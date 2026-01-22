@@ -21,10 +21,12 @@
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPDeclareSimd.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -7142,6 +7144,175 @@ convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+// if `v` is a function block-arg, return its index.
+// If `v` is `llvm.load %argN`, return N as well (var-stride common case).
+static std::optional<unsigned> getFuncArgIndex(mlir::LLVM::LLVMFuncOp func,
+                                               mlir::Value v) {
+  if (!v)
+    return std::nullopt;
+
+  // Direct block argument case: %argN
+  if (auto barg = mlir::dyn_cast<mlir::BlockArgument>(v)) {
+    // Make sure this block arg belongs to this function.
+    // For LLVMFuncOp, the body is a Region; its entry block holds the args.
+    mlir::Block &entry = func.getBody().front();
+    if (barg.getOwner() == &entry)
+      return barg.getArgNumber();
+    return std::nullopt;
+  }
+
+  // Common LLVM dialect pattern: %v = llvm.load %argN
+  if (auto load = v.getDefiningOp<mlir::LLVM::LoadOp>()) {
+    mlir::Value addr = load.getAddr();
+    if (auto addrBArg = mlir::dyn_cast<mlir::BlockArgument>(addr)) {
+      mlir::Block &entry = func.getBody().front();
+      if (addrBArg.getOwner() == &entry)
+        return addrBArg.getArgNumber();
+    }
+  }
+
+  return std::nullopt;
+}
+
+static void
+applyUniform(LLVM::LLVMFuncOp funcOp, mlir::omp::DeclareSimdOp ds,
+             llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
+  for (mlir::Value u : ds.getUniformVars()) {
+    auto idx = getFuncArgIndex(funcOp, u);
+    assert(idx && "uniform variable must be a function argument");
+    attrs[*idx].Kind = llvm::omp::DeclareSimdKindTy::Uniform;
+  }
+}
+
+static void
+applyAligned(LLVM::LLVMFuncOp funcOp, mlir::omp::DeclareSimdOp ds,
+             llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
+  auto alignedVars = ds.getAlignedVars();
+  std::optional<mlir::ArrayAttr> maybeAlignArr = ds.getAlignments();
+  if (alignedVars.empty() || !maybeAlignArr || !*maybeAlignArr)
+    return;
+
+  mlir::ArrayAttr alignArr = *maybeAlignArr;
+
+  unsigned n = std::min<unsigned>(alignedVars.size(), alignArr.size());
+  assert(alignedVars.size() == alignArr.size() &&
+         "aligned vars and alignments must have the same length");
+
+  for (unsigned i = 0; i < n; ++i) {
+    auto idx = getFuncArgIndex(funcOp, alignedVars[i]);
+    assert(idx && "aligned variable must be a function argument");
+
+    auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(alignArr[i]);
+    assert(intAttr && "alignment entry must be an IntegerAttr");
+
+    attrs[*idx].Alignment =
+        llvm::APSInt(intAttr.getValue(), /*isUnsigned=*/true);
+  }
+}
+
+/// Helper: fill linear kind + step.
+/// linear(%arg2 = %2 : !llvm.ptr)
+/// - linear var: %arg2 (must be function arg)
+/// - step value: %2 (may be constant) or another function arg (var stride)
+static void
+applyLinear(LLVM::LLVMFuncOp func, mlir::omp::DeclareSimdOp ds,
+            llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
+  auto linearVars = ds.getLinearVars();
+  auto linearSteps = ds.getLinearStepVars();
+
+  if (!linearSteps.empty()) {
+    assert(linearSteps.size() == linearVars.size() &&
+           "linear vars and steps must have the same length when steps exist");
+  }
+
+  // Default step=1
+  llvm::APSInt one(/*Bits=*/llvm::APInt(32, 1), /*isUnsigned=*/true);
+
+  for (unsigned i = 0; i < linearVars.size(); ++i) {
+    auto idx = getFuncArgIndex(func, linearVars[i]);
+    assert(idx && "linear variable must be a function argument");
+
+    llvm::omp::DeclareSimdAttrTy &paramAttr = attrs[*idx];
+    paramAttr.Kind = llvm::omp::DeclareSimdKindTy::Linear;
+    paramAttr.HasVarStride = false;
+    paramAttr.StrideOrArg = one;
+
+    if (i >= linearSteps.size())
+      continue;
+
+    mlir::Value stepV = linearSteps[i];
+
+    // Var-stride: step comes from a function arg (directly or via llvm.load
+    // %argN).
+    if (auto stepArgIdx = getFuncArgIndex(func, stepV)) {
+      paramAttr.HasVarStride = true;
+      paramAttr.StrideOrArg = llvm::APSInt(llvm::APInt(32, *stepArgIdx),
+                                           /*isUnsigned=*/true);
+      continue;
+    }
+
+    // Constant step: llvm.constant -> IntegerAttr.
+    if (auto cst = stepV.getDefiningOp<mlir::LLVM::ConstantOp>()) {
+      if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue())) {
+        paramAttr.HasVarStride = false;
+        paramAttr.StrideOrArg =
+            llvm::APSInt(intAttr.getValue(), /*isUnsigned=*/false);
+        continue;
+      }
+    }
+
+    // If we get here, we couldn't decode the step. This should not happen in
+    // well-formed IR; prefer asserting so bugs don't silently change mangling.
+    assert(false &&
+           "unhandled linear step form (expected const or arg/load-of-arg)");
+  }
+}
+
+static llvm::omp::DeclareSimdBranch
+getDeclareSimdBranch(mlir::omp::DeclareSimdOp &op) {
+  if (op.getInbranch())
+    return llvm::omp::DeclareSimdBranch::Inbranch;
+  if (op.getNotinbranch())
+    return llvm::omp::DeclareSimdBranch::Notinbranch;
+  return llvm::omp::DeclareSimdBranch::Undefined;
+}
+
+static LogicalResult
+convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  auto funcOp = opInst.getParentOfType<LLVM::LLVMFuncOp>();
+  assert(funcOp && "declare_simd must be defined inside an LLVM function");
+
+  llvm::Function *fn = moduleTranslation.lookupFunction(funcOp.getName());
+  assert(fn && "Failed to find corresponding LLVM function for LLVMFuncOp");
+
+  const llvm::Triple &T = fn->getParent()->getTargetTriple();
+  if (!T.isX86())
+    return opInst.emitOpError()
+           << "to LLVM IR currently only supported on x86 (got " << T.str()
+           << ")";
+
+  funcOp.walk([&](mlir::omp::DeclareSimdOp ds) {
+    llvm::SmallVector<llvm::omp::DeclareSimdAttrTy, 8> paramAttrs(
+        funcOp.getNumArguments());
+
+    applyUniform(funcOp, ds, paramAttrs);
+    applyAligned(funcOp, ds, paramAttrs);
+    applyLinear(funcOp, ds, paramAttrs);
+
+    llvm::APSInt VLENVal;
+    if (std::optional<int64_t> simdlen = ds.getSimdlen()) {
+      VLENVal = llvm::APSInt(llvm::APInt(/*numBits=*/64, *simdlen),
+                             /*isUnsigned=*/false);
+    }
+
+    llvm::omp::emitDeclareSimdFunction(fn, VLENVal, paramAttrs,
+                                       getDeclareSimdBranch(ds));
+  });
+
+  return success();
+}
+
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR (including
 /// OpenMP runtime calls).
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
@@ -7269,6 +7440,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TaskwaitOp op) {
             return convertOmpTaskwaitOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::DeclareSimdOp op) {
+            return convertDeclareSimdOp(*op, builder, moduleTranslation);
           })
           .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareMapperOp,
                 omp::DeclareMapperInfoOp, omp::DeclareReductionOp,
