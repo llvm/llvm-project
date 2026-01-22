@@ -33,6 +33,7 @@ _start:
 // 6
 // 7
 // 8
+// 9
 
 // RUN: not ld.lld %t.o %t255.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW1
 // OVERFLOW1: relocation R_AARCH64_ABS16 out of range: -32769 is not in [-32768, 65535]; references 'foo'
