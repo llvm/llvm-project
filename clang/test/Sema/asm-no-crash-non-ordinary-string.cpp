@@ -1,11 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 void foo() {
-  asm("" ::: (u8""}));
-  // expected-error@-1 {{cannot use unicode string literal in 'asm'}}
-  // expected-error@-2 {{expected ')'}}
-  // expected-note@-3 {{to match this '('}}
-  // expected-error@-4 {{expected expression}}
+  asm("" ::: (u8"")); // expected-error {{cannot use unicode string literal in 'asm'}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
 }
 
 void test_other_literals() {
