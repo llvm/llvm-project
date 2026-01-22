@@ -66,7 +66,7 @@ riscv64-unknown-linux-gnu-clang++ hello.s hello.o
 For details see [LLVM docs](https://llvm.org/docs/GettingStarted.html).
 
 ### Running performance testing
-TODO[khaser]: not implemented yet
+See [simba repository](https://github.com/llvm-rv-vext-improvements/simba).
 
 ### Running regression testing
 Since llvm is built with tests and tools for it, run `<build_dir>/bin/llvm-lit test/Transforms/SLPVectorizer`
@@ -74,7 +74,4 @@ to perform regression testing for SLPVectorizer test-suite.
 
 ### Misc
 Original LLVM readme can be found in [./README-llvm.md](./README-llvm.md)
-
-### Infra notes
-TODO[khaser]: write notes
 
