@@ -193,8 +193,7 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
-  void expandMSGPseudo(MachineInstr &MI) const;
-  void expandCSGPseudo(MachineInstr &MI) const;
+  void expandStackGuardPseudo(MachineInstr &MI, unsigned Opcode) const;
   MachineInstrBuilder
   emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
@@ -220,8 +219,9 @@ protected:
                                        unsigned CommuteOpIdx2) const override;
 
   // Emits a load of the stack guard's address, using the given
-  // AddrReg as the target.
-  void emitLoadStackGuardAddress(MachineInstr &MI, Register AddrReg) const;
+  // AddrReg as the target. Returns the appropriate offset to load
+  // the stack guard from that address.
+  unsigned emitLoadStackGuardAddress(MachineInstr &MI, Register AddrReg) const;
 
 public:
   explicit SystemZInstrInfo(const SystemZSubtarget &STI);
