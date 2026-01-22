@@ -840,6 +840,14 @@ private:
   std::set<SourceName> intrinsicUses_;
   std::set<SourceName> nonIntrinsicUses_;
 
+  void ApplyModuleAccessibility(Symbol &symbol) {
+    if (useModuleScope_ && useModuleScope_->symbol()) {
+      if (auto accessibility{
+              currScope().GetModuleAccessibility(*useModuleScope_->symbol())}) {
+        symbol.attrs().set(*accessibility);
+      }
+    }
+  }
   Symbol &SetAccess(const SourceName &, Attr attr, Symbol * = nullptr);
   // A rename in a USE statement: local => use
   struct SymbolRename {
@@ -3866,6 +3874,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol->implicitAttrs() =
           localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
       localSymbol->flags() = useSymbol.flags();
+      ApplyModuleAccessibility(*localSymbol);
       return;
     }
   }
@@ -4108,6 +4117,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
           useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
           UseDetails{localName, useUltimate})};
       newSymbol.flags() = useSymbol.flags();
+      // Apply module accessibility if specified
+      ApplyModuleAccessibility(newSymbol);
       return;
     } else {
       for (const auto &ref : useGeneric->specificProcs()) {
@@ -4164,6 +4175,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol->attrs() =
           useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
       localSymbol->flags() = useSymbol.flags();
+      // Apply module accessibility if specified
+      ApplyModuleAccessibility(*localSymbol);
       AddGenericUse(*localGeneric, localName, useUltimate);
       // Don't duplicate specific procedures.
       std::size_t originalLocalSpecifics{localGeneric->specificProcs().size()};
@@ -4206,6 +4219,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
         std::move(generic))};
     newSymbol.flags() = useUltimate.flags();
+    ApplyModuleAccessibility(newSymbol);
     auto &newUseGeneric{newSymbol.get<GenericDetails>()};
     AddGenericUse(newUseGeneric, localName, useUltimate);
     newUseGeneric.AddUse(*localSymbol);
@@ -9575,6 +9589,41 @@ bool ModuleVisitor::Pre(const parser::AccessStmt &x) {
     for (const auto &accessId : accessIds) {
       GenericSpecInfo info{accessId.v.value()};
       auto *symbol{FindInScope(info.symbolName())};
+      // An access-spec may have an access-name (module) in order to set
+      // the default accessibility for everything USE-associated from
+      // that module. The module name won't be in the current scope,
+      // so we need to check the global scope.
+      if (info.kind().IsName()) {
+        const Symbol *moduleSymbol{nullptr};
+        Symbol *resolveSymbol{nullptr};
+        if (symbol) {
+          // Check if symbol in current scope is USE-associated from a module
+          const Symbol &ultimate{symbol->GetUltimate()};
+          if (ultimate.has<ModuleDetails>()) {
+            moduleSymbol = &ultimate;
+            resolveSymbol = symbol;
+          }
+        } else {
+          // Look for a module with this name in the global scope
+          if (auto it{context().globalScope().find(info.symbolName())};
+              it != context().globalScope().end()) {
+            Symbol &globalSymbol{*it->second};
+            if (globalSymbol.has<ModuleDetails>()) {
+              moduleSymbol = &globalSymbol;
+              resolveSymbol = &globalSymbol;
+            }
+          }
+        }
+        if (moduleSymbol) {
+          if (!currScope().SetModuleAccessibility(*moduleSymbol, accessAttr)) {
+            Say(info.symbolName(),
+                "The accessibility of entities from module '%s' has already been specified"_err_en_US,
+                moduleSymbol->name());
+          }
+          info.Resolve(resolveSymbol);
+          continue;
+        }
+      }
       if (!symbol && !info.kind().IsName()) {
         symbol = &MakeSymbol(info.symbolName(), Attrs{}, GenericDetails{});
       }
@@ -9904,6 +9953,29 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   if (inInterfaceBlock()) {
     FinishNamelists(); // NAMELIST is useless in an interface, but allowed
   }
+
+  // Apply deferred module accessibility: F2023: Clause 8.6.1
+  // An <access-spec> with an <access-id> of a module name sets the
+  // accessibility for all entities USE-associated from that module.
+  for (auto &pair : currScope()) {
+    auto &symbol{*pair.second};
+    if (const auto *useDetails{symbol.detailsIf<UseDetails>()}) {
+      // If symbol already has explicit accessibility, skip it
+      if (symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
+        continue;
+      }
+      // Find the module that this symbol came from
+      const Symbol &useSymbol{useDetails->symbol()};
+      const Scope *moduleScope{FindModuleContaining(useSymbol.owner())};
+      if (moduleScope && moduleScope->symbol()) {
+        if (auto accessibility{
+                currScope().GetModuleAccessibility(*moduleScope->symbol())}) {
+          symbol.attrs().set(*accessibility);
+        }
+      }
+    }
+  }
+
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
