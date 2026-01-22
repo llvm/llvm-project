@@ -3038,16 +3038,17 @@ def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_NEG_ONE, i64, f64, fp_to_sint>;
 // instructions resulting in the copies from SCC to these instructions
 // will be moved to the VALU.
 
+def : GCNPat <
+ (i32 (UniformUnaryFrag<zext> i1:$src)),
+  (S_AND_B32 $src, (i32 1))
+>;
+
 let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B64 $src0, $src1)
 >;
 
-def : GCNPat <
-  (i64 (UniformUnaryFrag<zext> i1:$src)),
-  (S_AND_B64 $src, (i64 1))
->;
 
 def : GCNPat <
   (i1 (or i1:$src0, i1:$src1)),
@@ -3086,11 +3087,6 @@ let WaveSizePredicate = isWave32 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B32 $src0, $src1)
->;
-
-def : GCNPat <
-  (i32 (UniformUnaryFrag<zext> i1:$src)),
-  (S_AND_B32 $src, (i32 1))
 >;
 
 def : GCNPat <

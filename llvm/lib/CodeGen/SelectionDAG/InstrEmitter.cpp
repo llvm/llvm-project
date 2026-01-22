@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -105,8 +106,29 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   MVT VT = Op.getSimpleValueType();
 
   // Stick to the preferred register classes for legal types.
-  if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
+  if (TLI->isTypeLegal(VT)) {
+      const llvm::TargetRegisterClass *SrcRegRC = TRI->getMinimalPhysRegClass(SrcReg);
+      UseRC = TRI->getCrossCopyRegClass(SrcRegRC);
+      const llvm::TargetRegisterClass *LegalRC =
+          TLI->getRegClassFor(VT, Op->isDivergent());
+
+      if (!TRI->isTypeLegalForClass(*UseRC, VT)) {
+          UseRC = LegalRC;
+      }
+      {
+        // If there is a sub class relation between CrossCopyRegClass and
+        // natively supported RegClass, the result of getRegClassFor, then
+        // we use natively supported RegClass to stick the existing logic.
+        // For example, on AArch64, the CrossCopyRegClass of x0 is `GPR64arg`
+        // and x0 is natively supported in regclass `GPR64all`, then `GPR64all` is chosen.
+        // However, on AMDGPU, for `scc`, the natively supported regclass is, for
+        // some reasons, SGPR_64 but CrossCopyRegClass is SGPR_32. Since there
+        // is subclass relation, CrossCopyRegClass, SGPR_32 is picked.
+        if (TRI->getCommonSubClass(UseRC, LegalRC)) {
+            UseRC = LegalRC;
+        }
+      }
+  }
 
   for (SDNode *User : Op->users()) {
     bool Match = true;
@@ -121,7 +143,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
       for (unsigned i = 0, e = User->getNumOperands(); i != e; ++i) {
         if (User->getOperand(i) != Op)
           continue;
-        if (VT == MVT::Other || VT == MVT::Glue)
+        if (VT == MVT::Other || VT == MVT::Glue || !TLI->isTypeLegal(VT))
           continue;
         Match = false;
         if (User->isMachineOpcode()) {
@@ -131,10 +153,11 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
             RC = TRI->getAllocatableClass(
                 TII->getRegClass(II, i + II.getNumDefs()));
           }
+
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
-            const TargetRegisterClass *ComRC =
+              const TargetRegisterClass *ComRC =
                 TRI->getCommonSubClass(UseRC, RC);
             // If multiple uses expect disjoint register classes, we emit
             // copies in AddRegisterOperand.
@@ -153,6 +176,8 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
 
   // Figure out the register class to create for the destreg.
+  // If SrcReg is phsysical register, the corresponding register class could be
+  // non allocable, so we prefer UseRC to SrcRC
   if (VRBase) {
     DstRC = MRI->getRegClass(VRBase);
   } else if (UseRC) {
