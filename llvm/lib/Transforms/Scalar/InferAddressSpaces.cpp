@@ -402,19 +402,21 @@ SmallVector<Value *, 2> InferAddressSpacesImpl::getPointerOperands(
   }
 }
 
-static unsigned computeKnownChangedLSB(const Operator *LogicOp,
-                                       const Value *Mask, const DataLayout &DL,
-                                       AssumptionCache *AC,
-                                       const DominatorTree *DT) {
+// Return mask. The 1 in mask indicate the bit is changed.
+// This helper function is to compute the max know changed bits for ptr1 and
+// ptr2 after the operation `ptr2 = ptr1 Op Mask`.
+static APInt computeMaxChangedPtrBits(const Operator *Op, const Value *Mask,
+                                      const DataLayout &DL, AssumptionCache *AC,
+                                      const DominatorTree *DT) {
   KnownBits Known = computeKnownBits(Mask, DL, AC, nullptr, DT);
-  switch (LogicOp->getOpcode()) {
+  switch (Op->getOpcode()) {
   case Instruction::Xor:
   case Instruction::Or:
-    return Known.getBitWidth() - Known.countMinLeadingZeros();
+    return ~Known.Zero;
   case Instruction::And:
-    return Known.getBitWidth() - Known.countMinLeadingOnes();
+    return ~Known.One;
   default:
-    return -1;
+    return APInt::getAllOnes(Known.getBitWidth());
   }
 }
 
@@ -451,8 +453,11 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
 
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
   unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
-  unsigned AddrChangedLSB = computeKnownChangedLSB(LogicOP, Mask, DL, &AC, DT);
-  if (TTI->isSafeToCastIntPtrWithAS(AddrChangedLSB, SrcAS, DstAS)) {
+  APInt PreservedPtrMask = TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+  APInt ChangedPtrBits = computeMaxChangedPtrBits(LogicOP, Mask, DL, &AC, DT);
+  // Check if the address bits change is within the preserved mask. If the bits
+  // change is not preserved, it is not safe to perform address space cast.
+  if ((ChangedPtrBits & (~PreservedPtrMask)).isZero()) {
     PtrIntCastPairs[I2P] = P2I->getOperand(0);
     return true;
   }

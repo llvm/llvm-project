@@ -180,20 +180,17 @@ public:
     }
   }
 
-  bool isSafeToCastIntPtrWithAS(unsigned AddrChangedLSB, unsigned SrcAS,
-                                unsigned DstAS) const override {
+  APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                         unsigned DstAS) const override {
     if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
-      return false;
+      return APInt::getZero(DL.getPointerSizeInBits());
     if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
         DstAS != llvm::ADDRESS_SPACE_SHARED)
-      return false;
+      return APInt::getZero(DL.getPointerSizeInBits());
 
     // Address change within 4K size does not change the original address space
     // and is safe to perform address cast form SrcAS to DstAS.
-    if (AddrChangedLSB <= 12)
-      return true;
-
-    return false;
+    return {DL.getPointerSizeInBits(), 0xfff};
   }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,

@@ -193,6 +193,11 @@ public:
     return FromPtrBits.anyextOrTrunc(ToASBitSize);
   }
 
+  virtual APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                 unsigned DstAS) const {
+    return APInt::getZero(DL.getPointerSizeInBits());
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
@@ -1158,11 +1163,6 @@ public:
   }
 
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
-
-  virtual bool isSafeToCastIntPtrWithAS(unsigned AddrChangedLSB, unsigned SrcAS,
-                                        unsigned DstAS) const {
-    return false;
-  }
 
   virtual TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
