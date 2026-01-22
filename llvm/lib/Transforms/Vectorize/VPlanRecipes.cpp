@@ -613,7 +613,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (!V1->getType()->isVectorTy())
       return V1;
     Value *V2 = State.get(getOperand(1));
-    return Builder.CreateVectorSplice(V1, V2, -1, Name);
+    return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
     unsigned UF = getParent()->getPlan()->getUF();
@@ -2451,6 +2451,23 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
+void VPDerivedIVRecipe::execute(VPTransformState &State) {
+  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  if (FPBinOp)
+    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
+
+  Value *Step = State.get(getStepValue(), VPLane(0));
+  Value *Index = State.get(getOperand(1), VPLane(0));
+  Value *DerivedIV = emitTransformedIndex(
+      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
+      cast_if_present<BinaryOperator>(FPBinOp));
+  DerivedIV->setName(Name);
+  State.set(this, DerivedIV, VPLane(0));
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
@@ -2494,12 +2511,9 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     MulOp = Instruction::FMul;
   }
 
-  // Determine the number of scalars we need to generate for each unroll
-  // iteration.
+  // Determine the number of scalars we need to generate.
   bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
   // Compute the scalar steps and save the results in State.
-  Type *IntStepTy =
-      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
 
   unsigned StartLane = 0;
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
@@ -2507,21 +2521,8 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0;
-  if (getUnrollPart(*this) == 0)
-    StartIdx0 = ConstantInt::get(IntStepTy, 0);
-  else {
-    StartIdx0 = State.get(getOperand(2), true);
-    if (getUnrollPart(*this) != 1) {
-      StartIdx0 =
-          Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
-                                                        getUnrollPart(*this)));
-    }
-    StartIdx0 = Builder.CreateSExtOrTrunc(StartIdx0, IntStepTy);
-  }
-
-  if (BaseIVTy->isFloatingPointTy())
-    StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
+  Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
+                                     : Constant::getNullValue(BaseIVTy);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,
@@ -3405,6 +3406,20 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1), Ctx);
     if (isSingleScalar())
       return ScalarCost;
+
+    // If any of the operands is from a different replicate region and has its
+    // cost skipped, it may have been forced to scalar. Fall back to legacy cost
+    // model to avoid cost mis-match.
+    if (any_of(operands(), [&Ctx, VF](VPValue *Op) {
+          auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
+          if (!PredR)
+            return false;
+          return Ctx.skipCostComputation(
+              dyn_cast_or_null<Instruction>(
+                  PredR->getOperand(0)->getUnderlyingValue()),
+              VF.isVector());
+        }))
+      break;
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),

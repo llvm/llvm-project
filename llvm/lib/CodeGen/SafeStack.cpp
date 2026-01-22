@@ -198,14 +198,10 @@ public:
 };
 
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
-  uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
-  if (AI->isArrayAllocation()) {
-    auto C = dyn_cast<ConstantInt>(AI->getArraySize());
-    if (!C)
-      return 0;
-    Size *= C->getZExtValue();
-  }
-  return Size;
+  if (auto Size = AI->getAllocationSize(DL))
+    if (Size->isFixed())
+      return Size->getFixedValue();
+  return 0;
 }
 
 bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
@@ -357,11 +353,11 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
 }
 
 Value *SafeStack::getStackGuard(IRBuilder<> &IRB, Function &F) {
-  Value *StackGuardVar = TL.getIRStackGuard(IRB);
+  Value *StackGuardVar = TL.getIRStackGuard(IRB, Libcalls);
   Module *M = F.getParent();
 
   if (!StackGuardVar) {
-    TL.insertSSPDeclarations(*M);
+    TL.insertSSPDeclarations(*M, Libcalls);
     return IRB.CreateIntrinsic(Intrinsic::stackguard, {});
   }
 
@@ -820,7 +816,7 @@ bool SafeStack::run() {
         SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
-    UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB);
+    UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).
@@ -880,9 +876,7 @@ class SafeStackLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid..
 
-  SafeStackLegacyPass() : FunctionPass(ID) {
-    initializeSafeStackLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  SafeStackLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LibcallLoweringInfoWrapper>();

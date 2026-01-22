@@ -3478,11 +3478,8 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   if (!getGlobalOp)
     return {};
   // Get to the memref.global defining the symbol.
-  auto *symbolTableOp = getGlobalOp->getParentWithTrait<OpTrait::SymbolTable>();
-  if (!symbolTableOp)
-    return {};
-  auto global = dyn_cast_or_null<memref::GlobalOp>(
-      SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.getNameAttr()));
+  auto global = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
+      getGlobalOp, getGlobalOp.getNameAttr());
   if (!global)
     return {};
 

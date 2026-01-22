@@ -43,6 +43,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_PRINTF_DISABLE_FLOAT``: Disable printing floating point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_INDEX_MODE``: Disable index mode in the printf format string.
     - ``LIBC_CONF_PRINTF_DISABLE_STRERROR``: Disable handling of %m to print strerror in printf and friends.
+    - ``LIBC_CONF_PRINTF_DISABLE_WIDE``: Disable handling wide characters for printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_WRITE_INT``: Disable handling of %n in printf format string.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_NO_SPECIALIZE_LD``: Use the same mode for double and long double in printf.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT``: Use dyadic float for faster and smaller but less accurate printf doubles.
