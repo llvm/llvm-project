@@ -180,6 +180,13 @@ public:
   std::unique_ptr<InlineAdvice> getAdvice(CallBase &CB,
                                           bool MandatoryOnly = false);
 
+  /// Get an InlineAdvice for a call site without performing cost analysis.
+  /// This is useful for cases like the flatten attribute where we want to
+  /// inline all viable calls regardless of cost. The viability checks
+  /// (TTI compatibility, noinline attributes, etc.) are still performed.
+  /// Returns advice with isInliningRecommended() = true if the call is viable.
+  std::unique_ptr<InlineAdvice> getAdviceWithoutCost(CallBase &CB);
+
   /// This must be called when the Inliner pass is entered, to allow the
   /// InlineAdvisor update internal state, as result of function passes run
   /// between Inliner pass runs (for the same module).

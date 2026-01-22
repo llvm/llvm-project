@@ -1,5 +1,7 @@
 ; RUN: opt -passes=always-inline -S < %s | FileCheck %s
 ; RUN: opt -passes=always-inline -pass-remarks-missed=inline -S < %s 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt -passes=inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline<only-mandatory>)' -S < %s | FileCheck %s
 
 ; Test that the flatten attribute recursively inlines all calls.
 

@@ -654,6 +654,17 @@ std::unique_ptr<InlineAdvice> InlineAdvisor::getAdvice(CallBase &CB,
   return getMandatoryAdvice(CB, Advice);
 }
 
+std::unique_ptr<InlineAdvice>
+InlineAdvisor::getAdviceWithoutCost(CallBase &CB) {
+  // Check if the call is viable for inlining without performing cost analysis.
+  // This is useful for cases like the flatten attribute where we want to
+  // inline all viable calls regardless of cost.
+  bool IsViable = CB.getCaller() != CB.getCalledFunction() &&
+                  MandatoryInliningKind::Never !=
+                      getMandatoryKind(CB, FAM, getCallerORE(CB));
+  return getMandatoryAdvice(CB, IsViable);
+}
+
 OptimizationRemarkEmitter &InlineAdvisor::getCallerORE(CallBase &CB) {
   return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*CB.getCaller());
 }

@@ -195,6 +195,101 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
   return *IAA->getAdvisor();
 }
 
+/// Flatten a function by inlining all calls within it recursively.
+/// This implements the flatten attribute behavior for the CGSCC inliner.
+/// Returns true if any inlining was performed.
+static bool flattenFunction(Function &F, FunctionAnalysisManager &FAM,
+                            ProfileSummaryInfo *PSI, InlineAdvisor &Advisor) {
+  SmallVector<std::pair<CallBase *, int>, 16> Worklist;
+  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
+
+  auto GetAssumptionCache = [&](Function &Fn) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(Fn);
+  };
+
+  // Collect initial calls.
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        if (CB->getAttributes().hasFnAttr(Attribute::NoInline))
+          continue;
+        Function *Callee = CB->getCalledFunction();
+        if (!Callee || Callee->isDeclaration())
+          continue;
+        Worklist.push_back({CB, -1});
+      }
+    }
+  }
+
+  bool Changed = false;
+  while (!Worklist.empty()) {
+    std::pair<CallBase *, int> P = Worklist.pop_back_val();
+    CallBase *CB = P.first;
+    int InlineHistoryID = P.second;
+    Function *Callee = CB->getCalledFunction();
+    if (!Callee)
+      continue;
+
+    // Detect recursion.
+    if (Callee == &F ||
+        inlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory)) {
+      LLVM_DEBUG(dbgs() << "Skipping recursive call during flattening: "
+                        << F.getName() << " -> " << Callee->getName() << "\n");
+      setInlineRemark(*CB, "recursive");
+      auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined",
+                                        CB->getDebugLoc(), CB->getParent())
+               << "'" << ore::NV("Callee", Callee) << "' is not inlined into '"
+               << ore::NV("Caller", CB->getCaller())
+               << "': recursive call during flattening";
+      });
+      continue;
+    }
+
+    // Use the advisor to check viability without performing cost analysis.
+    // For flatten, we want to inline all viable calls regardless of cost.
+    std::unique_ptr<InlineAdvice> Advice = Advisor.getAdviceWithoutCost(*CB);
+    if (!Advice)
+      continue;
+
+    if (!Advice->isInliningRecommended()) {
+      Advice->recordUnattemptedInlining();
+      continue;
+    }
+
+    InlineFunctionInfo IFI(GetAssumptionCache, PSI);
+
+    InlineResult IR =
+        InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
+                       &FAM.getResult<AAManager>(F), /*InsertLifetime=*/true);
+    if (!IR.isSuccess()) {
+      Advice->recordUnsuccessfulInlining(IR);
+      continue;
+    }
+
+    Advice->recordInlining();
+    Changed = true;
+
+    // Add new call sites from the inlined function to the worklist.
+    if (!IFI.InlinedCallSites.empty()) {
+      int NewHistoryID = InlineHistory.size();
+      InlineHistory.push_back({Callee, InlineHistoryID});
+      for (CallBase *ICB : IFI.InlinedCallSites) {
+        Function *NewCallee = ICB->getCalledFunction();
+        if (NewCallee && !NewCallee->isDeclaration() &&
+            !ICB->getAttributes().hasFnAttr(Attribute::NoInline))
+          Worklist.push_back({ICB, NewHistoryID});
+      }
+    }
+  }
+
+  if (Changed)
+    FAM.invalidate(F, PreservedAnalyses::none());
+
+  return Changed;
+}
+
 void makeFunctionBodyUnreachable(Function &F) {
   F.dropAllReferences();
   for (BasicBlock &BB : make_early_inc_range(F))
@@ -248,8 +343,15 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // incrementally maknig a single function grow in a super linear fashion.
   SmallVector<std::pair<CallBase *, int>, 16> Calls;
 
+  // Track functions with flatten attribute for processing at the end.
+  SmallSetVector<Function *, 4> FlattenFunctions;
+
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
+    Function &Fn = N.getFunction();
+    if (Fn.hasFnAttribute(Attribute::Flatten))
+      FlattenFunctions.insert(&Fn);
+
     auto &ORE =
         FAM.getResult<OptimizationRemarkEmitterAnalysis>(N.getFunction());
     // We want to generally process call sites top-down in order for
@@ -534,6 +636,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // invalidate analyses for all functions in this SCC later.
     FAM.invalidate(F, PreservedAnalyses::none());
   }
+
+  // Now flatten functions with the flatten attribute.
+  for (Function *FlattenF : FlattenFunctions)
+    Changed |= flattenFunction(*FlattenF, FAM, PSI, Advisor);
 
   // We must ensure that we only delete functions with comdats if every function
   // in the comdat is going to be deleted.
