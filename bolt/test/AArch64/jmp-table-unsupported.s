@@ -101,7 +101,7 @@ SECTIONS {
 # JT-OBJDUMP-NORMAL: <handleOptionJumpTable>:
 # JT-OBJDUMP-NORMAL:  adrp
 # JT-OBJDUMP-NORMAL-NEXT:  add
-# JT-OBJDUMP-NORMAL-NEXT:  ldr
+# JT-OBJDUMP-NORMAL:  ldr
 # JT-OBJDUMP-NORMAL-NEXT:  blr
 
 # RUN: llvm-bolt %t/jt_type_normal.exe --dyno-stats \

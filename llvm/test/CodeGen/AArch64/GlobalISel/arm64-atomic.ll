@@ -760,6 +760,8 @@ define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O0:       ; %bb.0:
 ; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32
 ; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
+; CHECK-NOLSE-O0-NEXT:    mov w8, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #24] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [x0]
 ; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    b LBB8_1
@@ -768,7 +770,7 @@ define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB8_2 Depth 2
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Reload
 ; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Reload
-; CHECK-NOLSE-O0-NEXT:    mov w9, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Reload
 ; CHECK-NOLSE-O0-NEXT:    orr w12, w8, w9
 ; CHECK-NOLSE-O0-NEXT:  LBB8_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB8_1 Depth=1
