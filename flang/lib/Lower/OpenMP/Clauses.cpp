@@ -1280,10 +1280,27 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpNumTeamsClause
-  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
-  assert(!t1.empty());
-  List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
-                            /*UpperBound=*/makeExpr(t1.front(), semaCtx)}}};
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *dims = semantics::OmpGetUniqueModifier<parser::OmpDimsModifier>(mods);
+  auto *lowerBound =
+      semantics::OmpGetUniqueModifier<parser::OmpLowerBound>(mods);
+  auto &values = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!values.empty());
+
+  // With dims modifier: create Range for each value (all upper bounds)
+  if (dims) {
+    List<NumTeams::Range> v;
+    for (const auto &val : values) {
+      v.push_back(NumTeams::Range{{/*LowerBound=*/std::nullopt,
+                                   /*UpperBound=*/makeExpr(val, semaCtx)}});
+    }
+    return NumTeams{/*List=*/v};
+  }
+
+  // Without dims modifier: single element with optional lower bound
+  auto lb = maybeApplyToV(makeExprFn(semaCtx), lowerBound);
+  List<NumTeams::Range> v{{{/*LowerBound=*/lb,
+                            /*UpperBound=*/makeExpr(values.front(), semaCtx)}}};
   return NumTeams{/*List=*/v};
 }
 

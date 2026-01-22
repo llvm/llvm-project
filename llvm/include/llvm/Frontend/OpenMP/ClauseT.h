@@ -992,6 +992,7 @@ struct NumTasksT {
 };
 
 // V5.2: [10.2.1] `num_teams` clause
+// V6.1: Extended with dims modifier support
 template <typename T, typename I, typename E> //
 struct NumTeamsT {
   using LowerBound = E;
@@ -1004,7 +1005,7 @@ struct NumTeamsT {
   };
 
   // The name List is not a spec name. The list is an extension to allow
-  // specifying a grid with connection with the ompx_bare clause.
+  // specifying a grid with the dims modifier (OpenMP 6.1) or ompx_bare clause.
   using List = ListT<Range>;
   using WrapperTrait = std::true_type;
   List v;

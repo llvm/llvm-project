@@ -1109,15 +1109,15 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
-  // CHECK: omp.teams num_teams(%{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32)
-  omp.teams num_teams(%lb, %ub, %ub : i32, i32, i32) {
+  // CHECK: omp.teams num_teams( to %{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32)
+  omp.teams num_teams(to %lb, %ub, %ub : i32, i32, i32) {
     // CHECK: omp.terminator
     omp.terminator
   }
 
   // Test num_teams with mixed types.
-  // CHECK: omp.teams num_teams(%{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
-  omp.teams num_teams(%lb, %ub64, %ub16 : i32, i64, i16) {
+  // CHECK: omp.teams num_teams( to %{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+  omp.teams num_teams(to %lb, %ub64, %ub16 : i32, i64, i16) {
     // CHECK: omp.terminator
     omp.terminator
   }

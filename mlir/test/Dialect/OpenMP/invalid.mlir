@@ -1438,7 +1438,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1448,10 +1448,10 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
 
 func.func @omp_teams_num_teams1(%lb : i32) {
   omp.target {
-    // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
+    // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1465,10 +1465,10 @@ func.func @omp_teams_num_teams_multidim_with_bounds() {
     %v1 = arith.constant 2 : i32
     %lb = arith.constant 3 : i32
     %ub = arith.constant 4 : i32
-    // expected-error @below {{num_teams multi-dimensional values cannot be used together with legacy lower/upper bounds}}
-    "omp.teams" (%v0, %v1, %lb, %ub) ({
+    // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
+    "omp.teams" (%lb, %v0, %v1) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,2,1,1,0,0,0>} : (i32, i32, i32, i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0>} : (i32, i32, i32) -> ()
     omp.terminator
   }
   return

@@ -2240,10 +2240,10 @@ LogicalResult TargetOp::verifyRegions() {
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
       if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
-        if (llvm::is_contained({teamsOp.getNumTeamsLower(),
-                                teamsOp.getNumTeamsUpper(),
-                                teamsOp.getThreadLimit()},
-                               hostEvalArg))
+        // Check if used in num_teams_lower or any of num_teams_upper_vars
+        if (hostEvalArg == teamsOp.getNumTeamsLower() ||
+            llvm::is_contained(teamsOp.getNumTeamsUpperVars(), hostEvalArg) ||
+            hostEvalArg == teamsOp.getThreadLimit())
           continue;
 
         return emitOpError() << "host_eval argument only legal as 'num_teams' "
@@ -2370,7 +2370,7 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
 static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
                                WsloopOp *wsLoopOp) {
   // num_teams clause can break no-loop teams/threads assumption.
-  if (teamsOp.getNumTeamsUpper())
+  if (!teamsOp.getNumTeamsUpperVars().empty())
     return false;
 
   // Reduction kernels are slower in no-loop mode.
@@ -2624,38 +2624,26 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
-  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 clauses.ifExpr, clauses.numTeamsVars, clauses.numTeamsLower,
-                 clauses.numTeamsUpper,
-                 /*private_vars=*/{}, /*private_syms=*/nullptr,
-                 /*private_needs_barrier=*/nullptr, clauses.reductionMod,
-                 clauses.reductionVars,
-                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit);
+  TeamsOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpperVars,
+      /*private_vars=*/{}, /*private_syms=*/nullptr,
+      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+      clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimit);
 }
 
 // Verify num_teams clause
-static LogicalResult verifyNumTeamsClause(Operation *op,
-                                          OperandRange numTeamsVars,
-                                          Value numTeamsLower,
-                                          Value numTeamsUpper) {
-  bool hasLegacyOperands = numTeamsLower || numTeamsUpper;
-
-  // Cannot use both multi-dimensional and legacy format simultaneously
-  if (!numTeamsVars.empty() && hasLegacyOperands) {
-    return op->emitError()
-           << "num_teams multi-dimensional values cannot be used together with "
-              "legacy lower/upper bounds";
-  }
-
-  // If lower is specified, upper must also be specified
+static LogicalResult verifyNumTeamsClause(Operation *op, Value numTeamsLower,
+                                          OperandRange numTeamsUpperVars) {
+  // If lower is specified, upper must have exactly one value
   if (numTeamsLower) {
-    if (!numTeamsUpper)
+    if (numTeamsUpperVars.size() != 1)
       return op->emitError(
-          "expected num_teams upper bound to be defined if the "
-          "lower bound is defined");
-    if (numTeamsLower.getType() != numTeamsUpper.getType())
+          "expected exactly one num_teams upper bound when lower bound is "
+          "specified");
+    if (numTeamsLower.getType() != numTeamsUpperVars[0].getType())
       return op->emitError(
           "expected num_teams upper bound and lower bound to be "
           "the same type");
@@ -2677,9 +2665,8 @@ LogicalResult TeamsOp::verify() {
                      "in any OpenMP dialect operations");
 
   // Check for num_teams clause restrictions
-  if (failed(verifyNumTeamsClause(op, this->getNumTeamsVars(),
-                                  this->getNumTeamsLower(),
-                                  this->getNumTeamsUpper())))
+  if (failed(verifyNumTeamsClause(op, this->getNumTeamsLower(),
+                                  this->getNumTeamsUpperVars())))
     return failure();
 
   // Check for allocate clause restrictions
@@ -4511,111 +4498,6 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                        makeArrayAttr(ctx, clauses.alignments),
                        clauses.linearVars, clauses.linearStepVars,
                        clauses.linearVarTypes, clauses.simdlen);
-}
-
-//===----------------------------------------------------------------------===//
-// Parser and printer for num_teams clause
-//===----------------------------------------------------------------------===//
-// Parses num_teams clause in two formats:
-// 1. Multi-dimensional: num_teams(%v0, %v1, ... : type0, type1, ...)
-// 2. Uni-dimensional (legacy): num_teams(%lb : type to %ub : type)
-//                           or num_teams(to %ub : type)
-static ParseResult
-parseNumTeamsClause(OpAsmParser &parser,
-                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-                    SmallVectorImpl<Type> &types,
-                    std::optional<OpAsmParser::UnresolvedOperand> &lowerBound,
-                    Type &lowerBoundType,
-                    std::optional<OpAsmParser::UnresolvedOperand> &upperBound,
-                    Type &upperBoundType) {
-
-  // Format: num_teams(to upper : type)
-  if (succeeded(parser.parseOptionalKeyword("to"))) {
-    OpAsmParser::UnresolvedOperand upperOperand;
-    if (parser.parseOperand(upperOperand) || parser.parseColon() ||
-        parser.parseType(upperBoundType)) {
-      return failure();
-    }
-    upperBound = upperOperand;
-    return success();
-  }
-
-  // Try to parse multi-dimensional format: values : types
-  // or legacy format: lower : type to upper : type
-  OpAsmParser::UnresolvedOperand firstOperand;
-  if (parser.parseOperand(firstOperand))
-    return failure();
-
-  // Check if there is a comma (multi-dimensional) or colon
-  if (succeeded(parser.parseOptionalComma())) {
-    values.push_back(firstOperand);
-    if (parser.parseOperandList(values) || parser.parseColon() ||
-        parser.parseTypeList(types)) {
-      return failure();
-    }
-    return success();
-  }
-
-  // Must have a colon next
-  if (parser.parseColon())
-    return failure();
-
-  Type firstType;
-  if (parser.parseType(firstType))
-    return failure();
-
-  // Check for 'to' keyword (legacy format)
-  if (succeeded(parser.parseOptionalKeyword("to"))) {
-    lowerBound = firstOperand;
-    lowerBoundType = firstType;
-
-    OpAsmParser::UnresolvedOperand upperOperand;
-    if (parser.parseOperand(upperOperand) || parser.parseColon() ||
-        parser.parseType(upperBoundType)) {
-      return failure();
-    }
-    upperBound = upperOperand;
-    return success();
-  }
-
-  // Check for comma after type (multi-dimensional with types)
-  if (succeeded(parser.parseOptionalComma())) {
-    values.push_back(firstOperand);
-    types.push_back(firstType);
-    if (parser.parseTypeList(types))
-      return failure();
-    return success();
-  }
-
-  // Single value multi-dimensional format: %v0 : type0
-  values.push_back(firstOperand);
-  types.push_back(firstType);
-  return success();
-}
-
-static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
-                                OperandRange values, TypeRange types,
-                                Value lowerBound, Type lowerBoundType,
-                                Value upperBound, Type upperBoundType) {
-  if (!values.empty()) {
-    // Multi-dimensional: %v0, %v1, ... : type0, type1, ...
-    llvm::interleaveComma(values, p, [&](Value v) { p.printOperand(v); });
-    p << " : ";
-    llvm::interleaveComma(types, p);
-  } else if (upperBound) {
-    if (lowerBound) {
-      // Both bounds: lower : type to upper : type
-      p.printOperand(lowerBound);
-      p << " : " << lowerBoundType << " to ";
-      p.printOperand(upperBound);
-      p << " : " << upperBoundType;
-    } else {
-      // Upper only: to upper : type
-      p << " to ";
-      p.printOperand(upperBound);
-      p << " : " << upperBoundType;
-    }
-  }
 }
 
 #define GET_ATTRDEF_CLASSES
