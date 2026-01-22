@@ -26,7 +26,7 @@ handling the dynamic dependencies specified in the individual summary index
 files, such as Bazel. DTLTO removes this requirement, allowing it to be used
 with any build process that supports in-process ThinLTO. To facilitate this,
 DTLTO supports common in-process ThinLTO features, such as caching. Bitcode
-objects in static libraries/archives (e.g., libc.a) are also handled
+objects in static libraries/archives (e.g. libc.a) are also handled
 transparently by temporarily extracting referenced objects for distribution;
 when thin archives are used, no extraction is required.
 
