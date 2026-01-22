@@ -30,9 +30,6 @@ clang-tidy
 | Julian Schmidt
 | git.julian.schmidt@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
 
-| Piotr Zegar
-| me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)
-
 | Victor Baranov
 | bar.victor.2002@gmail.com (email), vbvictor (GitHub), vbvictor (Discourse), vbvictor  (Discord)
 
@@ -81,3 +78,4 @@ Inactive component maintainers
 | Julie Hockett (juliehockett@google.com) -- clang-doc
 | Sam McCall (sammccall@google.com (email), sam-mccall (GitHub, Discourse, Discord)) -- clangd
 | Peter Chou (peterchou411@gmail.com (email), PeterChou1 (GitHub, Discourse), .peterchou (Discord)) -- clang-doc
+| Piotr Zegar (me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)) -- clang-tidy
