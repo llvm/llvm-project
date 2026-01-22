@@ -4886,24 +4886,42 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // likely with complex control flow). Note that the heuristics here may be
   // overly conservative and we err on the side of avoiding runtime unrolling
   // rather than unroll excessively. They are all subject to further refinement.
-  if (!L->isInnermost() || L->getNumBlocks() > 8)
+  if (!L->isInnermost() || L->getNumBlocks() > 8) {
+    UP.RuntimeSkipReason = !L->isInnermost()
+        ? "Apple: not an innermost loop"
+        : "Apple: loop has too many blocks (" +
+          std::to_string(L->getNumBlocks()) + " > 8)";
     return;
+  }
 
   // Loops with multiple exits are handled by common code.
-  if (!L->getExitBlock())
+  if (!L->getExitBlock()) {
+    UP.RuntimeSkipReason = "Apple: loop has multiple exits";
     return;
+  }
 
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
-       SE.getSmallConstantMaxTripCount(L) <= 32))
+       SE.getSmallConstantMaxTripCount(L) <= 32)) {
+    UP.RuntimeSkipReason = isa<SCEVConstant>(BTC)
+        ? "Apple: loop has constant trip count"
+        : isa<SCEVCouldNotCompute>(BTC)
+          ? "Apple: could not compute backedge-taken count"
+          : "Apple: loop has small max trip count (" +
+            std::to_string(SE.getSmallConstantMaxTripCount(L)) + " <= 32)";
     return;
+  }
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized")) {
+    UP.RuntimeSkipReason = "Apple: loop already vectorized";
     return;
+  }
 
-  if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
+  if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L)) {
+    UP.RuntimeSkipReason = "Apple: symbolic max backedge-taken count differs from backedge-taken count";
     return;
+  }
 
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
@@ -4916,8 +4934,11 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     // Estimate the size of the loop.
     unsigned Size;
     unsigned Width = 10;
-    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
+    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size)) {
+      UP.RuntimeSkipReason = "Apple: loop size exceeds budget (" +
+                             std::to_string(Width) + ")";
       return;
+    }
 
     SmallPtrSet<Value *, 8> LoadedValuesPlus;
     SmallVector<StoreInst *> Stores;
@@ -4960,8 +4981,12 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
     if (BestUC == 1 || none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
           return LoadedValuesPlus.contains(SI->getOperand(0));
-        }))
+        })) {
+      UP.RuntimeSkipReason = (BestUC == 1)
+          ? "Apple: no beneficial unroll count found (BestUC=1)"
+          : "Apple: no load/store dependencies found that would benefit from unrolling";
       return;
+    }
 
     UP.Runtime = true;
     UP.DefaultUnrollRuntimeCount = BestUC;
@@ -4975,8 +5000,10 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || !Term->isConditional() || Preds.size() == 1 ||
       !llvm::is_contained(Preds, Header) ||
-      none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
+      none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); })) {
+    UP.RuntimeSkipReason = "Apple: loop structure unsuitable for early-continue optimization";
     return;
+  }
 
   std::function<bool(Instruction *, unsigned)> DependsOnLoopLoad =
       [&](Instruction *I, unsigned Depth) -> bool {

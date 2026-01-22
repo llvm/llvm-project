@@ -1100,6 +1100,8 @@ bool llvm::computeUnrollCount(
         auto Remark = OptimizationRemarkMissed(DEBUG_TYPE, "RuntimeUnrollSkipped",
                                                L->getStartLoc(), L->getHeader())
                       << "runtime unrolling was skipped";
+        if (!UP.RuntimeSkipReason.empty())
+          Remark << ": " << UP.RuntimeSkipReason;
         return Remark;
       });
     }

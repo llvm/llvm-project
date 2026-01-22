@@ -638,6 +638,9 @@ public:
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
+    /// Optional reason why runtime unrolling was not enabled by the target.
+    /// Used to provide detailed diagnostics in optimization remarks.
+    std::string RuntimeSkipReason;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
