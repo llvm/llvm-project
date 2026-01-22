@@ -30,7 +30,7 @@ if.then:                                          ; preds = %entry
   store float %add8, ptr addrspace(1) %add.ptr, align 4
   %mul9 = mul nsw i32 %k, 3
   store i32 %mul9, ptr addrspace(1) %ret.coerce, align 4
-  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 6, i32 0)
+  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 7, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 4, i32 0)
   br label %if.end
@@ -113,7 +113,7 @@ if.then:                                          ; preds = %entry
   %add7 = fadd contract float %a5, %add6
   store float %add7, ptr addrspace(1) %add.ptr, align 4
   tail call void @llvm.amdgcn.sched.group.barrier(i32 16, i32 1, i32 0)
-  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 5, i32 0)
+  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 9, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 16, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
@@ -157,7 +157,7 @@ if.then:                                          ; preds = %entry
   %add6 = fadd contract float %a6, %a7
   %add7 = fadd contract float %a5, %add6
   store float %add7, ptr addrspace(1) %add.ptr, align 4
-  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 7, i32 0)
+  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 11, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 128, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 1, i32 0)
   br label %if.end
