@@ -146,9 +146,12 @@ llvm::Error PseudoConsole::DrainInitSequences() {
   auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
   if (!attributelist_or_err)
     return llvm::errorCodeToError(attributelist_or_err.getError());
+  ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
+  if (auto error = attributelist.SetupPseudoConsole(m_conpty_handle))
+    return error;
 
   PROCESS_INFORMATION pi = {};
-  wchar_t cmdline[] = L"echo foo";
+  wchar_t cmdline[] = L"cmd.exe /c 'echo foo && exit'";
 
   if (!CreateProcessW(/*lpApplicationName=*/NULL, cmdline,
                       /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
