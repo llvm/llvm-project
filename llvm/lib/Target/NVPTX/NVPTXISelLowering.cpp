@@ -7444,8 +7444,11 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
   // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
-  // I before its memory order was modified.
-  if (!(isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst)))
+  // `Inst` before its memory order was modified. We cannot enforce this with an
+  // assert, because AtomicExpandPass will have modified the memory order
+  // between the initial call to shouldInsertFencesForAtomic() and the call to
+  // this function.
+  if (!isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
   // Specialize for cmpxchg and atomicrmw
@@ -7465,8 +7468,9 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
   // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
-  // I before its memory order was modified.
-  // Specialize for cmpxchg and atomicrmw
+  // `Inst` before its memory order was modified. See `emitLeadingFence` for why
+  // this cannot be enforced with an assert.  Specialize for cmpxchg and
+  // atomicrmw
   auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
   auto *RI = dyn_cast<AtomicRMWInst>(Inst);
   if (!CI && !RI)
@@ -7475,13 +7479,10 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
 
-  bool IsEmulated;
-  if (CI)
-    IsEmulated =
-        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
-        STI.getMinCmpXchgSizeInBits();
-  else // RI
-    IsEmulated = shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+  bool IsEmulated =
+      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
