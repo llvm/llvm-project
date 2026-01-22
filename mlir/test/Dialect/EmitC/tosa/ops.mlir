@@ -20,7 +20,7 @@
 
 // RUN: mlir-opt -split-input-file  \
 // RUN: -transform-preload-library='transform-library-paths=%p/td.mlir' \
-// RUN: -transform-interpreter %s -test-transform-dialect-erase-schedule | mlir-opt -convert-to-emitc | FileCheck %s
+// RUN: -transform-interpreter %s -test-transform-dialect-erase-schedule | FileCheck %s
 
 //      CHECK: emitc.func private @add(%[[ARG0:.*]]: !emitc.array<2xf32>, %[[ARG1:.*]]: !emitc.array<2xf32>, %[[RES:.*]]: !emitc.array<2xf32>)
 //  CHECK-DAG:   %[[C0:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t

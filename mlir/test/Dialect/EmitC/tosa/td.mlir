@@ -31,11 +31,11 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.canonicalization
     } : !transform.any_op
 
-    // FIXME: This causes a crash, which implies a bug
-    // %func_h_3 = transform.structured.match ops{["func.func"]} in %module_final_no_linalg
-    //   : (!transform.any_op) -> !transform.any_op
-    // transform.apply_registered_pass "convert-to-emitc" to %func_h_3
-    //   : (!transform.any_op) -> !transform.op<"func.func">
+    %func_h_3 = transform.structured.match ops{["func.func"]} in %module_final_no_linalg
+      : (!transform.any_op) -> !transform.any_op
+    %module_h_2 = transform.get_parent_op %func_h_3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "convert-to-emitc" to %module_h_2
+      : (!transform.any_op) -> !transform.op<"builtin.module">
 
     transform.yield
   }
