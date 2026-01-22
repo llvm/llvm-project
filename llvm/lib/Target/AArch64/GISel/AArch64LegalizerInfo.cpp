@@ -1879,7 +1879,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_SAVGCEIL);
   case Intrinsic::aarch64_neon_sqshrn: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_VASHR,
                               {MRI.getType(MI.getOperand(2).getReg())},
