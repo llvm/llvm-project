@@ -583,19 +583,14 @@ TEST(RangeSelectorTest, NameOpDeclInMacroArg) {
   EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("x"));
 }
 
-TEST(RangeSelectorTest, NameOpDeclInMacroBodyError) {
+TEST(RangeSelectorTest, NameSpelledInMacro) {
   StringRef Code = R"cc(
-  #define MACRO int x;
-  MACRO
+  #define NAME foo;
+  int NAME;
   )cc";
   const char *ID = "id";
   TestMatch Match = matchCode(Code, varDecl().bind(ID));
-  EXPECT_THAT_EXPECTED(
-      name(ID)(Match.Result),
-      Failed<StringError>(testing::Property(
-          &StringError::getMessage,
-          AllOf(HasSubstr("range selected by name(node id="),
-                HasSubstr("' is different from decl name 'x'")))));
+  EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("foo"));
 }
 
 TEST(RangeSelectorTest, CallArgsOp) {
@@ -922,6 +917,41 @@ TEST(RangeSelectorTest, ExpansionOpPartial) {
   TestMatch Match = matchCode(Code, returnStmt().bind(Ret));
   EXPECT_THAT_EXPECTED(select(expansion(node(Ret)), Match),
                        HasValue("BADDECL(x * x)"));
+}
+
+TEST(RangeSelectorTest, SpelledFullyInMacro) {
+  StringRef Code = R"cc(
+    #define MACRO int i;
+    MACRO
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(select(spelled(node(ID)), Match), HasValue("int i"));
+}
+
+TEST(RangeSelectorTest, SpelledWithArgumentInMacro) {
+  StringRef Code = R"cc(
+    #define MACRO(T) void foo(T t);
+    MACRO(int)
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, functionDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(select(spelled(node(ID)), Match),
+                       HasValue("void foo(T t)"));
+}
+
+TEST(RangeSelectorTest, SpelledPartiallyInMacro) {
+  StringRef Code = R"cc(
+    #define MACRO(T) foo(T t); int i;
+    void MACRO(int);
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, functionDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(
+      select(spelled(node(ID)), Match),
+      Failed<StringError>(testing::Property(
+          &StringError::getMessage,
+          HasSubstr("spelled: range crosses file/macro boundaries"))));
 }
 
 TEST(RangeSelectorTest, IfBoundOpBound) {

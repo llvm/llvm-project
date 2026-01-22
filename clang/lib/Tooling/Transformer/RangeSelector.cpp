@@ -257,6 +257,8 @@ RangeSelector transformer::name(std::string ID) {
       if (!D->getDeclName().isIdentifier())
         return missingPropertyError(ID, "name", "identifier");
       SourceLocation L = D->getLocation();
+      // the name may be spelled in a macro
+      L = Result.SourceManager->getSpellingLoc(L);
       auto R = CharSourceRange::getTokenRange(L, L);
       // Verify that the range covers exactly the name.
       // FIXME: extend this code to support cases like `operator +` or
@@ -434,5 +436,26 @@ RangeSelector transformer::expansion(RangeSelector S) {
     if (!SRange)
       return SRange.takeError();
     return Result.SourceManager->getExpansionRange(*SRange);
+  };
+}
+
+RangeSelector transformer::spelled(RangeSelector S) {
+  return [S](const MatchResult &Result) -> Expected<CharSourceRange> {
+    Expected<CharSourceRange> SRange = S(Result);
+    if (!SRange)
+      return SRange.takeError();
+    if (!SRange->isTokenRange()) {
+      return invalidArgumentError("spelled: only supports token ranges");
+    }
+    const auto &SM = *Result.SourceManager;
+    const auto B = SRange->getBegin();
+    const auto E = SRange->getEnd();
+    if (SM.getFileID(B) != SM.getFileID(E)) {
+      return invalidArgumentError(
+          "spelled: range crosses file/macro boundaries");
+    }
+    return CharSourceRange(
+        SourceRange(SM.getSpellingLoc(B), SM.getSpellingLoc(E)),
+        SRange->isTokenRange());
   };
 }
