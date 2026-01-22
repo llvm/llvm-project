@@ -96,7 +96,7 @@ entry:
   ret void, !dbg !40
 }
 
-; CHECK: ![[#]] = !{i64 -3270123626113159616, i64 4294967295, !"_Z3bazv"}
+; CHECK: ![[#]] = !{i64 -3270123626113159616, i64 4294967295, i8 2, !"_Z3bazv"}
 
 attributes #0 = { mustprogress noinline nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #1 = { noinline noreturn nounwind uwtable "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

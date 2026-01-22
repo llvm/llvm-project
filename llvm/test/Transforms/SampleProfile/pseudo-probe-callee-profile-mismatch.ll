@@ -46,7 +46,7 @@ attributes #1 = { "profile-checksum-mismatch" "use-sample-profile" }
 !10 = !DIFile(filename: "test2.c", directory: "/home/test", checksumkind: CSK_MD5, checksum: "553093afc026f9c73562eb3b0c5b7532")
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 ; Make a checksum mismatch in the pseudo_probe_desc
-!12 = !{i64 -2624081020897602054, i64 123456, !"main"}
+!12 = !{i64 -2624081020897602054, i64 123456, i8 0, !"main"}
 !13 = !DILocation(line: 8, column: 10, scope: !14)
 !14 = !DILexicalBlockFile(scope: !15, file: !1, discriminator: 186646591)
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 7, column: 40)

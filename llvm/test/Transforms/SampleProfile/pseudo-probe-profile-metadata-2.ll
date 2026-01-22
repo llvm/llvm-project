@@ -46,7 +46,7 @@ attributes #0 = {"use-sample-profile"}
 
 !0 = !{i32 7, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
-!2 = !{i64 6699318081062747564, i64 563022570642068, !"foo", null}
+!2 = !{i64 6699318081062747564, i64 563022570642068, i8 0, !"foo", null}
 !4 = distinct !DISubprogram(name: "foo", scope: !5, file: !5, line: 9, type: !6, scopeLine: 9, spFlags: DISPFlagDefinition, unit: !9)
 !5 = !DIFile(filename: "test.cpp", directory: "test")
 !6 = !DISubroutineType(types: !7)

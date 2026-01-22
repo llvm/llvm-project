@@ -277,7 +277,7 @@ static StringRef getProbeFNameForGUID(const GUIDProbeFunctionMap &GUID2FuncMAP,
 
 void MCPseudoProbeFuncDesc::print(raw_ostream &OS) {
   OS << "GUID: " << FuncGUID << " Name: " << FuncName << "\n";
-  OS << "Hash: " << FuncHash << "\n";
+  OS << "Hash: " << FuncHash << " Attributes: " << Attributes << "\n";
 }
 
 void MCDecodedPseudoProbe::getInlineContext(
@@ -378,7 +378,7 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
   // The pseudo_probe_desc section has a format like:
   // .section .pseudo_probe_desc,"",@progbits
   // .quad -5182264717993193164   // GUID
-  // .quad 4294967295             // Hash
+  // .quad 4294967295             // Hash and attributes
   // .uleb 3                      // Name size
   // .ascii "foo"                 // Name
   // .quad -2624081020897602054
@@ -394,7 +394,7 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
     // GUID
     if (!readUnencodedNumber<uint64_t>())
       return false;
-    // Hash
+    // Hash and attributes
     if (!readUnencodedNumber<uint64_t>())
       return false;
 
@@ -421,8 +421,10 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
     StringRef Name = cantFail(errorOrToExpected(readString(NameSize)));
 
     // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
-    GUID2FuncDescMap.emplace_back(
-        GUID, Hash, IsMMapped ? Name : Name.copy(FuncNameAllocator));
+    // [60:63] bits in Hash are encoded with attributes.
+    GUID2FuncDescMap.emplace_back(GUID, Hash & ((1ULL << 60) - 1), Hash >> 60,
+                                  IsMMapped ? Name
+                                            : Name.copy(FuncNameAllocator));
   }
   assert(Data == End && "Have unprocessed data in pseudo_probe_desc section");
   assert(GUID2FuncDescMap.size() == FuncDescCount &&
