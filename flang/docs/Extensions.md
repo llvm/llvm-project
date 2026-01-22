@@ -478,6 +478,9 @@ end
   to be a pointer so long as it is `INTENT(IN)`.
   (This extension is not yet supported for procedure pointer component
   interfaces.)
+* A data object can be initialized multiple times by `DATA` statements
+  and default component initialization, but only when all initializations
+  are to the same value.  Distinct initializations remain errors.
 
 ### Extensions supported when enabled by options
 

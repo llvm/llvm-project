@@ -5196,6 +5196,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_uinc:
+  case AO__atomic_fetch_udec:
     return 3;
 
   case AO__scoped_atomic_load:
@@ -5218,8 +5220,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
   case AO__scoped_atomic_exchange_n:
-  case AO__scoped_atomic_uinc_wrap:
-  case AO__scoped_atomic_udec_wrap:
+  case AO__scoped_atomic_fetch_uinc:
+  case AO__scoped_atomic_fetch_udec:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:
