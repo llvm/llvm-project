@@ -3074,9 +3074,7 @@ class CompletionChunk:
     @CachedProperty
     def kind(self) -> CompletionChunkKind:
         if self.__kind_id == -1:
-            self.__kind_id = conf.lib.clang_getCompletionChunkKind(
-                self.cs, self.key
-            )
+            self.__kind_id = conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
         return CompletionChunkKind.from_id(self.__kind_id)
 
     @CachedProperty
