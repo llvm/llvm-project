@@ -1064,7 +1064,7 @@ _Complex _Float16 mulf16(_Complex _Float16 a, _Complex _Float16 b) {
 // PRMTD-NEXT:    ret <2 x half> [[TMP33]]
 //
 // X86WINPRMTD-LABEL: define dso_local i32 @f1(
-// X86WINPRMTD-SAME: i32 noundef [[A_COERCE:%.*]], ptr dead_on_return noundef [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: i32 noundef [[A_COERCE:%.*]], ptr noundef dead_on_return [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[RETVAL:%.*]] = alloca { half, half }, align 2
 // X86WINPRMTD-NEXT:    [[A:%.*]] = alloca { half, half }, align 2

@@ -3699,6 +3699,42 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin. These builtins can be used within constant
 expressions.
 
+``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+------------------------------------------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+    T __builtin_stdc_rotate_left(T value, count)
+    T __builtin_stdc_rotate_right(T value, count)
+
+where ``T`` is any unsigned integer type and ``count`` is any integer type.
+
+**Description**:
+
+These builtins rotate the bits in ``value`` by ``count`` positions. The
+``__builtin_stdc_rotate_left`` builtin rotates bits to the left, while
+``__builtin_stdc_rotate_right`` rotates bits to the right. The first
+argument (``value``) must be an unsigned integer type, including ``_BitInt`` types.
+The second argument (``count``) can be any integer type. The rotation count is
+normalized modulo the bit-width of the value being rotated, with negative
+counts converted to equivalent positive rotations (e.g., rotating left
+by ``-1`` is equivalent to rotating left by ``BitWidth-1``). These builtins can
+be used within constant expressions.
+
+**Example of use**:
+
+.. code-block:: c
+
+  unsigned char rotated_left = __builtin_stdc_rotate_left((unsigned char)0xB1, 3);
+  unsigned int rotated_right = __builtin_stdc_rotate_right(0x12345678U, 8);
+
+  unsigned char neg_rotate = __builtin_stdc_rotate_left((unsigned char)0xB1, -1);
+
+  unsigned _BitInt(20) value = 0xABCDE;
+  unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
+
 ``__builtin_unreachable``
 -------------------------
 

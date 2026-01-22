@@ -19,7 +19,7 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-# Add the utils subdirectory for the library
+# Add the lib subdirectory
 add_subdirectory(lib)
 
 # Main executable
@@ -30,5 +30,15 @@ add_llvm_tool(llvm-ir2vec
   intrinsics_gen
 )
 
-target_include_directories(llvm-ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 target_link_libraries(llvm-ir2vec PRIVATE LLVMEmbUtils)
+
+option(LLVM_IR2VEC_ENABLE_PYTHON_BINDINGS 
+  "Build Python bindings for llvm-ir2vec" 
+  OFF)
+
+set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS False CACHE INTERNAL "")
+
+if(LLVM_IR2VEC_ENABLE_PYTHON_BINDINGS)
+  add_subdirectory(Bindings)
+  set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS True CACHE INTERNAL "" FORCE)
+endif()

@@ -147,8 +147,8 @@ body: |
     ; CHECK-NEXT: %y:vr = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
     ; CHECK-NEXT: %add0:vr = PseudoVADD_VV_M1 $noreg, %x, %y, -1, 5 /* e32 */, 3 /* ta, ma */
-    ; CHECK-NEXT: %add1:vmnov0 = COPY %add:vmnov0
-    ; CHECK-NEXT: %merge:vrnov0 = PseudoVOR_VV_M1_MASK %add:vmnov0, %add1, %y, %mask, -1, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: %add1:vrnov0 = COPY %add:vrnov0
+    ; CHECK-NEXT: %merge:vrnov0 = PseudoVOR_VV_M1_MASK %add:vrnov0, %add1, %y, %mask, -1, 5 /* e32 */, 1 /* ta, mu */
     %x:vr = COPY $v8
     %y:vr = COPY $v9
     %mask:vmv0 = COPY $v0

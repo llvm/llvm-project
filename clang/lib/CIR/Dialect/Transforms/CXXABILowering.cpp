@@ -57,8 +57,8 @@ public:
   matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
-    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::ConstantOp,
-                  cir::CmpOp, cir::DerivedDataMemberOp, cir::FuncOp,
+    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::CastOp, cir::CmpOp,
+                  cir::ConstantOp, cir::DerivedDataMemberOp, cir::FuncOp,
                   cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
 
@@ -128,6 +128,44 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
 
   rewriter.replaceOp(op, loweredOp);
   return mlir::success();
+}
+
+mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
+    cir::CastOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type srcTy = op.getSrc().getType();
+  assert((mlir::isa<cir::DataMemberType, cir::MethodType>(srcTy)) &&
+         "input to bitcast in ABI lowering must be a data member or method");
+
+  switch (op.getKind()) {
+  case cir::CastKind::bitcast: {
+    mlir::Type destTy = getTypeConverter()->convertType(op.getType());
+    mlir::Value loweredResult;
+    if (mlir::isa<cir::DataMemberType>(srcTy))
+      loweredResult = lowerModule->getCXXABI().lowerDataMemberBitcast(
+          op, destTy, adaptor.getSrc(), rewriter);
+    else
+      loweredResult = lowerModule->getCXXABI().lowerMethodBitcast(
+          op, destTy, adaptor.getSrc(), rewriter);
+    rewriter.replaceOp(op, loweredResult);
+    return mlir::success();
+  }
+  case cir::CastKind::member_ptr_to_bool: {
+    mlir::Value loweredResult;
+    if (mlir::isa<cir::MethodType>(srcTy))
+      loweredResult = lowerModule->getCXXABI().lowerMethodToBoolCast(
+          op, adaptor.getSrc(), rewriter);
+    else
+      loweredResult = lowerModule->getCXXABI().lowerDataMemberToBoolCast(
+          op, adaptor.getSrc(), rewriter);
+    rewriter.replaceOp(op, loweredResult);
+    return mlir::success();
+  }
+  default:
+    break;
+  }
+
+  return mlir::failure();
 }
 
 mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
@@ -256,6 +294,15 @@ mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRDynamicCastOpABILowering::matchAndRewrite(
+    cir::DynamicCastOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerDynamicCast(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGetMethodOpABILowering::matchAndRewrite(
     cir::GetMethodOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -346,6 +393,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  target.addIllegalOp<cir::DynamicCastOp>();
 }
 
 //===----------------------------------------------------------------------===//

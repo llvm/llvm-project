@@ -73,6 +73,7 @@ private:
     AtExitsVector AtExits;
     std::vector<PerJITDylibState *> Deps;
     RecordSectionsTracker<void (*)()> RecordedInits;
+    RecordSectionsTracker<void (*)()> RecordedFinis;
 
     bool referenced() const {
       return LinkedAgainstRefCount != 0 || RefCount != 0;
@@ -100,6 +101,10 @@ public:
                       std::vector<ExecutorAddrRange> Inits);
   Error deregisterInits(ExecutorAddr HeaderAddr,
                         std::vector<ExecutorAddrRange> Inits);
+  Error registerFinis(ExecutorAddr HeaderAddr,
+                      std::vector<ExecutorAddrRange> Finis);
+  Error deregisterFinis(ExecutorAddr HeaderAddr,
+                        std::vector<ExecutorAddrRange> Finis);
   Error deregisterObjectSections(ELFNixPerObjectSectionsToRegister POSR);
 
   const char *dlerror();
@@ -129,6 +134,8 @@ private:
                                                 std::string_view Symbol);
 
   Error runInits(std::unique_lock<std::recursive_mutex> &JDStatesLock,
+                 PerJITDylibState &JDS);
+  Error runFinis(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                  PerJITDylibState &JDS);
   Expected<void *> dlopenImpl(std::string_view Path, int Mode);
   Error dlopenFull(std::unique_lock<std::recursive_mutex> &JDStatesLock,
@@ -301,6 +308,46 @@ Error ELFNixPlatformRuntimeState::deregisterInits(
   return Error::success();
 }
 
+Error ELFNixPlatformRuntimeState::registerFinis(
+    ExecutorAddr HeaderAddr, std::vector<ExecutorAddrRange> Finis) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
+  PerJITDylibState *JDS =
+      getJITDylibStateByHeaderAddr(HeaderAddr.toPtr<void *>());
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "Could not register fini sections for unrecognized header "
+              << HeaderAddr.toPtr<void *>();
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  for (auto &F : Finis) {
+    JDS->RecordedFinis.add(F.toSpan<void (*)()>());
+  }
+
+  return Error::success();
+}
+
+Error ELFNixPlatformRuntimeState::deregisterFinis(
+    ExecutorAddr HeaderAddr, std::vector<ExecutorAddrRange> Finis) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
+  PerJITDylibState *JDS =
+      getJITDylibStateByHeaderAddr(HeaderAddr.toPtr<void *>());
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "Could not deregister fini sections for unrecognized header "
+              << HeaderAddr.toPtr<void *>();
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  for (auto &F : Finis) {
+    JDS->RecordedFinis.removeIfPresent(F);
+  }
+
+  return Error::success();
+}
+
 const char *ELFNixPlatformRuntimeState::dlerror() { return DLFcnError.c_str(); }
 
 void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
@@ -445,6 +492,31 @@ Error ELFNixPlatformRuntimeState::runInits(
   for (auto Sec : InitSections)
     for (auto *Init : Sec)
       Init();
+
+  JDStatesLock.lock();
+
+  return Error::success();
+}
+
+Error ELFNixPlatformRuntimeState::runFinis(
+    std::unique_lock<std::recursive_mutex> &JDStatesLock,
+    PerJITDylibState &JDS) {
+  std::vector<span<void (*)()>> FiniSections;
+
+  // Collect all fini sections (reset to move all to "new" for processing)
+  JDS.RecordedFinis.reset();
+  FiniSections.reserve(JDS.RecordedFinis.numNewSections());
+
+  JDS.RecordedFinis.processNewSections(
+      [&](span<void (*)()> Finis) { FiniSections.push_back(Finis); });
+
+  JDStatesLock.unlock();
+
+  // Run in forward order - sections are already sorted correctly by the JIT:
+  // .dtors first (in order), then .fini_array (in descending priority order)
+  for (auto Sec : FiniSections)
+    for (auto *Fini : Sec)
+      Fini();
 
   JDStatesLock.lock();
 
@@ -602,8 +674,13 @@ Error ELFNixPlatformRuntimeState::dlcloseImpl(void *DSOHandle) {
 Error ELFNixPlatformRuntimeState::dlcloseInitialize(
     std::unique_lock<std::recursive_mutex> &JDStatesLock,
     PerJITDylibState &JDS) {
+  // Run fini sections BEFORE atexits (mirrors static dtor order)
+  if (auto Err = runFinis(JDStatesLock, JDS))
+    return Err;
+
   runAtExits(JDStatesLock, JDS);
   JDS.RecordedInits.reset();
+  JDS.RecordedFinis.reset();
   for (auto *DepJDS : JDS.Deps)
     if (!JDS.referenced())
       if (auto Err = dlcloseInitialize(JDStatesLock, *DepJDS))
@@ -722,6 +799,32 @@ __orc_rt_elfnix_deregister_init_sections(char *ArgData, size_t ArgSize) {
                 std::vector<ExecutorAddrRange> &Inits) {
                return ELFNixPlatformRuntimeState::get().deregisterInits(
                    HeaderAddr, std::move(Inits));
+             })
+          .release();
+}
+
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
+__orc_rt_elfnix_register_fini_sections(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSError(SPSExecutorAddr,
+                                  SPSSequence<SPSExecutorAddrRange>)>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr HeaderAddr,
+                std::vector<ExecutorAddrRange> &Finis) {
+               return ELFNixPlatformRuntimeState::get().registerFinis(
+                   HeaderAddr, std::move(Finis));
+             })
+          .release();
+}
+
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
+__orc_rt_elfnix_deregister_fini_sections(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSError(SPSExecutorAddr,
+                                  SPSSequence<SPSExecutorAddrRange>)>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr HeaderAddr,
+                std::vector<ExecutorAddrRange> &Finis) {
+               return ELFNixPlatformRuntimeState::get().deregisterFinis(
+                   HeaderAddr, std::move(Finis));
              })
           .release();
 }

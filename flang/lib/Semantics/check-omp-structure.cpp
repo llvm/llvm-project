@@ -1447,6 +1447,28 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
 
+  const Scope &containingScope = context_.FindScope(dirName.source);
+  const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
+
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
+    if (!u) {
+      continue;
+    }
+    assert(clause.Id() == llvm::omp::Clause::OMPC_uniform);
+
+    for (const parser::Name &name : u->v) {
+      const Symbol *sym{name.symbol};
+      if (!sym || !IsDummy(*sym) ||
+          &GetProgramUnitContaining(sym->owner()) != &progUnitScope) {
+        context_.Say(name.source,
+            "Variable '%s' in UNIFORM clause must be a dummy argument of the "
+            "enclosing procedure"_err_en_US,
+            name.ToString());
+      }
+    }
+  }
+
   const parser::OmpArgumentList &args{x.v.Arguments()};
   if (args.v.empty()) {
     return;
@@ -3638,7 +3660,7 @@ void OmpStructureChecker::CheckReductionObjects(
     // a language identifier.
     for (const parser::OmpObject &object : objects.v) {
       if (auto *elem{GetArrayElementFromObj(object)}) {
-        const parser::DataRef &base = elem->base;
+        const parser::DataRef &base = elem->Base();
         if (!std::holds_alternative<parser::Name>(base.u)) {
           auto source{GetObjectSource(object)};
           context_.Say(source ? *source : GetContext().clauseSource,
@@ -3917,21 +3939,6 @@ void OmpStructureChecker::CheckSharedBindingInOuterContext(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_ordered);
-  // the parameter of ordered clause is optional
-  if (const auto &expr{x.v}) {
-    RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_ordered, *expr);
-    // 2.8.3 Loop SIMD Construct Restriction
-    if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
-      context_.Say(GetContext().clauseSource,
-          "No ORDERED clause with a parameter can be specified "
-          "on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_shared);
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
@@ -3955,7 +3962,7 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
   bool dataRefIsTypeParamInquiry{false};
   if (const auto *structComp{
           parser::Unwrap<parser::StructureComponent>(dataRef)}) {
-    if (const auto *compSymbol{structComp->component.symbol}) {
+    if (const auto *compSymbol{structComp->Component().symbol}) {
       if (const auto *compSymbolMiscDetails{
               std::get_if<MiscDetails>(&compSymbol->details())}) {
         const auto detailsKind = compSymbolMiscDetails->kind();
@@ -4627,7 +4634,7 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       // Do-construct, collect the induction variable.
       if (auto &control{(*doc)->GetLoopControl()}) {
         if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
-          inductionVars.insert(b->name.thing.symbol);
+          inductionVars.insert(b->Name().thing.symbol);
         }
       }
     } else {
@@ -4851,7 +4858,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  unsigned version{context_.langOptions().OpenMPVersion};
 
   for (auto [_, clause] :
       FindClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
@@ -4864,11 +4870,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
         if (name->symbol) {
           useDeviceAddrNameList.push_back(*name);
         }
-      }
-      if (version < 60 && IsWholeAssumedSizeArray(ompObject)) {
-        auto maybeSource{GetObjectSource(ompObject)};
-        context_.Say(maybeSource.value_or(clause->source),
-            "Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause"_err_en_US);
       }
     }
     CheckMultipleOccurrence(
@@ -5039,10 +5040,10 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
       common::visitors{
           [&](const common::Indirection<parser::ArrayElement> &elem) {
             // Check if the base element is valid on Depend Clause
-            CheckDependList(elem.value().base);
+            CheckDependList(elem.value().Base());
           },
           [&](const common::Indirection<parser::StructureComponent> &comp) {
-            CheckDependList(comp.value().base);
+            CheckDependList(comp.value().Base());
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
             context_.Say(GetContext().clauseSource,
@@ -5066,7 +5067,7 @@ void OmpStructureChecker::CheckArraySection(
   // looking for strings.
   if (!IsAssumedSizeArray(*name.symbol)) {
     evaluate::ExpressionAnalyzer ea{context_};
-    if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
+    if (MaybeExpr expr = ea.Analyze(arrayElement.Base())) {
       if (expr->Rank() == 0) {
         // Not an array: rank 0
         if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
@@ -5085,8 +5086,8 @@ void OmpStructureChecker::CheckArraySection(
       }
     }
   }
-  if (!arrayElement.subscripts.empty()) {
-    for (const auto &subscript : arrayElement.subscripts) {
+  if (!arrayElement.Subscripts().empty()) {
+    for (const auto &subscript : arrayElement.Subscripts()) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
         if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
@@ -5379,7 +5380,7 @@ struct NameHelper {
     return Visit(std::get<parser::DataRef>(x.t));
   }
   static const parser::Name *Visit(const parser::ArrayElement &x) {
-    return Visit(x.base);
+    return Visit(x.Base());
   }
   static const parser::Name *Visit(const parser::Designator &x) {
     return common::visit([](auto &&s) { return Visit(s); }, x.u);
