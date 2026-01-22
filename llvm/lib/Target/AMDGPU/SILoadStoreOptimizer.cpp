@@ -284,7 +284,8 @@ private:
   void updateAsyncLDSAddress(MachineInstr &MI, int32_t OffsetDiff) const;
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
-  bool processBaseWithConstOffset64(const MachineOperand &Base,
+  bool processBaseWithConstOffset64(MachineInstr *AddDef,
+                                    const MachineOperand &Base,
                                     MemAddress &Addr) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
@@ -2261,16 +2262,12 @@ void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
 // Returns true if successful, populating Addr with base register info and
 // offset.
 bool SILoadStoreOptimizer::processBaseWithConstOffset64(
-    const MachineOperand &Base, MemAddress &Addr) const {
+    MachineInstr *AddDef, const MachineOperand &Base, MemAddress &Addr) const {
   if (!Base.isReg())
     return false;
 
-  MachineInstr *Def = MRI->getVRegDef(Base.getReg());
-  if (!Def || Def->getOpcode() != AMDGPU::V_ADD_U64_e64)
-    return false;
-
-  MachineOperand *Src0 = TII->getNamedOperand(*Def, AMDGPU::OpName::src0);
-  MachineOperand *Src1 = TII->getNamedOperand(*Def, AMDGPU::OpName::src1);
+  MachineOperand *Src0 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src1);
 
   const MachineOperand *BaseOp = nullptr;
 
@@ -2285,13 +2282,8 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
   }
 
   // Now extract the base register (which should be a 64-bit VGPR).
-  assert(BaseOp->isReg() && "Expected base operand to be a register");
-  MachineInstr *BaseDef = MRI->getUniqueVRegDef(BaseOp->getReg());
+  MachineInstr *BaseDef = MRI->getVRegDef(BaseOp->getReg());
   assert(BaseDef && "Expected definition for base register");
-  assert(TRI->getRegSizeInBits(BaseOp->getReg(), *MRI) == 64 &&
-         BaseOp->getSubReg() == 0 &&
-         "Expected 64-bit Base Register for V_ADD_U64_e64 pattern and no "
-         "subregisters");
   Addr.Base.LoReg = BaseOp->getReg();
   Addr.Base.UseV64Pattern = true;
   return true;
@@ -2322,7 +2314,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
 
   // Try V_ADD_U64_e64 pattern first (simpler, used on gfx1250+)
   if (Def->getOpcode() == AMDGPU::V_ADD_U64_e64) {
-    if (processBaseWithConstOffset64(Base, Addr))
+    if (processBaseWithConstOffset64(Def, Base, Addr))
       return;
   }
 
