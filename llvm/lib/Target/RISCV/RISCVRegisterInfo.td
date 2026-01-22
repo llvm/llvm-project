@@ -323,6 +323,7 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                               (sequence "X%u_Y", 18, 27),
                               (sequence "X%u_Y", 0, 4))> {
   let RegInfos = YLenRI;
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
 }
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
@@ -363,7 +364,9 @@ def GPRJALR : GPRRegisterClass<(sub GPR, (sequence "X%u", 0, 5))>;
 def GPRJALRNonX7 : GPRRegisterClass<(sub GPRJALR, X7)>;
 
 def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
-                                 (sequence "X%u", 8, 9))>;
+                                 (sequence "X%u", 8, 9))> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8, 8>";
+}
 
 // For indirect tail calls, we can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
@@ -511,13 +514,17 @@ class FPRRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
                               (sequence "F%u_" # regSuffix, 28, 31), // ft8-ft11
                               (sequence "F%u_" # regSuffix, 8, 9),   // fs0-fs1
                               (sequence "F%u_" # regSuffix, 18, 27)  // fs2-fs11
-)>;
+)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::F0_" # regSuffix # ", 32>";
+}
 
 class FPRCRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
     : RISCVRegisterClass<regTypes, align,
                          (add (sequence "F%u_" # regSuffix, 15, 10), // fa5-fa0
                               (sequence "F%u_" # regSuffix, 8, 9)    // ft0-f7
-)>;
+)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::F8_" # regSuffix # ", 8>";
+}
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
@@ -549,9 +556,13 @@ def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
                                                 (sequence "X%u_H", 28, 31),
                                                 (sequence "X%u_H", 8, 9),
                                                 (sequence "X%u_H", 18, 27),
-                                                (sequence "X%u_H", 0, 4))>;
+                                                (sequence "X%u_H", 0, 4))> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_H, 32, /*RVELimit=*/16>";
+}
 def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
-                                                 (sequence "X%u_H", 8, 9))>;
+                                                 (sequence "X%u_H", 8, 9))> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_H, 8>";
+}
 def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
 
 def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
@@ -559,9 +570,13 @@ def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
                                                 (sequence "X%u_W", 28, 31),
                                                 (sequence "X%u_W", 8, 9),
                                                 (sequence "X%u_W", 18, 27),
-                                                (sequence "X%u_W", 0, 4))>;
+                                                (sequence "X%u_W", 0, 4))> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_W, 32, /*RVELimit=*/16>";
+}
 def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
-                                                 (sequence "X%u_W", 8, 9))>;
+                                                 (sequence "X%u_W", 8, 9))> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_W, 8>";
+}
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
 
 //===----------------------------------------------------------------------===//
@@ -860,20 +875,26 @@ def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 // Fractional LMUL register classes for inline assembly.
-def VRMF8 : VReg<VMF8VTs, (add VR), 1>;
-def VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1>;
+// The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
+// regclass enum. Tablegen uses the name to break ties. This is important
+// because only VR/VRNoV0 have the full type lists.
+def ZZZ_VRMF8 : VReg<VMF8VTs, (add VR), 1>;
+def ZZZ_VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1>;
 
-def VRMF4 : VReg<VMF4VTs, (add VR), 1>;
-def VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF4 : VReg<VMF4VTs, (add VR), 1>;
+def ZZZ_VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
 
-def VRMF2 : VReg<VMF2VTs, (add VR), 1>;
-def VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF2 : VReg<VMF2VTs, (add VR), 1>;
+def ZZZ_VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
 
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 // The register class is added for inline assembly for vector mask types.
-def VM : VReg<VMaskVTs, (add VR), 1>;
-def VMNoV0 : VReg<VMaskVTs, (add VRNoV0), 1>;
+// The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
+// regclass enum. Tablegen uses the name to break ties. This is important
+// because only VR/VRNoV0 have the full type lists.
+def ZZZ_VM : VReg<VMaskVTs, (add VR), 1>;
+def ZZZ_VMNoV0 : VReg<VMaskVTs, (add VRNoV0), 1>;
 
 defvar VTupM1N2VTs = [riscv_nxv8i8x2, riscv_nxv4i8x2, riscv_nxv2i8x2, riscv_nxv1i8x2];
 defvar VTupM1N3VTs = [riscv_nxv8i8x3, riscv_nxv4i8x3, riscv_nxv2i8x3, riscv_nxv1i8x3];
@@ -953,14 +974,16 @@ let RegInfos = XLenRI in {
 // The original scalar floating point register occupies the 32 LSB of the
 // vector.
 
-let SubRegIndices = [sub_32] in
-  class RISCVReg256<RISCVReg32 subreg> :
-    RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
-                        subreg.AltNames>;
+def sub_128 : SubRegIndex<128>;
+class RISCVReg256<RISCVReg128 subreg> :
+  RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                      subreg.AltNames> {
+  let SubRegIndices = [sub_128];
+}
 
 let RegAltNameIndices = [ABIRegAltName] in
   foreach Index = 0-31 in
-    def F#Index#_Q2 : RISCVReg256<!cast<RISCVReg32>("F"#Index#"_F")>,
+    def F#Index#_Q2 : RISCVReg256<!cast<RISCVReg128>("F"#Index#"_Q")>,
                                   DwarfRegNum<[!add(Index, 3088)]>;
 
 // The order of registers represents the preferred allocation sequence,
@@ -974,6 +997,8 @@ foreach Index = 0-7 in
 
 // Allowing i8 in addition to v8i1 simplifies the handling of builtins
 def MR : RISCVRegisterClass<[i8, v8i1], 8,
-                            (add (sequence "M%u", 1, 7), M0)>;
+                            (add (sequence "M%u", 1, 7), M0)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::M0, 8>";
+}
 
 def MR0 : RISCVRegisterClass<[i8, v8i1], 8, (add M0)>;

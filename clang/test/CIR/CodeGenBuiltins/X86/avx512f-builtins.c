@@ -1110,3 +1110,56 @@ __m256i test_mm512_maskz_cvtepi64_epi32(__mmask8 __M, __m512i __A) {
   // OGCG: bitcast <8 x i32> %[[SEL]] to <4 x i64>
   return _mm512_maskz_cvtepi64_epi32(__M, __A);
 }
+
+__m512 test_mm512_shuffle_f32x4(__m512 a, __m512 b) {
+  // CIR-LABEL: test_mm512_shuffle_f32x4
+  // CIR:   cir.vec.shuffle(%{{.+}}, %{{.+}} : !cir.vector<16 x !cir.float>)
+  // CIR-SAME: [#cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<16> : !s32i, #cir.int<17> : !s32i, #cir.int<18> : !s32i, #cir.int<19> : !s32i, #cir.int<20> : !s32i, #cir.int<21> : !s32i, #cir.int<22> : !s32i, #cir.int<23> : !s32i]
+
+  // LLVM-LABEL: test_mm512_shuffle_f32x4
+  // LLVM: shufflevector <16 x float> %{{.+}}, <16 x float> %{{.+}}, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+
+  // OGCG-LABEL: test_mm512_shuffle_f32x4
+  // OGCG: shufflevector <16 x float> %{{.+}}, <16 x float> %{{.+}}, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  return _mm512_shuffle_f32x4(a, b, 0x4E); // 2, 3, 0, 1
+}
+
+__m512i test_mm512_shuffle_i32x4(__m512i a, __m512i b) {
+  // CIR-LABEL: test_mm512_shuffle_i32x4
+  // CIR:   cir.vec.shuffle(%{{.+}}, %{{.+}} : !cir.vector<16 x !s32i>)
+  // CIR-SAME: [#cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<16> : !s32i, #cir.int<17> : !s32i, #cir.int<18> : !s32i, #cir.int<19> : !s32i, #cir.int<20> : !s32i, #cir.int<21> : !s32i, #cir.int<22> : !s32i, #cir.int<23> : !s32i]
+
+  // LLVM-LABEL: test_mm512_shuffle_i32x4
+  // LLVM: shufflevector <16 x i32> %{{.+}}, <16 x i32> %{{.+}}, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+
+  // OGCG-LABEL: test_mm512_shuffle_i32x4
+  // OGCG: shufflevector <16 x i32> %{{.+}}, <16 x i32> %{{.+}}, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  return _mm512_shuffle_i32x4(a, b, 0x4E);
+}
+
+__m512d test_mm512_shuffle_f64x2(__m512d a, __m512d b) {
+  // CIR-LABEL: test_mm512_shuffle_f64x2
+  // CIR:   cir.vec.shuffle(%{{.+}}, %{{.+}} : !cir.vector<8 x !cir.double>)
+  // CIR-SAME: [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i]
+
+  // LLVM-LABEL: test_mm512_shuffle_f64x2
+  // LLVM: shufflevector <8 x double> %{{.+}}, <8 x double> %{{.+}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: test_mm512_shuffle_f64x2
+  // OGCG: shufflevector <8 x double> %{{.+}}, <8 x double> %{{.+}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+  return _mm512_shuffle_f64x2(a, b, 0x4E);
+}
+
+__m512i test_mm512_shuffle_i64x2(__m512i a, __m512i b) {
+  // CIR-LABEL: test_mm512_shuffle_i64x2
+  // CIR:   cir.vec.shuffle(%{{.+}}, %{{.+}} : !cir.vector<8 x !s64i>)
+  // CIR-SAME: [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i]
+
+  // LLVM-LABEL: test_mm512_shuffle_i64x2
+  // LLVM: shufflevector <8 x i64> %{{.+}}, <8 x i64> %{{.+}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: test_mm512_shuffle_i64x2
+  // OGCG: shufflevector <8 x i64> %{{.+}}, <8 x i64> %{{.+}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+  return _mm512_shuffle_i64x2(a, b, 0x4E);
+}
+
