@@ -14,7 +14,7 @@
 #include "mlir/Bindings/Python/IRCore.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // Expected after binding headers.
+#include "mlir-c/Bindings/Python/Interop.h" // Expected after nanobind headers.
 // clang-format on
 #include "mlir/Config/mlir-config.h"
 #include "nanobind/nanobind.h"

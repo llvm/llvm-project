@@ -56,8 +56,7 @@ NB_MODULE(_mlir, m) {
   populatePassManagerSubmodule(passManagerModule);
   nanobind::register_exception_translator(
       [](const std::exception_ptr &p, void *payload) {
-        // We can't define exceptions with custom fields through the binding
-        // library, so
+        // We can't define exceptions with custom fields through nanobind, so
         // instead the exception class is defined in python and imported here.
         try {
           if (p)

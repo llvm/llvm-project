@@ -25,7 +25,7 @@
 // definitions for what we need below, however, importing Python.h directly on
 // Windows results in the enforcement of either pythonX.lib or pythonX_d.lib
 // depending on the build flavor. Instead, we rely on the fact that this file
-// (Interop.h) is always included AFTER the binding headers, which have already
+// (Interop.h) is always included AFTER the nanobind headers, which have already
 // imported Python.h and applied any needed platform workarounds.
 #if !defined(_MSC_VER)
 #include <Python.h>

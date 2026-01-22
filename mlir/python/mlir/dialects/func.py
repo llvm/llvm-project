@@ -282,7 +282,7 @@ class CallOp(CallOp):
         """
 
         # TODO: consider supporting constructor "overloads", e.g., through a custom
-        # metaclass provided by the bindings.
+        # metaclass provided by the nanobind bindings.
         if isinstance(calleeOrResults, FuncOp):
             if not isinstance(argumentsOrCallee, list):
                 raise ValueError(

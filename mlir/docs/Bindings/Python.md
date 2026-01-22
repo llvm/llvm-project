@@ -140,8 +140,7 @@ concerns, etc that affect such things. Organizing the code into composable
 modules (versus a monolithic `cpp` file) allows the flexibility to address many
 of these as needed over time. Also, compilation time for all of the template
 meta-programming in the binding layer scales with the number of things you
-define in a
-translation unit. Breaking into multiple translation units can significantly aid
+define in a translation unit. Breaking into multiple translation units can significantly aid
 compile times for APIs with a large surface area.
 
 ### Submodules
