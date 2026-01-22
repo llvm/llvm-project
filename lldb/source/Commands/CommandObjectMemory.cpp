@@ -1695,9 +1695,28 @@ protected:
     if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("shadow stack: yes");
     if (std::optional<unsigned> protection_key =
-            range_info.GetProtectionKey())
-      result.AppendMessageWithFormat("protection key: %" PRIu32 "\n",
+            range_info.GetProtectionKey()) {
+      result.AppendMessageWithFormat("protection key: %" PRIu32,
                                      *protection_key);
+
+      if (const lldb::ABISP &abi = target.GetProcessSP()->GetABI()) {
+        uint32_t base_permissions = range_info.GetLLDBPermissions();
+        if (auto permissions =
+                abi->GetMemoryPermissions(*m_exe_ctx.GetRegisterContext(),
+                                          *protection_key, base_permissions)) {
+          result.AppendMessageWithFormatv(
+              " ({0}{1}{2}, effective: {3}{4}{5})",
+              permissions->overlay & lldb::ePermissionsReadable ? 'r' : '-',
+              permissions->overlay & lldb::ePermissionsWritable ? 'w' : '-',
+              permissions->overlay & lldb::ePermissionsExecutable ? 'x' : '-',
+              permissions->effective & lldb::ePermissionsReadable ? 'r' : '-',
+              permissions->effective & lldb::ePermissionsWritable ? 'w' : '-',
+              permissions->effective & lldb::ePermissionsExecutable ? 'x'
+                                                                    : '-');
+        }
+      } else
+        result.AppendMessage("");
+    }
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();

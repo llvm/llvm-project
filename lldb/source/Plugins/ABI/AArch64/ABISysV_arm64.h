@@ -81,6 +81,11 @@ public:
   lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
   lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
 
+  virtual std::optional<MemoryPermissions>
+  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+                       unsigned protection_key,
+                       uint32_t original_permissions) override;
+
 protected:
   lldb::ValueObjectSP
   GetReturnValueObjectImpl(lldb_private::Thread &thread,
