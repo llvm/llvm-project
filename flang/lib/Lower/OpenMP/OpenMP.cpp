@@ -3849,6 +3849,8 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   cp.processLinear(clauseOps);
   cp.processSimdlen(clauseOps);
   cp.processUniform(clauseOps);
+  cp.processInbranch(clauseOps);
+  cp.processNotinbranch(clauseOps);
 
   mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
 }

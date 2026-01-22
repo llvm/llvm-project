@@ -102,11 +102,35 @@ end subroutine declare_simd_uniform
 ! CHECK: omp.declare_simd uniform(%[[XDECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, %[[YDECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
 ! CHECK: return
 
+subroutine declare_simd_inbranch()
+#ifdef OMP_60
+!$omp declare_simd inbranch
+#else
+!$omp declare simd inbranch
+#endif
+end subroutine declare_simd_inbranch
+
+! CHECK-LABEL: func.func @_QPdeclare_simd_inbranch()
+! CHECK: omp.declare_simd inbranch{{$}}
+! CHECK: return
+
+subroutine declare_simd_notinbranch()
+#ifdef OMP_60
+!$omp declare_simd notinbranch
+#else
+!$omp declare simd notinbranch
+#endif
+end subroutine declare_simd_notinbranch
+
+! CHECK-LABEL: func.func @_QPdeclare_simd_notinbranch()
+! CHECK: omp.declare_simd notinbranch{{$}}
+! CHECK: return
+
 subroutine declare_simd_combined(x, y, n, i)
 #ifdef OMP_60
-!$omp declare_simd aligned(x, y : 64) linear(i) simdlen(8) uniform(x, y)
+!$omp declare_simd inbranch aligned(x, y : 64) linear(i) simdlen(8) uniform(x, y)
 #else
-!$omp declare simd aligned(x, y : 64) linear(i) simdlen(8) uniform(x, y)
+!$omp declare simd inbranch aligned(x, y : 64) linear(i) simdlen(8) uniform(x, y)
 #endif
   real(8), pointer, intent(inout) :: x(:)
   real(8), pointer, intent(in)    :: y(:)
@@ -136,5 +160,6 @@ end subroutine declare_simd_combined
 ! CHECK-SAME: simdlen(8)
 ! CHECK-SAME: uniform(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>,
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+! CHECK-SAME: inbranch
 ! CHECK-SAME: {linear_var_types = [i32]}{{$}}
 ! CHECK: return

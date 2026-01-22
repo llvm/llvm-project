@@ -3425,6 +3425,41 @@ func.func @omp_declare_simd_uniform(%a: f64, %b: f64,
   return
 }
 
+// CHECK-LABEL: func.func @omp_declare_simd_inbranch
+func.func @omp_declare_simd_inbranch() -> () {
+  // CHECK:      omp.declare_simd inbranch
+  omp.declare_simd inbranch
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_notinbranch
+func.func @omp_declare_simd_notinbranch() -> () {
+  // CHECK:      omp.declare_simd notinbranch
+  omp.declare_simd notinbranch
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_multiple_clauses
+func.func @omp_declare_simd_multiple_clauses(%a: f64, %b: f64,
+                                             %p0: memref<i32>, %p1: memref<i32>,
+                                             %iv: i32, %step: i32) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: simdlen(8)
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
+  // CHECK-SAME: notinbranch
+  omp.declare_simd simdlen(8)
+    aligned(%p0 : memref<i32> -> 32 : i64,
+            %p1 : memref<i32> -> 128 : i64)
+    uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+    notinbranch
+  return
+}
+
 // CHECK-LABEL: func.func @omp_declare_simd_all_clauses
 func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
                                         %p0: memref<i32>, %p1: memref<i32>,
@@ -3438,10 +3473,12 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   // CHECK-SAME: uniform(
   // CHECK-SAME: %{{.*}} : memref<i32>,
   // CHECK-SAME: %{{.*}} : memref<i32>)
+  // CHECK-SAME: inbranch
   omp.declare_simd simdlen(8)
     aligned(%p0 : memref<i32> -> 32 : i64,
             %p1 : memref<i32> -> 128 : i64)
     linear(%iv = %step : i32)
     uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+    inbranch
   return
 }

@@ -3143,3 +3143,10 @@ func.func @invalid_workdistribute() -> () {
 // -----
 // expected-error @+1 {{'omp.declare_simd' op must be nested inside a function}}
 omp.declare_simd
+
+// -----
+func.func @omp_declare_simd_branch() -> () {
+  // expected-error @+1 {{'omp.declare_simd' op cannot have both 'inbranch' and 'notinbranch'}}
+  omp.declare_simd inbranch notinbranch
+  return
+}

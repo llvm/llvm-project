@@ -1726,6 +1726,26 @@ bool ClauseProcessor::processUniform(
       });
 }
 
+bool ClauseProcessor::processInbranch(
+    mlir::omp::InbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Inbranch>()) {
+    result.inbranch =
+        mlir::UnitAttr::get(converter.getFirOpBuilder().getContext());
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNotinbranch(
+    mlir::omp::NotinbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Notinbranch>()) {
+    result.notinbranch =
+        mlir::UnitAttr::get(converter.getFirOpBuilder().getContext());
+    return true;
+  }
+  return false;
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran
