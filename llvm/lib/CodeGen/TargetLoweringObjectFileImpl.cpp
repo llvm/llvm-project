@@ -2795,6 +2795,10 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
+  // Initialize the label for the ADA section.
+  MCSymbolGOFF *ADASym = static_cast<MCSymbolGOFF *>(
+      getContext().getOrCreateSymbol(ADAPR->getName()));
+  ADAPR->setBeginSymbol(ADASym);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
@@ -2859,10 +2863,9 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
   return TextSection;
 }
 
-static MCSectionGOFF *getStaticStructorSectionGOFF(MCContext &Ctx,
-                                                   const MCSection *TextSection,
-                                                   unsigned Priority) {
-  // xl compilers on z/OS support priorities from min-int to max-int, with
+MCSection *TargetLoweringObjectFileGOFF::getStaticXtorSection(
+    unsigned Priority) const {
+  // XL C/C++ compilers on z/OS support priorities from min-int to max-int, with
   // sinit as source priority 0. For clang, sinit has source priority 65535.
   // For GOFF, the priority sortkey field is an unsigned value. So, we
   // add min-int to get sorting to work properly but also subtract the
@@ -2875,6 +2878,7 @@ static MCSectionGOFF *getStaticStructorSectionGOFF(MCContext &Ctx,
   if (Priority != ClangDefaultSinitPriority)
     Name = llvm::Twine(Name).concat(".").concat(llvm::utostr(Priority)).str();
 
+  MCContext &Ctx = getContext();
   MCSectionGOFF *SInit = Ctx.getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_SINIT,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
@@ -2889,9 +2893,4 @@ static MCSectionGOFF *getStaticStructorSectionGOFF(MCContext &Ctx,
                    GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
-}
-
-MCSection *TargetLoweringObjectFileGOFF::getStaticXtorSection(
-    unsigned Priority, const MCSymbol *KeySym) const {
-  return getStaticStructorSectionGOFF(getContext(), TextSection, Priority);
 }

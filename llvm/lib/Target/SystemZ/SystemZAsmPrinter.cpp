@@ -1029,11 +1029,16 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
       static_cast<const TargetLoweringObjectFileGOFF &>(getObjFileLowering());
   for (Structor &S : Structors) {
     MCSectionGOFF *Section = static_cast<MCSectionGOFF *>(
-        Obj.getStaticXtorSection(S.Priority, nullptr));
+        Obj.getStaticXtorSection(S.Priority));
     OutStreamer->switchSection(Section);
     if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())
       emitAlignment(Align);
 
+    // The priority is provided as an input to getStaticXtorSection(), and is
+    // recalculated within that function as `Prio` going to going into the
+    // PR section.
+    // This priority retrieved via the `SortKey` below is the recalculated
+    // Priority.
     uint32_t XtorPriority = Section->getPRAttributes().SortKey;
 
     const GlobalValue *GV = dyn_cast<GlobalValue>(S.Func->stripPointerCasts());
@@ -1047,9 +1052,13 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
     auto &Ctx = OutStreamer->getContext();
     const MCExpr *ADAFuncRefExpr;
     unsigned SlotKind = SystemZII::MO_ADA_DIRECT_FUNC_DESC;
-    const MCSymbol *ADASym = Section->getBeginSymbol();
+
+    MCSectionGOFF *ADASection =
+        static_cast<MCSectionGOFF *>(Obj.getADASection());
+    assert(ADASection && "ADA section must exist for GOFF targets!");
+    const MCSymbol *ADASym = ADASection->getBeginSymbol();
     if (!ADASym)
-      ADASym = Ctx.getOrCreateSymbol(Section->getName());
+      ADASym = Ctx.getOrCreateSymbol(ADASection->getName());
 
     ADAFuncRefExpr = MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),

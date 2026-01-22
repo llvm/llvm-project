@@ -8,12 +8,12 @@
 ; CHECK: 	.xtor.22
 ; CHECK: 	DC XL4'7FFF0017'
 ; Check direct relocation and low bit on ctor.
-; CHECK:        DC AD(QD(.xtor.22)+XL8'0')
+; CHECK:        DC AD(QD(stdin#S)+XL8'0')
 ; CHECK: 	DC XL8'0000000000000000'
 ; CHECK:        DC XL4'7FFF0017'
 ; CHECK:        DC XL8'0000000000000000'
 ; Check direct relocation and low bit on dtor.
-; CHECK:        DC AD(QD(.xtor.22)+XL8'16')
+; CHECK:        DC AD(QD(stdin#S)+XL8'16')
 
 ; Check for function descriptors in ADA section:
 ; CHECK:        * Offset 0 function descriptor of cfuncctor
