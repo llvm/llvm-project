@@ -1498,6 +1498,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    setOperationAction(ISD::CLMUL, MVT::v8i8, Legal);
     setOperationAction(ISD::CLMUL, MVT::v16i8, Legal);
 
   } else /* !isNeonAvailable */ {
