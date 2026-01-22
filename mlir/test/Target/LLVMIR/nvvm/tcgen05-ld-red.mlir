@@ -46,33 +46,33 @@ llvm.func @nvvm_tcgen05_ld_32x32b_min(%addr : !llvm.ptr<6>) {
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data, %redval = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<2 x i32>, i32
+  %data, %redval = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<2 x i32>, i32
 
-  %data1, %redval1 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<4 x i32>, i32
+  %data1, %redval1 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<4 x i32>, i32
 
-  %data2, %redval2 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<8 x i32>, i32
+  %data2, %redval2 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<8 x i32>, i32
 
-  %data3, %redval3 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<16 x i32>, i32
+  %data3, %redval3 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<16 x i32>, i32
 
-  %data4, %redval4 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<32 x i32>, i32
+  %data4, %redval4 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<32 x i32>, i32
 
-  %data5, %redval5 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<64 x i32>, i32
+  %data5, %redval5 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<64 x i32>, i32
 
-  %data6, %redval6 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<128 x i32>, i32
+  %data6, %redval6 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<128 x i32>, i32
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -122,33 +122,33 @@ llvm.func @nvvm_tcgen05_ld_32x32b_max(%addr : !llvm.ptr<6>) {
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data, %redval = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<2 x i32>, i32
+  %data, %redval = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<2 x i32>, i32
 
-  %data1, %redval1 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<4 x i32>, i32
+  %data1, %redval1 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<4 x i32>, i32
 
-  %data2, %redval2 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<8 x i32>, i32
+  %data2, %redval2 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<8 x i32>, i32
 
-  %data3, %redval3 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<16 x i32>, i32
+  %data3, %redval3 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<16 x i32>, i32
 
-  %data4, %redval4 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<32 x i32>, i32
+  %data4, %redval4 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<32 x i32>, i32
 
-  %data5, %redval5 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<64 x i32>, i32
+  %data5, %redval5 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<64 x i32>, i32
 
-  %data6, %redval6 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<128 x i32>, i32
+  %data6, %redval6 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<128 x i32>, i32
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -177,19 +177,19 @@ llvm.func @nvvm_tcgen05_ld_32x32b_min_abs_nan(%addr : !llvm.ptr<6>) {
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<min>, abs, nan} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red min %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -218,19 +218,19 @@ llvm.func @nvvm_tcgen05_ld_32x32b_max_abs_nan(%addr : !llvm.ptr<6>) {
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK: %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, op = #nvvm.tcgen05_ld_red_op<max>, abs, nan} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red max %addr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>, abs, nan} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -282,33 +282,33 @@ llvm.func @nvvm_tcgen05_ld_16x32bx2_min(%addr : !llvm.ptr<6>) {
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data, %redval = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<2 x i32>, i32
+  %data, %redval = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<2 x i32>, i32
 
-  %data1, %redval1 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<4 x i32>, i32
+  %data1, %redval1 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<4 x i32>, i32
 
-  %data2, %redval2 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<8 x i32>, i32
+  %data2, %redval2 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<8 x i32>, i32
 
-  %data3, %redval3 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<16 x i32>, i32
+  %data3, %redval3 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<16 x i32>, i32
 
-  %data4, %redval4 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<32 x i32>, i32
+  %data4, %redval4 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<32 x i32>, i32
 
-  %data5, %redval5 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<64 x i32>, i32
+  %data5, %redval5 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<64 x i32>, i32
 
-  %data6, %redval6 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<128 x i32>, i32
+  %data6, %redval6 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<128 x i32>, i32
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -360,33 +360,33 @@ llvm.func @nvvm_tcgen05_ld_16x32bx2_max(%addr : !llvm.ptr<6>) {
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data, %redval = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<2 x i32>, i32
+  %data, %redval = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<2 x i32>, i32
 
-  %data1, %redval1 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<4 x i32>, i32
+  %data1, %redval1 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<4 x i32>, i32
 
-  %data2, %redval2 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<8 x i32>, i32
+  %data2, %redval2 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<8 x i32>, i32
 
-  %data3, %redval3 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<16 x i32>, i32
+  %data3, %redval3 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<16 x i32>, i32
 
-  %data4, %redval4 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<32 x i32>, i32
+  %data4, %redval4 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<32 x i32>, i32
 
-  %data5, %redval5 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<64 x i32>, i32
+  %data5, %redval5 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<64 x i32>, i32
 
-  %data6, %redval6 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<128 x i32>, i32
+  %data6, %redval6 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<128 x i32>, i32
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -416,19 +416,19 @@ llvm.func @nvvm_tcgen05_ld_16x32bx2_min_nan_abs(%addr : !llvm.ptr<6>) {
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<min>, nan, abs} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red min %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<128 x f32>, f32
   llvm.return
 }
 
@@ -458,18 +458,18 @@ llvm.func @nvvm_tcgen05_ld_16x32bx2_max_nan_abs(%addr : !llvm.ptr<6>) {
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 0
   // CHECK %{{.*}} = extractvalue { <128 x float>, float } %{{.*}}, 1
 
-  %data7, %redval7 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<2 x f32>, f32
+  %data7, %redval7 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<2 x f32>, f32
 
-  %data8, %redval8 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<4 x f32>, f32
+  %data8, %redval8 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<4 x f32>, f32
 
-  %data9, %redval9 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<8 x f32>, f32
+  %data9, %redval9 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<8 x f32>, f32
 
-  %data10, %redval10 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<16 x f32>, f32
+  %data10, %redval10 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<16 x f32>, f32
 
-  %data11, %redval11 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<32 x f32>, f32
+  %data11, %redval11 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<32 x f32>, f32
 
-  %data12, %redval12 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<64 x f32>, f32
+  %data12, %redval12 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<64 x f32>, f32
 
-  %data13, %redval13 = nvvm.tcgen05.ld.red %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, op = #nvvm.tcgen05_ld_red_op<max>, nan, abs} : vector<128 x f32>, f32
+  %data13, %redval13 = nvvm.tcgen05.ld.red max %addr, %offset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>, nan, abs} : vector<128 x f32>, f32
   llvm.return
 }

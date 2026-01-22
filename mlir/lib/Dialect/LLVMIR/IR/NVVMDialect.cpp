@@ -2969,26 +2969,26 @@ LogicalResult NVVM::ReduxOp::verify() {
       return emitOpError("nan attribute is supported only for f32 type");
   }
 
-  NVVM::ReduxKind kind = getKind();
+  NVVM::ReductionKind kind = getKind();
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
-  case NVVM::ReduxKind::AND:
-  case NVVM::ReduxKind::OR:
-  case NVVM::ReduxKind::XOR:
-  case NVVM::ReduxKind::MAX:
-  case NVVM::ReduxKind::MIN:
-  case NVVM::ReduxKind::UMAX:
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::ADD:
+  case NVVM::ReductionKind::AND:
+  case NVVM::ReductionKind::OR:
+  case NVVM::ReductionKind::XOR:
+  case NVVM::ReductionKind::MAX:
+  case NVVM::ReductionKind::MIN:
+  case NVVM::ReductionKind::UMAX:
+  case NVVM::ReductionKind::UMIN:
     if (!reduxType.isInteger(32))
       return emitOpError("'")
-             << kind << "' redux kind unsupported with " << reduxType
+             << kind << "' reduction kind unsupported with " << reduxType
              << " type. Only supported type is 'i32'.";
     break;
-  case NVVM::ReduxKind::FMIN:
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMIN:
+  case NVVM::ReductionKind::FMAX:
     if (!reduxType.isF32())
       return emitOpError("'")
-             << kind << "' redux kind unsupported with " << reduxType
+             << kind << "' reduction kind unsupported with " << reduxType
              << " type. Only supported type is 'f32'.";
     break;
   }
@@ -5543,7 +5543,8 @@ mlir::NVVM::IDArgPair NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
   if (shape == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2)
     args.push_back(mt.lookupValue(thisOp.getOffset()));
 
-  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getOp())));
+  args.push_back(
+      builder.getInt32(thisOp.getOp() == NVVM::ReductionKind::MIN ? 0 : 1));
 
   if (IsFloat) {
     args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getAbs())));
@@ -5559,6 +5560,10 @@ LogicalResult Tcgen05LdRedOp::verify() {
   if (data.getElementType() != redVal)
     return emitError(
         "type of reduction value and element type of vector data should match");
+
+  if (getOp() != NVVM::ReductionKind::MIN &&
+      getOp() != NVVM::ReductionKind::MAX)
+    return emitError("only min and max reduction kinds are supported");
 
   if (redVal.isInteger() && (getAbs() || getNan())) {
     return emitError("abs or nan is only applicable for f32 type");

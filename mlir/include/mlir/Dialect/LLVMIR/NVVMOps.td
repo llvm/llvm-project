@@ -232,6 +232,30 @@ def MemOrderKindAttr : EnumAttr<NVVM_Dialect, MemOrderKind, "mem_order"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+// Attrs for supported Reduction operations
+def ReductionKindNone : I32EnumAttrCase<"NONE", 0, "none">;
+def ReductionKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
+def ReductionKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
+def ReductionKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
+def ReductionKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
+def ReductionKindOr   : I32EnumAttrCase<"OR", 5, "or">;
+def ReductionKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
+def ReductionKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
+def ReductionKindXor  : I32EnumAttrCase<"XOR", 8, "xor">;
+def ReductionKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
+def ReductionKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
+
+/// Enum attribute of the different kinds.
+def ReductionKind : I32EnumAttr<"ReductionKind", "NVVM Reduction Kind attribute",
+  [ReductionKindAdd, ReductionKindAnd, ReductionKindMax, ReductionKindMin,
+   ReductionKindOr, ReductionKindUmax, ReductionKindUmin, ReductionKindXor,
+   ReductionKindFmin, ReductionKindFmax]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ReductionKindAttr : EnumAttr<NVVM_Dialect, ReductionKind, "reduction_kind">;
+
 //===----------------------------------------------------------------------===//
 // NVVM intrinsic operations
 //===----------------------------------------------------------------------===//
@@ -493,33 +517,11 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
-def ReduxKindNone : I32EnumAttrCase<"NONE", 0, "none">;
-def ReduxKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
-def ReduxKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
-def ReduxKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
-def ReduxKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
-def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
-def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
-def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
-def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
-def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
-def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
-
-/// Enum attribute of the different kinds.
-def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
-  [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
-
 def NVVM_ReduxOp :
   NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
   Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
   Arguments<(ins AnyTypeOf<[I32, F32]>:$val,
-                 ReduxKindAttr:$kind,
+                 ReductionKindAttr:$kind,
                  I32:$mask_and_clamp,
                  DefaultValuedAttr<BoolAttr, "false">:$abs,
                  DefaultValuedAttr<BoolAttr, "false">:$nan)> {
@@ -5326,27 +5328,12 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
 // NVVM tcgen05.ld.red Op
 //===----------------------------------------------------------------------===//
 
-def Tcgen05LdRedMin: I32EnumAttrCase<"MIN", 0, "min">;
-def Tcgen05LdRedMax: I32EnumAttrCase<"MAX", 1, "max">;
-
-def Tcgen05LdRedOperation: I32EnumAttr<
-  "Tcgen05LdRedOperation",
-  "tcgen05.ld.red reduction operation",
-  [Tcgen05LdRedMin, Tcgen05LdRedMax]> {
-  let cppNamespace = "::mlir::NVVM";
-  let genSpecializedAttr = 0;
-}
-
-def Tcgen05LdRedOperationAttr:
-      EnumAttr<NVVM_Dialect, Tcgen05LdRedOperation, "tcgen05_ld_red_op"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red", [NVVMRequiresSMa<[101]>]> {
-  let summary = "tensor memory load and reduce instructions";
+def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
+                          [NVVMRequiresSMa<[101, 110]>]> {
+  let summary = "Tcgen05 tensor memory load and reduce instructions";
   let arguments = (ins
     Tcgen05LdStShapeAttr:$shape,
-    Tcgen05LdRedOperationAttr:$op,
+    ReductionKindAttr:$op,
     UnitAttr:$abs,
     UnitAttr:$nan,
     LLVM_PointerTensor:$addr,
@@ -5358,14 +5345,14 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red", [NVVMRequiresSMa<[101]>]> {
                       AnyTypeOf<[I32, F32]>:$redVal);
 
   let assemblyFormat = [{
-    $addr (`,` $offset^)? attr-dict `:` type($data) `,` type($redVal)
+    $op $addr (`,` $offset^)? attr-dict `:` type($data) `,` type($redVal)
   }];
 
   let description = [{
     Instruction `tcgen05.ld.red` asynchronously loads data from the Tensor
     Memory at the location specified by the 32-bit address operand `addr` into
     the destination register `data`, collectively across all threads of the
-    warps. The operaiton also performs reduction operation specified by `op` on
+    warp. The operation also performs reduction operation specified by `op` on
     the loaded data across columns in each lane and stored into `redVal`
 
     The `shape` and the `num` attribute together determines the total
