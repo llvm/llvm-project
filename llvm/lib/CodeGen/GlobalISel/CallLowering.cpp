@@ -624,6 +624,13 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   MachineRegisterInfo &MRI = *B.getMRI();
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT LCMTy = getCoverTy(SrcTy, PartTy);
+  if (SrcTy.isVector() && DstRegs.size() > 1) {
+    TypeSize CoverSize = DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
+    LLT EltTy = SrcTy.getElementType();
+    unsigned EltSize = EltTy.getSizeInBits();
+    if (CoverSize % EltSize == 0)
+      LCMTy = LLT::fixed_vector(CoverSize / EltSize, EltTy);
+  }
 
   if (PartTy.isVector() && LCMTy == PartTy) {
     assert(DstRegs.size() == 1);
@@ -657,7 +664,9 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   if (LCMTy.isVector() && CoveringSize != SrcSize) {
     UnmergeSrc = B.buildPadVectorWithUndefElements(LCMTy, SrcReg).getReg(0);
 
+#if 0
     unsigned ExcessBits = CoveringSize - DstSize * DstRegs.size();
+
     if (ExcessBits != 0) {
       SmallVector<Register, 8> PaddedDstRegs(DstRegs.begin(), DstRegs.end());
 
@@ -668,6 +677,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       B.buildUnmerge(PaddedDstRegs, UnmergeSrc);
       return;
     }
+#endif
   }
 
   B.buildUnmerge(DstRegs, UnmergeSrc);
