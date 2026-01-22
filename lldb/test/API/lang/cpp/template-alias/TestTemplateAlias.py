@@ -20,6 +20,7 @@ class TestTemplateAlias(TestBase):
         self.expect_expr("bf2", result_type="Bar<double>")
         self.expect_expr("cbf1", result_type="Container<int>")
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
     @expectedFailureAll(
         bugnumber="LLDB doesn't reconstruct template alias names from template parameters"
     )
