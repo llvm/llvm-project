@@ -132,7 +132,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
-static constexpr TypePattern CChar{CharType, KindCode::exactKind, 1};
+static constexpr TypePattern CChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern EventType{DerivedType, KindCode::eventType};
 static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
 static constexpr TypePattern IeeeRoundType{

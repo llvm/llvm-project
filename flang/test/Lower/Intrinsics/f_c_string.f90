@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test lowering of F_C_STRING intrinsic from ISO_C_BINDING
 
