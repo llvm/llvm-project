@@ -49,8 +49,7 @@ public:
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront-one-as"));
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
 
-    const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
-    if (!AMDGPU::isGFX10Plus(TII->getSubtarget())) {
+    if (!AMDGPU::isGFX10Plus(MF->getSubtarget<GCNSubtarget>())) {
       // Prior to GFX10 workgroup scope does not normally require waitcnts
       IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
     }
