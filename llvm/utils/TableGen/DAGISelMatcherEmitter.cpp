@@ -1364,19 +1364,23 @@ void MatcherTableEmitter::EmitValueTypeFunction(raw_ostream &OS) {
 
   for (const auto &[VTs, Idx] : ValueTypeMap) {
     OS << "  case " << (Idx - 1) << ":\n";
-    OS << "    switch (HwMode) {\n";
-    if (!VTs.hasDefault())
-      OS << "    default:\n      return MVT();\n";
-    for (const auto [Mode, VT] : VTs) {
-      if (Mode == DefaultMode)
-        OS << "    default:\n";
-      else
-        OS << "    case " << Mode << ":\n";
-      OS << "      return " << getEnumName(VT) << ";\n";
-    }
+    if (VTs.isSimple()) {
+      OS << "    return " << getEnumName(VTs.getSimple()) << ";\n";
+    } else {
+      OS << "    switch (HwMode) {\n";
+      if (!VTs.hasDefault())
+        OS << "    default:\n      return MVT();\n";
+      for (const auto [Mode, VT] : VTs) {
+        if (Mode == DefaultMode)
+          OS << "    default:\n";
+        else
+          OS << "    case " << Mode << ":\n";
+        OS << "      return " << getEnumName(VT) << ";\n";
+      }
 
-    OS << "    }\n";
-    OS << "    break;\n";
+      OS << "    }\n";
+      OS << "    break;\n";
+    }
   }
 
   OS << "  }\n";
