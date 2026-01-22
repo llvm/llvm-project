@@ -162,7 +162,9 @@ end program
 ! CHECK:           %[[VOLATILE_CAST_13:.*]] = fir.volatile_cast %[[DESIGNATE_1]] : (!fir.box<!fir.array<10x10xi32>, volatile>) -> !fir.box<!fir.array<10x10xi32>>
 ! CHECK:           %[[CONVERT_8:.*]] = fir.convert %[[VOLATILE_CAST_13]] : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<!fir.array<?x?xi32>>
 ! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape_2d(%[[CONVERT_8]]) fastmath<contract> : (!fir.box<!fir.array<?x?xi32>>) -> ()
-! CHECK:           %[[CONVERT_9:.*]] = fir.convert %[[VOLATILE_CAST_10]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<*:i32>>
+! CHECK:           %[[EMBOX_8_2:.*]] = fir.embox %[[DECLARE_4]]#0(%[[SHAPE_0]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>, volatile>
+! CHECK:           %[[VOLATILE_CAST_10_2:.*]] = fir.volatile_cast %[[EMBOX_8_2]] : (!fir.box<!fir.array<10xi32>, volatile>) -> !fir.box<!fir.array<10xi32>>
+! CHECK:           %[[CONVERT_9:.*]] = fir.convert %[[VOLATILE_CAST_10_2]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<*:i32>>
 ! CHECK:           fir.call @_QFPsub_select_rank(%[[CONVERT_9]]) fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()
 ! CHECK:           %[[EMBOX_11:.*]] = fir.embox %[[DECLARE_5]]#0(%[[SHAPE_1]]) : (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>, volatile>
 ! CHECK:           %[[VOLATILE_CAST_14:.*]] = fir.volatile_cast %[[EMBOX_11]] : (!fir.box<!fir.array<10x10xi32>, volatile>) -> !fir.box<!fir.array<10x10xi32>>

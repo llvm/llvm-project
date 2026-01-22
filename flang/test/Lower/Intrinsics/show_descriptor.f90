@@ -262,7 +262,9 @@ subroutine test_derived
 ! CHECK:           %[[EMBOX_VT2:.*]] = fir.embox %[[DECLARE_18]] : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
 ! CHECK:           %[[CONVERT_CU:.*]] = fir.convert %[[DECLARE_CU]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[CONVERT_VT2:.*]] = fir.convert %[[EMBOX_VT2]] : (!fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<none>
-! CHECK:           fir.store %[[CONVERT_VT2]] to %[[ALLOCA_VT2:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           %[[EMBOX_VT2_2:.*]] = fir.embox %[[DECLARE_18]] : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
+! CHECK:           %[[CONVERT_VT2_2:.*]] = fir.convert %[[EMBOX_VT2_2]] : (!fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_VT2_2]] to %[[ALLOCA_VT2:.*]] : !fir.ref<!fir.box<none>>
 ! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_VT2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 
   call show_descriptor(c_t1)

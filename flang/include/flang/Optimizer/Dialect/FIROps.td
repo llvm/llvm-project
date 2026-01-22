@@ -855,8 +855,8 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
 // Operations on !fir.box<T> type objects
 //===----------------------------------------------------------------------===//
 
-def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
-                                   ConditionallySpeculatable,
+def fir_EmboxOp : fir_Op<"embox", [AttrSizedOperandSegments,
+                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
                                    fir_FortranObjectViewOpInterface]> {
   let summary = "boxes a given reference and (optional) dimension information";
 
@@ -930,8 +930,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
   }];
 }
 
-def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
-                                   ConditionallySpeculatable,
+def fir_ReboxOp : fir_Op<"rebox", [AttrSizedOperandSegments,
+                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
                                    fir_FortranObjectViewOpInterface]> {
   let summary =
       "create a box given another box and (optional) dimension information";
