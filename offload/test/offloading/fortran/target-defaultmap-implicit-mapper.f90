@@ -1,4 +1,4 @@
-! Offload test that ensures defaultmap(scalar: tofrom) does not suppress
+! Offload test that ensures defaultmap(tofrom: scalar) does not suppress
 ! implicit default mapper generation for allocatable derived types.
 ! REQUIRES: flang, amdgpu
 
