@@ -2447,306 +2447,152 @@ body:             |
 
 ...
 
+# STARTT
 ---
 # Delete s_cmp after s_add_u32 X, 1
-name:            s_add_u32_1_s_cmp_eq_u32_0x00000000
+name:            s_add_u32_X_1
 body:             |
-  ; GCN-LABEL: name: s_add_u32_1_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 1, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %3:sreg_32 = S_ADD_U32 %2, 1, implicit-def $scc
-    S_CMP_EQ_U32 killed %3, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
+    ; GCN-LABEL: name: s_add_u32_X_1
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 1, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 %0, 1, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
     S_ENDPGM 0
-
 ...
-
 ---
 # Delete s_cmp after s_add_u32 X, Y, where Y==1
-name:            s_add_u32_X_s_cmp_eq_u32_0x00000000
+name:            s_add_u32_X_R1
 body:             |
-  ; GCN-LABEL: name: s_add_u32_X_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %3:sreg_32 = S_MOV_B32 1
-    %4:sreg_32 = S_ADD_U32 %2, %3, implicit-def $scc
-    S_CMP_EQ_U32 killed %4, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
+    ; GCN-LABEL: name: s_add_u32_X_R1
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 1
+    %2:sreg_32 = S_ADD_U32 %0, %1, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
     S_ENDPGM 0
-
 ...
-
 ---
-# Delete s_cmp after s_add_i32 1, X
-name:            s_add_i32_1_s_cmp_eq_u32_0x00000000
+# Delete s_cmp after s_add_u32 1, X
+name:            s_add_u32_1_X
 body:             |
-  ; GCN-LABEL: name: s_add_i32_1_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
-  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 1, [[COPY]], implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1, %bb.2
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:vgpr_32 = IMPLICIT_DEF
-    %2:sreg_32 = COPY %0
-    %3:sreg_32 = S_ADD_I32 1, %2, implicit-def dead $scc
-    S_CMP_EQ_U32 killed %3, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
-    S_ENDPGM 0
-
-...
-
----
-# Delete s_cmp after s_add_i32 X, Y, where X==1
-name:            s_add_i32_X_s_cmp_eq_u32_0x00000000
-body:             |
-  ; GCN-LABEL: name: s_add_i32_X_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
-  bb.0:
-    successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %3:sreg_32 = S_MOV_B32 1
-    %4:sreg_32 = S_ADD_I32 %3, %2, implicit-def dead $scc
-    S_CMP_EQ_U32 killed %4, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
+    ; GCN-LABEL: name: s_add_u32_1_X
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 1, [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 1, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
     S_ENDPGM 0
-
 ...
-
+---
+# Delete s_cmp after s_add_u32 X, Y, where X==1
+name:            s_add_u32_R1_Y
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_R1_Y
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 1
+    %2:sreg_32 = S_ADD_U32 %1, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
+    S_ENDPGM 0
+...
 ---
 # Do not delete s_cmp after s_add_u32 X, 2
-name:            s_add_u32_non1_s_cmp_eq_u32_0x00000000
+name:            s_add_u32_X_2
 body:             |
-  ; GCN-LABEL: name: s_add_u32_non1_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 2, implicit-def $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %3:sreg_32 = S_ADD_U32 %2, 2, implicit-def $scc
-    S_CMP_EQ_U32 killed %3, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
+    ; GCN-LABEL: name: s_add_u32_X_2
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 2, implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 %0, 2, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
     S_ENDPGM 0
-
 ...
-
 ---
 # Do not delete s_cmp after s_add_u32 X, Y, where Y!=1
-name:            s_add_u32_non1X_s_cmp_eq_u32_0x00000000
+name:            s_add_u32_X_Rnon1
 body:             |
-  ; GCN-LABEL: name: s_add_u32_non1X_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
-  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %3:sreg_32 = S_MOV_B32 3
-    %4:sreg_32 = S_ADD_U32 %2, %3, implicit-def $scc
-    S_CMP_EQ_U32 killed %4, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
+    ; GCN-LABEL: name: s_add_u32_X_Rnon1
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 3
+    %2:sreg_32 = S_ADD_U32 %0, %1, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
     S_ENDPGM 0
-
 ...
-
 ---
-# Do not delete s_cmp after s_add_i32 2, X
-name:            s_add_i32_non1_s_cmp_eq_u32_0x00000000
+# Do not delete s_cmp after s_add_u32 3, X
+name:            s_add_u32_3_X
 body:             |
-  ; GCN-LABEL: name: s_add_i32_non1_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
-  ; GCN-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 2, [[COPY]], implicit-def dead $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 killed [[S_ADD_I32_]], 0, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1, %bb.2
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:vgpr_32 = IMPLICIT_DEF
-    %2:sreg_32 = COPY %0
-    %3:sreg_32 = S_ADD_I32 2, %2, implicit-def dead $scc
-    S_CMP_EQ_U32 killed %3, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
-    S_ENDPGM 0
-
-...
-
----
-# Do not delete s_cmp after s_add_i32 X, Y, where X!=1
-name:            s_add_i32_non1X_s_cmp_eq_u32_0x00000000
-body:             |
-  ; GCN-LABEL: name: s_add_i32_non1X_s_cmp_eq_u32_0x00000000
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5
-  ; GCN-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_MOV_B32_]], [[COPY]], implicit-def dead $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 killed [[S_ADD_I32_]], 0, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
-  bb.0:
-    successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %3:sreg_32 = S_MOV_B32 5
-    %4:sreg_32 = S_ADD_I32 %3, %2, implicit-def dead $scc
-    S_CMP_EQ_U32 killed %4, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2
-
-  bb.2:
+    ; GCN-LABEL: name: s_add_u32_3_X
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 3, [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 3, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
     S_ENDPGM 0
-
+...
+---
+# Do not delete s_cmp after s_add_u32 X, Y, where X!=1
+name:            s_add_u32_Rnon1_Y
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_Rnon1_Y
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 4
+    %2:sreg_32 = S_ADD_U32 %1, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
+    S_ENDPGM 0
 ...
