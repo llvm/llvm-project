@@ -1139,9 +1139,7 @@ public:
   static char ID;
 
   ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
-      : FunctionPass(ID), OptLevel(OptLevel) {
-    initializeExpandIRInstsLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), OptLevel(OptLevel) {}
 
   ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {};
 
@@ -1153,7 +1151,7 @@ public:
 
     const LibcallLoweringInfo &Libcalls =
         getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
-            *Subtarget);
+            *F.getParent(), *Subtarget);
 
     if (OptLevel != CodeGenOptLevel::None && !F.hasOptNone())
       AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);

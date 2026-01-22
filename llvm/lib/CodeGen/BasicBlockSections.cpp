@@ -110,9 +110,7 @@ public:
 
   BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
-  BasicBlockSections() : MachineFunctionPass(ID) {
-    initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
-  }
+  BasicBlockSections() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Basic Block Sections Analysis";

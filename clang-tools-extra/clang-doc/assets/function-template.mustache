@@ -17,5 +17,7 @@
             {{>Comments}}
         </div>
         {{/Description}}
-        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+        {{#Location}}
+        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+        {{/Location}}
 </div>

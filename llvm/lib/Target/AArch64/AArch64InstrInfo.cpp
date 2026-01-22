@@ -4064,7 +4064,7 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       MRI.constrainRegClass(AM.BaseReg, &AArch64::GPR64spRegClass);
       auto B = BuildMI(MBB, MemI, DL, get(Opcode))
                    .addReg(MemI.getOperand(0).getReg(),
-                           MemI.mayLoad() ? RegState::Define : 0)
+                           getDefRegState(MemI.mayLoad()))
                    .addReg(AM.BaseReg)
                    .addReg(AM.ScaledReg)
                    .addImm(0)
@@ -4085,13 +4085,13 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
     else
       Opcode = scaledOffsetOpcode(Opcode, Scale);
 
-    auto B = BuildMI(MBB, MemI, DL, get(Opcode))
-                 .addReg(MemI.getOperand(0).getReg(),
-                         MemI.mayLoad() ? RegState::Define : 0)
-                 .addReg(AM.BaseReg)
-                 .addImm(AM.Displacement / Scale)
-                 .setMemRefs(MemI.memoperands())
-                 .setMIFlags(MemI.getFlags());
+    auto B =
+        BuildMI(MBB, MemI, DL, get(Opcode))
+            .addReg(MemI.getOperand(0).getReg(), getDefRegState(MemI.mayLoad()))
+            .addReg(AM.BaseReg)
+            .addImm(AM.Displacement / Scale)
+            .setMemRefs(MemI.memoperands())
+            .setMIFlags(MemI.getFlags());
     return B.getInstr();
   }
 
@@ -4110,15 +4110,15 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       BuildMI(MBB, MemI, DL, get(TargetOpcode::COPY), OffsetReg)
           .addReg(AM.ScaledReg, 0, AArch64::sub_32);
     }
-    auto B = BuildMI(MBB, MemI, DL, get(Opcode))
-                 .addReg(MemI.getOperand(0).getReg(),
-                         MemI.mayLoad() ? RegState::Define : 0)
-                 .addReg(AM.BaseReg)
-                 .addReg(OffsetReg)
-                 .addImm(AM.Form == ExtAddrMode::Formula::SExtScaledReg)
-                 .addImm(AM.Scale != 1)
-                 .setMemRefs(MemI.memoperands())
-                 .setMIFlags(MemI.getFlags());
+    auto B =
+        BuildMI(MBB, MemI, DL, get(Opcode))
+            .addReg(MemI.getOperand(0).getReg(), getDefRegState(MemI.mayLoad()))
+            .addReg(AM.BaseReg)
+            .addReg(OffsetReg)
+            .addImm(AM.Form == ExtAddrMode::Formula::SExtScaledReg)
+            .addImm(AM.Scale != 1)
+            .setMemRefs(MemI.memoperands())
+            .setMIFlags(MemI.getFlags());
 
     return B.getInstr();
   }
@@ -5389,6 +5389,38 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
   }
 }
 
+/// Returns true if the instruction at I is in a streaming call site region,
+/// within a single basic block.
+/// A "call site streaming region" starts after smstart and ends at smstop
+/// around a call to a streaming function. This walks backward from I.
+static bool isInStreamingCallSiteRegion(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator I) {
+  MachineFunction &MF = *MBB.getParent();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  // Walk backwards to find smstart/smstop
+  for (MachineInstr &MI : reverse(make_range(MBB.begin(), I))) {
+    unsigned Opc = MI.getOpcode();
+    if (Opc == AArch64::MSRpstatesvcrImm1 || Opc == AArch64::MSRpstatePseudo) {
+      // Check if this is SM change (not ZA)
+      int64_t PState = MI.getOperand(0).getImm();
+      if (PState == AArch64SVCR::SVCRSM || PState == AArch64SVCR::SVCRSMZA) {
+        // Operand 1 is 1 for start, 0 for stop
+        return MI.getOperand(1).getImm() == 1;
+      }
+    }
+  }
+  return false;
+}
+
+/// Returns true if in a streaming call site region without SME-FA64.
+static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
+                                MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) {
+  return !Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I);
+}
+
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, Register DestReg,
@@ -5674,8 +5706,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if (Subtarget.isSVEorStreamingSVEAvailable() &&
-        !Subtarget.isNeonAvailable()) {
+    // In streaming regions, NEON is illegal but streaming-SVE is available.
+    // Use SVE for copies if we're in a streaming region and SME is available.
+    // With +sme-fa64, NEON is legal in streaming mode so we can use it.
+    if ((Subtarget.isSVEorStreamingSVEAvailable() &&
+         !Subtarget.isNeonAvailable()) ||
+        mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
@@ -5705,7 +5741,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR64RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::dsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::dsub,
@@ -5732,7 +5769,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR32RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
@@ -5773,7 +5811,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR16RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
@@ -5814,7 +5853,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR8RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
@@ -6117,7 +6157,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator MBBI,
                                             Register DestReg, int FI,
                                             const TargetRegisterClass *RC,
-                                            Register VReg,
+                                            Register VReg, unsigned SubReg,
                                             MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -11220,11 +11260,15 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
       .addMBB(ExitMBB)
       .setMIFlags(Flags);
 
-  //   STR XZR, [SP]
-  BuildMI(*LoopBodyMBB, LoopBodyMBB->end(), DL, TII->get(AArch64::STRXui))
-      .addReg(AArch64::XZR)
+  //   LDR XZR, [SP]
+  BuildMI(*LoopBodyMBB, LoopBodyMBB->end(), DL, TII->get(AArch64::LDRXui))
+      .addDef(AArch64::XZR)
       .addReg(AArch64::SP)
       .addImm(0)
+      .addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getUnknownStack(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+          Align(8)))
       .setMIFlags(Flags);
 
   //   B loop

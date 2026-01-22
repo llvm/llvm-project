@@ -215,6 +215,15 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+def FIRToMemRef : Pass<"fir-to-memref", "::mlir::func::FuncOp"> {
+  let summary = "Convert FIR memory operations to MemRef dialect";
+  let description = [{
+    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to MLIR's MemRef core dialect.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect"];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
 def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
@@ -477,12 +486,13 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
-  ];
-  let options = [Option<"allocationConversion", "allocation-conversion", "bool",
-                        /*default=*/"true",
-                        "Convert allocation related operation with this pass">];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+                           "mlir::DLTIDialect"];
+}
+
+def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
+  let summary = "Convert CUF operations to runtime calls late in the pipeline";
+  let dependentDialects = ["fir::FIROpsDialect"];
 }
 
 def CUFDeviceGlobal :
@@ -629,6 +639,17 @@ def OptimizeArrayRepacking
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
+def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
+  let summary = "Hoist invariants from loops";
+  let description = [{
+    Hoist invariants from loops. This is a FIR-specific version of loop
+    invariant code motion, which relies on FIR types, operations (such as
+    fir.declare) and interfaces such as FortranObjectViewOpInterface.
+    The pass only moves existing operations, so there are no dependent
+    dialects.
+  }];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

@@ -296,7 +296,7 @@ public:
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     FPMathOperator *FPBinOp, VPIRValue *Start,
                                      VPValue *Current, VPValue *Step,
                                      const Twine &Name = "") {
     return tryInsertInstruction(
@@ -319,6 +319,17 @@ public:
         ResultTy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits()
             ? Instruction::Trunc
             : Instruction::ZExt;
+    return createScalarCast(CastOp, Op, ResultTy, DL);
+  }
+
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
+                                   DebugLoc DL) {
+    if (ResultTy == SrcTy)
+      return Op;
+    Instruction::CastOps CastOp =
+        ResultTy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits()
+            ? Instruction::Trunc
+            : Instruction::SExt;
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
@@ -566,7 +577,7 @@ public:
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.
   VectorizationFactor
-  selectEpilogueVectorizationFactor(const ElementCount MaxVF, unsigned IC);
+  selectEpilogueVectorizationFactor(const ElementCount MainLoopVF, unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);

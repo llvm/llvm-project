@@ -788,8 +788,8 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     IRBuilder<> Builder(Call);
     Value *State;
     if (InCleanup) {
-      Value *StateField = Builder.CreateStructGEP(RegNode->getAllocatedType(),
-                                                  RegNode, StateFieldIndex);
+      Value *StateField =
+          Builder.CreateStructGEP(RegNodeTy, RegNode, StateFieldIndex);
       State = Builder.CreateLoad(Builder.getInt32Ty(), StateField);
     } else {
       State = Builder.getInt32(getStateForCall(BlockColors, FuncInfo, *Call));
@@ -800,8 +800,8 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
 
 void WinEHStatePass::insertStateNumberStore(Instruction *IP, int State) {
   IRBuilder<> Builder(IP);
-  Value *StateField = Builder.CreateStructGEP(RegNode->getAllocatedType(),
-                                              RegNode, StateFieldIndex);
+  Value *StateField =
+      Builder.CreateStructGEP(RegNodeTy, RegNode, StateFieldIndex);
   Builder.CreateStore(Builder.getInt32(State), StateField);
 }
 

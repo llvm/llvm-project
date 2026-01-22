@@ -562,7 +562,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_flat_set",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202511},
             "headers": ["flat_set"],
         },
         {
@@ -1026,6 +1026,8 @@ feature_test_macros = [
             "name": "__cpp_lib_optional_range_support",
             "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
             "headers": ["optional"],
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR",
+            "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR",
         },
         {
             "name": "__cpp_lib_out_ptr",
@@ -1167,7 +1169,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_zip",
             "values": {"c++23": 202110},
             "headers": ["ranges", "tuple", "utility"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ratio",

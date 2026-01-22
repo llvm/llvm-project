@@ -23,14 +23,14 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO-TRAILING-FENCE %s
 
-; RUN: llc -mtriple=riscv32 -global-isel -mattr=+d,+a,+experimental-zalasr -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -global-isel -mattr=+d,+a,+zalasr -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZALASR,RV32IA-ZALASR-WMO %s
-; RUN: llc -mtriple=riscv32 -global-isel -mattr=+d,+a,+experimental-zalasr,+ztso -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -global-isel -mattr=+d,+a,+zalasr,+ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZALASR,RV32IA-ZALASR-TSO %s
 
-; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+experimental-zalasr -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+zalasr -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZALASR,RV64IA-ZALASR-WMO %s
-; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+experimental-zalasr,+ztso -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+zalasr,+ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZALASR,RV64IA-ZALASR-TSO %s
 
 

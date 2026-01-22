@@ -1048,6 +1048,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ABS, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FABS, Op);
+}
+
 /// Match a zext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd> inline auto m_ZExtOrSelf(const Opnd &Op) {
@@ -1302,6 +1306,11 @@ inline BinaryOpc_match<Zero_match, ValTy, false> m_Neg(const ValTy &V) {
 template <typename ValTy>
 inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
+}
+
+template <unsigned IntrinsicId, typename... OpndPreds>
+inline auto m_IntrinsicWOChain(const OpndPreds &...Opnds) {
+  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Opnds...);
 }
 
 struct SpecificNeg_match {

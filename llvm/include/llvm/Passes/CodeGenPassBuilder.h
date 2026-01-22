@@ -581,6 +581,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
                 /*Force=*/true);
   addModulePass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(), PMW,
                 /*Force=*/true);
+  addModulePass(RequireAnalysisPass<LibcallLoweringModuleAnalysis, Module>(),
+                PMW,
+                /*Force=*/true);
   addISelPasses(PMW);
   flushFPMsToMPM(PMW);
 
@@ -1040,6 +1043,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     addModulePass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>(),
                   PMW);
     addMachineFunctionPass(RegUsageInfoCollectorPass(), PMW);
+    // If -print-regusage is specified, print the collected register usage info.
+    if (Opt.PrintRegUsage) {
+      flushFPMsToMPM(PMW);
+      addModulePass(PhysicalRegisterUsageInfoPrinterPass(errs()), PMW);
+    }
   }
 
   addMachineFunctionPass(FuncletLayoutPass(), PMW);

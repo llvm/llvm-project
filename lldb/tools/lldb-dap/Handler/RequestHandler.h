@@ -64,6 +64,10 @@ protected:
   /// LLDB_DAP_WELCOME_MESSAGE is defined.
   void PrintWelcomeMessage() const;
 
+  /// Prints an introduction to the debug console and information about the
+  /// debug session.
+  void PrintIntroductionMessage() const;
+
   // Takes a LaunchRequest object and launches the process, also handling
   // runInTerminal if applicable. It doesn't do any of the additional
   // initialization and bookkeeping stuff that is needed for `request_launch`.
@@ -293,7 +297,8 @@ public:
   llvm::Expected<protocol::EvaluateResponseBody>
   Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureEvaluateForHovers};
+    return {protocol::eAdapterFeatureEvaluateForHovers,
+            protocol::eAdapterFeatureClipboardContext};
   }
 };
 
