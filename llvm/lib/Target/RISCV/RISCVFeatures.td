@@ -270,7 +270,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExtension<1, 0, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
