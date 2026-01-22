@@ -5323,6 +5323,111 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld.red Op
+//===----------------------------------------------------------------------===//
+
+def Tcgen05LdRedMin: I32EnumAttrCase<"MIN", 0, "min">;
+def Tcgen05LdRedMax: I32EnumAttrCase<"MAX", 1, "max">;
+
+def Tcgen05LdRedOperation: I32EnumAttr<
+  "Tcgen05LdRedOperation",
+  "tcgen05.ld.red reduction operation",
+  [Tcgen05LdRedMin, Tcgen05LdRedMax]> {
+  let cppNamespace = "::mlir::NVVM";
+  let genSpecializedAttr = 0;
+}
+
+def Tcgen05LdRedOperationAttr:
+      EnumAttr<NVVM_Dialect, Tcgen05LdRedOperation, "tcgen05_ld_red_op"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red", [NVVMRequiresSMa<[101]>]> {
+  let summary = "tensor memory load and reduce instructions";
+  let arguments = (ins
+    Tcgen05LdStShapeAttr:$shape,
+    Tcgen05LdRedOperationAttr:$op,
+    UnitAttr:$abs,
+    UnitAttr:$nan,
+    LLVM_PointerTensor:$addr,
+    Optional<I64>:$offset
+  );
+
+  let results = (outs VectorOfLengthAndType<[2, 4, 8, 16, 32, 64, 128],
+                                            [I32, F32]>:$data,
+                      AnyTypeOf<[I32, F32]>:$redVal);
+
+  let assemblyFormat = [{
+    $addr (`,` $offset^)? attr-dict `:` type($data) `,` type($redVal)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.ld.red` asynchronously loads data from the Tensor
+    Memory at the location specified by the 32-bit address operand `addr` into
+    the destination register `data`, collectively across all threads of the
+    warps. The operaiton also performs reduction operation specified by `op` on
+    the loaded data across columns in each lane and stored into `redVal`
+
+    The `shape` and the `num` attribute together determines the total
+    dimension of the data which is loaded from the Tensor Memory. The `shape`
+    attribute indicates the base dimension of data to be accessed as described
+    in the Data Movement Shape. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data
+    that is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `addr`
+    and the base address of the second access is specified by
+    `addr + offset`, where `offset` is an immediate argument.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes:
+    ```
+    |=============================================|
+    | num/shape      |     16x32bx2/32x32b        |
+    |=============================================|
+    | x2             |             2              |
+    | x4             |             4              |
+    | x8             |             8              |
+    | x16            |             16             |
+    | x32            |             32             |
+    | x64            |             64             |
+    | x128           |             128            |
+    |=============================================|
+    ```
+
+    Example:
+    ```mlir
+      %data, %redval = nvvm.tcgen05.ld,red %addr, %offset {
+        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
+      } : <2xi32>, i32
+
+      %data, %redval = nvvm.tcgen05.ld,red %addr {
+        shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>,
+      } : <2xf32>, f32
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    llvm::Value *result = createIntrinsicCall(builder, id, args);
+    $data = builder.CreateExtractValue(result, {0});
+    $redVal = builder.CreateExtractValue(result, {1});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.st Op
 //===----------------------------------------------------------------------===//
 
