@@ -681,6 +681,27 @@ bool RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerSplitTo32Mul(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  assert(DstTy == S64);
+  auto Op1 = B.buildUnmerge({VgprRB_S32}, MI.getOperand(1).getReg());
+  auto Op2 = B.buildUnmerge({VgprRB_S32}, MI.getOperand(2).getReg());
+
+  // TODO: G_AMDGPU_MAD_* optimizations for G_MUL divergent S64 operation to
+  // match GlobalISel with old regbankselect.
+  auto Lo = B.buildMul(VgprRB_S32, Op1.getReg(0), Op2.getReg(0));
+  auto Carry = B.buildUMulH(VgprRB_S32, Op1.getReg(0), Op2.getReg(0));
+  auto MulLo0Hi1 = B.buildMul(VgprRB_S32, Op1.getReg(0), Op2.getReg(1));
+  auto MulHi0Lo1 = B.buildMul(VgprRB_S32, Op1.getReg(1), Op2.getReg(0));
+  auto Sum = B.buildAdd(VgprRB_S32, MulLo0Hi1, MulHi0Lo1);
+  auto Hi = B.buildAdd(VgprRB_S32, Sum, Carry);
+
+  B.buildMergeLikeInstr(Dst, {Lo, Hi});
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   assert(MRI.getType(Dst) == V2S16);
@@ -928,6 +949,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case SplitTo32:
     return lowerSplitTo32(MI);
+  case SplitTo32Mul:
+    return lowerSplitTo32Mul(MI);
   case SplitTo32Select:
     return lowerSplitTo32Select(MI);
   case SplitTo32SExtInReg:
