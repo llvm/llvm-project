@@ -839,15 +839,20 @@ define <3 x i16> @v_orn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX6-NEXT:    v_or_b32_e32 v2, v2, v5
-; GFX6-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX6-NEXT:    v_xor_b32_e32 v2, -1, v2
-; GFX6-NEXT:    v_xor_b32_e32 v3, 0xfff5, v3
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v4
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX6-NEXT:    v_xor_b32_e32 v3, 0xfff5, v3
+; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX6-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_orn2_v3i16:
