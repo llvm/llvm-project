@@ -1,8 +1,8 @@
-; Test to ensure that if a definition is imported, already-present declarations
-; are updated as necessary: Definitions from the same module may be optimized
-; together. Thus care must be taken when importing only a subset of the
-; definitions from a module (because other referenced definitions from that
-; module may have been changed by the optimizer and may no longer match
+; Test to ensure that if an exact definition is imported, it is used in favor
+; of an already-present declaration. Exact definitions from the same module may
+; be optimized together. Thus care must be taken when importing only a subset
+; of the definitions from a module (because other referenced definitions from
+; that module may have been changed by the optimizer and may no longer match
 ; declarations already present in the module being imported into).
 
 ; Generate bitcode and index, and run the function import.
@@ -20,12 +20,13 @@ define void @main()  {
   ret void
 }
 
-; Because `@inner` is `noinline`, it should not get imported. However, the
-; `noundef` should be removed.
-; CHECK: declare void @inner(i32)
-declare void @inner(i32 noundef)
-
 ; `@outer` should get imported.
 ; CHECK: define available_externally void @outer(i32 noundef %arg)
 ; CHECK-NEXT: call void @inner(i32 poison)
 declare void @outer(i32 noundef)
+
+; Because `@inner` is `noinline`, the definition should not be important.
+; However, we should create a new declaration from the definition, which does
+; not have the `noundef` attribute.
+; CHECK: declare void @inner(i32)
+declare void @inner(i32 noundef)
