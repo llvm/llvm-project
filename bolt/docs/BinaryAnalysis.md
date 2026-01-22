@@ -54,18 +54,6 @@ GS-PAUTH: signing oracle found in function function_name, basic block .LBB016, a
   The 0 instructions that write to the affected registers after any authentication are:
 ```
 
-Furthermore, a ", basic block `<name>`" part is omitted in a report, if BOLT was
-unable to reconstruct control-flow graph for the particular function:
-
-```
-GS-PAUTH: signing oracle found in function function_name_nocfg, at address 10510
-  The instruction is     00010510:      pacda   x0, x1
-  The 0 instructions that write to the affected registers after any authentication are:
-```
-
-The analysis is likely to be less precise when CFG information is absent or
-incomplete.
-
 ## Background and motivation
 
 ### Security scanners
@@ -190,6 +178,13 @@ program point:
   a result of a failed authentication operation (for example, the register is
   zeroed, or its value is checked to be valid, so that failure results in
   immediate abnormal program termination).
+
+Generally, BOLT strives to reconstruct the control-flow graph of each function,
+which is important for dataflow analysis. However, when BOLT fails to recognize
+some control flow in the particular function, that function ends up being
+represented as a flat list of instructions - in such cases
+`llvm-bolt-binary-analysis` computes register properties using a fallback
+analysis implementation, which is less precise.
 
 The below sub-sections describe the particular detectors. Please note that while
 the descriptions refer to AArch64 for simplicity, the implementation of gadget
