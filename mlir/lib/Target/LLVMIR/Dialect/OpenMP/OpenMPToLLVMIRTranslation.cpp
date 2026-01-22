@@ -26,6 +26,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPDeclareSimd.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -6871,20 +6872,20 @@ convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-static llvm::StringRef paramKindToStr(llvm::omp::ParamKindTy param) {
+static llvm::StringRef paramKindToStr(llvm::omp::DeclareSimdKindTy param) {
   switch (param) {
-  case llvm::omp::Linear:     return "Linear";
-  case llvm::omp::LinearRef:  return "LinearRef";
-  case llvm::omp::LinearUVal: return "LinearUVal";
-  case llvm::omp::LinearVal:  return "LinearVal";
-  case llvm::omp::Uniform:    return "Uniform";
-  case llvm::omp::Vector:     return "Vector";
+  case llvm::omp::DeclareSimdKindTy::Linear:     return "Linear";
+  case llvm::omp::DeclareSimdKindTy::LinearRef:  return "LinearRef";
+  case llvm::omp::DeclareSimdKindTy::LinearUVal: return "LinearUVal";
+  case llvm::omp::DeclareSimdKindTy::LinearVal:  return "LinearVal";
+  case llvm::omp::DeclareSimdKindTy::Uniform:    return "Uniform";
+  case llvm::omp::DeclareSimdKindTy::Vector:     return "Vector";
   }
   return "Unknown";
 }
 
 static void dumpParamAttrs(LLVM::LLVMFuncOp func,
-                           llvm::ArrayRef<llvm::omp::ParamAttrTy> attrs) {
+                           llvm::ArrayRef<llvm::omp::DeclareSimdAttrTy> attrs) {
   llvm::errs() << "=== DeclareSimd ParamAttrs for function "
                << func.getName() << " ===\n";
   for (auto it : llvm::enumerate(func.getArguments())) {
@@ -6906,14 +6907,14 @@ static void dumpParamAttrs(LLVM::LLVMFuncOp func,
     else
       llvm::errs() << "(arg" << I << ") ";
 
-    const llvm::omp::ParamAttrTy &A = attrs[I];
+    const llvm::omp::DeclareSimdAttrTy &A = attrs[I];
     llvm::errs() << "Kind=" << paramKindToStr(A.Kind);
 
     if (A.Alignment != 0)
       llvm::errs() << " Align=" << A.Alignment;
 
-    if (A.Kind == llvm::omp::Linear || A.Kind == llvm::omp::LinearRef || A.Kind == llvm::omp::LinearUVal ||
-        A.Kind == llvm::omp::LinearVal) {
+    if (A.Kind == llvm::omp::DeclareSimdKindTy::Linear || A.Kind == llvm::omp::DeclareSimdKindTy::LinearRef || A.Kind == llvm::omp::DeclareSimdKindTy::LinearUVal ||
+        A.Kind == llvm::omp::DeclareSimdKindTy::LinearVal) {
       if (A.HasVarStride)
         llvm::errs() << " VarStrideArgIndex=" << A.StrideOrArg;
       else
@@ -6956,10 +6957,10 @@ getFuncArgIndex(mlir::LLVM::LLVMFuncOp func, mlir::Value v) {
 
 static void applyUniform(LLVM::LLVMFuncOp funcOp,
                          mlir::omp::DeclareSimdOp ds,
-                         llvm::SmallVectorImpl<llvm::omp::ParamAttrTy> &attrs) {
+                         llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
   for (mlir::Value u : ds.getUniformVars()) {
     if (auto idx = getFuncArgIndex(funcOp, u))
-      attrs[*idx].Kind = llvm::omp::Uniform;
+      attrs[*idx].Kind = llvm::omp::DeclareSimdKindTy::Uniform;
     else
       llvm::errs() << "NOTE: uniform var is not a function argument: " << u
                    << "\n";
@@ -6968,7 +6969,7 @@ static void applyUniform(LLVM::LLVMFuncOp funcOp,
 
 static void applyAligned(LLVM::LLVMFuncOp funcOp,
                          mlir::omp::DeclareSimdOp ds,
-                         llvm::SmallVectorImpl<llvm::omp::ParamAttrTy> &attrs) {
+                         llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
   auto alignedVars = ds.getAlignedVars();
   std::optional<mlir::ArrayAttr> maybeAlignArr = ds.getAlignments();
 
@@ -7004,7 +7005,7 @@ static void applyAligned(LLVM::LLVMFuncOp funcOp,
 /// - step value: %2 (may be constant) or another function arg (var stride)
 static void applyLinear(LLVM::LLVMFuncOp func,
                         mlir::omp::DeclareSimdOp ds,
-                        llvm::SmallVectorImpl<llvm::omp::ParamAttrTy> &attrs) {
+                        llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
   auto linearVars = ds.getLinearVars();
   auto linearSteps = ds.getLinearStepVars(); // SSA values (may be empty)
 
@@ -7020,8 +7021,8 @@ static void applyLinear(LLVM::LLVMFuncOp func,
       continue;
     }
 
-    llvm::omp::ParamAttrTy &paramAttr = attrs[*idx];
-    paramAttr.Kind = llvm::omp::Linear;
+    llvm::omp::DeclareSimdAttrTy &paramAttr = attrs[*idx];
+    paramAttr.Kind = llvm::omp::DeclareSimdKindTy::Linear;
     paramAttr.HasVarStride = false;
     paramAttr.StrideOrArg = one;
 
@@ -7068,7 +7069,6 @@ getDeclareSimdBranch(mlir::omp::DeclareSimdOp &op) {
 static LogicalResult
 convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto funcOp = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   assert(funcOp && "declare_simd must be defined inside an LLVM function");
   llvm::errs() << "convertOmpDeclareSimd on function: " << funcOp << "\n";
@@ -7077,7 +7077,7 @@ convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
   assert(fn && "Failed to find corresponding LLVM function for LLVMFuncOp");
 
   funcOp.walk([&](mlir::omp::DeclareSimdOp ds) {
-    llvm::SmallVector<llvm::omp::ParamAttrTy, 8> paramAttrs(funcOp.getNumArguments());
+    llvm::SmallVector<llvm::omp::DeclareSimdAttrTy, 8> paramAttrs(funcOp.getNumArguments());
   
     applyUniform(funcOp, ds, paramAttrs);
     applyAligned(funcOp, ds, paramAttrs);
@@ -7089,7 +7089,7 @@ convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
     }
 
     dumpParamAttrs(funcOp, paramAttrs);
-    ompBuilder->emitDeclareSimdFunction(fn, VLENVal, paramAttrs, getDeclareSimdBranch(ds));
+    llvm::omp::emitDeclareSimdFunction(fn, VLENVal, paramAttrs, getDeclareSimdBranch(ds));
   });
 
   return success();

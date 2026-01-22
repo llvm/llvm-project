@@ -499,32 +499,6 @@ private:
   OffloadEntriesDeviceGlobalVarTy OffloadEntriesDeviceGlobalVar;
 };
 
-namespace omp {
-
-enum ParamKindTy {
-  Linear,
-  LinearRef,
-  LinearUVal,
-  LinearVal,
-  Uniform,
-  Vector,
-};
-
-struct ParamAttrTy {
-  ParamKindTy Kind = Vector;
-  llvm::APSInt StrideOrArg;   // linear step (or var-stride arg index)
-  llvm::APSInt Alignment;     // aligned(...)
-  bool HasVarStride = false;  // linear(i:stepVar)
-};
-
-enum DeclareSimdBranch {
-  Undefined,
-  Notinbranch,
-  Inbranch,
-};
-
-} // end of namespace omp
-
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
 /// Each OpenMP directive has a corresponding public generator method.
@@ -3881,11 +3855,6 @@ public:
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                               std::optional<unsigned> AddressSpace = {});
-
-  LLVM_ABI void emitDeclareSimdFunction(llvm::Function *Fn,
-                                        const llvm::APSInt &VLENVal,
-                                        ArrayRef<llvm::omp::ParamAttrTy> ParamAttrs,
-                                        llvm::omp::DeclareSimdBranch Branch);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

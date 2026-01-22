@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Frontend/OpenMP/OMPDeclareSimd.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
@@ -11813,7 +11814,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
 }
 
 static unsigned evaluateCDTSize(const FunctionDecl *FD,
-                                ArrayRef<ParamAttrTy> ParamAttrs) {
+                                ArrayRef<DeclareSimdAttrTy> ParamAttrs) {
   // Every vector variant of a SIMD-enabled function has a vector length (VLEN).
   // If OpenMP clause "simdlen" is used, the VLEN is the value of the argument
   // of that clause. The VLEN value must be power of 2.
@@ -11843,13 +11844,13 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   } else {
     unsigned Offset = 0;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (ParamAttrs[Offset].Kind == Vector)
+      if (ParamAttrs[Offset].Kind == DeclareSimdKindTy::Vector)
         CDT = C.getPointerType(C.getCanonicalTagType(MD->getParent()));
       ++Offset;
     }
     if (CDT.isNull()) {
       for (unsigned I = 0, E = FD->getNumParams(); I < E; ++I) {
-        if (ParamAttrs[I + Offset].Kind == Vector) {
+        if (ParamAttrs[I + Offset].Kind == DeclareSimdKindTy::Vector) {
           CDT = FD->getParamDecl(I)->getType();
           break;
         }
@@ -11864,56 +11865,10 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   return C.getTypeSize(CDT);
 }
 
-/// Mangle the parameter part of the vector function name according to
-/// their OpenMP classification. The mangling function is defined in
-/// section 4.5 of the AAVFABI(2021Q1).
-static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const auto &ParamAttr : ParamAttrs) {
-    switch (ParamAttr.Kind) {
-    case Linear:
-      Out << 'l';
-      break;
-    case LinearRef:
-      Out << 'R';
-      break;
-    case LinearUVal:
-      Out << 'U';
-      break;
-    case LinearVal:
-      Out << 'L';
-      break;
-    case Uniform:
-      Out << 'u';
-      break;
-    case Vector:
-      Out << 'v';
-      break;
-    }
-    if (ParamAttr.HasVarStride)
-      Out << "s" << ParamAttr.StrideOrArg;
-    else if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef ||
-             ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
-      // Don't print the step value if it is not present or if it is
-      // equal to 1.
-      if (ParamAttr.StrideOrArg < 0)
-        Out << 'n' << -ParamAttr.StrideOrArg;
-      else if (ParamAttr.StrideOrArg != 1)
-        Out << ParamAttr.StrideOrArg;
-    }
-
-    if (!!ParamAttr.Alignment)
-      Out << 'a' << ParamAttr.Alignment;
-  }
-
-  return std::string(Out.str());
-}
-
 static void
 emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
                            const llvm::APSInt &VLENVal,
-                           ArrayRef<ParamAttrTy> ParamAttrs,
+                           ArrayRef<DeclareSimdAttrTy> ParamAttrs,
                            OMPDeclareSimdDeclAttr::BranchStateTy State) {
   struct ISADataTy {
     char ISA;
@@ -11958,7 +11913,7 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
       } else {
         Out << VLENVal;
       }
-      Out << mangleVectorParameters(ParamAttrs);
+      Out << llvm::omp::mangleVectorParameters(ParamAttrs);
       Out << '_' << Fn->getName();
       Fn->addFnAttr(Out.str());
     }
@@ -11972,19 +11927,19 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
 // https://developer.arm.com/products/software-development-tools/hpc/arm-compiler-for-hpc/vector-function-abi.
 
 /// Maps To Vector (MTV), as defined in 4.1.1 of the AAVFABI (2021Q1).
-static bool getAArch64MTV(QualType QT, ParamKindTy Kind) {
+static bool getAArch64MTV(QualType QT, DeclareSimdKindTy Kind) {
   QT = QT.getCanonicalType();
 
   if (QT->isVoidType())
     return false;
 
-  if (Kind == ParamKindTy::Uniform)
+  if (Kind == DeclareSimdKindTy::Uniform)
     return false;
 
-  if (Kind == ParamKindTy::LinearUVal || Kind == ParamKindTy::LinearRef)
+  if (Kind == DeclareSimdKindTy::LinearUVal || Kind == DeclareSimdKindTy::LinearRef)
     return false;
 
-  if ((Kind == ParamKindTy::Linear || Kind == ParamKindTy::LinearVal) &&
+  if ((Kind == DeclareSimdKindTy::Linear || Kind == DeclareSimdKindTy::LinearVal) &&
       !QT->isReferenceType())
     return false;
 
@@ -12017,7 +11972,7 @@ static bool getAArch64PBV(QualType QT, ASTContext &C) {
 /// Computes the lane size (LS) of a return type or of an input parameter,
 /// as defined by `LS(P)` in 3.2.1 of the AAVFABI.
 /// TODO: Add support for references, section 3.2.1, item 1.
-static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
+static unsigned getAArch64LS(QualType QT, DeclareSimdKindTy Kind, ASTContext &C) {
   if (!getAArch64MTV(QT, Kind) && QT.getCanonicalType()->isPointerType()) {
     QualType PTy = QT.getCanonicalType()->getPointeeType();
     if (getAArch64PBV(PTy, C))
@@ -12033,7 +11988,7 @@ static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
 // signature of the scalar function, as defined in 3.2.2 of the
 // AAVFABI.
 static std::tuple<unsigned, unsigned, bool>
-getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
+getNDSWDS(const FunctionDecl *FD, ArrayRef<DeclareSimdAttrTy> ParamAttrs) {
   QualType RetType = FD->getReturnType().getCanonicalType();
 
   ASTContext &C = FD->getASTContext();
@@ -12042,7 +11997,7 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
 
   llvm::SmallVector<unsigned, 8> Sizes;
   if (!RetType->isVoidType()) {
-    Sizes.push_back(getAArch64LS(RetType, ParamKindTy::Vector, C));
+    Sizes.push_back(getAArch64LS(RetType, DeclareSimdKindTy::Vector, C));
     if (!getAArch64PBV(RetType, C) && getAArch64MTV(RetType, {}))
       OutputBecomesInput = true;
   }
@@ -12121,7 +12076,7 @@ static void addAArch64AdvSIMDNDSNames(unsigned NDS, StringRef Mask,
 /// Emit vector function attributes for AArch64, as defined in the AAVFABI.
 static void emitAArch64DeclareSimdFunction(
     CodeGenModule &CGM, const FunctionDecl *FD, unsigned UserVLEN,
-    ArrayRef<ParamAttrTy> ParamAttrs,
+    ArrayRef<DeclareSimdAttrTy> ParamAttrs,
     OMPDeclareSimdDeclAttr::BranchStateTy State, StringRef MangledName,
     char ISA, unsigned VecRegSize, llvm::Function *Fn, SourceLocation SLoc) {
 
@@ -12155,7 +12110,7 @@ static void emitAArch64DeclareSimdFunction(
   }
 
   // Sort out parameter sequence.
-  const std::string ParSeq = mangleVectorParameters(ParamAttrs);
+  const std::string ParSeq = llvm::omp::mangleVectorParameters(ParamAttrs);
   StringRef Prefix = "_ZGV";
   // Generate simdlen from user input (if any).
   if (UserVLEN) {
@@ -12231,7 +12186,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       ++ParamPos;
     }
     for (const auto *Attr : FD->specific_attrs<OMPDeclareSimdDeclAttr>()) {
-      llvm::SmallVector<ParamAttrTy, 8> ParamAttrs(ParamPositions.size());
+      llvm::SmallVector<DeclareSimdAttrTy, 8> ParamAttrs(ParamPositions.size());
       // Mark uniform parameters.
       for (const Expr *E : Attr->uniforms()) {
         E = E->IgnoreParenImpCasts();
@@ -12245,7 +12200,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
           assert(It != ParamPositions.end() && "Function parameter not found");
           Pos = It->second;
         }
-        ParamAttrs[Pos].Kind = Uniform;
+        ParamAttrs[Pos].Kind = DeclareSimdKindTy::Uniform;
       }
       // Get alignment info.
       auto *NI = Attr->alignments_begin();
@@ -12306,15 +12261,15 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                     .getQuantity();
           }
         }
-        ParamAttrTy &ParamAttr = ParamAttrs[Pos];
+        DeclareSimdAttrTy &ParamAttr = ParamAttrs[Pos];
         if (*MI == OMPC_LINEAR_ref)
-          ParamAttr.Kind = LinearRef;
+          ParamAttr.Kind = DeclareSimdKindTy::LinearRef;
         else if (*MI == OMPC_LINEAR_uval)
-          ParamAttr.Kind = LinearUVal;
+          ParamAttr.Kind = DeclareSimdKindTy::LinearUVal;
         else if (IsReferenceType)
-          ParamAttr.Kind = LinearVal;
+          ParamAttr.Kind = DeclareSimdKindTy::LinearVal;
         else
-          ParamAttr.Kind = Linear;
+          ParamAttr.Kind = DeclareSimdKindTy::Linear;
         // Assuming a stride of 1, for `linear` without modifiers.
         ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(1);
         if (*SI) {
@@ -12339,7 +12294,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         // rescale the value of linear_step with the byte size of the
         // pointee type.
         if (!ParamAttr.HasVarStride &&
-            (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef))
+            (ParamAttr.Kind == DeclareSimdKindTy::Linear || ParamAttr.Kind == DeclareSimdKindTy::LinearRef))
           ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
         ++MI;
