@@ -416,6 +416,9 @@ void SILowerSGPRSpills::updateDbgValueArg(MachineInstr &MI,
         MI.getOperand(FIOpndIdx).ChangeToRegister(vgpr.VGPR, false);
         MI.getDebugExpressionOp().setMetadata(EBuilder.intoExpression());
       }
+      else {
+        MI.eraseFromParent();
+      }
     }
   }
 }
@@ -431,7 +434,7 @@ void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
 
   auto WasOpndSpilled = [&](const MachineOperand &Opnd, bool IsValueList) {
     int FrObjIdx = (IsValueList ? Opnd.getIndex() : 0);
-    return (Opnd.isFI() && FrInfo.isFixedObjectIndex(FrObjIdx) &&
+    return (Opnd.isFI() && !FrInfo.isFixedObjectIndex(FrObjIdx) &&
             SpillFIs[Opnd.getIndex()]);
   };
   
