@@ -28,6 +28,7 @@ class TestTemplateAlias(TestBase):
             dict(CXXFLAGS_EXTRAS="-gdwarf-5 -gtemplate-alias -gsimple-template-names")
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
     def test_tag_alias_no_simple(self):
         self.do_test(
             dict(
@@ -35,6 +36,7 @@ class TestTemplateAlias(TestBase):
             )
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
     def test_no_tag_alias_simple(self):
         self.do_test(
             dict(
@@ -42,6 +44,7 @@ class TestTemplateAlias(TestBase):
             )
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
     def test_no_tag_alias_no_simple(self):
         self.do_test(
             dict(
