@@ -89,29 +89,11 @@ struct TextDiagnosticsPrinterWithOutput {
         DiagPrinter(DiagnosticsOS, *DiagOpts) {}
 };
 
-std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
-buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                 llvm::BumpPtrAllocator &Alloc);
-
 std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                           ArrayRef<std::string> CommandLine,
-                           StringRef WorkingDirectory,
-                           llvm::MemoryBufferRef TUBuffer);
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName);
-
-bool initializeScanCompilerInstance(
+void initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
@@ -123,9 +105,6 @@ getInitialStableDirs(const CompilerInstance &ScanInstance);
 std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
                              SmallVector<StringRef> &StableDirs);
-
-std::unique_ptr<DependencyOutputOptions>
-takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance);
 
 /// Create the dependency collector that will collect the produced
 /// dependencies. May return the created ModuleDepCollector depending

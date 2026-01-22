@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
+from typing import Protocol
 import argparse
 import binascii
 import dataclasses
@@ -39,7 +43,12 @@ DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
 # created by the DAP client are terminated correctly when the test ends.
-SpawnHelperCallback = Callable[[str, List[str], List[str]], subprocess.Popen]
+class SpawnHelperCallback(Protocol):
+    def __call__(
+        self, executable: str, args: List[str], extra_env: List[str], **kwargs
+    ) -> subprocess.Popen:
+        ...
+
 
 ## DAP type references
 
@@ -51,7 +60,7 @@ class Event(TypedDict):
     body: Any
 
 
-class Request(TypedDict, total=False):
+class Request(TypedDict):
     type: Literal["request"]
     seq: int
     command: str
@@ -262,6 +271,7 @@ class DebugCommunication(object):
         self.module_events: List[Dict] = []
         self.sequence: int = 1
         self.output: Dict[str, str] = {}
+        self.reverse_process: Optional[subprocess.Popen] = None
 
         # debuggee state
         self.threads: Optional[dict] = None
@@ -522,14 +532,17 @@ class DebugCommunication(object):
             assert self.spawn_helper is not None, "Not configured to spawn subprocesses"
             [exe, *args] = arguments["args"]
             env = [f"{k}={v}" for k, v in arguments.get("env", {}).items()]
-            proc = self.spawn_helper(exe, args, env)
-            body = {"processId": proc.pid}
+            self.reverse_process = self.spawn_helper(
+                exe, args, env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            body = {"processId": self.reverse_process.pid}
             self.send_packet(
                 {
                     "type": "response",
                     "seq": 0,
                     "request_seq": request["seq"],
                     "success": True,
+                    "message": None,
                     "command": "runInTerminal",
                     "body": body,
                 }
@@ -555,7 +568,7 @@ class DebugCommunication(object):
         if all_threads_continued:
             self.thread_stop_reasons = {}
 
-    def _update_verified_breakpoints(self, breakpoints: list[Breakpoint]):
+    def _update_verified_breakpoints(self, breakpoints: List[Breakpoint]):
         for bp in breakpoints:
             # If no id is set, we cannot correlate the given breakpoint across
             # requests, ignore it.
@@ -589,7 +602,7 @@ class DebugCommunication(object):
 
         return packet["seq"]
 
-    def _send_recv(self, request: Request) -> Optional[Response]:
+    def _send_recv(self, request: Request) -> Response:
         """Send a command python dictionary as JSON and receive the JSON
         response. Validates that the response is the correct sequence and
         command in the reply. Any events that are received are added to the
@@ -650,7 +663,7 @@ class DebugCommunication(object):
             breakpoint_events.append(event)
         return breakpoint_events
 
-    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: list[str]):
+    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[str]):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
         while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
             breakpoint_event = self.wait_for_event(["breakpoint"])
@@ -861,8 +874,7 @@ class DebugCommunication(object):
         *,
         program: Optional[str] = None,
         pid: Optional[int] = None,
-        debuggerId: Optional[int] = None,
-        targetId: Optional[int] = None,
+        session: Optional[dict[str, int]] = None,
         waitFor=False,
         initCommands: Optional[list[str]] = None,
         preRunCommands: Optional[list[str]] = None,
@@ -876,16 +888,14 @@ class DebugCommunication(object):
         sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
         gdbRemotePort: Optional[int] = None,
         gdbRemoteHostname: Optional[str] = None,
-    ):
+    ) -> int:
         args_dict = {}
         if pid is not None:
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
-        if debuggerId is not None:
-            args_dict["debuggerId"] = debuggerId
-        if targetId is not None:
-            args_dict["targetId"] = targetId
+        if session is not None:
+            args_dict["session"] = session
         if waitFor:
             args_dict["waitFor"] = waitFor
         args_dict["initCommands"] = self.init_commands
@@ -914,7 +924,7 @@ class DebugCommunication(object):
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
-        return self._send_recv(command_dict)
+        return self.send_packet(command_dict)
 
     def request_breakpointLocations(
         self, file_path, line, end_line=None, column=None, end_column=None
@@ -945,10 +955,10 @@ class DebugCommunication(object):
             "arguments": {},
         }
         response = self._send_recv(command_dict)
-        if response:
+        if response and response["success"]:
             self.configuration_done_sent = True
             stopped_on_entry = self.is_stopped
-            self.request_threads()
+            threads_response = self.request_threads()
             if not stopped_on_entry:
                 # Drop the initial cached threads if we did not stop-on-entry.
                 # In VSCode, immediately following 'configurationDone', a
@@ -1076,10 +1086,10 @@ class DebugCommunication(object):
         threadId=None,
         context=None,
         is_hex: Optional[bool] = None,
-    ):
+    ) -> Response:
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
-            return []
+            raise ValueError("invalid frameIndex")
         args_dict = {
             "expression": expression,
             "frameId": stackFrame["id"],
@@ -1162,7 +1172,7 @@ class DebugCommunication(object):
         commandEscapePrefix: Optional[str] = None,
         customFrameFormat: Optional[str] = None,
         customThreadFormat: Optional[str] = None,
-    ):
+    ) -> int:
         args_dict = {"program": program}
         if args:
             args_dict["args"] = args
@@ -1213,7 +1223,7 @@ class DebugCommunication(object):
         if commandEscapePrefix is not None:
             args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
-        return self._send_recv(command_dict)
+        return self.send_packet(command_dict)
 
     def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
@@ -1273,6 +1283,7 @@ class DebugCommunication(object):
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
+        assert self.initialized, "cannot setBreakpoints before initialized"
         args_dict = {
             "source": source,
             "sourceModified": False,
@@ -1310,6 +1321,7 @@ class DebugCommunication(object):
     def request_setExceptionBreakpoints(
         self, *, filters: list[str] = [], filter_options: list[dict] = []
     ):
+        assert self.initialized, "cannot setExceptionBreakpoints before initialized"
         args_dict = {"filters": filters}
         if filter_options:
             args_dict["filterOptions"] = filter_options
@@ -1321,6 +1333,7 @@ class DebugCommunication(object):
         return self._send_recv(command_dict)
 
     def request_setFunctionBreakpoints(self, names, condition=None, hitCondition=None):
+        assert self.initialized, "cannot setFunctionBreakpoints before initialized"
         breakpoints = []
         for name in names:
             bp = {"name": name}
@@ -1369,6 +1382,7 @@ class DebugCommunication(object):
             [hitCondition]: string
         }
         """
+        assert self.initialized, "cannot setDataBreakpoints before initialized"
         args_dict = {"breakpoints": dataBreakpoints}
         command_dict = {
             "command": "setDataBreakpoints",
@@ -1388,7 +1402,12 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text) + 1}
+        def code_units(input: str) -> int:
+            utf16_bytes = input.encode("utf-16-le")
+            # one UTF16 codeunit = 2 bytes.
+            return len(utf16_bytes) // 2
+
+        args_dict = {"text": text, "column": code_units(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {
@@ -1707,8 +1726,12 @@ class DebugAdapterServer(DebugCommunication):
                 )
             )
 
+        # FIXME: use `str.removeprefix` when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+        if out.startswith(expected_prefix):
+            out = out[len(expected_prefix) :]
+
         # If the listener expanded into multiple addresses, use the first.
-        connection = out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
+        connection = out.rstrip("\r\n").split(",", 1)[0]
 
         return (process, connection)
 

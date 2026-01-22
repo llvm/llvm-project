@@ -77,7 +77,7 @@ struct UnrollVectorOptions {
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction with MMT semantics (matrix matrix multiplication
 /// with the RHS transposed). This specific form is meant to have the vector
 /// operands are organized such that the reduction dimension is contiguous.
@@ -90,7 +90,7 @@ struct UnrollVectorOptions {
 ///                  kind = #vector.kind<add>} %a, %b, %c : ...
 /// ```
 ///
-///  The `constraint` predicate is used to decide which `vector.contraction` ops
+///  The `constraint` predicate is used to decide which `vector.contract` ops
 ///  to filter out.
 void populateVectorContractCanonicalizeMatmulToMMT(
     RewritePatternSet &patterns,

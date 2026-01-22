@@ -3,7 +3,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-constraints=z3 \
 // RUN:   -analyzer-checker=core %s -verify
 //
-// REQUIRES: z3, z3-mock, asserts, shell, system-linux
+// REQUIRES: z3, z3-mock, asserts, system-linux
 //
 // Works only with the z3 constraint manager.
 // expected-no-diagnostics

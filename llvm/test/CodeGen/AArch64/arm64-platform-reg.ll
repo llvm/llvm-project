@@ -113,11 +113,13 @@
 ; Also, fp must always refer to a valid frame record, even if it's not the one
 ; of the current function, so it shouldn't be used either.
 
-@var = global [30 x i64] zeroinitializer
+; Test reserved GPR64 super-registers regalloc on register pressure.
 
-define void @keep_live() {
-  %val = load volatile [30 x i64], ptr @var
-  store volatile [30 x i64] %val, ptr @var
+@var_i64 = global [30 x i64] zeroinitializer
+
+define void @keep_live_GPR64() {
+  %val = load volatile [30 x i64], ptr @var_i64
+  store volatile [30 x i64] %val, ptr @var_i64
 
 ; CHECK: ldr x18
 ; CHECK: str x18
@@ -183,6 +185,83 @@ define void @keep_live() {
 ; CHECK-RESERVE-X27-NOT: ldr x27
 ; CHECK-RESERVE-X28-NOT: ldr x28
 ; CHECK-RESERVE-LR-RA-NOT: ldr x30
+; CHECK-RESERVE: ret
+  ret void
+}
+
+; Test reserved GPR32 sub-registers regalloc on register pressure.
+; They should be reserved together with their GPR64 super-registers. 
+
+@var_i32 = global [30 x i32] zeroinitializer
+
+define void @keep_live_GPR32() {
+  %val = load volatile [30 x i32], ptr @var_i32
+  store volatile [30 x i32] %val, ptr @var_i32
+
+; CHECK: ldr w18
+; CHECK: str w18
+
+; CHECK-RESERVE-NOT: ldr fp
+; CHECK-RESERVE-X8-NOT: adrp w8
+; CHECK-RESERVE-X8-NOT: ldr w8
+; CHECK-RESERVE-X1-NOT: ldr w1,
+; CHECK-RESERVE-X2-NOT: ldr w2,
+; CHECK-RESERVE-X3-NOT: ldr w3,
+; CHECK-RESERVE-X4-NOT: ldr w4,
+; CHECK-RESERVE-X5-NOT: ldr w5,
+; CHECK-RESERVE-X6-NOT: ldr w6,
+; CHECK-RESERVE-X7-NOT: ldr w7,
+; CHECK-RESERVE-X9-NOT: ldr w9,
+; CHECK-RESERVE-X10-NOT: ldr w10,
+; CHECK-RESERVE-X11-NOT: ldr w11,
+; CHECK-RESERVE-X12-NOT: ldr w12,
+; CHECK-RESERVE-X13-NOT: ldr w13,
+; CHECK-RESERVE-X14-NOT: ldr w14,
+; CHECK-RESERVE-X15-NOT: ldr w15,
+; CHECK-RESERVE-X16-NOT: ldr w16
+; CHECK-RESERVE-X17-NOT: ldr w17
+; CHECK-RESERVE-X18-NOT: ldr w18
+; CHECK-RESERVE-X19-NOT: ldr w19
+; CHECK-RESERVE-X20-NOT: ldr w20
+; CHECK-RESERVE-X21-NOT: ldr w21
+; CHECK-RESERVE-X22-NOT: ldr w22
+; CHECK-RESERVE-X23-NOT: ldr w23
+; CHECK-RESERVE-X24-NOT: ldr w24
+; CHECK-RESERVE-X25-NOT: ldr w25
+; CHECK-RESERVE-X26-NOT: ldr w26
+; CHECK-RESERVE-X27-NOT: ldr w27
+; CHECK-RESERVE-X28-NOT: ldr w28
+; CHECK-RESERVE-LR-RA-NOT: ldr w30
+; CHECK-RESERVE: Spill
+; CHECK-RESERVE-NOT: ldr fp
+; CHECK-RESERVE-X1-NOT: ldr w1,
+; CHECK-RESERVE-X2-NOT: ldr w2,
+; CHECK-RESERVE-X3-NOT: ldr w3,
+; CHECK-RESERVE-X4-NOT: ldr w4,
+; CHECK-RESERVE-X5-NOT: ldr w5,
+; CHECK-RESERVE-X6-NOT: ldr w6,
+; CHECK-RESERVE-X7-NOT: ldr w7,
+; CHECK-RESERVE-X9-NOT: ldr w9,
+; CHECK-RESERVE-X10-NOT: ldr w10,
+; CHECK-RESERVE-X11-NOT: ldr w11,
+; CHECK-RESERVE-X12-NOT: ldr w12,
+; CHECK-RESERVE-X13-NOT: ldr w13,
+; CHECK-RESERVE-X14-NOT: ldr w14,
+; CHECK-RESERVE-X15-NOT: ldr w15,
+; CHECK-RESERVE-X16-NOT: ldr w16
+; CHECK-RESERVE-X17-NOT: ldr w17
+; CHECK-RESERVE-X18-NOT: ldr w18
+; CHECK-RESERVE-X19-NOT: ldr w19
+; CHECK-RESERVE-X20-NOT: ldr w20
+; CHECK-RESERVE-X21-NOT: ldr w21
+; CHECK-RESERVE-X22-NOT: ldr w22
+; CHECK-RESERVE-X23-NOT: ldr w23
+; CHECK-RESERVE-X24-NOT: ldr w24
+; CHECK-RESERVE-X25-NOT: ldr w25
+; CHECK-RESERVE-X26-NOT: ldr w26
+; CHECK-RESERVE-X27-NOT: ldr w27
+; CHECK-RESERVE-X28-NOT: ldr w28
+; CHECK-RESERVE-LR-RA-NOT: ldr w30
 ; CHECK-RESERVE: ret
   ret void
 }

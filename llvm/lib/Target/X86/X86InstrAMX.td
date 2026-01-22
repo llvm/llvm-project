@@ -388,13 +388,13 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     let  usesCustomInserter = 1 in {
       def PTCVTROWD2PSrri : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
-                                    [(set VR512:$dst, (int_x86_tcvtrowd2ps timm:$src1, imm:$src2))]>;
+                                    [(set VR512:$dst, (int_x86_tcvtrowd2psi timm:$src1, timm:$src2))]>;
       def PTCVTROWD2PSrre : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
                                     [(set VR512:$dst, (int_x86_tcvtrowd2ps timm:$src1, GR32:$src2))]>;
     }
 
     def PTCVTROWD2PSrriV : PseudoI<(outs VR512:$dst),
-                                   (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                   (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                     [(set VR512: $dst,
                                       (int_x86_tcvtrowd2ps_internal GR16:$src1, GR16:$src2,
                                        TILE:$src3, imm:$src4))]>;
@@ -404,7 +404,7 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
                                      (int_x86_tcvtrowd2ps_internal GR16:$src1, GR16:$src2,
                                       TILE:$src3, GR32:$src4))]>;
     def PTCVTROWPS2BF16HrriV : PseudoI<(outs VR512:$dst),
-                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                        [(set VR512: $dst,
                                          (int_x86_tcvtrowps2bf16h_internal GR16:$src1, GR16:$src2,
                                           TILE:$src3, imm:$src4))]>;
@@ -414,7 +414,7 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
                                          (int_x86_tcvtrowps2bf16h_internal GR16:$src1, GR16:$src2,
                                           TILE:$src3, GR32:$src4))]>;
     def PTCVTROWPS2BF16LrriV : PseudoI<(outs VR512:$dst),
-                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                        [(set VR512: $dst,
                                          (int_x86_tcvtrowps2bf16l_internal GR16:$src1, GR16:$src2,
                                           TILE:$src3, imm:$src4))]>;
@@ -424,7 +424,7 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
                                          (int_x86_tcvtrowps2bf16l_internal GR16:$src1, GR16:$src2,
                                           TILE:$src3, GR32:$src4))]>;
     def PTCVTROWPS2PHHrriV : PseudoI<(outs VR512:$dst),
-                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                      [(set VR512: $dst,
                                        (int_x86_tcvtrowps2phh_internal GR16:$src1, GR16:$src2,
                                         TILE:$src3, imm:$src4))]>;
@@ -434,7 +434,7 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
                                        (int_x86_tcvtrowps2phh_internal GR16:$src1, GR16:$src2,
                                         TILE:$src3, GR32:$src4))]>;
     def PTCVTROWPS2PHLrriV : PseudoI<(outs VR512:$dst),
-                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                      [(set VR512: $dst,
                                        (int_x86_tcvtrowps2phl_internal GR16:$src1, GR16:$src2,
                                         TILE:$src3, imm:$src4))]>;
@@ -465,7 +465,7 @@ multiclass AMXAVX512_BASE<bits<8> Opcode1, bits<8> Opcode2, string Opstr,
                                     (!cast<Intrinsic>("int_x86_"#Opstr) timm:$src1, GR32:$src2))]>;
       def "P"#NAME#"rri" : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
                                    [(set VR512:$dst,
-                                    (!cast<Intrinsic>("int_x86_"#Opstr) timm:$src1, imm:$src2))]>;
+                                    (!cast<Intrinsic>("int_x86_"#Opstr#"i") timm:$src1, timm:$src2))]>;
     }
   }
 }
@@ -496,13 +496,13 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     let  usesCustomInserter = 1 in {
       def PTILEMOVROWrri : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
-                                   [(set VR512:$dst, (int_x86_tilemovrow timm:$src1, imm:$src2))]>;
+                                   [(set VR512:$dst, (int_x86_tilemovrowi timm:$src1, timm:$src2))]>;
       def PTILEMOVROWrre : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
                                    [(set VR512:$dst, (int_x86_tilemovrow timm:$src1, GR32:$src2))]>;
     }
 
     def PTILEMOVROWrriV : PseudoI<(outs VR512:$dst),
-                                  (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                  (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                   [(set VR512: $dst,
                                     (int_x86_tilemovrow_internal GR16:$src1, GR16:$src2,
                                      TILE:$src3, imm:$src4))]>;
