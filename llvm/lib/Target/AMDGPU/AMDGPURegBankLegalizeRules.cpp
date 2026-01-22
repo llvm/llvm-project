@@ -495,17 +495,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  bool HasVecMulU64 = ST->hasVectorMulU64();
   addRulesForGOpcs({G_MUL}, Standard)
-      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
-      .Uni(S64, {{SgprB64}, {SgprB64, SgprB64}})
-      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
-      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
-      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
-      .Div(S64, {{VgprB64}, {VgprB64, VgprB64}}, HasVecMulU64)
-      .Div(S64, {{VgprB64}, {VgprB64, VgprB64}, SplitTo32Mul}, !HasVecMulU64);
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
   bool hasMulHi = ST->hasScalarMulHiInsts();
   addRulesForGOpcs({G_UMULH, G_SMULH}, Standard)
