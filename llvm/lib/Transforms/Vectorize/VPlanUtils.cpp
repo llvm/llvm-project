@@ -333,6 +333,7 @@ static bool preservesUniformity(unsigned Opcode) {
   if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
     return true;
   switch (Opcode) {
+  case Instruction::Freeze:
   case Instruction::GetElementPtr:
   case Instruction::ICmp:
   case Instruction::FCmp:
