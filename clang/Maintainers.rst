@@ -179,6 +179,9 @@ Offloading driver
 | Joseph Huber
 | joseph.huber\@amd.com (email), jhuber6 (GitHub)
 
+| Nick Sarnie
+| nick.sarnie\@intel.com (email), sarnex (GitHub)
+
 
 Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
