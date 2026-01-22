@@ -37,7 +37,7 @@ private:
 
 public:
   LIBC_INLINE_VAR static constexpr bool value =
-      (is_arithmetic_v<T> && (T(-1) > T(0))) ||
+      (is_integral_v<T> && (T(-1) > T(0))) ||
       __is_unqualified_any_of<T, unsigned short fract, unsigned fract,
                               unsigned long fract, unsigned short accum,
                               unsigned accum, unsigned long accum,
