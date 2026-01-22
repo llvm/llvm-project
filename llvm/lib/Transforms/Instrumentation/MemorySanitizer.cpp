@@ -3450,15 +3450,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Handle Arm NEON vector convert intrinsics.
   ///
   /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
-  ///      i32 @llvm.aarch64.neon.fcvtms.i32.f64(double)
+  ///      i32        @llvm.aarch64.neon.fcvtms.i32.f64    (double)
+  ///
+  /// For conversions to or from fixed-point, there is a trailing argument to
+  /// indicate the fixed-point precision:
+  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
+  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
   ///
   /// For x86 SSE vector convert intrinsics, see
   /// handleSSEVectorConvertIntrinsic().
-  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I) {
-    assert(I.arg_size() == 1);
+  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I, bool FixedPoint) {
+    if (FixedPoint)
+      assert(I.arg_size() == 2);
+    else
+      assert(I.arg_size() == 1);
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
+
+    if (FixedPoint) {
+      Value *Precision = I.getOperand(1);
+      insertCheckShadowOf(Precision, &I);
+    }
 
     /// For scalars:
     /// Since they are converting from floating-point to integer, the output is
@@ -6661,6 +6674,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool maybeHandleArmSIMDIntrinsic(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    // Two operands e.g.,
+    // - <8 x i8>  @llvm.aarch64.neon.rshrn.v8i8  (<8 x i16>, i32)
+    // - <4 x i16> @llvm.aarch64.neon.uqrshl.v4i16(<4 x i16>, <4 x i16>)
     case Intrinsic::aarch64_neon_rshrn:
     case Intrinsic::aarch64_neon_sqrshl:
     case Intrinsic::aarch64_neon_sqrshrn:
@@ -6677,8 +6693,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_uqshrn:
     case Intrinsic::aarch64_neon_urshl:
     case Intrinsic::aarch64_neon_ushl:
-      // Not handled here: aarch64_neon_vsli (vector shift left and insert)
       handleVectorShiftIntrinsic(I, /* Variable */ false);
+      break;
+
+    // Vector Shift Left/Right and Insert
+    //
+    // Three operands e.g.,
+    // - <4 x i16> @llvm.aarch64.neon.vsli.v4i16
+    //                 (<4 x i16> %a, <4 x i16> %b, i32 %n)
+    // - <16 x i8> @llvm.aarch64.neon.vsri.v16i8
+    //                 (<16 x i8> %a, <16 x i8> %b, i32 %n)
+    //
+    // %b is shifted by %n bits, and the "missing" bits are filled in with %a
+    // (instead of zero-extending/sign-extending).
+    case Intrinsic::aarch64_neon_vsli:
+    case Intrinsic::aarch64_neon_vsri:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1);
       break;
 
     // TODO: handling max/min similarly to AND/OR may be more precise
@@ -6720,10 +6751,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_fcvtzs:
     case Intrinsic::aarch64_neon_fcvtzu:
     // Floating-point convert to lower precision narrow, rounding to odd
-    case Intrinsic::aarch64_neon_fcvtxn: {
-      handleNEONVectorConvertIntrinsic(I);
+    case Intrinsic::aarch64_neon_fcvtxn:
+    // Vector Conversions Between Half-Precision and Single-Precision
+    case Intrinsic::aarch64_neon_vcvthf2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2hf:
+      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
-    }
+
+    // Vector Conversions Between Fixed-Point and Floating-Point
+    case Intrinsic::aarch64_neon_vcvtfxs2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfxu2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu:
+      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/true);
+      break;
+
+    // TODO: bfloat conversions
+    // - bfloat @llvm.aarch64.neon.bfcvt(float)
+    // - <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float>)
+    // - <8 x bfloat> @llvm.aarch64.neon.bfcvtn2(<8 x bfloat>, <4 x float>)
 
     // Add reduction to scalar
     case Intrinsic::aarch64_neon_faddv:
