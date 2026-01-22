@@ -17,6 +17,9 @@
 define void @main()  {
   call void @outer(i32 noundef 1)
   call void @inner(i32 noundef 1)
+  ; This call is UB due to signature mismatch with the actual definition.
+  ; Make sure it does not lead to a crash.
+  call void @inner2()
   ret void
 }
 
@@ -30,3 +33,6 @@ declare void @outer(i32 noundef)
 ; not have the `noundef` attribute.
 ; CHECK: declare void @inner(i32)
 declare void @inner(i32 noundef)
+
+; CHECK: declare void @inner2(i32)
+declare void @inner2()
