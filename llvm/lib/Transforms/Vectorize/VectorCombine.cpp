@@ -2446,8 +2446,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     Z = PoisonValue::get(BinOpTy);
     Op0Info = TTI.getOperandInfo(X);
   } else
-    Op0Info =
-        TTI.mergeInfo(TTI::getOperandInfo(X), TTI::getOperandInfo(Z), false);
+    Op0Info = TTI.commonOperandInfo(X, Z);
 
   SmallVector<int> NewMask1(OldMask);
   TargetTransformInfo::ShuffleKind SK1 = TargetTransformInfo::SK_PermuteTwoSrc;
@@ -2457,8 +2456,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     W = PoisonValue::get(BinOpTy);
     Op1Info = TTI.getOperandInfo(Y);
   } else
-    Op1Info =
-        TTI.mergeInfo(TTI::getOperandInfo(Y), TTI::getOperandInfo(W), false);
+    Op1Info = TTI.commonOperandInfo(Y, W);
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
   InstructionCost OldCost =

@@ -957,26 +957,11 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 }
 
 TargetTransformInfo::OperandValueInfo
-TargetTransformInfo::mergeInfo(const Value *X, const Value *Y) {
-  return mergeInfo(getOperandInfo(X), getOperandInfo(Y), X == Y);
-}
-
-TargetTransformInfo::OperandValueInfo
-TargetTransformInfo::mergeInfo(const OperandValueInfo OpInfoX,
-                               const OperandValueInfo OpInfoY, bool IsEqual) {
-  OperandValueKind MergeKind = OK_AnyValue;
-  OperandValueProperties MergeProp = OP_None;
-  if (IsEqual)
+TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
+  OperandValueInfo OpInfoX = getOperandInfo(X);
+  if (X == Y)
     return OpInfoX;
-
-  if (OpInfoX.isConstant() || OpInfoY.isConstant())
-    MergeKind = OK_NonUniformConstantValue;
-  else
-    MergeKind = OK_AnyValue;
-
-  MergeProp =
-      OpInfoX.Properties == OpInfoY.Properties ? OpInfoX.Properties : OP_None;
-  return {MergeKind, MergeProp};
+  return OpInfoX.mergeWith(getOperandInfo(Y));
 }
 
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
@@ -998,10 +983,8 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
       return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
   }
 
-  InstructionCost Cost =
-      TTIImpl->getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                      Op1Info, Op2Info,
-                                      Args, CxtI);
+  InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

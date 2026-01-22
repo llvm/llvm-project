@@ -4,7 +4,7 @@
 
 declare void @use(<4 x i32>)
 
-; Uniform constant shift
+; Uniform constant shift v16i16
 
 define <16 x i16> @shuf_uniform_shift_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: define <16 x i16> @shuf_uniform_shift_v16i16_v8i16(
@@ -19,7 +19,7 @@ define <16 x i16> @shuf_uniform_shift_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1)
   ret <16 x i16> %res
 }
 
-; Nonuniform constant shift
+; Nonuniform constant shift v16i16
 
 define <16 x i16> @shuf_nonuniform_shift_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: define <16 x i16> @shuf_nonuniform_shift_v16i16_v8i16(
@@ -34,7 +34,83 @@ define <16 x i16> @shuf_nonuniform_shift_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %
   ret <16 x i16> %res
 }
 
-; Uniform constant & pow2 mul
+; Variable shift (Non-uniform & Non-constant) v8i32
+
+define <8 x i32> @shuf_variable_shl_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %sh0, <4 x i32> %sh1) {
+; SSE-LABEL: define <8 x i32> @shuf_variable_shl_v8i32_v4i32(
+; SSE-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]], <4 x i32> [[SH0:%.*]], <4 x i32> [[SH1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0]], <4 x i32> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[SH0]], <4 x i32> [[SH1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    [[RES:%.*]] = shl <8 x i32> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <8 x i32> [[RES]]
+;
+; AVX-LABEL: define <8 x i32> @shuf_variable_shl_v8i32_v4i32(
+; AVX-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]], <4 x i32> [[SH0:%.*]], <4 x i32> [[SH1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[V0:%.*]] = shl <4 x i32> [[A0]], [[SH0]]
+; AVX-NEXT:    [[V1:%.*]] = shl <4 x i32> [[A1]], [[SH1]]
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[V1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    ret <8 x i32> [[RES]]
+;
+  %v0 = shl <4 x i32> %a0, %sh0
+  %v1 = shl <4 x i32> %a1, %sh1
+  %res = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %res
+}
+
+; Variable shift v4i64
+
+define <4 x i64> @shuf_variable_shl_v4i64_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %sh0, <2 x i64> %sh1) {
+; SSE-LABEL: define <4 x i64> @shuf_variable_shl_v4i64_v2i64(
+; SSE-SAME: <2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]], <2 x i64> [[SH0:%.*]], <2 x i64> [[SH1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[A0]], <2 x i64> [[A1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[SH0]], <2 x i64> [[SH1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[RES:%.*]] = shl <4 x i64> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <4 x i64> [[RES]]
+;
+; AVX-LABEL: define <4 x i64> @shuf_variable_shl_v4i64_v2i64(
+; AVX-SAME: <2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]], <2 x i64> [[SH0:%.*]], <2 x i64> [[SH1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[V0:%.*]] = shl <2 x i64> [[A0]], [[SH0]]
+; AVX-NEXT:    [[V1:%.*]] = shl <2 x i64> [[A1]], [[SH1]]
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[V0]], <2 x i64> [[V1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX-NEXT:    ret <4 x i64> [[RES]]
+;
+  %v0 = shl <2 x i64> %a0, %sh0
+  %v1 = shl <2 x i64> %a1, %sh1
+  %res = shufflevector <2 x i64> %v0, <2 x i64> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i64> %res
+}
+
+; Uniform constant shift right v16i8
+
+define <16 x i8> @shuf_uniform_ashr_v16i8_v8i8(<8 x i8> %a0, <8 x i8> %a1) {
+; CHECK-LABEL: define <16 x i8> @shuf_uniform_ashr_v16i8_v8i8(
+; CHECK-SAME: <8 x i8> [[A0:%.*]], <8 x i8> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[A0]], <8 x i8> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[RES:%.*]] = ashr <16 x i8> [[TMP1]], splat (i8 7)
+; CHECK-NEXT:    ret <16 x i8> [[RES]]
+;
+  %v0 = ashr <8 x i8> %a0, splat (i8 7)
+  %v1 = ashr <8 x i8> %a1, splat (i8 7)
+  %res = shufflevector <8 x i8> %v0, <8 x i8> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %res
+}
+
+; Uniform constant shift right v4i64
+
+define <4 x i64> @shuf_uniform_ashr_v4i64_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: define <4 x i64> @shuf_uniform_ashr_v4i64_v2i64(
+; CHECK-SAME: <2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[A0]], <2 x i64> [[A1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[RES:%.*]] = ashr <4 x i64> [[TMP1]], splat (i64 7)
+; CHECK-NEXT:    ret <4 x i64> [[RES]]
+;
+  %v0 = ashr <2 x i64> %a0, <i64 7, i64 7>
+  %v1 = ashr <2 x i64> %a1, <i64 7, i64 7>
+  %res = shufflevector <2 x i64> %v0, <2 x i64> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i64> %res
+}
+
+; Uniform constant & pow2 mul v16i16
 
 define <16 x i16> @shuf_uniform_mul_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: define <16 x i16> @shuf_uniform_mul_v16i16_v8i16(
@@ -64,7 +140,7 @@ define <16 x i16> @shuf_nonuniform_const_mul_v16i16_v8i16(<8 x i16> %a0, <8 x i1
   ret <16 x i16> %res
 }
 
-; Uniform constant & non-pow2 mul
+; Uniform constant & non-pow2 mul v16i16
 
 define <16 x i16> @shuf_uniform_mul_non_pow2_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: define <16 x i16> @shuf_uniform_mul_non_pow2_v16i16_v8i16(
@@ -108,6 +184,7 @@ define <16 x i16> @shuf_uniform_runtime_mul_v16i16_v8i16(<8 x i16> %a0, <8 x i16
 }
 
 ; Uniform constant mul v4i32
+
 define <8 x i32> @shuf_uniform_const_mul_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: define <8 x i32> @shuf_uniform_const_mul_v8i32_v4i32(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
@@ -119,50 +196,6 @@ define <8 x i32> @shuf_uniform_const_mul_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a
   %v1 = mul <4 x i32> %a1, splat(i32 7)
   %res = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %res
-}
-
-; Uniform constant ADD
-
-define <16 x i16> @shuf_uniform_add_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: define <16 x i16> @shuf_uniform_add_v16i16_v8i16(
-; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[RES:%.*]] = add <16 x i16> [[TMP1]], <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    ret <16 x i16> [[RES]]
-;
-  %v0 = add <8 x i16> %a0, splat(i16 4)
-  %v1 = add <8 x i16> %a1, splat(i16 8)
-  %res  = shufflevector <8 x i16> %v0, <8 x i16> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x i16> %res
-}
-
-; Uniform constant SUB
-define <16 x i16> @shuf_uniform_const_sub_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: define <16 x i16> @shuf_uniform_const_sub_v16i16_v8i16(
-; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[RES:%.*]] = sub <16 x i16> [[TMP1]], splat (i16 5)
-; CHECK-NEXT:    ret <16 x i16> [[RES]]
-;
-  %v0 = sub <8 x i16> %a0, splat(i16 5)
-  %v1 = sub <8 x i16> %a1, splat(i16 5)
-  %res = shufflevector <8 x i16> %v0, <8 x i16> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x i16> %res
-}
-
-; Uniform constant AND
-
-define <16 x i16> @shuf_uniform_const_and_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: define <16 x i16> @shuf_uniform_const_and_v16i16_v8i16(
-; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[RES:%.*]] = and <16 x i16> [[TMP1]], splat (i16 255)
-; CHECK-NEXT:    ret <16 x i16> [[RES]]
-;
-  %v0 = and <8 x i16> %a0, splat(i16 255)
-  %v1 = and <8 x i16> %a1, splat(i16 255)
-  %res = shufflevector <8 x i16> %v0, <8 x i16> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x i16> %res
 }
 
 ; Shuffle is much cheaper than fdiv. FMF are intersected.
