@@ -94,6 +94,53 @@ public:
 
     return NBFuncEmbMap;
   }
+
+  nb::list getBBEmbMap() {
+    auto result = Tool->getBBEmbeddings(EmbKind);
+    nb::list nb_result;
+
+    for (const auto &[bb_ptr, embedding] : result) {
+      std::string bb_name = bb_ptr->getName().str();
+      auto data = embedding.getData();
+
+      double *data_ptr = new double[data.size()];
+      std::copy(data.data(), data.data() + data.size(), data_ptr);
+      auto nb_array = nb::ndarray<nb::numpy, double, nb::shape<-1>>(
+          data_ptr, {data.size()}, nb::capsule(data_ptr, [](void *p) noexcept {
+            delete[] static_cast<double *>(p);
+          }));
+      nb_result.append(nb::make_tuple(nb::str(bb_name.c_str()), nb_array));
+    }
+
+    return nb_result;
+  }
+
+  nb::list getInstEmbMap() {
+    auto result = Tool->getInstEmbeddings(EmbKind);
+    nb::list nb_result;
+
+    for (const auto &[inst_ptr, embedding] : result) {
+      std::string inst_str;
+      llvm::raw_string_ostream RSO(inst_str);
+      inst_ptr->print(RSO);
+      RSO.flush();
+
+      auto data = embedding.getData();
+
+      double *data_ptr = new double[data.size()];
+      std::copy(data.data(), data.data() + data.size(), data_ptr);
+
+      // Create nanobind numpy array with dynamic 1D shape
+      auto nb_array = nb::ndarray<nb::numpy, double, nb::shape<-1>>(
+          data_ptr, {data.size()}, nb::capsule(data_ptr, [](void *p) noexcept {
+            delete[] static_cast<double *>(p);
+          }));
+
+      nb_result.append(nb::make_tuple(nb::str(inst_str.c_str()), nb_array));
+    }
+
+    return nb_result;
+  }
 };
 
 } // namespace
@@ -108,7 +155,14 @@ NB_MODULE(ir2vec, m) {
       .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
            "Generate function-level embeddings for all functions\n"
            "Returns: dict[str, ndarray[float64]] - "
-           "{function_name: embedding}");
+           "{function_name: embedding}")
+      .def("getBBEmbMap", &PyIR2VecTool::getBBEmbMap,
+           "Generate basic block embeddings for all functions\n"
+           "Returns: list[tuple[str, ndarray[float64]]] - "
+           "[{bb_name, embedding}]")
+      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap,
+           "Generate instruction embeddings for all functions\n"
+           "Returns: list[tuple[str, ndarray[float64]]]");
 
   m.def(
       "initEmbedding",
