@@ -1290,12 +1290,6 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "Use s_add_pc_i64 instruction."
 >;
 
-// Dummy feature used to disable assembler instructions.
-def FeatureDisable : SubtargetFeature<"",
-  "FeatureDisable","true",
-  "Dummy feature to disable assembler instructions"
->;
-
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,

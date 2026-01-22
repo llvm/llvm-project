@@ -328,9 +328,6 @@ protected:
   bool RequiresWaitsBeforeSystemScopeStores = false;
   bool UseAddPC64Inst = false;
 
-  // Dummy feature to use for assembler in tablegen.
-  bool FeatureDisable = false;
-
 #define DECL_HAS_MEMBER(Name) bool Has##Name = false;
   GCN_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
   GCN_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(DECL_HAS_MEMBER)
