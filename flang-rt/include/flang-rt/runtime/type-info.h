@@ -57,7 +57,11 @@ public:
     Allocatable = 3,
     Automatic = 4,
     PointerDevice = 5,
-    AllocatableDevice = 6
+    AllocatableDevice = 6,
+    PointerManaged = 7,
+    AllocatableManaged = 8,
+    PointerUnified = 9,
+    AllocatableUnified = 10
   };
 
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }

@@ -6,17 +6,39 @@ module m
     real(kind=8), pointer, dimension(:), device :: pd
   end type
 
+  type managed_array
+    real(kind=8), allocatable, dimension(:), managed :: ad
+    real(kind=8), pointer, dimension(:), managed :: pd
+  end type
+
+  type unified_array
+    real(kind=8), allocatable, dimension(:), unified :: ad
+    real(kind=8), pointer, dimension(:), unified :: pd
+  end type
+
   type(device_array), allocatable :: da(:)
+  type(managed_array), allocatable :: ma(:)
+  type(unified_array), allocatable :: ua(:)
 end module
 
 ! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.device_array
 ! CHECK: fir.insert_value %{{.*}}, %c6{{.*}}, ["genre"
 ! CHECK: fir.insert_value %{{.*}}, %c5{{.*}}, ["genre"
 
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.managed_array
+! CHECK: fir.insert_value %{{.*}}, %c8{{.*}}, ["genre"
+! CHECK: fir.insert_value %{{.*}}, %c7{{.*}}, ["genre"
+
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.unified_array
+! CHECK: fir.insert_value %{{.*}}, %c10{{.*}}, ["genre"
+! CHECK: fir.insert_value %{{.*}}, %c9{{.*}}, ["genre"
+
 program main
   use m
   type(device_array) :: local
+  type(managed_array) :: local_ma
+  type(unified_array) :: local_ua
 end
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK: fir.call @_FortranAInitialize
+! CHECK-COUNT-3: fir.call @_FortranAInitialize

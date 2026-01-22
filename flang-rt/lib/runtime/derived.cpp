@@ -65,7 +65,9 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
   for (; !Componentwise::IsComplete(); SkipToNextComponent()) {
     char *rawComponent{rawInstance + component_->offset()};
     if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
-        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableManaged ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableUnified) {
       Descriptor &allocDesc{*reinterpret_cast<Descriptor *>(rawComponent)};
       component_->EstablishDescriptor(
           allocDesc, instance_, workQueue.terminator());
@@ -79,7 +81,9 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
         Fortran::runtime::memcpy(rawComponent, init, bytes);
       }
     } else if (component_->genre() == typeInfo::Component::Genre::Pointer ||
-        component_->genre() == typeInfo::Component::Genre::PointerDevice) {
+        component_->genre() == typeInfo::Component::Genre::PointerDevice ||
+        component_->genre() == typeInfo::Component::Genre::PointerManaged ||
+        component_->genre() == typeInfo::Component::Genre::PointerUnified) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
       // assignment statements.
@@ -164,7 +168,9 @@ RT_API_ATTRS int InitializeClone(const Descriptor &clone,
 RT_API_ATTRS int InitializeCloneTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
     if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
-        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableManaged ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableUnified) {
       Descriptor &origDesc{*instance_.ElementComponent<Descriptor>(
           subscripts_, component_->offset())};
       if (origDesc.IsAllocated()) {
@@ -343,7 +349,11 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
     if ((component_->genre() == typeInfo::Component::Genre::Allocatable ||
             component_->genre() ==
-                typeInfo::Component::Genre::AllocatableDevice) &&
+                typeInfo::Component::Genre::AllocatableDevice ||
+            component_->genre() ==
+                typeInfo::Component::Genre::AllocatableManaged ||
+            component_->genre() ==
+                typeInfo::Component::Genre::AllocatableUnified) &&
         component_->category() == TypeCategory::Derived) {
       // Component may be polymorphic or unlimited polymorphic. Need to use the
       // dynamic type to check whether finalization is needed.
@@ -366,6 +376,8 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
       }
     } else if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
         component_->genre() == typeInfo::Component::Genre::AllocatableDevice ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableManaged ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableUnified ||
         component_->genre() == typeInfo::Component::Genre::Automatic) {
       if (const typeInfo::DerivedType *compType{component_->derivedType()};
           compType && !compType->noFinalizationNeeded()) {
@@ -449,7 +461,9 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
     const auto *componentDerived{component_->derivedType()};
     if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
-        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableManaged ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableUnified) {
       if (fixedStride_ &&
           (!componentDerived || componentDerived->noDestructionNeeded())) {
         // common fast path, just deallocate in every element

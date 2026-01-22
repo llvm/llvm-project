@@ -95,16 +95,25 @@ RT_API_ATTRS std::size_t Component::SizeInBytes(
 RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
     const Descriptor &container, Terminator &terminator) const {
   ISO::CFI_attribute_t attribute{static_cast<ISO::CFI_attribute_t>(
-      genre_ == Genre::Allocatable || genre_ == Genre::AllocatableDevice
+      genre_ == Genre::Allocatable || genre_ == Genre::AllocatableDevice ||
+              genre_ == Genre::AllocatableManaged ||
+              genre_ == Genre::AllocatableUnified
           ? CFI_attribute_allocatable
-          : genre_ == Genre::Pointer || genre_ == Genre::PointerDevice
+          : genre_ == Genre::Pointer || genre_ == Genre::PointerDevice ||
+              genre_ == Genre::PointerManaged || genre_ == Genre::PointerUnified
           ? CFI_attribute_pointer
           : CFI_attribute_other)};
   TypeCategory cat{category()};
-  unsigned allocatorIdx{
-      genre_ == Genre::AllocatableDevice || genre_ == Genre::PointerDevice
-          ? kDeviceAllocatorPos
-          : kDefaultAllocator};
+  unsigned allocatorIdx{kDefaultAllocator};
+  if (genre_ == Genre::AllocatableDevice || genre_ == Genre::PointerDevice) {
+    allocatorIdx = kDeviceAllocatorPos;
+  } else if (genre_ == Genre::AllocatableManaged ||
+      genre_ == Genre::PointerManaged) {
+    allocatorIdx = kManagedAllocatorPos;
+  } else if (genre_ == Genre::AllocatableUnified ||
+      genre_ == Genre::PointerUnified) {
+    allocatorIdx = kUnifiedAllocatorPos;
+  }
   if (cat == TypeCategory::Character) {
     std::size_t lengthInChars{0};
     if (auto length{characterLen_.GetValue(&container)}) {
@@ -128,7 +137,9 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
         cat, kind_, nullptr, rank_, nullptr, attribute, false, allocatorIdx);
   }
   if (rank_ && genre_ != Genre::Allocatable && genre_ != Genre::Pointer &&
-      genre_ != Genre::AllocatableDevice && genre_ != Genre::PointerDevice) {
+      genre_ != Genre::AllocatableDevice && genre_ != Genre::PointerDevice &&
+      genre_ != Genre::AllocatableManaged && genre_ != Genre::PointerManaged &&
+      genre_ != Genre::AllocatableUnified && genre_ != Genre::PointerUnified) {
     const typeInfo::Value *boundValues{bounds()};
     RUNTIME_CHECK(terminator, boundValues != nullptr);
     auto byteStride{static_cast<SubscriptValue>(descriptor.ElementBytes())};
@@ -281,10 +292,18 @@ FILE *Component::Dump(FILE *f) const {
     std::fputs("    Pointer          ", f);
   } else if (genre_ == Genre::PointerDevice) {
     std::fputs("    PointerDevice    ", f);
+  } else if (genre_ == Genre::PointerManaged) {
+    std::fputs("    PointerManaged   ", f);
+  } else if (genre_ == Genre::PointerUnified) {
+    std::fputs("    PointerUnified   ", f);
   } else if (genre_ == Genre::Allocatable) {
     std::fputs("    Allocatable.     ", f);
   } else if (genre_ == Genre::AllocatableDevice) {
     std::fputs("    AllocatableDevice", f);
+  } else if (genre_ == Genre::AllocatableManaged) {
+    std::fputs("    AllocatableManaged", f);
+  } else if (genre_ == Genre::AllocatableUnified) {
+    std::fputs("    AllocatableUnified", f);
   } else if (genre_ == Genre::Automatic) {
     std::fputs("    Automatic        ", f);
   } else {

@@ -773,6 +773,10 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
       symbol, foldingContext)};
   bool isDevice{object.cudaDataAttr() &&
       *object.cudaDataAttr() == common::CUDADataAttr::Device};
+  bool isManaged{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Managed};
+  bool isUnified{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Unified};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   int rank{typeAndShape->Rank()};
@@ -888,6 +892,12 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     if (isDevice) {
       AddValue(values, componentSchema_, "genre"s,
           GetEnumValue("allocatabledevice"));
+    } else if (isManaged) {
+      AddValue(values, componentSchema_, "genre"s,
+          GetEnumValue("allocatablemanaged"));
+    } else if (isUnified) {
+      AddValue(values, componentSchema_, "genre"s,
+          GetEnumValue("allocatableunified"));
     } else {
       AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
     }
@@ -895,6 +905,12 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     if (isDevice) {
       AddValue(
           values, componentSchema_, "genre"s, GetEnumValue("pointerdevice"));
+    } else if (isManaged) {
+      AddValue(
+          values, componentSchema_, "genre"s, GetEnumValue("pointermanaged"));
+    } else if (isUnified) {
+      AddValue(
+          values, componentSchema_, "genre"s, GetEnumValue("pointerunified"));
     } else {
       AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
     }

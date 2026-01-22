@@ -75,7 +75,10 @@ module __fortran_type_info
   end type
 
   enum, bind(c) ! Component::Genre
-    enumerator :: Data = 1, Pointer = 2, Allocatable = 3, Automatic = 4, PointerDevice = 5, AllocatableDevice = 6
+    enumerator :: Data = 1, Pointer = 2, Allocatable = 3, Automatic = 4
+    enumerator :: PointerDevice = 5, AllocatableDevice = 6
+    enumerator :: PointerManaged = 7, AllocatableManaged = 8
+    enumerator :: PointerUnified = 9, AllocatableUnified = 10
   end enum
 
   enum, bind(c) ! common::TypeCategory
