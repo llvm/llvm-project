@@ -7807,12 +7807,10 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
     SDValue Result;
     switch (N.getOpcode()) {
     case ISD::SCALAR_TO_VECTOR: {
-      EVT VT = N.getValueType(0);
-      if (VT.isScalableVector() || !VT.isInteger() ||
-          VT.getVectorElementType() != N.getOperand(0).getValueType())
-        break;
-
-      Result = addBitcastHints(*CurDAG, N);
+      EVT ScalarTy = N.getValueType(0).getVectorElementType();
+      if ((ScalarTy == MVT::i32 || ScalarTy == MVT::i64) && ScalarTy == N.getOperand(0).getValueType())
+        Result = addBitcastHints(*CurDAG, N);
+      
       break;
     }
     default:
