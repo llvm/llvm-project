@@ -37,17 +37,17 @@ struct RuntimeInstrumentReport {
   uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
   uint32_t line = LLDB_INVALID_LINE_NUMBER;
 
-  // keys found on UBSan
+  // Keys used by UBSan.
   lldb::addr_t memory = LLDB_INVALID_ADDRESS;
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   std::vector<lldb::user_id_t> trace;
 
-  // keys found on MainThreadChecker
+  // Keys used by MainThreadChecker.
   std::string api_name;
   std::string class_name;
   std::string selector;
 
-  // FIXME: TSan, ASan, BoundsSafety
+  // FIXME: Support TSan, ASan, BoundsSafety.
 };
 
 static bool fromJSON(const llvm::json::Value &Params,
