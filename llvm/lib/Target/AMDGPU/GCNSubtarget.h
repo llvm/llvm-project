@@ -288,45 +288,42 @@ protected:
   unsigned MaxPrivateElementSize = 0;
 
   // Dynamically set bits that enable features.
-  bool FlatForGlobal = false;
-  bool SupportsXNACK = false;
-
-  // This should not be used directly. 'TargetID' tracks the dynamic settings
-  // for XNACK.
-  bool EnableXNACK = false;
-
-  bool EnableTgSplit = false;
-  bool EnableCuMode = false;
-  bool EnablePreciseMemory = false;
-
-  // Used as options.
-  bool EnableLoadStoreOpt = false;
-  bool EnableUnsafeDSOffsetFolding = false;
-  bool EnableSIScheduler = false;
-  bool EnableDS128 = false;
-  bool EnablePRTStrictNull = false;
-  bool DumpCode = false;
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
+  bool ScalarizeGlobal = false;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
-  bool SupportsSRAMECC = false;
-  bool DynamicVGPR = false;
-  bool DynamicVGPRBlockSize32 = false;
-  bool RequiresAlignVGPR = false;
 
+  //===--------------------------------------------------------------------===//
+  /// Controlled by subtarget features defined in AMDGPU.td
+  //===--------------------------------------------------------------------===//
+  bool DumpCode = false;
+  bool EnableCuMode = false;
+  bool EnableDS128 = false;
+  bool EnableFlatScratch = false;
+  bool EnableLoadStoreOpt = false;
+  bool EnablePreciseMemory = false;
+  bool EnablePRTStrictNull = false;
+  bool EnableSIScheduler = false;
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
   bool EnableSRAMECC = false;
-
-  bool EnableFlatScratch = false;
-  bool ScalarizeGlobal = false;
+  bool EnableTgSplit = false;
+  bool EnableUnsafeDSOffsetFolding = false;
+  bool EnableXNACK = false;
+  bool RequiresAlignVGPR = false;
   bool RequiresCOV6 = false;
-  bool UseBlockVGPROpsForCSR = false;
-
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool SupportsSRAMECC = false;
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for XNACK.
+  bool SupportsXNACK = false;
   bool UseAddPC64Inst = false;
+  bool UseBlockVGPROpsForCSR = false;
+  bool UseFlatForGlobal = false;
 
 #define DECL_HAS_MEMBER(Name) bool Has##Name = false;
   GCN_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
@@ -429,7 +426,8 @@ public:
   int getLDSBankCount() const { return LDSBankCount; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
-    return (ForBufferRSrc || !enableFlatScratch()) ? MaxPrivateElementSize : 16;
+    return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
+                                                       : 16;
   }
 
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -541,7 +539,7 @@ public:
     return getGeneration() >= AMDGPUSubtarget::GFX10;
   }
 
-  bool useFlatForGlobal() const { return FlatForGlobal; }
+  bool useFlatForGlobal() const { return UseFlatForGlobal; }
 
   /// \returns If target supports ds_read/write_b128 and user enables generation
   /// of ds_read/write_b128.
@@ -594,8 +592,8 @@ public:
 
   bool hasFlatScratchSVSMode() const { return HasGFX940Insts || HasGFX11Insts; }
 
-  bool enableFlatScratch() const {
-    return flatScratchIsArchitected() ||
+  bool hasFlatScratchEnabled() const {
+    return hasArchitectedFlatScratch() ||
            (EnableFlatScratch && hasFlatScratchInsts());
   }
 
@@ -931,10 +929,6 @@ public:
   bool flatScratchIsPointer() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
-
-  /// \returns true if the flat_scratch register is initialized by the HW.
-  /// In this case it is readonly.
-  bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8
