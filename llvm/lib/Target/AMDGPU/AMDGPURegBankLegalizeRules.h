@@ -229,6 +229,7 @@ enum LoweringMethodID {
   UniMul64,
   DivSMulToMAD,
   SplitTo32,
+  SplitTo32Mul,
   ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
