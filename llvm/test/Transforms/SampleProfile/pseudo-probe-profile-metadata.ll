@@ -47,7 +47,7 @@ exit:
 attributes #0 = {"use-sample-profile"}
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #1
 !llvm.pseudo_probe_desc = !{!4496}
-!4496 = !{i64 6699318081062747564, i64 158517001042, !"foo", null}
+!4496 = !{i64 6699318081062747564, i64 158517001042, i8 0, !"foo", null}
 
 ; CHECK: ![[ENTRY_PROF]] = !{!"branch_weights", i32 10, i32 6}
 ; CHECK: ![[SWITCH_PROF]] = !{!"branch_weights", i32 1, i32 9536, i32 1}

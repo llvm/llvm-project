@@ -99,7 +99,10 @@ public:
                         ->getZExtValue();
         auto Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))
                         ->getZExtValue();
-        GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
+        auto Attributes = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))
+                              ->getZExtValue();
+        GUIDToProbeDescMap.try_emplace(
+            GUID, PseudoProbeDescriptor(GUID, Hash, Attributes));
       }
       for (const auto &Func : M) {
         if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
