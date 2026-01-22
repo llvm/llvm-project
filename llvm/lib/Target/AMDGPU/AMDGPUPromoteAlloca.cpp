@@ -1538,7 +1538,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   for (const GlobalVariable *GV : UsedLDS) {
     Align Alignment =
         DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    uint64_t AllocSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t AllocSize = GV->getGlobalSize(DL);
 
     // HIP uses an extern unsized array in local address space for dynamically
     // allocated shared memory.  In that case, we have to disable the promotion.

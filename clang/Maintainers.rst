@@ -42,9 +42,6 @@ AST Visitors
 
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
-
 | Eli Friedman
 | efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
@@ -404,3 +401,4 @@ Inactive component maintainers
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
 | Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation

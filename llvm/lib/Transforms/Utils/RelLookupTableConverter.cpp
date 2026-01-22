@@ -91,7 +91,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
       || (TT.isX86() && TT.isOSDarwin());
 
   APInt Offset(IndexWidth, 0);
-  uint64_t GVSize = DL.getTypeAllocSize(GV.getValueType());
+  uint64_t GVSize = GV.getGlobalSize(DL);
   for (; Offset.ult(GVSize); Offset += Stride) {
     Constant *C =
         ConstantFoldLoadFromConst(GV.getInitializer(), ElemType, Offset, DL);

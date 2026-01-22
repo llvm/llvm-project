@@ -77,7 +77,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::Freeze:
   case Instruction::PHI:
   case VPInstruction::Broadcast:
-  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement:

@@ -36,6 +36,8 @@ struct [[gsl::Pointer(long)]] MyLongPointerFromConversion {
 
 struct [[gsl::Owner(long)]] MyLongOwnerWithConversion {
   MyLongOwnerWithConversion();
+  // TODO: Do this behind a macro and run tests without this dtor to verify trivial dtor cases.
+  ~MyLongOwnerWithConversion();
   operator MyLongPointerFromConversion();
   long &operator*();
   MyIntPointer releaseAsMyPointer();
@@ -121,7 +123,8 @@ MyIntPointer danglingGslPtrFromTemporary2() {
 }
 
 MyLongPointerFromConversion danglingGslPtrFromTemporaryConv() {
-  return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}}
+  return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}} \
+                                      // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }
 
 int *noFalsePositive(MyIntOwner &o) {
@@ -152,12 +155,15 @@ void initLocalGslPtrWithTempOwner() {
                          // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   use(global);           // cfg-note {{later used here}}
 
-  MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  use(p2);
+  MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                                                // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p2);                                                      // cfg-note {{later used here}}
 
-  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }}
-  global2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'global2' }}
-  use(global2, p2);
+  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }} \
+                                    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  global2 = MyLongOwnerWithConversion{};  // expected-warning {{object backing the pointer 'global2' }} \
+                                          // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
 
 
