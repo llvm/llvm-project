@@ -446,6 +446,10 @@ public:
   /// CompilerType with that Type.
   CompilerType GetTypeFromTypeMetadataNode(llvm::StringRef mangled_name);
 
+  /// Given a mangled name that mangles a "value witness table for Type",
+  /// return a CompilerType with that Type.
+  CompilerType GetTypeFromValueWitnessTable(llvm::StringRef mangled_name);
+
   /// Use API notes to determine the swiftified name of \p clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
