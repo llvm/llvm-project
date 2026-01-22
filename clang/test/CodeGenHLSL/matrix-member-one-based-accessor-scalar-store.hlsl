@@ -4,7 +4,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -17,14 +17,13 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat11(out int4x4 A, int I) {
-    return A._11 = I;
+void StoreScalarAtMat11(out int4x4 A, int I) {
+    A._11 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -38,14 +37,13 @@ int StoreScalarAtMat11(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat12(out int4x4 A, int I) {
-    return A._12 = I;
+void StoreScalarAtMat12(out int4x4 A, int I) {
+    A._12 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -59,14 +57,13 @@ int StoreScalarAtMat12(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat13(out int4x4 A, int I) {
-    return A._13 = I;
+void StoreScalarAtMat13(out int4x4 A, int I) {
+    A._13 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat14Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat14Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -80,14 +77,13 @@ int StoreScalarAtMat13(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat14(out int4x4 A, int I) {
-    return A._14 = I;
+void StoreScalarAtMat14(out int4x4 A, int I) {
+    A._14 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -101,14 +97,13 @@ int StoreScalarAtMat14(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat21(out int4x4 A, int I) {
-    return A._21 = I;
+void StoreScalarAtMat21(out int4x4 A, int I) {
+    A._21 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -122,14 +117,13 @@ int StoreScalarAtMat21(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 5
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat22(out int4x4 A, int I) {
-    return A._22 = I;
+void StoreScalarAtMat22(out int4x4 A, int I) {
+    A._22 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -143,14 +137,13 @@ int StoreScalarAtMat22(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat23(out int4x4 A, int I) {
-    return A._23 = I;
+void StoreScalarAtMat23(out int4x4 A, int I) {
+    A._23 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat24Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat24Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -164,14 +157,13 @@ int StoreScalarAtMat23(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat24(out int4x4 A, int I) {
-    return A._24 = I;
+void StoreScalarAtMat24(out int4x4 A, int I) {
+    A._24 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -185,14 +177,13 @@ int StoreScalarAtMat24(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat31(out int4x4 A, int I) {
-    return A._31 = I;
+void StoreScalarAtMat31(out int4x4 A, int I) {
+    A._31 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -206,14 +197,13 @@ int StoreScalarAtMat31(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 9
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat32(out int4x4 A, int I) {
-    return A._32 = I;
+void StoreScalarAtMat32(out int4x4 A, int I) {
+    A._32 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -227,14 +217,13 @@ int StoreScalarAtMat32(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 10
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat33(out int4x4 A, int I) {
-    return A._33 = I;
+void StoreScalarAtMat33(out int4x4 A, int I) {
+    A._33 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat34Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat34Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -248,14 +237,13 @@ int StoreScalarAtMat33(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat34(out int4x4 A, int I) {
-    return A._34 = I;
+void StoreScalarAtMat34(out int4x4 A, int I) {
+    A._34 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat41Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat41Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -269,14 +257,13 @@ int StoreScalarAtMat34(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat41(out int4x4 A, int I) {
-    return A._41 = I;
+void StoreScalarAtMat41(out int4x4 A, int I) {
+    A._41 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat42Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat42Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -290,14 +277,13 @@ int StoreScalarAtMat41(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat42(out int4x4 A, int I) {
-    return A._42 = I;
+void StoreScalarAtMat42(out int4x4 A, int I) {
+    A._42 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat43Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat43Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -311,14 +297,13 @@ int StoreScalarAtMat42(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 14
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat43(out int4x4 A, int I) {
-    return A._43 = I;
+void StoreScalarAtMat43(out int4x4 A, int I) {
+    A._43 = I;
 }
 
-// CHECK-LABEL: define hidden noundef i32 @_Z18StoreScalarAtMat44Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat44Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -332,11 +317,10 @@ int StoreScalarAtMat43(out int4x4 A, int I) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 15
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-int StoreScalarAtMat44(out int4x4 A, int I) {
-    return A._44 = I;
+void StoreScalarAtMat44(out int4x4 A, int I) {
+    A._44 = I;
 }
 
 //.

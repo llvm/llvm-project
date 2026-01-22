@@ -5051,28 +5051,33 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   return true;
 }
 
+static QualType ReportMatrixInvalidMember(Sema &S, StringRef Name,
+                                          StringRef Expected,
+                                          SourceLocation OpLoc,
+                                          SourceLocation CompLoc) {
+  S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
+      << Name << Expected << SourceRange(CompLoc);
+  return QualType();
+}
+
 QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
                                         ExprValueKind &VK, SourceLocation OpLoc,
                                         const IdentifierInfo *CompName,
                                         SourceLocation CompLoc) {
-  const auto *MT = baseType->getAs<ConstantMatrixType>();
+  const auto *MT = baseType->castAs<ConstantMatrixType>();
   StringRef AccessorName = CompName->getName();
-  assert(MT &&
-         "checkMatrixComponent is intended to be used on ConstantMatrixType");
   assert(!AccessorName.empty() && "Matrix Accessor must have a name");
 
   unsigned Rows = MT->getNumRows();
   unsigned Cols = MT->getNumColumns();
   bool IsZeroBasedAccessor = false;
   unsigned ChunkLen = 0;
-  if (AccessorName.size() < 2) {
-    const char Expected[] = "length 4 for zero based: \'_mRC\' or length 3 for "
-                            "one-based: \'_RC\' accessor";
-    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
-        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
-        << SourceRange(CompLoc);
-    return QualType();
-  }
+  if (AccessorName.size() < 2)
+    return ReportMatrixInvalidMember(S, AccessorName,
+                                     "length 4 for zero based: \'_mRC\' or "
+                                     "length 3 for one-based: \'_RC\' accessor",
+                                     OpLoc, CompLoc);
+
   if (AccessorName[0] == '_') {
     if (AccessorName[1] == 'm') {
       IsZeroBasedAccessor = true;
@@ -5080,23 +5085,17 @@ QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
     } else {
       ChunkLen = 3; // one-based: "_RC"
     }
-  } else {
-    const char Expected[] =
-        "zero based: \'_mRC\' or one-based: \'_RC\' accessor";
-    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
-        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
-        << SourceRange(CompLoc);
-    return QualType();
-  }
+  } else
+    return ReportMatrixInvalidMember(
+        S, AccessorName, "zero based: \'_mRC\' or one-based: \'_RC\' accessor",
+        OpLoc, CompLoc);
 
   if (AccessorName.size() % ChunkLen != 0) {
     const llvm::StringRef Expected = IsZeroBasedAccessor
                                          ? "zero based: '_mRC' accessor"
                                          : "one-based: '_RC' accessor";
 
-    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
-        << CompName->getName() << Expected << SourceRange(CompLoc);
-    return QualType();
+    return ReportMatrixInvalidMember(S, AccessorName, Expected, OpLoc, CompLoc);
   }
 
   auto isDigit = [](char c) { return c >= '0' && c <= '9'; };
@@ -5115,52 +5114,40 @@ QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
       // Zero-based: "_mRC"
       if (Chunk[0] != '_' || Chunk[1] != 'm') {
         char Bad = (Chunk[0] != '_') ? Chunk[0] : Chunk[1];
-        const char Expected[] = "\'_m\' prefix";
-        S.Diag(OpLoc.getLocWithOffset(I + (Bad == Chunk[0] ? 1 : 2)),
-               diag::err_builtin_matrix_invalid_member)
-            << StringRef(&Bad, 1) << StringRef(Expected, sizeof(Expected) - 1)
-            << SourceRange(CompLoc);
-        return QualType();
+        return ReportMatrixInvalidMember(
+            S, StringRef(&Bad, 1), "\'_m\' prefix",
+            OpLoc.getLocWithOffset(I + (Bad == Chunk[0] ? 1 : 2)), CompLoc);
       }
       RowChar = Chunk[2];
       ColChar = Chunk[3];
     } else {
       // One-based: "_RC"
-      if (Chunk[0] != '_') {
-        const char Expected[] = "\'_\' prefix";
-        S.Diag(OpLoc.getLocWithOffset(I + 1),
-               diag::err_builtin_matrix_invalid_member)
-            << StringRef(&Chunk[0], 1)
-            << StringRef(Expected, sizeof(Expected) - 1)
-            << SourceRange(CompLoc);
-        return QualType();
-      }
+      if (Chunk[0] != '_')
+        return ReportMatrixInvalidMember(
+            S, StringRef(&Chunk[0], 1), "\'_\' prefix",
+            OpLoc.getLocWithOffset(I + 1), CompLoc);
       RowChar = Chunk[1];
       ColChar = Chunk[2];
     }
 
     // Must be digits.
-    bool isDigitsError = false;
+    bool IsDigitsError = false;
     if (!isDigit(RowChar)) {
-      const char Expected[] = "row as integer";
       unsigned BadPos = IsZeroBasedAccessor ? 2 : 1;
-      S.Diag(OpLoc.getLocWithOffset(I + BadPos + 1),
-             diag::err_builtin_matrix_invalid_member)
-          << StringRef(&RowChar, 1) << StringRef(Expected, sizeof(Expected) - 1)
-          << SourceRange(CompLoc);
-      isDigitsError = true;
+      ReportMatrixInvalidMember(S, StringRef(&RowChar, 1), "row as integer",
+                                OpLoc.getLocWithOffset(I + BadPos + 1),
+                                CompLoc);
+      IsDigitsError = true;
     }
 
     if (!isDigit(ColChar)) {
-      const char Expected[] = "column as integer";
       unsigned BadPos = IsZeroBasedAccessor ? 3 : 2;
-      S.Diag(OpLoc.getLocWithOffset(I + BadPos + 1),
-             diag::err_builtin_matrix_invalid_member)
-          << StringRef(&ColChar, 1) << StringRef(Expected, sizeof(Expected) - 1)
-          << SourceRange(CompLoc);
-      isDigitsError = true;
+      ReportMatrixInvalidMember(S, StringRef(&ColChar, 1), "column as integer",
+                                OpLoc.getLocWithOffset(I + BadPos + 1),
+                                CompLoc);
+      IsDigitsError = true;
     }
-    if (isDigitsError)
+    if (IsDigitsError)
       return QualType();
 
     unsigned Row = RowChar - '0';
@@ -5192,8 +5179,8 @@ QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
         HasIndexingError = true;
       }
       // Convert to 0-based after range checking.
-      Row--;
-      Col--;
+      --Row;
+      --Col;
     }
 
     if (HasIndexingError)

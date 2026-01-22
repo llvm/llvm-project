@@ -4,7 +4,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat00Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat00Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -17,14 +17,13 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP1]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat00(out float4x4 A, float F) {
-    return A._m00 = F;
+void StoreScalarAtMat00(out float4x4 A, float F) {
+    A._m00 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat01Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat01Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -38,14 +37,13 @@ float StoreScalarAtMat00(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat01(out float4x4 A, float F) {
-    return A._m01 = F;
+void StoreScalarAtMat01(out float4x4 A, float F) {
+    A._m01 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat02Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat02Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -59,14 +57,13 @@ float StoreScalarAtMat01(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat02(out float4x4 A, float F) {
-    return A._m02 = F;
+void StoreScalarAtMat02(out float4x4 A, float F) {
+    A._m02 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat03Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat03Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -80,14 +77,13 @@ float StoreScalarAtMat02(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat03(out float4x4 A, float F) {
-    return A._m03 = F;
+void StoreScalarAtMat03(out float4x4 A, float F) {
+    A._m03 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat10Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat10Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -101,14 +97,13 @@ float StoreScalarAtMat03(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 4
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat10(out float4x4 A, float F) {
-    return A._m10 = F;
+void StoreScalarAtMat10(out float4x4 A, float F) {
+    A._m10 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -122,14 +117,13 @@ float StoreScalarAtMat10(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 5
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat11(out float4x4 A, float F) {
-    return A._m11 = F;
+void StoreScalarAtMat11(out float4x4 A, float F) {
+    A._m11 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -143,14 +137,13 @@ float StoreScalarAtMat11(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat12(out float4x4 A, float F) {
-    return A._m12 = F;
+void StoreScalarAtMat12(out float4x4 A, float F) {
+    A._m12 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -164,14 +157,13 @@ float StoreScalarAtMat12(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat13(out float4x4 A, float F) {
-    return A._m13 = F;
+void StoreScalarAtMat13(out float4x4 A, float F) {
+    A._m13 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat20Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat20Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -185,14 +177,13 @@ float StoreScalarAtMat13(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat20(out float4x4 A, float F) {
-    return A._m20 = F;
+void StoreScalarAtMat20(out float4x4 A, float F) {
+    A._m20 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -206,14 +197,13 @@ float StoreScalarAtMat20(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 9
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat21(out float4x4 A, float F) {
-    return A._m21 = F;
+void StoreScalarAtMat21(out float4x4 A, float F) {
+    A._m21 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -227,14 +217,13 @@ float StoreScalarAtMat21(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 10
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat22(out float4x4 A, float F) {
-    return A._m22 = F;
+void StoreScalarAtMat22(out float4x4 A, float F) {
+    A._m22 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -248,14 +237,13 @@ float StoreScalarAtMat22(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat23(out float4x4 A, float F) {
-    return A._m23 = F;
+void StoreScalarAtMat23(out float4x4 A, float F) {
+    A._m23 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat30Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat30Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -269,14 +257,13 @@ float StoreScalarAtMat23(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat30(out float4x4 A, float F) {
-    return A._m30 = F;
+void StoreScalarAtMat30(out float4x4 A, float F) {
+    A._m30 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -290,14 +277,13 @@ float StoreScalarAtMat30(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat31(out float4x4 A, float F) {
-    return A._m31 = F;
+void StoreScalarAtMat31(out float4x4 A, float F) {
+    A._m31 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -311,14 +297,13 @@ float StoreScalarAtMat31(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 14
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat32(out float4x4 A, float F) {
-    return A._m32 = F;
+void StoreScalarAtMat32(out float4x4 A, float F) {
+    A._m32 = F;
 }
 
-// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -332,11 +317,10 @@ float StoreScalarAtMat32(out float4x4 A, float F) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 15
 // CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    ret void
 //
-float StoreScalarAtMat33(out float4x4 A, float F) {
-    return A._m33 = F;
+void StoreScalarAtMat33(out float4x4 A, float F) {
+    A._m33 = F;
 }
 
 //.

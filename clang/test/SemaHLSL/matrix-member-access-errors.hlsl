@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -finclude-default-header -verify %s
 
+typedef vector<float, 5> float5;
+
 void foo() {
     float3x3 A;
     float r = A._m00;      // read is ok
@@ -29,4 +31,9 @@ void foo() {
 
     A._m12 = 3.14;           // write is OK
     A._m00_m00 = 1.xx;       // expected-error {{matrix is not assignable (contains duplicate components)}}
+
+    float4x4 B;
+    float5 vec5;
+    B._m00_m01_m02_m03_m10 = vec5;  // expected-error {{matrix swizzle length must be between 1 and 4 but is 5}}
+    float5 badVec5 = B._m00_m01_m02_m03_m10; // expected-error {{matrix swizzle length must be between 1 and 4 but is 5}}
 }

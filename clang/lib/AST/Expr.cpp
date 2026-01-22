@@ -4425,7 +4425,7 @@ unsigned ExtVectorElementExpr::getNumElements() const {
 }
 
 unsigned MatrixElementExpr::getNumElements() const {
-  if (const ConstantMatrixType *MT = getType()->getAs<ConstantMatrixType>())
+  if (const auto *MT = getType()->getAs<ConstantMatrixType>())
     return MT->getNumElementsFlattened();
   return 1;
 }
@@ -4459,9 +4459,7 @@ bool MatrixElementExpr::containsDuplicateElements() const {
   assert(!Comp.empty() && Comp[0] == '_' && "invalid matrix accessor");
 
   // Get the matrix type so we know bounds.
-  const ConstantMatrixType *MT =
-      getBase()->getType()->getAs<ConstantMatrixType>();
-  assert(MT && "MatrixElementExpr base must be a matrix type");
+  const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
 
   unsigned Rows = MT->getNumRows();
   unsigned Cols = MT->getNumColumns();
@@ -4483,7 +4481,7 @@ bool MatrixElementExpr::containsDuplicateElements() const {
          "matrix swizzle accessor has invalid length");
 
   // Track visited elements using real matrix size.
-  SmallVector<bool, 16> Seen(Max, false);
+  llvm::BitVector Seen(Max, /*t=*/false);
 
   for (unsigned I = 0, E = Comp.size(); I < E; I += ChunkLen) {
     unsigned Row = 0, Col = 0;
@@ -4507,7 +4505,7 @@ bool MatrixElementExpr::containsDuplicateElements() const {
     if (Seen[Index])
       return true;
 
-    Seen[Index] = true;
+    Seen.set(Index);
   }
   return false;
 }
@@ -4550,9 +4548,7 @@ void MatrixElementExpr::getEncodedElementAccess(
   StringRef Comp = Accessor->getName();
   assert(!Comp.empty() && Comp[0] == '_' && "invalid matrix accessor");
 
-  const ConstantMatrixType *MT =
-      getBase()->getType()->getAs<ConstantMatrixType>();
-  assert(MT && "MatrixElementExpr base must be a matrix type");
+  const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
 
   unsigned Rows = MT->getNumRows();
   unsigned Cols = MT->getNumColumns();
@@ -4574,20 +4570,20 @@ void MatrixElementExpr::getEncodedElementAccess(
   assert(Comp.size() % ChunkLen == 0 &&
          "matrix swizzle accessor has invalid length");
 
-  for (unsigned i = 0, e = Comp.size(); i < e; i += ChunkLen) {
+  for (unsigned I = 0, E = Comp.size(); I < E; I += ChunkLen) {
     unsigned Row = 0, Col = 0;
 
     if (IsZeroIndexed) {
       // Pattern: _mRC
-      assert(Comp[i] == '_' && Comp[i + 1] == 'm' &&
+      assert(Comp[I] == '_' && Comp[I + 1] == 'm' &&
              "invalid zero-indexed matrix swizzle component");
-      Row = static_cast<unsigned>(Comp[i + 2] - '0'); // 0..Rows-1
-      Col = static_cast<unsigned>(Comp[i + 3] - '0'); // 0..Cols-1
+      Row = static_cast<unsigned>(Comp[I + 2] - '0'); // 0..Rows-1
+      Col = static_cast<unsigned>(Comp[I + 3] - '0'); // 0..Cols-1
     } else {
       // Pattern: _RC
-      assert(Comp[i] == '_' && "invalid one-indexed matrix swizzle component");
-      Row = static_cast<unsigned>(Comp[i + 1] - '1'); // 1..Rows -> 0..Rows-1
-      Col = static_cast<unsigned>(Comp[i + 2] - '1'); // 1..Cols -> 0..Cols-1
+      assert(Comp[I] == '_' && "invalid one-indexed matrix swizzle component");
+      Row = static_cast<unsigned>(Comp[I + 1] - '1'); // 1..Rows -> 0..Rows-1
+      Col = static_cast<unsigned>(Comp[I + 2] - '1'); // 1..Cols -> 0..Cols-1
     }
 
     // Sema should have validated these, but assert here for sanity.

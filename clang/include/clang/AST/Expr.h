@@ -6612,11 +6612,19 @@ public:
             ExtVectorElementExprClass, Ty, VK, Base, Accessor, Loc,
             (VK == VK_PRValue ? OK_Ordinary : OK_VectorComponent)) {}
 
+  /// Build an empty vector element expression.
   explicit ExtVectorElementExpr(EmptyShell Empty)
       : ElementAccessExprBase(ExtVectorElementExprClass, Empty) {}
 
+  /// getNumElements - Get the number of components being selected.
   unsigned getNumElements() const;
+
+  /// containsDuplicateElements - Return true if any element access is
+  /// repeated.
   bool containsDuplicateElements() const;
+
+  /// getEncodedElementAccess - Encode the elements accessed into an llvm
+  /// aggregate Constant of ConstantInt(s).
   void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
 
   /// isArrow - Return true if the base expression is a pointer to vector,
@@ -6636,11 +6644,19 @@ public:
             MatrixElementExprClass, Ty, VK, Base, Accessor, Loc,
             OK_Ordinary /*TODO: Should we add a new OK_MatrixComponent?*/) {}
 
+  /// Build an empty matrix element expression.
   explicit MatrixElementExpr(EmptyShell Empty)
       : ElementAccessExprBase(MatrixElementExprClass, Empty) {}
 
+  /// getNumElements - Get the number of components being selected.
   unsigned getNumElements() const;
+
+  /// containsDuplicateElements - Return true if any element access is
+  /// repeated.
   bool containsDuplicateElements() const;
+
+  /// getEncodedElementAccess - Encode the elements accessed into an llvm
+  /// aggregate Constant of ConstantInt(s).
   void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
 
   static bool classof(const Stmt *T) {
