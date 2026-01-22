@@ -2183,7 +2183,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
           // If optional operand is not present in actual instruction then we
           // should call its DefaultMethod before RenderMethod
           assert(HasOptionalOperands);
-          CvtOS << "      if (OptionalOperandsMask[*(p + 1) - 1]) {\n"
+          CvtOS << "      if (OptionalOperandsMask[*(p + 1)]) {\n"
                 << "        " << Op.Class->DefaultMethod << "()"
                 << "->" << Op.Class->RenderMethod << "(Inst, "
                 << OpInfo.MINumOperands << ");\n"
@@ -3850,21 +3850,24 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal "
           "operand not required\\n\");\n";
     OS << "          if (isSubclass(Formal, OptionalMatchClass)) {\n";
-    OS << "            OptionalOperandsMask.set(FormalIdx);\n";
+    OS << "            OptionalOperandsMask.set("
+       << (HasMnemonicFirst ? "FormalIdx + 1" : "FormalIdx") << ");\n";
     OS << "          }\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {
     OS << "        if (Formal == InvalidMatchClass) {\n";
     if (HasOptionalOperands) {
-      OS << "          OptionalOperandsMask.set(FormalIdx, " << MaxNumOperands
-         << ");\n";
+      OS << "          OptionalOperandsMask.set("
+         << (HasMnemonicFirst ? "FormalIdx + 1, " : "FormalIdx, ")
+         << MaxNumOperands << ");\n";
     }
     OS << "          break;\n";
     OS << "        }\n";
     OS << "        if (isSubclass(Formal, OptionalMatchClass)) {\n";
     if (HasOptionalOperands)
-      OS << "          OptionalOperandsMask.set(FormalIdx);\n";
+      OS << "          OptionalOperandsMask.set("
+         << (HasMnemonicFirst ? "FormalIdx + 1" : "FormalIdx") << ");\n";
     OS << "          continue;\n";
     OS << "        }\n";
     OS << "        OperandsValid = false;\n";
@@ -3904,7 +3907,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      if (Diag == Match_InvalidOperand "
      << "&& isSubclass(Formal, OptionalMatchClass)) {\n";
   if (HasOptionalOperands)
-    OS << "        OptionalOperandsMask.set(FormalIdx);\n";
+    OS << "        OptionalOperandsMask.set("
+       << (HasMnemonicFirst ? "FormalIdx + 1" : "FormalIdx") << ");\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"ignoring "
         "optional operand\\n\");\n";
   OS << "        continue;\n";
@@ -4063,8 +4067,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
        << ");\n";
     OS << "    for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
        << "; ++i) {\n";
-    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
     OS << "      NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
+    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
     OS << "    }\n\n";
   }
 
