@@ -578,20 +578,24 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
                                       .addReg(ScratchReg)
                                       .addImm((CallTarget >> 32) & 0xFFFF));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::RLDIC)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm(32).addImm(16));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ORIS8)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm((CallTarget >> 16) & 0xFFFF));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ORI8)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm(CallTarget & 0xFFFF));
+      ++EncodedBytes;
 
       // Save the current TOC pointer before the remote call.
       int TOCSaveOffset = Subtarget->getFrameLowering()->getTOCSaveOffset();
@@ -612,6 +616,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
                                         .addImm(8)
                                         .addReg(ScratchReg));
         ++EncodedBytes;
+
         EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LD)
                                         .addReg(ScratchReg)
                                         .addImm(0)
@@ -622,6 +627,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTCTR8)
                                       .addReg(ScratchReg));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BCTRL8));
       ++EncodedBytes;
 
@@ -647,8 +653,10 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
 
   // Emit padding.
   unsigned NumBytes = Opers.getNumPatchBytes();
-  assert(NumBytes >= EncodedBytes &&
-         "Patchpoint can't request size less than the length of a call.");
+  if (NumBytes < EncodedBytes)
+    reportFatalUsageError(
+        "Patchpoint can't request size less than the length of a call.");
+
   assert((NumBytes - EncodedBytes) % 4 == 0 &&
          "Invalid number of NOP bytes requested!");
   for (unsigned i = EncodedBytes; i < NumBytes; i += 4)
