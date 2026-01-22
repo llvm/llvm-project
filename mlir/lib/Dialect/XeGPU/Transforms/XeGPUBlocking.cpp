@@ -137,28 +137,31 @@ template <typename T, typename>
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   Value value;
-  if constexpr (std::is_same_v<T, OpOperand>)
+  Operation *ownerOp;
+  if constexpr (std::is_same_v<T, OpOperand>) {
     value = operandOrResult.get();
-  else
+    ownerOp = operandOrResult.getOwner();
+  } else {
     value = (Value)operandOrResult;
+    ownerOp = value.getDefiningOp();
+  }
 
   xegpu::DistributeLayoutAttr layout =
       xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-      // Remove leading unit dimensions from inst_data
+      // Remove leading unit dimensions from inst_data for vector operations
       // For example, if the inst_data is [1, 1, 32]
       // it will pass [32] as the unroll/blocking size.
       // Skip it for xegpu nd ops since it will be 2D
-      // TODO: For vectors ops, experiment with the
-      // upstream vector remove leading unit dims patterns,
-      // populateCastAwayVectorLeadingOneDimPatterns.
-      Operation *definingOp = value.getDefiningOp();
       bool skipLeadingUnitDimRemoval =
-          definingOp &&
-          (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::DpasOp,
-               xegpu::StoreNdOp, xegpu::PrefetchNdOp>(definingOp));
+          ownerOp &&
+          (isa<xegpu::CreateNdDescOp, xegpu::DpasOp, xegpu::ConvertLayoutOp,
+               xegpu::LoadMatrixOp, xegpu::StoreMatrixOp, xegpu::AtomicRMWOp,
+               xegpu::LoadNdOp, xegpu::StoreNdOp, xegpu::PrefetchNdOp,
+               vector::TransposeOp, vector::ShapeCastOp,
+               vector::MultiDimReductionOp, vector::BroadcastOp>(ownerOp));
       if (!skipLeadingUnitDimRemoval) {
         auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
         instData.erase(instData.begin(), it);
