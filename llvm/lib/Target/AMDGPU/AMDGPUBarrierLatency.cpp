@@ -21,8 +21,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUBarrierLatency.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
