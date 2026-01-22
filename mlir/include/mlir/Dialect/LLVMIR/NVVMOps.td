@@ -6385,7 +6385,7 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
                      CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
-                     CArg<"StringRef", "\"sm_50\"">:$chip,
+                     CArg<"StringRef", "\"sm_75\"">:$chip,
                      CArg<"StringRef", "\"+ptx60\"">:$features,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles,
