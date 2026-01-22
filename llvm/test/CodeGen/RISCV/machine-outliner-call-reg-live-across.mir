@@ -22,6 +22,7 @@
   ; CHECK-NEXT:    li a7, 1
   ; CHECK-NEXT:    li t2, 0
   ; CHECK-NEXT:    mv a2, a0
+  ; CHECK-NEXT:    mv      a3, t1
   ; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
   entry:
     %var4 = alloca ptr, align 4
@@ -53,6 +54,7 @@
   ; CHECK-NEXT:    li a7, 1
   ; CHECK-NEXT:    li t2, 0
   ; CHECK-NEXT:    mv a1, a0
+  ; CHECK-NEXT:    mv      a3, t1
   ; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
   entry:
     %var4 = alloca ptr, align 4
@@ -67,7 +69,6 @@
   ; so this is manually specified.
   ; CHECK-LABEL: OUTLINED_FUNCTION_0:
   ; CHECK:       # %bb.0:
-  ; CHECK-NEXT:      mv      a3, t1
   ; CHECK-NEXT:      mv      a4, t0
   ; CHECK-NEXT:      jalr    t2
   ; CHECK-NEXT:      sw      s3, 0(s1)
