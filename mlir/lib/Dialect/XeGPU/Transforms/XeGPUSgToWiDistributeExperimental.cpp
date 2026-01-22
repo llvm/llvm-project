@@ -26,6 +26,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
@@ -53,7 +54,7 @@ static Value castValueTo(ConversionPatternRewriter &rewriter,
       v.getType().getNumElements() == expectedTy.getNumElements())
     return vector::ShapeCastOp::create(rewriter, v.getLoc(), expectedTy, v);
 
-  // else create an unrealized cast.
+  // Else create an unrealized cast.
   auto newOp = UnrealizedConversionCastOp::create(rewriter, v.getLoc(),
                                                   expectedTy, ValueRange{v});
   return newOp.getResult(0);
@@ -272,7 +273,13 @@ struct WgToWiElementWise : public ConversionPattern {
 
     VectorType newResultType = wiShapeOrFailure.value();
     OperationState state(op->getLoc(), op->getName());
-    state.addOperands(operands);
+    // Cast the types of operands to the expected workitem types.
+    SmallVector<Value> newOperands =
+        llvm::map_to_vector(operands, [&](Value v) {
+          return castValueTo(rewriter, cast<TypedValue<VectorType>>(v),
+                             newResultType);
+        });
+    state.addOperands(newOperands);
     state.addTypes(newResultType);
     // Copy all attributes except for DistributeLayoutAttr.
     for (auto attr : op->getAttrs()) {

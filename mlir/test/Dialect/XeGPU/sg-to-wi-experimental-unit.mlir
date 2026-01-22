@@ -1,6 +1,6 @@
 
-// RUN: mlir-opt  --xevm-attach-target='module=xevm_* chip=pvc' \
-// --test-xegpu-sg-to-wi-distribute-experimental --split-input-file %s | FileCheck %s
+// RUN: mlir-opt  --xevm-attach-target='module=xevm_* chip=pvc' --allow-unregistered-dialect \
+// RUN: --test-xegpu-sg-to-wi-distribute-experimental --split-input-file %s | FileCheck %s
 
 
 

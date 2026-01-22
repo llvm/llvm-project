@@ -28,7 +28,7 @@ class LayoutAttr;
 class TensorDescType;
 
 namespace uArch {
-class uArch;
+struct uArch;
 } // namespace uArch
 } // namespace xegpu
 
