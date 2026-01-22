@@ -207,7 +207,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
                    options::OPT_fno_unsafe_cray_pointers, false)) {
     // TODO: currently passed as MLIR option
     CmdArgs.push_back("-mmlir");
-    CmdArgs.push_back("-funsafe-cray-pointers");
+    CmdArgs.push_back("-unsafe-cray-pointers");
   }
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
@@ -1140,6 +1140,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
   renderCommonIntegerOverflowOptions(Args, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");

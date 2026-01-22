@@ -329,22 +329,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getBare())
       result = todo("ompx_bare");
   };
-  auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
-    omp::ClauseCancellationConstructType cancelledDirective =
-        op.getCancelDirective();
-    // Cancelling a taskloop is not yet supported because we don't yet have LLVM
-    // IR conversion for taskloop
-    if (cancelledDirective == omp::ClauseCancellationConstructType::Taskgroup) {
-      Operation *parent = op->getParentOp();
-      while (parent) {
-        if (parent->getDialect() == op->getDialect())
-          break;
-        parent = parent->getParentOp();
-      }
-      if (isa_and_nonnull<omp::TaskloopOp>(parent))
-        result = todo("cancel directive inside of taskloop");
-    }
-  };
   auto checkCollapse = [&todo](auto op, LogicalResult &result) {
     if (op.getCollapseNumLoops() > 1)
       result = todo("collapse");
@@ -352,26 +336,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
-  };
-  auto checkFinal = [&todo](auto op, LogicalResult &result) {
-    if (op.getFinal())
-      result = todo("final");
-  };
-  auto checkGrainsize = [&todo](auto op, LogicalResult &result) {
-    if (op.getGrainsize())
-      result = todo("grainsize");
-  };
-  auto checkIf = [&todo](auto op, LogicalResult &result) {
-    if (op.getIfExpr())
-      result = todo("if");
-  };
-  auto checkMergeable = [&todo](auto op, LogicalResult &result) {
-    if (op.getMergeable())
-      result = todo("mergeable");
-  };
-  auto checkNogroup = [&todo](auto op, LogicalResult &result) {
-    if (op.getNogroup())
-      result = todo("nogroup");
   };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
@@ -386,10 +350,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getNowait())
       result = todo("nowait");
   };
-  auto checkNumTasks = [&todo](auto op, LogicalResult &result) {
-    if (op.getNumTasks())
-      result = todo("num_tasks");
-  };
   auto checkOrder = [&todo](auto op, LogicalResult &result) {
     if (op.getOrder() || op.getOrderMod())
       result = todo("order");
@@ -397,10 +357,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkParLevelSimd = [&todo](auto op, LogicalResult &result) {
     if (op.getParLevelSimd())
       result = todo("parallelization-level");
-  };
-  auto checkPriority = [&todo](auto op, LogicalResult &result) {
-    if (op.getPriority())
-      result = todo("priority");
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if (!op.getPrivateVars().empty() || op.getPrivateSyms())
@@ -420,17 +376,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         op.getTaskReductionSyms())
       result = todo("task_reduction");
   };
-  auto checkUntied = [&todo](auto op, LogicalResult &result) {
-    if (op.getUntied())
-      result = todo("untied");
-  };
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
-      .Case([&](omp::CancelOp op) { checkCancelDirective(op, result); })
-      .Case([&](omp::CancellationPointOp op) {
-        checkCancelDirective(op, result);
-      })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkOrder(op, result);
@@ -467,16 +415,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopOp op) {
         checkAllocate(op, result);
-        checkFinal(op, result);
-        checkGrainsize(op, result);
-        checkIf(op, result);
         checkInReduction(op, result);
-        checkMergeable(op, result);
-        checkNogroup(op, result);
-        checkNumTasks(op, result);
         checkReduction(op, result);
-        checkUntied(op, result);
-        checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
@@ -2203,7 +2143,7 @@ pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
   auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
     llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
 
-    // ip is currently in the block branched to if cancellation occured.
+    // ip is currently in the block branched to if cancellation occurred.
     // We need to create a branch to terminate that block.
     llvmBuilder.restoreIP(ip);
 
@@ -2310,6 +2250,9 @@ void TaskContextStructManager::generateTaskContextStruct() {
     privateVarTypes.push_back(moduleTranslation.convertType(mlirType));
   }
 
+  if (privateVarTypes.empty())
+    return;
+
   structTy = llvm::StructType::get(moduleTranslation.getLLVMContext(),
                                    privateVarTypes);
 
@@ -2347,10 +2290,10 @@ SmallVector<llvm::Value *> TaskContextStructManager::createGEPsToPrivateVars(
 }
 
 void TaskContextStructManager::createGEPsToPrivateVars() {
-  if (!structPtr) {
+  if (!structPtr)
     assert(privateVarTypes.empty());
-    return;
-  }
+  // Still need to run createGEPsToPrivateVars to populate llvmPrivateVarGEPs
+  // with null values for skipped private decls
 
   llvmPrivateVarGEPs = createGEPsToPrivateVars(structPtr);
 }
@@ -2854,9 +2797,34 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return loopInfo;
   };
 
+  llvm::Value *ifCond = nullptr;
+  llvm::Value *grainsize = nullptr;
+  int sched = 0; // default
+  mlir::Value grainsizeVal = taskloopOp.getGrainsize();
+  mlir::Value numTasksVal = taskloopOp.getNumTasks();
+  if (Value ifVar = taskloopOp.getIfExpr())
+    ifCond = moduleTranslation.lookupValue(ifVar);
+  if (grainsizeVal) {
+    grainsize = moduleTranslation.lookupValue(grainsizeVal);
+    sched = 1; // grainsize
+  } else if (numTasksVal) {
+    grainsize = moduleTranslation.lookupValue(numTasksVal);
+    sched = 2; // num_tasks
+  }
+
   llvm::OpenMPIRBuilder::TaskDupCallbackTy taskDupOrNull = nullptr;
-  if (!taskStructMgr.getLLVMPrivateVarGEPs().empty())
+  if (taskStructMgr.getStructPtr())
     taskDupOrNull = taskDupCB;
+
+  llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+  SmallVector<llvm::BranchInst *> cancelTerminators;
+  // The directive to match here is OMPD_taskgroup because it is the
+  // taskgroup which is canceled. This is handled here because it is the
+  // task's cleanup block which should be branched to. It doesn't depend upon
+  // nogroup because even in that case the taskloop might still be inside an
+  // explicit taskgroup.
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskloopOp,
+                           llvm::omp::Directive::OMPD_taskgroup);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
@@ -2865,10 +2833,16 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]),
           moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[0]),
           moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
-          /*Tied=*/true, taskDupOrNull, taskStructMgr.getStructPtr());
+          taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
+          sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
+          taskloopOp.getMergeable(),
+          moduleTranslation.lookupValue(taskloopOp.getPriority()),
+          taskDupOrNull, taskStructMgr.getStructPtr());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
+
+  popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
   return success();
@@ -6313,15 +6287,20 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     attrs.TargetThreadLimit.front() =
         moduleTranslation.lookupValue(targetThreadLimit);
 
+  // The __kmpc_push_num_teams_51 function expects int32 as the arguments.  So,
+  // truncate or sign extend lower and upper num_teams bounds as well as
+  // thread_limit to match int32 ABI requirements for the OpenMP runtime.
   if (numTeamsLower)
-    attrs.MinTeams = moduleTranslation.lookupValue(numTeamsLower);
+    attrs.MinTeams = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(numTeamsLower), builder.getInt32Ty());
 
   if (numTeamsUpper)
-    attrs.MaxTeams.front() = moduleTranslation.lookupValue(numTeamsUpper);
+    attrs.MaxTeams.front() = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(numTeamsUpper), builder.getInt32Ty());
 
   if (teamsThreadLimit)
-    attrs.TeamsThreadLimit.front() =
-        moduleTranslation.lookupValue(teamsThreadLimit);
+    attrs.TeamsThreadLimit.front() = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
@@ -6339,6 +6318,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
       llvm::Value *lowerBound = moduleTranslation.lookupValue(loopLower);
       llvm::Value *upperBound = moduleTranslation.lookupValue(loopUpper);
       llvm::Value *step = moduleTranslation.lookupValue(loopStep);
+
+      if (!lowerBound || !upperBound || !step) {
+        attrs.LoopTripCount = nullptr;
+        break;
+      }
 
       llvm::OpenMPIRBuilder::LocationDescription loc(builder);
       llvm::Value *tripCount = ompBuilder->calculateCanonicalLoopTripCount(

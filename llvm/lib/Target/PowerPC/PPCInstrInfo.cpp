@@ -2081,7 +2081,7 @@ void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
-                                        Register VReg,
+                                        Register VReg, unsigned SubReg,
                                         MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
@@ -2722,7 +2722,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineBasicBlock::iterator MII = MI;
   BuildMI(*MI->getParent(), std::next(MII), MI->getDebugLoc(),
           get(TargetOpcode::COPY), CRReg)
-    .addReg(PPC::CR0, MIOpC != NewOpC ? RegState::Kill : 0);
+      .addReg(PPC::CR0, getKillRegState(MIOpC != NewOpC));
 
   // Even if CR0 register were dead before, it is alive now since the
   // instruction we just built uses it.

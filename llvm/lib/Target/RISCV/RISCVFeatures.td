@@ -270,7 +270,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExtension<1, 0, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
@@ -1044,6 +1044,10 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : RISCVExtension<1, 0, "Page-Based Memory Types">;
 
+def FeatureStdExtSvrsw60t59b
+    : RISCVExtension<1, 0,
+                     "PTE Reserved-for-Software Bits 60-59">;
+
 def FeatureStdExtSvvptc
     : RISCVExtension<1, 0,
                      "Obviating Memory-Management Instructions after Marking PTEs Valid">;
@@ -1488,9 +1492,8 @@ def HasVendorXwchc
 // Qualcomm Extensions
 
 def FeatureVendorXqccmp
-    : RISCVExperimentalExtension<0, 3,
-                                 "Qualcomm 16-bit Push/Pop and Double Moves",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 3, "Qualcomm 16-bit Push/Pop and Double Moves",
+                     [FeatureStdExtZca]>;
 def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
@@ -1730,6 +1733,12 @@ def HasVendorXSMTVDot
       AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
                          "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
+def FeatureVendorXAIFET
+    : RISCVExtension<1, 0, "AI Foundry ET Extension", [FeatureStdExtF]>;
+def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
+                          AssemblerPredicate<(all_of FeatureVendorXAIFET),
+                          "'XAIFET' (AI Foundry ET Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1842,6 +1851,10 @@ def TuneDisablePostMISchedStoreClustering : SubtargetFeature<"disable-postmische
 def TuneDisableLatencySchedHeuristic
     : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
                        "Disable latency scheduling heuristic">;
+
+def TuneEnableVsetvliSchedHeuristic
+    : SubtargetFeature<"enable-vsetvli-sched-heuristic", "EnableVsetvliSchedHeuristic", "true",
+                       "Enable vsetvli-based scheduling heuristic">;
 
 def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",

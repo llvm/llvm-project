@@ -75,8 +75,19 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
+  case Instruction::PHI:
+  case VPInstruction::Broadcast:
+  case VPInstruction::ComputeFindIVResult:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ExtractLastPart:
+  case VPInstruction::ExtractLastActive:
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::Reverse:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -95,16 +106,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeAnyOfResult:
     return inferScalarType(R->getOperand(1));
-  case VPInstruction::ComputeFindIVResult:
-  case VPInstruction::ComputeReductionResult: {
-    return inferScalarType(R->getOperand(0));
-  }
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
-  case Instruction::PHI:
-    // Infer the type of first operand only, as other operands of header phi's
-    // may lead to infinite recursion.
-    return inferScalarType(R->getOperand(0));
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -119,22 +122,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
-  case VPInstruction::ExtractLastLane:
-  case VPInstruction::ExtractPenultimateElement:
-    return inferScalarType(R->getOperand(0));
-  case VPInstruction::ExtractLastPart:
-    return inferScalarType(R->getOperand(0));
   case VPInstruction::LogicalAnd:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
            "LogicalAnd operands should be bool");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::Broadcast:
-  case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
-  case VPInstruction::Reverse:
-    // Return the type based on first operand.
-    return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
@@ -171,11 +163,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::ExtractValue: {
     assert(R->getNumOperands() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
-    return StructTy->getTypeAtIndex(CI->getZExtValue());
+    return StructTy->getTypeAtIndex(
+        cast<VPConstantInt>(R->getOperand(1))->getZExtValue());
   }
-  case Instruction::Select:
-    return inferScalarType(R->getOperand(1));
+  case Instruction::Select: {
+    Type *ResTy = inferScalarType(R->getOperand(1));
+    VPValue *OtherV = R->getOperand(2);
+    assert(inferScalarType(OtherV) == ResTy &&
+           "different types inferred for different operands");
+    CachedTypes[OtherV] = ResTy;
+    return ResTy;
+  }
   default:
     break;
   }

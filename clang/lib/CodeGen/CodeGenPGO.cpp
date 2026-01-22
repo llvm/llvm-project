@@ -252,8 +252,9 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
-      if (BinOp && BinOp->isLogicalOp()) {
+      if (const auto *BinOp =
+              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
+          BinOp && BinOp->isLogicalOp()) {
         /// Check for "split-nested" logical operators. This happens when a new
         /// boolean expression logical-op nest is encountered within an existing
         /// boolean expression, separated by a non-logical operator.  For
@@ -285,7 +286,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
       return true;
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
+      const BinaryOperator *BinOp =
+          dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
       if (BinOp && BinOp->isLogicalOp()) {
         assert(LogOpStack.back() == BinOp);
         LogOpStack.pop_back();
@@ -306,7 +308,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
           }
 
           // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
+          MCDCState.DecisionByStmt[BinOp].ID = MCDCState.DecisionByStmt.size();
         }
         return true;
       }
@@ -1135,6 +1137,16 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
   if (CoverageMapping.empty())
     return;
 
+  // Scan max(FalseCnt) and update NumRegionCounters.
+  unsigned MaxNumCounters = NumRegionCounters;
+  for (const auto &[_, V] : *RegionCounterMap) {
+    assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
+           "TrueCnt should not be reassigned");
+    if (V.Skipped.hasValue())
+      MaxNumCounters = std::max(MaxNumCounters, V.Skipped + 1);
+  }
+  NumRegionCounters = MaxNumCounters;
+
   CGM.getCoverageMapping()->addFunctionMappingRecord(
       FuncNameVar, FuncName, FunctionHash, CoverageMapping);
 }
@@ -1195,11 +1207,21 @@ std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                           bool UseSkipPath, bool UseBoth,
                                            llvm::Value *StepV) {
-  if (!RegionCounterMap || !Builder.GetInsertBlock())
+  if (!RegionCounterMap)
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S].Executed;
+  // Allocate S in the Map regardless of emission.
+  const auto &TheCounterPair = (*RegionCounterMap)[S];
+
+  if (!Builder.GetInsertBlock())
+    return;
+
+  const CounterPair::ValueOpt &Counter =
+      (UseSkipPath ? TheCounterPair.Skipped : TheCounterPair.Executed);
+  if (!Counter.hasValue())
+    return;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
@@ -1243,9 +1265,29 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
 }
 
+/// Fill mcdc.addr order by ID.
+std::vector<Address *>
+CodeGenPGO::getMCDCCondBitmapAddrArray(CGBuilderTy &Builder) {
+  std::vector<Address *> Result;
+
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
+    return Result;
+
+  SmallVector<std::pair<unsigned, Address *>> SortedPair;
+  for (auto &[_, V] : RegionMCDCState->DecisionByStmt)
+    if (V.isValid())
+      SortedPair.emplace_back(V.ID, &V.MCDCCondBitmapAddr);
+
+  llvm::sort(SortedPair);
+
+  for (auto &[_, MCDCCondBitmapAddr] : SortedPair)
+    Result.push_back(MCDCCondBitmapAddr);
+
+  return Result;
+}
+
 void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                                                 const Expr *S,
-                                                Address MCDCCondBitmapAddr,
                                                 CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
@@ -1254,6 +1296,10 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
 
   auto DecisionStateIter = RegionMCDCState->DecisionByStmt.find(S);
   if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
+    return;
+
+  auto &MCDCCondBitmapAddr = DecisionStateIter->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   // Don't create tvbitmap_update if the record is allocated but excluded.
@@ -1278,14 +1324,16 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
 
-void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
-                                         Address MCDCCondBitmapAddr) {
+void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
-  S = S->IgnoreParens();
+  auto I = RegionMCDCState->DecisionByStmt.find(S->IgnoreParens());
+  if (I == RegionMCDCState->DecisionByStmt.end())
+    return;
 
-  if (!RegionMCDCState->DecisionByStmt.contains(S))
+  auto &MCDCCondBitmapAddr = I->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   // Emit intrinsic that resets a dedicated temporary value on the stack to 0.
@@ -1293,7 +1341,6 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 }
 
 void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                          Address MCDCCondBitmapAddr,
                                           llvm::Value *Val,
                                           CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
@@ -1321,6 +1368,10 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   const auto DecisionIter =
       RegionMCDCState->DecisionByStmt.find(Branch.DecisionStmt);
   if (DecisionIter == RegionMCDCState->DecisionByStmt.end())
+    return;
+
+  auto &MCDCCondBitmapAddr = DecisionIter->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   const auto &TVIdxs = DecisionIter->second.Indices[Branch.ID];
@@ -1510,13 +1561,15 @@ CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
                               std::max(*CondCount, LoopCount) - LoopCount);
 }
 
-void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+void CodeGenFunction::incrementProfileCounter(CounterForIncrement ExecSkip,
+                                              const Stmt *S, bool UseBoth,
                                               llvm::Value *StepV) {
   if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
       !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
       !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
     auto AL = ApplyDebugLocation::CreateArtificial(*this);
-    PGO->emitCounterSetOrIncrement(Builder, S, StepV);
+    PGO->emitCounterSetOrIncrement(Builder, S, (ExecSkip == UseSkipPath),
+                                   UseBoth, StepV);
   }
   PGO->setCurrentStmt(S);
 }
@@ -1534,18 +1587,29 @@ void CodeGenFunction::markStmtMaybeUsed(const Stmt *S) {
 void CodeGenFunction::maybeCreateMCDCCondBitmap() {
   if (isMCDCCoverageEnabled()) {
     PGO->emitMCDCParameters(Builder);
-    MCDCCondBitmapAddr = CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+
+    // Set up MCDCCondBitmapAddr for each Decision.
+    // Note: This doesn't initialize Addrs in invalidated Decisions.
+    for (auto *MCDCCondBitmapAddr : PGO->getMCDCCondBitmapAddrArray(Builder))
+      *MCDCCondBitmapAddr =
+          CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
   }
+}
+bool CodeGenFunction::isMCDCDecisionExpr(const Expr *E) const {
+  return PGO->isMCDCDecisionExpr(E);
+}
+bool CodeGenFunction::isMCDCBranchExpr(const Expr *E) const {
+  return PGO->isMCDCBranchExpr(E);
 }
 void CodeGenFunction::maybeResetMCDCCondBitmap(const Expr *E) {
   if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-    PGO->emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
+    PGO->emitMCDCCondBitmapReset(Builder, E);
     PGO->setCurrentStmt(E);
   }
 }
 void CodeGenFunction::maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
   if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-    PGO->emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
+    PGO->emitMCDCTestVectorBitmapUpdate(Builder, E, *this);
     PGO->setCurrentStmt(E);
   }
 }
@@ -1553,7 +1617,7 @@ void CodeGenFunction::maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
 void CodeGenFunction::maybeUpdateMCDCCondBitmap(const Expr *E,
                                                 llvm::Value *Val) {
   if (isMCDCCoverageEnabled()) {
-    PGO->emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
+    PGO->emitMCDCCondBitmapUpdate(Builder, E, Val, *this);
     PGO->setCurrentStmt(E);
   }
 }

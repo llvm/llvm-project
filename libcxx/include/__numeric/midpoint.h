@@ -18,6 +18,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_cv.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -31,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-  requires(is_integral_v<_Tp> && !is_same_v<_Tp, bool>)
+  requires(is_integral_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, bool>)
 [[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
   using _Up                = make_unsigned_t<_Tp>;
@@ -49,11 +50,6 @@ template <class _Tp>
   requires(is_object_v<_Tp> && (sizeof(_Tp) > 0))
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept {
   return __a + std::midpoint(ptrdiff_t(0), __b - __a);
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr int __sign(_Tp __val) {
-  return (_Tp(0) < __val) - (__val < _Tp(0));
 }
 
 template <typename _Fp>

@@ -125,35 +125,6 @@ void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
   II->setHasMacroDefinition(true);
   if (!MD->isDefined() && !LeafModuleMacros.contains(II))
     II->setHasMacroDefinition(false);
-
-  if (getLangOpts().Modules) {
-    // When both modules and a PCH are used, we may run into the following
-    // situation:
-    //  - the PCH is compiled with macro definitions on the command line.
-    //  - the modules are compiled with the same set of macros on the command
-    // line.
-    // In this case, clang needs to know that some predefined macros exist
-    // over the command line transitively through the PCH and some are passed
-    // directly over the command line. The preprocessor stores
-    // PCHPredefinesFileID so later it is aware of macros defined transitively
-    // through the PCH's compilation.
-    auto MDLoc = MD->getLocation();
-
-    if (SourceMgr.isWrittenInCommandLineFile(MDLoc)) {
-      auto MDFileID = SourceMgr.getFileID(MDLoc);
-      if (PCHPredefinesFileID.isInvalid())
-        PCHPredefinesFileID = MDFileID;
-      else {
-        // The PCH and all the chain of headers it includes must be
-        // compiled with the exact same set of macros defined over the
-        // command line. No different macros should be defined over
-        // different command line invocations. This means that all the macros'
-        // source locations should have the same MDFileID.
-        assert(MDFileID == PCHPredefinesFileID &&
-               "PCHBuiltinFileID must be consistent!");
-      }
-    }
-  }
 }
 
 ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
