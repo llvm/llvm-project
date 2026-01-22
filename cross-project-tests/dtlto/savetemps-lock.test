@@ -31,12 +31,12 @@ RUN:         | FileCheck %s --implicit-check-not=warning
 CHECK-DAG: Lock any files in the output directory.
 CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.[[#PID:]].dist-file.json': {{.*}}
 # Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
-CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[HEXPID:[A-Z0-9]+]].1.[[#PID]].native.o': {{.*}}
-CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[HEXPID]].1.[[#PID]].native.o.thinlto.bc': {{.*}}
-CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[HEXPID]].2.[[#PID]].native.o': {{.*}}
-CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[HEXPID]].2.[[#PID]].native.o.thinlto.bc': {{.*}}
-CHECK-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[HEXPID]].o': {{.*}}
-CHECK-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[HEXPID]].o': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc': {{.*}}
+CHECK-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o': {{.*}}
+CHECK-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o': {{.*}}
 
 #--- t1.c
 __attribute__((retain)) int t1(int x) { return x; }

@@ -34,9 +34,9 @@ TEMPS: {{^}}my.[[#PID:]].dist-file.json{{$}}
 ELF:   {{^}}my.exe{{$}}
 OTHER: {{^}}my.exe.resolution.txt{{$}}
 # Filename composition: <archive><member><member offset>.<task>.<pid>.<task>.<pid>.native.o.
-TEMPS: {{^}}t.libt1.o[[#T1_OFFSET:]].1.[[HEXPID:[A-Z0-9]+]].1.[[#PID]].native.o{{$}}
-TEMPS: {{^}}t.libt1.o[[#T1_OFFSET]].1.[[HEXPID]].1.[[#PID]].native.o.thinlto.bc{{$}}
-TEMPS: {{^}}t.libt1.o[[#T1_OFFSET]].1.[[HEXPID]].o{{$}}
+TEMPS: {{^}}t.libt1.o[[#T1_OFFSET:]].1.[[#%X,HEXPID:]].1.[[#PID]].native.o{{$}}
+TEMPS: {{^}}t.libt1.o[[#T1_OFFSET]].1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.libt1.o[[#T1_OFFSET]].1.[[#%X,HEXPID]].o{{$}}
 # No files are expected after.
 BOOKEND-NOT: {{.}}
 
