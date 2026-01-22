@@ -582,7 +582,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
-  initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
@@ -874,8 +873,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [](ModulePassManager &PM, OptimizationLevel Level,
-         ThinOrFullLTOPhase Phase) {
+      [this](ModulePassManager &PM, OptimizationLevel Level,
+             ThinOrFullLTOPhase Phase) {
         if (!isLTOPreLink(Phase)) {
           // When we are not using -fgpu-rdc, we can run accelerator code
           // selection relatively early, but still after linking to prevent
@@ -898,6 +897,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
+
+        if (!isLTOPreLink(Phase))
+          if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
+            AMDGPUAttributorOptions Opts;
+            PM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+          }
       });
 
   PB.registerPeepholeEPCallback(
@@ -931,10 +936,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // but before SROA to increase SROA opportunities.
         FPM.addPass(InferAddressSpacesPass());
 
-        // This should run after inlining to have any chance of doing
-        // anything, and before other cleanup optimizations.
-        FPM.addPass(AMDGPULowerKernelAttributesPass());
-
         if (Level != OptimizationLevel::O0) {
           // Promote alloca to vector before SROA and loop unroll. If we
           // manage to eliminate allocas before unroll we may choose to unroll
@@ -944,20 +945,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
-
-  // FIXME: Why is AMDGPUAttributor not in CGSCC?
-  PB.registerOptimizerLastEPCallback([this](ModulePassManager &MPM,
-                                            OptimizationLevel Level,
-                                            ThinOrFullLTOPhase Phase) {
-    if (Level != OptimizationLevel::O0) {
-      if (!isLTOPreLink(Phase)) {
-        if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
-          AMDGPUAttributorOptions Opts;
-          MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
-        }
-      }
-    }
-  });
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {

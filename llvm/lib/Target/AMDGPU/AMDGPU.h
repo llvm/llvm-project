@@ -123,15 +123,6 @@ struct AMDGPUPromoteKernelArgumentsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-ModulePass *createAMDGPULowerKernelAttributesPass();
-void initializeAMDGPULowerKernelAttributesPass(PassRegistry &);
-extern char &AMDGPULowerKernelAttributesID;
-
-struct AMDGPULowerKernelAttributesPass
-    : PassInfoMixin<AMDGPULowerKernelAttributesPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
 void initializeAMDGPULowerModuleLDSLegacyPass(PassRegistry &);
 extern char &AMDGPULowerModuleLDSLegacyPassID;
 
