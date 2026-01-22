@@ -63,7 +63,7 @@ define nofpclass(qnan inf zero sub norm) half @ret_only_snan(half %x, half %y) {
 define nofpclass(nan inf sub norm) half @ret_only_zero(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) half @ret_only_zero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fsub nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fsub nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %add = fsub half %x, %y
@@ -217,7 +217,7 @@ define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fsub_select_unknown_or_in
 ; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF0:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[INF1:%.*]] = call half @returns_inf()
-; CHECK-NEXT:    [[ADD:%.*]] = fsub nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fsub nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %inf0 = call half @returns_inf()
