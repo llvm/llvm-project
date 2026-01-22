@@ -234,6 +234,11 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+// FIXME: Listing all bitcode libfunc symbols here is clunky. A higher-level way
+// to indicate which TUs made it into the link might be better, but this would
+// required more detailed tracking of the sources of constructs in the IR.
+// Alternatively, there may be some other data structure that could hold this
+// information.
 static cl::list<std::string>
     BitcodeLibFuncs("bitcode-libfuncs", cl::Hidden,
                     cl::desc("set of libfuncs implemented in bitcode"));
