@@ -625,11 +625,16 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT LCMTy = getCoverTy(SrcTy, PartTy);
   if (SrcTy.isVector() && DstRegs.size() > 1) {
-    TypeSize CoverSize = DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
+    LLT CoverTy = DstTy.multiplyElements(DstRegs.size());
+
     LLT EltTy = SrcTy.getElementType();
-    unsigned EltSize = EltTy.getSizeInBits();
-    if (CoverSize % EltSize == 0)
-      LCMTy = LLT::fixed_vector(CoverSize / EltSize, EltTy);
+    TypeSize EltSize = EltTy.getSizeInBits();
+    TypeSize CoverSize = CoverTy.getSizeInBits();
+    if (CoverSize.isKnownMultipleOf(EltSize)) {
+      TypeSize VecSize = CoverSize.divideCoefficientBy(EltSize);
+      LCMTy =
+          LLT::vector(ElementCount::get(VecSize, VecSize.isScalable()), EltTy);
+    }
   }
 
   if (PartTy.isVector() && LCMTy == PartTy) {
