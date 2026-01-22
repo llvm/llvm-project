@@ -9906,9 +9906,6 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_operand_empty_string : Error<
      "cannot use an empty string literal in 'asm'">;
 
-  def err_asm_string_literal_not_ordinary : Error<
-     "cannot use unicode string literal in 'asm'">;
-
 
   def err_asm_pmf_through_constraint_not_permitted
     : Error<"cannot pass a pointer-to-member through register-constrained "

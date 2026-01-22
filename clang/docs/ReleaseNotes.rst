@@ -127,6 +127,7 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+- Fixed a crash when using non-ordinary string literals (``u8""``, ``L""``, ``u""``, ``U""``) in inline assembly. Clang now properly diagnoses these as errors. (#GH177056)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
