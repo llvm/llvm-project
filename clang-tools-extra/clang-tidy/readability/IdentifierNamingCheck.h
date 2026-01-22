@@ -88,42 +88,6 @@ public:
     HungarianPrefixType HPType;
   };
 
-  struct HungarianNotation {
-  public:
-    bool checkOptionValid(int StyleKindIndex) const;
-    bool isOptionEnabled(StringRef OptionKey,
-                         const llvm::StringMap<std::string> &StrMap) const;
-
-    size_t getAsteriskCount(const std::string &TypeName) const;
-    size_t getAsteriskCount(const std::string &TypeName,
-                            const NamedDecl *ND) const;
-
-    void loadDefaultConfig(
-        IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-    void loadFileConfig(
-        const ClangTidyCheck::OptionsView &Options,
-        IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-
-    bool removeDuplicatedPrefix(
-        SmallVector<StringRef, 8> &Words,
-        const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-
-    std::string getPrefix(
-        const Decl *D,
-        const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-
-    std::string getDataTypePrefix(
-        StringRef TypeName, const NamedDecl *ND,
-        const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-
-    std::string getClassPrefix(
-        const CXXRecordDecl *CRD,
-        const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-
-    std::string getEnumPrefix(const EnumConstantDecl *ECD) const;
-    std::string getDeclTypeName(const NamedDecl *ND) const;
-  };
-
   struct FileStyle {
     FileStyle() : IsActive(false), IgnoreMainLikeFunctions(false) {}
     FileStyle(SmallVectorImpl<std::optional<NamingStyle>> &&Styles,
@@ -231,7 +195,6 @@ private:
   ClangTidyContext *Context;
   const bool GetConfigPerFile;
   const bool IgnoreFailedSplit;
-  HungarianNotation HungarianNotation;
 };
 
 } // namespace readability
