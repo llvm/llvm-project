@@ -1664,6 +1664,7 @@ define amdgpu_ps <2 x half> @fma_v2s16_uniform(<2 x half> inreg %a, <2 x half> i
 ; GFX6-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX6-NEXT:    s_or_b32 s0, s0, s1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: fma_v2s16_uniform:
