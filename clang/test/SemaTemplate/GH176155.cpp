@@ -3,6 +3,11 @@
 template <int> struct bad {
   template <class T, auto =
                          [] { // #lambda
+                           // expected-note@#lambda {{while substituting into a lambda expression here}}
+                           // expected-note@#lambda 2{{capture 'i' by value}}
+                           // expected-note@#lambda 2{{capture 'i' by reference}}
+                           // expected-note@#lambda 2{{default capture by value}}
+                           // expected-note@#lambda 2{{default capture by reference}}
                            for (int i = 0; i < 100; ++i) { // #i
                              // expected-error@-1 {{variable 'i' cannot be implicitly captured in a lambda with no capture-default specified}}
                              // expected-note@#i {{'i' declared here}}
