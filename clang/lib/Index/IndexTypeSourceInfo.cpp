@@ -202,11 +202,12 @@ public:
     auto QT = T->getReplacementType();
     if (QT.isNull())
       return true;
+    auto *CXXRD = QT->getAsCXXRecordDecl();
+    if (!CXXRD)
+      return true;
 
-    IndexCtx.handleReference(QT->getAsCXXRecordDecl(), TL.getNameLoc(), Parent,
-                             ParentDC, SymbolRoleSet(), Relations);
-
-    return true;
+    return IndexCtx.handleReference(CXXRD, TL.getNameLoc(), Parent, ParentDC,
+                                    SymbolRoleSet(), Relations);
   }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {

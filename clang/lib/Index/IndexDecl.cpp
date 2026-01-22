@@ -14,7 +14,6 @@
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/Support/Casting.h"
 
 using namespace clang;
 using namespace index;
@@ -746,9 +745,9 @@ public:
     if (const auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(D))
       for (auto *SD : CTD->specializations())
         for (auto *RD : SD->redecls()) {
-          auto *CTSD = cast<ClassTemplateSpecializationDecl>(RD);
+          auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD);
           // For now we are only interested in instantiations with inheritance.
-          if (!CTSD->hasDefinition() || CTSD->bases().empty())
+          if (!CTSD || !CTSD->hasDefinition() || CTSD->bases().empty())
             continue;
           // Explicit specialization is handled elsewhere
           if (CTSD->isExplicitSpecialization())
