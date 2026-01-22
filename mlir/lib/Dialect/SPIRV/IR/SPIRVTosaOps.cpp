@@ -171,7 +171,6 @@ ParseResult parseSPIRV_I32_1DArmTensor(OpAsmParser &parser,
 
 void printSPIRV_I32_1DArmTensor(OpAsmPrinter &printer, Operation *,
                                 DenseIntElementsAttr attr) {
-
   printer << llvm::interleaved_array(
       llvm::map_range(attr.getValues<APInt>(),
                       [](const APInt &a) { return a.getSExtValue(); }));
