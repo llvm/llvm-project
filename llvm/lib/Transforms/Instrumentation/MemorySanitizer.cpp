@@ -4094,15 +4094,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //                 (<2 x float> %A, <2 x float>)
   void handleVectorComparePackedIntrinsic(IntrinsicInst &I,
                                           bool PredicateAsOperand) {
-    if (PredicateAsOperand)
+    if (PredicateAsOperand) {
       assert(I.arg_size() == 3);
+      assert(I.paramHasAttr(2, Attribute::ImmArg));
+    }
     else
       assert(I.arg_size() == 2);
 
     IRBuilder<> IRB(&I);
-
-    if (PredicateAsOperand)
-      insertCheckShadowOf(I.getOperand(2), &I);
 
     // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
     // all-ones shadow.
