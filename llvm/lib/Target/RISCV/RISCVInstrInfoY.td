@@ -51,7 +51,7 @@ def uimm7_srliy : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction Formats
+// Instruction Formats and class templates
 //===----------------------------------------------------------------------===//
 
 // Like an RVInstR, except rs2 is now an additional function code.
@@ -70,28 +70,6 @@ class RVYInstSrcDst<bits<7> funct7, bits<5> funct5, bits<3> funct3,
   let Inst{6-0} = opcode.Value;
 }
 
-class RVYInstBNDSWIFmt<dag outs, dag ins, string opcodestr, string argstr>
-    : RVInstIBase<0b011, OPC_OP_IMM_32, outs, ins, opcodestr, argstr> {
-  bits<5> rd;
-  bits<5> rs1;
-  bits<10> imm;
-
-  let Inst{31-30} = 0b00;
-  let Inst{29-20} = imm;
-}
-
-class RVYInstSRLIYFmt<bits<7> imm, dag outs, dag ins, string opcodestr,
-                      string argstr>
-    : RVInstIBase<0b101, OPC_OP_IMM, outs, ins, opcodestr, argstr> {
- bits<7> shamt = imm;
- let Inst{31-27} = 0b00000;
- let Inst{26-20} = shamt;
-}
-
-//===----------------------------------------------------------------------===//
-// Instruction Class Templates
-//===----------------------------------------------------------------------===//
-
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class RVY_r<bits<5> funct5, string opcodestr, DAGOperand rdOp = GPR,
             DAGOperand rs1Op = YGPR>
@@ -108,11 +86,25 @@ class RVY_ri<bits<3> funct3, RISCVOpcode opcode, string opcodestr,
               (ins rs1Op:$rs1, simm12_lo:$imm12), opcodestr,
               "$rd, $rs1, $imm12">;
 class RVY_bndswi<string opcodestr>
-    : RVYInstBNDSWIFmt<(outs YGPR:$rd), (ins YGPR:$rs1, ybndsw_imm:$imm),
-                         opcodestr, "$rd, $rs1, $imm">;
+   : RVInstIBase<0b011, OPC_OP_IMM_32, (outs YGPR:$rd),
+                 (ins YGPR:$rs1, ybndsw_imm:$imm), opcodestr,
+                 "$rd, $rs1, $imm"> {
+  bits<5> rd;
+  bits<5> rs1;
+  bits<10> imm;
+
+  let Inst{31-30} = 0b00;
+  let Inst{29-20} = imm;
+}
 class RVY_srli<string opcodestr, bits<7> imm>
-    : RVYInstSRLIYFmt<imm, (outs GPR:$rd), (ins YGPR:$rs1, uimm7_srliy:$shamt),
-                      opcodestr, "$rd, $rs1, $shamt">;
+    : RVInstIBase<0b101, OPC_OP_IMM, (outs GPR:$rd),
+                  (ins YGPR:$rs1, uimm7_srliy:$shamt), opcodestr,
+                  "$rd, $rs1, $shamt"> {
+  bits<7> shamt = imm;
+
+  let Inst{31-27} = 0b00000;
+  let Inst{26-20} = shamt;
+}
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let Predicates = [HasStdExtY] in {

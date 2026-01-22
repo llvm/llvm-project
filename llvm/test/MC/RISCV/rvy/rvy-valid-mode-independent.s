@@ -66,14 +66,14 @@ ymv a0, a0
 # CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
 mv a0, a0
 # CHECK-NEXT: packy		a0, a0, a0
-# CHECK-ASM-SAME: # encoding: [0x33,0x35,0xa5,0x0c]
+# CHECK-ASM-SAME: # encoding: [0x33,0x35,0xa5,0x08]
 # CHECK-ASM-NEXT: # <MCInst #[[#]] PACKY{{$}}
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10>>
 packy a0, a0, a0
 # CHECK-NEXT: packy		a0, a0, a0
-# CHECK-ASM-SAME: # encoding: [0x33,0x35,0xa5,0x0c]
+# CHECK-ASM-SAME: # encoding: [0x33,0x35,0xa5,0x08]
 # CHECK-ASM-NEXT: # <MCInst #[[#]] PACKY{{$}}
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
