@@ -11,21 +11,17 @@
 
 #include <spawn.h>
 
-#if __has_include(<responsibility.h>)
 #include <dispatch/dispatch.h>
 #include <dlfcn.h>
+#if __has_include(<responsibility.h>)
 #include <responsibility.h>
+#endif
 
-// Older SDKs  have responsibility.h but not this particular function. Let's
-// include the prototype here.
 errno_t responsibility_spawnattrs_setdisclaim(posix_spawnattr_t *attrs,
                                               bool disclaim);
 
-#endif
-
 static inline int setup_posix_spawn_responsible_flag(posix_spawnattr_t *attr) {
   if (@available(macOS 10.14, *)) {
-#if __has_include(<responsibility.h>)
     static __typeof__(responsibility_spawnattrs_setdisclaim)
         *responsibility_spawnattrs_setdisclaim_ptr;
     static dispatch_once_t pred;
@@ -36,7 +32,6 @@ static inline int setup_posix_spawn_responsible_flag(posix_spawnattr_t *attr) {
     });
     if (responsibility_spawnattrs_setdisclaim_ptr)
       return responsibility_spawnattrs_setdisclaim_ptr(attr, true);
-#endif
   }
   return 0;
 }
