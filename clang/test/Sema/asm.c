@@ -45,7 +45,7 @@ void test3(void) {
   asm("foo" : L"=r"(x)); // expected-error {{wide string}}
 
   // GH177056
-  asm("" ::: (u8"")); // expected-error {{the expression in this asm operand must be a string literal or an object with 'data()' and 'size()' member functions}}
+  asm("" ::: (u8"")); // expected-error {{expected string literal in 'asm'}} expected-error {{expected ')'}}
   asm(R"(nop)");
 }
 
