@@ -974,14 +974,16 @@ let RegInfos = XLenRI in {
 // The original scalar floating point register occupies the 32 LSB of the
 // vector.
 
-let SubRegIndices = [sub_32] in
-  class RISCVReg256<RISCVReg32 subreg> :
-    RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
-                        subreg.AltNames>;
+def sub_128 : SubRegIndex<128>;
+class RISCVReg256<RISCVReg128 subreg> :
+  RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                      subreg.AltNames> {
+  let SubRegIndices = [sub_128];
+}
 
 let RegAltNameIndices = [ABIRegAltName] in
   foreach Index = 0-31 in
-    def F#Index#_Q2 : RISCVReg256<!cast<RISCVReg32>("F"#Index#"_F")>,
+    def F#Index#_Q2 : RISCVReg256<!cast<RISCVReg128>("F"#Index#"_Q")>,
                                   DwarfRegNum<[!add(Index, 3088)]>;
 
 // The order of registers represents the preferred allocation sequence,
