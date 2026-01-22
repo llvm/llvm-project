@@ -330,8 +330,9 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
 /// Return a constant with the initial value for the reduction operator and
 /// type combination.
 static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Type ty,
+                                         mlir::Location loc, mlir::Type varType,
                                          mlir::acc::ReductionOperator op) {
+  mlir::Type ty = fir::getFortranElementType(varType);
   if (op == mlir::acc::ReductionOperator::AccLand ||
       op == mlir::acc::ReductionOperator::AccLor ||
       op == mlir::acc::ReductionOperator::AccEqv ||
@@ -369,19 +370,6 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
     return fir::factory::Complex{builder, loc}.createComplex(cmplxTy, realInit,
                                                              imagInit);
   }
-
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
-    return getReductionInitValue(builder, loc, seqTy.getEleTy(), op);
-
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
-    return getReductionInitValue(builder, loc, boxTy.getEleTy(), op);
-
-  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
-    return getReductionInitValue(builder, loc, heapTy.getEleTy(), op);
-
-  if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(ty))
-    return getReductionInitValue(builder, loc, ptrTy.getEleTy(), op);
-
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
 }
 
@@ -491,7 +479,7 @@ static RecipeOp genRecipeOp(
   mlir::Value initValue;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     assert(op != mlir::acc::ReductionOperator::AccNone);
-    initValue = getReductionInitValue(builder, loc, fir::unwrapRefType(ty), op);
+    initValue = getReductionInitValue(builder, loc, ty, op);
   }
 
   // Since we reuse the same recipe for all variables of the same type - we
