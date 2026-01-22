@@ -70,10 +70,9 @@ multiclass AMDGPUSubtargetFeature<string FeatureString,
       def Has#NAME : Predicate<"Subtarget->has"#NAME#"()">;
 }
 
-def FeatureFastFMAF32 : SubtargetFeature<"fast-fmaf",
-  "FastFMAF32",
-  "true",
-  "Assuming f32 fma is at least as fast as mul + add"
+defm FastFMAF32 : AMDGPUSubtargetFeature<"fast-fmaf",
+  "Assuming f32 fma is at least as fast as mul + add",
+  /*GenPredicate=*/0
 >;
 
 defm FastDenormalF32 : AMDGPUSubtargetFeature<"fast-denormal-f32",
@@ -135,9 +134,7 @@ defm FlatGVSMode : AMDGPUSubtargetFeature<"flat-gvs-mode",
   [FeatureFlatAddressSpace]
 >;
 
-def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
-  "AddNoCarryInsts",
-  "true",
+defm AddNoCarryInsts : AMDGPUSubtargetFeature<"add-no-carry-insts",
   "Have VALU add/sub instructions without carry out"
 >;
 
@@ -145,10 +142,9 @@ defm UnalignedBufferAccess : AMDGPUSubtargetFeature<"unaligned-buffer-access",
   "Hardware supports unaligned global loads and stores"
 >;
 
-def FeatureTrapHandler: SubtargetFeature<"trap-handler",
-  "TrapHandler",
-  "true",
-  "Trap handler support"
+defm TrapHandler: AMDGPUSubtargetFeature<"trap-handler",
+  "Trap handler support",
+  /*GenPredicate=*/0
 >;
 
 defm UnalignedScratchAccess : AMDGPUSubtargetFeature<"unaligned-scratch-access",
@@ -241,16 +237,14 @@ defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size"
 >;
 
-def FeatureUserSGPRInit16Bug : SubtargetFeature<"user-sgpr-init16-bug",
-  "UserSGPRInit16Bug",
-  "true",
-  "Bug requiring at least 16 user+system SGPRs to be enabled"
+defm UserSGPRInit16Bug : AMDGPUSubtargetFeature<"user-sgpr-init16-bug",
+  "Bug requiring at least 16 user+system SGPRs to be enabled",
+  /*GenPredicate=*/0
 >;
 
-def FeatureLdsMisalignedBug : SubtargetFeature<"lds-misaligned-bug",
-  "LDSMisalignedBug",
-  "true",
-  "Some GFX10 bug with multi-dword LDS and flat access that is not naturally aligned in WGP mode"
+defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
+  "Some GFX10 bug with multi-dword LDS and flat access that is not naturally aligned in WGP mode",
+  /*GenPredicate=*/0
 >;
 
 defm MFMAInlineLiteralBug : AMDGPUSubtargetFeature<"mfma-inline-literal-bug",
@@ -336,11 +330,10 @@ defm NegativeScratchOffsetBug : AMDGPUSubtargetFeature<"negative-scratch-offset-
   "Negative immediate offsets in scratch instructions with an SGPR offset page fault on GFX9"
 >;
 
-def FeatureNegativeUnalignedScratchOffsetBug : SubtargetFeature<"negative-unaligned-scratch-offset-bug",
-  "NegativeUnalignedScratchOffsetBug",
-  "true",
+defm NegativeUnalignedScratchOffsetBug : AMDGPUSubtargetFeature<"negative-unaligned-scratch-offset-bug",
   "Scratch instructions with a VGPR offset and a negative immediate offset that"
-  "is not a multiple of 4 read wrong memory on GFX10"
+  "is not a multiple of 4 read wrong memory on GFX10",
+  /*GenPredicate=*/0
 >;
 
 defm Offset3fBug : AMDGPUSubtargetFeature<"offset-3f-bug",
@@ -1085,11 +1078,9 @@ defm SWakeupBarrier : AMDGPUSubtargetFeature<"s-wakeup-barrier-inst",
 // wave32 and wave64. Instead what users do is assemble with both
 // wavesizes enabled. We translate this into this special mode so this
 // only influences assembler behavior and nothing else.
-def FeatureAssemblerPermissiveWavesize : SubtargetFeature<
-  "assembler-permissive-wavesize",
-  "AssemblerPermissiveWavesize",
-  "true",
-  "allow parsing wave32 and wave64 variants of instructions"
+defm AssemblerPermissiveWavesize : AMDGPUSubtargetFeature<"assembler-permissive-wavesize",
+  "Allow parsing wave32 and wave64 variants of instructions",
+  /*GenPredicate=*/0
 >;
 
 class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
@@ -1102,12 +1093,6 @@ class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
 def FeatureMaxPrivateElementSize4 : FeatureMaxPrivateElementSize<4>;
 def FeatureMaxPrivateElementSize8 : FeatureMaxPrivateElementSize<8>;
 def FeatureMaxPrivateElementSize16 : FeatureMaxPrivateElementSize<16>;
-
-def FeatureDumpCode : SubtargetFeature <"DumpCode",
-  "DumpCode",
-  "true",
-  "Dump MachineInstrs in the CodeEmitter"
->;
 
 def FeatureDumpCodeLower : SubtargetFeature <"dumpcode",
   "DumpCode",
@@ -1162,23 +1147,20 @@ def FeatureEnablePRTStrictNull : SubtargetFeature<"enable-prt-strict-null",
 // FIXME: moveToVALU should be able to handle converting addr64 MUBUF
 // instructions.
 
-def FeatureFlatForGlobal : SubtargetFeature<"flat-for-global",
-  "FlatForGlobal",
+def FeatureUseFlatForGlobal : SubtargetFeature<"flat-for-global",
+  "UseFlatForGlobal",
   "true",
   "Force to generate flat instruction for global"
 >;
 
-def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
-  "auto-waitcnt-before-barrier",
-  "AutoWaitcntBeforeBarrier",
-  "true",
-  "Hardware automatically inserts waitcnt before barrier"
+defm AutoWaitcntBeforeBarrier : AMDGPUSubtargetFeature <"auto-waitcnt-before-barrier",
+  "Hardware automatically inserts waitcnt before barrier",
+  /*GenPredicate=*/0
 >;
 
-def FeatureBackOffBarrier : SubtargetFeature <"back-off-barrier",
-  "BackOffBarrier",
-  "true",
-  "Hardware supports backing off s_barrier if an exception occurs"
+defm BackOffBarrier : AMDGPUSubtargetFeature <"back-off-barrier",
+  "Hardware supports backing off s_barrier if an exception occurs",
+  /*GenPredicate=*/0
 >;
 
 defm TrigReducedRange : AMDGPUSubtargetFeature<"trig-reduced-range",
@@ -1186,10 +1168,9 @@ defm TrigReducedRange : AMDGPUSubtargetFeature<"trig-reduced-range",
   /*GenPredicate=*/0
 >;
 
-def FeatureKernargPreload : SubtargetFeature <"kernarg-preload",
-  "KernargPreload",
-  "true",
-  "Hardware supports preloading of kernel arguments in user SGPRs."
+defm KernargPreload : AMDGPUSubtargetFeature <"kernarg-preload",
+  "Hardware supports preloading of kernel arguments in user SGPRs.",
+  /*GenPredicate=*/0
 >;
 
 // Alignment enforcement is controlled by a configuration register:
@@ -1301,12 +1282,6 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "UseAddPC64Inst",
   "true",
   "Use s_add_pc_i64 instruction."
->;
-
-// Dummy feature used to disable assembler instructions.
-def FeatureDisable : SubtargetFeature<"",
-  "FeatureDisable","true",
-  "Dummy feature to disable assembler instructions"
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1722,7 +1697,7 @@ def FeatureISAVersion10_1_Common : FeatureSet<
      FeatureGetWaveIdInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
-     FeatureLdsMisalignedBug,
+     FeatureLDSMisalignedBug,
      FeatureSupportsXNACK,
      // gfx101x bugs
      FeatureVcmpxPermlaneHazard,
@@ -2385,10 +2360,7 @@ def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9
 def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
   AssemblerPredicate<(all_of FeatureGFX8Insts)>;
 
-def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
-  AssemblerPredicate<(all_of FeatureAddNoCarryInsts)>;
-
-def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
+def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarryInsts()">;
 
 def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
@@ -2493,9 +2465,9 @@ def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
-def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
+def HasFlatScratchEnabled : Predicate<"Subtarget->hasFlatScratchEnabled()">;
 
-def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
+def NotHasFlatScratchEnabled : Predicate<"!Subtarget->hasFlatScratchEnabled()">;
 
 def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
