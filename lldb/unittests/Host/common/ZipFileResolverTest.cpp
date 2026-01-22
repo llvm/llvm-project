@@ -28,16 +28,16 @@ class ZipFileResolverTest : public ::testing::Test {
 
 std::vector<ZipFileDesc> TestZipFiles() {
   return {
-    // Simple uncompressed zip file, making use of extra fields
-    {"zip-test.zip", "lib/arm64-v8a/libzip-test.so", 4096, 3600},
+      // Simple uncompressed zip file, making use of extra fields
+      {"zip-test.zip", "lib/arm64-v8a/libzip-test.so", 4096, 3600},
 
-    // Simple uncompressed zip file, where the shared library is the last entry,
-    // and the enrty has no extra field
-    {"zip-test-no-extras.zip", "lib/arm64-v8a/libzip-test.so", 140, 3600},
+      // Simple uncompressed zip file, where the shared library is the last
+      // entry, and the entry has no extra field or comment
+      {"zip-test-no-extras.zip", "lib/arm64-v8a/libzip-test.so", 140, 3600},
   };
 }
 
-std::string TestZipPath(const ZipFileDesc& desc) {
+std::string TestZipPath(const ZipFileDesc &desc) {
   FileSpec zip_spec(GetInputFilePath(desc.zip_name));
   FileSystem::Instance().Resolve(zip_spec);
   return zip_spec.GetPath();
