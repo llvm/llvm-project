@@ -441,20 +441,27 @@ that cannot escape unchecked.
 
 Reports authentication instructions, whose result (success or failure) can be
 observed by the attacker and used to guess the correct PAC field by trial-and-error.
-This check is turned off if `--auth-traps-on-failure` command line option is
-passed to indicate that the target CPU is known to implement `FEAT_FPAC`.
+
+The authentication oracles searched for by this detector are impossible if all
+authentication instructions are known to generate an irrecoverable error on
+failure. On AArch64 this is the case if CPU is known to implement `FEAT_FPAC`
+(though recoverability depends on the OS: for example, on Linux such errors
+result in signals that can be handled if configured accordingly).
+This check is disabled by `--auth-traps-on-failure` command line option.
 
 **Examples:**
 
 ```asm
+; The descriptions assume FEAT_FPAC is not implemented.
+
 good_auth_call:
   paciasp
   stp     x29, x30, [sp, #-16]!
   mov     x29, sp
 
-  ; The result of authentication is inevitably dereferenced by blr,
-  ; crashing the program in case autia returned non-canonical address due to
-  ; authentication failure.
+  ; The result of authentication is inevitably dereferenced by blr.
+  ; If autia returns a non-canonical address due to incorrect signature,
+  ; the program crashes when the resulting address is jumped-to by blr.
   cbz     x2, .L1
   autia   x0, x1
   blr     x0
