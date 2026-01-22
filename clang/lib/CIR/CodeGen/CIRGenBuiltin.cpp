@@ -332,7 +332,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_atan2l:
   case Builtin::BI__builtin_atan2f128:
   case Builtin::BI__builtin_elementwise_atan2:
-    return emitBinaryFPBuiltin<cir::ATan2Op>(cgf, *e);
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::ATan2Op>(cgf, *e));
   case Builtin::BIceil:
   case Builtin::BIceilf:
   case Builtin::BIceill:
@@ -475,9 +476,9 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmodf16:
   case Builtin::BI__builtin_fmodl:
   case Builtin::BI__builtin_fmodf128:
-    return emitBinaryFPBuiltin<cir::FModOp>(cgf, *e);
   case Builtin::BI__builtin_elementwise_fmod:
-    return RValue::getIgnored();
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FModOp>(cgf, *e));
   case Builtin::BIlog:
   case Builtin::BIlogf:
   case Builtin::BIlogl:
@@ -1202,41 +1203,45 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(result);
   }
   case Builtin::BI__builtin_elementwise_acos:
-    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ACosOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_asin:
-    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ASinOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan:
-    return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ATanOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan2:
-    return emitBinaryFPBuiltin<cir::ATan2Op>(*this, *e);
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::ATan2Op>(*this, *e));
   case Builtin::BI__builtin_elementwise_exp:
-    return emitUnaryFPBuiltin<cir::ExpOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_exp2:
-    return emitUnaryFPBuiltin<cir::Exp2Op>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Exp2Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_log:
-    return emitUnaryFPBuiltin<cir::LogOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::LogOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_log2:
-    return emitUnaryFPBuiltin<cir::Log2Op>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log2Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_log10:
-    return emitUnaryFPBuiltin<cir::Log10Op>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log10Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_cos:
-    return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_floor:
-    return emitUnaryFPBuiltin<cir::FloorOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FloorOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_round:
-    return emitUnaryFPBuiltin<cir::RoundOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_rint:
-    return emitUnaryFPBuiltin<cir::RintOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RintOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_nearbyint:
-    return emitUnaryFPBuiltin<cir::NearbyintOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::NearbyintOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_sin:
-    return emitUnaryFPBuiltin<cir::SinOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SinOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_sqrt:
-    return emitUnaryFPBuiltin<cir::SqrtOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SqrtOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_tan:
-    return emitUnaryFPBuiltin<cir::TanOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TanOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_trunc:
-    return emitUnaryFPBuiltin<cir::TruncOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TruncOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_fmod:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FModOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_exp10:
   case Builtin::BI__builtin_elementwise_ldexp:
@@ -1738,9 +1743,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
+  case Builtin::BIforward_like:
   case Builtin::BIas_const:
     return RValue::get(emitLValue(e->getArg(0)).getPointer());
-  case Builtin::BIforward_like:
   case Builtin::BI__GetExceptionInfo:
   case Builtin::BI__fastfail:
   case Builtin::BIread_pipe:
