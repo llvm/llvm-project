@@ -7,6 +7,12 @@ The `llvm-bolt-binary-analysis` tool enables running requested analyses
 on binaries, and generating reports. It does this by building on top of the
 analyses implemented in the BOLT libraries.
 
+Contents
+1. [Background and motivation](#background-and-motivation)
+2. [Usage](#usage)
+3. [Pointer Authentication validator](#pointer-authentication-validator)
+4. [How to add your own analysis](#how-to-add-your-own-analysis)
+
 ## Background and motivation
 
 ### Security scanners
@@ -490,9 +496,9 @@ bad_leaks_to_callee:
   ret
 ```
 
-## Known issues and missing features
+### Known issues and missing features
 
-### Control-flow graph availability
+#### Control-flow graph availability
 
 The analysis quality is degraded if BOLT is unable to reconstruct control-flow
 graph of the function correctly.
@@ -515,7 +521,7 @@ GS-PAUTH: untrusted link register found before tail call in function luaV_execut
   The instruction is     000338a0:      br      x16 # UNKNOWN CONTROL FLOW
 ```
 
-### Last writing instructions
+#### Last writing instructions
 
 Some of the reports contain extra information like this
 
@@ -531,7 +537,7 @@ Some of the reports contain extra information like this
 This information is provided on a best-effort basis and is less reliable than
 gadget reports themselves.
 
-### Feature: scan for unsafe computation of discriminator value
+#### Feature: scan for unsafe computation of discriminator value
 
 There is a common pattern on AArch64 to compute the discriminator as a blend
 of an address and an integer modifier by inserting a compile-time constant
@@ -589,7 +595,7 @@ better_spilling:
   ret
 ```
 
-### Handling of constants
+#### Handling of constants
 
 While (PC-relative) address constants are tracked as "trusted" register state
 by `SrcSafetyAnalysis`, constant values are not generally accounted for.
@@ -621,7 +627,7 @@ As an example of false-negative, it is possible that an instruction like
 of iterations, making it technically possible for an attacker to replace a
 valid pointer with a pointer to an arbitrary *higher* address.
 
-### Other known issues
+#### Other known issues
 
 * Not handling "no-return" functions. See issue
   [#115154](https://github.com/llvm/llvm-project/issues/115154) for details and
@@ -637,7 +643,7 @@ valid pointer with a pointer to an arbitrary *higher* address.
   dereference to trusted state yet. This does not affect scanning regular code
   hardened neither by `pac-ret`, nor by `arm64e` or `pauthtest`.
 
-## How to add your own binary analysis
+## How to add your own analysis
 
 ### Pointer Authentication validator
 
