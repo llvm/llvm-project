@@ -14483,7 +14483,7 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   if (Src.getValueType() != MVT::i16)
     return SDValue();
 
-  if (1 < std::distance(Src->user_begin(), Src->user_end()))
+  if (!Src->hasOneUse())
     return SDValue();
 
   // TODO: We bail out below if SrcOffset is not in the first dword (>= 4). It's
@@ -14492,17 +14492,17 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
 
   std::optional<ByteProvider<SDValue>> BP0 =
       calculateByteProvider(SDValue(N, 0), 0, 0, 0);
-  if (!BP0.has_value() || 4 <= BP0->SrcOffset)
+  if (!BP0 || BP0->SrcOffset >= 4 || !BP0->Src)
     return SDValue();
-  SDValue V0 = BP0->Src.value_or(SDValue());
+  SDValue V0 = *BP0->Src;
 
   std::optional<ByteProvider<SDValue>> BP1 =
       calculateByteProvider(SDValue(N, 0), 1, 0, 1);
-  if (!BP1.has_value() || 4 <= BP1->SrcOffset)
+  if (!BP1 || BP1->SrcOffset >= 4 || !BP1->Src)
     return SDValue();
-  SDValue V1 = BP1->Src.value_or(SDValue());
+  SDValue V1 = *BP1->Src;
 
-  if (!V0 || !V1 || V0 == V1)
+  if (V0 == V1)
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -14518,9 +14518,8 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
     PermMask = (PermMask & ~(0xFF << 8)) | (BP1->SrcOffset << 8);
   }
 
-  SDValue P = DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, V0, V1,
-                          DAG.getConstant(PermMask, DL, MVT::i32));
-  return P;
+  return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, V0, V1,
+                     DAG.getConstant(PermMask, DL, MVT::i32));
 }
 
 SDValue
