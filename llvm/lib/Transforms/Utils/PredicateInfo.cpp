@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/Dominators.h"
@@ -217,7 +218,7 @@ class PredicateInfoBuilder {
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
 
-  void processAssume(IntrinsicInst *, BasicBlock *,
+  void processAssume(AssumeInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
   void processBranch(BranchInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
@@ -359,8 +360,20 @@ void PredicateInfoBuilder::addInfoFor(SmallVectorImpl<Value *> &OpsToRename,
 // Process an assume instruction and place relevant operations we want to rename
 // into OpsToRename.
 void PredicateInfoBuilder::processAssume(
-    IntrinsicInst *II, BasicBlock *AssumeBB,
+    AssumeInst *II, BasicBlock *AssumeBB,
     SmallVectorImpl<Value *> &OpsToRename) {
+  if (II->hasOperandBundles()) {
+    for (auto BOI : II->bundle_op_infos()) {
+      if (RetainedKnowledge RK = getKnowledgeFromBundle(*II, BOI)) {
+        if (RK.AttrKind == Attribute::NonNull)
+          addInfoFor(OpsToRename, RK.WasOn,
+                     new (Allocator) PredicateBundleAssume(RK.WasOn, II,
+                                                           Attribute::NonNull));
+      }
+    }
+    return;
+  }
+
   SmallVector<Value *, 4> Worklist;
   SmallPtrSet<Value *, 4> Visited;
   Worklist.push_back(II->getOperand(0));
@@ -489,7 +502,7 @@ void PredicateInfoBuilder::buildPredicateInfo() {
     }
   }
   for (auto &Assume : AC.assumptions()) {
-    if (auto *II = dyn_cast_or_null<IntrinsicInst>(Assume))
+    if (auto *II = cast_or_null<AssumeInst>(Assume))
       if (DT.isReachableFromEntry(II->getParent()))
         processAssume(II, II->getParent(), OpsToRename);
   }
@@ -712,6 +725,14 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
 
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
+  case PT_BundleAssume: {
+    auto *BA = cast<PredicateBundleAssume>(this);
+    assert(BA->AttrKind == Attribute::NonNull &&
+           "Cannot handle anything other than NonNull");
+    return {{CmpInst::ICMP_NE, ConstantPointerNull::get(
+                                   cast<PointerType>(OriginalOp->getType()))}};
+  }
+
   case PT_Assume:
   case PT_Branch: {
     bool TrueEdge = true;
