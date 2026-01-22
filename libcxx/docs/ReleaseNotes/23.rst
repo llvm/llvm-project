@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 
 - P2440R1 (partial): ``ranges::iota`` and ``ranges::shift_left`` are supported (`Github <https://llvm.org/PR105184>`__)
+- P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 
 Improvements and New Features
 -----------------------------
