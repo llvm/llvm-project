@@ -30,6 +30,8 @@ page](https://llvm.org/releases/).
 ## Major New Features
 
 * Support for LOWER= argument for C_F_POINTER.
+* Experimental support for multi-image program launch, collective subroutines,
+  synchronization, teams, and image enumeration.
 
 ## Bug Fixes
 
@@ -38,6 +40,7 @@ page](https://llvm.org/releases/).
 ## New Compiler Flags
 
 * -fexperimental-loop-fusion is now recognized by flang.
+* -fcoarray activates experimental multi-image support in flang.
 
 ## Windows Support
 
