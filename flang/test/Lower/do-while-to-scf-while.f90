@@ -47,11 +47,8 @@ subroutine nested_do_while()
 end subroutine nested_do_while
 
 ! CHECK-LABEL: func.func @_QPdo_while_goto_internal_forward()
-! CHECK: scf.while
-! CHECK: scf.condition
-! CHECK: fir.if
-! CHECK-NOT: cf.br
-! CHECK: scf.yield
+! CHECK-NOT: scf.while
+! CHECK: cf.cond_br
 subroutine do_while_goto_internal_forward()
   implicit none
   integer :: i, sum

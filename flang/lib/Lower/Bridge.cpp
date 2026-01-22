@@ -1650,10 +1650,6 @@ private:
     genConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
 
-  /// Return true iff there is any control-flow transfer within \p outerDoWhile
-  /// that can exit the outer loop early or jump to the outer loop end-do
-  /// (i.e. early "continue"). Nested loop exits that remain inside the outer
-  /// loop are allowed.
   bool doWhileHasEarlyExit(const Fortran::lower::pft::Evaluation &outerDoWhile,
                            const Fortran::lower::pft::Evaluation &outerDoStmt,
                            const Fortran::lower::pft::Evaluation &outerEndDo) {
@@ -1677,24 +1673,21 @@ private:
       if (&e == &outerDoStmt || &e == &outerEndDo)
         return false;
 
-      // Catch branches represented through the PFT controlSuccessor link.
-      if (e.controlSuccessor && branchTargetIsEarlyExit(*e.controlSuccessor))
+      // Any explicit branch statement in the loop body forces CFG and cannot be
+      // emitted inside scf.while's single-block regions by this lowering.
+      // TODO: can be improved to accept certain GOTOs within the loop
+      if (e.isA<Fortran::parser::GotoStmt>() ||
+          e.isA<Fortran::parser::ComputedGotoStmt>() ||
+          e.isA<Fortran::parser::AssignedGotoStmt>() ||
+          e.isA<Fortran::parser::ArithmeticIfStmt>() ||
+          e.isA<Fortran::parser::ExitStmt>() ||
+          e.isA<Fortran::parser::CycleStmt>())
         return true;
 
-      // Support branch statements inside the loop by checking that all their
-      // targets remain inside the outer DO WHILE.
-      if (const auto *s = e.getIf<Fortran::parser::GotoStmt>()) {
-        if (branchTargetIsEarlyExit(evalOfLabel(s->v)))
+      if (e.controlSuccessor) {
+        if (!e.isConstruct() && !e.isConstructStmt())
           return true;
-      } else if (const auto *s = e.getIf<Fortran::parser::ComputedGotoStmt>()) {
-        for (const auto &lab :
-             std::get<std::list<Fortran::parser::Label>>(s->t))
-          if (branchTargetIsEarlyExit(evalOfLabel(lab)))
-            return true;
-      } else if (const auto *s = e.getIf<Fortran::parser::ArithmeticIfStmt>()) {
-        if (branchTargetIsEarlyExit(evalOfLabel(std::get<1>(s->t))) ||
-            branchTargetIsEarlyExit(evalOfLabel(std::get<2>(s->t))) ||
-            branchTargetIsEarlyExit(evalOfLabel(std::get<3>(s->t))))
+        if (branchTargetIsEarlyExit(*e.controlSuccessor))
           return true;
       }
 
