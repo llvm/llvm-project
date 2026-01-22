@@ -80,6 +80,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -100,6 +101,7 @@ namespace {
 
 class AArch64ConditionOptimizer : public MachineFunctionPass {
   const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
   MachineDominatorTree *DomTree;
   const MachineRegisterInfo *MRI;
 
@@ -506,6 +508,18 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
     return false;
   }
 
+  // Ensure both compares use the same register, tracing through copies.
+  Register HeadReg = HeadCmpMI->getOperand(1).getReg();
+  Register TrueReg = TrueCmpMI->getOperand(1).getReg();
+  Register HeadCmpReg =
+      HeadReg.isVirtual() ? TRI->lookThruCopyLike(HeadReg, MRI) : HeadReg;
+  Register TrueCmpReg =
+      TrueReg.isVirtual() ? TRI->lookThruCopyLike(TrueReg, MRI) : TrueReg;
+  if (HeadCmpReg != TrueCmpReg) {
+    LLVM_DEBUG(dbgs() << "CMPs compare different registers\n");
+    return false;
+  }
+
   AArch64CC::CondCode HeadCmp;
   if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {
     return false;
@@ -589,6 +603,7 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();
+  TRI = MF.getSubtarget().getRegisterInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MRI = &MF.getRegInfo();
 
