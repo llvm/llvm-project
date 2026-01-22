@@ -3043,8 +3043,10 @@ defm jmc : BoolFOption<"jmc",
           "Enable just-my-code debugging">,
   NegFlag<SetFalse>>;
 def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Enables the global instruction selector">;
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   Alias<fglobal_isel>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -3665,8 +3667,10 @@ def fno_inline_functions : Flag<["-"], "fno-inline-functions">, Group<f_clang_Gr
 def fno_inline : Flag<["-"], "fno-inline">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>;
 def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_clang_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Disables the global instruction selector">;
 def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
