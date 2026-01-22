@@ -4,6 +4,8 @@ void foo() {
   asm("" ::: (u8""}));
   // expected-error@-1 {{cannot use unicode string literal in 'asm'}}
   // expected-error@-2 {{expected ')'}}
+  // expected-note@-3 {{to match this '('}}
+  // expected-error@-4 {{expected expression}}
 }
 
 void test_other_literals() {
