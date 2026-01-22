@@ -61760,7 +61760,37 @@ static SDValue combineBMI(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI) {
-  unsigned NumElts = N->getSimpleValueType(0).getVectorNumElements();
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(VT.getVectorElementType() == MVT::i64 && "vXi64 type expected");
+
+  // Use the PCLMULQDQ lo/hi mask to attempt to remove an unnecessary shuffle,
+  // rescaled back to vXi64, repeating every v2i64 sublane.
+  auto SimplifyOperand = [&](SDValue &Op, uint64_t &M) {
+    SmallVector<SDValue, 2> Src;
+    SmallVector<int, 16> Mask, ScaledMask, RepeatedMask;
+    if (!getTargetShuffleInputs(peekThroughBitcasts(Op), Src, Mask, DAG) ||
+        Src.size() != 1 || Src[0].getValueSizeInBits() != VT.getSizeInBits() ||
+        !scaleShuffleMaskElts(NumElts, Mask, ScaledMask) ||
+        !isRepeatedTargetShuffleMask(128, VT, ScaledMask, RepeatedMask) ||
+        !isInRange(RepeatedMask[M & 1], 0, 2))
+      return false;
+    Op = DAG.getBitcast(VT, Src[0]);
+    M = RepeatedMask[M & 1];
+    return true;
+  };
+
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
+  uint64_t Mask = N->getConstantOperandVal(2);
+  uint64_t M0 = Mask & 0x01, M1 = (Mask & 0x10) >> 4;
+  bool Simplify0 = SimplifyOperand(N0, M0);
+  bool Simplify1 = SimplifyOperand(N1, M1);
+  if (Simplify0 || Simplify1) {
+    SDLoc DL(N);
+    return DAG.getNode(X86ISD::PCLMULQDQ, DL, VT, N0, N1,
+                       DAG.getTargetConstant((M1 << 4) | M0, DL, MVT::i8));
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedVectorElts(SDValue(N, 0), APInt::getAllOnes(NumElts),
                                      DCI))
