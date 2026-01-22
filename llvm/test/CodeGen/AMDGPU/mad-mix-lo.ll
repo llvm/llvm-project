@@ -45,7 +45,6 @@ define half @mixlo_simple(float %src0, float %src1, float %src2) #0 {
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: mixlo_simple:
@@ -92,7 +91,6 @@ define half @mixlo_simpl_no_flush(float %src0, float %src1, float %src2) {
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: mixlo_simpl_no_flush:
@@ -138,9 +136,11 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo:
@@ -197,9 +197,11 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush(half %src0, half %src1, 
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
@@ -250,9 +252,10 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32(half %src0, half %src1, float %src2
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32:
@@ -301,9 +304,12 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %sr
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt:
@@ -372,9 +378,10 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt:
@@ -2524,7 +2531,6 @@ define half @mixlo_fptrunc(float %a, float %b) #0 {
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: mixlo_fptrunc:
@@ -2571,7 +2577,6 @@ define half @mixlo_fptrunc_no_flush(float %a, float %b) {
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: mixlo_fptrunc_no_flush:
@@ -2617,7 +2622,6 @@ define half @mixlo_fptrunc_abs_src_mod(float %a, float %b) #0 {
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mul_f32_e64 v0, |v0|, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: mixlo_fptrunc_abs_src_mod:
@@ -2664,7 +2668,6 @@ define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: mixlo_fptrunc_neg_src_mod:

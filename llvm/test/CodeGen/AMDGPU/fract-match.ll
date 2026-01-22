@@ -1578,21 +1578,21 @@ define half @basic_fract_f16_nonan(half nofpclass(nan) %x) {
 ; GFX6-LABEL: basic_fract_f16_nonan:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX6-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX6-NEXT:    v_min_f32_e32 v0, 0x3f7fe000, v0
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: basic_fract_f16_nonan:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_min_f32_e32 v0, 0x3f7fe000, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: basic_fract_f16_nonan:
@@ -1859,18 +1859,18 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) writeonly
 ; GFX6-LABEL: safe_math_fract_f16_noinf_check:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s4, s6
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    s_mov_b32 s5, s6
 ; GFX6-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX6-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX6-NEXT:    v_min_f32_e32 v4, 0x3f7fe000, v4
 ; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    s_mov_b32 s5, s6
 ; GFX6-NEXT:    buffer_store_short v3, v[1:2], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -1878,18 +1878,18 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) writeonly
 ; GFX7-LABEL: safe_math_fract_f16_noinf_check:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    s_mov_b32 s5, s6
 ; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX7-NEXT:    v_min_f32_e32 v4, 0x3f7fe000, v4
 ; GFX7-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_mov_b32 s5, s6
 ; GFX7-NEXT:    buffer_store_short v3, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -2486,46 +2486,46 @@ define half @safe_math_fract_f16(half %x, ptr addrspace(1) writeonly captures(no
 ; GFX6-LABEL: safe_math_fract_f16:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-NEXT:    s_movk_i32 s8, 0x7c00
-; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX6-NEXT:    s_mov_b32 s4, s6
-; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    v_floor_f32_e32 v4, v3
 ; GFX6-NEXT:    v_sub_f32_e32 v5, v3, v4
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX6-NEXT:    v_min_f32_e32 v5, 0x3f7fe000, v5
 ; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX6-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
-; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, s8, v0
+; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
-; GFX6-NEXT:    buffer_store_short v4, v[1:2], s[4:7], 0 addr64
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v4
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    buffer_store_short v3, v[1:2], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: safe_math_fract_f16:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    s_movk_i32 s8, 0x7c00
-; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7-NEXT:    s_mov_b32 s4, s6
-; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    v_floor_f32_e32 v4, v3
 ; GFX7-NEXT:    v_sub_f32_e32 v5, v3, v4
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX7-NEXT:    v_min_f32_e32 v5, 0x3f7fe000, v5
 ; GFX7-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX7-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
-; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, s8, v0
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
-; GFX7-NEXT:    buffer_store_short v4, v[1:2], s[4:7], 0 addr64
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v4
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_mov_b32 s4, s6
+; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    buffer_store_short v3, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;

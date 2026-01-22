@@ -20,13 +20,13 @@ define half @test_vector_reduce_fadd_v2half(half %sp, <2 x half> %v) {
 ; GFX7-SDAG-LABEL: test_vector_reduce_fadd_v2half:
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fadd_v2half:
@@ -158,15 +158,15 @@ define half @test_vector_reduce_fadd_v3half(half %sp, <3 x half> %v) {
 ; GFX7-SDAG-LABEL: test_vector_reduce_fadd_v3half:
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v3
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fadd_v3half:
@@ -311,11 +311,10 @@ define half @test_vector_reduce_fadd_v4half(half %sp, <4 x half> %v) {
 ; GFX7-SDAG-LABEL: test_vector_reduce_fadd_v4half:
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v3, v3
@@ -323,6 +322,7 @@ define half @test_vector_reduce_fadd_v4half(half %sp, <4 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v4
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v3
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fadd_v4half:
@@ -499,11 +499,10 @@ define half @test_vector_reduce_fadd_v8half(half %sp, <8 x half> %v) {
 ; GFX7-SDAG-LABEL: test_vector_reduce_fadd_v8half:
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v8, v8
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v8, v8
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v7, v7
@@ -521,6 +520,7 @@ define half @test_vector_reduce_fadd_v8half(half %sp, <8 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v6
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v4
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v5
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fadd_v8half:
@@ -787,11 +787,10 @@ define half @test_vector_reduce_fadd_v16half(half %sp, <16 x half> %v) {
 ; GFX7-SDAG-LABEL: test_vector_reduce_fadd_v16half:
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v16, 16, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v16, v16
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v16, v16
 ; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v15, v15
@@ -829,6 +828,7 @@ define half @test_vector_reduce_fadd_v16half(half %sp, <16 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v10
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v8
 ; GFX7-SDAG-NEXT:    v_add_f32_e32 v0, v0, v9
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fadd_v16half:

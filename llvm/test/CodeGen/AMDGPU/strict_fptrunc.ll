@@ -13,6 +13,7 @@ define half @v_constrained_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #0 {
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
@@ -227,7 +228,7 @@ define half @v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
@@ -269,6 +270,7 @@ define half @v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict(float %arg) #
 ; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
