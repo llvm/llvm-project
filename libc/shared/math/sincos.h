@@ -1,4 +1,4 @@
-//===-- Double-precision sincos function ----------------------------------===//
+//===-- Shared sincos function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SHARED_MATH_SINCOS_H
+#define LLVM_LIBC_SHARED_MATH_SINCOS_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/sincos.h"
-#include "src/math/sincos.h"
 
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
-  return math::sincos(x, sin_x, cos_x);
-}
+namespace shared {
 
+using math::sincos;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_SINCOS_H
