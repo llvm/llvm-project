@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-allow-differing-element-types -passes=polly-codegen -S \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-differing-element-types '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; CHECK: %polly.access.global.load = getelementptr i32, ptr %global.load, i64 0
 ; CHECK: %polly.access.global.load.load = load i32, ptr %polly.access.global.load

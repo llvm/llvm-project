@@ -20,8 +20,7 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
   if (ec)
     return failure();
 
-  auto serOr = llvm::remarks::createRemarkSerializer(
-      fmt, llvm::remarks::SerializerMode::Separate, f->os());
+  auto serOr = llvm::remarks::createRemarkSerializer(fmt, f->os());
   if (!serOr) {
     llvm::consumeError(serOr.takeError());
     return failure();
@@ -50,11 +49,18 @@ LLVMRemarkStreamer::~LLVMRemarkStreamer() {
   if (file && remarkStreamer)
     file->keep();
 }
+
+void LLVMRemarkStreamer::finalize() {
+  if (!remarkStreamer)
+    return;
+  remarkStreamer->releaseSerializer();
+}
 } // namespace mlir::remark::detail
 
 namespace mlir::remark {
 LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     MLIRContext &ctx, StringRef path, llvm::remarks::Format fmt,
+    std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
     const RemarkCategories &cat, bool printAsEmitRemarks) {
 
   FailureOr<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
@@ -62,7 +68,8 @@ LogicalResult enableOptimizationRemarksWithLLVMStreamer(
   if (failed(sOr))
     return failure();
 
-  return remark::enableOptimizationRemarks(ctx, std::move(*sOr), cat,
+  return remark::enableOptimizationRemarks(ctx, std::move(*sOr),
+                                           std::move(remarkEmittingPolicy), cat,
                                            printAsEmitRemarks);
 }
 

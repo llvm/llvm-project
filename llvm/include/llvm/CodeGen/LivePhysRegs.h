@@ -51,7 +51,7 @@ class raw_ostream;
 /// when walking backward/forward through a basic block.
 class LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
-  using RegisterSet = SparseSet<MCPhysReg, identity<MCPhysReg>>;
+  using RegisterSet = SparseSet<MCPhysReg, MCPhysReg>;
   RegisterSet LiveRegs;
 
 public:
@@ -83,6 +83,9 @@ public:
   void addReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
     assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
+    // Constant registers are never considered live.
+    if (TRI->isConstantPhysReg(Reg))
+      return;
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
       LiveRegs.insert(SubReg);
   }

@@ -61,7 +61,6 @@ class ErrorReporter {
   /// Return a nice name for an TargetAllocTy.
   static StringRef getAllocTyName(TargetAllocTy Kind) {
     switch (Kind) {
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
     case TARGET_ALLOC_DEFAULT:
     case TARGET_ALLOC_DEVICE:
       return "device memory";

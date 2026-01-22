@@ -287,34 +287,72 @@ LIBC_INLINE constexpr static T hmax(simd<T, N> v) {
 }
 
 // Accessor helpers.
-template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE T load_unaligned(const void *ptr) {
+template <typename T>
+LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
   T tmp;
-  __builtin_memcpy(&tmp, ptr, sizeof(T));
+  __builtin_memcpy_inline(
+      &tmp, reinterpret_cast<const simd_element_type_t<T> *>(ptr), sizeof(T));
   return tmp;
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE T load_aligned(const void *ptr) {
-  return load_unaligned<T>(__builtin_assume_aligned(ptr, alignof(T)));
+LIBC_INLINE constexpr static void store(T v, void *ptr, bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  __builtin_memcpy_inline(ptr, &v, sizeof(T));
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE T store_unaligned(T v, void *ptr) {
-  __builtin_memcpy(ptr, &v, sizeof(T));
+LIBC_INLINE constexpr static T
+load_masked(simd<bool, simd_size_v<T>> mask, const void *ptr,
+            T passthru = internal::poison<T>(), bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  return __builtin_masked_load(
+      mask, reinterpret_cast<const simd_element_type_t<T> *>(ptr), passthru);
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE T store_aligned(T v, void *ptr) {
-  store_unaligned<T>(v, __builtin_assume_aligned(ptr, alignof(T)));
+LIBC_INLINE constexpr static void store_masked(simd<bool, simd_size_v<T>> mask,
+                                               T v, void *ptr,
+                                               bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  __builtin_masked_store(mask, v,
+                         reinterpret_cast<simd_element_type_t<T> *>(ptr));
+}
+template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
+LIBC_INLINE constexpr static T gather(simd<bool, simd_size_v<T>> mask, Idx idx,
+                                      const void *base, bool aligned = false) {
+  if (aligned)
+    base = __builtin_assume_aligned(base, alignof(T));
+  return __builtin_masked_gather(
+      mask, idx, reinterpret_cast<const simd_element_type_t<T> *>(base));
+}
+template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
+LIBC_INLINE constexpr static void scatter(simd<bool, simd_size_v<T>> mask,
+                                          Idx idx, T v, void *base,
+                                          bool aligned = false) {
+  if (aligned)
+    base = __builtin_assume_aligned(base, alignof(T));
+  __builtin_masked_scatter(mask, idx, v,
+                           reinterpret_cast<simd_element_type_t<T> *>(base));
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE T
-masked_load(simd<bool, simd_size_v<T>> m, void *ptr,
-            T passthru = internal::poison<simd_element_type<T>>()) {
-  return __builtin_masked_load(m, ptr, passthru);
+LIBC_INLINE constexpr static T
+expand(simd<bool, simd_size_v<T>> mask, const void *ptr,
+       T passthru = internal::poison<T>(), bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  return __builtin_masked_expand_load(
+      mask, reinterpret_cast<const simd_element_type_t<T> *>(ptr), passthru);
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE T masked_store(simd<bool, simd_size_v<T>> m, T v, void *ptr) {
-  __builtin_masked_store(
-      m, v, static_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))));
+LIBC_INLINE constexpr static void compress(simd<bool, simd_size_v<T>> mask, T v,
+                                           void *ptr, bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  __builtin_masked_compress_store(
+      mask, v, reinterpret_cast<simd_element_type_t<T> *>(ptr));
 }
 
 // Construction helpers.

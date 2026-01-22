@@ -72,7 +72,7 @@ define void @test_bindings() {
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF5]], %dx.types.ResourceProperties { i32 10, i32 1033 }) #[[#ATTR]]
 
   ; cbuffer cb0 : register(b0) { int4 i; float4 f; }
-  %cb0 = call target("dx.CBuffer", target("dx.Layout", {<4 x i32>, <4 x float>}, 32, 0, 16))
+  %cb0 = call target("dx.CBuffer", <{ <4 x i32>, <4 x float> }>)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   ; CHECK: [[BUF6:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 0, i32 0, i8 2 }, i32 0, i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF6]], %dx.types.ResourceProperties { i32 13, i32 32 }) #[[#ATTR]]

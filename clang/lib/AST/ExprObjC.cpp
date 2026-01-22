@@ -330,8 +330,7 @@ Stmt::child_range ObjCMessageExpr::children() {
 }
 
 Stmt::const_child_range ObjCMessageExpr::children() const {
-  auto Children = const_cast<ObjCMessageExpr *>(this)->children();
-  return const_child_range(Children.begin(), Children.end());
+  return const_cast<ObjCMessageExpr *>(this)->children();
 }
 
 StringRef ObjCBridgedCastExpr::getBridgeKindName() const {

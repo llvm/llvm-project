@@ -4,10 +4,8 @@
 define i32 @foo(ptr %__a) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    umov.h w8, v0[0]
-; CHECK-NEXT:    umov.h w9, v0[0]
-; CHECK-NEXT:    add w0, w9, w8, uxth #1
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    add w0, w8, w8, lsl #1
 ; CHECK-NEXT:    ret
   %tmp18 = load <4 x i16>, ptr %__a, align 8
   %vget_lane = extractelement <4 x i16> %tmp18, i32 0

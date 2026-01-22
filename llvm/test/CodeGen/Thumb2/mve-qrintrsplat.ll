@@ -1496,15 +1496,14 @@ define void @vfmasq(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB34_1: @ %for.body.preheader
-; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB34_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vfma.f32 q3, q2, q1
-; CHECK-NEXT:    vstrw.32 q3, [r1], #16
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+01
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vfma.f32 q2, q1, q0
+; CHECK-NEXT:    vstrw.32 q2, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB34_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -1542,15 +1541,14 @@ define void @vfmas(ptr %s1, ptr %s2, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB35_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB35_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vfma.f32 q3, q2, q1
-; CHECK-NEXT:    vstrw.32 q3, [r0], #16
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+01
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vfma.f32 q2, q1, q0
+; CHECK-NEXT:    vstrw.32 q2, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB35_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}

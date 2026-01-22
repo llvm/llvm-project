@@ -11,6 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DESIGNATEDINITIALIZERS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DESIGNATEDINITIALIZERS_H
+
 #include "clang/AST/Expr.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
@@ -40,3 +43,5 @@ llvm::DenseMap<clang::SourceLocation, std::string>
 getUnwrittenDesignators(const clang::InitListExpr *Syn);
 
 } // namespace clang::tidy::utils
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DESIGNATEDINITIALIZERS_H

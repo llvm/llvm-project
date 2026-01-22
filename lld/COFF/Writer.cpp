@@ -324,6 +324,7 @@ private:
   OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
+  OutputSection *cvinfoSec;
   OutputSection *dataSec;
   OutputSection *pdataSec;
   OutputSection *idataSec;
@@ -1092,6 +1093,7 @@ void Writer::createSections() {
   bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
+  cvinfoSec = createSection(".cvinfo", data | r);
   dataSec = createSection(".data", data | r | w);
   pdataSec = createSection(".pdata", data | r);
   idataSec = createSection(".idata", data | r);
@@ -1111,6 +1113,10 @@ void Writer::createSections() {
       if (ctx.config.verbose)
         sc->printDiscardedMessage();
       continue;
+    }
+    if (auto *cc = dyn_cast<CommonChunk>(c)) {
+      if (!cc->live)
+        continue;
     }
     StringRef name = c->getSectionName();
     if (shouldStripSectionSuffix(sc, name, ctx.config.mingw))
@@ -1228,7 +1234,13 @@ void Writer::createMiscChunks() {
   });
 
   // Create Debug Information Chunks
-  debugInfoSec = config->mingw ? buildidSec : rdataSec;
+  if (config->mingw) {
+    debugInfoSec = buildidSec;
+  } else if (!config->mergeDebugDirectory) {
+    debugInfoSec = cvinfoSec;
+  } else {
+    debugInfoSec = rdataSec;
+  }
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
       config->repro || config->cetCompat || config->cetCompatStrict ||
       config->cetCompatIpValidationRelaxed ||
@@ -1318,7 +1330,7 @@ void Writer::createImportTables() {
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
-    if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
+    if (ctx.config.delayLoads.contains(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
                    << " due to import of data: "
@@ -1612,7 +1624,7 @@ void Writer::createSymbolAndStringTable() {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
                     createSymbol(dthunk->wrappedSym)) {
-              if (d->getName().size() > COFF::NameSize)
+              if (dthunk->wrappedSym->getName().size() > COFF::NameSize)
                 longNameSymbols.emplace_back(outputSymtab.size(),
                                              dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);
@@ -1844,7 +1856,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
-  assert(coffHeaderOffset == buf - buffer->getBufferStart());
+  assert(coffHeaderOffset ==
+         static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   SymbolTable &symtab =
@@ -1870,7 +1883,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
-  assert(peHeaderOffset == buf - buffer->getBufferStart());
+  assert(peHeaderOffset == static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1937,7 +1950,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   assert(!ctx.config.is64() ||
-         dataDirOffset64 == buf - buffer->getBufferStart());
+         dataDirOffset64 ==
+             static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (symtab.edataStart) {

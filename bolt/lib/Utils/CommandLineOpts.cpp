@@ -104,6 +104,29 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
+cl::opt<SplitFunctionsStrategy> SplitStrategy(
+    "split-strategy", cl::init(SplitFunctionsStrategy::Profile2),
+    cl::values(clEnumValN(SplitFunctionsStrategy::Profile2, "profile2",
+                          "split each function into a hot and cold fragment "
+                          "using profiling information")),
+    cl::values(clEnumValN(SplitFunctionsStrategy::CDSplit, "cdsplit",
+                          "split each function into a hot, warm, and cold "
+                          "fragment using profiling information")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::Random2, "random2",
+        "split each function into a hot and cold fragment at a randomly chosen "
+        "split point (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::RandomN, "randomN",
+        "split each function into N fragments at a randomly chosen split "
+        "points (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::All, "all",
+        "split all basic blocks of each function into fragments such that each "
+        "fragment contains exactly a single basic block")),
+    cl::desc("strategy used to partition blocks into fragments"),
+    cl::cat(BoltOptCategory));
+
 bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
                                    StringRef Arg, HeatmapBlockSizes &Val) {
   // Parses a human-readable suffix into a shift amount or nullopt on error.
@@ -222,6 +245,16 @@ cl::opt<bool> PrintCacheMetrics(
     cl::desc("calculate and print various metrics for instruction cache"),
     cl::cat(BoltOptCategory));
 
+cl::list<std::string> PrintOnly("print-only", cl::CommaSeparated,
+                                cl::desc("list of functions to print"),
+                                cl::value_desc("func1,func2,func3,..."),
+                                cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<std::string>
+    PrintOnlyFile("print-only-file",
+                  cl::desc("file with list of functions to print"), cl::Hidden,
+                  cl::cat(BoltCategory));
+
 cl::opt<bool> PrintSections("print-sections",
                             cl::desc("print all registered sections"),
                             cl::Hidden, cl::cat(BoltCategory));
@@ -262,7 +295,7 @@ cl::opt<bool> TimeRewrite("time-rewrite",
 
 cl::opt<bool> UseOldText(
     "use-old-text",
-    cl::desc("re-use space in old .text if possible (relocation mode)"),
+    cl::desc("reuse space in old .text if possible (relocation mode)"),
     cl::cat(BoltCategory));
 
 cl::opt<bool> UpdateDebugSections(

@@ -112,7 +112,7 @@ public:
 /// Helper to parse a META_BLOCK for a bitstream remark container.
 class BitstreamMetaParserHelper
     : public BitstreamBlockParserHelper<BitstreamMetaParserHelper> {
-  friend class BitstreamBlockParserHelper;
+  friend class BitstreamBlockParserHelper<BitstreamMetaParserHelper>;
 
 public:
   struct ContainerInfo {
@@ -137,7 +137,7 @@ protected:
 /// Helper to parse a REMARK_BLOCK for a bitstream remark container.
 class BitstreamRemarkParserHelper
     : public BitstreamBlockParserHelper<BitstreamRemarkParserHelper> {
-  friend class BitstreamBlockParserHelper;
+  friend class BitstreamBlockParserHelper<BitstreamRemarkParserHelper>;
 
 protected:
   SmallVector<uint64_t, 5> Record;
@@ -187,35 +187,49 @@ struct BitstreamParserHelper {
   BitstreamCursor Stream;
   /// The block info block.
   BitstreamBlockInfo BlockInfo;
+
+  /// Helper to parse the metadata blocks in this bitstream.
+  BitstreamMetaParserHelper MetaHelper;
+  /// Helper to parse the remark blocks in this bitstream. Only needed
+  /// for ContainerType RemarksFile.
+  std::optional<BitstreamRemarkParserHelper> RemarksHelper;
+  /// The position of the first remark block we encounter after
+  /// the initial metadata block.
+  std::optional<uint64_t> RemarkStartBitPos;
+
   /// Start parsing at \p Buffer.
-  BitstreamParserHelper(StringRef Buffer);
+  BitstreamParserHelper(StringRef Buffer)
+      : Stream(Buffer), MetaHelper(Stream), RemarksHelper(Stream) {}
+
   /// Parse and validate the magic number.
   Error expectMagic();
-  /// Advance to the meta block
-  Error advanceToMetaBlock();
   /// Parse the block info block containing all the abbrevs.
   /// This needs to be called before calling any other parsing function.
   Error parseBlockInfoBlock();
-  /// Return true if the parser reached the end of the stream.
-  bool atEndOfStream() { return Stream.AtEndOfStream(); }
+
+  /// Parse all metadata blocks in the file. This populates the meta helper.
+  Error parseMeta();
+  /// Parse the next remark. This populates the remark helper data.
+  Error parseRemark();
 };
 
 /// Parses and holds the state of the latest parsed remark.
 struct BitstreamRemarkParser : public RemarkParser {
   /// The buffer to parse.
-  BitstreamParserHelper ParserHelper;
+  std::optional<BitstreamParserHelper> ParserHelper;
   /// The string table used for parsing strings.
   std::optional<ParsedStringTable> StrTab;
   /// Temporary remark buffer used when the remarks are stored separately.
   std::unique_ptr<MemoryBuffer> TmpRemarkBuffer;
+  /// Whether the metadata has already been parsed, so we can continue parsing
+  /// remarks.
+  bool IsMetaReady = false;
   /// The common metadata used to decide how to parse the buffer.
   /// This is filled when parsing the metadata block.
   uint64_t ContainerVersion = 0;
   uint64_t RemarkVersion = 0;
   BitstreamRemarkContainerType ContainerType =
-      BitstreamRemarkContainerType::Standalone;
-  /// Wether the parser is ready to parse remarks.
-  bool ReadyToParseRemarks = false;
+      BitstreamRemarkContainerType::RemarksFile;
 
   /// Create a parser that expects to find a string table embedded in the
   /// stream.
@@ -230,20 +244,15 @@ struct BitstreamRemarkParser : public RemarkParser {
   /// Parse and process the metadata of the buffer.
   Error parseMeta();
 
-  /// Parse a Bitstream remark.
-  Expected<std::unique_ptr<Remark>> parseRemark();
-
 private:
-  Error processCommonMeta(BitstreamMetaParserHelper &Helper);
-  Error processStandaloneMeta(BitstreamMetaParserHelper &Helper);
-  Error processSeparateRemarksFileMeta(BitstreamMetaParserHelper &Helper);
-  Error processSeparateRemarksMetaMeta(BitstreamMetaParserHelper &Helper);
-  Error processExternalFilePath(BitstreamMetaParserHelper &Helper);
-  Error processStrTab(BitstreamMetaParserHelper &Helper);
-  Error processRemarkVersion(BitstreamMetaParserHelper &Helper);
+  Error processCommonMeta();
+  Error processFileContainerMeta();
+  Error processExternalFilePath();
 
-  Expected<std::unique_ptr<Remark>>
-  processRemark(BitstreamRemarkParserHelper &Helper);
+  Expected<std::unique_ptr<Remark>> processRemark();
+
+  Error processStrTab();
+  Error processRemarkVersion();
 };
 
 Expected<std::unique_ptr<BitstreamRemarkParser>> createBitstreamParserFromMeta(

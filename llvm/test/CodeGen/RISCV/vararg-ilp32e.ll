@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32e -frame-pointer=all -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=ILP32E-WITHFP %s
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
 declare void @abort()
 
 define i32 @caller(i32 %a) {

@@ -524,6 +524,28 @@ TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
 }
 
+TEST(HeuristicResolver, MemberExpr_HangOnLongCallChain) {
+  const size_t CallChainLength = 50;
+  std::string Code = R"cpp(
+    template <typename T>
+    void foo(T t) {
+      t
+    )cpp";
+  for (size_t I = 0; I < CallChainLength; ++I)
+    Code.append(".method()\n");
+  Code.append(R"cpp(
+      .lastMethod();
+    }
+  )cpp");
+  // Test that resolution of a name whose base is a long call chain
+  // does not hang. Note that the hang for which this is a regression
+  // test is finite (exponential runtime in the length of the chain),
+  // so a "failure" here manifests as abnormally long runtime.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("lastMethod")).bind("input"));
+}
+
 TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument) {
   std::string Code = R"cpp(
     struct Default {

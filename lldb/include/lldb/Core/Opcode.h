@@ -223,7 +223,9 @@ public:
   int Dump(Stream *s, uint32_t min_byte_width) const;
 
   const void *GetOpcodeBytes() const {
-    return ((m_type == Opcode::eTypeBytes) ? m_data.inst.bytes : nullptr);
+    return ((m_type == Opcode::eTypeBytes || m_type == Opcode::eType16_32Tuples)
+                ? m_data.inst.bytes
+                : nullptr);
   }
 
   uint32_t GetByteSize() const {

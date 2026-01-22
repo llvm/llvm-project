@@ -82,8 +82,8 @@ void RootDescriptorsEntry() {}
 // checking minLOD, maxLOD
 // CHECK-SAME: float -1.280000e+02, float 1.280000e+02,
 
-// checking register, space and visibility
-// CHECK-SAME: i32 42, i32 0, i32 0}
+// checking register, space, visibility and flag
+// CHECK-SAME: i32 42, i32 0, i32 0, i32 1}
 
 #define SampleStaticSampler \
   "StaticSampler(s42, " \
@@ -96,6 +96,7 @@ void RootDescriptorsEntry() {}
   " borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE, " \
   " minLOD = -128.f, maxLOD = 128.f, " \
   " space = 0, visibility = SHADER_VISIBILITY_ALL, " \
+  " flags = UINT_BORDER_COLOR" \
   ")"
 [shader("compute"), RootSignature(SampleStaticSampler)]
 [numthreads(1,1,1)]

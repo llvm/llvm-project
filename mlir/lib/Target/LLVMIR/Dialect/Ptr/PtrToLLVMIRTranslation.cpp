@@ -351,6 +351,42 @@ translateConstantOp(ConstantOp constantOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Translate ptr.ptr_diff operation operation to LLVM IR.
+static LogicalResult
+translatePtrDiffOp(PtrDiffOp ptrDiffOp, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *lhs = moduleTranslation.lookupValue(ptrDiffOp.getLhs());
+  llvm::Value *rhs = moduleTranslation.lookupValue(ptrDiffOp.getRhs());
+
+  if (!lhs || !rhs)
+    return ptrDiffOp.emitError("Failed to lookup operands");
+
+  // Translate result type to LLVM type
+  llvm::Type *resultType =
+      moduleTranslation.convertType(ptrDiffOp.getResult().getType());
+  if (!resultType)
+    return ptrDiffOp.emitError("Failed to translate result type");
+
+  PtrDiffFlags flags = ptrDiffOp.getFlags();
+
+  // Convert both pointers to integers using ptrtoaddr, and compute the
+  // difference: lhs - rhs
+  llvm::Value *llLhs = builder.CreatePtrToAddr(lhs);
+  llvm::Value *llRhs = builder.CreatePtrToAddr(rhs);
+  llvm::Value *result = builder.CreateSub(
+      llLhs, llRhs, /*Name=*/"",
+      /*HasNUW=*/(flags & PtrDiffFlags::nuw) == PtrDiffFlags::nuw,
+      /*HasNSW=*/(flags & PtrDiffFlags::nsw) == PtrDiffFlags::nsw);
+
+  // Convert the difference to the expected result type by truncating or
+  // extending.
+  if (result->getType() != resultType)
+    result = builder.CreateIntCast(result, resultType, /*isSigned=*/true);
+
+  moduleTranslation.mapValue(ptrDiffOp.getResult(), result);
+  return success();
+}
+
 /// Implementation of the dialect interface that translates operations belonging
 /// to the `ptr` dialect to LLVM IR.
 class PtrDialectLLVMIRTranslationInterface
@@ -370,6 +406,9 @@ public:
         })
         .Case([&](PtrAddOp ptrAddOp) {
           return translatePtrAddOp(ptrAddOp, builder, moduleTranslation);
+        })
+        .Case([&](PtrDiffOp ptrDiffOp) {
+          return translatePtrDiffOp(ptrDiffOp, builder, moduleTranslation);
         })
         .Case([&](LoadOp loadOp) {
           return translateLoadOp(loadOp, builder, moduleTranslation);

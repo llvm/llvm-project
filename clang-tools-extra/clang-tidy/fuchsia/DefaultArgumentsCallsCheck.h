@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_DEFAULT_ARGUMENTS_CALLS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_DEFAULT_ARGUMENTS_CALLS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_DEFAULTARGUMENTSCALLSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_DEFAULTARGUMENTSCALLSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::fuchsia {
 /// Default arguments are not allowed in called functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/default-arguments-calls.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/default-arguments-calls.html
 class DefaultArgumentsCallsCheck : public ClangTidyCheck {
 public:
   DefaultArgumentsCallsCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::fuchsia
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_DEFAULT_ARGUMENTS_CALLS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_DEFAULTARGUMENTSCALLSCHECK_H

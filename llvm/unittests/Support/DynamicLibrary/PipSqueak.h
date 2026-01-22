@@ -15,11 +15,9 @@
 #pragma warning(disable: 4530)
 #pragma warning(disable: 4577)
 #include <string>
-#include <vector>
 #pragma warning(pop)
 #else
 #include <string>
-#include <vector>
 #endif
 
 #if defined(_WIN32) || defined(__CYGWIN__)

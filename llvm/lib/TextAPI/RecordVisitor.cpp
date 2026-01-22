@@ -15,7 +15,7 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-RecordVisitor::~RecordVisitor() {}
+RecordVisitor::~RecordVisitor() = default;
 void RecordVisitor::visitObjCInterface(const ObjCInterfaceRecord &) {}
 void RecordVisitor::visitObjCCategory(const ObjCCategoryRecord &) {}
 

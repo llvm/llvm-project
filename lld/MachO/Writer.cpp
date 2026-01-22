@@ -663,7 +663,7 @@ void Writer::treatSpecialUndefineds() {
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const lld::macho::Reloc &r) {
+                                    const Relocation &r) {
   if (!sym->isLive()) {
     if (Defined *defined = dyn_cast<Defined>(sym)) {
       if (config->emitInitOffsets &&
@@ -707,7 +707,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      lld::macho::Reloc &r = *it;
+      Relocation &r = *it;
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
@@ -1377,13 +1377,11 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupStrings)
-    in.cStringSection =
-        make<DeduplicatedCStringSection>(section_names::cString);
-  else
-    in.cStringSection = make<CStringSection>(section_names::cString);
-  in.objcMethnameSection =
-      make<DeduplicatedCStringSection>(section_names::objcMethname);
+  // Materialize cstring and objcMethname sections
+  in.cStringSection = in.getOrCreateCStringSection(section_names::cString);
+  in.objcMethnameSection = cast<DeduplicatedCStringSection>(
+      in.getOrCreateCStringSection(section_names::objcMethname,
+                                   /*forceDedupStrings=*/true));
   in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();

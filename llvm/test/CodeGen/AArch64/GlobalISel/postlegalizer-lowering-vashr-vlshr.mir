@@ -15,8 +15,7 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: [[VASHR:%[0-9]+]]:_(<4 x s32>) = G_VASHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[VASHR:%[0-9]+]]:_(<4 x s32>) = G_VASHR [[COPY]], 5
     ; CHECK-NEXT: $q0 = COPY [[VASHR]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
@@ -39,8 +38,7 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: [[VLSHR:%[0-9]+]]:_(<4 x s32>) = G_VLSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[VLSHR:%[0-9]+]]:_(<4 x s32>) = G_VLSHR [[COPY]], 5
     ; CHECK-NEXT: $q0 = COPY [[VLSHR]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
@@ -63,8 +61,7 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: [[VLSHR:%[0-9]+]]:_(<8 x s16>) = G_VLSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[VLSHR:%[0-9]+]]:_(<8 x s16>) = G_VLSHR [[COPY]], 5
     ; CHECK-NEXT: $q0 = COPY [[VLSHR]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0

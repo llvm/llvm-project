@@ -305,6 +305,8 @@ public:
   void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
 
   void emitModuleCommandLines(Module &M) override;
+
+  void emitRefMetadata(const GlobalObject *);
 };
 
 } // end anonymous namespace
@@ -2404,7 +2406,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
             << static_cast<unsigned>(((V) & (TracebackTable::Field##Mask)) >>  \
                                      (TracebackTable::Field##Shift))
 
-  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobaLinkage);
+  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobalLinkage);
   GENBOOLCOMMENT(", ", FirstHalfOfMandatoryField, IsOutOfLineEpilogOrPrologue);
   EmitComment();
 
@@ -2702,7 +2704,7 @@ static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
 
 static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
   return StringSwitch<bool>(GV->getName())
-      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Cases({"llvm.global_ctors", "llvm.global_dtors"}, true)
       .Default(false);
 }
 
@@ -2748,6 +2750,10 @@ static void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) {
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Special LLVM global arrays have been handled at the initialization.
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
+    return;
+
+  // Ignore non-emitted data.
+  if (GV->getSection() == "llvm.metadata")
     return;
 
   // If the Global Variable has the toc-data attribute, it needs to be emitted
@@ -2797,13 +2803,17 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Switch to the containing csect.
   OutStreamer->switchSection(Csect);
 
+  if (GV->hasMetadata(LLVMContext::MD_implicit_ref)) {
+    emitRefMetadata(GV);
+  }
+
   const DataLayout &DL = GV->getDataLayout();
 
   // Handle common and zero-initialized local symbols.
   if (GV->hasCommonLinkage() || GVKind.isBSSLocal() ||
       GVKind.isThreadBSSLocal()) {
     Align Alignment = GV->getAlign().value_or(DL.getPreferredAlign(GV));
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     GVSym->setStorageClass(
         TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
@@ -2889,10 +2899,16 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
   if (!TM.getFunctionSections() || MF->getFunction().hasSection())
     PPCAsmPrinter::emitFunctionEntryLabel();
 
+  const Function *F = &MF->getFunction();
+
   // Emit aliasing label for function entry point label.
-  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+  for (const GlobalAlias *Alias : GOAliasMap[F])
     OutStreamer->emitLabel(
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
+
+  if (F->hasMetadata(LLVMContext::MD_implicit_ref)) {
+    emitRefMetadata(F);
+  }
 }
 
 void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
@@ -2911,7 +2927,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
     if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
-        DL.getTypeAllocSize(GV.getValueType()) > 0) {
+        GV.getGlobalSize(DL) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;
     }
@@ -3074,7 +3090,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (G.isThreadLocal() && !G.isDeclaration()) {
       TLSVarAddress = alignTo(TLSVarAddress, getGVAlignment(&G, DL));
       TLSVarsToAddressMapping[&G] = TLSVarAddress;
-      TLSVarAddress += DL.getTypeAllocSize(G.getValueType());
+      TLSVarAddress += G.getGlobalSize(DL);
     }
   }
 
@@ -3330,6 +3346,19 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
     OutStreamer->emitValue(Exp, GetSizeOfEncodedValue(Encoding));
   } else
     OutStreamer->emitIntValue(0, GetSizeOfEncodedValue(Encoding));
+}
+
+void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
+  SmallVector<MDNode *> MDs;
+  GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  assert(MDs.size() && "Expected asscoiated metadata nodes");
+
+  for (const MDNode *MD : MDs) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalValue *GV = cast<GlobalValue>(VAM->getValue());
+    MCSymbol *Referenced = TM.getSymbol(GV);
+    OutStreamer->emitXCOFFRefDirective(Referenced);
+  }
 }
 
 // Return a pass that prints the PPC assembly code for a MachineFunction to the

@@ -176,19 +176,22 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
   // complex cases, including pointers/references, template specializations,
   // etc.
+  PrintingPolicy Copy(PP);
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
-        TT && TT->isCanonicalUnqualified())
-      OS << TT->getOriginalDecl()->getKindName() << " ";
+        TT && TT->isCanonicalUnqualified()) {
+      Copy.SuppressTagKeywordInAnonNames = true;
+      OS << TT->getDecl()->getKindName() << " ";
+    }
   }
-  QT.print(OS, PP);
+  QT.print(OS, Copy);
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
     bool ShouldAKA = false;
     QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
     if (ShouldAKA)
-      Result.AKA = DesugaredTy.getAsString(PP);
+      Result.AKA = DesugaredTy.getAsString(Copy);
   }
   return Result;
 }
@@ -1537,6 +1540,12 @@ markup::Document HoverInfo::presentDoxygen() const {
   SymbolDocCommentVisitor SymbolDoc(Documentation, CommentOpts);
 
   if (SymbolDoc.hasBriefCommand()) {
+    if (Kind != index::SymbolKind::Parameter &&
+        Kind != index::SymbolKind::TemplateTypeParm)
+      // Only add a "Brief" heading if we are not documenting a parameter.
+      // Parameters only have a brief section and adding the brief header would
+      // be redundant.
+      Output.addHeading(3).appendText("Brief");
     SymbolDoc.briefToMarkup(Output.addParagraph());
     Output.addRuler();
   }
@@ -1550,7 +1559,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   // Returns
   // `type` - description
   if (TemplateParameters && !TemplateParameters->empty()) {
-    Output.addParagraph().appendBoldText("Template Parameters:");
+    Output.addHeading(3).appendText("Template Parameters");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *TemplateParameters) {
       markup::Paragraph &P = L.addItem().addParagraph();
@@ -1564,7 +1573,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   }
 
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendBoldText("Parameters:");
+    Output.addHeading(3).appendText("Parameters");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters) {
       markup::Paragraph &P = L.addItem().addParagraph();
@@ -1583,7 +1592,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   if (ReturnType &&
       ((ReturnType->Type != "void" && !ReturnType->AKA.has_value()) ||
        (ReturnType->AKA.has_value() && ReturnType->AKA != "void"))) {
-    Output.addParagraph().appendBoldText("Returns:");
+    Output.addHeading(3).appendText("Returns");
     markup::Paragraph &P = Output.addParagraph();
     P.appendCode(llvm::to_string(*ReturnType));
 
@@ -1591,15 +1600,15 @@ markup::Document HoverInfo::presentDoxygen() const {
       P.appendText(" - ");
       SymbolDoc.returnToMarkup(P);
     }
+
+    SymbolDoc.retvalsToMarkup(Output);
     Output.addRuler();
   }
 
-  // add specially handled doxygen commands.
-  SymbolDoc.warningsToMarkup(Output);
-  SymbolDoc.notesToMarkup(Output);
-
-  // add any other documentation.
-  SymbolDoc.docToMarkup(Output);
+  if (SymbolDoc.hasDetailedDoc()) {
+    Output.addHeading(3).appendText("Details");
+    SymbolDoc.detailedDocToMarkup(Output);
+  }
 
   Output.addRuler();
 
@@ -1784,7 +1793,7 @@ void parseDocumentationParagraph(llvm::StringRef Text, markup::Paragraph &Out) {
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
   // A documentation string is treated as a sequence of paragraphs,
-  // where the paragraphs are seperated by at least one empty line
+  // where the paragraphs are separated by at least one empty line
   // (meaning 2 consecutive newline characters).
   // Possible leading empty lines (introduced by an odd number > 1 of
   // empty lines between 2 paragraphs) will be removed later in the Markup

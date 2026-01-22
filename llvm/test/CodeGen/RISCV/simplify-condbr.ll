@@ -2,12 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
-declare void @llvm.assume(i1 noundef) #0
-
 declare fastcc i1 @S_reginclass()
 
 declare fastcc ptr @Perl_av_store(i64)
@@ -175,5 +169,3 @@ sw.bb85:                                          ; preds = %if.end48
   br label %common.ret
 }
 
-attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

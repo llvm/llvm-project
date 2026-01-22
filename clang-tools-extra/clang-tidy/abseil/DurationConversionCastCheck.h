@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 /// the right conversion function instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-conversion-cast.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-conversion-cast.html
 class DurationConversionCastCheck : public ClangTidyCheck {
 public:
   DurationConversionCastCheck(StringRef Name, ClangTidyContext *Context)

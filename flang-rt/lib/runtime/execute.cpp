@@ -212,7 +212,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   } else {
 // Asynchronous mode
 #ifdef _WIN32
-    STARTUPINFO si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
@@ -234,7 +234,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
     FreeMemory(newCmdWin);
 
-    if (CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
+    if (CreateProcessW(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
       // Close handles so it will be removed when terminated
       CloseHandle(pi.hProcess);

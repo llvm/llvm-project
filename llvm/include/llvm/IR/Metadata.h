@@ -41,6 +41,7 @@
 
 namespace llvm {
 
+enum class CaptureComponents : uint8_t;
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
@@ -143,7 +144,8 @@ public:
 
   /// Metadata IDs that may generate poison.
   constexpr static const unsigned PoisonGeneratingIDs[] = {
-      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align,
+      LLVMContext::MD_nofpclass};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -1410,18 +1412,14 @@ private:
   void eraseFromStore();
 
   template <class NodeTy> struct HasCachedHash;
-  template <class NodeTy>
-  static void dispatchRecalculateHash(NodeTy *N, std::true_type) {
-    N->recalculateHash();
+  template <class NodeTy> static void dispatchRecalculateHash(NodeTy *N) {
+    if constexpr (HasCachedHash<NodeTy>::value)
+      N->recalculateHash();
   }
-  template <class NodeTy>
-  static void dispatchRecalculateHash(NodeTy *, std::false_type) {}
-  template <class NodeTy>
-  static void dispatchResetHash(NodeTy *N, std::true_type) {
-    N->setHash(0);
+  template <class NodeTy> static void dispatchResetHash(NodeTy *N) {
+    if constexpr (HasCachedHash<NodeTy>::value)
+      N->setHash(0);
   }
-  template <class NodeTy>
-  static void dispatchResetHash(NodeTy *, std::false_type) {}
 
   /// Merge branch weights from two direct callsites.
   static MDNode *mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
@@ -1475,6 +1473,7 @@ public:
   LLVM_ABI static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A,
                                                                    MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericNoFPClass(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
   /// Currently only implemented with direct callsites with branch weights.
   LLVM_ABI static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
@@ -1484,6 +1483,13 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+
+  /// Convert !captures metadata to CaptureComponents. MD may be nullptr.
+  LLVM_ABI static CaptureComponents toCaptureComponents(const MDNode *MD);
+  /// Convert CaptureComponents to !captures metadata. The return value may be
+  /// nullptr.
+  LLVM_ABI static MDNode *fromCaptureComponents(LLVMContext &Ctx,
+                                                CaptureComponents CC);
 };
 
 /// Tuple of metadata.

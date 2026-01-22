@@ -10,7 +10,7 @@
 
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Driver.h"
+#include "clang/Options/OptionUtils.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -53,7 +53,7 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   std::string raw_path = lldb_shlib_spec.GetPath();
   llvm::StringRef parent_dir = llvm::sys::path::parent_path(raw_path);
   static const std::string clang_resource_path =
-      clang::driver::Driver::GetResourcesPath("bin/lldb");
+      clang::GetResourcesPath("bin/lldb");
 
   static const llvm::StringRef kResourceDirSuffixes[] = {
       // LLVM.org's build of LLDB uses the clang resource directory placed

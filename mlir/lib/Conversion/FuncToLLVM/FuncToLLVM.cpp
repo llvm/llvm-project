@@ -374,9 +374,12 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
   // Create a memory effect attribute corresponding to readnone.
   if (funcOp->hasAttr(readnoneAttrName)) {
     auto memoryAttr = LLVM::MemoryEffectsAttr::get(
-        rewriter.getContext(),
-        {LLVM::ModRefInfo::NoModRef, LLVM::ModRefInfo::NoModRef,
-         LLVM::ModRefInfo::NoModRef});
+        rewriter.getContext(), {/*other=*/LLVM::ModRefInfo::NoModRef,
+                                /*argMem=*/LLVM::ModRefInfo::NoModRef,
+                                /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+                                /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+                                /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+                                /*targetMem1=*/LLVM::ModRefInfo::NoModRef});
     newFuncOp.setMemoryEffectsAttr(memoryAttr);
   }
 

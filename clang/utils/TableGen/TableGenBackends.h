@@ -82,6 +82,8 @@ void EmitClangAttrParsedAttrImpl(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 void EmitClangAttrParsedAttrKinds(const llvm::RecordKeeper &Records,
                                   llvm::raw_ostream &OS);
+void EmitClangAttrIsTypeDependent(const llvm::RecordKeeper &Records,
+                                  llvm::raw_ostream &OS);
 void EmitClangAttrTextNodeDump(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrNodeTraverse(const llvm::RecordKeeper &Records,
@@ -140,6 +142,8 @@ void EmitImmCheckTypes(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
 void EmitSveHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveBuiltinsJSON(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 void EmitSveBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveTypeFlags(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveRangeChecks(const llvm::RecordKeeper &Records,
@@ -149,6 +153,8 @@ void EmitSveStreamingAttrs(const llvm::RecordKeeper &Records,
 
 void EmitSmeHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltinsJSON(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 void EmitSmeBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeRangeChecks(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);

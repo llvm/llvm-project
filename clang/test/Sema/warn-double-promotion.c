@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -verify -fsyntax-only %s -Wdouble-promotion
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -verify -fsyntax-only -x c++ %s -Wdouble-promotion
 
 float ReturnFloatFromDouble(double d) {
   return d;
@@ -24,13 +25,37 @@ long double ReturnLongDoubleFromDouble(double d) {
   return d;  //expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
 }
 
+double ReturnDoubleFromFloatWithExplicitCast(float f) {
+  return (double)f;
+}
+
+long double ReturnLongDoubleFromFloatWithExplicitCast(float f) {
+  return (long double)f;
+}
+
+long double ReturnLongDoubleFromDoubleWithExplicitCast(double d) {
+  return (long double)d;
+}
+
 void Assignment(float f, double d, long double ld) {
   d = f;  //expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
   ld = f; //expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
   ld = d; //expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  d = (double)f;
+  ld = (long double)f;
+  ld = (long double)d;
   f = d;
   f = ld;
   d = ld;
+}
+
+void AssignmentWithExtraParens(float f, double d, long double ld) {
+  d = (f);  //expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+  ld = (f); //expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+  ld = (d); //expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  d = (double)(f);
+  ld = (long double)(f);
+  ld = (long double)(d);
 }
 
 extern void DoubleParameter(double);
@@ -40,6 +65,9 @@ void ArgumentPassing(float f, double d) {
   DoubleParameter(f); // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
   LongDoubleParameter(f); // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
   LongDoubleParameter(d); // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  DoubleParameter((double)f);
+  LongDoubleParameter((long double)f);
+  LongDoubleParameter((long double)d);
 }
 
 void BinaryOperator(float f, double d, long double ld) {
@@ -49,12 +77,21 @@ void BinaryOperator(float f, double d, long double ld) {
   f = ld * f; // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
   d = d * ld; // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
   d = ld * d; // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  f = (double)f * d;
+  f = d * (double)f;
+  f = (long double)f * ld;
+  f = ld * (long double)f;
+  d = (long double)d * ld;
+  d = ld * (long double)d;
 }
 
 void MultiplicationAssignment(float f, double d, long double ld) {
   d *= f; // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
   ld *= f; // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
   ld *= d; // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  d *= (double)f;
+  ld *= (long double)f;
+  ld *= (long double)d;
 
   // FIXME: These cases should produce warnings as above.
   f *= d;

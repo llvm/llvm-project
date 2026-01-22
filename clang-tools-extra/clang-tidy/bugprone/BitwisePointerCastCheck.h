@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// ``std::bit_cast`` or ``memcpy``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/bitwise-pointer-cast.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/bitwise-pointer-cast.html
 class BitwisePointerCastCheck : public ClangTidyCheck {
 public:
   BitwisePointerCastCheck(StringRef Name, ClangTidyContext *Context)

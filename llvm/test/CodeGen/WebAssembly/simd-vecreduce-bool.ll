@@ -276,7 +276,7 @@ define i1 @test_any_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: test_any_v8i8:
 ; CHECK:         .functype test_any_v8i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $0
 ; CHECK-NEXT:    i32.const $push1=, 15
 ; CHECK-NEXT:    i16x8.shl $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i32.const $push5=, 15
@@ -292,7 +292,7 @@ define i1 @test_all_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: test_all_v8i8:
 ; CHECK:         .functype test_all_v8i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $0
 ; CHECK-NEXT:    i32.const $push1=, 15
 ; CHECK-NEXT:    i16x8.shl $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i32.const $push5=, 15

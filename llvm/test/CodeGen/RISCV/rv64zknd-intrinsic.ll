@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zknd -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKND
 
-declare i64 @llvm.riscv.aes64ds(i64, i64);
-
 define i64 @aes64ds(i64 %a, i64 %b) nounwind {
 ; RV64ZKND-LABEL: aes64ds:
 ; RV64ZKND:       # %bb.0:
@@ -13,8 +11,6 @@ define i64 @aes64ds(i64 %a, i64 %b) nounwind {
     ret i64 %val
 }
 
-declare i64 @llvm.riscv.aes64dsm(i64, i64);
-
 define i64 @aes64dsm(i64 %a, i64 %b) nounwind {
 ; RV64ZKND-LABEL: aes64dsm:
 ; RV64ZKND:       # %bb.0:
@@ -23,8 +19,6 @@ define i64 @aes64dsm(i64 %a, i64 %b) nounwind {
     %val = call i64 @llvm.riscv.aes64dsm(i64 %a, i64 %b)
     ret i64 %val
 }
-
-declare i64 @llvm.riscv.aes64im(i64);
 
 define i64 @aes64im(i64 %a) nounwind {
 ; RV64ZKND-LABEL: aes64im:

@@ -276,10 +276,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
       SourceMgr(PP.getSourceManager()), APINotes(SourceMgr, LangOpts),
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
-      LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
-      OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      LateTemplateParser(nullptr), OpaqueParser(nullptr), CurContext(nullptr),
+      ExternalSource(nullptr), StackHandler(Diags), CurScope(nullptr),
+      Ident_super(nullptr), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -322,9 +321,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
           static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
       StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
-      TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
-      AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
-      InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
+      TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
+      CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
       ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
@@ -671,7 +669,9 @@ void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
 
 void Sema::PrintStats() const {
   llvm::errs() << "\n*** Semantic Analysis Stats:\n";
-  llvm::errs() << NumSFINAEErrors << " SFINAE diagnostics trapped.\n";
+  if (SFINAETrap *Trap = getSFINAEContext())
+    llvm::errs() << int(Trap->hasErrorOccurred())
+                 << " SFINAE diagnostics trapped.\n";
 
   BumpAlloc.PrintStats();
   AnalysisWarnings.PrintStats();
@@ -1248,9 +1248,6 @@ void Sema::ActOnEndOfTranslationUnit() {
             ? TUFragmentKind::Private
             : TUFragmentKind::Normal);
 
-    if (LateTemplateParserCleanup)
-      LateTemplateParserCleanup(OpaqueParser);
-
     CheckDelayedMemberExceptionSpecs();
   } else {
     // If we are building a TU prefix for serialization, it is safe to transfer
@@ -1484,6 +1481,13 @@ void Sema::ActOnEndOfTranslationUnit() {
       Consumer.CompleteTentativeDefinition(VD);
   }
 
+  // In incremental mode, tentative definitions belong to the current
+  // partial translation unit (PTU). Once they have been completed and
+  // emitted to codegen, drop them to prevent re-emission in future PTUs.
+  if (PP.isIncrementalProcessingEnabled())
+    TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
+                               TentativeDefinitions.end());
+
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
       continue;
@@ -1493,6 +1497,9 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
+  if (LangOpts.OpenACC)
+    OpenACC().ActOnEndOfTranslationUnit(
+        getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
@@ -1678,7 +1685,8 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
   // issue I am not seeing yet), then there should at least be a clarifying
   // comment somewhere.
   Diagnostic DiagInfo(&Diags, DB);
-  if (std::optional<TemplateDeductionInfo *> Info = isSFINAEContext()) {
+  if (SFINAETrap *Trap = getSFINAEContext()) {
+    sema::TemplateDeductionInfo *Info = Trap->getDeductionInfo();
     switch (DiagnosticIDs::getDiagnosticSFINAEResponse(DiagInfo.getID())) {
     case DiagnosticIDs::SFINAE_Report:
       // We'll report the diagnostic below.
@@ -1687,37 +1695,37 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
     case DiagnosticIDs::SFINAE_SubstitutionFailure:
       // Count this failure so that we know that template argument deduction
       // has failed.
-      ++NumSFINAEErrors;
+      Trap->setErrorOccurred();
 
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information.
-      if (*Info && !(*Info)->hasSFINAEDiagnostic()) {
-        (*Info)->addSFINAEDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
-      }
+      if (Info && !Info->hasSFINAEDiagnostic())
+        Info->addSFINAEDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
 
       Diags.setLastDiagnosticIgnored(true);
       return;
 
     case DiagnosticIDs::SFINAE_AccessControl: {
       // Per C++ Core Issue 1170, access control is part of SFINAE.
-      // Additionally, the AccessCheckingSFINAE flag can be used to temporarily
+      // Additionally, the WithAccessChecking flag can be used to temporarily
       // make access control a part of SFINAE for the purposes of checking
       // type traits.
-      if (!AccessCheckingSFINAE && !getLangOpts().CPlusPlus11)
+      if (!Trap->withAccessChecking() && !getLangOpts().CPlusPlus11)
         break;
 
       SourceLocation Loc = DiagInfo.getLocation();
 
       // Suppress this diagnostic.
-      ++NumSFINAEErrors;
+      Trap->setErrorOccurred();
 
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information.
-      if (*Info && !(*Info)->hasSFINAEDiagnostic()) {
-        (*Info)->addSFINAEDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
-      }
+      if (Info && !Info->hasSFINAEDiagnostic())
+        Info->addSFINAEDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
 
       Diags.setLastDiagnosticIgnored(true);
 
@@ -1737,13 +1745,13 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
         return;
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information;
-      if (*Info) {
-        (*Info)->addSuppressedDiagnostic(
+      if (Info) {
+        Info->addSuppressedDiagnostic(
             DiagInfo.getLocation(),
             PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
         if (!Diags.getDiagnosticIDs()->isNote(DiagID))
           PrintContextStack([Info](SourceLocation Loc, PartialDiagnostic PD) {
-            (*Info)->addSuppressedDiagnostic(Loc, std::move(PD));
+            Info->addSuppressedDiagnostic(Loc, std::move(PD));
           });
       }
 
@@ -2214,9 +2222,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty
+                        << false /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2233,9 +2241,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty << true /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2250,16 +2257,10 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD && !FD->getType().isNull()) {
+    if (Ty->isSVESizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
-        if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-          Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
-        else if (!IsArmStreamingFunction(FD,
-                                         /*IncludeLocallyStreaming=*/true))
-          Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
-      }
+      ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
 
     if (auto *VT = Ty->getAs<VectorType>();
@@ -2439,8 +2440,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
 }
 
 Sema::PoppedFunctionScopePtr
-Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
-                           const Decl *D, QualType BlockType) {
+Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP, Decl *D,
+                           QualType BlockType) {
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
 
   markEscapingByrefs(*FunctionScopes.back(), *this);

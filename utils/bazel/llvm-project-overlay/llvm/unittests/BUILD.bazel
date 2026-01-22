@@ -41,6 +41,7 @@ cc_library(
         "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
     ],
 )
@@ -62,6 +63,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:attributes_gen",
@@ -78,6 +80,7 @@ cc_library(
         "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
     ],
 )
@@ -99,6 +102,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:attributes_gen",
@@ -136,6 +140,7 @@ cc_test(
         "//llvm:FrontendHLSL",
         "//llvm:Instrumentation",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
@@ -252,6 +257,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TestingSupport",
@@ -381,6 +387,7 @@ cc_test(
         "//llvm:MC",
         "//llvm:MCJIT",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
@@ -408,7 +415,7 @@ cc_test(
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     deps = [
@@ -423,6 +430,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:ObjectYAML",
         "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
@@ -475,6 +483,7 @@ cc_test(
         "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Scalar",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -517,6 +526,7 @@ cc_test(
         "//llvm:FrontendOpenACC",
         "//llvm:FrontendOpenMP",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
@@ -651,6 +661,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "sub_command_opts_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = {"Option/SubCommandOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/SubCommandOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "automata_gen",
     strip_include_prefix = "TableGen",
     tbl_outs = {
@@ -671,6 +690,7 @@ cc_test(
     ),
     deps = [
         ":option_tests_gen",
+        ":sub_command_opts_tests_gen",
         "//llvm:Option",
         "//llvm:Support",
         "//third-party/unittest:gtest",
@@ -891,6 +911,7 @@ cc_test(
         "//llvm:IPO",
         "//llvm:IRReader",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TestingSupport",

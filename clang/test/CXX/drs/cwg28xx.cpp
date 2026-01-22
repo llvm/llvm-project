@@ -61,6 +61,24 @@ namespace cwg2819 { // cwg2819: 19 c++26
 #endif
 } // namespace cwg2819
 
+namespace cwg2823 { // cwg2823: no
+#if __cplusplus >= 201103L
+  constexpr int *p = 0;
+  constexpr int *q1 = &*p;
+  // expected-error@-1 {{constexpr variable 'q1' must be initialized by a constant expression}}
+  //   expected-note@-2 {{dereferencing a null pointer is not allowed in a constant expression}}
+  // FIXME: invalid: dereferencing a null pointer.
+  constexpr int *q2 = &p[0];
+
+  int arr[32];
+  constexpr int *r = arr;
+  // FIXME: invalid: dereferencing a past-the-end pointer.
+  constexpr int *s1 = &*(r + 32);
+  // FIXME: invalid: dereferencing a past-the-end pointer.
+  constexpr int *s2 = &r[32];
+#endif
+}
+
 namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 
 #if __cplusplus >= 202002L

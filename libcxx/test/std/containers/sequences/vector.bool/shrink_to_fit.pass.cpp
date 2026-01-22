@@ -11,8 +11,6 @@
 
 // void shrink_to_fit();
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cassert>
 #include <climits>
 #include <vector>

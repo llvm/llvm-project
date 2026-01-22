@@ -13,7 +13,7 @@
 
 // RUN: echo > %t.proftext
 // RUN: llvm-profdata merge %t.proftext -o %t.profdata
-// RUN: %clang_cc1 -emit-llvm -fdebug-pass-manager -O1 -fprofile-instrument-use-path=%t.profdata -fdebug-info-for-profiling %s -o - 2>&1 | FileCheck %s --check-prefix=DISCR
+// RUN: %clang_cc1 -emit-llvm -fdebug-pass-manager -O1 -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -fdebug-info-for-profiling %s -o - 2>&1 | FileCheck %s --check-prefix=DISCR
 // RUN: %clang_cc1 -emit-llvm -fdebug-pass-manager -O1 -fdebug-info-for-profiling -fpseudo-probe-for-profiling %s -o - 2>&1 | FileCheck %s --check-prefix=PROBE
 
 // NODISCR-NOT: Running pass: AddDiscriminatorsPass

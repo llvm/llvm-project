@@ -220,8 +220,6 @@ def YieldOp : SMTOp<"yield", [
   Pure,
   Terminator,
   ReturnLike,
-  ParentOneOf<["smt::SolverOp", "smt::CheckOp",
-               "smt::ForallOp", "smt::ExistsOp"]>,
 ]> {
   let summary = "terminator operation for various regions of SMT operations";
   let arguments = (ins Variadic<AnyType>:$values);

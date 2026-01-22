@@ -15,6 +15,7 @@
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
@@ -47,9 +48,10 @@ namespace lldb_private {
 NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
-    : NativeProcessProtocol(LLDB_INVALID_PROCESS_ID,
-                            launch_info.GetPTY().ReleasePrimaryFileDescriptor(),
-                            delegate),
+    : NativeProcessProtocol(
+          LLDB_INVALID_PROCESS_ID,
+          PseudoTerminal::invalid_fd, // TODO: Implement on Windows
+          delegate),
       ProcessDebugger(), m_arch(launch_info.GetArchitecture()) {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));

@@ -101,7 +101,7 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printLE64(const std::string &S) {
   for (uint32_t I = 0, Size = S.size(); I < Size; ++I) {
     errs() << Twine::utohexstr(S[I]);
@@ -876,7 +876,7 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
   DIEValue StrListBaseAttrInfo =
       Die.findAttribute(dwarf::DW_AT_str_offsets_base);
   auto RetVal = ProcessedBaseOffsets.find(*Val);
-  // Handling re-use of str-offsets section.
+  // Handling reuse of str-offsets section.
   if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
     initialize(Unit);
     // Update String Offsets that were modified.
@@ -1167,7 +1167,7 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 // For functions that we do not modify we output them as raw data.
 // Re-constructing .debug_line_str so that offsets are correct for those
 // debug line tables.
-// Bonus is that when we output a final binary we can re-use .debug_line_str
+// Bonus is that when we output a final binary we can reuse .debug_line_str
 // section. So we don't have to do the SHF_ALLOC trick we did with
 // .debug_line.
 static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,

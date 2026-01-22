@@ -895,17 +895,17 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
-  uint8_t Feature = 0;
+  uint16_t Feature = 0;
   uint64_t Address = 0;
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 3)
+      if (Cur && Version > 4)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
                 Twine(static_cast<int>(Version)));
-      Feature = Data.getU8(Cur);
+      Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
     }
     uint64_t NumBBRanges = 1;
     uint64_t NumBlocks = 0;
@@ -946,8 +946,11 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
         }
         uint64_t Size = Data.getULEB128(Cur);
         uint64_t Metadata = Data.getULEB128(Cur);
+        std::optional<llvm::yaml::Hex64> Hash;
+        if (FeatureOrErr->BBHash)
+          Hash = Data.getU64(Cur);
         BBEntries.push_back(
-            {ID, Offset, Size, Metadata, std::move(CallsiteEndOffsets)});
+            {ID, Offset, Size, Metadata, std::move(CallsiteEndOffsets), Hash});
       }
       TotalNumBlocks += BBEntries.size();
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
@@ -969,6 +972,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
           auto &PGOBBEntry = PGOBBEntries.emplace_back();
           if (FeatureOrErr->BBFreq) {
             PGOBBEntry.BBFreq = Data.getULEB128(Cur);
+            if (FeatureOrErr->PostLinkCfg)
+              PGOBBEntry.PostLinkBBFreq = Data.getULEB128(Cur);
             if (!Cur)
               break;
           }
@@ -979,7 +984,10 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
             for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
               uint32_t ID = Data.getULEB128(Cur);
               uint32_t BrProb = Data.getULEB128(Cur);
-              SuccEntries.push_back({ID, BrProb});
+              std::optional<uint32_t> PostLinkBrFreq;
+              if (FeatureOrErr->PostLinkCfg)
+                PostLinkBrFreq = Data.getULEB128(Cur);
+              SuccEntries.push_back({ID, BrProb, PostLinkBrFreq});
             }
           }
         }

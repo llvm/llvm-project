@@ -5,6 +5,7 @@
 # RUN: cp %S/Inputs/diff-test-update/single-split-file-no-expected.in %S/Inputs/diff-test-update/single-split-file-no-expected.test
 # RUN: cp %S/Inputs/diff-test-update/split-c-comments.in %S/Inputs/diff-test-update/split-c-comments.test
 # RUN: cp %S/Inputs/diff-test-update/split-whitespace.in "%S/Inputs/diff-test-update/split whitespace.test"
+# RUN: cp %S/Inputs/diff-test-update/split-both.in %S/Inputs/diff-test-update/split-both.test
 
 # RUN: not %{lit} --update-tests -v %S/Inputs/diff-test-update | FileCheck %s
 
@@ -15,6 +16,7 @@
 # RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/single-split-file-no-expected.out %S/Inputs/diff-test-update/single-split-file-no-expected.test
 # RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/split-c-comments.out %S/Inputs/diff-test-update/split-c-comments.test
 # RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/split-whitespace.out "%S/Inputs/diff-test-update/split whitespace.test"
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/split-both.out %S/Inputs/diff-test-update/split-both.test
 
 
 # CHECK: # update-diff-test: could not deduce source and target from {{.*}}1.in and {{.*}}2.in
@@ -22,7 +24,6 @@
 # CHECK: # update-diff-test: copied {{.*}}my-file.txt to {{.*}}my-file.expected
 # CHECK: # update-diff-test: copied {{.*}}1.txt to {{.*}}empty.txt
 # CHECK: # update-diff-test: copied {{.*}}diff-tmp.test.tmp.txt to {{.*}}diff-t-out.txt
-# CHECK: # update-diff-test: could not deduce source and target from {{.*}}split-both.expected and {{.*}}split-both.out
 # CHECK: # update-diff-test: copied {{.*}}unrelated-split.txt to {{.*}}unrelated-split.expected
 
 

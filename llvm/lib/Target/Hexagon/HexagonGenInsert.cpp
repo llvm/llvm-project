@@ -153,8 +153,7 @@ namespace {
       return !BitVector::any();
     }
     bool includes(const RegisterSet &Rs) const {
-      // A.BitVector::test(B)  <=>  A-B != {}
-      return !Rs.BitVector::test(*this);
+      return Rs.BitVector::subsetOf(*this);
     }
     bool intersects(const RegisterSet &Rs) const {
       return BitVector::anyCommon(Rs);
@@ -920,6 +919,10 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
   // successors have been processed.
   RegisterSet BlockDefs, InsDefs;
   for (MachineInstr &MI : *B) {
+    // Stop if the map size is too large.
+    if (IFMap.size() >= MaxIFMSize)
+      break;
+
     InsDefs.clear();
     getInstrDefs(&MI, InsDefs);
     // Leave those alone. They are more transparent than "insert".
@@ -942,8 +945,8 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
 
         findRecordInsertForms(VR, AVs);
         // Stop if the map size is too large.
-        if (IFMap.size() > MaxIFMSize)
-          return;
+        if (IFMap.size() >= MaxIFMSize)
+          break;
       }
     }
 

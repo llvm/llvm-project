@@ -661,41 +661,73 @@ static uint64_t getARMStaticBase(const Symbol &sym) {
   return os->ptLoad->firstSec->addr;
 }
 
-// For RE_RISCV_PC_INDIRECT (R_RISCV_PCREL_LO12_{I,S}), the symbol actually
-// points the corresponding R_RISCV_PCREL_HI20 relocation, and the target VA
-// is calculated using PCREL_HI20's symbol.
+struct RISCVPCRel {
+  static constexpr const char *loReloc = "R_RISCV_PCREL_LO12";
+  static constexpr const char *hiReloc = "R_RISCV_PCREL_HI20";
+
+  static bool isHiReloc(uint32_t type) {
+    return is_contained({R_RISCV_PCREL_HI20, R_RISCV_GOT_HI20,
+                         R_RISCV_TLS_GD_HI20, R_RISCV_TLS_GOT_HI20},
+                        type);
+  }
+};
+
+struct LoongArchPCAdd {
+  static constexpr const char *loReloc = "R_LARCH_*PCADD_LO12";
+  static constexpr const char *hiReloc = "R_LARCH_*PCADD_HI20";
+
+  static bool isHiReloc(uint32_t type) {
+    return is_contained({R_LARCH_PCADD_HI20, R_LARCH_GOT_PCADD_HI20,
+                         R_LARCH_TLS_IE_PCADD_HI20, R_LARCH_TLS_LD_PCADD_HI20,
+                         R_LARCH_TLS_GD_PCADD_HI20,
+                         R_LARCH_TLS_DESC_PCADD_HI20},
+                        type);
+  }
+};
+
+// For PC-relative indirect relocations (e.g. R_RISCV_PCREL_LO12_* and
+// R_LARCH_*PCADD_LO12), the symbol referenced by the LO12 relocation does not
+// directly represent the final target address. Instead, it points to the
+// corresponding HI20 relocation, and the target VA is computed using the
+// symbol associated with that HI20 relocation.
 //
-// This function returns the R_RISCV_PCREL_HI20 relocation from the
-// R_RISCV_PCREL_LO12 relocation.
-static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
-                                     const Relocation &loReloc) {
-  uint64_t addend = loReloc.addend;
+// This helper locates and returns the matching HI20 relocation corresponding
+// to a given LO12 relocation.
+template <typename PCRel>
+static Relocation *getPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
+                                const Relocation &loReloc) {
+  int64_t addend = loReloc.addend;
   Symbol *sym = loReloc.sym;
 
-  const Defined *d = cast<Defined>(sym);
-  if (!d->section) {
+  const Defined *d = dyn_cast<Defined>(sym);
+  if (!d) {
     Err(ctx) << loSec->getLocation(loReloc.offset)
-             << ": R_RISCV_PCREL_LO12 relocation points to an absolute symbol: "
-             << sym->getName();
+             << " points to undefined symbol";
+    return nullptr;
+  }
+  if (!d->section) {
+    Err(ctx) << loSec->getLocation(loReloc.offset) << ": " << PCRel::loReloc
+             << " relocation points to an absolute symbol: " << sym->getName();
     return nullptr;
   }
   InputSection *hiSec = cast<InputSection>(d->section);
 
-  if (hiSec != loSec)
-    Err(ctx) << loSec->getLocation(loReloc.offset)
-             << ": R_RISCV_PCREL_LO12 relocation points to a symbol '"
-             << sym->getName() << "' in a different section '" << hiSec->name
-             << "'";
+  if (hiSec != loSec) {
+    Err(ctx) << loSec->getLocation(loReloc.offset) << ": " << PCRel::loReloc
+             << " relocation points to a symbol '" << sym->getName()
+             << "' in a different section '" << hiSec->name << "'";
+    return nullptr;
+  }
 
   if (addend != 0)
-    Warn(ctx) << loSec->getLocation(loReloc.offset)
-              << ": non-zero addend in R_RISCV_PCREL_LO12 relocation to "
+    Warn(ctx) << loSec->getLocation(loReloc.offset) << ": non-zero addend in "
+              << PCRel::loReloc << " relocation to "
               << hiSec->getObjMsg(d->value) << " is ignored";
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
   Relocation hiReloc;
-  hiReloc.offset = d->value;
+  hiReloc.offset = d->value + addend;
   auto range =
       std::equal_range(hiSec->relocs().begin(), hiSec->relocs().end(), hiReloc,
                        [](const Relocation &lhs, const Relocation &rhs) {
@@ -703,14 +735,12 @@ static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
                        });
 
   for (auto it = range.first; it != range.second; ++it)
-    if (it->type == R_RISCV_PCREL_HI20 || it->type == R_RISCV_GOT_HI20 ||
-        it->type == R_RISCV_TLS_GD_HI20 || it->type == R_RISCV_TLS_GOT_HI20)
+    if (PCRel::isHiReloc(it->type))
       return &*it;
 
-  Err(ctx) << loSec->getLocation(loReloc.offset)
-           << ": R_RISCV_PCREL_LO12 relocation points to "
-           << hiSec->getObjMsg(d->value)
-           << " without an associated R_RISCV_PCREL_HI20 relocation";
+  Err(ctx) << loSec->getLocation(loReloc.offset) << ": " << PCRel::loReloc
+           << " relocation points to " << hiSec->getObjMsg(d->value)
+           << " without an associated " << PCRel::hiReloc << " relocation";
   return nullptr;
 }
 
@@ -784,6 +814,8 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return r.sym->getVA(ctx, a);
   case R_ADDEND:
     return a;
+  case R_ADDEND_NEG:
+    return -static_cast<uint64_t>(a);
   case R_RELAX_HINT:
     return 0;
   case RE_ARM_SBREL:
@@ -887,8 +919,13 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getAArch64Page(val) - getAArch64Page(p);
   }
   case RE_RISCV_PC_INDIRECT: {
-    if (const Relocation *hiRel = getRISCVPCRelHi20(ctx, this, r))
+    if (const Relocation *hiRel = getPCRelHi20<RISCVPCRel>(ctx, this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
+    return 0;
+  }
+  case RE_LOONGARCH_PC_INDIRECT: {
+    if (const Relocation *hiRel = getPCRelHi20<LoongArchPCAdd>(ctx, this, r))
+      return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx, a));
     return 0;
   }
   case RE_LOONGARCH_PAGE_PC:
@@ -1171,7 +1208,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
 }
 
 template <class ELFT>
-void InputSectionBase::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
+void InputSection::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
   if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
     adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 
@@ -1357,21 +1394,24 @@ SyntheticSection *EhInputSection::getParent() const {
 
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
+// In rare cases (.eh_frame pieces are reordered by a linker script), the
+// relocations may be unordered.
 template <class ELFT> void EhInputSection::split() {
-  const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>(/*supportsCrel=*/false);
-  // getReloc expects the relocations to be sorted by r_offset. See the comment
-  // in scanRelocs.
-  if (rels.areRelocsRel()) {
-    SmallVector<typename ELFT::Rel, 0> storage;
-    split<ELFT>(sortRels(rels.rels, storage));
-  } else {
-    SmallVector<typename ELFT::Rela, 0> storage;
-    split<ELFT>(sortRels(rels.relas, storage));
-  }
-}
+  const RelsOrRelas<ELFT> elfRels = relsOrRelas<ELFT>();
+  if (elfRels.areRelocsCrel())
+    preprocessRelocs<ELFT>(elfRels.crels);
+  else if (elfRels.areRelocsRel())
+    preprocessRelocs<ELFT>(elfRels.rels);
+  else
+    preprocessRelocs<ELFT>(elfRels.relas);
 
-template <class ELFT, class RelTy>
-void EhInputSection::split(ArrayRef<RelTy> rels) {
+  // The loop below expects the relocations to be sorted by offset.
+  auto cmp = [](const Relocation &a, const Relocation &b) {
+    return a.offset < b.offset;
+  };
+  if (!llvm::is_sorted(rels, cmp))
+    llvm::stable_sort(rels, cmp);
+
   ArrayRef<uint8_t> d = content();
   const char *msg = nullptr;
   unsigned relI = 0;
@@ -1397,10 +1437,10 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     // Find the first relocation that points to [off,off+size). Relocations
     // have been sorted by r_offset.
     const uint64_t off = d.data() - content().data();
-    while (relI != rels.size() && rels[relI].r_offset < off)
+    while (relI != rels.size() && rels[relI].offset < off)
       ++relI;
     unsigned firstRel = -1;
-    if (relI != rels.size() && rels[relI].r_offset < off + size)
+    if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
     (id == 0 ? cies : fdes).emplace_back(off, this, size, firstRel);
     d = d.slice(size);
@@ -1408,6 +1448,23 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
   if (msg)
     Err(file->ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
                    << getObjMsg(d.data() - content().data());
+}
+
+template <class ELFT, class RelTy>
+void EhInputSection::preprocessRelocs(Relocs<RelTy> elfRels) {
+  Ctx &ctx = file->ctx;
+  rels.reserve(elfRels.size());
+  for (auto rel : elfRels) {
+    uint64_t offset = rel.r_offset;
+    Symbol &sym = file->getSymbol(rel.getSymbol(ctx.arg.isMips64EL));
+    RelType type = rel.getType(ctx.arg.isMips64EL);
+    RelExpr expr = ctx.target->getRelExpr(type, sym, content().data() + offset);
+    int64_t addend =
+        RelTy::HasAddend
+            ? getAddend<ELFT>(rel)
+            : ctx.target->getImplicitAddend(content().data() + offset, type);
+    rels.push_back({expr, type, offset, addend, &sym});
+  }
 }
 
 // Return the offset in an output section for a given input offset.

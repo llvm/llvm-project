@@ -56,6 +56,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -160,6 +161,7 @@ public:
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -293,7 +295,6 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->InsertMachineInstrInMaps(*SetExec);
   LIS->InsertMachineInstrInMaps(*NewBr);
 
-  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   MI.eraseFromParent();
 
   // FIXME: Is there a better way of adjusting the liveness? It shouldn't be
@@ -363,9 +364,6 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   RecomputeRegs.insert(SrcReg);
   RecomputeRegs.insert(DstReg);
   LIS->createAndComputeVirtRegInterval(SaveReg);
-
-  // Let this be recomputed.
-  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
@@ -828,7 +826,10 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
 
   optimizeEndCf();
 
-  if (LIS) {
+  if (LIS && Changed) {
+    // These will need to be recomputed for insertions and removals.
+    LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
+    LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
     for (Register Reg : RecomputeRegs) {
       LIS->removeInterval(Reg);
       LIS->createAndComputeVirtRegInterval(Reg);
@@ -881,5 +882,6 @@ SILowerControlFlowPass::run(MachineFunction &MF,
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }

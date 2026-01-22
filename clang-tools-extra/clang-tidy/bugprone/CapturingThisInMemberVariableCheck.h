@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// assignments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/capturing-this-in-member-variable.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/capturing-this-in-member-variable.html
 class CapturingThisInMemberVariableCheck : public ClangTidyCheck {
 public:
   CapturingThisInMemberVariableCheck(StringRef Name, ClangTidyContext *Context);

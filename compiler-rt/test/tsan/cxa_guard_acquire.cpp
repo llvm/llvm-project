@@ -66,10 +66,17 @@ int main(int argc, char **argv) {
   printf("Enter main\n");
 
   // If initialization is contended, the blocked thread should enter a
-  // potentially blocking region.
+  // potentially blocking region. Note that we use a DAG check because it is
+  // possible for Thread 1 to acquire the guard, then Thread 2 fail to acquire
+  // the guard then call `OnPotentiallyBlockingRegionBegin` and print "Enter
+  // potentially blocking region\n", before Thread 1 manages to reach "Enter
+  // constructor\n". This is exceptionally rare, but can be replicated by
+  // inserting a `sleep(1)` between `LazyInit() {` and `printf("Enter
+  // constructor\n");`. Due to the barrier it is not possible for the exit logs
+  // to be inverted.
   //
-  // CHECK-NEXT: Enter constructor
-  // CHECK-NEXT: Enter potentially blocking region
+  // CHECK-DAG: Enter constructor
+  // CHECK-DAG: Enter potentially blocking region
   // CHECK-NEXT: Exit constructor
   // CHECK-NEXT: Exit potentially blocking region
   barrier_init(&barrier, 2);

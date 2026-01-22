@@ -425,17 +425,19 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
     "DIEmissionKind":$emissionKind,
-    OptionalParameter<"DINameTableKind">:$nameTableKind
+    OptionalParameter<"DINameTableKind">:$nameTableKind,
+    OptionalParameter<"StringAttr">:$splitDebugFilename
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
-      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename
     ), [{
       return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind);
+                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -929,11 +931,9 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
-  let parameters = (ins
-    "ModRefInfo":$other,
-    "ModRefInfo":$argMem,
-    "ModRefInfo":$inaccessibleMem
-  );
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$argMem,
+      "ModRefInfo":$inaccessibleMem, "ModRefInfo":$errnoMem,
+      "ModRefInfo":$targetMem0, "ModRefInfo":$targetMem1);
   let extraClassDeclaration = [{
     bool isReadWrite();
   }];

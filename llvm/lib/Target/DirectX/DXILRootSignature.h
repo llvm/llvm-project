@@ -21,7 +21,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
-#include <optional>
 
 namespace llvm {
 namespace dxil {

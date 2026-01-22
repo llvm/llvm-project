@@ -13,16 +13,16 @@ subroutine eoshift_test1(arr, shift)
   ! CHECK: fir.store %[[init]] to %[[resBox]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
   ! CHECK:  %[[boundBox:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[shift:.*]] = fir.load %arg1 : !fir.ref<i32>
-  
+
     res = eoshift(arr, shift)
-  
+
   ! CHECK: %[[resIRBox:.*]] = fir.convert %[[resBox]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[arrBox:.*]] = fir.convert %[[arr]] : (!fir.box<!fir.array<3x!fir.logical<4>>>) -> !fir.box<none>
   ! CHECK: %[[shiftBox:.*]] = fir.convert %[[shift]] : (i32) -> i64
   ! CHECK: fir.call @_FortranAEoshiftVector(%[[resIRBox]], %[[arrBox]], %[[shiftBox]], %[[boundBox]], {{.*}}, {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   ! CHECK: fir.array_merge_store %[[resLoad]], {{.*}} to %[[res]] : !fir.array<3x!fir.logical<4>>, !fir.array<3x!fir.logical<4>>, !fir.ref<!fir.array<3x!fir.logical<4>>>
   end subroutine eoshift_test1
-  
+
   ! CHECK-LABEL: eoshift_test2
   subroutine eoshift_test2(arr, shift, bound, dim)
     integer, dimension(3,3) :: arr, res
@@ -31,9 +31,9 @@ subroutine eoshift_test1(arr, shift)
   ! CHECK: %[[resBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
   ! CHECK: %[[res:.*]] = fir.alloca !fir.array<3x3xi32> {bindc_name = "res", uniq_name = "_QFeoshift_test2Eres"}
   !CHECK: %[[resLoad:.*]] = fir.array_load %[[res]]({{.*}}) : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>) -> !fir.array<3x3xi32>
-    
+
     res = eoshift(arr, shift, bound, dim)
-  
+
   ! CHECK: %[[arr:.*]] = fir.embox %arg0({{.*}}) : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<3x3xi32>>
   ! CHECK: %[[boundBox:.*]] = fir.embox %arg2 : (!fir.ref<i32>) -> !fir.box<i32>
   ! CHECK: %[[dim:.*]] = fir.load %arg3 : !fir.ref<i32>
@@ -42,16 +42,16 @@ subroutine eoshift_test1(arr, shift)
   ! CHECK: %[[arrBox:.*]] = fir.convert %[[arr]] : (!fir.box<!fir.array<3x3xi32>>) -> !fir.box<none>
   ! CHECK: %[[shiftBoxNone:.*]] = fir.convert %[[shiftBox]] : (!fir.box<!fir.array<3xi32>>) -> !fir.box<none>
   ! CHECK: %[[boundBoxNone:.*]] = fir.convert %[[boundBox]] : (!fir.box<i32>) -> !fir.box<none>
-  
+
   ! CHECK: fir.call @_FortranAEoshift(%[[resIRBox]], %[[arrBox]], %[[shiftBoxNone]], %[[boundBoxNone]], %[[dim]], {{.*}}, {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   ! CHECK: fir.array_merge_store %[[resLoad]], {{.*}} to %[[res]] : !fir.array<3x3xi32>, !fir.array<3x3xi32>, !fir.ref<!fir.array<3x3xi32>>
   end subroutine eoshift_test2
-  
+
   ! CHECK-LABEL: eoshift_test3
   subroutine eoshift_test3(arr, shift, dim)
     character(4), dimension(3,3) :: arr, res
     integer :: shift, dim
-  
+
   ! CHECK: %[[resBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,4>>>>
   ! CHECK: %[[arr:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK: %[[array:.*]] = fir.convert %[[arr]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<3x3x!fir.char<1,4>>>
@@ -59,9 +59,9 @@ subroutine eoshift_test1(arr, shift)
   ! CHECK: %[[resLoad:.*]] = fir.array_load %[[res]]({{.*}}) : (!fir.ref<!fir.array<3x3x!fir.char<1,4>>>, !fir.shape<2>) -> !fir.array<3x3x!fir.char<1,4>>
   ! CHECK: %[[arrayBox:.*]] = fir.embox %[[array]]({{.*}}) : (!fir.ref<!fir.array<3x3x!fir.char<1,4>>>, !fir.shape<2>) -> !fir.box<!fir.array<3x3x!fir.char<1,4>>>
   ! CHECK: %[[dim:.*]] = fir.load %arg2 : !fir.ref<i32>
-  
+
     res = eoshift(arr, SHIFT=shift, DIM=dim)
-  
+
   ! CHECK: %[[boundBox:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[shiftBox:.*]] = fir.embox %arg1 : (!fir.ref<i32>) -> !fir.box<i32>
   ! CHECK: %[[resIRBox:.*]] = fir.convert %[[resBox]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,4>>>>>) -> !fir.ref<!fir.box<none>>
@@ -70,7 +70,7 @@ subroutine eoshift_test1(arr, shift)
   ! CHECK: fir.call @_FortranAEoshift(%[[resIRBox]], %[[arrayBoxNone]], %[[shiftBoxNone]], %[[boundBox]], %[[dim]], {{.*}}, {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   ! CHECK: fir.array_merge_store %[[resLoad]], {{.*}} to %[[res]] : !fir.array<3x3x!fir.char<1,4>>, !fir.array<3x3x!fir.char<1,4>>, !fir.ref<!fir.array<3x3x!fir.char<1,4>>>
   end subroutine eoshift_test3
-  
+
   ! CHECK-LABEL: func @_QPeoshift_test_dynamic_optional(
   ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?x?xi32>>
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<i32>

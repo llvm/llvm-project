@@ -531,9 +531,9 @@ lldb::TypeSP Type::GetTypedefType() {
 
 lldb::Format Type::GetFormat() { return GetForwardCompilerType().GetFormat(); }
 
-lldb::Encoding Type::GetEncoding(uint64_t &count) {
+lldb::Encoding Type::GetEncoding() {
   // Make sure we resolve our type if it already hasn't been.
-  return GetForwardCompilerType().GetEncoding(count);
+  return GetForwardCompilerType().GetEncoding();
 }
 
 bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,

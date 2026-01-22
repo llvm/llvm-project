@@ -23,6 +23,7 @@ set(MODULES
   "iso_c_binding"
   "iso_fortran_env"
   "iso_fortran_env_impl"
+  "flang_debug"
 )
 
 # Check if 128-bit float computations can be done via long double.

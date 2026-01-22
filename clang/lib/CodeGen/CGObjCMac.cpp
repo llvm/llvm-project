@@ -338,7 +338,7 @@ public:
   /// GcReadWeakFn -- LLVM objc_read_weak (id *src) function.
   llvm::FunctionCallee getGcReadWeakFn() {
     // id objc_read_weak (id *)
-    llvm::Type *args[] = {CGM.UnqualPtrTy};
+    llvm::Type *args[] = {CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_read_weak");
   }
@@ -346,7 +346,7 @@ public:
   /// GcAssignWeakFn -- LLVM objc_assign_weak function.
   llvm::FunctionCallee getGcAssignWeakFn() {
     // id objc_assign_weak (id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_weak");
   }
@@ -354,7 +354,7 @@ public:
   /// GcAssignGlobalFn -- LLVM objc_assign_global function.
   llvm::FunctionCallee getGcAssignGlobalFn() {
     // id objc_assign_global(id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_global");
   }
@@ -362,7 +362,7 @@ public:
   /// GcAssignThreadLocalFn -- LLVM objc_assign_threadlocal function.
   llvm::FunctionCallee getGcAssignThreadLocalFn() {
     // id objc_assign_threadlocal(id src, id * dest)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_threadlocal");
   }
@@ -370,7 +370,7 @@ public:
   /// GcAssignIvarFn -- LLVM objc_assign_ivar function.
   llvm::FunctionCallee getGcAssignIvarFn() {
     // id objc_assign_ivar(id, id *, ptrdiff_t)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy, CGM.PtrDiffTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy, CGM.PtrDiffTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_ivar");
   }
@@ -386,7 +386,7 @@ public:
   /// GcAssignStrongCastFn -- LLVM objc_assign_strongCast function.
   llvm::FunctionCallee getGcAssignStrongCastFn() {
     // id objc_assign_strongCast(id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_strongCast");
   }
@@ -517,7 +517,7 @@ public:
 
   /// ExceptionTryEnterFn - LLVM objc_exception_try_enter function.
   llvm::FunctionCallee getExceptionTryEnterFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.VoidTy, params, false),
         "objc_exception_try_enter");
@@ -525,7 +525,7 @@ public:
 
   /// ExceptionTryExitFn - LLVM objc_exception_try_exit function.
   llvm::FunctionCallee getExceptionTryExitFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.VoidTy, params, false),
         "objc_exception_try_exit");
@@ -533,7 +533,7 @@ public:
 
   /// ExceptionExtractFn - LLVM objc_exception_extract function.
   llvm::FunctionCallee getExceptionExtractFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ObjectPtrTy, params, false),
         "objc_exception_extract");
@@ -550,7 +550,7 @@ public:
   /// SetJmpFn - LLVM _setjmp function.
   llvm::FunctionCallee getSetJmpFn() {
     // This is specifically the prototype for x86.
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -730,6 +730,7 @@ enum class ObjCLabelType {
   MethodVarName,
   MethodVarType,
   PropertyName,
+  LayoutBitMap,
 };
 
 class CGObjCCommonMac : public CodeGen::CGObjCRuntime {
@@ -847,9 +848,19 @@ protected:
   /// this translation unit.
   llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *> MethodDefinitions;
 
+  /// Information about a direct method definition
+  struct DirectMethodInfo {
+    llvm::Function
+        *Implementation;   // The true implementation (where body is emitted)
+    llvm::Function *Thunk; // The nil-check thunk (nullptr if not generated)
+
+    DirectMethodInfo(llvm::Function *Impl, llvm::Function *Thunk = nullptr)
+        : Implementation(Impl), Thunk(Thunk) {}
+  };
+
   /// DirectMethodDefinitions - map of direct methods which have been defined in
   /// this translation unit.
-  llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
+  llvm::DenseMap<const ObjCMethodDecl *, DirectMethodInfo>
       DirectMethodDefinitions;
 
   /// PropertyNames - uniqued method variable names.
@@ -1053,8 +1064,19 @@ public:
   GenerateMethod(const ObjCMethodDecl *OMD,
                  const ObjCContainerDecl *CD = nullptr) override;
 
-  llvm::Function *GenerateDirectMethod(const ObjCMethodDecl *OMD,
-                                       const ObjCContainerDecl *CD);
+  DirectMethodInfo &GenerateDirectMethod(const ObjCMethodDecl *OMD,
+                                         const ObjCContainerDecl *CD);
+
+  /// Generate class realization code: [self self]
+  /// This is used for class methods to ensure the class is initialized.
+  /// Returns the realized class object.
+  llvm::Value *GenerateClassRealization(CodeGenFunction &CGF,
+                                        llvm::Value *classObject,
+                                        const ObjCInterfaceDecl *OID);
+
+  void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override;
 
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
@@ -1927,7 +1949,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   // If we don't already have it, construct the type for a constant NSString.
   if (!NSConstantStringType) {
     NSConstantStringType =
-        llvm::StructType::create({CGM.UnqualPtrTy, CGM.Int8PtrTy, CGM.IntTy},
+        llvm::StructType::create({CGM.DefaultPtrTy, CGM.Int8PtrTy, CGM.IntTy},
                                  "struct.__builtin_NSString");
   }
 
@@ -2080,7 +2102,8 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   llvm::FunctionCallee Fn = nullptr;
   if (Method && Method->isDirectMethod()) {
     assert(!IsSuper);
-    Fn = GenerateDirectMethod(Method, Method->getClassInterface());
+    auto Info = GenerateDirectMethod(Method, Method->getClassInterface());
+    Fn = Info.Implementation;
     // Direct methods will synthesize the proper `_cmd` internally,
     // so just don't bother with setting the `_cmd` argument.
     RequiresSelValue = false;
@@ -2495,7 +2518,7 @@ void CGObjCCommonMac::BuildRCBlockVarRecordLayout(const RecordType *RT,
                                                   CharUnits BytePos,
                                                   bool &HasUnion,
                                                   bool ByrefLayout) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   SmallVector<const FieldDecl *, 16> Fields(RD->fields());
   llvm::Type *Ty = CGM.getTypes().ConvertType(QualType(RT, 0));
   const llvm::StructLayout *RecLayout =
@@ -3847,7 +3870,9 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   llvm::Function *Method;
 
   if (OMD->isDirectMethod()) {
-    Method = GenerateDirectMethod(OMD, CD);
+    // Returns DirectMethodInfo& containing both Implementation and Thunk
+    DirectMethodInfo &Info = GenerateDirectMethod(OMD, CD);
+    Method = Info.Implementation; // Extract implementation for body generation
   } else {
     auto Name = getSymbolNameForMethod(OMD);
 
@@ -3863,7 +3888,7 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   return Method;
 }
 
-llvm::Function *
+CGObjCCommonMac::DirectMethodInfo &
 CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
                                       const ObjCContainerDecl *CD) {
   auto *COMD = OMD->getCanonicalDecl();
@@ -3882,7 +3907,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     // a new one that has the proper type below.
     if (!OMD->getBody() || COMD->getReturnType() == OMD->getReturnType())
       return I->second;
-    OldFn = I->second;
+    OldFn = I->second.Implementation;
   }
 
   CodeGenTypes &Types = CGM.getTypes();
@@ -3896,20 +3921,42 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     OldFn->replaceAllUsesWith(Fn);
     OldFn->eraseFromParent();
 
-    // Replace the cached function in the map.
-    I->second = Fn;
+    // Replace the cached implementation in the map.
+    I->second.Implementation = Fn;
+
   } else {
     auto Name = getSymbolNameForMethod(OMD, /*include category*/ false);
 
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                                 Name, &CGM.getModule());
-    DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
+    auto [It, inserted] = DirectMethodDefinitions.insert(
+        std::make_pair(COMD, DirectMethodInfo(Fn)));
+    I = It;
   }
 
-  return Fn;
+  // Return reference to DirectMethodInfo (contains both Implementation and
+  // Thunk)
+  return I->second;
 }
 
-void CGObjCCommonMac::GenerateDirectMethodPrologue(
+llvm::Value *
+CGObjCCommonMac::GenerateClassRealization(CodeGenFunction &CGF,
+                                          llvm::Value *classObject,
+                                          const ObjCInterfaceDecl *OID) {
+  // Generate: self = [self self]
+  // This forces class lazy initialization
+  Selector SelfSel = GetNullarySelector("self", CGM.getContext());
+  auto ResultType = CGF.getContext().getObjCIdType();
+  CallArgList Args;
+
+  RValue result = GeneratePossiblySpecializedMessageSend(
+      CGF, ReturnValueSlot(), ResultType, SelfSel, classObject, Args, OID,
+      nullptr, true);
+
+  return result.getScalarVal();
+}
+
+void CGObjCCommonMac::GenerateDirectMethodsPreconditionCheck(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   auto &Builder = CGF.Builder;
@@ -3926,18 +3973,11 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   // if (self == nil) {
   //     return (ReturnType){ };
   // }
-  //
-  // _cmd = @selector(...)
-  // ...
 
   if (OMD->isClassMethod()) {
     const ObjCInterfaceDecl *OID = cast<ObjCInterfaceDecl>(CD);
     assert(OID &&
            "GenerateDirectMethod() should be called with the Class Interface");
-    Selector SelfSel = GetNullarySelector("self", CGM.getContext());
-    auto ResultType = CGF.getContext().getObjCIdType();
-    RValue result;
-    CallArgList Args;
 
     // TODO: If this method is inlined, the caller might know that `self` is
     // already initialized; for example, it might be an ordinary Objective-C
@@ -3946,10 +3986,10 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     //
     // We should find a way to eliminate this unnecessary initialization in such
     // cases in LLVM.
-    result = GeneratePossiblySpecializedMessageSend(
-        CGF, ReturnValueSlot(), ResultType, SelfSel, selfValue, Args, OID,
-        nullptr, true);
-    Builder.CreateStore(result.getScalarVal(), selfAddr);
+
+    // Perform class realization using the helper function
+    llvm::Value *realizedClass = GenerateClassRealization(CGF, selfValue, OID);
+    Builder.CreateStore(realizedClass, selfAddr);
 
     // Nullable `Class` expressions cannot be messaged with a direct method
     // so the only reason why the receive can be null would be because
@@ -3957,6 +3997,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     ReceiverCanBeNull = isWeakLinkedClass(OID);
   }
 
+  // Generate nil check
   if (ReceiverCanBeNull) {
     llvm::BasicBlock *SelfIsNilBlock =
         CGF.createBasicBlock("objc_direct_method.self_is_nil");
@@ -3986,8 +4027,17 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CGF.EmitBlock(ContBlock);
     Builder.SetInsertPoint(ContBlock);
   }
+}
 
-  // only synthesize _cmd if it's referenced
+void CGObjCCommonMac::GenerateDirectMethodPrologue(
+    CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+    const ObjCContainerDecl *CD) {
+  // Generate precondition checks (class realization + nil check) if needed
+  GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
+
+  auto &Builder = CGF.Builder;
+  // Only synthesize _cmd if it's referenced
+  // This is the actual "prologue" work that always happens
   if (OMD->getCmdDecl()->isUsed()) {
     // `_cmd` is not a parameter to direct methods, so storage must be
     // explicitly declared for it.
@@ -4048,6 +4098,9 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
   case ObjCLabelType::PropertyName:
     Label = "OBJC_PROP_NAME_ATTR_";
     break;
+  case ObjCLabelType::LayoutBitMap:
+    Label = "OBJC_LAYOUT_BITMAP_";
+    break;
   }
 
   bool NonFragile = ForceNonFragileABI || isNonFragileABI();
@@ -4069,6 +4122,9 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
   case ObjCLabelType::PropertyName:
     Section = NonFragile ? "__TEXT,__objc_methname,cstring_literals"
                          : "__TEXT,__cstring,cstring_literals";
+    break;
+  case ObjCLabelType::LayoutBitMap:
+    Section = "__TEXT,__cstring,cstring_literals";
     break;
   }
 
@@ -5184,7 +5240,7 @@ CGObjCCommonMac::GetIvarLayoutName(IdentifierInfo *Ident,
 }
 
 void IvarLayoutBuilder::visitRecord(const RecordType *RT, CharUnits offset) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
 
   // If this is a union, remember that we had one, because it might mess
   // up the ordering of layout entries.
@@ -5367,7 +5423,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
 
     // Ignore scan requests that don't start at an even multiple of the
     // word size.  We can't encode them.
-    if ((beginOfScan % WordSize) != 0)
+    if (!beginOfScan.isMultipleOf(WordSize))
       continue;
 
     // Ignore scan requests that start before the instance start.
@@ -5421,7 +5477,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
   buffer.push_back(0);
 
   auto *Entry = CGObjC.CreateCStringLiteral(
-      reinterpret_cast<char *>(buffer.data()), ObjCLabelType::ClassName);
+      reinterpret_cast<char *>(buffer.data()), ObjCLabelType::LayoutBitMap);
   return getConstantGEP(CGM.getLLVMContext(), Entry, 0, 0);
 }
 
@@ -5959,7 +6015,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(
       Int8PtrTy, PropertyListPtrTy);
 
   // ImpnfABITy - LLVM for id (*)(id, SEL, ...)
-  ImpnfABITy = CGM.UnqualPtrTy;
+  ImpnfABITy = CGM.DefaultPtrTy;
 
   // struct _class_t {
   //   struct _class_t *isa;
@@ -6380,7 +6436,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
           CGM.getModule(), ObjCTypes.ImpnfABITy, false,
           llvm::GlobalValue::ExternalLinkage, nullptr, "_objc_empty_vtable");
     else
-      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.UnqualPtrTy);
+      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.DefaultPtrTy);
   }
 
   // FIXME: Is this correct (that meta class size is never computed)?

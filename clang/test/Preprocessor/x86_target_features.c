@@ -526,18 +526,6 @@
 
 // NO-AMX-COMPLEX-NOT: #define __AMX_COMPLEX__ 1
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-transpose -x c \
-// RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-TRANSPOSE %s
-
-// AMX-TRANSPOSE: #define __AMX_TRANSPOSE__ 1
-
-// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-amx-transpose -x c \
-// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TRANSPOSE %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-transpose -mno-amx-tile \
-// RUN: -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TRANSPOSE %s
-
-// NO-AMX-TRANSPOSE-NOT: #define __AMX_TRANSPOSE__ 1
-
 // RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-avx512 -x c \
 // RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-AVX512 %s
 

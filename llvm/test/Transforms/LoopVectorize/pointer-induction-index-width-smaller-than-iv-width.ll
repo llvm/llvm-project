@@ -15,13 +15,20 @@ define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %s
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[SRC]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 8, i32 16, i32 24>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[DOTCAST]], 8
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 8
+; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], 16
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[OFFSET_IDX]], 24
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP17]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP2]]
@@ -29,14 +36,10 @@ define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %s
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    store ptr [[TMP5]], ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 2
 ; CHECK-NEXT:    store ptr [[TMP13]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 3
 ; CHECK-NEXT:    store ptr [[TMP14]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 32
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

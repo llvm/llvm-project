@@ -22,6 +22,7 @@
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include <cstdint>
 #include <numeric>
 
@@ -110,9 +111,7 @@ static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
                      {TypeAttr::get(memrefType.getElementType())}));
 
   IndexType indexType = builder.getIndexType();
-  int64_t numElements = std::accumulate(memrefType.getShape().begin(),
-                                        memrefType.getShape().end(), int64_t{1},
-                                        std::multiplies<int64_t>());
+  int64_t numElements = llvm::product_of(memrefType.getShape());
   emitc::ConstantOp numElementsValue = emitc::ConstantOp::create(
       builder, loc, indexType, builder.getIndexAttr(numElements));
 
@@ -123,7 +122,7 @@ static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
   return totalSizeBytes.getResult();
 }
 
-static emitc::ApplyOp
+static emitc::AddressOfOp
 createPointerFromEmitcArray(Location loc, OpBuilder &builder,
                             TypedValue<emitc::ArrayType> arrayValue) {
 
@@ -134,9 +133,9 @@ createPointerFromEmitcArray(Location loc, OpBuilder &builder,
   llvm::SmallVector<mlir::Value> indices(arrayType.getRank(), zeroIndex);
   emitc::SubscriptOp subPtr =
       emitc::SubscriptOp::create(builder, loc, arrayValue, ValueRange(indices));
-  emitc::ApplyOp ptr = emitc::ApplyOp::create(
+  emitc::AddressOfOp ptr = emitc::AddressOfOp::create(
       builder, loc, emitc::PointerType::get(arrayType.getElementType()),
-      builder.getStringAttr("&"), subPtr);
+      subPtr);
 
   return ptr;
 }
@@ -226,12 +225,12 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
 
     auto srcArrayValue =
         cast<TypedValue<emitc::ArrayType>>(operands.getSource());
-    emitc::ApplyOp srcPtr =
+    emitc::AddressOfOp srcPtr =
         createPointerFromEmitcArray(loc, rewriter, srcArrayValue);
 
     auto targetArrayValue =
         cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
-    emitc::ApplyOp targetPtr =
+    emitc::AddressOfOp targetPtr =
         createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
 
     emitc::CallOpaqueOp memCpyCall = emitc::CallOpaqueOp::create(
@@ -320,8 +319,8 @@ struct ConvertGetGlobal final
       emitc::GetGlobalOp globalLValue = emitc::GetGlobalOp::create(
           rewriter, op.getLoc(), lvalueType, operands.getNameAttr());
       emitc::PointerType pointerType = emitc::PointerType::get(resultTy);
-      rewriter.replaceOpWithNewOp<emitc::ApplyOp>(
-          op, pointerType, rewriter.getStringAttr("&"), globalLValue);
+      rewriter.replaceOpWithNewOp<emitc::AddressOfOp>(op, pointerType,
+                                                      globalLValue);
       return success();
     }
     rewriter.replaceOpWithNewOp<emitc::GetGlobalOp>(op, resultTy,

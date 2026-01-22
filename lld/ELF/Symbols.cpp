@@ -35,7 +35,7 @@ template <typename T> struct AssertSymbol {
                 "SymbolUnion not aligned enough");
 };
 
-LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
+[[maybe_unused]] static inline void assertSymbols() {
   AssertSymbol<Defined>();
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -17,10 +17,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.timeb.11.32.53.242.347.557.599.851.998.1208.2069.2153.2174.2237.2258.2279.2321 = type { i64, i16, i16, i16 }
 %struct.pix_pos.13.34.55.244.349.559.601.853.1000.1210.2071.2155.2176.2239.2260.2281.2323 = type { i32, i32, i32, i32, i32, i32 }
 
-declare void @getLuma4x4Neighbour() #0
+declare void @getLuma4x4Neighbour()
 
 ; Function Attrs: nounwind uwtable
-define void @readCBP_CABAC(ptr %img) #1 {
+define void @readCBP_CABAC(ptr %img) {
 entry:
   %block_a = alloca %struct.pix_pos.13.34.55.244.349.559.601.853.1000.1210.2071.2155.2176.2239.2260.2281.2323, align 4
   %mb_data = getelementptr inbounds %struct.img_par.12.33.54.243.348.558.600.852.999.1209.2070.2154.2175.2238.2259.2280.2322, ptr %img, i64 0, i32 39
@@ -45,7 +45,7 @@ if.end.35:                                        ; preds = %if.else.19, %if.els
   br i1 %cmp36, label %if.then.38, label %if.else.66
 
 if.then.38:                                       ; preds = %if.end.35
-  call void @getLuma4x4Neighbour() #2
+  call void @getLuma4x4Neighbour()
   %0 = load i32, ptr null, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end.72, label %if.then.42
@@ -72,7 +72,3 @@ for.inc.84:                                       ; preds = %if.end.72
 for.end.86:                                       ; preds = %for.inc.84
   ret void
 }
-
-attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="haswell" "target-features"="+aes,+avx,+avx2,+bmi,+bmi2,+cmov,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+hle,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+rtm,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+xsave,+xsaveopt,-adx,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512pf,-avx512vl,-fma4,-prfchw,-rdseed,-sha,-sse4a,-tbm,-xop,-xsavec,-xsaves" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="haswell" "target-features"="+aes,+avx,+avx2,+bmi,+bmi2,+cmov,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+hle,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+rtm,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+xsave,+xsaveopt,-adx,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512pf,-avx512vl,-fma4,-prfchw,-rdseed,-sha,-sse4a,-tbm,-xop,-xsavec,-xsaves" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }

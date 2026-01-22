@@ -216,6 +216,12 @@ public:
   /// always be false.
   LLVM_ABI bool matches(OptSpecifier ID) const;
 
+  LLVM_ABI bool isRegisteredSC(StringRef SubCommand) const {
+    assert(Info && "Must have a valid info!");
+    assert(Owner && "Must have a valid owner!");
+    return Owner->isValidForSubCommand(Info, SubCommand);
+  }
+
   /// Potentially accept the current argument, returning a new Arg instance,
   /// or 0 if the option does not accept this argument (or the argument is
   /// missing values).

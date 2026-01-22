@@ -463,6 +463,13 @@ public:
                                              Stmt *AStmt,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc);
+
+  /// Called on well-formed '#pragma omp fuse' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
+                                      Stmt *AStmt, SourceLocation StartLoc,
+                                      SourceLocation EndLoc);
+
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult
@@ -921,6 +928,12 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+
+  /// Called on well-form 'looprange' clause after parsing its arguments.
+  OMPClause *
+  ActOnOpenMPLoopRangeClause(Expr *First, Expr *Count, SourceLocation StartLoc,
+                             SourceLocation LParenLoc, SourceLocation FirstLoc,
+                             SourceLocation CountLoc, SourceLocation EndLoc);
   /// Called on well-formed 'ordered' clause.
   OMPClause *
   ActOnOpenMPOrderedClause(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -962,6 +975,17 @@ public:
                            OpenMPDefaultClauseVariableCategory VCKind,
                            SourceLocation VCKindLoc, SourceLocation StartLoc,
                            SourceLocation LParenLoc, SourceLocation EndLoc);
+  /// Called on well-formed 'threadset' clause.
+  OMPClause *ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
+                                        SourceLocation KindLoc,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc);
+  /// Called on well-formed 'transparent' clause.
+  OMPClause *ActOnOpenMPTransparentClause(Expr *Transparent,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,
@@ -1009,7 +1033,8 @@ public:
                                SourceLocation EndLoc);
   /// Called on well-formed 'nowait' clause.
   OMPClause *ActOnOpenMPNowaitClause(SourceLocation StartLoc,
-                                     SourceLocation EndLoc);
+                                     SourceLocation EndLoc,
+                                     SourceLocation LParenLoc, Expr *Condition);
   /// Called on well-formed 'untied' clause.
   OMPClause *ActOnOpenMPUntiedClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);
@@ -1151,9 +1176,11 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
-                            ///< lastprivate clause.
+    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend,
+                            ///< lastprivate, or use_device_ptr clause.
     int OriginalSharingModifier = 0; // Default is shared
+    int NeedDevicePtrModifier = 0;
+    SourceLocation NeedDevicePtrModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
@@ -1329,7 +1356,7 @@ public:
   OMPClause *
   ActOnOpenMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                       ArrayRef<SourceLocation> MotionModifiersLoc,
-                      CXXScopeSpec &MapperIdScopeSpec,
+                      Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                       DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                       ArrayRef<Expr *> UnresolvedMappers = {});
@@ -1337,13 +1364,15 @@ public:
   OMPClause *
   ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                         ArrayRef<SourceLocation> MotionModifiersLoc,
-                        CXXScopeSpec &MapperIdScopeSpec,
+                        Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                         DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                         ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                         ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'use_device_ptr' clause.
-  OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
-                                           const OMPVarListLocTy &Locs);
+  OMPClause *ActOnOpenMPUseDevicePtrClause(
+      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc);
   /// Called on well-formed 'use_device_addr' clause.
   OMPClause *ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
                                             const OMPVarListLocTy &Locs);
@@ -1390,6 +1419,13 @@ public:
   OMPClause *ActOnOpenMPXDynCGroupMemClause(Expr *Size, SourceLocation StartLoc,
                                             SourceLocation LParenLoc,
                                             SourceLocation EndLoc);
+
+  /// Called on a well-formed 'dyn_groupprivate' clause.
+  OMPClause *ActOnOpenMPDynGroupprivateClause(
+      OpenMPDynGroupprivateClauseModifier M1,
+      OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
+      SourceLocation M2Loc, SourceLocation EndLoc);
 
   /// Called on well-formed 'doacross' clause.
   OMPClause *
@@ -1443,6 +1479,13 @@ public:
 
   void setOpenMPDeviceNumID(StringRef ID);
 
+  enum class OpenMPImpexType {
+    OMP_NotImpex = 0,
+    OMP_Impex = 1,
+    OMP_Import = 2,
+    OMP_Export = 3
+  };
+
 private:
   void *VarDataSharingAttributesStack;
 
@@ -1485,7 +1528,81 @@ private:
   bool checkTransformableLoopNest(
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits);
+      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
+
+  /// Holds the result of the analysis of a (possibly canonical) loop.
+  struct LoopAnalysis {
+    /// The analyzed loop or loop transformation.
+    Stmt *AStmt = nullptr;
+    /// Loop analyses results.
+    OMPLoopBasedDirective::HelperExprs HelperExprs;
+    /// The for-statement of the loop. TheForStmt equals AStmt only when the
+    /// latter is a canonical loop (i.e. not a loop transformation).
+    Stmt *TheForStmt = nullptr;
+    /// Initialization statements before transformations.
+    SmallVector<Stmt *> OriginalInits;
+    /// Initialization statements required after transformation of this loop.
+    SmallVector<Stmt *> TransformsPreInits;
+
+    explicit LoopAnalysis(Stmt *S) : AStmt(S) {}
+
+    bool isRegularLoop() const { return isRegularLoop(AStmt); }
+    bool isLoopTransformation() const { return isLoopTransformation(AStmt); }
+
+    // Convenience functions used when building LoopSequenceAnalysis.
+    static bool isRegularLoop(Stmt *S) {
+      return isa<ForStmt, CXXForRangeStmt>(S);
+    }
+    static bool isLoopTransformation(Stmt *S) {
+      return isa<OMPLoopTransformationDirective>(S);
+    }
+  };
+
+  /// Holds the result of the analysis of a (possibly canonical) loop sequence.
+  struct LoopSequenceAnalysis {
+    /// Number of top level canonical loops.
+    unsigned LoopSeqSize = 0;
+    /// For each loop results of the analysis.
+    SmallVector<LoopAnalysis, 2> Loops;
+    /// Additional code required before entering the transformed loop sequence.
+    SmallVector<Stmt *> LoopSequencePreInits;
+
+    // Convenience function used when building the LoopSequenceAnalysis.
+    static bool isLoopSequenceDerivation(Stmt *S) {
+      return LoopAnalysis::isRegularLoop(S) ||
+             LoopAnalysis::isLoopTransformation(S);
+    }
+  };
+
+  /// The main recursive process of `checkTransformableLoopSequence` that
+  /// performs grammatical parsing of a canonical loop sequence. It extracts
+  /// key information, such as the number of top-level loops, loop statements,
+  /// helper expressions, and other relevant loop-related data, all in a single
+  /// execution to avoid redundant traversals. This analysis flattens inner
+  /// Loop Sequences
+  ///
+  /// \param LoopSeqStmt    The AST of the original statement.
+  /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
+  /// \param Context
+  /// \param Kind           The loop transformation directive kind.
+  /// \return Whether the original statement is both syntactically and
+  /// semantically correct according to OpenMP 6.0 canonical loop
+  /// sequence definition.
+  bool analyzeLoopSequence(Stmt *LoopSeqStmt, LoopSequenceAnalysis &SeqAnalysis,
+                           ASTContext &Context, OpenMPDirectiveKind Kind);
+
+  /// Validates and checks whether a loop sequence can be transformed according
+  /// to the given directive, providing necessary setup and initialization
+  /// (Driver function) before recursion using `analyzeLoopSequence`.
+  ///
+  /// \param Kind           The loop transformation directive kind.
+  /// \param AStmt          The AST of the original statement
+  /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
+  /// \param Context
+  /// \return Whether there was an absence of errors or not
+  bool checkTransformableLoopSequence(OpenMPDirectiveKind Kind, Stmt *AStmt,
+                                      LoopSequenceAnalysis &SeqAnalysis,
+                                      ASTContext &Context);
 
   /// Helper to keep information about the current `omp begin/end declare
   /// variant` nesting.

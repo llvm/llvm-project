@@ -1,4 +1,5 @@
 # RUN: ulimit -n 50
+# RUN: ulimit -f 5
 # RUN: %{python} %S/print_limits.py
 # Fail the test so that we can assert on the output.
 # RUN: not echo return

@@ -42,7 +42,7 @@ GLOBALS-DAG:   Variable{{.*}}, name = "g_Const"
 GLOBALS-SAME:  scope = ??? (2)
 GLOBALS:     Function
 
-FUNC-F:      Function{{.*}}, {{mangled = \?f@@YAHHH@Z|demangled = f}}
+FUNC-F:      Function{{.*}}, mangled = ?f@@YAHHH@Z
 FUNC-F-NEXT:   Block
 FUNC-F-NEXT:     Variable{{.*}}, name = "var_arg1"
 FUNC-F-SAME:                     scope = parameter
@@ -64,14 +64,14 @@ FUNC-MAIN-SAME:                     scope = local
 FUNC-MAIN-NEXT:     Variable{{.*}}, name = "a"
 FUNC-MAIN-SAME:                     scope = local
 
-FUNC-CONSTRUCTOR:      Function{{.*}}, {{(de)?}}mangled = {{.*}}Class::Class{{.*}}
+FUNC-CONSTRUCTOR:      Function{{.*}}, {{mangled = \?\?0Class@@QEAA@H@Z|demangled = .*Class::Class}}
 FUNC-CONSTRUCTOR-NEXT:   Block
 FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "this"
 FUNC-CONSTRUCTOR-SAME:                     scope = parameter
 FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "a"
 FUNC-CONSTRUCTOR-SAME:                     scope = parameter
 
-FUNC-MEMBER:      Function{{.*}}, {{(de)?}}mangled = {{.*}}{{(Class::)?}}Func{{.*}}
+FUNC-MEMBER:      Function{{.*}}, {{mangled = \?Func@Class@@QEAAXXZ|demangled = .*Class::Func}}
 FUNC-MEMBER-NEXT:   Block
 FUNC-MEMBER-NEXT:     Variable{{.*}}, name = "this"
 FUNC-MEMBER-SAME:                     scope = parameter

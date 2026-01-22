@@ -64,16 +64,14 @@ SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
 
 TemplateTemplateParmDecl *
 SubstTemplateTemplateParmPackStorage::getParameterPack() const {
-  return cast<TemplateTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())
-          ->asArray()[Bits.Index]);
+  return cast<TemplateTemplateParmDecl>(std::get<0>(
+      getReplacedTemplateParameter(getAssociatedDecl(), Bits.Index)));
 }
 
 TemplateTemplateParmDecl *
 SubstTemplateTemplateParmStorage::getParameter() const {
-  return cast<TemplateTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())
-          ->asArray()[Bits.Index]);
+  return cast<TemplateTemplateParmDecl>(std::get<0>(
+      getReplacedTemplateParameter(getAssociatedDecl(), Bits.Index)));
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {

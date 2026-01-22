@@ -10,26 +10,36 @@ output = os.path.join(clang_www_dir, 'cxx_dr_status.html')
 dr_test_dir = os.path.join(clang_www_dir, '../test/CXX/drs')
 
 class DR:
-  def __init__(self, section, issue, url, status, title):
-    self.section, self.issue, self.url, self.status, self.title = \
-        section, issue, url, status, title
+  def __init__(self, *, section_number, section_name, section_link, number, url, status, liaison, title):
+    self.section_number, self.section_name, self.section_link, self.number, self.url, self.status, self.liaison, self.title = \
+        section_number, section_name, section_link, number, url, status, liaison, title
   def __repr__(self):
-    return '%s (%s): %s' % (self.issue, self.status, self.title)
+    return '%s (%s): %s' % (self.number, self.status, self.title)
 
-def parse(dr):
-  try:
-    section, issue_link, status, liaison, title = [
-        col.split('>', 1)[1].split('</TD>')[0]
-        for col in dr.split('</TR>', 1)[0].split('<TD')[1:]
-    ]
-  except Exception as ex:
-    print(f"Parse error: {ex}\n{dr}", file=sys.stderr)
-    sys.exit(1)
-  _, url, issue = issue_link.split('"', 2)
-  url = url.strip()
-  issue = int(issue.split('>', 1)[1].split('<', 1)[0])
-  title = title.replace('<issue_title>', '').replace('</issue_title>', '').replace('\r\n', '\n').strip()
-  return DR(section, issue, url, status, title)
+  pattern = re.compile('''
+<TD.*>(?P<section_number>.*) <A href="(?P<section_link>.*)">(?P<section_name>.*)</A>
+</TD>
+<TD.*><A HREF="(?P<url>.*)">(?P<number>.*)</A></TD>
+<TD.*>(?P<status>.*)</TD>
+<TD.*>(?P<liaison>.*)</TD>
+<TD.*><issue_title>(?P<title>[\\w\\W]*)</issue_title></TD>
+</TR>''')
+
+  @classmethod
+  def parse_from_html(cls, html_string):
+    match = cls.pattern.match(html_string)
+    if match is None:
+        print(f"Parse error: {html_string}", file=sys.stderr)
+        exit(1)
+    return cls(
+      section_number=match.group('section_number'),
+      section_name=match.group('section_name'),
+      section_link=match.group('section_link'),
+      number=int(match.group('number')),
+      url=match.group('url'),
+      status=match.group('status'),
+      liaison=match.group('liaison'),
+      title=match.group('title').replace('\n', ' ').strip())
 
 def collect_tests():
   status_re = re.compile(r'\bcwg([0-9]+): (.*)')
@@ -68,8 +78,8 @@ def get_issues(path):
      print(ex, file=sys.stderr)
      sys.exit(1)
 
-  return sorted((parse(dr) for dr in buffer.split('<TR>')[2:]),
-                key = lambda dr: dr.issue)
+  return sorted((DR.parse_from_html(dr) for dr in buffer.split('<TR>')[2:]),
+                key = lambda dr: dr.number)
 
 
 issue_list_path  = None
@@ -127,9 +137,10 @@ out_html.append('''\
 
 <p>This page tracks which C++ defect reports are implemented within Clang.</p>
 
-<table width="689" border="1" cellspacing="0">
+<table width="892" border="1" cellspacing="0">
   <tr>
     <th>Number</th>
+    <th>Section</th>
     <th>Status</th>
     <th>Issue title</th>
     <th>Available in Clang?</th>
@@ -149,7 +160,7 @@ def availability(issue):
     unresolved_status = unresolved_status_match.group(1)
     proposed_resolution_match = re.search(r' (open|drafting|review|tentatively ready|ready) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
     if proposed_resolution_match is None:
-      raise AvailabilityError('error: issue {}: \'{}\' status should be followed by a paper number (P1234R5) or proposed resolution in YYYY-MM-DD format'.format(dr.issue, unresolved_status))
+      raise AvailabilityError('error: issue {}: \'{}\' status should be followed by a paper number (P1234R5) or proposed resolution in YYYY-MM-DD format'.format(dr.number, unresolved_status))
     proposed_resolution = proposed_resolution_match.group(2)
     status = status[:-1-len(proposed_resolution)]
     status = status[:-1-len(unresolved_status)]
@@ -236,7 +247,7 @@ def availability(issue):
     avail = 'Duplicate of <a href="#%s">%s</a>' % (dup, dup)
     _, avail_style, _, _ = availability(dup)
   else:
-    raise AvailabilityError('error: unknown status %s for issue %s' % (status, dr.issue))
+    raise AvailabilityError('error: unknown status %s for issue %s' % (status, dr.number))
   return (avail + avail_suffix, avail_style, unresolved_status, details)
 
 count = {}
@@ -254,7 +265,7 @@ for dr in drs:
   elif dr.status in ('open', 'drafting', 'review', 'tentatively ready', 'ready'):
     row_style = ' class="open"'
     try:
-      avail, avail_style, unresolved_status, details = availability(dr.issue)
+      avail, avail_style, unresolved_status, details = availability(dr.number)
     except AvailabilityError as e:
       availability_error_occurred = True
       print(e.args[0])
@@ -267,12 +278,12 @@ for dr in drs:
       if unresolved_status != dr.status:
         availability_error_occurred = True
         print("error: issue %s is marked '%s', which differs from CWG index status '%s'" \
-             % (dr.issue, unresolved_status, dr.status))
+             % (dr.number, unresolved_status, dr.status))
         continue
   else:
     row_style = ''
     try:
-      avail, avail_style, unresolved_status, details = availability(dr.issue)
+      avail, avail_style, unresolved_status, details = availability(dr.number)
     except AvailabilityError as e:
       availability_error_occurred = True
       print(e.args[0])
@@ -281,7 +292,7 @@ for dr in drs:
     if unresolved_status:
       availability_error_occurred = True
       print("error: issue %s is marked '%s', even though it is resolved in CWG index" \
-           % (dr.issue, unresolved_status))
+           % (dr.number, unresolved_status))
       continue
 
   if not avail.startswith('Sup') and not avail.startswith('Dup'):
@@ -297,8 +308,9 @@ for dr in drs:
         {details}
       </details>'''
   out_html.append(f'''
-  <tr{row_style} id="{dr.issue}">
-    <td><a href="https://cplusplus.github.io/CWG/issues/{dr.issue}.html">{dr.issue}</a></td>
+  <tr{row_style} id="{dr.number}">
+    <td><a href="https://cplusplus.github.io/CWG/issues/{dr.number}.html">{dr.number}</a></td>
+    <td>[<a href="{dr.section_link}">{dr.section_name}</a>]</td>
     <td>{dr.status}</td>
     <td>{dr.title}</td>
     <td{avail_style} align="center">{avail}</td>

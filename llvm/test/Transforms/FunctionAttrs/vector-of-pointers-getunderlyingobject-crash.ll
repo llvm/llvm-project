@@ -4,7 +4,7 @@
 define double @getUnderlyingObject_vector_ptr(<4 x i1> %arg0, <4 x i1> %arg1) {
 ; CHECK-LABEL: define double @getUnderlyingObject_vector_ptr(
 ; CHECK-SAME: <4 x i1> [[ARG0:%.*]], <4 x i1> [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[GATHER:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> getelementptr inbounds (i8, <4 x ptr> zeroinitializer, <4 x i64> splat (i64 8)), i32 0, <4 x i1> [[ARG0]], <4 x double> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 getelementptr inbounds (i8, <4 x ptr> zeroinitializer, <4 x i64> splat (i64 8)), <4 x i1> [[ARG0]], <4 x double> zeroinitializer)
 ; CHECK-NEXT:    [[REDUCE_FADD:%.*]] = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[GATHER]])
 ; CHECK-NEXT:    ret double [[REDUCE_FADD]]
 ;

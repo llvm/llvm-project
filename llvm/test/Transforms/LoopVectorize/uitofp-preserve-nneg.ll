@@ -18,23 +18,11 @@ define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[RESULT:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX1]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER4:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = uitofp nneg i32 [[TMP4]] to float
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[CONV]], [[Y]]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = zext nneg i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[RESULT]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP4]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 256
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_EXIT]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret void
 ;

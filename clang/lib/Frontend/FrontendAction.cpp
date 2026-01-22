@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
@@ -23,7 +24,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -629,7 +629,7 @@ static std::error_code collectModuleHeaderIncludes(
       // Check whether this entry has an extension typically associated with
       // headers.
       if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
-               .Cases(".h", ".H", ".hh", ".hpp", true)
+               .Cases({".h", ".H", ".hh", ".hpp"}, true)
                .Default(false))
         continue;
 
@@ -836,7 +836,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we fail, reset state since the client will not end up calling the
   // matching EndSourceFile(). All paths that return true should release this.
-  auto FailureCleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FailureCleanup([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
     CI.setASTConsumer(nullptr);
@@ -879,7 +879,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     // file, otherwise the CompilerInstance will happily destroy them.
     CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
     CI.setFileManager(AST->getFileManagerPtr());
-    CI.createSourceManager(CI.getFileManager());
+    CI.createSourceManager();
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
 
     // Preload all the module files loaded transitively by the AST unit. Also
@@ -945,6 +945,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getVirtualFileSystemPtr());
     CI.setFileManager(AST->getFileManagerPtr());
     CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
@@ -971,13 +972,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Set up the file system, file and source managers, if needed.
   if (!CI.hasVirtualFileSystem())
     CI.createVirtualFileSystem();
-  if (!CI.hasFileManager()) {
-    if (!CI.createFileManager()) {
-      return false;
-    }
-  }
+  if (!CI.hasFileManager())
+    CI.createFileManager();
   if (!CI.hasSourceManager()) {
-    CI.createSourceManager(CI.getFileManager());
+    CI.createSourceManager();
     if (CI.getDiagnosticOpts().getFormat() == DiagnosticOptions::SARIF) {
       static_cast<SARIFDiagnosticPrinter *>(&CI.getDiagnosticClient())
           ->setSarifWriter(
@@ -1041,7 +1039,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
-                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
+                SpecificModuleCachePath,
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
@@ -1318,7 +1317,7 @@ llvm::Error FrontendAction::Execute() {
   if (CI.shouldBuildGlobalModuleIndex() && CI.hasFileManager() &&
       CI.hasPreprocessor()) {
     StringRef Cache =
-        CI.getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
+        CI.getPreprocessor().getHeaderSearchInfo().getSpecificModuleCachePath();
     if (!Cache.empty()) {
       if (llvm::Error Err = GlobalModuleIndex::writeIndex(
               CI.getFileManager(), CI.getPCHContainerReader(), Cache)) {

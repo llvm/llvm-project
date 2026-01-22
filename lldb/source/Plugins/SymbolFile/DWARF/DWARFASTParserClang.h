@@ -47,6 +47,11 @@ public:
 
   ~DWARFASTParserClang() override;
 
+  // LLVM RTTI support
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
+
   // DWARFASTParser interface.
   lldb::TypeSP
   ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
@@ -263,10 +268,6 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
-  static bool classof(const DWARFASTParser *Parser) {
-    return Parser->GetKind() == Kind::DWARFASTParserClang;
-  }
 
 private:
   struct FieldInfo {
@@ -574,6 +575,7 @@ struct ParsedDWARFTypeAttributes {
   lldb_private::plugin::dwarf::DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
   std::optional<uint64_t> byte_size;
+  std::optional<uint64_t> data_bit_size;
   std::optional<uint64_t> alignment;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;

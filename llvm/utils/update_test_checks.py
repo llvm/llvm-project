@@ -197,6 +197,7 @@ def update_test(ti: common.TestInfo):
                     global_tbaa_records_for_prefixes,
                     is_filtered=builder.is_filtered(),
                     original_check_lines=original_check_lines.get(func, {}),
+                    check_inst_comments=args.check_inst_comments,
                 ),
             )
         )
@@ -230,6 +231,7 @@ def update_test(ti: common.TestInfo):
                         global_tbaa_records_for_prefixes,
                         is_filtered=builder.is_filtered(),
                         original_check_lines=original_check_lines.get(func_name, {}),
+                        check_inst_comments=args.check_inst_comments,
                     )
                 )
                 is_in_function_start = False
@@ -260,9 +262,17 @@ def update_test(ti: common.TestInfo):
                 skip_same_checks=dropped_previous_line,
             ):
                 # This input line of the function body will go as-is into the output.
-                # Except make leading whitespace uniform: 2 spaces. 4 for debug records.
+                # Except make leading whitespace uniform: 2 spaces. 4 for debug records/switch cases.
                 indent = (
-                    "  " if not common.IS_DEBUG_RECORD_RE.match(input_line) else "    "
+                    " " * 4
+                    if (
+                        common.IS_DEBUG_RECORD_RE.match(input_line)
+                        or (
+                            ti.args.version > 6
+                            and common.IS_SWITCH_CASE_RE.match(input_line)
+                        )
+                    )
+                    else " " * 2
                 )
                 input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(indent, input_line)
                 output_lines.append(input_line)
@@ -353,6 +363,12 @@ def main():
         default="default",
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
+    )
+    parser.add_argument(
+        "--check-inst-comments",
+        action="store_true",
+        default=False,
+        help="Check the generated comments describing instructions (e.g., -print-predicate-info/print<memssa>)",
     )
     parser.add_argument(
         "--reset-variable-names",

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/mem_fence/clc_mem_fence.h>
-#include <clc/opencl/explicit_fence/explicit_memory_fence.h>
 #include <clc/opencl/synchronization/utils.h>
 
 _CLC_DEF _CLC_OVERLOAD void mem_fence(cl_mem_fence_flags flags) {

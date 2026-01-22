@@ -221,3 +221,34 @@ namespace ForwardDeclaredMember {
     };
   };
 }
+
+#if __cplusplus >= 201103L
+namespace GH167217 {
+
+struct NonMovable {
+  NonMovable(const NonMovable&) = delete;
+};
+
+struct Wrapper {
+  struct {
+    NonMovable v;
+  };
+};
+
+static_assert(!__is_constructible(Wrapper, const Wrapper&), "");
+static_assert(!__is_constructible(Wrapper, Wrapper), "");
+
+template<class T>
+struct WrapperTmpl {
+  struct {
+    NonMovable v;
+  };
+};
+
+using Wrapper2 = WrapperTmpl<NonMovable>;
+
+static_assert(!__is_constructible(Wrapper2, const Wrapper2&), "");
+static_assert(!__is_constructible(Wrapper2, Wrapper2), "");
+
+}
+#endif
