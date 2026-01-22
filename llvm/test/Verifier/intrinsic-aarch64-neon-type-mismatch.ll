@@ -1,4 +1,4 @@
-; RUN: opt -S < %s 2>&1 | FileCheck %s
+; RUN: not opt -S < %s 2>&1 | FileCheck %s
 
 ; Test that AArch64 NEON intrinsics with incorrect vector element types
 ; are rejected with a proper error instead of causing assertion failures.
