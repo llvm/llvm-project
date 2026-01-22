@@ -663,7 +663,7 @@ define float @fdiv_constant_numerator_fmul(float %x) {
 
 define float @fdiv_constant_numerator_fmul_mixed(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul_mixed(
-; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc nnan float 1.200000e+07, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv reassoc float 2.0e+3, %x
@@ -1401,7 +1401,7 @@ entry:
 define <3 x float> @mul_mixed_zero_nnan_ninf_vec(<3 x float> nofpclass(inf nan) %a) {
 ; CHECK-LABEL: @mul_mixed_zero_nnan_ninf_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = fmul <3 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00, float poison>
+; CHECK-NEXT:    [[RET:%.*]] = fmul nnan ninf <3 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00, float poison>
 ; CHECK-NEXT:    ret <3 x float> [[RET]]
 ;
 entry:

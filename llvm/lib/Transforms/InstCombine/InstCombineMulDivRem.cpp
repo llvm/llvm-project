@@ -1000,19 +1000,8 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (match(Op1, m_SpecificFP(-1.0)))
     return UnaryOperator::CreateFNegFMF(Op0, &I);
 
-  // With no-nans/no-infs:
-  // X * 0.0 --> copysign(0.0, X)
-  // X * -0.0 --> copysign(0.0, -X)
-  const APFloat *FPC;
-  if (match(Op1, m_APFloatAllowPoison(FPC)) && FPC->isZero() &&
-      ((I.hasNoInfs() && isKnownNeverNaN(Op0, SQ.getWithInstruction(&I))) ||
-       isKnownNeverNaN(&I, SQ.getWithInstruction(&I)))) {
-    if (FPC->isNegative())
-      Op0 = Builder.CreateFNegFMF(Op0, &I);
-    CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
-                                                 {I.getType()}, {Op1, Op0}, &I);
-    return replaceInstUsesWith(I, CopySign);
-  }
+  if (SimplifyDemandedInstructionFPClass(I))
+    return &I;
 
   // -X * C --> X * -C
   Value *X, *Y;

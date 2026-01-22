@@ -49,7 +49,7 @@ define float @test2(i1 zeroext %arg) #0 {
 
 define float @test3(i1 zeroext %arg) #0 {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[ARG:%.*]], float 5.000000e+00, float 5.400000e+01
+; CHECK-NEXT:    [[TMP2:%.*]] = select nnan i1 [[ARG:%.*]], float 5.000000e+00, float 5.400000e+01
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
@@ -66,7 +66,7 @@ declare void @use_float(float)
 define float @test4(i1 zeroext %arg) #0 {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP:%.*]] = select i1 [[ARG:%.*]], float 5.000000e+00, float 6.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[ARG]], float 5.000000e+00, float 5.400000e+01
+; CHECK-NEXT:    [[TMP2:%.*]] = select nnan i1 [[ARG]], float 5.000000e+00, float 5.400000e+01
 ; CHECK-NEXT:    call void @use_float(float [[TMP]])
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
