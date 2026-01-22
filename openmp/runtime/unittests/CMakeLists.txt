@@ -6,27 +6,8 @@ if(WIN32 OR STUBS_LIBRARY)
   return()
 endif()
 
-function(standalone_add_gtest success_var)
-  # LLVM_RUNTIMES_BUILD avoids gtest to link to LLVMSupport, which might be
-  # incompable with the platform libomp is compiled for.
-  set(LLVM_RUNTIMES_BUILD 1)
-  if (EXISTS "${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h")
-    set(${success_var} TRUE PARENT_SCOPE)
-    add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
-  else()
-    set(${success_var} FALSE PARENT_SCOPE)
-    message(WARNING "OpenMP unit tests will be skipped as LLVM third-party unittest directory is not available at: ${LLVM_THIRD_PARTY_DIR}/unittest")
-    return()
-  endif()
-endfunction()
-
 # Make the targets default_gtest and default_gtest_main available.
-if (OPENMP_STANDALONE_BUILD)
-  standalone_add_gtest(STANDALONE_UNIT_TESTS)
-  if(NOT STANDALONE_UNIT_TESTS)
-    return()
-  endif()
-elseif ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
   # llvm_gtest should already exist
 else ()
   # LLVM_ENABLE_RUNTIMES build
