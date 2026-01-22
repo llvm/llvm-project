@@ -75,14 +75,12 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
     ret = ax == ay ? __clc_copysign(0.0f, x) : ret;
     q7 = ax == ay ? qsgn : q7;
   }
-  bool __oclc_finite_only_opt = false;
-  if (!__oclc_finite_only_opt) {
-    ret = y == 0.0f ? __clc_nan(0) : ret;
-    q7 = y == 0.0f ? 0 : q7;
-    bool c = !__clc_isnan(y) && __clc_isfinite(x);
-    ret = c ? ret : __clc_nan(0);
-    q7 = c ? q7 : 0;
-  }
+
+  ret = y == 0.0f ? __clc_nan(0) : ret;
+  q7 = y == 0.0f ? 0 : q7;
+  bool c = !__clc_isnan(y) && __clc_isfinite(x);
+  ret = c ? ret : __clc_nan(0);
+  q7 = c ? q7 : 0;
 
   *quo = q7;
   return ret;
