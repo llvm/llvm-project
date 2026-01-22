@@ -35,6 +35,11 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   if ((A = Args.getLastArg(options::OPT_mcpu_EQ))) {
     StringRef Mcpu = A->getValue();
     CPU = Mcpu.split("+").first.lower();
+  } else if (const Arg *MArch = Args.getLastArg(options::OPT_march_EQ)) {
+    // Otherwise, use -march=native if specified.
+    StringRef MArchValue = MArch->getValue();
+    if (MArchValue.split("+").first.equals_insensitive("native"))
+      CPU = "native";
   }
 
   CPU = llvm::AArch64::resolveCPUAlias(CPU);
