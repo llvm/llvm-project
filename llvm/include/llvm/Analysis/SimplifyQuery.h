@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_SIMPLIFYQUERY_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/Semilattice.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Compiler.h"
 
@@ -76,6 +77,7 @@ struct SimplifyQuery {
   const Instruction *CxtI = nullptr;
   const DomConditionCache *DC = nullptr;
   const CondContext *CC = nullptr;
+  const Semilattice *CacheLat = nullptr;
 
   // Wrapper to query additional information for instructions like metadata or
   // keywords like nsw, which provides conservative results if those cannot
@@ -89,6 +91,9 @@ struct SimplifyQuery {
 
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
       : DL(DL), CxtI(CXTI) {}
+
+  SimplifyQuery(const DataLayout &DL, const Semilattice *CacheLat)
+      : DL(DL), CacheLat(CacheLat) {}
 
   SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
                 const DominatorTree *DT = nullptr,
