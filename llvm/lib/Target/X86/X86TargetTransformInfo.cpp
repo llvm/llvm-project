@@ -4802,7 +4802,6 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
-
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
                                                unsigned Index, const Value *Op0,
@@ -4814,6 +4813,11 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i64,     7 }
    };
 
+  if (auto *VT = dyn_cast<VectorType>(Val)) {
+      if (VT->isScalableTy()) {
+          return TTI::TCC_Expensive;
+      }
+  }
   assert(Val->isVectorTy() && "This must be a vector type");
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
