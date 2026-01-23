@@ -60,10 +60,13 @@ static llvm::cl::opt<std::string> ProjectRoot{
         "Defaults to current directory if not specified."),
 };
 
-// Action factory that merges all symbols into a single index (for YAML/RIFF).
-class IndexActionFactory : public tooling::FrontendActionFactory {
+// Base class for index action factories that provides common symbol collection.
+class IndexActionFactoryBase : public tooling::FrontendActionFactory {
 public:
-  IndexActionFactory(IndexFileIn &Result) : Result(Result) {}
+  IndexActionFactoryBase()
+      : Symbols(std::make_unique<SymbolSlab::Builder>()),
+        Refs(std::make_unique<RefSlab::Builder>()),
+        Relations(std::make_unique<RelationSlab::Builder>()) {}
 
   std::unique_ptr<FrontendAction> create() override {
     SymbolCollector::Options Opts;
@@ -84,10 +87,10 @@ public:
           // Merge as we go.
           std::lock_guard<std::mutex> Lock(SymbolsMu);
           for (const auto &Sym : S) {
-            if (const auto *Existing = Symbols.find(Sym.ID))
-              Symbols.insert(mergeSymbol(*Existing, Sym));
+            if (const auto *Existing = Symbols->find(Sym.ID))
+              Symbols->insert(mergeSymbol(*Existing, Sym));
             else
-              Symbols.insert(Sym);
+              Symbols->insert(Sym);
           }
         },
         [&](RefSlab S) {
@@ -95,13 +98,13 @@ public:
           for (const auto &Sym : S) {
             // Deduplication happens during insertion.
             for (const auto &Ref : Sym.second)
-              Refs.insert(Sym.first, Ref);
+              Refs->insert(Sym.first, Ref);
           }
         },
         [&](RelationSlab S) {
           std::lock_guard<std::mutex> Lock(RelsMu);
           for (const auto &R : S) {
-            Relations.insert(R);
+            Relations->insert(R);
           }
         },
         /*IncludeGraphCallback=*/nullptr);
@@ -116,72 +119,39 @@ public:
         std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
   }
 
+protected:
+  std::mutex FilesMu;
+  llvm::StringSet<> Files;
+  std::mutex SymbolsMu;
+  std::unique_ptr<SymbolSlab::Builder> Symbols;
+  std::mutex RefsMu;
+  std::unique_ptr<RefSlab::Builder> Refs;
+  std::mutex RelsMu;
+  std::unique_ptr<RelationSlab::Builder> Relations;
+};
+
+// Action factory that merges all symbols into a single index (for YAML/RIFF).
+class IndexActionFactory : public IndexActionFactoryBase {
+public:
+  IndexActionFactory(IndexFileIn &Result) : Result(Result) {}
+
   // Awkward: we write the result in the destructor, because the executor
   // takes ownership so it's the easiest way to get our data back out.
   ~IndexActionFactory() {
-    Result.Symbols = std::move(Symbols).build();
-    Result.Refs = std::move(Refs).build();
-    Result.Relations = std::move(Relations).build();
+    Result.Symbols = std::move(*Symbols).build();
+    Result.Refs = std::move(*Refs).build();
+    Result.Relations = std::move(*Relations).build();
   }
 
 private:
   IndexFileIn &Result;
-  std::mutex FilesMu;
-  llvm::StringSet<> Files;
-  std::mutex SymbolsMu;
-  SymbolSlab::Builder Symbols;
-  std::mutex RefsMu;
-  RefSlab::Builder Refs;
-  std::mutex RelsMu;
-  RelationSlab::Builder Relations;
 };
 
 // Action factory that writes per-file shards (for sharded index format).
-class ShardedIndexActionFactory : public tooling::FrontendActionFactory {
+class ShardedIndexActionFactory : public IndexActionFactoryBase {
 public:
   ShardedIndexActionFactory(BackgroundIndexStorage &Storage)
-      : Storage(Storage), Symbols(std::make_unique<SymbolSlab::Builder>()),
-        Refs(std::make_unique<RefSlab::Builder>()),
-        Relations(std::make_unique<RelationSlab::Builder>()) {}
-
-  std::unique_ptr<FrontendAction> create() override {
-    SymbolCollector::Options Opts;
-    Opts.CountReferences = true;
-    Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
-      const auto F = SM.getFileEntryRefForID(FID);
-      if (!F)
-        return false;
-      auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
-      if (!AbsPath)
-        return false;
-      std::lock_guard<std::mutex> Lock(FilesMu);
-      return Files.insert(*AbsPath).second;
-    };
-    return createStaticIndexingAction(
-        Opts,
-        [&](SymbolSlab S) {
-          std::lock_guard<std::mutex> Lock(SymbolsMu);
-          for (const auto &Sym : S) {
-            if (const auto *Existing = Symbols->find(Sym.ID))
-              Symbols->insert(mergeSymbol(*Existing, Sym));
-            else
-              Symbols->insert(Sym);
-          }
-        },
-        [&](RefSlab S) {
-          std::lock_guard<std::mutex> Lock(RefsMu);
-          for (const auto &Sym : S) {
-            for (const auto &Ref : Sym.second)
-              Refs->insert(Sym.first, Ref);
-          }
-        },
-        [&](RelationSlab S) {
-          std::lock_guard<std::mutex> Lock(RelsMu);
-          for (const auto &R : S)
-            Relations->insert(R);
-        },
-        /*IncludeGraphCallback=*/nullptr);
-  }
+      : Storage(Storage) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *Files,
@@ -236,15 +206,7 @@ private:
   }
 
   BackgroundIndexStorage &Storage;
-  std::mutex FilesMu;
-  llvm::StringSet<> Files;
   unsigned ShardsWritten = 0;
-  std::mutex SymbolsMu;
-  std::unique_ptr<SymbolSlab::Builder> Symbols;
-  std::mutex RefsMu;
-  std::unique_ptr<RefSlab::Builder> Refs;
-  std::mutex RelsMu;
-  std::unique_ptr<RelationSlab::Builder> Relations;
 };
 
 } // namespace
