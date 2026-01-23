@@ -21,7 +21,7 @@ class AproposFormattingTest(PExpectTest):
 
         self.child.expect_exact("The following commands may relate to 'disass':")
         self.child.expect_exact(
-            "  disassemble                   -- Disassemble specified instructions in the current target."
+            "  disassemble -- Disassemble specified instructions in the current target."
         )
 
         self.child.expect_exact(

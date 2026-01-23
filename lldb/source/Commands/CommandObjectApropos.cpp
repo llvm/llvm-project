@@ -33,27 +33,13 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   if (argc == 1) {
     auto search_word = args[0].ref();
     if (!search_word.empty()) {
-      // Find all commands matching the search word and compute the max length.
+      ReturnStatus return_status = eReturnStatusSuccessFinishNoResult;
+
+      // Find all commands matching the search word.
       StringList commands_found;
       StringList commands_help;
-
       m_interpreter.FindCommandsForApropos(
           search_word, commands_found, commands_help, true, true, true, true);
-
-      size_t max_len = commands_found.GetMaxStringLength();
-
-      // Find all the properties matching the search word and compute the max
-      // length.
-      std::vector<const Property *> properties;
-      const size_t num_properties =
-          GetDebugger().Apropos(search_word, properties);
-      for (const Property *prop : properties) {
-        StreamString qualified_name;
-        prop->DumpQualifiedName(qualified_name);
-        max_len = std::max(max_len, qualified_name.GetString().size());
-      }
-
-      ReturnStatus return_status = eReturnStatusSuccessFinishNoResult;
 
       if (commands_found.GetSize() == 0) {
         result.AppendMessageWithFormat("No commands found pertaining to '%s'. "
@@ -63,11 +49,24 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       } else {
         result.AppendMessageWithFormat(
             "The following commands may relate to '%s':\n", args[0].c_str());
+        const size_t commands_max_len = commands_found.GetMaxStringLength();
         for (size_t i = 0; i < commands_found.GetSize(); ++i)
           m_interpreter.OutputFormattedHelpText(
               result.GetOutputStream(), commands_found.GetStringAtIndex(i),
-              "--", commands_help.GetStringAtIndex(i), max_len);
+              "--", commands_help.GetStringAtIndex(i), commands_max_len);
         return_status = eReturnStatusSuccessFinishResult;
+      }
+
+      // Find all the properties matching the search word.
+      size_t properties_max_len = 0;
+      std::vector<const Property *> properties;
+      const size_t num_properties =
+          GetDebugger().Apropos(search_word, properties);
+      for (const Property *prop : properties) {
+        StreamString qualified_name;
+        prop->DumpQualifiedName(qualified_name);
+        properties_max_len =
+            std::max(properties_max_len, qualified_name.GetString().size());
       }
 
       if (num_properties == 0) {
@@ -84,9 +83,9 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
 
         const bool dump_qualified_name = true;
         for (size_t i = 0; i < num_properties; ++i)
-          properties[i]->DumpDescription(m_interpreter,
-                                         result.GetOutputStream(), max_len,
-                                         dump_qualified_name);
+          properties[i]->DumpDescription(
+              m_interpreter, result.GetOutputStream(), properties_max_len,
+              dump_qualified_name);
         return_status = eReturnStatusSuccessFinishResult;
       }
 
