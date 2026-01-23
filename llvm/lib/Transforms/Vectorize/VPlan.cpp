@@ -52,6 +52,10 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -1692,17 +1696,33 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  if (!OrigAverageTripCount)
-    return;
-  // Calculate number of iterations in unrolled loop.
-  unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-  // Calculate number of iterations for remainder loop.
-  unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
-
+  unsigned AverageVectorTripCount = 0;
+  unsigned RemainderAverageTripCount = 0;
+  auto EC = VectorLoop->getLoopPreheader()->getParent()->getEntryCount();
+  auto IsProfiled = EC && EC->getCount();
+  if (!OrigAverageTripCount) {
+    if (!IsProfiled)
+      return;
+    auto &SE = *PSE.getSE();
+    AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
+    if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
+      return;
+    if (Plan.getScalarPreheader()->hasPredecessors())
+      RemainderAverageTripCount =
+          SE.getSmallConstantTripCount(OrigLoop) % EstimatedVFxUF;
+    // Setting to 1 should be sufficient to generate the correct branch weights.
+    OrigLoopInvocationWeight = 1;
+  } else {
+    // Calculate number of iterations in unrolled loop.
+    AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+  }
   if (HeaderVPBB) {
     setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
                               OrigLoopInvocationWeight);
   }
+
   if (Plan.getScalarPreheader()->hasPredecessors()) {
     setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
                               OrigLoopInvocationWeight);
