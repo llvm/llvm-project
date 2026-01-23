@@ -79,9 +79,9 @@ static size_t GetPartialTokenCodeUnits(StringRef line, size_t cursor_pos) {
 
   const size_t byte_offset = (idx == StringRef::npos) ? 0 : idx + 1;
   const StringRef byte_token = line.substr(byte_offset);
-  llvm::SmallVector<UTF16, 20> utf16_token;
+  SmallVector<UTF16, 20> utf16_token;
 
-  if (llvm::convertUTF8ToUTF16String(byte_token, utf16_token))
+  if (convertUTF8ToUTF16String(byte_token, utf16_token))
     return utf16_token.size();
   return byte_token.size(); // fallback to back to byte offset.
 }

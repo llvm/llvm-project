@@ -31,7 +31,7 @@ class CompletionItem:
 
 
 @dataclass(frozen=True)
-class TestCase:
+class Scenario:
     input: str
     expected: set[CompletionItem]
     not_expected: Optional[set[CompletionItem]] = None
@@ -68,23 +68,20 @@ str1_completion = CompletionItem(
 # templates like vector.
 @skipIf(compiler="clang", compiler_version=["<", "16.0"])
 class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
-    def verify_completions(self, case: TestCase):
+    def verify_completions(self, case: Scenario):
         completions = {
             CompletionItem(**comp)
             for comp in self.dap_server.get_completions(case.input)
         }
 
         # handle expected completions
-        expected_completions = case.expected
-        for exp_comp in expected_completions:
-            # with self.subTest(f"Expected completion : {exp_comp}"):
+        for exp_comp in case.expected:
             self.assertIn(
                 exp_comp, completions, f"\nCompletion for input: {case.input}"
             )
 
         # unexpected completions
-        not_expected_label = case.not_expected or set()
-        for not_exp_comp in not_expected_label:
+        for not_exp_comp in case.not_expected or set():
             with self.subTest(f"Not expected completion : {not_exp_comp}"):
                 self.assertNotIn(not_exp_comp, completions)
 
@@ -100,7 +97,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             ],
         )
 
-    def check_non_ascii_completion(self, alias_cmd: str):
+    def verify_non_ascii_completion(self, alias_cmd: str):
         """Creates an command alias for the `next` command and
         verify if it has completion for the command and its help.
 
@@ -120,10 +117,10 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # complete the command
-        self.verify_completions(TestCase(input=part, expected={expected_item}))
+        self.verify_completions(Scenario(input=part, expected={expected_item}))
         # complete the help
         self.verify_completions(
-            TestCase(input=f"help {part}", expected={expected_item})
+            Scenario(input=f"help {part}", expected={expected_item})
         )
 
         # remove the alias
@@ -146,7 +143,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Provides completion for top-level commands
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="se",
                 expected={
                     session_completion.clone(length=2),
@@ -156,7 +153,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
         # Provides completions for sub-commands
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="memory ",
                 expected={
                     CompletionItem(
@@ -173,18 +170,18 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Provides completions for parameter values of commands
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="`log enable  ", expected={CompletionItem(label="gdb-remote")}
             )
         )
 
         # Also works if the escape prefix is used
         self.verify_completions(
-            TestCase(input="`mem", expected={memory_completion.clone(length=3)})
+            Scenario(input="`mem", expected={memory_completion.clone(length=3)})
         )
 
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="`",
                 expected={session_completion, settings_completion, memory_completion},
             )
@@ -192,7 +189,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Completes an incomplete quoted token
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input='setting "se',
                 expected={
                     CompletionItem(
@@ -206,12 +203,12 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Completes an incomplete quoted token
         self.verify_completions(
-            TestCase(input="'mem", expected={memory_completion.clone(length=4)})
+            Scenario(input="'mem", expected={memory_completion.clone(length=4)})
         )
 
         # Completes expressions with quotes inside
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input='expr " "; typed',
                 expected={CompletionItem(label="typedef", length=5)},
             )
@@ -219,7 +216,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Provides completions for commands, but not variables
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="var",
                 expected={command_var_completion},
                 not_expected={variable_var_completion},
@@ -228,18 +225,18 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Completes partial completion
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="plugin list ar",
                 expected={CompletionItem(label="architecture", length=2)},
             )
         )
 
         # Complete custom command with non ascii character.
-        self.check_non_ascii_completion("n€xt")  # 2 bytes £
-        self.check_non_ascii_completion("n£xt")  # 3 bytes €
-        self.check_non_ascii_completion("n💩xt")  # 4 bytes 💩
-        self.check_non_ascii_completion("√∂xt")  # start with non ascii
-        self.check_non_ascii_completion("one_seç")  # ends with non ascii
+        self.verify_non_ascii_completion("n€xt")  # 2 bytes £
+        self.verify_non_ascii_completion("n£xt")  # 3 bytes €
+        self.verify_non_ascii_completion("n💩xt")  # 4 bytes 💩
+        self.verify_non_ascii_completion("√∂xt")  # start with non ascii
+        self.verify_non_ascii_completion("one_seç")  # ends with non ascii
 
     def test_variable_completions(self):
         """
@@ -255,7 +252,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Provides completions for varibles, but not command
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="var",
                 expected={variable_var_completion},
                 not_expected={command_var_completion},
@@ -264,7 +261,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # We stopped inside `fun`, so we shouldn't see variables from main
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="var",
                 expected={variable_var_completion},
                 not_expected={
@@ -276,7 +273,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # We should see global keywords but not variables inside main
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="str",
                 expected={CompletionItem(label="struct", length=3)},
                 not_expected={str1_completion.clone(length=3)},
@@ -288,7 +285,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         # We stopped in `main`, so we should see variables from main but
         # not from the other function
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="var",
                 expected={
                     variable_var1_completion.clone(length=3),
@@ -301,7 +298,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="str",
                 expected={
                     CompletionItem(label="struct", length=3),
@@ -317,14 +314,14 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Completion also works for more complex expressions
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="foo1.v",
                 expected={CompletionItem(label="foo1.var1", detail="int", length=6)},
             )
         )
 
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="foo1.my_bar_object.v",
                 expected={
                     CompletionItem(
@@ -335,14 +332,14 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="foo1.var1 + foo1.v",
                 expected={CompletionItem(label="foo1.var1", detail="int", length=6)},
             )
         )
 
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="foo1.var1 + v",
                 expected={CompletionItem(label="var1", detail="int &", length=1)},
             )
@@ -350,7 +347,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # should correctly handle spaces between objects and member operators
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="foo1 .v",
                 expected={CompletionItem(label=".var1", detail="int", length=2)},
                 not_expected={CompletionItem(label=".var2", detail="int", length=2)},
@@ -358,7 +355,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="foo1 . v",
                 expected={CompletionItem(label="var1", detail="int", length=1)},
                 not_expected={CompletionItem(label="var2", detail="int", length=1)},
@@ -367,7 +364,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Even in variable mode, we can still use the escape prefix
         self.verify_completions(
-            TestCase(input="`mem", expected={memory_completion.clone(length=3)})
+            Scenario(input="`mem", expected={memory_completion.clone(length=3)})
         )
 
     def test_auto_completions(self):
@@ -391,7 +388,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         # We are stopped inside `main`. Variables `var1` and `var2` are in scope.
         # Make sure, we offer all completions
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="va",
                 expected={
                     command_var_completion.clone(length=2),
@@ -403,7 +400,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # If we are using the escape prefix, only commands are suggested, but no variables
         self.verify_completions(
-            TestCase(
+            Scenario(
                 input="`va",
                 expected={
                     command_var_completion.clone(length=2),
