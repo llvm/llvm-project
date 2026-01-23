@@ -846,7 +846,7 @@ public:
         OS << "]";
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {";
-        if (auto * PBA = dyn_cast<PredicateBundleAssume>(PA)) {
+        if (auto *PBA = dyn_cast<PredicateBundleAssume>(PA)) {
           OS << " Attribute: " << Attribute::getNameFromAttrKind(PBA->AttrKind);
         } else {
           assert(isa<PredicateConditionAssume>(PA));

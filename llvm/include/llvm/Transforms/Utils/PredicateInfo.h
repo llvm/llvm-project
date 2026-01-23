@@ -67,7 +67,12 @@ class Value;
 class IntrinsicInst;
 class raw_ostream;
 
-enum PredicateType { PT_Branch, PT_ConditionAssume, PT_BundleAssume, PT_Switch };
+enum PredicateType {
+  PT_Branch,
+  PT_ConditionAssume,
+  PT_BundleAssume,
+  PT_Switch
+};
 
 /// Constraint for a predicate of the form "cmp Pred Op, OtherOp", where Op
 /// is the value the constraint applies to (the bitcast result).
