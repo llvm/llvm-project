@@ -232,7 +232,7 @@ void RISCVMachObjectWriter::recordRelocation(
       return;
     }
 
-    Target = MCValue::get(RealTarget.getAddSym(), nullptr /*SymB*/,
+    Target = MCValue::get(RealTarget.getAddSym(), /*SymB*/ nullptr,
                           RealTarget.getConstant(), RISCV::S_PCREL_LO);
 
     Log2Size = Log2_32(4);
@@ -277,8 +277,8 @@ void RISCVMachObjectWriter::recordRelocation(
       return;
     }
     emitRelocation(Writer, Fragment, FixupOffset, RelSymbol, Index,
-                   false /*IsPCRel*/, ~0U /*Log2Size*/,
-                   MachO::RISCV_RELOC_UNSIGNED /*Type*/);
+                   /*IsPCRel*/ false, /*Log2Size*/ ~0U,
+                   /*Type*/ MachO::RISCV_RELOC_UNSIGNED);
     return;
   }
 
@@ -325,11 +325,11 @@ void RISCVMachObjectWriter::recordRelocation(
             Fixup.getLoc()))
       return;
 
-    emitRelocation(Writer, Fragment, FixupOffset, A_Base /*RelSymbol*/, Index,
-                   IsPCRel, Log2Size, MachO::RISCV_RELOC_UNSIGNED /*Type*/);
+    emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ A_Base, Index,
+                   IsPCRel, Log2Size, /*Type*/ MachO::RISCV_RELOC_UNSIGNED);
     // struct relocation_info (8 bytes)
-    emitRelocation(Writer, Fragment, FixupOffset, B_Base /*RelSymbol*/, Index,
-                   IsPCRel, Log2Size, MachO::RISCV_RELOC_SUBTRACTOR /*Type*/);
+    emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ B_Base, Index,
+                   IsPCRel, Log2Size, /*Type*/ MachO::RISCV_RELOC_SUBTRACTOR);
     return;
   }
 
@@ -396,8 +396,8 @@ void RISCVMachObjectWriter::recordRelocation(
       FixedValue = Value;
       // struct relocation_info (8 bytes)
       emitRelocation(Writer, Fragment, FixupOffset, RelSymbol, Index,
-                     false /*IsPCRel*/, Log2Size,
-                     MachO::RISCV_RELOC_UNSIGNED /*Type*/);
+                     /*IsPCRel*/ false, Log2Size,
+                     /*Type*/ MachO::RISCV_RELOC_UNSIGNED);
       return;
     }
     // We have an addend offset that is encoded in the relocation
@@ -410,9 +410,9 @@ void RISCVMachObjectWriter::recordRelocation(
       emitRelocation(Writer, Fragment, FixupOffset, RelSymbol, Index, IsPCRel,
                      Log2Size, Type);
       // Now set up the Addend relocation.
-      emitRelocation(Writer, Fragment, FixupOffset, nullptr /*RelSymbol*/,
-                     Value & 0xffffff, false /*IsPCRel*/, 2 /*Log2Size*/,
-                     MachO::RISCV_RELOC_ADDEND /*Type*/);
+      emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ nullptr,
+                     Value & 0xffffff, /*IsPCRel*/ false, /*Log2Size*/ 2,
+                     /*Type*/ MachO::RISCV_RELOC_ADDEND);
       return;
     }
 
