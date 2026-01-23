@@ -201,8 +201,7 @@ static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
     for (uint64_t I = 0; I < NumElements; I++) {
       Value *InVal = CGF.Builder.CreateExtractElement(Op0, I);
       Value *Unpack = CGF.Builder.CreateIntrinsic(
-          UnpackType, Intrinsic::spv_unpackhalf2x16,
-          ArrayRef<Value *>{InVal});
+          UnpackType, Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{InVal});
       Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
       Result = CGF.Builder.CreateInsertElement(Result, Res, I);
     }
