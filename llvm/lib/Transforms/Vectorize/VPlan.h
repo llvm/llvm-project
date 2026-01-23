@@ -616,6 +616,7 @@ class VPIRFlags {
     GEPOp,
     FPMathOp,
     NonNegOp,
+    ReductionOp,
     Other
   };
 
@@ -665,6 +666,21 @@ private:
     CmpInst::Predicate Pred;
     FastMathFlagsTy FMFs;
   };
+  /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
+  struct ReductionFlagsTy {
+    // RecurKind has ~26 values, needs 5 bits but uses 6 bits to account for
+    // additional kinds.
+    unsigned char Kind : 6;
+    // TODO: Derive order/in-loop from plan and remove here.
+    unsigned char IsOrdered : 1;
+    unsigned char IsInLoop : 1;
+    FastMathFlagsTy FMFs;
+
+    ReductionFlagsTy(RecurKind Kind, bool IsOrdered, bool IsInLoop,
+                     FastMathFlags FMFs)
+        : Kind(static_cast<unsigned char>(Kind)), IsOrdered(IsOrdered),
+          IsInLoop(IsInLoop), FMFs(FMFs) {}
+  };
 
   OperationType OpType;
 
@@ -678,6 +694,7 @@ private:
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     FCmpFlagsTy FCmpFlags;
+    ReductionFlagsTy ReductionFlags;
     unsigned AllFlags;
   };
 
@@ -745,6 +762,10 @@ public:
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
+  VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs)
+      : OpType(OperationType::ReductionOp),
+        ReductionFlags(Kind, IsOrdered, IsInLoop, FMFs) {}
+
   void transferFlags(VPIRFlags &Other) {
     OpType = Other.OpType;
     AllFlags = Other.AllFlags;
@@ -778,6 +799,7 @@ public:
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp:
+    case OperationType::ReductionOp:
       getFMFsRef().NoNaNs = false;
       getFMFsRef().NoInfs = false;
       break;
@@ -825,6 +847,8 @@ public:
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
+    case OperationType::ReductionOp:
+      llvm_unreachable("reduction ops should not use applyFlags");
     case OperationType::Cmp:
     case OperationType::Other:
       break;
@@ -855,7 +879,8 @@ public:
 
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const {
-    return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp;
+    return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
+           OpType == OperationType::ReductionOp;
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlags() const;
@@ -897,13 +922,39 @@ public:
     return DisjointFlags.IsDisjoint;
   }
 
+  RecurKind getRecurKind() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return static_cast<RecurKind>(ReductionFlags.Kind);
+  }
+
+  bool isReductionOrdered() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return ReductionFlags.IsOrdered;
+  }
+
+  bool isReductionInLoop() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return ReductionFlags.IsInLoop;
+  }
+
 private:
-  /// Get a reference to the fast-math flags for FPMathOp or FCmp.
+  /// Get a reference to the fast-math flags for FPMathOp, FCmp or ReductionOp.
   FastMathFlagsTy &getFMFsRef() {
-    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+    if (OpType == OperationType::FCmp)
+      return FCmpFlags.FMFs;
+    if (OpType == OperationType::ReductionOp)
+      return ReductionFlags.FMFs;
+    return FMFs;
   }
   const FastMathFlagsTy &getFMFsRef() const {
-    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+    if (OpType == OperationType::FCmp)
+      return FCmpFlags.FMFs;
+    if (OpType == OperationType::ReductionOp)
+      return ReductionFlags.FMFs;
+    return FMFs;
   }
 
 public:
@@ -1079,7 +1130,6 @@ public:
     /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
     /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
-    ComputeFindIVResult,
     ComputeReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,
@@ -1137,6 +1187,11 @@ public:
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
+    /// Extracts the lane from the first operand corresponding to the last
+    /// active (non-zero) lane in the mask (second operand), or if no lanes
+    /// were active in the mask, returns the default value (third operand).
+    ExtractLastActive,
+
     /// Returns the value for vscale.
     VScale,
     OpsEnd = VScale,
@@ -2326,6 +2381,10 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3102,8 +3161,8 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
-    assert(SubConst && SubConst->getValue() == 0 &&
+    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+    assert(SubConst && SubConst->isZero() &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
 
@@ -3765,9 +3824,13 @@ protected:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their scalar values.
-class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
-                                                public VPUnrollPartAccessor<3> {
+/// producing their scalar values. Before unrolling by UF the recipe represents
+/// the VF*UF scalar values to be produced, or UF scalar values if only first
+/// lane is used, and has 3 operands: IV, step and VF. Unrolling adds one extra
+/// operand StartIndex to all unroll parts except part 0, as the recipe
+/// represents the VF scalar values (this number of values is taken from
+/// State.VF rather than from the VF operand) starting at IV + StartIndex.
+class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags {
   Instruction::BinaryOps InductionOpcode;
 
 public:
@@ -3797,10 +3860,6 @@ public:
         getDebugLoc());
   }
 
-  /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
-  /// this is only accurate after the VPlan has been unrolled.
-  bool isPart0() const { return getUnrollPart(*this) == 0; }
-
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
   /// Generate the scalarized versions of the phi node as needed by their users.
@@ -3814,6 +3873,16 @@ public:
   }
 
   VPValue *getStepValue() const { return getOperand(1); }
+
+  /// Return the number of scalars to produce per unroll part, used to compute
+  /// StartIndex during unrolling.
+  VPValue *getVFValue() const { return getOperand(2); }
+
+  /// Return the StartIndex, or null if known to be zero, valid only after
+  /// unrolling.
+  VPValue *getStartIndex() const {
+    return getNumOperands() == 4 ? getOperand(3) : nullptr;
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -4505,8 +4574,12 @@ public:
   VPIRValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPIRValue of a null Value");
     auto [It, Inserted] = LiveIns.try_emplace(V);
-    if (Inserted)
-      It->second = new VPIRValue(V);
+    if (Inserted) {
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        It->second = new VPConstantInt(CI);
+      else
+        It->second = new VPIRValue(V);
+    }
 
     assert(isa<VPIRValue>(It->second) &&
            "Only VPIRValues should be in mapping");

@@ -423,10 +423,11 @@ public:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
-    case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
-    case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
-    case LibFunc_tanh:         case LibFunc_tanhf:      case LibFunc_tanhl:
-    case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
+    case LibFunc_strnlen:      case LibFunc_strstr:     case LibFunc_memchr:
+    case LibFunc_mempcpy:      case LibFunc_tan:        case LibFunc_tanf:
+    case LibFunc_tanl:         case LibFunc_tanh:       case LibFunc_tanhf:
+    case LibFunc_tanhl:        case LibFunc_trunc:      case LibFunc_truncf:
+    case LibFunc_truncl:
       // clang-format on
       return true;
     }

@@ -3958,8 +3958,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       if (!ShouldBeCallOrBinInst)
         return false;
 
-      if (!IsFirstCallOrBinInst &&
-          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+      if (!IsFirstCallOrBinInst && any_of(PrevVecV, equal_to(nullptr)))
         return false;
 
       // For the first found call/bin op, the vector has to come from the
@@ -4006,8 +4005,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       if (!ShouldBeCallOrBinInst)
         return false;
 
-      if (!IsFirstCallOrBinInst &&
-          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+      if (!IsFirstCallOrBinInst && any_of(PrevVecV, equal_to(nullptr)))
         return false;
 
       if (BinOp != (IsFirstCallOrBinInst ? VecOpEE : PrevVecV[0]))
@@ -4047,8 +4045,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     } else if (auto *SVInst = dyn_cast<ShuffleVectorInst>(CI)) {
       // We shouldn't have any null values in the previous vectors,
       // is so, there was a mismatch in pattern.
-      if (ShouldBeCallOrBinInst ||
-          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+      if (ShouldBeCallOrBinInst || any_of(PrevVecV, equal_to(nullptr)))
         return false;
 
       if (SVInst != PrevVecV[1])

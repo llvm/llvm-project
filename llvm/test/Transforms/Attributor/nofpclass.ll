@@ -1856,7 +1856,7 @@ define i32 @fptosi(float nofpclass(inf nan) %arg) {
 
 define float @fptrunc(double noundef nofpclass(inf nan) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @fptrunc
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @fptrunc
 ; CHECK-SAME: (double noundef nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[CAST:%.*]] = fptrunc double [[ARG]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CAST]], [[CAST]]
@@ -3630,18 +3630,33 @@ define float @fadd_double_no_zero__output_only_is_dynamic(float noundef nofpclas
 }
 
 ; Implies return must be 0
-define float @assume_select_condition_not_nan(float %arg) {
+define float @assume_select_condition_not_nan(float noundef %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @assume_select_condition_not_nan
-; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNO]]) #[[ATTR22]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[UNO]], float 0.000000e+00, float [[ARG]]
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @assume_select_condition_not_nan
+; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR22]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ORD]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
-  %uno = fcmp ord float %arg, 0.0
+  %ord = fcmp ord float %arg, 0.0
+  call void @llvm.assume(i1 %ord)
+  %select = select i1 %ord, float 0.0, float %arg
+  ret float %select
+}
+
+define float @assume_select_condition_not_nan_commute(float noundef %arg) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; CHECK-LABEL: define noundef nofpclass(inf nzero sub norm) float @assume_select_condition_not_nan_commute
+; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19]] {
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNO]]) #[[ATTR22]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[UNO]], float [[ARG]], float 0.000000e+00
+; CHECK-NEXT:    ret float [[SELECT]]
+;
+  %uno = fcmp uno float %arg, 0.0
   call void @llvm.assume(i1 %uno)
-  %select = select i1 %uno, float 0.0, float %arg
+  %select = select i1 %uno, float %arg, float 0.0
   ret float %select
 }
 
@@ -3662,10 +3677,10 @@ define float @assume_load(ptr %ptr) {
 }
 
 ; FIXME: Why is this not working?
-define float @assume_returned_arg(float %arg) {
+define float @assume_returned_arg(float noundef %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define float @assume_returned_arg
-; CHECK-SAME: (float returned [[ARG:%.*]]) #[[ATTR19]] {
+; CHECK-LABEL: define noundef float @assume_returned_arg
+; CHECK-SAME: (float noundef returned [[ARG:%.*]]) #[[ATTR19]] {
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR22]]
 ; CHECK-NEXT:    ret float [[ARG]]
@@ -3719,6 +3734,62 @@ define float @fadd_double_no_zero_or_sub__output_only_is_ftpz(float noundef nofp
   ret float %add
 }
 
+define float @infer_return_from_load_nofpclass_md_f32_0(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(nan) float @infer_return_from_load_nofpclass_md_f32_0
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR]], align 4, !nofpclass [[META1:![0-9]+]]
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, ptr %ptr, !nofpclass !1
+  ret float %load
+}
+
+define float @infer_return_from_load_nofpclass_md_f32_1(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(pinf) float @infer_return_from_load_nofpclass_md_f32_1
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR]], align 4, !nofpclass [[META2:![0-9]+]]
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, ptr %ptr, !nofpclass !2
+  ret float %load
+}
+
+define <2 x float> @infer_return_from_load_nofpclass_md_v2f32(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(nan) <2 x float> @infer_return_from_load_nofpclass_md_v2f32
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x float>, ptr [[PTR]], align 8, !nofpclass [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[LOAD]]
+;
+  %load = load <2 x float>, ptr %ptr, !nofpclass !1
+  ret <2 x float> %load
+}
+
+; TODO: Misses this case
+define { float, float } @infer_return_from_load_nofpclass_md_struct(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define { float, float } @infer_return_from_load_nofpclass_md_struct
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(8) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load { float, float }, ptr [[PTR]], align 4, !nofpclass [[META1]]
+; CHECK-NEXT:    ret { float, float } [[LOAD]]
+;
+  %load = load { float, float }, ptr %ptr, !nofpclass !1
+  ret { float, float } %load
+}
+
+define [4 x float] @infer_return_from_load_nofpclass_md_array(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(nan) [4 x float] @infer_return_from_load_nofpclass_md_array
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(16) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load [4 x float], ptr [[PTR]], align 4, !nofpclass [[META1]]
+; CHECK-NEXT:    ret [4 x float] [[LOAD]]
+;
+  %load = load [4 x float], ptr %ptr, !nofpclass !1
+  ret [4 x float] %load
+}
+
 declare i64 @_Z13get_global_idj(i32 noundef)
 
 attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
@@ -3733,6 +3804,8 @@ attributes #8 = { "denormal-fp-math"="dynamic,ieee" }
 attributes #9 = { "denormal-fp-math"="ieee,dynamic" }
 
 !0 = !{}
+!1 = !{i32 3}
+!2 = !{i32 512}
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CGSCC-CI: {{.*}}

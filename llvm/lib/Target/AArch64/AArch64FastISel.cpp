@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -274,8 +275,10 @@ public:
   Register fastMaterializeFloatZero(const ConstantFP *CF) override;
 
   explicit AArch64FastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                           const TargetLibraryInfo *LibInfo,
+                           const LibcallLoweringInfo *libcallLowering)
+      : FastISel(FuncInfo, LibInfo, libcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<AArch64Subtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -3156,6 +3159,10 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       CLI.CB->getOperandBundle(LLVMContext::OB_kcfi))
     return false;
 
+  // Allow SelectionDAG isel to handle clang.arc.attachedcall operand bundle.
+  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB))
+    return false;
+
   // Allow SelectionDAG isel to handle tail calls.
   if (IsTailCall)
     return false;
@@ -3580,8 +3587,14 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
 
     CallLoweringInfo CLI;
     MCContext &Ctx = MF->getContext();
-    CLI.setCallee(DL, Ctx, TLI.getLibcallCallingConv(LC), II->getType(),
-                  TLI.getLibcallName(LC), std::move(Args));
+
+    RTLIB::LibcallImpl LCImpl = LibcallLowering->getLibcallImpl(LC);
+    if (LCImpl == RTLIB::Unsupported)
+      return false;
+
+    CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+    StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+    CLI.setCallee(DL, Ctx, CC, II->getType(), FuncName, std::move(Args));
     if (!lowerCallTo(CLI))
       return false;
     updateValueMap(II, CLI.ResultReg);
@@ -4851,17 +4864,10 @@ bool AArch64FastISel::selectFRem(const Instruction *I) {
   if (!isTypeLegal(I->getType(), RetVT))
     return false;
 
-  RTLIB::Libcall LC;
-  switch (RetVT.SimpleTy) {
-  default:
+  RTLIB::LibcallImpl LCImpl =
+      LibcallLowering->getLibcallImpl(RTLIB::getREM(RetVT));
+  if (LCImpl == RTLIB::Unsupported)
     return false;
-  case MVT::f32:
-    LC = RTLIB::REM_F32;
-    break;
-  case MVT::f64:
-    LC = RTLIB::REM_F64;
-    break;
-  }
 
   ArgListTy Args;
   Args.reserve(I->getNumOperands());
@@ -4872,8 +4878,10 @@ bool AArch64FastISel::selectFRem(const Instruction *I) {
 
   CallLoweringInfo CLI;
   MCContext &Ctx = MF->getContext();
-  CLI.setCallee(DL, Ctx, TLI.getLibcallCallingConv(LC), I->getType(),
-                TLI.getLibcallName(LC), std::move(Args));
+  CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+  StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+
+  CLI.setCallee(DL, Ctx, CC, I->getType(), FuncName, std::move(Args));
   if (!lowerCallTo(CLI))
     return false;
   updateValueMap(I, CLI.ResultReg);
@@ -5189,7 +5197,8 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
 }
 
 FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                        const TargetLibraryInfo *LibInfo) {
+                                  const TargetLibraryInfo *LibInfo,
+                                  const LibcallLoweringInfo *LibcallLowering) {
 
   SMEAttrs CallerAttrs =
       FuncInfo.MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
@@ -5198,5 +5207,5 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
       CallerAttrs.hasStreamingCompatibleInterface() ||
       CallerAttrs.hasAgnosticZAInterface())
     return nullptr;
-  return new AArch64FastISel(FuncInfo, LibInfo);
+  return new AArch64FastISel(FuncInfo, LibInfo, LibcallLowering);
 }

@@ -173,6 +173,16 @@ namespace llvm {
     Required = 2,
   };
 
+  enum class ControlFlowGuardMode {
+    // Don't enable Control Flow Guard.
+    Disabled = 0,
+    // Emit the Control Flow Guard tables in the binary, but don't emit any
+    // checks.
+    TableOnly = 1,
+    // Enable Control Flow Guard checks and emit the tables.
+    Enabled = 2,
+  };
+
   } // namespace llvm
 
 #endif

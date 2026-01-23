@@ -505,6 +505,9 @@ public:
                              bool ToBigInstrs = true) const;
   void translateInstrsForDup(MachineBasicBlock::instr_iterator MII,
                              bool ToBigInstrs) const;
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;

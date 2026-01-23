@@ -1924,8 +1924,11 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     if (MCSymbol *Sym =
             static_cast<MCSectionCOFF *>(Streamer.getCurrentSectionOnly())
                 ->getCOMDATSymbol())
-      if (Sym->isUndefined())
+      if (Sym->isUndefined()) {
+        // COMDAT symbol must be external to perform deduplication.
+        Streamer.emitSymbolAttribute(Sym, MCSA_Global);
         Streamer.emitLabel(Sym);
+      }
   });
 }
 
@@ -2540,7 +2543,7 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
 
   // For BSS kind, zero initialized data must be emitted to the .data section
   // because external linkage control sections that get mapped to the .bss
-  // section will be linked as tentative defintions, which is only appropriate
+  // section will be linked as tentative definitions, which is only appropriate
   // for SectionKind::Common.
   if (Kind.isData() || Kind.isReadOnlyWithRel() || Kind.isBSS()) {
     if (TM.getDataSections()) {

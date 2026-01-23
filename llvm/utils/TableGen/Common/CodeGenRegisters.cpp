@@ -986,8 +986,11 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     // register class.
     if (A == B)
       return false;
-    if (A->getMembers().size() == B->getMembers().size())
+    if (A->getMembers().size() == B->getMembers().size()) {
+      if (A->getBaseClassOrder() != B->getBaseClassOrder())
+        return A->getBaseClassOrder() > B->getBaseClassOrder();
       return A == this;
+    }
     return A->getMembers().size() > B->getMembers().size();
   };
 
@@ -1005,7 +1008,9 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
       SuperRegRCs.emplace_back(&RC);
   llvm::stable_sort(SuperRegRCs, WeakSizeOrder);
 
-  assert(SuperRegRCs.front() == BiggestSuperRegRC &&
+  assert((SuperRegRCs.front() == BiggestSuperRegRC ||
+          SuperRegRCs.front()->getBaseClassOrder() >
+              BiggestSuperRegRC->getBaseClassOrder()) &&
          "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
