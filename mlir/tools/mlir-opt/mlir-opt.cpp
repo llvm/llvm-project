@@ -182,7 +182,7 @@ void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
-void registerTestPasses() {
+static void registerTestPasses() {
   registerCloneTestPasses();
   registerConvertToTargetEnvPass();
   registerPrintTosaAvailabilityPass();

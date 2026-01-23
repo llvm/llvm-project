@@ -12,8 +12,8 @@
 #include "hdr/stdint_proxy.h" // uint32_t
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // Futex
-#include "src/__support/threads/linux/raw_mutex.h"   // RawMutex
 #include "src/__support/threads/mutex.h"             // Mutex
+#include "src/__support/threads/raw_mutex.h"         // RawMutex
 
 namespace LIBC_NAMESPACE_DECL {
 

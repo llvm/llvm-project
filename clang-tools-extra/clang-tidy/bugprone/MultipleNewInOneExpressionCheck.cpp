@@ -51,7 +51,8 @@ namespace {
 
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
+  const unsigned NH = Node.getNumHandlers();
+  for (unsigned I = 0; I < NH; ++I) {
     const CXXCatchStmt *CatchS = Node.getHandler(I);
     // Check for generic catch handler (match anything).
     if (CatchS->getCaughtType().isNull())
@@ -66,7 +67,7 @@ AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
 }
 
 AST_MATCHER(CXXNewExpr, mayThrow) {
-  FunctionDecl *OperatorNew = Node.getOperatorNew();
+  const FunctionDecl *OperatorNew = Node.getOperatorNew();
   if (!OperatorNew)
     return false;
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();

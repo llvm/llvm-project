@@ -137,21 +137,26 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
                                 const ValueDecl *D) {
   // This function tries pretty hard to produce a good diagnostic. Just skip
-  // tha if nobody will see it anyway.
+  // that if nobody will see it anyway.
   if (!S.diagnosing())
     return false;
 
   if (isa<ParmVarDecl>(D)) {
     if (D->getType()->isReferenceType()) {
       if (S.inConstantContext() && S.getLangOpts().CPlusPlus &&
-          !S.getLangOpts().CPlusPlus11)
+          !S.getLangOpts().CPlusPlus11) {
         diagnoseNonConstVariable(S, OpPC, D);
-      return false;
+        return false;
+      }
     }
 
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown) << D;
+    if (S.getLangOpts().CPlusPlus23 && D->getType()->isReferenceType()) {
+      S.FFDiag(Loc, diag::note_constexpr_access_unknown_variable, 1)
+          << AK_Read << D;
+      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    } else if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown, 1) << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
     } else {
       S.FFDiag(Loc);
@@ -326,12 +331,13 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
 }
 
 bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK) {
+                 AccessKinds AK, bool WillActivate) {
   if (Ptr.isActive())
     return true;
 
   assert(Ptr.inUnion());
 
+  // Find the outermost union.
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
   while (!U.isRoot() && !U.isActive()) {
@@ -346,6 +352,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     U = U.getBase();
   }
   assert(C.isField());
+  assert(C.getBase() == U);
 
   // Consider:
   // union U {
@@ -361,6 +368,25 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   // handle this.
   if (!U.getFieldDesc()->isUnion())
     return true;
+
+  // When we will activate Ptr, check that none of the unions in its path have a
+  // non-trivial default constructor.
+  if (WillActivate) {
+    bool Fails = false;
+    Pointer It = Ptr;
+    while (!It.isRoot() && !It.isActive()) {
+      if (const Record *R = It.getRecord(); R && R->isUnion()) {
+        if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl());
+            CXXRD && !CXXRD->hasTrivialDefaultConstructor()) {
+          Fails = true;
+          break;
+        }
+      }
+      It = It.getBase();
+    }
+    if (!Fails)
+      return true;
+  }
 
   // Get the inactive field descriptor.
   assert(!C.isActive());
@@ -390,8 +416,9 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (Ptr.isInitialized() ||
-      (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
+  if (!Ptr.isPastEnd() &&
+      (Ptr.isInitialized() ||
+       (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)))
     return true;
 
   if (S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus &&
@@ -431,7 +458,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
     } else if (!S.checkingPotentialConstantExpression()) {
       bool IsTemp = Ptr.isTemporary();
-      S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
+      S.FFDiag(Src, diag::note_constexpr_access_uninit)
+          << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
 
       if (IsTemp)
         S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
@@ -626,6 +654,10 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!S.getLangOpts().CPlusPlus)
     return Invalid(S, OpPC);
 
+  // Volatile object can be written-to and read if they are being constructed.
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+    return true;
+
   // The reason why Ptr is volatile might be further up the hierarchy.
   // Find that pointer.
   Pointer P = Ptr;
@@ -736,8 +768,7 @@ static bool CheckWeak(InterpState &S, CodePtr OpPC, const Block *B) {
 // For example, since those can't be members of structs, they also can't
 // be mutable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
-  const auto &Desc =
-      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (!B->isAccessible()) {
     if (!CheckExtern(S, OpPC, Pointer(const_cast<Block *>(B))))
       return false;
@@ -886,7 +917,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!WillBeActivated && !CheckActive(S, OpPC, Ptr, AK_Assign))
+  if (!CheckActive(S, OpPC, Ptr, AK_Assign, WillBeActivated))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
@@ -919,33 +950,8 @@ bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
-
-  if (F->isVirtual() && !S.getLangOpts().CPlusPlus20) {
-    const SourceLocation &Loc = S.Current->getLocation(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
-    return false;
-  }
-
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
-    return false;
-
-  if (F->isValid() && F->hasBody() && F->isConstexpr())
-    return true;
-
-  const FunctionDecl *DiagDecl = F->getDecl();
-  const FunctionDecl *Definition = nullptr;
-  DiagDecl->getBody(Definition);
-
-  if (!Definition && S.checkingPotentialConstantExpression() &&
-      DiagDecl->isConstexpr()) {
-    return false;
-  }
-
-  // Implicitly constexpr.
-  if (F->isLambdaStaticInvoker())
-    return true;
-
+static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
+                                 const FunctionDecl *DiagDecl) {
   // Bail out if the function declaration itself is invalid.  We will
   // have produced a relevant diagnostic while parsing it, so just
   // note the problematic sub-expression.
@@ -953,11 +959,10 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return Invalid(S, OpPC);
 
   // Diagnose failed assertions specially.
-  if (S.Current->getLocation(OpPC).isMacroID() &&
-      F->getDecl()->getIdentifier()) {
+  if (S.Current->getLocation(OpPC).isMacroID() && DiagDecl->getIdentifier()) {
     // FIXME: Instead of checking for an implementation-defined function,
     // check and evaluate the assert() macro.
-    StringRef Name = F->getDecl()->getName();
+    StringRef Name = DiagDecl->getName();
     bool AssertFailed =
         Name == "__assert_rtn" || Name == "__assert_fail" || Name == "_wassert";
     if (AssertFailed) {
@@ -1004,7 +1009,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     // for a constant expression. It might be defined at the point we're
     // actually calling it.
     bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-    bool IsDefined = F->isDefined();
+    bool IsDefined = DiagDecl->isDefined();
     if (!IsDefined && !IsExtern && DiagDecl->isConstexpr() &&
         S.checkingPotentialConstantExpression())
       return false;
@@ -1025,6 +1030,35 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   }
 
   return false;
+}
+
+static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
+  if (F->isVirtual() && !S.getLangOpts().CPlusPlus20) {
+    const SourceLocation &Loc = S.Current->getLocation(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
+    return false;
+  }
+
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+    return false;
+
+  if (F->isValid() && F->hasBody() && F->isConstexpr())
+    return true;
+
+  const FunctionDecl *DiagDecl = F->getDecl();
+  const FunctionDecl *Definition = nullptr;
+  DiagDecl->getBody(Definition);
+
+  if (!Definition && S.checkingPotentialConstantExpression() &&
+      DiagDecl->isConstexpr()) {
+    return false;
+  }
+
+  // Implicitly constexpr.
+  if (F->isLambdaStaticInvoker())
+    return true;
+
+  return diagnoseCallableDecl(S, OpPC, DiagDecl);
 }
 
 static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
@@ -1286,8 +1320,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
     // Remove base casts.
     QualType InitialType = Ptr.getType();
-    while (Ptr.isBaseClass())
-      Ptr = Ptr.getBase();
+    Ptr = Ptr.stripBaseCasts();
 
     Source = Ptr.getDeclDesc()->asExpr();
     BlockToDelete = Ptr.block();
@@ -1404,7 +1437,8 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
   // Therefore, we use the C++1y behavior.
 
-  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+  if (!S.Current->isBottomFrame() &&
+      S.Current->getFunction()->isConstructor() &&
       S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl) {
     return true;
   }
@@ -1431,8 +1465,12 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
-    return true;
+    if (std::optional<IntPointer> IntPtr =
+            Ptr.asIntPointer().atOffset(S.getASTContext(), Off)) {
+      S.Stk.push<Pointer>(std::move(*IntPtr));
+      return true;
+    }
+    return false;
   }
 
   if (!Ptr.isBlockPointer()) {
@@ -1444,6 +1482,10 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
         << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
     return false;
   }
+
+  // We can't get the field of something that's not a record.
+  if (!Ptr.getFieldDesc()->isRecord())
+    return false;
 
   if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;
@@ -1498,6 +1540,21 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   }
   return CheckActive(S, OpPC, Ptr, AK_Destroy);
+}
+
+/// Opcode. Check if the function decl can be called at compile time.
+bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+    return false;
+
+  const FunctionDecl *Definition = nullptr;
+  const Stmt *Body = FD->getBody(Definition);
+
+  if (Definition && Body &&
+      (Definition->isConstexpr() || Definition->hasAttr<MSConstexprAttr>()))
+    return true;
+
+  return diagnoseCallableDecl(S, OpPC, FD);
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
@@ -1560,6 +1617,11 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
+
+  // C doesn't have constexpr functions.
+  if (!S.getLangOpts().CPlusPlus)
+    return Invalid(S, OpPC);
+
   assert(Func);
   auto cleanup = [&]() -> bool {
     cleanupAfterFunctionCall(S, OpPC, Func);
@@ -1609,12 +1671,11 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
 
-  // FIXME: The isConstructor() check here is not always right. The current
-  // constant evaluator is somewhat inconsistent in when it allows a function
-  // call when checking for a constant expression.
-  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
-      !Func->isConstructor())
-    return cleanup();
+  // Do not evaluate any function calls in checkingPotentialConstantExpression
+  // mode. Constructors will be aborted later when their initializers are
+  // evaluated.
+  if (S.checkingPotentialConstantExpression() && !Func->isConstructor())
+    return false;
 
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
@@ -1646,8 +1707,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
 static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
-  while (TypePtr.isBaseClass())
-    TypePtr = TypePtr.getBase();
+  TypePtr = TypePtr.stripBaseCasts();
 
   QualType DynamicType = TypePtr.getType();
   if (TypePtr.isStatic() || TypePtr.isConst()) {
@@ -1731,8 +1791,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
       // If the function we call is further DOWN the hierarchy than the
       // FieldDesc of our pointer, just go up the hierarchy of this field
       // the furthest we can go.
-      while (ThisPtr.isBaseClass())
-        ThisPtr = ThisPtr.getBase();
+      ThisPtr = ThisPtr.stripBaseCasts();
     }
   }
 
@@ -1812,6 +1871,15 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
   }
 
+  // We nedd to compile (and check) early for function pointer calls
+  // because the Call/CallVirt below might access the instance pointer
+  // but the Function's information about them is wrong.
+  if (!F->isFullyCompiled())
+    compileFunction(S, F);
+
+  if (!CheckCallable(S, OpPC, F))
+    return false;
+
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
 
@@ -1881,10 +1949,6 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
 
-  // FIXME: We need per-element lifetime information for primitive arrays.
-  if (Ptr.isArrayElement())
-    return true;
-
   endLifetimeRecurse(Ptr.narrow());
   return true;
 }
@@ -1894,10 +1958,6 @@ bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
-
-  // FIXME: We need per-element lifetime information for primitive arrays.
-  if (Ptr.isArrayElement())
-    return true;
 
   endLifetimeRecurse(Ptr.narrow());
   return true;
@@ -1917,6 +1977,9 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   }
 
   if (!Ptr.isBlockPointer())
+    return false;
+
+  if (!CheckRange(S, OpPC, Ptr, AK_Construct))
     return false;
 
   startLifetimeRecurse(Ptr);
@@ -2058,14 +2121,14 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
 
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
   if (Ptr.isDummy())
     return false;
   if (Ptr.isFunctionPointer())
     return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   if (Ptr.isBlockPointer() && !Ptr.isZero()) {
     // Only allow based lvalue casts if they are lossless.
@@ -2295,6 +2358,34 @@ bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
     Ptr.activate();
   }
 
+  return true;
+}
+
+bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current->getFunction());
+  // FIXME: We iterate the scope once here and then again in the destroy() call
+  // below.
+  for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
+    if (!S.Current->getLocalBlock(Local.Offset)->isInitialized())
+      continue;
+    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
+    if (Ptr.getLifetime() == Lifetime::Ended) {
+      // Try to use the declaration for better diagnostics
+      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+        auto *ND = cast<NamedDecl>(D);
+        S.FFDiag(ND->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << ND->getNameAsString();
+      } else {
+        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << Ptr.toDiagnosticString(S.getASTContext());
+      }
+      return false;
+    }
+  }
+
+  S.Current->destroy(I);
   return true;
 }
 

@@ -90,7 +90,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -884,7 +883,7 @@ bool DwarfLinkerForBinary::linkImpl(
       ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
         Options.VFS, Map, *Streamer->getAsmPrinter().OutStreamer, OutFile,
-        RelocationsToApply);
+        RelocationsToApply, Options.AllowSectionHeaderOffsetOverflow);
 
   Streamer->finish();
   return true;

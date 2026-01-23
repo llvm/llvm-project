@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple i386-mingw32 -fsyntax-only -Wno-missing-declarations -verify -fms-extensions  %s
+// RUN: %clang_cc1 -triple i386-mingw32 -fsyntax-only -Wno-missing-declarations -verify -fms-extensions %s
+// RUN: %clang_cc1 -triple i386-mingw32 -fsyntax-only -Wno-missing-declarations -verify -fms-extensions %s -fexperimental-new-constant-interpreter
+
 __stdcall int func0(void);
 int __stdcall func(void);
 typedef int (__cdecl *tptr)(void);

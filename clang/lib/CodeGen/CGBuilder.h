@@ -101,7 +101,7 @@ public:
       : CGBuilderBaseTy(BB), TypeCache(TypeCache) {}
 
   llvm::ConstantInt *getSize(CharUnits N) {
-    return llvm::ConstantInt::get(TypeCache.SizeTy, N.getQuantity());
+    return llvm::ConstantInt::getSigned(TypeCache.SizeTy, N.getQuantity());
   }
   llvm::ConstantInt *getSize(uint64_t N) {
     return llvm::ConstantInt::get(TypeCache.SizeTy, N);

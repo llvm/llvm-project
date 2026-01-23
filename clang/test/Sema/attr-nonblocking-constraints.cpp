@@ -104,6 +104,25 @@ void nb8c()
 	};
 }
 
+void nb8d() [[clang::nonblocking]]
+{
+	// Blocking methods of a local CXXRecordDecl do not generate diagnostics
+	// for the outer function.
+	struct F1 {
+        void method() { void* ptr = new int; }
+	};
+
+	// Skipping the CXXRecordDecl does not skip a following VarDecl.
+	struct F2 {
+        F2() { void* ptr = new int; } // expected-note {{constructor cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+	} f2; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'nb8d()::F2::F2'}}
+
+	// Nonblocking methods of a local CXXRecordDecl are verified independently.
+	struct F3 {
+		void method() [[clang::nonblocking]] { void* ptr = new int; }// expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
+	};
+}
+
 // Make sure template expansions are found and verified.
 	template <typename T>
 	struct Adder {

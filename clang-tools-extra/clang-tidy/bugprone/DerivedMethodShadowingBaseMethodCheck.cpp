@@ -65,7 +65,7 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
 
       for (const auto &BaseMethod : CurrentRecord->methods()) {
         if (namesCollide(*BaseMethod, Node)) {
-          ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+          const ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
           Builder->setBinding("base_method",
                               clang::DynTypedNode::create(*BaseMethod));
           return true;

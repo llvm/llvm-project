@@ -6,9 +6,9 @@
 #
 #; define void @"$s12"(...) {         define i64 @"$s5” (...) {             define void @"$s13"(...) {
 #   ...                                ...                                   ...
-#   %8 = load i1, i1* %7                                                     %8 = load i1, i1* %7
-#   %9 = load i4, i4*, %6              %9 = load i4, i4*, %6                 %9 = load i4, i4*, %6
-#   store i4 %9, i4* %5                store i4 %9, i4* %5                   store i4 %9, i4* %5
+#   %8 = load i1, ptr %7                                                     %8 = load i1, ptr %7
+#   %9 = load i4, ptr, %6              %9 = load i4, ptr, %6                 %9 = load i4, ptr, %6
+#   store i4 %9, ptr %5                store i4 %9, ptr %5                   store i4 %9, ptr %5
 #   ...                                ...                                   ...
 # }                                  }                                     }
 #
@@ -16,7 +16,7 @@
 #
 # define void @"$s12"(...) {         define i64 @"$s5” (...) {             define void @"$s13"(...) {
 #   ...                                ...                                   ...
-#   %8 = load i1, i1* %7                                                     %8 = load i1, i1* %7
+#   %8 = load i1, ptr %7                                                     %8 = load i1, ptr %7
 #   call void @outlined_function_1_1   call void @outlined_function_1_1      call void @outlined_function_1_1
 #   ...                                ...                                   ...
 # }                                  }                                     }

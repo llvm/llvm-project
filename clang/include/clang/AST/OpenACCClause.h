@@ -51,8 +51,7 @@ public:
 
   child_range children();
   const_child_range children() const {
-    auto Children = const_cast<OpenACCClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCClause *>(this)->children();
   }
 
   virtual ~OpenACCClause() = default;
@@ -474,8 +473,7 @@ public:
   }
 
   const_child_range children() const {
-    child_range Children = const_cast<OpenACCSelfClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCSelfClause *>(this)->children();
   }
 
   static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
@@ -523,9 +521,7 @@ public:
   }
 
   const_child_range children() const {
-    child_range Children =
-        const_cast<OpenACCClauseWithExprs *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCClauseWithExprs *>(this)->children();
   }
 };
 

@@ -73,8 +73,8 @@ public:
   void verify() const final {
     assert(isa<llvm::Function>(Val) && "Expected Function!");
   }
-  void dumpNameAndArgs(raw_ostream &OS) const;
-  void dumpOS(raw_ostream &OS) const final;
+  LLVM_ABI_FOR_TEST void dumpNameAndArgs(raw_ostream &OS) const;
+  LLVM_ABI_FOR_TEST void dumpOS(raw_ostream &OS) const final;
 #endif
 };
 

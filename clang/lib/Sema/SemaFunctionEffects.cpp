@@ -1302,6 +1302,14 @@ private:
       return true;
     }
 
+    bool TraverseCXXRecordDecl(CXXRecordDecl *D) override {
+      // Completely skip local struct/class/union declarations since their
+      // methods would otherwise be incorrectly interpreted as part of the
+      // function we are currently traversing. The initial Sema pass will have
+      // already recorded any nonblocking methods needing analysis.
+      return true;
+    }
+
     bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
       ViolationSite PrevVS = VSite;
       if (Init->isAnyMemberInitializer())

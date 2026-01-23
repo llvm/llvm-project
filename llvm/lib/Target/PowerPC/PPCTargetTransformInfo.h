@@ -150,6 +150,24 @@ public:
                              ArrayRef<Type *> Types) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;
 
+  TargetTransformInfo::VPLegalization
+  getVPLegalizationStrategy(const VPIntrinsic &PI) const override;
+
+  bool hasActiveVectorLength() const override;
+
+  bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override;
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
+
+  InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
+
 private:
   // The following constant is used for estimating costs on power9.
   static const InstructionCost::CostType P9PipelineFlushEstimate = 80;

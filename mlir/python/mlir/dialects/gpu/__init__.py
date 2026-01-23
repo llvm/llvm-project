@@ -49,13 +49,13 @@ class GPUFuncOp(GPUFuncOp):
 
     FUNCTION_TYPE_ATTR_NAME = "function_type"
     SYM_NAME_ATTR_NAME = "sym_name"
-    ARGUMENT_ATTR_NAME = "arg_attrs"
-    RESULT_ATTR_NAME = "res_attrs"
 
     def __init__(
         self,
         function_type: Union[FunctionType, TypeAttr],
         sym_name: Optional[Union[str, StringAttr]] = None,
+        arg_attrs: Optional[Sequence[dict]] = None,
+        res_attrs: Optional[Sequence[dict]] = None,
         kernel: Optional[bool] = None,
         workgroup_attrib_attrs: Optional[Sequence[dict]] = None,
         private_attrib_attrs: Optional[Sequence[dict]] = None,
@@ -88,6 +88,8 @@ class GPUFuncOp(GPUFuncOp):
         )
         super().__init__(
             function_type,
+            arg_attrs=arg_attrs,
+            res_attrs=res_attrs,
             workgroup_attrib_attrs=workgroup_attrib_attrs,
             private_attrib_attrs=private_attrib_attrs,
             loc=loc,

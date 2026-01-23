@@ -96,19 +96,7 @@ AArch64PrologueEpilogueCommon::AArch64PrologueEpilogueCommon(
   HasFP = AFL.hasFP(MF);
   NeedsWinCFI = AFL.needsWinCFI(MF);
 
-  // Windows unwind can't represent the required stack adjustments if we have
-  // both SVE callee-saves and dynamic stack allocations, and the frame pointer
-  // is before the SVE spills.  The allocation of the frame pointer must be the
-  // last instruction in the prologue so the unwinder can restore the stack
-  // pointer correctly. (And there isn't any unwind opcode for `addvl sp, x29,
-  // -17`.)
-  //
-  // Because of this, we do spills in the opposite order on Windows: first SVE,
-  // then GPRs. The main side-effect of this is that it makes accessing
-  // parameters passed on the stack more expensive.
-  //
-  // We could consider rearranging the spills for simpler cases.
-  if (Subtarget.isTargetWindows() && AFI->getSVECalleeSavedStackSize()) {
+  if (AFL.hasSVECalleeSavesAboveFrameRecord(MF)) {
     if (AFI->hasStackHazardSlotIndex())
       reportFatalUsageError("SME hazard padding is not supported on Windows");
     SVELayout = SVEStackLayout::CalleeSavesAboveFrameRecord;
@@ -174,16 +162,22 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   }
   TypeSize Scale = TypeSize::getFixed(1), Width = TypeSize::getFixed(0);
   int64_t MinOffset, MaxOffset;
-  bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
-      NewOpc, Scale, Width, MinOffset, MaxOffset);
+  bool Success = TII->getMemOpInfo(NewOpc, Scale, Width, MinOffset, MaxOffset);
   (void)Success;
   assert(Success && "unknown load/store opcode");
 
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
+  //
+  // On Windows, some register pairs involving LR can't be folded because
+  // there isn't a corresponding unwind opcode.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
-      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
+      (NeedsWinCFI &&
+       (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
+       RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+           RegInfo.getEncodingValue(MBBI->getOperand(1).getReg()))) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
@@ -253,6 +247,8 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveReg:
   case AArch64::SEH_SaveFRegP:
   case AArch64::SEH_SaveFReg:
+  case AArch64::SEH_SaveAnyRegI:
+  case AArch64::SEH_SaveAnyRegIP:
   case AArch64::SEH_SaveAnyRegQP:
   case AArch64::SEH_SaveAnyRegQPX:
     ImmOpnd = &MBBI->getOperand(ImmIdx);
@@ -321,6 +317,11 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   // (to force a stp with predecrement) to match the packed unwind format,
   // provided that there actually are any callee saved registers to merge the
   // decrement with.
+  //
+  // Note that for certain paired saves, like "x19, lr", we can't actually
+  // emit an predecrement stp, but packed unwind still expects a separate stack
+  // adjustment.
+  //
   // This is potentially marginally slower, but allows using the packed
   // unwind format for functions that both have a local area and callee saved
   // registers. Using the packed unwind format notably reduces the size of
@@ -553,11 +554,15 @@ void AArch64PrologueEmitter::allocateStackSpace(
     // objects), we need to issue an extra probe, so these allocations start in
     // a known state.
     if (FollowupAllocs) {
-      // STR XZR, [SP]
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
@@ -588,11 +593,15 @@ void AArch64PrologueEmitter::allocateStackSpace(
     }
     if (FollowupAllocs || upperBound(AllocSize) + RealignmentPadding >
                               AArch64::StackProbeMaxUnprobedStack) {
-      // STR XZR, [SP]
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
     return;
@@ -644,7 +653,7 @@ void AArch64PrologueEmitter::emitPrologue() {
   // the epilogue. In this case, we still need to emit a SEH prologue sequence.
   // See `seh-minimal-prologue-epilogue.ll` test cases.
   if (AFI->getArgumentStackToRestore())
-    HasWinCFI = true;
+    HasWinCFI |= NeedsWinCFI;
 
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
@@ -805,7 +814,7 @@ void AArch64PrologueEmitter::emitPrologue() {
     CFAOffset += SVEAllocs.BeforePPRs;
     assert(PPRRange.End == ZPRRange.Begin &&
            "Expected ZPR callee saves after PPR locals");
-    allocateStackSpace(PPRRange.End, RealignmentPadding, SVEAllocs.AfterPPRs,
+    allocateStackSpace(PPRRange.End, 0, SVEAllocs.AfterPPRs,
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects() || SVEAllocs.AfterZPRs);
     CFAOffset += SVEAllocs.AfterPPRs;
@@ -1133,7 +1142,12 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
         .setMIFlags(MachineInstr::FrameSetup);
   }
 
-  const char *ChkStk = Subtarget.getChkStkName();
+  const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+  RTLIB::LibcallImpl ChkStkLibcall = TLI->getLibcallImpl(RTLIB::STACK_PROBE);
+  if (ChkStkLibcall == RTLIB::Unsupported)
+    reportFatalUsageError("no available implementation of __chkstk");
+
+  const char *ChkStk = TLI->getLibcallImplName(ChkStkLibcall).data();
   switch (MF.getTarget().getCodeModel()) {
   case CodeModel::Tiny:
   case CodeModel::Small:
@@ -1318,6 +1332,26 @@ AArch64EpilogueEmitter::AArch64EpilogueEmitter(MachineFunction &MF,
   SEHEpilogueStartI = MBB.end();
 }
 
+void AArch64EpilogueEmitter::moveSPBelowFP(MachineBasicBlock::iterator MBBI,
+                                           StackOffset Offset) {
+  // Other combinations could be supported, but are not currently needed.
+  assert(Offset.getScalable() < 0 && Offset.getFixed() <= 0 &&
+         "expected negative offset (with optional fixed portion)");
+  Register Base = AArch64::FP;
+  if (int64_t FixedOffset = Offset.getFixed()) {
+    // If we have a negative fixed offset, we need to first subtract it in a
+    // temporary register first (to avoid briefly deallocating the scalable
+    // portion of the offset).
+    Base = MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+    emitFrameOffset(MBB, MBBI, DL, Base, AArch64::FP,
+                    StackOffset::getFixed(FixedOffset), TII,
+                    MachineInstr::FrameDestroy);
+  }
+  emitFrameOffset(MBB, MBBI, DL, AArch64::SP, Base,
+                  StackOffset::getScalable(Offset.getScalable()), TII,
+                  MachineInstr::FrameDestroy);
+}
+
 void AArch64EpilogueEmitter::emitEpilogue() {
   MachineBasicBlock::iterator EpilogueEndI = MBB.getLastNonDebugInstr();
   if (MBB.end() != EpilogueEndI) {
@@ -1418,6 +1452,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
       AfterCSRPopSize += ProloguePopSize;
     }
   }
+
   // Move past the restores of the callee-saved registers.
   // If we plan on combining the sp bump of the local stack size and the callee
   // save stack size, we might need to adjust the CSR save and restore offsets.
@@ -1483,7 +1518,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
   SVEStackAllocations SVEAllocs = getSVEStackAllocations({PPR, ZPR});
-  MachineBasicBlock::iterator RestoreBegin = ZPRRange.Begin;
 
   // Deallocate the SVE area.
   if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
@@ -1510,28 +1544,25 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) ? AArch64::FP
                                                               : AArch64::SP;
     if (SVECalleeSavesSize && BaseForSVEDealloc == AArch64::FP) {
-      // TODO: Support stack realigment and variable-sized objects.
-      assert(
-          SVELayout != SVEStackLayout::Split &&
-          "unexpected stack realignment or variable sized objects with split "
-          "SVE stack objects");
-
-      Register CalleeSaveBase = AArch64::FP;
-      if (int64_t CalleeSaveBaseOffset =
-              AFI->getCalleeSaveBaseToFrameRecordOffset()) {
-        // If we have have an non-zero offset to the non-SVE CS base we need to
-        // compute the base address by subtracting the offest in a temporary
-        // register first (to avoid briefly deallocating the SVE CS).
-        CalleeSaveBase = MBB.getParent()->getRegInfo().createVirtualRegister(
-            &AArch64::GPR64RegClass);
-        emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
-                        StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
-                        MachineInstr::FrameDestroy);
+      if (ZPR.CalleeSavesSize || SVELayout != SVEStackLayout::Split) {
+        // The offset from the frame-pointer to the start of the ZPR saves.
+        StackOffset FPOffsetZPR =
+            -SVECalleeSavesSize - PPR.LocalsSize -
+            StackOffset::getFixed(AFI->getCalleeSaveBaseToFrameRecordOffset());
+        // Deallocate the stack space space by moving the SP to the start of the
+        // ZPR/PPR callee-save area.
+        moveSPBelowFP(ZPRRange.Begin, FPOffsetZPR);
       }
-      // The code below will deallocate the stack space space by moving the SP
-      // to the start of the SVE callee-save area.
-      emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
-                      -SVECalleeSavesSize, TII, MachineInstr::FrameDestroy);
+      // With split SVE, the predicates are stored in a separate area above the
+      // ZPR saves, so we must adjust the stack to the start of the PPRs.
+      if (PPR.CalleeSavesSize && SVELayout == SVEStackLayout::Split) {
+        // The offset from the frame-pointer to the start of the PPR saves.
+        StackOffset FPOffsetPPR = -PPR.CalleeSavesSize;
+        // Move to the start of the PPR area.
+        assert(!FPOffsetPPR.getFixed() && "expected only scalable offset");
+        emitFrameOffset(MBB, ZPRRange.End, DL, AArch64::SP, AArch64::FP,
+                        FPOffsetPPR, TII, MachineInstr::FrameDestroy);
+      }
     } else if (BaseForSVEDealloc == AArch64::SP) {
       auto NonSVELocals = StackOffset::getFixed(NumBytes);
       auto CFAOffset = NonSVELocals + StackOffset::getFixed(PrologueSaveSize) +

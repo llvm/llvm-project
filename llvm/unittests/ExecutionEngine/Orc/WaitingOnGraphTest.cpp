@@ -399,6 +399,31 @@ TEST_F(WaitingOnGraphTest, Emit_TrivialSequence) {
   EXPECT_EQ(ER1.Failed.size(), 0U);
 }
 
+TEST_F(WaitingOnGraphTest, Emit_SingleContainerSimpleCycle) {
+  // Test an emit of two nodes with a dependence cycle within a single
+  // container:
+  // N0: (0, 0) -> (0, 1)
+  // N1: (0, 1) -> (0, 0)
+  // We expect intra-simplify cycle elimination to clear both dependence sets,
+  // and coalescing to join them into one supernode covering both defs.
+  SuperNodeBuilder B;
+  ContainerElementsMap Defs0({{0, {0}}});
+  ContainerElementsMap Deps0({{0, {1}}});
+  B.add(Defs0, Deps0);
+
+  auto ER0 = emit(TestGraph::simplify(B.takeSuperNodes()));
+  EXPECT_EQ(ER0.Ready.size(), 0U);
+  EXPECT_EQ(ER0.Failed.size(), 0U);
+
+  ContainerElementsMap Defs1({{0, {1}}});
+  ContainerElementsMap Deps1({{0, {0}}});
+  B.add(Defs1, Deps1);
+  auto ER1 = emit(TestGraph::simplify(B.takeSuperNodes()));
+
+  EXPECT_EQ(collapseDefs(ER1.Ready), merge(Defs0, Defs1));
+  EXPECT_EQ(ER1.Failed.size(), 0U);
+}
+
 TEST_F(WaitingOnGraphTest, Emit_TrivialReverseSequence) {
   // Perform a sequence of two emits where the first emit depends on the
   // second. Check that both nodes become ready after the second emit.
@@ -505,6 +530,52 @@ TEST_F(WaitingOnGraphTest, Emit_ZigZag) {
             merge(merge(merge(Defs0, Defs1), Defs2), Defs3));
   EXPECT_EQ(ER2.Failed.size(), 0U);
   EXPECT_TRUE(PendingSNs.empty());
+}
+
+TEST_F(WaitingOnGraphTest, Emit_ReEmit) {
+  // Test for the bug in https://github.com/llvm/llvm-project/issues/169135,
+  // which was caused by stale entries in the ElemsToPendingSNs map.
+  //
+  // To trigger the bug we need to:
+  // 1. Create a SuperNode with an unmet dependence, causing it to be added to
+  //    ElemsToPendingSNs.
+  // 2. Cause that SuperNode to become ready (bug left stale entries in map)
+  // 3. Remove the node from the Ready map (this is equivalent to removal of a
+  //    symbol in an ORC session, and allows new SuperNodes to depend on the
+  //    stale entry).
+  // 4. Add a new node that references the previously emitted/removed SuperNode
+  //    This triggers access of the stale entry, and should error out in
+  //    sanitizer builds.
+
+  SuperNodeBuilder B;
+
+  // 1. Create SuperNode with unmet dependence.
+  ContainerElementsMap Defs0({{0, {0}}});
+  ContainerElementsMap Deps0({{0, {1}}});
+  B.add(Defs0, Deps0);
+  emit(TestGraph::simplify(B.takeSuperNodes()));
+
+  EXPECT_TRUE(Ready.empty());
+
+  // 2. Cause previous SuperNode to become ready.
+  ContainerElementsMap Defs1({{0, {1}}});
+  B.add(Defs1, ContainerElementsMap());
+  emit(TestGraph::simplify(B.takeSuperNodes()));
+
+  // Check that both nodes have become ready.
+  EXPECT_EQ(Ready, merge(Defs0, Defs1));
+
+  // 3. Erase Ready nodes to simulate removal from the graph.
+  Ready.clear();
+
+  // 4. Emit a new dependence on the original def.
+  ContainerElementsMap Defs2({{0, {2}}});
+  ContainerElementsMap Deps2({{0, {0}}});
+  B.add(Defs2, Deps2);
+  auto ER = emit(TestGraph::simplify(B.takeSuperNodes()));
+
+  // We expect the new dependence to remain pending.
+  EXPECT_TRUE(ER.Ready.empty());
 }
 
 TEST_F(WaitingOnGraphTest, Fail_Empty) {

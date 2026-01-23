@@ -76,6 +76,15 @@ define <2 x i32> @movi2s_lsl16() {
    ret <2 x i32> <i32 16711680, i32 16711680>
 }
 
+define <2 x i32> @movi2s_fneg() {
+; CHECK-LABEL: movi2s_fneg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2s, #240, lsl #8
+; CHECK-NEXT:    fneg v0.2s, v0.2s
+; CHECK-NEXT:    ret
+   ret <2 x i32> <i32 2147545088, i32 2147545088>
+}
+
 define <2 x i32> @movi2s_lsl24() {
 ; CHECK-LABEL: movi2s_lsl24:
 ; CHECK:       // %bb.0:
@@ -149,6 +158,33 @@ define <4 x i16> @movi4h_lsl8() {
    ret <4 x i16> <i16 65280, i16 65280, i16 65280, i16 65280>
 }
 
+define <4 x i16> @movi4h_fneg() {
+; CHECK-NOFP16-SD-LABEL: movi4h_fneg:
+; CHECK-NOFP16-SD:       // %bb.0:
+; CHECK-NOFP16-SD-NEXT:    movi v0.4h, #127, lsl #8
+; CHECK-NOFP16-SD-NEXT:    fneg v0.2s, v0.2s
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: movi4h_fneg:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    movi v0.4h, #127, lsl #8
+; CHECK-FP16-SD-NEXT:    fneg v0.2s, v0.2s
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: movi4h_fneg:
+; CHECK-NOFP16-GI:       // %bb.0:
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI18_0]
+; CHECK-NOFP16-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: movi4h_fneg:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI18_0
+; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI18_0]
+; CHECK-FP16-GI-NEXT:    ret
+   ret <4 x i16> <i16 32512, i16 65280, i16 32512, i16 65280>
+}
+
 define <8 x i16> @movi8h_lsl0() {
 ; CHECK-LABEL: movi8h_lsl0:
 ; CHECK:       // %bb.0:
@@ -180,14 +216,14 @@ define <8 x i16> @movi8h_fneg() {
 ;
 ; CHECK-NOFP16-GI-LABEL: movi8h_fneg:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI21_0
+; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI21_0]
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: movi8h_fneg:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-FP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
+; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI21_0
+; CHECK-FP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI21_0]
 ; CHECK-FP16-GI-NEXT:    ret
    ret <8 x i16> <i16 32512, i16 65280, i16 32512, i16 65280, i16 32512, i16 65280, i16 32512, i16 65280>
 }
@@ -275,6 +311,27 @@ define <4 x i16> @mvni4h_lsl8() {
    ret <4 x i16> <i16 61439, i16 61439, i16 61439, i16 61439>
 }
 
+define <4 x i16> @mvni4h_neg() {
+; CHECK-NOFP16-SD-LABEL: mvni4h_neg:
+; CHECK-NOFP16-SD:       // %bb.0:
+; CHECK-NOFP16-SD-NEXT:    mov w8, #33008 // =0x80f0
+; CHECK-NOFP16-SD-NEXT:    dup v0.4h, w8
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-LABEL: mvni4h_neg:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    movi v0.4h, #240
+; CHECK-FP16-NEXT:    fneg v0.4h, v0.4h
+; CHECK-FP16-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: mvni4h_neg:
+; CHECK-NOFP16-GI:       // %bb.0:
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI32_0
+; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI32_0]
+; CHECK-NOFP16-GI-NEXT:    ret
+   ret <4 x i16> <i16 33008, i16 33008, i16 33008, i16 33008>
+}
+
 define <8 x i16> @mvni8h_lsl0() {
 ; CHECK-LABEL: mvni8h_lsl0:
 ; CHECK:       // %bb.0:
@@ -306,8 +363,8 @@ define <8 x i16> @mvni8h_neg() {
 ;
 ; CHECK-NOFP16-GI-LABEL: mvni8h_neg:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI32_0
-; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI32_0]
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI35_0]
 ; CHECK-NOFP16-GI-NEXT:    ret
    ret <8 x i16> <i16 33008, i16 33008, i16 33008, i16 33008, i16 33008, i16 33008, i16 33008, i16 33008>
 }
@@ -486,6 +543,33 @@ define <2 x double> @fmov2d_neg0() {
 	ret <2 x double> <double -0.0, double -0.0>
 }
 
+define <1 x double> @fmov1d_neg0() {
+; CHECK-NOFP16-SD-LABEL: fmov1d_neg0:
+; CHECK-NOFP16-SD:       // %bb.0:
+; CHECK-NOFP16-SD-NEXT:    movi d0, #0000000000000000
+; CHECK-NOFP16-SD-NEXT:    fneg d0, d0
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: fmov1d_neg0:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    movi d0, #0000000000000000
+; CHECK-FP16-SD-NEXT:    fneg d0, d0
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: fmov1d_neg0:
+; CHECK-NOFP16-GI:       // %bb.0:
+; CHECK-NOFP16-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NOFP16-GI-NEXT:    fmov d0, x8
+; CHECK-NOFP16-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: fmov1d_neg0:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-FP16-GI-NEXT:    fmov d0, x8
+; CHECK-FP16-GI-NEXT:    ret
+	ret <1 x double> <double -0.0>
+}
+
 define <2 x i32> @movi1d_1() {
 ; CHECK-NOFP16-SD-LABEL: movi1d_1:
 ; CHECK-NOFP16-SD:       // %bb.0:
@@ -499,14 +583,14 @@ define <2 x i32> @movi1d_1() {
 ;
 ; CHECK-NOFP16-GI-LABEL: movi1d_1:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI52_0
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI52_0]
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI56_0
+; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI56_0]
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: movi1d_1:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI52_0
-; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI52_0]
+; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI56_0
+; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI56_0]
 ; CHECK-FP16-GI-NEXT:    ret
   ret <2 x i32> <i32  -65536, i32 65535>
 }
@@ -517,31 +601,31 @@ define <2 x i32> @movi1d() {
 ; CHECK-NOFP16-SD-LABEL: movi1d:
 ; CHECK-NOFP16-SD:       // %bb.0:
 ; CHECK-NOFP16-SD-NEXT:    movi d1, #0x00ffffffff0000
-; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI53_0
-; CHECK-NOFP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI53_0]
+; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI57_0
+; CHECK-NOFP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI57_0]
 ; CHECK-NOFP16-SD-NEXT:    b test_movi1d
 ;
 ; CHECK-FP16-SD-LABEL: movi1d:
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    movi d1, #0x00ffffffff0000
-; CHECK-FP16-SD-NEXT:    adrp x8, .LCPI53_0
-; CHECK-FP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI53_0]
+; CHECK-FP16-SD-NEXT:    adrp x8, .LCPI57_0
+; CHECK-FP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI57_0]
 ; CHECK-FP16-SD-NEXT:    b test_movi1d
 ;
 ; CHECK-NOFP16-GI-LABEL: movi1d:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI53_1
-; CHECK-NOFP16-GI-NEXT:    adrp x9, .LCPI53_0
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI53_1]
-; CHECK-NOFP16-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI53_0]
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI57_1
+; CHECK-NOFP16-GI-NEXT:    adrp x9, .LCPI57_0
+; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI57_1]
+; CHECK-NOFP16-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI57_0]
 ; CHECK-NOFP16-GI-NEXT:    b test_movi1d
 ;
 ; CHECK-FP16-GI-LABEL: movi1d:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI53_1
-; CHECK-FP16-GI-NEXT:    adrp x9, .LCPI53_0
-; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI53_1]
-; CHECK-FP16-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI53_0]
+; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI57_1
+; CHECK-FP16-GI-NEXT:    adrp x9, .LCPI57_0
+; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI57_1]
+; CHECK-FP16-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI57_0]
 ; CHECK-FP16-GI-NEXT:    b test_movi1d
   %1 = tail call <2 x i32> @test_movi1d(<2 x i32> <i32 -2147483648, i32 2147450880>, <2 x i32> <i32 -65536, i32 65535>)
   ret <2 x i32> %1

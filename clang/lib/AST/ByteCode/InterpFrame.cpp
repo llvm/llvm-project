@@ -89,9 +89,21 @@ void InterpFrame::destroyScopes() {
 void InterpFrame::initScope(unsigned Idx) {
   if (!Func)
     return;
+
   for (auto &Local : Func->getScope(Idx).locals()) {
     localBlock(Local.Offset)->invokeCtor();
   }
+}
+
+void InterpFrame::enableLocal(unsigned Idx) {
+  assert(Func);
+
+  // FIXME: This is a little dirty, but to avoid adding a flag to
+  // InlineDescriptor that's only ever useful on the toplevel of local
+  // variables, we reuse the IsActive flag for the enabled state. We should
+  // probably use a different struct than InlineDescriptor for the block-level
+  // inline descriptor of local varaibles.
+  localInlineDesc(Idx)->IsActive = true;
 }
 
 void InterpFrame::destroy(unsigned Idx) {
@@ -139,8 +151,9 @@ static bool shouldSkipInBacktrace(const Function *F) {
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
+  assert(Func);
   // For lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
+  if (shouldSkipInBacktrace(Func))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
@@ -177,17 +190,18 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   unsigned Off = 0;
 
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
-  Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
+  Off += (Func->hasThisPointer() && !Func->isThisPointerExplicit())
+             ? primSize(PT_Ptr)
+             : 0;
 
+  llvm::ListSeparator Comma;
   for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
+    OS << Comma;
     QualType Ty = F->getParamDecl(I)->getType();
-
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
     TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
     Off += align(primSize(PrimTy));
-    if (I + 1 != N)
-      OS << ", ";
   }
   OS << ")";
 }

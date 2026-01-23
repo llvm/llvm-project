@@ -22,6 +22,7 @@ Contents
    pp-trace
    clangd <https://clangd.llvm.org/>
    clang-doc
+   Maintainers
 
 
 Doxygen Documentation

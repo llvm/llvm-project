@@ -183,6 +183,11 @@ def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 /// Specify how the pointer may be captured.
 def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
 
+/// Result will not be undef or poison if all arguments are not undef and not
+/// poison.
+def NoCreateUndefOrPoison
+    : EnumAttr<"nocreateundeforpoison", IntersectAnd, [FnAttr]>;
+
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 
@@ -199,7 +204,7 @@ def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
 /// Argument is dead upon function return.
-def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
+def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;

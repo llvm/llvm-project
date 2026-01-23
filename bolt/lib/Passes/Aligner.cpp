@@ -77,6 +77,13 @@ static void alignCompact(BinaryFunction &Function,
   size_t HotSize = 0;
   size_t ColdSize = 0;
 
+  // On AArch64, larger cold code size may lead to more veneers and higher
+  // potential overhead for hot code. Minimize the cold code size.
+  if (!Function.hasProfile() && BC.isAArch64()) {
+    Function.setAlignment(Function.getMinAlignment());
+    return;
+  }
+
   for (const BinaryBasicBlock &BB : Function)
     if (BB.isSplit())
       ColdSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);

@@ -24,9 +24,8 @@ static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
                                          const NamedDecl *Param) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const TypeSourceInfo *const FriendType = Friend->getFriendType();
-    if (!FriendType) {
+    if (!FriendType)
       return false;
-    }
 
     const auto *const TTPT =
         dyn_cast<TemplateTypeParmType>(FriendType->getType());
@@ -39,9 +38,8 @@ static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
                                      const CXXRecordDecl *Derived) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const TypeSourceInfo *const FriendType = Friend->getFriendType();
-    if (!FriendType) {
+    if (!FriendType)
       return false;
-    }
 
     return declaresSameEntity(FriendType->getType()->getAsCXXRecordDecl(),
                               Derived);
@@ -106,9 +104,8 @@ void CrtpConstructorAccessibilityCheck::check(
   const CXXRecordDecl *CRTPDeclaration =
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
-  if (!CRTPDeclaration->hasDefinition()) {
+  if (!CRTPDeclaration->hasDefinition())
     return;
-  }
 
   const auto *DerivedTemplateParameter =
       getDerivedParameter(CRTPInstantiation, DerivedRecord);
@@ -116,9 +113,10 @@ void CrtpConstructorAccessibilityCheck::check(
   assert(DerivedTemplateParameter &&
          "No template parameter corresponds to the derived class of the CRTP.");
 
-  bool NeedsFriend = !isDerivedParameterBefriended(CRTPDeclaration,
-                                                   DerivedTemplateParameter) &&
-                     !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
+  const bool NeedsFriend =
+      !isDerivedParameterBefriended(CRTPDeclaration,
+                                    DerivedTemplateParameter) &&
+      !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
 
   const FixItHint HintFriend = FixItHint::CreateInsertion(
       CRTPDeclaration->getBraceRange().getEnd(),

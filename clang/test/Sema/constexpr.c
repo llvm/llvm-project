@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion -Wno-div-by-zero %s
+// RUN: %clang_cc1 -std=c23 -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion -Wno-div-by-zero -fexperimental-new-constant-interpreter %s
 
 // Check that constexpr only applies to variables.
 constexpr void f0() {} // expected-error {{'constexpr' can only be used in variable declarations}}
@@ -401,3 +402,25 @@ bool issue155507(v2int16_t a, v2int16_t b) {
 
 constexpr bool b2 = (bool)nullptr;
 _Static_assert(!b2);
+
+double gh173847_double(double a) {
+  double result = 3.0 / (a + 4.5 - 2.1 * 0.7);
+  return result;
+}
+
+long double gh173847_long_double(long double a) {
+  long double result = 3.0L / (a + 4.5L - 2.1L * 0.7L);
+  return result;
+}
+
+void gh173847_test() {
+  constexpr double d_const = gh173847_double(2.0);             // expected-error {{constexpr variable 'd_const' must be initialized by a constant expression}}
+  constexpr long double ld_const = gh173847_long_double(2.0L); // expected-error {{constexpr variable 'ld_const' must be initialized by a constant expression}}
+}
+
+int gh173605(int x) {
+  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}}\
+                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
+  static int justincase = justincase; // expected-error {{initializer element is not a compile-time constant}}
+  return x;
+}

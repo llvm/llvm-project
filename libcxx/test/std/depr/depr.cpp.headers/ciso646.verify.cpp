@@ -14,5 +14,11 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: clang-modules-build
 
+// FIXME: using `#warning` causes diagnostics from system headers which include deprecated headers. This can only be
+// enabled again once https://github.com/llvm/llvm-project/pull/168041 (or a similar feature) has landed, since that
+// allows suppression in system headers.
+// XFAIL: *
+
 #include <ciso646>
-// expected-warning@ciso646:* {{'__standard_header_ciso646' is deprecated: removed in C++20. Include <version> instead.}}
+
+// expected-warning@ciso646:* {{<ciso646> is removed in C++20. Include <version> instead.}}

@@ -22,17 +22,6 @@ class Operation;
 namespace ast {
 class Context;
 
-namespace detail {
-struct AttributeTypeStorage;
-struct ConstraintTypeStorage;
-struct OperationTypeStorage;
-struct RangeTypeStorage;
-struct RewriteTypeStorage;
-struct TupleTypeStorage;
-struct TypeTypeStorage;
-struct ValueTypeStorage;
-} // namespace detail
-
 //===----------------------------------------------------------------------===//
 // Type
 //===----------------------------------------------------------------------===//
@@ -98,6 +87,127 @@ inline raw_ostream &operator<<(raw_ostream &os, Type type) {
   type.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// Type::Storage
+//===----------------------------------------------------------------------===//
+
+struct Type::Storage : public StorageUniquer::BaseStorage {
+  Storage(TypeID typeID) : typeID(typeID) {}
+
+  /// The type identifier for the derived type class.
+  TypeID typeID;
+};
+
+namespace detail {
+
+/// A utility CRTP base class that defines many of the necessary utilities for
+/// defining a PDLL AST Type.
+template <typename ConcreteT, typename KeyT = void>
+struct TypeStorageBase : public Type::Storage {
+  using KeyTy = KeyT;
+  using Base = TypeStorageBase<ConcreteT, KeyT>;
+  TypeStorageBase(KeyTy key)
+      : Type::Storage(TypeID::get<ConcreteT>()), key(key) {}
+
+  /// Construct an instance with the given storage allocator.
+  static ConcreteT *construct(StorageUniquer::StorageAllocator &alloc,
+                              const KeyTy &key) {
+    return new (alloc.allocate<ConcreteT>()) ConcreteT(key);
+  }
+
+  /// Utility methods required by the storage allocator.
+  bool operator==(const KeyTy &key) const { return this->key == key; }
+
+  /// Return the key value of this storage class.
+  const KeyTy &getValue() const { return key; }
+
+protected:
+  KeyTy key;
+};
+/// A specialization of the storage base for singleton types.
+template <typename ConcreteT>
+struct TypeStorageBase<ConcreteT, void> : public Type::Storage {
+  using Base = TypeStorageBase<ConcreteT, void>;
+  TypeStorageBase() : Type::Storage(TypeID::get<ConcreteT>()) {}
+};
+
+//===----------------------------------------------------------------------===//
+// AttributeTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct AttributeTypeStorage : public TypeStorageBase<AttributeTypeStorage> {};
+
+//===----------------------------------------------------------------------===//
+// ConstraintTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct ConstraintTypeStorage : public TypeStorageBase<ConstraintTypeStorage> {};
+
+//===----------------------------------------------------------------------===//
+// OperationTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct OperationTypeStorage
+    : public TypeStorageBase<OperationTypeStorage,
+                             std::pair<StringRef, const ods::Operation *>> {
+  using Base::Base;
+
+  static OperationTypeStorage *
+  construct(StorageUniquer::StorageAllocator &alloc,
+            const std::pair<StringRef, const ods::Operation *> &key) {
+    return new (alloc.allocate<OperationTypeStorage>()) OperationTypeStorage(
+        std::make_pair(alloc.copyInto(key.first), key.second));
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// RangeTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct RangeTypeStorage : public TypeStorageBase<RangeTypeStorage, Type> {
+  using Base::Base;
+};
+
+//===----------------------------------------------------------------------===//
+// RewriteTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct RewriteTypeStorage : public TypeStorageBase<RewriteTypeStorage> {};
+
+//===----------------------------------------------------------------------===//
+// TupleTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct TupleTypeStorage
+    : public TypeStorageBase<TupleTypeStorage,
+                             std::pair<ArrayRef<Type>, ArrayRef<StringRef>>> {
+  using Base::Base;
+
+  static TupleTypeStorage *
+  construct(StorageUniquer::StorageAllocator &alloc,
+            std::pair<ArrayRef<Type>, ArrayRef<StringRef>> key) {
+    SmallVector<StringRef> names = llvm::to_vector(llvm::map_range(
+        key.second, [&](StringRef name) { return alloc.copyInto(name); }));
+    return new (alloc.allocate<TupleTypeStorage>())
+        TupleTypeStorage(std::make_pair(alloc.copyInto(key.first),
+                                        alloc.copyInto(llvm::ArrayRef(names))));
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// TypeTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct TypeTypeStorage : public TypeStorageBase<TypeTypeStorage> {};
+
+//===----------------------------------------------------------------------===//
+// ValueTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct ValueTypeStorage : public TypeStorageBase<ValueTypeStorage> {};
+
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // AttributeType

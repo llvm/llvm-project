@@ -31,25 +31,25 @@ void test() {
   {
     C c{T{27}, T{28}};
     // expected-error-re@*:* 3{{static assertion failed {{.*}}Index value is out of range.}}
-    std::get<3>(c);
+    (void)std::get<3>(c);
   }
   // &&
   {
     C c{T{27}, T{28}};
     // expected-error-re@*:* 3 {{static assertion failed {{.*}}Index value is out of range.}}
-    std::get<3>(std::move(c));
+    (void)std::get<3>(std::move(c));
   }
   // const &
   {
     const C c{T{27}, T{28}};
     // expected-error-re@*:* 3 {{static assertion failed {{.*}}Index value is out of range.}}
-    std::get<3>(c);
+    (void)std::get<3>(c);
   }
   // const &&
   {
     const C c{T{27}, T{28}};
     // expected-error-re@*:* 3 {{static assertion failed {{.*}}Index value is out of range.}}
-    std::get<3>(std::move(c));
+    (void)std::get<3>(std::move(c));
   }
 }
 

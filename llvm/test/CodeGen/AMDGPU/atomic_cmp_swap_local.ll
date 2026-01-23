@@ -265,8 +265,7 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_bad_si_offset(ptr addrspac
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 7
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_sub_i32 s2, s2, s3
-; GFX9-NEXT:    s_lshl_b32 s2, s2, 2
-; GFX9-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-NEXT:    s_lshl2_add_u32 s0, s2, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX9-NEXT:    ds_cmpst_rtn_b32 v0, v1, v0, v2 offset:16
@@ -282,9 +281,8 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_bad_si_offset(ptr addrspac
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_sub_i32 s2, s2, s3
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s1
-; GFX11-NEXT:    s_lshl_b32 s2, s2, 2
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-NEXT:    s_lshl2_add_u32 s0, s2, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

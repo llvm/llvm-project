@@ -44,12 +44,6 @@ int main(int, char**) {
     test_container_iterators(std::array<int, 3>());
     test_container_iterators(std::vector<int>(3));
     test_container_iterators(std::string("abc"));
-#if TEST_STD_VER >= 17
-    test_container_iterators(std::string_view("abc"));
-#endif
-#if TEST_STD_VER >= 20
-    test_container_iterators(std::span<const char>("abc"));
-#endif
     test_valarray_iterators();
 
     return 0;

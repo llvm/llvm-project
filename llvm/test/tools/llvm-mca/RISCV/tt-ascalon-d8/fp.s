@@ -47,33 +47,35 @@ fsqrt.d ft2, fa3
 # CHECK-NEXT:  1      12    6.00                        fsqrt.d	ft2, fa3
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0.0] - AscalonFP
-# CHECK-NEXT: [0.1] - AscalonFP
-# CHECK-NEXT: [1]   - AscalonFXA
-# CHECK-NEXT: [2]   - AscalonFXB
-# CHECK-NEXT: [3.0] - AscalonFXC
-# CHECK-NEXT: [3.1] - AscalonFXC
-# CHECK-NEXT: [4.0] - AscalonFXD
-# CHECK-NEXT: [4.1] - AscalonFXD
-# CHECK-NEXT: [5.0] - AscalonLS
-# CHECK-NEXT: [5.1] - AscalonLS
-# CHECK-NEXT: [5.2] - AscalonLS
+# CHECK-NEXT: [0]   - AscalonFPA
+# CHECK-NEXT: [1]   - AscalonFPB
+# CHECK-NEXT: [2]   - AscalonFXA
+# CHECK-NEXT: [3]   - AscalonFXB
+# CHECK-NEXT: [4.0] - AscalonFXC
+# CHECK-NEXT: [4.1] - AscalonFXC
+# CHECK-NEXT: [5.0] - AscalonFXD
+# CHECK-NEXT: [5.1] - AscalonFXD
+# CHECK-NEXT: [6.0] - AscalonLS
+# CHECK-NEXT: [6.1] - AscalonLS
+# CHECK-NEXT: [6.2] - AscalonLS
+# CHECK-NEXT: [7]   - AscalonVA
+# CHECK-NEXT: [8]   - AscalonVB
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]
-# CHECK-NEXT: 18.00  28.00   -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4.0]  [4.1]  [5.0]  [5.1]  [6.0]  [6.1]  [6.2]  [7]    [8]
+# CHECK-NEXT: 18.00  28.00   -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     fmin.s	ft0, fa0, fa1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -     fmax.s	ft1, fa0, fa1
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     fmin.d	ft2, ft4, ft5
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -     fmax.d	ft3, ft4, ft5
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     fmadd.s	fs0, fs0, fs8, fs9
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -     fmsub.s	fs1, fs1, fs8, fs9
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     fmul.s	fs3, fs3, fs4
-# CHECK-NEXT: 7.00    -      -      -      -      -      -      -      -      -      -     fdiv.s	fs2, fs3, fs4
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -     fmul.d	ft4, ft4, ft5
-# CHECK-NEXT:  -     12.00   -      -      -      -      -      -      -      -      -     fdiv.d	fs4, fa3, ft5
-# CHECK-NEXT: 7.00    -      -      -      -      -      -      -      -      -      -     fsqrt.s	ft1, fa2
-# CHECK-NEXT:  -     12.00   -      -      -      -      -      -      -      -      -     fsqrt.d	ft2, fa3
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4.0]  [4.1]  [5.0]  [5.1]  [6.0]  [6.1]  [6.2]  [7]    [8]    Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     fmin.s	ft0, fa0, fa1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     fmax.s	ft1, fa0, fa1
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     fmin.d	ft2, ft4, ft5
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     fmax.d	ft3, ft4, ft5
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     fmadd.s	fs0, fs0, fs8, fs9
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     fmsub.s	fs1, fs1, fs8, fs9
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     fmul.s	fs3, fs3, fs4
+# CHECK-NEXT: 7.00    -      -      -      -      -      -      -      -      -      -      -      -     fdiv.s	fs2, fs3, fs4
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     fmul.d	ft4, ft4, ft5
+# CHECK-NEXT:  -     12.00   -      -      -      -      -      -      -      -      -      -      -     fdiv.d	fs4, fa3, ft5
+# CHECK-NEXT: 7.00    -      -      -      -      -      -      -      -      -      -      -      -     fsqrt.s	ft1, fa2
+# CHECK-NEXT:  -     12.00   -      -      -      -      -      -      -      -      -      -      -     fsqrt.d	ft2, fa3

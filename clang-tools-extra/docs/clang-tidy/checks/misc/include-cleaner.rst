@@ -10,7 +10,7 @@ Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 Example:
 
 .. code-block:: c++
-   
+
    // foo.h
    class Foo{};
    // bar.h

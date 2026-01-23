@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_pown.h>
-#include <clc/opencl/math/pown.h>
 
 #define __CLC_FUNCTION pown
 #define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>

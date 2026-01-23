@@ -111,17 +111,30 @@ private:
 
 public:
   std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+
+  bool isMCDCDecisionExpr(const Expr *E) const {
+    if (!RegionMCDCState)
+      return false;
+    auto I = RegionMCDCState->DecisionByStmt.find(E);
+    if (I == RegionMCDCState->DecisionByStmt.end())
+      return false;
+    return I->second.isValid();
+  }
+
+  bool isMCDCBranchExpr(const Expr *E) const {
+    return (RegionMCDCState && RegionMCDCState->BranchByStmt.contains(E));
+  }
+
   void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                 bool UseFalsePath, bool UseBoth,
                                  llvm::Value *StepV);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                      Address MCDCCondBitmapAddr,
                                       CodeGenFunction &CGF);
   void emitMCDCParameters(CGBuilderTy &Builder);
-  void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
-                               Address MCDCCondBitmapAddr);
+  std::vector<Address *> getMCDCCondBitmapAddrArray(CGBuilderTy &Builder);
+  void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S);
   void emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                Address MCDCCondBitmapAddr, llvm::Value *Val,
-                                CodeGenFunction &CGF);
+                                llvm::Value *Val, CodeGenFunction &CGF);
 
   void markStmtAsUsed(bool Skipped, const Stmt *S) {
     // Do nothing.

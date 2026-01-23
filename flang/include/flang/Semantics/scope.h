@@ -55,6 +55,15 @@ struct EquivalenceObject {
 };
 using EquivalenceSet = std::vector<EquivalenceObject>;
 
+// Preserved USE statement information for debug info generation.
+struct PreservedUseStmt {
+  std::string moduleName;
+  std::vector<std::string> onlyNames; // For USE ONLY
+  std::vector<std::string> renames; // local_name (resolved via GetUltimate)
+
+  PreservedUseStmt(std::string modName) : moduleName(std::move(modName)) {}
+};
+
 class Scope {
   using mapType = std::map<SourceName, MutableSymbolRef>;
 

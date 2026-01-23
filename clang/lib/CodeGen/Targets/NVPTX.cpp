@@ -276,9 +276,6 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
         M.handleCUDALaunchBoundsAttr(F, Attr);
     }
   }
-  // Attach kernel metadata directly if compiling for NVPTX.
-  if (FD->hasAttr<DeviceKernelAttr>())
-    F->setCallingConv(getDeviceKernelCallingConv());
 }
 
 void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,

@@ -72,7 +72,6 @@ multiclass VPseudoVQDOT_VV_VX {
   }
 }
 
-// TODO: Add pseudo and patterns for vqdotus.vx
 // TODO: Add isCommutable for VQDOT and VQDOTU
 let Predicates = [HasStdExtZvqdotq], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0 in {

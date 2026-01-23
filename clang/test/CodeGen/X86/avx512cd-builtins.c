@@ -7,6 +7,8 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512cd -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512cd -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
+// Crashes with SIGBUS: https://github.com/llvm/llvm-project/issues/172994
+// UNSUPPORTED: target=arm{{.*}}
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"

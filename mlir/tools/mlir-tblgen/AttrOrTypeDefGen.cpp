@@ -637,8 +637,10 @@ void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
   for (auto &method : iface.getMethods()) {
     // Don't declare if the method has a body. Or if the method has a default
     // implementation and the def didn't request that it always be declared.
-    if (method.getBody() || (method.getDefaultImplementation() &&
-                             !alwaysDeclared.count(method.getName()))) {
+    if (method.getBody())
+      continue;
+    if (method.getDefaultImplementation() &&
+        !alwaysDeclared.count(method.getName())) {
       genTraitMethodUsingDecl(trait, method);
       continue;
     }

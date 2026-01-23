@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/Interfaces/AlignmentAttrInterface.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -65,15 +66,15 @@ class AllocLikeOp<string mnemonic,
                   list<Trait> traits = []> :
     MemRef_Op<mnemonic,
     !listconcat([
-      AttrSizedOperandSegments
+      AttrSizedOperandSegments,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
     ], traits)> {
 
   let arguments = (ins Variadic<Index>:$dynamicSizes,
                        // The symbolic operands (the ones in square brackets)
                        // bind to the symbols of the memref's layout map.
                        Variadic<Index>:$symbolOperands,
-                       ConfinedAttr<OptionalAttr<I64Attr>,
-                                [IntMinValue<0>]>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
   let results = (outs Res<AnyMemRef, "",
                           [MemAlloc<resource, 0, FullEffect>]>:$memref);
 
@@ -148,7 +149,9 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       Pure,
       ViewLikeOpInterface,
       SameOperandsAndResultType,
-      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+                                ["reifyDimOfResult"]>
     ]> {
   let summary =
       "assumption that gives alignment information to the input memref";
@@ -269,7 +272,8 @@ def MemRef_AllocOp : AllocLikeOp<"alloc", DefaultResource, [
 //===----------------------------------------------------------------------===//
 
 
-def MemRef_ReallocOp : MemRef_Op<"realloc"> {
+def MemRef_ReallocOp : MemRef_Op<"realloc",
+    [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "memory reallocation operation";
   let description = [{
     The `realloc` operation changes the size of a memory region. The memory
@@ -335,8 +339,7 @@ def MemRef_ReallocOp : MemRef_Op<"realloc"> {
   let arguments = (ins Arg<MemRefRankOf<[AnyType], [1]>, "",
                                         [MemFreeAt<0, FullEffect>]>:$source,
                    Optional<Index>:$dynamicResultSize,
-                   ConfinedAttr<OptionalAttr<I64Attr>,
-                                [IntMinValue<0>]>:$alignment);
+                   OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let results = (outs Res<MemRefRankOf<[AnyType], [1]>, "",
                                        [MemAlloc<DefaultResource, 1,
@@ -417,7 +420,8 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
 
 def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
       [AutomaticAllocationScope,
-       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
        RecursiveMemoryEffects,
        NoRegionArguments]> {
@@ -1160,7 +1164,8 @@ def MemRef_GetGlobalOp : MemRef_Op<"get_global",
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
+def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
+    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "declare or define a global memref variable";
   let description = [{
     The `memref.global` operation declares or defines a named global memref
@@ -1235,6 +1240,7 @@ def LoadOp : MemRef_Op<"load",
                      "memref", "result",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
@@ -1780,7 +1786,8 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+      ["reifyResultShapes"]>]> {
   let summary = "operation to produce a memref with a higher rank.";
   let description = [{
     The `memref.expand_shape` op produces a new view with a higher rank whose
@@ -2010,6 +2017,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
                      "memref", "value",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
@@ -2450,6 +2458,9 @@ def MemRef_ViewOp : MemRef_Op<"view", [
   let extraClassDeclaration = [{
     /// The result of a view is always a memref.
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
+
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
 
     /// Returns the dynamic sizes for this view operation. This is redundant
     /// with `sizes` but needed in template implementations. More specifically:

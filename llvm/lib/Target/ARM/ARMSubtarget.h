@@ -258,6 +258,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 private:
   ARMSelectionDAGInfo TSInfo;

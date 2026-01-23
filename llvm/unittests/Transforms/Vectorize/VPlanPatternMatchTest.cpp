@@ -27,7 +27,7 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPBuilder Builder(VPBB);
 
   IntegerType *I64Ty = IntegerType::get(C, 64);
-  VPValue *StartV = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 0));
+  VPIRValue *StartV = Plan.getConstantInt(I64Ty, 0);
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DebugLoc());
   Builder.insert(CanonicalIVPHI);
 
