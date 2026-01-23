@@ -151,6 +151,8 @@ VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
   assert(
       entry &&
       "VirtualDataExtractor subset extractor requires valid virtual address");
+  if (!entry)
+    return {};
 
   // Entry::data is the offset into the DataBuffer's actual start/end range
   // Entry::base is the virtual address at the start of this region of data
@@ -158,6 +160,8 @@ VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
   assert(
       offset_into_entry_range + virtual_length <= entry->size &&
       "VirtualDataExtractor subset may not span multiple LookupTable entries");
+  if (offset_into_entry_range + virtual_length > entry->size)
+    return {};
 
   // We could support a Subset VirtualDataExtractor which covered
   // multiple LookupTable virtual entries, but we'd need to mutate
@@ -180,6 +184,8 @@ VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset) {
   assert(
       entry &&
       "VirtualDataExtractor subset extractor requires valid virtual address");
+  if (!entry)
+    return {};
 
   // Entry::data is the offset into the DataBuffer's actual start/end range
   // Entry::base is the virtual address at the start of this region of data
@@ -200,5 +206,7 @@ llvm::ArrayRef<uint8_t> VirtualDataExtractor::GetData() const {
   const LookupTable::Entry *entry = FindEntry(0);
   assert(entry &&
          "VirtualDataExtractor GetData requires valid virtual address");
+  if (!entry)
+    return {};
   return {m_start + entry->data, entry->size};
 }
