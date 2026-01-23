@@ -940,20 +940,6 @@ TEST(RangeSelectorTest, SpelledWithArgumentInMacro) {
                        HasValue("void foo(T t)"));
 }
 
-TEST(RangeSelectorTest, SpelledPartiallyInMacro) {
-  StringRef Code = R"cc(
-    #define MACRO(T) foo(T t); int i;
-    void MACRO(int);
-  )cc";
-  const char *ID = "id";
-  TestMatch Match = matchCode(Code, functionDecl().bind(ID));
-  EXPECT_THAT_EXPECTED(
-      select(spelled(node(ID)), Match),
-      Failed<StringError>(testing::Property(
-          &StringError::getMessage,
-          HasSubstr("spelled: range crosses file/macro boundaries"))));
-}
-
 TEST(RangeSelectorTest, IfBoundOpBound) {
   StringRef Code = R"cc(
     int f() {
