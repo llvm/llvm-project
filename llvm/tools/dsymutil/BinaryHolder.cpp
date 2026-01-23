@@ -282,8 +282,9 @@ BinaryHolder::searchAndCreateCAS(StringRef Path) {
   if (!DB)
     return DB.takeError();
 
-  WithColor::note() << "create CAS using configuration: " << Config->first
-                    << "'\n";
+  if (Opts.Verbose)
+    WithColor::note() << "create CAS using configuration: " << Config->first
+                      << "'\n";
   return LocalCAS.try_emplace(Path, std::move(DB->first)).first->second;
 }
 
@@ -338,8 +339,9 @@ BinaryHolder::getObjectEntryFromCAS(StringRef MaybeCASID, StringRef Filename) {
 
   auto DB = GlobalCAS;
   if (!DB) {
-    // If no global CAS, infer from Filename.
-    auto MaybeCAS = searchAndCreateCAS(Filename);
+    // If no global CAS, infer from Filename and search from the parent path of
+    // the binary file.
+    auto MaybeCAS = searchAndCreateCAS(sys::path::parent_path(Filename));
     if (!MaybeCAS)
       return MaybeCAS.takeError();
     DB = std::move(*MaybeCAS);
