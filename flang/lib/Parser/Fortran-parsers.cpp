@@ -715,8 +715,8 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(languageBindingSpec) || construct<AttrSpec>(optional) ||
     construct<AttrSpec>(construct<Parameter>("PARAMETER"_tok)) ||
     construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedAttr) ||
-    construct<AttrSpec>("RANK" >> construct<RankClause>(
-        parenthesized(scalarIntConstantExpr))) ||
+    construct<AttrSpec>("RANK" >>
+        construct<RankClause>(parenthesized(scalarIntConstantExpr))) ||
     construct<AttrSpec>(save) ||
     construct<AttrSpec>(construct<Target>("TARGET"_tok)) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||

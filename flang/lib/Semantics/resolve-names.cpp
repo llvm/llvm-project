@@ -2743,7 +2743,7 @@ void ArraySpecVisitor::Post(const parser::RankClause &x) {
     }
   } else {
     Say("RANK value must be a constant expression"_err_en_US);
-   }
+  }
 }
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
