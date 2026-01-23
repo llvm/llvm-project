@@ -26,7 +26,7 @@
 
 // llvm-bc and llvm-ll outputs need to match regular suffixes
 // (unfortunately).
-// RUN: %clangxx %s --target=x86_64-unknown-linux-gnu --no-offload-new-driver -nocudainc -nocudalib -flto -save-temps --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda -### 2> %t
+// RUN: %clangxx %s --target=x86_64-unknown-linux-gnu --no-offload-new-driver -nocudainc -nocudalib -flto -save-temps --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda -### 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-SUFFIXES < %t %s
 //
 // CHECK-COMPILELINK-SUFFIXES: "-o" "[[CPP:.*lto-host.*\.cui]]" "-x" "cuda" "{{.*}}lto.cu"
@@ -61,10 +61,10 @@
 
 // -flto passes along an explicit debugger tuning argument.
 // RUN: %clangxx -nocudainc -nocudalib --no-offload-new-driver \
-// RUN:          --target=x86_64-unknown-linux -### %s -flto -glldb --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2> %t
+// RUN:          --target=x86_64-unknown-linux -### %s -flto -glldb --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda 2> %t
 // RUN: FileCheck -check-prefix=CHECK-TUNING-LLDB < %t %s
 // RUN: %clangxx -nocudainc -nocudalib --no-offload-new-driver \
-// RUN:          --target=x86_64-unknown-linux -### %s -flto -g --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2> %t
+// RUN:          --target=x86_64-unknown-linux -### %s -flto -g --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda 2> %t
 // RUN: FileCheck -check-prefix=CHECK-NO-TUNING < %t %s
 //
 // CHECK-TUNING-LLDB:   "-plugin-opt=-debugger-tune=lldb"

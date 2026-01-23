@@ -13,10 +13,10 @@
 // RUN:   --offload-arch=sm_70 --offload-arch=sm_60 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=DEVICE60-60-70,DEVICE70-60-70,HOST-60-70 %s
 
-// Verify that it works with no explicit arch (defaults to sm_52)
+// Verify that it works with no explicit arch (defaults to sm_75)
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nocudainc -nocudalib \
-// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=DEVICE52,HOST52 %s
+// RUN:   --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=DEVICE75,HOST75 %s
 
 // Verify that --no-offload-arch negates preceding --offload-arch
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nocudainc -nocudalib \
@@ -46,12 +46,12 @@
 // HOST-60-70: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // HOST-60-70-SAME: "-D__CUDA_ARCH_LIST__=600,700"
 
-// DEVICE52: "-cc1" "-triple" "nvptx64-nvidia-cuda"
-// DEVICE52-SAME: "-target-cpu" "sm_52"
-// DEVICE52-SAME: "-D__CUDA_ARCH_LIST__=520"
+// DEVICE75: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// DEVICE75-SAME: "-target-cpu" "sm_75"
+// DEVICE75-SAME: "-D__CUDA_ARCH_LIST__=750"
 
-// HOST52: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// HOST52-SAME: "-D__CUDA_ARCH_LIST__=520"
+// HOST75: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// HOST75-SAME: "-D__CUDA_ARCH_LIST__=750"
 
 // DEVICE70-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // DEVICE70-ONLY-SAME: "-target-cpu" "sm_70"

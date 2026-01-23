@@ -4,7 +4,7 @@
 
 // RUN: not %clang %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
 // RUN: not %clang -x objective-c++ %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
-// RUN: not %clang -x cuda -nocudainc -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN: not %clang -x cuda -nocudainc -nocudalib --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
 // RUN: not %clang -x hip -nocudainc -nocudalib %s -std=foobar -c 2>&1 \
 // RUN:   | FileCheck --match-full-lines %s

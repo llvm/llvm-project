@@ -1,6 +1,6 @@
-// RUN: %clang -v --target=i386-pc-windows-msvc \
+// RUN: %clang -v --target=i386-pc-windows-msvc --no-cuda-version-check \
 // RUN:   --sysroot=%S/Inputs/CUDA-windows 2>&1 %s -### | FileCheck %s
-// RUN: %clang -v --target=i386-pc-windows-mingw32 \
+// RUN: %clang -v --target=i386-pc-windows-mingw32 --no-cuda-version-check \
 // RUN:   --sysroot=%S/Inputs/CUDA-windows 2>&1 %s -### | FileCheck %s
 
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA-windows/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v8.0
