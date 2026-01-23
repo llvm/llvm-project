@@ -3028,14 +3028,6 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         .getAsInteger(10, Num);
     return Num * 4;
   }
-  case PPC::GETtlsADDR:
-  case PPC::GETtlsADDRPCREL:
-  case PPC::GETtlsldADDR:
-  case PPC::GETtlsldADDRPCREL:
-    if (MI.getOperand(2).getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
-        MI.getOperand(2).getTargetFlags() == PPCII::MO_GOT_TLSLD_PCREL_FLAG)
-      return 4;
-    return 8;
   default:
     return get(Opcode).getSize();
   }
