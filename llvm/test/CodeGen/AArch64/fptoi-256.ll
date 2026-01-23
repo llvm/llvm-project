@@ -1,4 +1,3 @@
-; REQUIRES: aarch64-registered-target
 ; RUN: llc -mtriple=aarch64 < %s
 
 define i256 @doubletosi256(double %a) {

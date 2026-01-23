@@ -21,8 +21,8 @@ void f() {
   Inheritor({g()});
 }
 // CHECK-LABEL: define{{.*}} void @_Z1fv
-// CHECK:       %call1 = call noundef ptr @_Z1gv() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK:       call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
+// CHECK:       %[[TMP:.*]] = call noundef ptr @_Z1gv()
+// CHECK:       {{.*}} = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[TMP]])
 // CHECK:       call void (ptr, ptr, ...) @_ZN4BaseC2E6Strongz(ptr {{.*}}, ptr {{.*}})
 // CHECK-NEXT:  call void @_ZN9InheritorD1Ev(ptr {{.*}})
 

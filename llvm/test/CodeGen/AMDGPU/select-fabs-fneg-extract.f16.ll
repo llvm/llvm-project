@@ -300,8 +300,8 @@ define half @add_select_fabs_var_f16(i32 %c, half %x, half %y, half %z) {
 ; CI-LABEL: add_select_fabs_var_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -1772,8 +1772,8 @@ define half @add_select_negfabs_fabs_f16(i32 %c, half %x, half %y, half %z) {
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; CI-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
 ; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
+; CI-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -1924,8 +1924,8 @@ define half @add_select_neg_fabs_f16(i32 %c, half %x, half %y, half %z) {
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; CI-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
 ; CI-NEXT:    v_cvt_f32_f16_e64 v1, -v1
+; CI-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
