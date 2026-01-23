@@ -87,8 +87,7 @@ define i32 @testmswh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testmswh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtms w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testmswh:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
@@ -130,8 +129,7 @@ define i64 @testmsxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testmsxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtms x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testmsxh:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
@@ -148,27 +146,10 @@ entry:
 }
 
 define i32 @testmsws(float %a) {
-; CHECK-CVT-LABEL: testmsws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtms w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmsws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtms w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmsws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm s0, s0
-; CHECK-GI-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmsws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmsws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtms w0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testmsws:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintm s0, s0
@@ -181,27 +162,10 @@ entry:
 }
 
 define i64 @testmsxs(float %a) {
-; CHECK-CVT-LABEL: testmsxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtms x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmsxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtms x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmsxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm s0, s0
-; CHECK-GI-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmsxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmsxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtms x0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testmsxs:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintm s0, s0
@@ -214,27 +178,10 @@ entry:
 }
 
 define i32 @testmswd(double %a) {
-; CHECK-CVT-LABEL: testmswd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtms w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmswd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtms w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmswd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm d0, d0
-; CHECK-GI-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmswd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmswd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtms w0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testmswd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintm d0, d0
@@ -247,27 +194,10 @@ entry:
 }
 
 define i64 @testmsxd(double %a) {
-; CHECK-CVT-LABEL: testmsxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtms x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmsxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtms x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmsxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm d0, d0
-; CHECK-GI-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmsxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmsxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtms x0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testmsxd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintm d0, d0
@@ -351,8 +281,7 @@ define i32 @testpswh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testpswh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtps w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testpswh:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
@@ -394,8 +323,7 @@ define i64 @testpsxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testpsxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtps x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testpsxh:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
@@ -412,27 +340,10 @@ entry:
 }
 
 define i32 @testpsws(float %a) {
-; CHECK-CVT-LABEL: testpsws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtps w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpsws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtps w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpsws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp s0, s0
-; CHECK-GI-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpsws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpsws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtps w0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testpsws:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintp s0, s0
@@ -445,27 +356,10 @@ entry:
 }
 
 define i64 @testpsxs(float %a) {
-; CHECK-CVT-LABEL: testpsxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtps x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpsxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtps x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpsxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp s0, s0
-; CHECK-GI-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpsxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpsxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtps x0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testpsxs:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintp s0, s0
@@ -478,27 +372,10 @@ entry:
 }
 
 define i32 @testpswd(double %a) {
-; CHECK-CVT-LABEL: testpswd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtps w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpswd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtps w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpswd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp d0, d0
-; CHECK-GI-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpswd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpswd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtps w0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testpswd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintp d0, d0
@@ -511,27 +388,10 @@ entry:
 }
 
 define i64 @testpsxd(double %a) {
-; CHECK-CVT-LABEL: testpsxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtps x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpsxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtps x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpsxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp d0, d0
-; CHECK-GI-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpsxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpsxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtps x0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testpsxd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintp d0, d0
@@ -615,7 +475,6 @@ define i32 @testzswh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testzswh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz h0, h0
 ; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testzswh:
@@ -658,7 +517,6 @@ define i64 @testzsxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testzsxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz h0, h0
 ; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testzsxh:
@@ -676,27 +534,10 @@ entry:
 }
 
 define i32 @testzsws(float %a) {
-; CHECK-CVT-LABEL: testzsws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzs w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzsws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzsws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzsws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzsws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testzsws:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintz s0, s0
@@ -709,27 +550,10 @@ entry:
 }
 
 define i64 @testzsxs(float %a) {
-; CHECK-CVT-LABEL: testzsxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzs x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzsxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzsxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzsxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzsxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testzsxs:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintz s0, s0
@@ -742,27 +566,10 @@ entry:
 }
 
 define i32 @testzswd(double %a) {
-; CHECK-CVT-LABEL: testzswd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzs w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzswd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzswd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz d0, d0
-; CHECK-GI-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzswd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzswd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs w0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testzswd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintz d0, d0
@@ -775,27 +582,10 @@ entry:
 }
 
 define i64 @testzsxd(double %a) {
-; CHECK-CVT-LABEL: testzsxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzs x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzsxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzsxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz d0, d0
-; CHECK-GI-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzsxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzsxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs x0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testzsxd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frintz d0, d0
@@ -879,8 +669,7 @@ define i32 @testaswh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testaswh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtas w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testaswh:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
@@ -922,8 +711,7 @@ define i64 @testasxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testasxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtas x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testasxh:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
@@ -940,27 +728,10 @@ entry:
 }
 
 define i32 @testasws(float %a) {
-; CHECK-CVT-LABEL: testasws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtas w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testasws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtas w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testasws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta s0, s0
-; CHECK-GI-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testasws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testasws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtas w0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testasws:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frinta s0, s0
@@ -973,27 +744,10 @@ entry:
 }
 
 define i64 @testasxs(float %a) {
-; CHECK-CVT-LABEL: testasxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtas x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testasxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtas x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testasxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta s0, s0
-; CHECK-GI-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testasxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testasxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtas x0, s0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testasxs:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frinta s0, s0
@@ -1006,27 +760,10 @@ entry:
 }
 
 define i32 @testaswd(double %a) {
-; CHECK-CVT-LABEL: testaswd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtas w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testaswd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtas w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testaswd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta d0, d0
-; CHECK-GI-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testaswd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testaswd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtas w0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testaswd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frinta d0, d0
@@ -1039,27 +776,10 @@ entry:
 }
 
 define i64 @testasxd(double %a) {
-; CHECK-CVT-LABEL: testasxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtas x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testasxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtas x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testasxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta d0, d0
-; CHECK-GI-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testasxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testasxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtas x0, d0
+; CHECK-NEXT:    ret
 ; CHECK-GI-NOFP16-LABEL: testasxd:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    frinta d0, d0
