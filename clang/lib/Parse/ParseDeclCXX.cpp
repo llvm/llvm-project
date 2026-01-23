@@ -1123,6 +1123,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
     Diag(StartLoc, DiagID) << PrevSpec;
     DS.SetTypeSpecError();
   }
+  DS.SetRangeEnd(EndLoc);
   return EndLoc;
 }
 
