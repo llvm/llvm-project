@@ -48,6 +48,16 @@ let Definition = "modulelist" in {
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
 }
 
+#ifndef NDEBUG
+let Definition = "testing" in {
+  def InjectVarLocListError
+      : Property<"inject-variable-location-error", "Boolean">,
+        Global,
+        DefaultFalse,
+        Desc<"Used for testing LLDB only. Hide locations of local variables.">;
+}
+#endif
+
 let Definition = "debugger" in {
   def AutoConfirm: Property<"auto-confirm", "Boolean">,
     Global,
@@ -114,10 +124,6 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will highlight the displayed source code.">;
-  def MarkHiddenFrames: Property<"mark-hidden-frames", "Boolean">,
-    Global,
-    DefaultTrue,
-    Desc<"If true, LLDB will add a marker to delimit hidden frames in backtraces.">;
   def StopShowColumn: Property<"stop-show-column", "Enum">,
     DefaultEnumValue<"eStopShowColumnAnsiOrCaret">,
     EnumValues<"OptionEnumValues(s_stop_show_column_values)">,

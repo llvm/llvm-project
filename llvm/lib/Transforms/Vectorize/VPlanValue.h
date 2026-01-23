@@ -244,9 +244,9 @@ class VPRecipeValue : public VPValue {
 #endif
 
 public:
-  VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
 
-  virtual ~VPRecipeValue();
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVRecipeValueSC;

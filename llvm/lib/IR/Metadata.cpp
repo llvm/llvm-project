@@ -621,6 +621,14 @@ MDString *MDString::get(LLVMContext &Context, StringRef Str) {
   return &MapEntry;
 }
 
+MDString *MDString::getIfExists(LLVMContext &Context, StringRef Str) {
+  auto &Store = Context.pImpl->MDStringCache;
+  auto I = Store.find(Str);
+  if (I == Store.end())
+    return nullptr;
+  return &I->getValue();
+}
+
 StringRef MDString::getString() const {
   assert(Entry && "Expected to find string map entry");
   return Entry->first();
@@ -1395,6 +1403,23 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   for (auto *I : EndPoints)
     MDs.push_back(ConstantAsMetadata::get(I));
   return MDNode::get(A->getContext(), MDs);
+}
+
+MDNode *MDNode::getMostGenericNoFPClass(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  ConstantInt *AVal = mdconst::extract<ConstantInt>(A->getOperand(0));
+  ConstantInt *BVal = mdconst::extract<ConstantInt>(B->getOperand(0));
+  unsigned Intersect = AVal->getZExtValue() & BVal->getZExtValue();
+  if (Intersect == 0)
+    return nullptr;
+
+  return MDNode::get(A->getContext(), ConstantAsMetadata::get(ConstantInt::get(
+                                          AVal->getType(), Intersect)));
 }
 
 MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
