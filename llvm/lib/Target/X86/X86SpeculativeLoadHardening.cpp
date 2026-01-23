@@ -1926,7 +1926,7 @@ Register X86SpeculativeLoadHardeningImpl::hardenValueInRegister(
     unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
     Register NarrowStateReg = MRI->createVirtualRegister(RC);
     BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), NarrowStateReg)
-        .addReg(StateReg, 0, SubRegImm);
+        .addReg(StateReg, {}, SubRegImm);
     StateReg = NarrowStateReg;
   }
 

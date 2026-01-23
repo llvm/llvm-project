@@ -216,7 +216,7 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
     }
 
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::COPY), DstReg)
-        .addReg(SrcReg, 0, BPF::sub_32);
+        .addReg(SrcReg, {}, BPF::sub_32);
     return;
   }
 

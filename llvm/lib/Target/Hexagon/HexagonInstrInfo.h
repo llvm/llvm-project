@@ -471,7 +471,7 @@ public:
   int getMinValue(const MachineInstr &MI) const;
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
-                  unsigned &PredRegPos, unsigned &PredRegFlags) const;
+                  unsigned &PredRegPos, RegState &PredRegFlags) const;
   short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;

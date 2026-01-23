@@ -806,10 +806,10 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         Y1 = getSubRegForIndex(Y, Ysub, I);
         auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
                             TII->get(AMDGPU::V_SWAP_B32))
-                        .addDef(X1.Reg, 0, X1.SubReg)
-                        .addDef(Y1.Reg, 0, Y1.SubReg)
-                        .addReg(Y1.Reg, 0, Y1.SubReg)
-                        .addReg(X1.Reg, 0, X1.SubReg)
+                        .addDef(X1.Reg, {}, X1.SubReg)
+                        .addDef(Y1.Reg, {}, Y1.SubReg)
+                        .addReg(Y1.Reg, {}, Y1.SubReg)
+                        .addReg(X1.Reg, {}, X1.SubReg)
                         .getInstr();
         Swaps.push_back(MIB);
       }

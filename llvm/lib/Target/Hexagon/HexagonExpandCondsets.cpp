@@ -639,12 +639,12 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
   /// predicate.
 
   unsigned Opc = getCondTfrOpcode(SrcOp, PredSense);
-  unsigned DstState = RegState::Define | getUndefRegState(ReadUndef);
-  unsigned PredState = getRegState(PredOp) & ~RegState::Kill;
+  RegState DstState = RegState::Define | getUndefRegState(ReadUndef);
+  RegState PredState = getRegState(PredOp) & ~RegState::Kill;
   MachineInstrBuilder MIB;
 
   if (SrcOp.isReg()) {
-    unsigned SrcState = getRegState(SrcOp);
+    RegState SrcState = getRegState(SrcOp);
     if (RegisterRef(SrcOp) == RegisterRef(DstR, DstSR))
       SrcState &= ~RegState::Kill;
     MIB = BuildMI(B, At, DL, HII->get(Opc))
@@ -698,7 +698,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
       // Copy regs to update first.
       updateRegs(MI);
       MI.setDesc(HII->get(TargetOpcode::COPY));
-      unsigned S = getRegState(ST);
+      RegState S = getRegState(ST);
       while (MI.getNumOperands() > 1)
         MI.removeOperand(MI.getNumOperands()-1);
       MachineFunction &MF = *MI.getParent()->getParent();

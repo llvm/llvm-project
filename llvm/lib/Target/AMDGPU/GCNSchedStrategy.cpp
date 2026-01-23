@@ -2262,8 +2262,8 @@ bool RewriteMFMAFormStage::rewrite(
             MachineInstrBuilder VGPRCopy =
                 BuildMI(*RD->getParent(), std::next(RD->getIterator()),
                         RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
-                    .addDef(MappedReg, 0, 0)
-                    .addUse(Src2Reg, 0, 0);
+                    .addDef(MappedReg, {}, 0)
+                    .addUse(Src2Reg, {}, 0);
             DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
             // If this reaching def was the last MI in the region, update the
@@ -2345,8 +2345,8 @@ bool RewriteMFMAFormStage::rewrite(
           MachineInstrBuilder VGPRCopy =
               BuildMI(*RD->getParent(), std::next(RD->getIterator()),
                       RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
-                  .addDef(MappedReg, 0, 0)
-                  .addUse(DstReg, 0, 0);
+                  .addDef(MappedReg, {}, 0)
+                  .addUse(DstReg, {}, 0);
           DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
           // If this reaching def was the last MI in the region, update the
@@ -2381,8 +2381,8 @@ bool RewriteMFMAFormStage::rewrite(
       MachineInstrBuilder VGPRCopy =
           BuildMI(*UseInst->getParent(), UseInst->getIterator(),
                   UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(NewUseReg, 0, 0)
-              .addUse(DstReg, 0, 0);
+              .addDef(NewUseReg, {}, 0)
+              .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
       // Since we know this use has only one reaching def, we can replace the
       // use reg.
@@ -2424,8 +2424,8 @@ bool RewriteMFMAFormStage::rewrite(
       MachineInstrBuilder VGPRCopy =
           BuildMI(*UseInst->getParent(), UseInst->getIterator(),
                   UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(NewUseReg, 0, 0)
-              .addUse(RUDst.first, 0, 0);
+              .addDef(NewUseReg, {}, 0)
+              .addUse(RUDst.first, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
       // If this UseInst was the first MI in the region, update the region

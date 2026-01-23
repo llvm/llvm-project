@@ -309,12 +309,12 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
     return false;
 
   unsigned NewOpc;
-  unsigned StartRegState;
+  RegState StartRegState;
   bool AddImplicitRegs = true;
 
   if (IsLoad) {
     NewOpc = RISCV::QC_LWMI;
-    StartRegState = static_cast<unsigned>(RegState::Define);
+    StartRegState = RegState::Define;
   } else {
     assert(SMode != StoreMode::Unknown &&
            "Group should be large enough to know the store mode");
@@ -357,9 +357,9 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
     // Add implicit operands for the additional registers.
     for (unsigned i = 1; i < Len; ++i) {
       Register R = StartReg + i;
-      unsigned State = 0;
+      RegState State;
       if (IsLoad)
-        State = static_cast<unsigned>(RegState::ImplicitDefine);
+        State = RegState::ImplicitDefine;
       else
         State = RegState::Implicit |
                 getKillRegState(Group[i]->getOperand(0).isKill());
@@ -425,8 +425,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   Register NextReg = SecondOp0.getReg();
 
   unsigned XqciOpc;
-  unsigned StartRegState;
-  unsigned NextRegState = 0;
+  RegState StartRegState;
+  RegState NextRegState = {};
   bool AddNextReg = true;
 
   if (Opc == RISCV::LW) {
@@ -443,8 +443,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       return false;
 
     XqciOpc = RISCV::QC_LWMI;
-    StartRegState = static_cast<unsigned>(RegState::Define);
-    NextRegState = static_cast<unsigned>(RegState::ImplicitDefine);
+    StartRegState = RegState::Define;
+    NextRegState = RegState::ImplicitDefine;
   } else {
     assert(Opc == RISCV::SW && "Expected a SW instruction");
     if (StartReg == NextReg) {
