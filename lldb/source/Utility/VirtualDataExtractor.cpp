@@ -208,5 +208,5 @@ llvm::ArrayRef<uint8_t> VirtualDataExtractor::GetData() const {
          "VirtualDataExtractor GetData requires valid virtual address");
   if (!entry)
     return {};
-  return {m_start + entry->data, entry->size};
+  return {m_start + static_cast<size_t>(entry->data), entry->size};
 }
