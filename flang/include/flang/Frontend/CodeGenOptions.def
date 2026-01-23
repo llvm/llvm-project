@@ -40,6 +40,7 @@ CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
+CODEGENOPT(ProtectParens, 1, 1) ///< -fprotect-parens (enable parenthesis protection)
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
 CODEGENOPT(VectorizeLoop, 1, 0) ///< Enable loop vectorization.
 CODEGENOPT(VectorizeSLP, 1, 0) ///< Enable SLP vectorization.

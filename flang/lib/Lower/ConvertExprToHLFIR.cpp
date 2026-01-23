@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -36,6 +37,19 @@
 #include <optional>
 
 namespace {
+
+// This was modelled after isParenthesizedVariable()
+template <typename T>
+static bool isParenthesized(const Fortran::evaluate::Expr<T> &expr) {
+  using ExprVariant = decltype(Fortran::evaluate::Expr<T>::u);
+  using Parentheses = Fortran::evaluate::Parentheses<T>;
+  if constexpr (Fortran::common::HasMember<Parentheses, ExprVariant>) {
+    return std::get_if<Parentheses>(&expr.u) != nullptr;
+  } else {
+    return Fortran::common::visit(
+        [&](const auto &x) { return isParenthesized(x); }, expr.u);
+  }
+}
 
 /// Lower Designators to HLFIR.
 class HlfirDesignatorBuilder {
@@ -1703,12 +1717,27 @@ private:
     BinaryOp<D> binaryOp;
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
+
+    // "A op (...)" or "(...) op A" may need to have their reassoc flag
+    // turned off
+    const bool leftIsParens = isParenthesized(op.left());
+    const bool rightIsParens = isParenthesized(op.right());
+    const bool noReassoc =
+        getConverter().getLoweringOptions().getProtectParens() &&
+        (leftIsParens || rightIsParens);
     llvm::SmallVector<mlir::Value, 1> typeParams;
     if constexpr (R::category == Fortran::common::TypeCategory::Character) {
       binaryOp.genResultTypeParams(loc, builder, left, right, typeParams);
     }
-    if (rank == 0)
-      return binaryOp.gen(loc, builder, op.derived(), left, right);
+    if (rank == 0) {
+      auto fmfBackup = builder.getFastMathFlags();
+      if (noReassoc)
+        builder.setFastMathFlags(fmfBackup &
+                                 ~mlir::arith::FastMathFlags::reassoc);
+      auto res = binaryOp.gen(loc, builder, op.derived(), left, right);
+      builder.setFastMathFlags(fmfBackup);
+      return res;
+    }
 
     // Elemental expression.
     mlir::Type elementType =
@@ -1722,14 +1751,19 @@ private:
       assert(right.isArray() && "must have at least one array operand");
       shape = hlfir::genShape(loc, builder, right);
     }
-    auto genKernel = [&op, &left, &right, &binaryOp](
+    auto genKernel = [&op, &left, &right, &binaryOp, noReassoc](
                          mlir::Location l, fir::FirOpBuilder &b,
                          mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+      auto fmfBackup = b.getFastMathFlags();
+      if (noReassoc)
+        b.setFastMathFlags(fmfBackup & ~mlir::arith::FastMathFlags::reassoc);
       auto leftElement = hlfir::getElementAt(l, b, left, oneBasedIndices);
       auto rightElement = hlfir::getElementAt(l, b, right, oneBasedIndices);
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
       auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
-      return binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
+      auto result = binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
+      b.setFastMathFlags(fmfBackup);
+      return result;
     };
     auto iofBackup = builder.getIntegerOverflowFlags();
     // nsw is never added to operations on vector subscripts

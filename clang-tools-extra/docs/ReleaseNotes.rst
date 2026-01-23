@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`modernize-use-string-view
+  <clang-tidy/checks/modernize/use-string-view>` check.
+
+  Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
+  change it to ``std::[...]string_view`` for performance reasons if possible.
+
 - New :doc:`performance-string-view-conversions
   <clang-tidy/checks/performance/string-view-conversions>` check.
 
