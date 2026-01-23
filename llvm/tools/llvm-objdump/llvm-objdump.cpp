@@ -2691,7 +2691,9 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
   } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
   } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
-    // Assign attributes based on the AVR architecture version.
+    // Assign attributes based on the AVR architecture version, default to
+    // "avr0". Report "<unknown>" for unsupported AVR instructions to avoid
+    // silent failures.
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
       unsigned AVRVersion = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
       Features.AddFeature('+' + AVR::getFeatureSetForEFlag(AVRVersion));

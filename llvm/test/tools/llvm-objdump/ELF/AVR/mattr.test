@@ -1,16 +1,22 @@
 ## When --mattr and --mcpu are both empty, disassemble ELF with e_flags derived feature.
-# RUN: yaml2obj -DARCH_ARCHVERSION=ARCH_AVR1 %s -o %t.avr1
-# RUN: llvm-objdump -d %t.avr1 | FileCheck %s --check-prefixes=AVR1
-# RUN: yaml2obj -DARCH_ARCHVERSION=ARCH_AVR3 %s -o %t.avr3
-# RUN: llvm-objdump -d %t.avr3 | FileCheck %s --check-prefixes=ALL
+# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_ARCH_AVR1 %s -o %t.avr1
+# RUN: llvm-objdump -d %t.avr1 | FileCheck %s --check-prefix=AVR1
+# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_ARCH_AVR3 %s -o %t.avr3
+# RUN: llvm-objdump -d %t.avr3 | FileCheck %s --check-prefix=ALL
 
 ## If --mattr or --mcpu is specified, don't default to the file's e_flags derived feature.
-# RUN: llvm-objdump -d --mattr=+avr3 %t.avr1 | FileCheck %s --check-prefixes=ALL
-# RUN: llvm-objdump -d --mcpu=avr3 %t.avr1 | FileCheck %s --check-prefixes=ALL
+# RUN: llvm-objdump -d --mattr=+avr3 %t.avr1 | FileCheck %s --check-prefix=ALL
+# RUN: llvm-objdump -d --mcpu=avr3 %t.avr1 | FileCheck %s --check-prefix=ALL
+# RUN: llvm-objdump -d --mattr=+avr1 %t.avr3 | FileCheck %s --check-prefix=AVR1
+# RUN: llvm-objdump -d --mcpu=avr1 %t.avr3 | FileCheck %s --check-prefix=AVR1
 
 ## If file's e_flags is not specified, default to "avr0".
-# RUN: yaml2obj -DARCH_ARCHVERSION=LINKRELAX_PREPARED %s -o %t.noarchversion
-# RUN: llvm-objdump -d %t.noarchversion | FileCheck %s --check-prefixes=AVR0
+# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_LINKRELAX_PREPARED %s -o %t.noarchversion
+# RUN: llvm-objdump -d %t.noarchversion | FileCheck %s --check-prefix=AVR0
+
+## If file's e_flags is not specified, default to "avr0".
+# RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR1, EF_AVR_ARCH_AVR6' %s -o %t.multiarchversion
+# RUN: llvm-objdump -d %t.multiarchversion | FileCheck %s --check-prefix=AVR0
 
 # AVR1:         <_start>:
 # AVR1-COUNT-2:  <unknown>
@@ -32,7 +38,7 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: EM_AVR
-  Flags:   [ EF_AVR_[[ARCH_ARCHVERSION]] ]
+  Flags:   [ [[ARCH_ARCHVERSION]] ]
 Sections:
   - Name:    .text
     Type:    SHT_PROGBITS
