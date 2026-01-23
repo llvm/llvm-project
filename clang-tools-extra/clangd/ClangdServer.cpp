@@ -899,7 +899,7 @@ void ClangdServer::resolveTypeHierarchy(
     PathRef File, TypeHierarchyItem Item, int Resolve,
     TypeHierarchyDirection Direction,
     Callback<std::optional<TypeHierarchyItem>> CB) {
-  auto Action = [=, CB = std::move(CB),
+  auto Action = [Item = std::move(Item), Resolve, Direction, CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
