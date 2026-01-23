@@ -73,8 +73,9 @@ void ModRefResult::print(raw_ostream &os) const {
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
 
-AliasAnalysis::AliasAnalysis(Operation *op) {
-  addAnalysisImplementation(LocalAliasAnalysis());
+AliasAnalysis::AliasAnalysis(Operation *op, bool includeDefaultAnalyses) {
+  if (includeDefaultAnalyses)
+    addAnalysisImplementation(LocalAliasAnalysis());
 }
 
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
