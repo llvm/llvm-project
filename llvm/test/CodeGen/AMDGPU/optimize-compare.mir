@@ -20,7 +20,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -30,7 +30,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -57,7 +57,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -68,7 +68,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -94,7 +94,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -104,7 +104,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -131,7 +131,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -141,7 +141,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -173,20 +173,20 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0, $vgpr0_vgpr1
-    successors: %bb.1(0x80000000)
+    successors: %bb.1
 
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = S_AND_B32 1, killed %0, implicit-def dead $scc
 
   bb.1:
-    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    successors: %bb.2, %bb.1
 
     S_CMP_EQ_I32 %1:sreg_32, 1, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit $scc
     S_BRANCH %bb.1
 
   bb.2:
-    successors: %bb.3(0x80000000)
+    successors: %bb.3
 
   bb.3:
     S_ENDPGM 0
@@ -213,7 +213,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -223,7 +223,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -249,7 +249,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -259,7 +259,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -285,7 +285,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -294,7 +294,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -322,7 +322,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -333,7 +333,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -361,7 +361,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $sgpr1, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -372,7 +372,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -399,7 +399,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -410,7 +410,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -436,7 +436,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -447,7 +447,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -473,7 +473,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -484,7 +484,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -512,7 +512,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -523,7 +523,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -550,7 +550,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -560,7 +560,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -587,7 +587,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -597,7 +597,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -623,7 +623,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -633,7 +633,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -659,7 +659,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -669,7 +669,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -695,7 +695,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -705,7 +705,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -731,7 +731,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -741,7 +741,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -768,7 +768,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -778,7 +778,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -804,7 +804,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -814,7 +814,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -840,7 +840,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -850,7 +850,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -876,7 +876,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -886,7 +886,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -912,7 +912,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -922,7 +922,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -948,7 +948,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -958,7 +958,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -984,7 +984,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -994,7 +994,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1020,7 +1020,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1030,7 +1030,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1056,7 +1056,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1066,7 +1066,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1092,7 +1092,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1102,7 +1102,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1128,7 +1128,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1138,7 +1138,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1164,7 +1164,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1174,7 +1174,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1200,7 +1200,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1210,7 +1210,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1235,7 +1235,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = S_AND_B32 1, 11, implicit-def dead $scc
@@ -1244,7 +1244,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1270,7 +1270,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1280,7 +1280,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1306,7 +1306,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1316,7 +1316,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1342,7 +1342,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -1352,7 +1352,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1378,7 +1378,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1388,7 +1388,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1414,7 +1414,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1424,7 +1424,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1450,7 +1450,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -1460,7 +1460,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1488,7 +1488,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1498,7 +1498,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
     S_NOP 0, implicit %1
   bb.2:
@@ -1526,7 +1526,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1536,7 +1536,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1563,7 +1563,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1573,7 +1573,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1600,7 +1600,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1611,7 +1611,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1638,7 +1638,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1649,7 +1649,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1676,7 +1676,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -1687,7 +1687,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1713,7 +1713,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1723,7 +1723,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1749,7 +1749,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1759,7 +1759,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1785,7 +1785,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1795,7 +1795,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1822,7 +1822,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1832,7 +1832,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1858,7 +1858,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1868,7 +1868,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1894,7 +1894,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1904,7 +1904,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1931,7 +1931,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1941,7 +1941,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -1967,7 +1967,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -1977,7 +1977,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2003,7 +2003,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -2013,7 +2013,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2039,7 +2039,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -2049,7 +2049,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2077,7 +2077,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -2087,7 +2087,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
     S_NOP 0, implicit %1
 
@@ -2116,7 +2116,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -2126,7 +2126,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2152,7 +2152,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -2162,7 +2162,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2188,7 +2188,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -2198,7 +2198,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2224,7 +2224,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0, $vgpr0_vgpr1
 
     %0:sreg_32 = COPY $sgpr0
@@ -2234,7 +2234,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2260,7 +2260,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     %0:sreg_64 = COPY $sgpr0_sgpr1
@@ -2270,7 +2270,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2283,10 +2283,9 @@ body:             |
   ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $sgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
   ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub0
@@ -2300,10 +2299,9 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:vgpr_32 = IMPLICIT_DEF
-    %2:sreg_32 = COPY %0
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0
+    %2:sreg_32 = COPY $sgpr0
     S_CMP_LG_U32 %2, 0, implicit-def $scc
     %31:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
     %40:sreg_32_xm0_xexec = COPY %31.sub0:sreg_64_xexec
@@ -2314,7 +2312,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2327,10 +2325,9 @@ body:             |
   ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize_intervening
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $sgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
   ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
@@ -2346,10 +2343,9 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:vgpr_32 = IMPLICIT_DEF
-    %2:sreg_32 = COPY %0
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0
+    %2:sreg_32 = COPY $sgpr0
     S_CMP_LG_U32 %2, 0, implicit-def $scc
     %31:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
     S_CMP_LG_U32 %2, 0, implicit-def $scc
@@ -2361,7 +2357,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2375,10 +2371,9 @@ body:             |
   ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $sgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
   ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 1, 0, implicit $scc
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub1
@@ -2393,10 +2388,9 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:vgpr_32 = IMPLICIT_DEF
-    %2:sreg_32 = COPY %0
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0
+    %2:sreg_32 = COPY $sgpr0
     S_CMP_LG_U32 %2, 0, implicit-def $scc
     %31:sreg_64_xexec = S_CSELECT_B64 1, 0, implicit $scc
     %40:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
@@ -2407,7 +2401,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -2420,13 +2414,12 @@ body:             |
   ; GCN-LABEL: name: s_cselect_b64_undef_s_or_b32_s_cmp_lg_u32_0x00000000
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $sgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
   ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
-  ; GCN-NEXT:   %sgpr4:sreg_32 = S_OR_B32 undef %4:sreg_32_xm0_xexec, undef %5:sreg_32_xm0_xexec, implicit-def $scc
+  ; GCN-NEXT:   %sgpr4:sreg_32 = S_OR_B32 undef %3:sreg_32_xm0_xexec, undef %4:sreg_32_xm0_xexec, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
@@ -2436,10 +2429,9 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:vgpr_32 = IMPLICIT_DEF
-    %2:sreg_32 = COPY %0
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0
+    %2:sreg_32 = COPY $sgpr0
     S_CMP_LG_U32 %2, 0, implicit-def $scc
     %31:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
     %sgpr4:sreg_32 = S_OR_B32 undef %40:sreg_32_xm0_xexec, undef %41:sreg_32_xm0_xexec, implicit-def $scc
@@ -2448,9 +2440,159 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
   bb.2:
     S_ENDPGM 0
 
+...
+
+# STARTT
+---
+# Delete s_cmp after s_add_u32 X, 1
+name:            s_add_u32_X_1
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_X_1
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 1, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 %0, 1, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Delete s_cmp after s_add_u32 X, Y, where Y==1
+name:            s_add_u32_X_R1
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_X_R1
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 1
+    %2:sreg_32 = S_ADD_U32 %0, %1, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Delete s_cmp after s_add_u32 1, X
+name:            s_add_u32_1_X
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_1_X
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 1, [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 1, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Delete s_cmp after s_add_u32 X, Y, where X==1
+name:            s_add_u32_R1_Y
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_R1_Y
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 1
+    %2:sreg_32 = S_ADD_U32 %1, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Do not delete s_cmp after s_add_u32 X, 2
+name:            s_add_u32_X_2
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_X_2
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 2, implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 %0, 2, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Do not delete s_cmp after s_add_u32 X, Y, where Y!=1
+name:            s_add_u32_X_Rnon1
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_X_Rnon1
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 3
+    %2:sreg_32 = S_ADD_U32 %0, %1, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Do not delete s_cmp after s_add_u32 3, X
+name:            s_add_u32_3_X
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_3_X
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 3, [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_ADD_U32 3, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %1, 0, implicit-def $scc
+    S_ENDPGM 0
+...
+---
+# Do not delete s_cmp after s_add_u32 X, Y, where X!=1
+name:            s_add_u32_Rnon1_Y
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_add_u32_Rnon1_Y
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
+    ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_MOV_B32 4
+    %2:sreg_32 = S_ADD_U32 %1, %0, implicit-def $scc
+    S_CMP_EQ_U32 killed %2, 0, implicit-def $scc
+    S_ENDPGM 0
 ...

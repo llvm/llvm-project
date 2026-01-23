@@ -4040,8 +4040,8 @@ are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
 representation and never change anything except possibly for the sign bit.
 
 Floating-point math operations that return a NaN are an exception from the
-general principle that LLVM implements IEEE-754 semantics. Unless specified
-otherwise, the following rules apply whenever the IEEE-754 semantics say that a
+general principle that LLVM implements IEEE 754 semantics. Unless specified
+otherwise, the following rules apply whenever the IEEE 754 semantics say that a
 NaN value is returned: the result has a non-deterministic sign; the quiet bit
 and payload are non-deterministically chosen from the following set of options:
 
@@ -4095,13 +4095,13 @@ Floating-Point Semantics
 ------------------------
 
 This section defines the semantics for core floating-point operations on types
-that use a format specified by IEEE-754. These types are: ``half``, ``float``,
+that use a format specified by IEEE 754. These types are: ``half``, ``float``,
 ``double``, and ``fp128``, which correspond to the binary16, binary32, binary64,
 and binary128 formats, respectively. The "core" operations are those defined in
-section 5 of IEEE-754, which all have corresponding LLVM operations.
+section 5 of IEEE 754, which all have corresponding LLVM operations.
 
 The value returned by those operations matches that of the corresponding
-IEEE-754 operation executed in the :ref:`default LLVM floating-point environment
+IEEE 754 operation executed in the :ref:`default LLVM floating-point environment
 <floatenv>`, except that the behavior of NaN results is instead :ref:`as
 specified here <floatnan>`. In particular, such a floating-point instruction
 returning a non-NaN value is guaranteed to always return the same bit-identical
@@ -4444,7 +4444,7 @@ Floating-Point Types
      - Description
 
    * - ``half``
-     - 16-bit floating-point value (IEEE-754 binary16)
+     - 16-bit floating-point value (IEEE 754 binary16)
 
    * - ``bfloat``
      - 16-bit "brain" floating-point value (7-bit significand).  Provides the
@@ -4453,13 +4453,13 @@ Floating-Point Types
        extensions and Arm's ARMv8.6-A extensions, among others.
 
    * - ``float``
-     - 32-bit floating-point value (IEEE-754 binary32)
+     - 32-bit floating-point value (IEEE 754 binary32)
 
    * - ``double``
-     - 64-bit floating-point value (IEEE-754 binary64)
+     - 64-bit floating-point value (IEEE 754 binary64)
 
    * - ``fp128``
-     - 128-bit floating-point value (IEEE-754 binary128)
+     - 128-bit floating-point value (IEEE 754 binary128)
 
    * - ``x86_fp80``
      -  80-bit floating-point value (X87)
@@ -4893,7 +4893,7 @@ and disassembly do not cause any bits to change in the constants.
 
 When using the hexadecimal form, constants of types bfloat, half, float, and
 double are represented using the 16-digit form shown above (which matches the
-IEEE754 representation for double); bfloat, half and float values must, however,
+IEEE 754 representation for double); bfloat, half and float values must, however,
 be exactly representable as bfloat, IEEE 754 half, and IEEE 754 single
 precision respectively. Hexadecimal format is always used for long double, and
 there are three forms of long double. The 80-bit format used by x86 is
@@ -16512,7 +16512,7 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``sqrt``' function but without
-trapping or setting ``errno``. For types specified by IEEE-754, the result
+trapping or setting ``errno``. For types specified by IEEE 754, the result
 matches a conforming libm implementation.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -17507,7 +17507,7 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Return the same value as the IEEE-754 fusedMultiplyAdd operation. This
+Return the same value as the IEEE 754 fusedMultiplyAdd operation. This
 is assumed to not trap or set ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -18243,7 +18243,7 @@ The argument and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
+This function implements IEEE 754 operation ``roundToIntegralTiesToEven``. It
 also behaves in the same way as C standard function ``roundeven``, including
 that it disregards rounding mode and does not raise floating point exceptions.
 
@@ -19993,7 +19993,7 @@ Overview:
 The '``llvm.canonicalize.*``' intrinsic returns the platform-specific canonical
 encoding of a floating-point number. This canonicalization is useful for
 implementing certain numeric primitives such as frexp. The canonical encoding is
-defined by IEEE-754-2008 to be:
+defined by IEEE 754-2008 to be:
 
 ::
 
@@ -20001,7 +20001,7 @@ defined by IEEE-754-2008 to be:
       representation in a format. Applied to declets, significands of finite
       numbers, infinities, and NaNs, especially in decimal formats.
 
-This operation can also be considered equivalent to the IEEE-754-2008
+This operation can also be considered equivalent to the IEEE 754-2008
 conversion of a floating-point value to the same format. NaNs are handled
 according to section 6.2.
 
@@ -20015,7 +20015,7 @@ Examples of non-canonical encodings:
   These are treated as non-canonical encodings of zero and will be flushed to
   a zero of the same sign by this operation.
 
-Note that per IEEE-754-2008 6.2, systems that support signaling NaNs with
+Note that per IEEE 754-2008 6.2, systems that support signaling NaNs with
 default exception handling must signal an invalid exception, and produce a
 quiet NaN result.
 
@@ -23213,7 +23213,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754-2008 minNum of two vectors of floating-point values.
+Predicated floating-point IEEE 754-2008 minNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -23262,7 +23262,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754-2008 maxNum of two vectors of floating-point values.
+Predicated floating-point IEEE 754-2008 maxNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -29507,7 +29507,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754-2008 semantics for maxNum.
+This function follows the IEEE 754-2008 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -29539,7 +29539,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754-2008 semantics for minNum.
+This function follows the IEEE 754-2008 semantics for minNum.
 
 
 '``llvm.experimental.constrained.maximum``' Intrinsic
@@ -29736,7 +29736,7 @@ The second argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
+This function implements IEEE 754 operation ``roundToIntegralTiesToEven``. It
 also behaves in the same way as C standard function ``roundeven`` and can signal
 the invalid operation exception for a SNAN argument.
 
