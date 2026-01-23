@@ -72,9 +72,9 @@ def extract_llvm_libc_function(content: str) -> tuple:
 def transform_cpp_to_header(content: str, func_name: str) -> str:
     """Transform the .cpp file content to a header-only implementation."""
     lines = content.splitlines()
-    license_header = '\n'.join(lines[:7])
+    license_header = "\n".join(lines[:7])
 
-    includes_end = lines.index('namespace LIBC_NAMESPACE_DECL {')
+    includes_end = lines.index("namespace LIBC_NAMESPACE_DECL {")
     include_lines = lines[7:includes_end]
     header_includes = []
     for inc in include_lines:
@@ -85,29 +85,32 @@ def transform_cpp_to_header(content: str, func_name: str) -> str:
         if '"src/__support/common.h"' in inc:
             continue
         # Rely on clang-format to figure out include order.
-        header_includes.append(inc.replace('src/__support/math/', ''))
-    headers = '\n'.join(header_includes)
+        header_includes.append(inc.replace("src/__support/math/", ""))
+    headers = "\n".join(header_includes)
 
     func_upper = func_name.upper()
 
-    header = license_header + f"""
+    header = (
+        license_header
+        + f"""
 
 #ifndef LIBC_SRC___SUPPORT_MATH_{func_upper}_H
 #define LIBC_SRC___SUPPORT_MATH_{func_upper}_H
 
 {headers}
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE_DECL {{
 
-namespace math {
+namespace math {{
 
 // XXX put function implementation here
 
-} // namespace math
+}} // namespace math
 
-} // namespace LIBC_NAMESPACE_DECL
+}} // namespace LIBC_NAMESPACE_DECL
 
 """
+    )
     header += f"#endif // LIBC_SRC___SUPPORT_MATH_{func_upper}_H\n"
 
     return header
@@ -148,10 +151,18 @@ using math::{func_name};
 """
 
 
-def create_wrapper_cpp(content: str, func_name: str, return_type: str, params_with_types: str, param_names: str) -> str:
+def create_wrapper_cpp(
+    content: str,
+    func_name: str,
+    return_type: str,
+    params_with_types: str,
+    param_names: str,
+) -> str:
     """Create the simplified wrapper .cpp file."""
-    license_header = '\n'.join(content.splitlines()[:7])
-    return license_header + f"""
+    license_header = "\n".join(content.splitlines()[:7])
+    return (
+        license_header
+        + f"""
 
 #include "src/math/{func_name}.h"
 #include "src/__support/math/{func_name}.h"
@@ -163,7 +174,9 @@ LLVM_LIBC_FUNCTION({return_type}, {func_name}, ({params_with_types})) {{ return 
 }} // namespace LIBC_NAMESPACE_DECL
 
 // FIXME: Move this to the header:
-""" + content
+"""
+        + content
+    )
 
 
 def extract_cmake_depends(cmake_content: str, func_name: str) -> list:
@@ -389,19 +402,21 @@ def update_bazel_build(bazel_path: Path, func_name: str) -> str:
 
     # Create new libc_support_library entry
     deps_str = '",\n        "'.join(deps) if deps else ""
-    new_support_lib = f'''libc_support_library(
+    new_support_lib = f"""libc_support_library(
     name = "__support_math_{func_name}",
     hdrs = ["src/__support/math/{func_name}.h"],
     deps = [
         "{deps_str}",
     ],
 )
-'''
+"""
 
     # Find where to insert (after other __support_math_ entries, alphabetically)
     # Look for existing __support_math_ entries
     insert_pos = 0
-    for match in re.finditer(r'libc_support_library\s*\(\s*name\s*=\s*"__support_math_(\w+)"', content):
+    for match in re.finditer(
+        r'libc_support_library\s*\(\s*name\s*=\s*"__support_math_(\w+)"', content
+    ):
         existing_name = match.group(1)
         if existing_name < func_name:
             # Find end of this block
@@ -443,7 +458,6 @@ def update_bazel_build(bazel_path: Path, func_name: str) -> str:
 def migrate_function(func_name: str, root: Path, dry_run: bool = False) -> None:
     """Perform the full migration of a math function."""
 
-
     src_cpp = root / "libc" / "src" / "math" / "generic" / f"{func_name}.cpp"
     if not src_cpp.exists():
         raise FileNotFoundError(f"Source file not found: {src_cpp}")
@@ -455,7 +469,9 @@ def migrate_function(func_name: str, root: Path, dry_run: bool = False) -> None:
     print(f"Migrating {func_name}...")
 
     src_content = read_file(src_cpp)
-    return_type, _, params_with_types, param_names = extract_llvm_libc_function(src_content)
+    return_type, _, params_with_types, param_names = extract_llvm_libc_function(
+        src_content
+    )
     print(f"  Function signature: {return_type} {func_name}({params_with_types})")
 
     print("\nGenerating files...")
@@ -480,7 +496,9 @@ def migrate_function(func_name: str, root: Path, dry_run: bool = False) -> None:
     if not dry_run:
         write_file(test_cmake, updated_test_cmake)
 
-    bazel_build = root / "utils" / "bazel" / "llvm-project-overlay" / "libc" / "BUILD.bazel"
+    bazel_build = (
+        root / "utils" / "bazel" / "llvm-project-overlay" / "libc" / "BUILD.bazel"
+    )
     updated_bazel = update_bazel_build(bazel_build, func_name)
     print(f"  Updating: {bazel_build}")
     if not dry_run:
@@ -505,7 +523,9 @@ def migrate_function(func_name: str, root: Path, dry_run: bool = False) -> None:
     if not dry_run:
         write_file(support_header, header_content)
 
-    wrapper_content = create_wrapper_cpp(src_content, func_name, return_type, params_with_types, param_names)
+    wrapper_content = create_wrapper_cpp(
+        src_content, func_name, return_type, params_with_types, param_names
+    )
     print(f"  Updating: {src_cpp}")
     if not dry_run:
         write_file(src_cpp, wrapper_content)
@@ -516,18 +536,22 @@ def migrate_function(func_name: str, root: Path, dry_run: bool = False) -> None:
     print("\nNext steps:")
     print(f"  1. git add {shared_header} {support_header}")
     print(f"  2. Move code from {src_cpp} to {support_header}")
-    print(f"    * Replace `namespace {` with `namespace {func_name}_internal` (including closing comment)")
+    print(
+        f"    * Replace `namespace {{` with `namespace {func_name}_internal` (including closing comment)"
+    )
     print(f"    * Add `using namespace {func_name}_internal` to top of main function")
     print(f"    * Make all functions `LIBC_INLINE static`")
     print(f"    * Make all variables `LIBC_INLINE_VAR`")
     print(f"  3. Add a test to {test_cpp}")
-    print(f"""  4. git commit -am '[libc][math] Refactor {func_name} implementation to header-only in src/__support/math folder.
+    print(
+        f"""  4. git commit -am '[libc][math] Refactor {func_name} implementation to header-only in src/__support/math folder.
 
 Part of #147386
 
 in preparation for:
 
-https://discourse.llvm.org/t/rfc-make-clang-builtin-math-functions-constexpr-with-llvm-libc-to-support-c-23-constexpr-math-functions/86450'""")
+https://discourse.llvm.org/t/rfc-make-clang-builtin-math-functions-constexpr-with-llvm-libc-to-support-c-23-constexpr-math-functions/86450'"""
+    )
     print(f"  5. Run `git clang-format main` to fix include order")
 
 
