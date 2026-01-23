@@ -1214,8 +1214,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   const MachineFunction &MF = State.getMachineFunction();
   const Function &Fn = MF.getFunction();
   LLVMContext &Ctx = Fn.getContext();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
-  const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset();
+  const unsigned ExplicitOffset = Subtarget->getExplicitKernelArgOffset();
   CallingConv::ID CC = Fn.getCallingConv();
 
   Align MaxAlign = Align(1);
