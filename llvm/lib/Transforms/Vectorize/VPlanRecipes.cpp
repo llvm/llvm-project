@@ -473,7 +473,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ExtractLastActive:
     return 3;
@@ -610,7 +609,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (!V1->getType()->isVectorTy())
       return V1;
     Value *V2 = State.get(getOperand(1));
-    return Builder.CreateVectorSplice(V1, V2, -1, Name);
+    return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
     unsigned UF = getParent()->getPlan()->getUF();
@@ -710,54 +709,27 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                        Builder.getInt32(0));
   }
   case VPInstruction::ComputeAnyOfResult: {
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    Value *ReducedPartRdx = State.get(getOperand(2));
-    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedPartRdx =
-          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
-                              ReducedPartRdx, "bin.rdx");
-    return createAnyOfReduction(Builder, ReducedPartRdx,
-                                State.get(getOperand(1), VPLane(0)), OrigPhi);
-  }
-  case VPInstruction::ComputeFindIVResult: {
-    // The recipe's operands are the start value, the sentinel value, followed
-    // by one operand for each part of the reduction.
-    unsigned UF = getNumOperands() - 2;
+    Value *Start = State.get(getOperand(0), VPLane(0));
+    Value *NewVal = State.get(getOperand(1), VPLane(0));
     Value *ReducedResult = State.get(getOperand(2));
-    RecurKind MinMaxKind = getRecurKind();
-    assert((MinMaxKind == RecurKind::SMin || MinMaxKind == RecurKind::SMax ||
-            MinMaxKind == RecurKind::UMin || MinMaxKind == RecurKind::UMax) &&
-           "unexpected recurrence kind for ComputeFindIVResult");
-    for (unsigned Part = 1; Part < UF; ++Part)
-      ReducedResult = createMinMaxOp(Builder, MinMaxKind, ReducedResult,
-                                     State.get(getOperand(2 + Part)));
-
-    // Reduce the vector to a scalar.
-    bool IsMaxRdx =
-        MinMaxKind == RecurKind::SMax || MinMaxKind == RecurKind::UMax;
-    bool IsSigned =
-        MinMaxKind == RecurKind::SMin || MinMaxKind == RecurKind::SMax;
+    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
+      ReducedResult =
+          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
+                              ReducedResult, "bin.rdx");
+    // If any predicate is true it means that we want to select the new value.
     if (ReducedResult->getType()->isVectorTy())
-      ReducedResult = IsMaxRdx
-                          ? Builder.CreateIntMaxReduce(ReducedResult, IsSigned)
-                          : Builder.CreateIntMinReduce(ReducedResult, IsSigned);
-    // Correct the final reduction result back to the start value if the
-    // reduction result is the sentinel value.
-    Value *Start = State.get(getOperand(0), true);
-    Value *Sentinel = getOperand(1)->getLiveInIRValue();
-    Value *Cmp =
-        Builder.CreateICmpNE(ReducedResult, Sentinel, "rdx.select.cmp");
-    return Builder.CreateSelect(Cmp, ReducedResult, Start, "rdx.select");
+      ReducedResult = Builder.CreateOrReduce(ReducedResult);
+    // The compares in the loop may yield poison, which propagates through the
+    // bitwise ORs. Freeze it here before the condition is used.
+    ReducedResult = Builder.CreateFreeze(ReducedResult);
+    return Builder.CreateSelect(ReducedResult, NewVal, Start, "rdx.select");
   }
   case VPInstruction::ComputeReductionResult: {
     RecurKind RK = getRecurKind();
     bool IsOrdered = isReductionOrdered();
     bool IsInLoop = isReductionInLoop();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-           "should be handled by ComputeFindIVResult");
+           "FindIV should use min/max reduction kinds");
 
     // The recipe may have multiple operands to be reduced together.
     unsigned NumOperandsToReduce = getNumOperands();
@@ -1277,7 +1249,6 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::LastActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
-         getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
@@ -1405,9 +1376,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
   case VPInstruction::ComputeAnyOfResult:
-    return Op == getOperand(1);
-  case VPInstruction::ComputeFindIVResult:
-    return Op == getOperand(0);
+    return Op == getOperand(0) || Op == getOperand(1);
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
@@ -1507,9 +1476,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";
-    break;
-  case VPInstruction::ComputeFindIVResult:
-    O << "compute-find-iv-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
@@ -2115,8 +2081,7 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::Cmp:
     return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
   case OperationType::ReductionOp:
-    return Opcode == VPInstruction::ComputeReductionResult ||
-           Opcode == VPInstruction::ComputeFindIVResult;
+    return Opcode == VPInstruction::ComputeReductionResult;
   case OperationType::Other:
     return true;
   }
@@ -2173,6 +2138,9 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     RecurKind RK = getRecurKind();
     O << " (";
     switch (RK) {
+    case RecurKind::AnyOf:
+      O << "any-of";
+      break;
     case RecurKind::SMax:
       O << "smax";
       break;
@@ -2442,6 +2410,23 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
+void VPDerivedIVRecipe::execute(VPTransformState &State) {
+  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  if (FPBinOp)
+    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
+
+  Value *Step = State.get(getStepValue(), VPLane(0));
+  Value *Index = State.get(getOperand(1), VPLane(0));
+  Value *DerivedIV = emitTransformedIndex(
+      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
+      cast_if_present<BinaryOperator>(FPBinOp));
+  DerivedIV->setName(Name);
+  State.set(this, DerivedIV, VPLane(0));
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
@@ -2485,12 +2470,9 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     MulOp = Instruction::FMul;
   }
 
-  // Determine the number of scalars we need to generate for each unroll
-  // iteration.
+  // Determine the number of scalars we need to generate.
   bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
   // Compute the scalar steps and save the results in State.
-  Type *IntStepTy =
-      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
 
   unsigned StartLane = 0;
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
@@ -2498,21 +2480,8 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0;
-  if (getUnrollPart(*this) == 0)
-    StartIdx0 = ConstantInt::get(IntStepTy, 0);
-  else {
-    StartIdx0 = State.get(getOperand(2), true);
-    if (getUnrollPart(*this) != 1) {
-      StartIdx0 =
-          Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
-                                                        getUnrollPart(*this)));
-    }
-    StartIdx0 = Builder.CreateSExtOrTrunc(StartIdx0, IntStepTy);
-  }
-
-  if (BaseIVTy->isFloatingPointTy())
-    StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
+  Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
+                                     : Constant::getNullValue(BaseIVTy);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,
@@ -3396,6 +3365,20 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1), Ctx);
     if (isSingleScalar())
       return ScalarCost;
+
+    // If any of the operands is from a different replicate region and has its
+    // cost skipped, it may have been forced to scalar. Fall back to legacy cost
+    // model to avoid cost mis-match.
+    if (any_of(operands(), [&Ctx, VF](VPValue *Op) {
+          auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
+          if (!PredR)
+            return false;
+          return Ctx.skipCostComputation(
+              dyn_cast_or_null<Instruction>(
+                  PredR->getOperand(0)->getUnderlyingValue()),
+              VF.isVector());
+        }))
+      break;
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),

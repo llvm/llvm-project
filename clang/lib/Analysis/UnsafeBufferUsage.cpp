@@ -763,14 +763,25 @@ static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   // Strip CXXDefaultArgExpr before check:
+  Ptr = Ptr->IgnoreParenImpCasts();
   if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
-    Ptr = DefaultArgE->getExpr();
-  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
-  if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
+    Ptr = DefaultArgE->getExpr()->IgnoreParenImpCasts();
+  // Try to perform constant fold recursively:
+  if (const auto *NewPtr = tryConstantFoldConditionalExpr(Ptr, Ctx);
+      NewPtr != Ptr)
+    return isNullTermPointer(NewPtr, Ctx);
+  // Split the analysis for conditional expressions that cannot be
+  // constant-folded:
+  if (const auto *CondE = dyn_cast<ConditionalOperator>(Ptr)) {
+    return isNullTermPointer(CondE->getLHS(), Ctx) &&
+           isNullTermPointer(CondE->getRHS(), Ctx);
+  }
+
+  if (isa<clang::StringLiteral>(Ptr))
     return true;
-  if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
+  if (isa<PredefinedExpr>(Ptr))
     return true;
-  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts())) {
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr)) {
     const CXXMethodDecl *MD = MCE->getMethodDecl();
     const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
 
@@ -781,7 +792,7 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
 
   // Functions known to return properly null terminated strings.
   static const llvm::StringSet<> NullTermFunctions = {"strerror"};
-  if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+  if (auto *CE = dyn_cast<CallExpr>(Ptr)) {
     const FunctionDecl *F = CE->getDirectCallee();
     if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
       return true;
@@ -2109,6 +2120,7 @@ public:
                  // guarantee null-termination
     VA_LIST = 4, // one of the `-printf`s function that take va_list, which is
                  // considered unsafe as it is not compile-time check
+    FORMAT_ATTR = 8, // flag: the callee has the format attribute
   } WarnedFunKind = OTHERS;
 
   UnsafeLibcFunctionCallGadget(const MatchResult &Result)
@@ -2293,11 +2305,16 @@ public:
                              ASTContext &Ctx) const override {
     if (UnsafeArg)
       Handler.handleUnsafeLibcCall(
-          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::STRING, Ctx,
-          UnsafeArg);
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::STRING |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx, UnsafeArg);
     else
       Handler.handleUnsafeLibcCall(
-          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS, Ctx);
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
