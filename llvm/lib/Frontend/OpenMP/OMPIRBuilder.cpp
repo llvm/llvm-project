@@ -1882,7 +1882,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                            PrivTID, PrivTIDAddr, ToBeDeletedVec);
     };
   }
-  
+
   OI->FixUpNonEntryAllocas = true;
   OI->OuterAllocaBB = OuterAllocaBlock;
   OI->EntryBB = PRegEntryBB;
