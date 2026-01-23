@@ -137,6 +137,10 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
+  algorithms: ``std::replace_copy`` and ``std::replace_copy_if``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
