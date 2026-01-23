@@ -1145,9 +1145,10 @@ struct DeferredStore {
 } // namespace
 
 /// Check whether allocations for the given operation might potentially have to
-/// be done in device shared memory. That means we're compiling for a offloading
-/// target, the operation is an `omp::TargetOp` or nested inside of one and that
-/// target region represents a Generic (non-SPMD) kernel.
+/// be done in device shared memory. That means we're compiling for an
+/// offloading target, the operation is neither an `omp::TargetOp` nor nested
+/// inside of one, or it is and that target region represents a Generic
+/// (non-SPMD) kernel.
 ///
 /// This represents a necessary but not sufficient set of conditions to use
 /// device shared memory in place of regular allocas. For some variables, the
@@ -1163,7 +1164,7 @@ mightAllocInDeviceSharedMemory(Operation &op,
   if (!targetOp)
     targetOp = op.getParentOfType<omp::TargetOp>();
 
-  return targetOp &&
+  return !targetOp ||
          targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()) ==
              omp::TargetExecMode::generic;
 }
@@ -1177,18 +1178,36 @@ mightAllocInDeviceSharedMemory(Operation &op,
 /// operation that owns the specified block argument.
 static bool mustAllocPrivateVarInDeviceSharedMemory(BlockArgument value) {
   Operation *parentOp = value.getOwner()->getParentOp();
-  auto targetOp = dyn_cast<omp::TargetOp>(parentOp);
-  if (!targetOp)
-    targetOp = parentOp->getParentOfType<omp::TargetOp>();
-  assert(targetOp && "expected a parent omp.target operation");
-
+  auto moduleOp = parentOp->getParentOfType<ModuleOp>();
   for (auto *user : value.getUsers()) {
     if (auto parallelOp = dyn_cast<omp::ParallelOp>(user)) {
       if (llvm::is_contained(parallelOp.getReductionVars(), value))
         return true;
     } else if (auto parallelOp = user->getParentOfType<omp::ParallelOp>()) {
-      if (parentOp->isProperAncestor(parallelOp))
-        return true;
+      if (parentOp->isProperAncestor(parallelOp)) {
+        // If it is used directly inside of a parallel region, skip private
+        // clause uses.
+        bool isPrivateClauseUse = false;
+        if (auto argIface = dyn_cast<omp::BlockArgOpenMPOpInterface>(user)) {
+          if (auto privateSyms = llvm::cast_or_null<ArrayAttr>(
+                  user->getAttr("private_syms"))) {
+            for (auto [var, sym] :
+                 llvm::zip_equal(argIface.getPrivateVars(), privateSyms)) {
+              if (var != value)
+                continue;
+
+              auto privateOp = cast<omp::PrivateClauseOp>(
+                  moduleOp.lookupSymbol(cast<SymbolRefAttr>(sym)));
+              if (privateOp.getCopyRegion().empty()) {
+                isPrivateClauseUse = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!isPrivateClauseUse)
+          return true;
+      }
     }
   }
 
@@ -1213,8 +1232,8 @@ allocReductionVars(T op, ArrayRef<BlockArgument> reductionArgs,
   builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  bool useDeviceSharedMem =
-      isa<omp::TeamsOp>(op) && mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool useDeviceSharedMem = isa<omp::TeamsOp>(*op) &&
+                            mightAllocInDeviceSharedMemory(*op, *ompBuilder);
 
   // delay creating stores until after all allocas
   deferredStores.reserve(op.getNumReductionVars());
@@ -1345,8 +1364,8 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     return success();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  bool useDeviceSharedMem =
-      isa<omp::TeamsOp>(op) && mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool useDeviceSharedMem = isa<omp::TeamsOp>(*op) &&
+                            mightAllocInDeviceSharedMemory(*op, *ompBuilder);
 
   llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
   auto allocaIP = llvm::IRBuilderBase::InsertPoint(
@@ -1589,8 +1608,8 @@ static LogicalResult createReductionsAndCleanup(
       reductionRegions, privateReductionVariables, moduleTranslation, builder,
       "omp.reduction.cleanup");
 
-  bool useDeviceSharedMem =
-      isa<omp::TeamsOp>(op) && mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool useDeviceSharedMem = isa<omp::TeamsOp>(*op) &&
+                            mightAllocInDeviceSharedMemory(*op, *ompBuilder);
   if (useDeviceSharedMem) {
     for (auto [var, reductionDecl] :
          llvm::zip_equal(privateReductionVariables, reductionDecls))
@@ -1782,7 +1801,7 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool mightUseDeviceSharedMem =
-      isa<omp::TeamsOp, omp::DistributeOp>(*op) &&
+      isa<omp::TargetOp, omp::TeamsOp, omp::DistributeOp>(*op) &&
       mightAllocInDeviceSharedMemory(*op, *ompBuilder);
   unsigned int allocaAS =
       moduleTranslation.getLLVMModule()->getDataLayout().getAllocaAddrSpace();
@@ -1936,7 +1955,7 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool mightUseDeviceSharedMem =
-      isa<omp::TeamsOp, omp::DistributeOp>(*op) &&
+      isa<omp::TargetOp, omp::TeamsOp, omp::DistributeOp>(*op) &&
       mightAllocInDeviceSharedMemory(*op, *ompBuilder);
   for (auto [privDecl, llvmPrivVar, blockArg] :
        llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.llvmVars,
@@ -6062,42 +6081,68 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
 // a store of the kernel argument into this allocated memory which
 // will then be loaded from, ByCopy will use the allocated memory
 // directly.
-static llvm::IRBuilderBase::InsertPoint
-createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
-                             llvm::Value *input, llvm::Value *&retVal,
-                             llvm::IRBuilderBase &builder,
-                             llvm::OpenMPIRBuilder &ompBuilder,
-                             LLVM::ModuleTranslation &moduleTranslation,
-                             llvm::IRBuilderBase::InsertPoint allocaIP,
-                             llvm::IRBuilderBase::InsertPoint codeGenIP) {
+static llvm::IRBuilderBase::InsertPoint createDeviceArgumentAccessor(
+    omp::TargetOp targetOp, MapInfoData &mapData, llvm::Argument &arg,
+    llvm::Value *input, llvm::Value *&retVal, llvm::IRBuilderBase &builder,
+    llvm::OpenMPIRBuilder &ompBuilder,
+    LLVM::ModuleTranslation &moduleTranslation,
+    llvm::IRBuilderBase::InsertPoint allocIP,
+    llvm::IRBuilderBase::InsertPoint codeGenIP,
+    llvm::ArrayRef<llvm::IRBuilderBase::InsertPoint> deallocIPs) {
   assert(ompBuilder.Config.isTargetDevice() &&
          "function only supported for target device codegen");
-  builder.restoreIP(allocaIP);
+  builder.restoreIP(allocIP);
 
   omp::VariableCaptureKind capture = omp::VariableCaptureKind::ByRef;
   LLVM::TypeToLLVMIRTranslator typeToLLVMIRTranslator(
       ompBuilder.M.getContext());
   unsigned alignmentValue = 0;
+  BlockArgument mlirArg;
   // Find the associated MapInfoData entry for the current input
-  for (size_t i = 0; i < mapData.MapClause.size(); ++i)
+  for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
     if (mapData.OriginalValue[i] == input) {
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
       capture = mapOp.getMapCaptureType();
       // Get information of alignment of mapped object
       alignmentValue = typeToLLVMIRTranslator.getPreferredAlignment(
           mapOp.getVarType(), ompBuilder.M.getDataLayout());
+      // Get the corresponding target entry block argument
+      mlirArg =
+          cast<omp::BlockArgOpenMPOpInterface>(*targetOp).getMapBlockArgs()[i];
       break;
     }
+  }
 
   unsigned int allocaAS = ompBuilder.M.getDataLayout().getAllocaAddrSpace();
   unsigned int defaultAS =
       ompBuilder.M.getDataLayout().getProgramAddressSpace();
 
-  // Create the alloca for the argument the current point.
-  llvm::Value *v = builder.CreateAlloca(arg.getType(), allocaAS);
+  // Create the allocation for the argument.
+  llvm::Value *v = nullptr;
+  if (mightAllocInDeviceSharedMemory(*targetOp, ompBuilder) &&
+      mustAllocPrivateVarInDeviceSharedMemory(mlirArg)) {
+    // Use the beginning of the codeGenIP rather than the usual allocation point
+    // for shared memory allocations because otherwise these would be done prior
+    // to the target initialization call. Also, the exit block (where the
+    // deallocation is placed) is only executed if the initialization call
+    // succeeds.
+    builder.SetInsertPoint(codeGenIP.getBlock()->getFirstInsertionPt());
+    v = ompBuilder.createOMPAllocShared(builder, arg.getType());
 
-  if (allocaAS != defaultAS && arg.getType()->isPointerTy())
-    v = builder.CreateAddrSpaceCast(v, builder.getPtrTy(defaultAS));
+    // Create deallocations in all provided deallocation points and then restore
+    // the insertion point to right after the new allocations.
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    for (auto deallocIP : deallocIPs) {
+      builder.SetInsertPoint(deallocIP.getBlock(), deallocIP.getPoint());
+      ompBuilder.createOMPFreeShared(builder, v, arg.getType());
+    }
+  } else {
+    // Use the current point, which was previously set to allocIP.
+    v = builder.CreateAlloca(arg.getType(), allocaAS);
+
+    if (allocaAS != defaultAS && arg.getType()->isPointerTy())
+      v = builder.CreateAddrSpaceCast(v, builder.getPtrTy(defaultAS));
+  }
 
   builder.CreateStore(&arg, v);
 
@@ -6705,8 +6750,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   };
 
   auto argAccessorCB = [&](llvm::Argument &arg, llvm::Value *input,
-                           llvm::Value *&retVal, InsertPointTy allocaIP,
-                           InsertPointTy codeGenIP)
+                           llvm::Value *&retVal, InsertPointTy allocIP,
+                           InsertPointTy codeGenIP,
+                           llvm::ArrayRef<InsertPointTy> deallocIPs)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetCurrentDebugLocation(llvm::DebugLoc());
@@ -6720,9 +6766,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       return codeGenIP;
     }
 
-    return createDeviceArgumentAccessor(mapData, arg, input, retVal, builder,
-                                        *ompBuilder, moduleTranslation,
-                                        allocaIP, codeGenIP);
+    return createDeviceArgumentAccessor(targetOp, mapData, arg, input, retVal,
+                                        builder, *ompBuilder, moduleTranslation,
+                                        allocIP, codeGenIP, deallocIPs);
   };
 
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
