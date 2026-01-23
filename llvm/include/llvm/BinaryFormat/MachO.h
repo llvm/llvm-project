@@ -508,7 +508,10 @@ enum RelocationInfoType {
   // r_pcrel=0 means this is paired with a LUI (llvm currently does
   // not support no-PIC). Note: the compiler places the distance to
   // the paired AUIPC in the imm12 (e.g. if previous instruction is
-  // the AUIPC, the imm12 is -4 or 0xFFC).
+  // the AUIPC, the imm12 is -4 or 0xFFC).  NOTE: this mean that the
+  // separation between hi/lo has to fit in (signed) 12 bits. FIXME:
+  // this needs addressing for code models that go beyond 4k
+  // functions.
   RISCV_RELOC_LO12 = 4,
   // High 20 bits of GOT slot. r_pcrel=1 means this is paired with an
   // AUIPC.  r_pcrel=0 means this is paired with a LUI.
