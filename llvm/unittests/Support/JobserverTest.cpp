@@ -14,6 +14,7 @@
 #include "llvm/Support/Jobserver.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
@@ -214,6 +215,40 @@ TEST_F(JobserverClientTest, UnixClientFifo) {
   EXPECT_FALSE(S2.isValid());
 
   // Release does not write to the pipe for the implicit token.
+  Client->release(std::move(S1));
+
+  // Re-acquire the implicit token.
+  S1 = Client->tryAcquire();
+  EXPECT_TRUE(S1.isValid());
+}
+
+TEST_F(JobserverClientTest, UnixClientNonFifo) {
+  // This test verifies that non-FIFO jobservers can be used, such as steve
+  // or guildmaster.
+  SmallString<64> F;
+  std::error_code EC =
+      sys::fs::createTemporaryFile("jobserver-test", "nonfifo", F);
+  ASSERT_FALSE(EC);
+  FileRemover Cleanup(F);
+
+  // Intentionally inserted \t in environment string.
+  std::string Makeflags = " \t -j4\t \t--jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // Get the implicit token.
+  JobSlot S1 = Client->tryAcquire();
+  EXPECT_TRUE(S1.isValid());
+  EXPECT_TRUE(S1.isImplicit());
+
+  // File is empty, next acquire fails.
+  JobSlot S2 = Client->tryAcquire();
+  EXPECT_FALSE(S2.isValid());
+
+  // Release does not write to the file for the implicit token.
   Client->release(std::move(S1));
 
   // Re-acquire the implicit token.

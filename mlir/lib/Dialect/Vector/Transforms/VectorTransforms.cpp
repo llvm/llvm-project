@@ -453,6 +453,8 @@ struct ReorderCastOpsOnBroadcast
                                 PatternRewriter &rewriter) const override {
     if (op->getNumOperands() != 1)
       return failure();
+    if (!isa<VectorType>(op->getResult(0).getType()))
+      return failure();
     auto bcastOp = op->getOperand(0).getDefiningOp<vector::BroadcastOp>();
     if (!bcastOp)
       return failure();
@@ -1716,7 +1718,7 @@ class DropInnerMostUnitDimsTransferWrite
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction suitable for MMT (matrix matrix multiplication
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final

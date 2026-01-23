@@ -281,7 +281,7 @@ struct TextDocumentEdit {
   /// The text document to change.
   VersionedTextDocumentIdentifier textDocument;
 
-	/// The edits to be applied.
+  /// The edits to be applied.
   /// FIXME: support the AnnotatedTextEdit variant.
   std::vector<TextEdit> edits;
 };
@@ -560,7 +560,7 @@ struct ClientCapabilities {
 
   /// The client supports versioned document changes for WorkspaceEdit.
   bool DocumentChanges = false;
-  
+
   /// The client supports change annotations on text edits,
   bool ChangeAnnotation = false;
 
@@ -1027,12 +1027,12 @@ struct WorkspaceEdit {
   /// Versioned document edits.
   ///
   /// If a client neither supports `documentChanges` nor
-	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
-	/// using the `changes` property are supported.
+  /// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+  /// using the `changes` property are supported.
   std::optional<std::vector<TextDocumentEdit>> documentChanges;
-  
+
   /// A map of change annotations that can be referenced in
-	/// AnnotatedTextEdit.
+  /// AnnotatedTextEdit.
   std::map<std::string, ChangeAnnotation> changeAnnotations;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &, llvm::json::Path);
@@ -1104,6 +1104,35 @@ struct CodeAction {
 };
 llvm::json::Value toJSON(const CodeAction &);
 
+/// Symbol tags are extra annotations that can be attached to a symbol.
+/// \see https://github.com/microsoft/language-server-protocol/pull/2003
+enum class SymbolTag {
+  Deprecated = 1,
+  Private = 2,
+  Package = 3,
+  Protected = 4,
+  Public = 5,
+  Internal = 6,
+  File = 7,
+  Static = 8,
+  Abstract = 9,
+  Final = 10,
+  Sealed = 11,
+  Transient = 12,
+  Volatile = 13,
+  Synchronized = 14,
+  Virtual = 15,
+  Nullable = 16,
+  NonNull = 17,
+  Declaration = 18,
+  Definition = 19,
+  ReadOnly = 20,
+
+  // Update as needed
+  FirstTag = Deprecated,
+  LastTag = ReadOnly
+};
+llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
 /// that appear in a document. Document symbols can be hierarchical and they
 /// have two ranges: one that encloses its definition and one that points to its
@@ -1120,6 +1149,9 @@ struct DocumentSymbol {
 
   /// Indicates if this symbol is deprecated.
   bool deprecated = false;
+
+  /// The tags for this symbol.
+  std::vector<SymbolTag> tags;
 
   /// The range enclosing this symbol not including leading/trailing whitespace
   /// but everything else like comments. This information is typically used to
@@ -1145,6 +1177,9 @@ struct SymbolInformation {
 
   /// The kind of this symbol.
   SymbolKind kind;
+
+  /// Tags for this symbol, e.g public, private, static, const etc.
+  std::vector<SymbolTag> tags;
 
   /// The location of this symbol.
   Location location;
@@ -1288,13 +1323,13 @@ enum class InsertTextFormat {
 /// Additional details for a completion item label.
 struct CompletionItemLabelDetails {
   /// An optional string which is rendered less prominently directly after label
-	/// without any spacing. Should be used for function signatures or type
+  /// without any spacing. Should be used for function signatures or type
   /// annotations.
   std::string detail;
 
   /// An optional string which is rendered less prominently after
-	/// CompletionItemLabelDetails.detail. Should be used for fully qualified
-	/// names or file path.
+  /// CompletionItemLabelDetails.detail. Should be used for fully qualified
+  /// names or file path.
   std::string description;
 };
 llvm::json::Value toJSON(const CompletionItemLabelDetails &);
@@ -1571,9 +1606,6 @@ struct ResolveTypeHierarchyItemParams {
 };
 bool fromJSON(const llvm::json::Value &, ResolveTypeHierarchyItemParams &,
               llvm::json::Path);
-
-enum class SymbolTag { Deprecated = 1 };
-llvm::json::Value toJSON(SymbolTag);
 
 /// The parameter of a `textDocument/prepareCallHierarchy` request.
 struct CallHierarchyPrepareParams : public TextDocumentPositionParams {};

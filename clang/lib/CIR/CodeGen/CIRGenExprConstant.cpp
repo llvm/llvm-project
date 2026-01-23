@@ -1458,8 +1458,7 @@ ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
-  return {};
+  return cgm.getAddrOfConstantStringFromLiteral(e->getFunctionName());
 }
 
 ConstantLValue
@@ -1876,8 +1875,24 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
         mlir::ArrayAttr::get(cgm.getBuilder().getContext(), elements));
   }
   case APValue::MemberPointer: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
-    return {};
+    assert(!cir::MissingFeatures::cxxABI());
+
+    const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (value.isMemberPointerToDerivedMember()) {
+      cgm.errorNYI(
+          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
+      return {};
+    }
+
+    if (isa<CXXMethodDecl>(memberDecl)) {
+      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer to method");
+      return {};
+    }
+
+    auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
+
+    const auto *fieldDecl = cast<FieldDecl>(memberDecl);
+    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();

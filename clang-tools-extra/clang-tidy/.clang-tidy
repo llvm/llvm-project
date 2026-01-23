@@ -15,6 +15,7 @@ Checks: >
   cppcoreguidelines-virtual-class-destructor,
   google-readability-casting,
   misc-const-correctness,
+  misc-include-cleaner,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,
@@ -41,4 +42,6 @@ Checks: >
 
 CheckOptions:
   - key:             performance-move-const-arg.CheckTriviallyCopyableMove
+    value:           false
+  - key:             misc-include-cleaner.MissingIncludes
     value:           false

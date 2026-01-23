@@ -18,6 +18,7 @@
 #include "Decomposer.h"
 #include "Utils.h"
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
@@ -995,6 +996,11 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       } else {
         mapFlag |= mlir::omp::ClauseMapFlags::to;
       }
+    } else if (semantics::IsNamedConstant(sym)) {
+      // Parameter constants should be mapped as read-only (to) since they
+      // cannot be modified. Mapping them as tofrom would cause a crash when
+      // trying to write back to read-only memory.
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
     } else if (!fir::isa_builtin_cptr_type(varType)) {
       mapFlag |= mlir::omp::ClauseMapFlags::to;
       mapFlag |= mlir::omp::ClauseMapFlags::from;
@@ -1639,6 +1645,62 @@ static void genSimdClauses(
   cp.processLinear(clauseOps);
 }
 
+// SIMD construct may have implicit
+// linear semantics on IV. Process the same here.
+static void
+genSimdImplicitLinear(lower::AbstractConverter &converter,
+                      mlir::omp::SimdOperands &clauseOps,
+                      mlir::omp::LoopNestOperands loopNestClauseOps,
+                      llvm::SmallVector<const semantics::Symbol *> iv) {
+
+  // If the (standalone/composite) SIMD is enclosed within TARGET,
+  // implicit linearization will cause invalid FIR due to
+  // target operation `host_eval` argument's illegal use in omp.simd.
+  // Hence skip implicit linearization if TARGET encloses the current
+  // SIMD.
+  auto *currentOp =
+      converter.getFirOpBuilder().getInsertionBlock()->getParentOp();
+  while (currentOp) {
+    if (auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(currentOp))
+      return;
+    currentOp = currentOp->getParentOp();
+  }
+
+  std::vector<mlir::Attribute> typeAttrs;
+  // If attributes from explicit `linear(...)` clause are present,
+  // carry them forward.
+  if (clauseOps.linearVarTypes && !clauseOps.linearVarTypes.empty())
+    typeAttrs.assign(clauseOps.linearVarTypes.begin(),
+                     clauseOps.linearVarTypes.end());
+
+  for (auto [loopVar, loopStep] : llvm::zip(iv, loopNestClauseOps.loopSteps)) {
+    const mlir::Value variable = converter.getSymbolAddress(*loopVar);
+
+    // If the loop variable is already linearized (through an explicit
+    // `linear()` clause, skip.
+    if (std::find(clauseOps.linearVars.begin(), clauseOps.linearVars.end(),
+                  variable) != clauseOps.linearVars.end())
+      continue;
+
+    // TODO: Implicit linearization is skipped if iv is a pointer
+    // or an allocatable, due to potential mismatch between the linear
+    // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
+    // and the linear step size (example: i64). Handle this type mismatch
+    // gracefully.
+    if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
+        !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
+          Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
+      mlir::Type ty = converter.genType(*loopVar);
+      typeAttrs.push_back(mlir::TypeAttr::get(ty));
+      clauseOps.linearVars.push_back(variable);
+      clauseOps.linearStepVars.push_back(loopStep);
+    }
+  }
+  if (!typeAttrs.empty())
+    clauseOps.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
+}
+
 static void genSingleClauses(lower::AbstractConverter &converter,
                              semantics::SemanticsContext &semaCtx,
                              const List<Clause> &clauses, mlir::Location loc,
@@ -2034,13 +2096,13 @@ static void genCanonicalLoopNest(
     assert(bounds && "Expected bounds for canonical loop");
     lower::StatementContext stmtCtx;
     mlir::Value loopLBVar = fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx));
+        converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx));
     mlir::Value loopUBVar = fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx));
+        converter.genExprValue(*semantics::GetExpr(bounds->Upper()), stmtCtx));
     mlir::Value loopStepVar = [&]() {
-      if (bounds->step) {
+      if (auto &step = bounds->Step()) {
         return fir::getBase(
-            converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx));
+            converter.genExprValue(*semantics::GetExpr(step), stmtCtx));
       }
 
       // If `step` is not present, assume it is `1`.
@@ -2049,7 +2111,7 @@ static void genCanonicalLoopNest(
     }();
 
     // Get the integer kind for the loop variable and cast the loop bounds
-    size_t loopVarTypeSize = bounds->name.thing.symbol->GetUltimate().size();
+    size_t loopVarTypeSize = bounds->Name().thing.symbol->GetUltimate().size();
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
     loopVarTypes.push_back(loopVarType);
     loopLBVar = firOpBuilder.createConvert(loc, loopVarType, loopLBVar);
@@ -2512,6 +2574,66 @@ static bool isDuplicateMappedSymbol(
   return checkSymbol(sym.GetUltimate());
 }
 
+// Visitor to collect symbols that have dynamic substring accesses
+struct DynamicSubstringVisitor {
+  llvm::SmallPtrSet<const semantics::Symbol *, 8> symbolsWithDynamicSubstring;
+  semantics::SemanticsContext &semaCtx;
+
+  explicit DynamicSubstringVisitor(semantics::SemanticsContext &ctx)
+      : semaCtx(ctx) {}
+
+  template <typename T>
+  bool Pre(const T &) {
+    return true;
+  }
+  template <typename T>
+  void Post(const T &) {}
+
+  // Check each expression for substring access
+  void Post(const parser::Expr &expr) {
+    if (const auto *typedExpr = semantics::GetExpr(semaCtx, expr)) {
+      // Try to extract a substring from this expression
+      if (auto substring = Fortran::evaluate::ExtractSubstring(*typedExpr)) {
+        // Check if the substring has non-constant (dynamic) indices
+        bool hasDynamicIndex = false;
+
+        // Check if explicit lower bound exists and is non-constant
+        if (const auto *lowerExpr = substring->GetLower()) {
+          if (!Fortran::evaluate::ToInt64(*lowerExpr))
+            hasDynamicIndex = true;
+        }
+
+        // Check if explicit upper bound exists and is non-constant
+        if (const auto *upperExpr = substring->GetUpper()) {
+          if (!Fortran::evaluate::ToInt64(*upperExpr))
+            hasDynamicIndex = true;
+        }
+
+        // If we have dynamic indices, extract the base symbol
+        if (hasDynamicIndex) {
+          if (auto dataRef =
+                  Fortran::evaluate::ExtractSubstringBase(*substring)) {
+            if (const auto *symRef =
+                    std::get_if<Fortran::evaluate::SymbolRef>(&dataRef->u)) {
+              symbolsWithDynamicSubstring.insert(&symRef->get());
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+// Collect symbols that have dynamic substring accesses in the target region
+static void collectSymbolsWithDynamicSubstring(
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    llvm::SmallPtrSet<const semantics::Symbol *, 8>
+        &symbolsWithDynamicSubstring) {
+  DynamicSubstringVisitor visitor(semaCtx);
+  eval.visit([&](const auto &node) { parser::Walk(node, visitor); });
+  symbolsWithDynamicSubstring = visitor.symbolsWithDynamicSubstring;
+}
+
 static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::StatementContext &stmtCtx,
@@ -2574,6 +2696,11 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*isTargetPrivitization=*/true);
   dsp.processStep1(&clauseOps);
 
+  // Collect symbols that have dynamic substring accesses
+  llvm::SmallPtrSet<const semantics::Symbol *, 8> symbolsWithDynamicSubstring;
+  collectSymbolsWithDynamicSubstring(semaCtx, eval,
+                                     symbolsWithDynamicSubstring);
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
   // symbols used inside the region that do not have explicit data-environment
@@ -2601,8 +2728,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (!converter.getSymbolAddress(sym))
       return;
 
-    // Skip parameters/constants as they do not need to be mapped.
-    if (semantics::IsNamedConstant(sym))
+    // Skip scalar parameters/constants as they do not need to be mapped.
+    // However, parameter arrays must be mapped as they may be accessed with
+    // dynamic indices on the device (e.g., const_array(runtime_index)).
+    // Also, character scalar parameters must be mapped if they have dynamic
+    // substring access.
+    if (semantics::IsNamedConstant(sym) && sym.Rank() == 0 &&
+        !symbolsWithDynamicSubstring.contains(&sym.GetUltimate()))
       return;
 
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
@@ -3019,6 +3151,7 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
   simdArgs.priv.syms = dsp.getDelayedPrivSymbols();
@@ -3027,7 +3160,6 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
-
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{simdOp, simdArgs}},
                 llvm::omp::Directive::OMPD_simd, dsp);
@@ -3198,6 +3330,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   // Operation creation.
   EntryBlockArgs distributeArgs;
@@ -3269,6 +3402,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   // Operation creation.
   EntryBlockArgs distributeArgs;
@@ -3331,6 +3465,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   // Operation creation.
   EntryBlockArgs wsloopArgs;
@@ -3602,57 +3737,28 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
-static ReductionProcessor::GenCombinerCBTy
-processReductionCombiner(lower::AbstractConverter &converter,
-                         lower::SymMap &symTable,
-                         semantics::SemanticsContext &semaCtx,
-                         const parser::OmpReductionSpecifier &specifier) {
+static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, const clause::Combiner &combiner) {
   ReductionProcessor::GenCombinerCBTy genCombinerCB;
-  const auto &combinerExpression =
-      std::get<std::optional<parser::OmpCombinerExpression>>(specifier.t)
-          .value();
-  const parser::OmpStylizedInstance &combinerInstance =
-      combinerExpression.v.front();
-  const parser::OmpStylizedInstance::Instance &instance =
-      std::get<parser::OmpStylizedInstance::Instance>(combinerInstance.t);
-
-  std::optional<semantics::SomeExpr> evalExprOpt;
-  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
-    auto &expr = std::get<parser::Expr>(as->t);
-    evalExprOpt = makeExpr(expr, semaCtx);
-  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
-    if (call->typedCall) {
-      const auto &procRef = *call->typedCall;
-      evalExprOpt = semantics::SomeExpr{procRef};
-    } else {
-      TODO(converter.getCurrentLocation(),
-           "CallStmt without typedCall is not yet supported");
-    }
-  } else {
-    TODO(converter.getCurrentLocation(), "Unsupported combiner instance type");
-  }
-
-  assert(evalExprOpt.has_value() && "evalExpr must be initialized");
-  semantics::SomeExpr evalExpr = *evalExprOpt;
+  const StylizedInstance &inst = combiner.v.front();
+  semantics::SomeExpr evalExpr = std::get<StylizedInstance::Instance>(inst.t);
 
   genCombinerCB = [&, evalExpr](fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Type type, mlir::Value lhs,
                                 mlir::Value rhs, bool isByRef) {
     lower::SymMapScope scope(symTable);
-    const std::list<parser::OmpStylizedDeclaration> &declList =
-        std::get<std::list<parser::OmpStylizedDeclaration>>(combinerInstance.t);
     mlir::Value ompOutVar;
-    for (const parser::OmpStylizedDeclaration &decl : declList) {
-      auto &name = std::get<parser::ObjectName>(decl.var.t);
+    for (const Object &object : std::get<StylizedInstance::Variables>(inst.t)) {
       mlir::Value addr = lhs;
       mlir::Type type = lhs.getType();
-      bool isRhs = name.ToString() == std::string("omp_in");
+      std::string name = object.sym()->name().ToString();
+      bool isRhs = name == "omp_in";
       if (isRhs) {
         addr = rhs;
         type = rhs.getType();
       }
 
-      assert(name.symbol && "Reduction object name does not have a symbol");
       if (!fir::conformsWithPassByRef(type)) {
         addr = builder.createTemporary(loc, type);
         fir::StoreOp::create(builder, loc, isRhs ? rhs : lhs, addr);
@@ -3660,13 +3766,13 @@ processReductionCombiner(lower::AbstractConverter &converter,
       fir::FortranVariableFlagsEnum extraFlags = {};
       fir::FortranVariableFlagsAttr attributes =
           Fortran::lower::translateSymbolAttributes(builder.getContext(),
-                                                    *name.symbol, extraFlags);
+                                                    *object.sym(), extraFlags);
       auto declareOp =
-          hlfir::DeclareOp::create(builder, loc, addr, name.ToString(), nullptr,
-                                   {}, nullptr, nullptr, 0, attributes);
-      if (name.ToString() == "omp_out")
+          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
+                                   nullptr, nullptr, 0, attributes);
+      if (name == "omp_out")
         ompOutVar = declareOp.getResult(0);
-      symTable.addVariableDefinition(*name.symbol, declareOp);
+      symTable.addVariableDefinition(*object.sym(), declareOp);
     }
 
     lower::StatementContext stmtCtx;
@@ -3740,56 +3846,87 @@ getReductionType(lower::AbstractConverter &converter,
   return reductionType;
 }
 
-static void genOMP(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareReductionConstruct &declareReductionConstruct) {
+// Represent the reduction combiner as a clause, return reference to it.
+// If there is a "combiner" clause already present, do nothing. Otherwise
+// manufacture a combiner clause from the combiner expression on the reduction
+// specifier and append it to the list of clauses.
+static const clause::Combiner &
+appendCombiner(const parser::OpenMPDeclareReductionConstruct &construct,
+               List<Clause> &clauses, semantics::SemanticsContext &semaCtx) {
+  for (const Clause &clause : clauses) {
+    if (clause.id == llvm::omp::Clause::OMPC_combiner)
+      return std::get<clause::Combiner>(clause.u);
+  }
+
+  using namespace parser::omp;
+  const parser::OmpDirectiveSpecification &dirSpec = construct.v;
+  auto *specifier = GetFirstArgument<parser::OmpReductionSpecifier>(dirSpec);
+  assert(specifier && "Expecting reduction specifier");
+  if (auto *expr = GetCombinerExpr(*specifier)) {
+    clause::Combiner combiner;
+    for (const parser::OmpStylizedInstance &sinst : expr->v)
+      combiner.v.push_back(makeStylizedInstance(sinst, semaCtx));
+    clauses.push_back(makeClause(llvm::omp::Clause::OMPC_combiner,
+                                 std::move(combiner), expr->source));
+    return std::get<clause::Combiner>(clauses.back().u);
+  }
+
+  llvm_unreachable("Expecting reduction combiner");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDeclareReductionConstruct &construct) {
   if (semaCtx.langOptions().OpenMPSimd)
     return;
 
-  const parser::OmpArgumentList &args{declareReductionConstruct.v.Arguments()};
-  const parser::OmpArgument &arg{args.v.front()};
-  const auto &specifier = std::get<parser::OmpReductionSpecifier>(arg.u);
-
+  const auto &specifier =
+      DEREF(parser::omp::GetFirstArgument<parser::OmpReductionSpecifier>(
+          construct.v));
   if (std::get<parser::OmpTypeNameList>(specifier.t).v.size() > 1)
     TODO(converter.getCurrentLocation(),
          "multiple types in declare reduction is not yet supported");
 
   mlir::Type reductionType = getReductionType(converter, specifier);
+  List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
+  const clause::Combiner &combiner =
+      appendCombiner(construct, clauses, semaCtx);
+
   ReductionProcessor::GenCombinerCBTy genCombinerCB =
-      processReductionCombiner(converter, symTable, semaCtx, specifier);
-  const parser::OmpClauseList &initializer =
-      declareReductionConstruct.v.Clauses();
-  if (initializer.v.size() > 0) {
-    List<Clause> clauses = makeClauses(initializer, semaCtx);
-    ReductionProcessor::GenInitValueCBTy genInitValueCB;
-    ClauseProcessor cp(converter, semaCtx, clauses);
-    const parser::OmpClause::Initializer &iclause{
-        std::get<parser::OmpClause::Initializer>(initializer.v.front().u)};
-    cp.processInitializer(symTable, iclause, genInitValueCB);
-    const auto &identifier =
-        std::get<parser::OmpReductionIdentifier>(specifier.t);
-    const auto &designator =
-        std::get<parser::ProcedureDesignator>(identifier.u);
-    const auto &reductionName = std::get<parser::Name>(designator.u);
-    bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
-    ReductionProcessor::createDeclareReductionHelper<
-        mlir::omp::DeclareReductionOp>(
-        converter, reductionName.ToString(), reductionType,
-        converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
-  } else {
-    TODO(converter.getCurrentLocation(),
-         "declare reduction without an initializer clause is not yet "
-         "supported");
-  }
+      processReductionCombiner(converter, symTable, semaCtx, combiner);
+
+  ReductionProcessor::GenInitValueCBTy genInitValueCB;
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processInitializer(symTable, genInitValueCB);
+
+  const auto &identifier =
+      std::get<parser::OmpReductionIdentifier>(specifier.t);
+  const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
+  const auto &reductionName = std::get<parser::Name>(designator.u);
+  bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+  ReductionProcessor::createDeclareReductionHelper<
+      mlir::omp::DeclareReductionOp>(
+      converter, reductionName.ToString(), reductionType,
+      converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
 }
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+  mlir::Location loc = converter.getCurrentLocation();
+  const parser::OmpDirectiveSpecification &beginSpec = declareSimdConstruct.v;
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+
+  mlir::omp::DeclareSimdOperands clauseOps;
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAligned(clauseOps);
+  cp.processLinear(clauseOps);
+  cp.processSimdlen(clauseOps);
+  cp.processUniform(clauseOps);
+
+  mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
 }
 
 static void genOpenMPDeclareMapperImpl(
@@ -4095,7 +4232,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Mergeable>(clause.u) &&
         !std::holds_alternative<clause::Untied>(clause.u) &&
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
-        !std::holds_alternative<clause::Detach>(clause.u)) {
+        !std::holds_alternative<clause::Detach>(clause.u) &&
+        !std::holds_alternative<clause::Device>(clause.u)) {
       std::string name =
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
       if (!semaCtx.langOptions().OpenMPSimd)

@@ -36,6 +36,9 @@ public:
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
 
+  const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                             LLT Ty) const override;
+
 private:
   /// \returns true if \p MI only uses and defines FPRs.
   bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,

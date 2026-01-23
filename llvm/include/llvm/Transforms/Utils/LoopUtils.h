@@ -13,8 +13,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
-#include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -37,6 +35,7 @@ class MemoryAccess;
 class MemorySSA;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
+struct PointerDiffInfo;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
@@ -497,12 +496,6 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
 /// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
 LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
                                      Value *InitVal, PHINode *OrigPhi);
-
-/// Create a reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::FindLastIV.
-LLVM_ABI Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
-                                          RecurKind RdxKind, Value *Start,
-                                          Value *Sentinel);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.

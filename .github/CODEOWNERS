@@ -55,6 +55,7 @@
 /mlir/**/SubsetOpInterfaceImpl.* @matthias-springer
 /mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
+/mlir/**/Interfaces/ControlFlowInterfaces.* @matthias-springer
 
 # AMDGPU and ROCDL dialects in MLIR.
 /mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
@@ -168,7 +169,7 @@
 /mlir/**/*IRDL* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal
@@ -179,7 +180,7 @@
 /clang/tools/clang-installapi/ @cyndyishida
 
 # ExtractAPI
-/clang/**/ExtractAPI @daniel-grumberg @QuietMisdreavus
+/clang/**/ExtractAPI @QuietMisdreavus @snprajwal
 
 # DWARFLinker, dwarfutil, dsymutil
 /llvm/**/DWARFLinker/ @JDevlieghere

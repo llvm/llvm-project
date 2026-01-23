@@ -102,8 +102,9 @@ define void @t3() {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -64
 ; LA32-NEXT:    .cfi_def_cfa_offset 64
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.L.str)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.L.str)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.L.str)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    ld.h $a1, $a0, 20
 ; LA32-NEXT:    ld.w $a2, $a0, 16
 ; LA32-NEXT:    st.h $a1, $sp, 20

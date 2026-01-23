@@ -9,6 +9,12 @@
 #ifndef SCUDO_SECONDARY_H_
 #define SCUDO_SECONDARY_H_
 
+#ifndef __STDC_FORMAT_MACROS
+// Ensure PRId64 macro is available
+#define __STDC_FORMAT_MACROS 1
+#endif
+#include <inttypes.h>
+
 #include "chunk.h"
 #include "common.h"
 #include "list.h"
@@ -221,9 +227,17 @@ public:
 
     for (CachedBlock &Entry : LRUEntries) {
       Str->append("  StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
-                  "BlockSize: %zu %s\n",
+                  "BlockSize: %zu%s",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
-                  Entry.CommitSize, Entry.Time == 0 ? "[R]" : "");
+                  Entry.CommitSize, Entry.Time == 0 ? " [R]" : "");
+#if SCUDO_LINUX
+      // getResidentPages only works on linux systems currently.
+      Str->append(", Resident Pages: %" PRId64 "/%zu\n",
+                  getResidentPages(Entry.CommitBase, Entry.CommitSize),
+                  Entry.CommitSize / getPageSizeCached());
+#else
+      Str->append("\n");
+#endif
     }
   }
 

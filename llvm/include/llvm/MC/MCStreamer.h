@@ -839,6 +839,8 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
+  virtual void emitPrefAlign(Align A);
+
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///
@@ -1024,8 +1026,7 @@ public:
   /// for the frame.  We cannot use the End marker, as it is not set at the
   /// point of emitting .xdata, in order to indicate that the frame is active.
   virtual void emitWinCFIFuncletOrFuncEnd(SMLoc Loc = SMLoc());
-  virtual void emitWinCFIStartChained(SMLoc Loc = SMLoc());
-  virtual void emitWinCFIEndChained(SMLoc Loc = SMLoc());
+  virtual void emitWinCFISplitChained(SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushReg(MCRegister Register, SMLoc Loc = SMLoc());
   virtual void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                   SMLoc Loc = SMLoc());
@@ -1055,7 +1056,7 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void emitSyntaxDirective();
+  virtual void emitSyntaxDirective(StringRef Syntax, StringRef Options);
 
   /// Record a relocation described by the .reloc directive.
   virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,

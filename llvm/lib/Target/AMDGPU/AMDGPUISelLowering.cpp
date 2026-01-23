@@ -338,6 +338,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
+  setTruncStoreAction(MVT::v6f32, MVT::v6f16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
   setTruncStoreAction(MVT::v16f32, MVT::v16bf16, Expand);
@@ -480,7 +481,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64},
       Custom);
 
-  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction({ISD::FP16_TO_FP, ISD::STRICT_FP16_TO_FP}, MVT::f64,
+                     Expand);
   setOperationAction(ISD::FP_TO_FP16, {MVT::f64, MVT::f32}, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
@@ -1534,7 +1536,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
@@ -2634,11 +2636,18 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
     return Src.getOperand(0).getValueType() == MVT::f16;
   case ISD::FP16_TO_FP:
   case ISD::FFREXP:
+  case ISD::FSQRT:
+  case AMDGPUISD::LOG:
+  case AMDGPUISD::EXP:
     return true;
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntrinsicID = Src.getConstantOperandVal(0);
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_log:
+    case Intrinsic::amdgcn_log_clamp:
+    case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_sqrt:
       return true;
     default:
       return false;
@@ -3070,14 +3079,14 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   SDNodeFlags Flags = Op->getFlags();
   const bool IsExp10 = Op.getOpcode() == ISD::FEXP10;
 
+  // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
+  // library behavior. Also, is known-not-daz source sufficient?
+  if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
+    return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
+                   : lowerFEXPUnsafe(X, SL, DAG, Flags);
+  }
+
   if (VT.getScalarType() == MVT::f16) {
-    // v_exp_f16 (fmul x, log2e)
-
-    if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
-      return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
-                     : lowerFEXPUnsafe(X, SL, DAG, Flags);
-    }
-
     if (VT.isVector())
       return SDValue();
 
@@ -3095,13 +3104,6 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   assert(VT == MVT::f32);
-
-  // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
-  // library behavior. Also, is known-not-daz source sufficient?
-  if (allowApproxFunc(DAG, Flags)) {
-    return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
-                   : lowerFEXPUnsafe(X, SL, DAG, Flags);
-  }
 
   //    Algorithm:
   //
@@ -4151,8 +4153,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                 : TargetScalarType;
+  EVT TargetType = VT.changeElementType(*DAG.getContext(), TargetScalarType);
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
@@ -4216,8 +4217,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                 : TargetScalarType;
+  EVT TargetType = VT.changeElementType(*DAG.getContext(), TargetScalarType);
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
@@ -4338,8 +4338,7 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                 : TargetScalarType;
+  EVT TargetType = VT.changeElementType(*DAG.getContext(), TargetScalarType);
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();

@@ -767,7 +767,7 @@ public:
           m_cur_value.SetLine(line_num);
         }
         break;
-      case 'c':
+      case 'u':
         uint32_t column_num;
         if (option_arg.getAsInteger(0, column_num))
           error = Status::FromError(
@@ -1274,7 +1274,6 @@ protected:
       result.AppendError("no pattern to seek");
       return;
     }
-    printf("Pattern: '%s'\n", pattern.str().c_str());
 
     Target &target =
         m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();

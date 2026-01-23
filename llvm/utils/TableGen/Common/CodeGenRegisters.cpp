@@ -986,8 +986,11 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     // register class.
     if (A == B)
       return false;
-    if (A->getMembers().size() == B->getMembers().size())
+    if (A->getMembers().size() == B->getMembers().size()) {
+      if (A->getBaseClassOrder() != B->getBaseClassOrder())
+        return A->getBaseClassOrder() > B->getBaseClassOrder();
       return A == this;
+    }
     return A->getMembers().size() > B->getMembers().size();
   };
 
@@ -1005,7 +1008,9 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
       SuperRegRCs.emplace_back(&RC);
   llvm::stable_sort(SuperRegRCs, WeakSizeOrder);
 
-  assert(SuperRegRCs.front() == BiggestSuperRegRC &&
+  assert((SuperRegRCs.front() == BiggestSuperRegRC ||
+          SuperRegRCs.front()->getBaseClassOrder() >
+              BiggestSuperRegRC->getBaseClassOrder()) &&
          "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
@@ -1316,11 +1321,19 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
   return {&RegClasses.back(), true};
 }
 
-CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def) const {
+CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def,
+                                                  ArrayRef<SMLoc> Loc) const {
+  assert(Def->isSubClassOf("RegisterClassLike"));
   if (CodeGenRegisterClass *RC = Def2RC.lookup(Def))
     return RC;
 
-  PrintFatalError(Def->getLoc(), "Not a known RegisterClass!");
+  ArrayRef<SMLoc> DiagLoc = Loc.empty() ? Def->getLoc() : Loc;
+  // TODO: Ideally we should update the API to allow resolving HwMode.
+  if (Def->isSubClassOf("RegClassByHwMode"))
+    PrintError(DiagLoc, "cannot resolve HwMode for " + Def->getName());
+  else
+    PrintError(DiagLoc, Def->getName() + " is not a known RegisterClass!");
+  PrintFatalNote(Def->getLoc(), Def->getName() + " defined here");
 }
 
 CodeGenSubRegIndex *

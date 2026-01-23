@@ -1327,16 +1327,10 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_15(<vscale x 16 x i1> %vec, <vs
 define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_0(<vscale x 4 x i32> %vec, <vscale x 4 x i32> %subvec) nounwind {
 ; CHECK-LABEL: insert_nxv1i32_nxv4i32_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp]
-; CHECK-NEXT:    ldr z0, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
   %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> %vec, <vscale x 1 x i32> %i, i64 0)
@@ -1420,17 +1414,10 @@ define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_3(<vscale x 4 x i32> %vec, <vs
 define <vscale x 2 x float> @insert_nxv1f32_nxv2f32_0(<vscale x 2 x float> %vec, <vscale x 2 x float> %subvec) nounwind {
 ; CHECK-LABEL: insert_nxv1f32_nxv2f32_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    whilelo p1.d, xzr, x8
-; CHECK-NEXT:    st1w { z1.d }, p1, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv2f32(<vscale x 2 x float> %subvec, i64 0)
   %retval = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.nxv1f32(<vscale x 2 x float> %vec, <vscale x 1 x float> %i, i64 0)

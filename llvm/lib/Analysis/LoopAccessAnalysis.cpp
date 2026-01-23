@@ -363,7 +363,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
         ScEnd = SE->getAddExpr(
             SE->getNegativeSCEV(EltSizeSCEV),
             SE->getSCEV(ConstantExpr::getIntToPtr(
-                ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+                ConstantInt::getAllOnesValue(EltSizeSCEV->getType()),
+                AR->getType())));
       }
     }
     const SCEV *Step = AR->getStepRecurrence(*SE);
@@ -1041,6 +1042,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
           if (getLoadStorePointerOperand(U) != GEP)
             return false;
           BasicBlock *UserBB = cast<Instruction>(U)->getParent();
+          if (!L->contains(UserBB))
+            return false;
           return !LoopAccessInfo::blockNeedsPredication(UserBB, L, &DT);
         }))
       return true;

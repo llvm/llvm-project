@@ -173,7 +173,7 @@ public:
   }
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
     // There's rarely any point of packing something into a vector type if we
@@ -241,8 +241,6 @@ private:
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;

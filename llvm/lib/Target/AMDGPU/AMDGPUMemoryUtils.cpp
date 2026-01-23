@@ -70,7 +70,7 @@ bool isDynamicLDS(const GlobalVariable &GV) {
   const DataLayout &DL = M->getDataLayout();
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return false;
-  return DL.getTypeAllocSize(GV.getValueType()) == 0;
+  return GV.getGlobalSize(DL) == 0;
 }
 
 bool isLDSVariableToLower(const GlobalVariable &GV) {
@@ -371,6 +371,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_wait:
     case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:

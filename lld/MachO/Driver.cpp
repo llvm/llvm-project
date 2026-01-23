@@ -1999,6 +1999,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->codegenDataGeneratePath =
       args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
@@ -2352,10 +2353,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     resolveLCLinkerOptions();
 
-    // If --thinlto-index-only is given, we should create only "index
-    // files" and not object files. Index file creation is already done
-    // in compileBitcodeFiles, so we are done if that's the case.
-    if (config->thinLTOIndexOnly)
+    // If either --thinlto-index-only or --lto-emit-llvm is given, we should
+    // not create object files. Index file creation is already done in
+    // compileBitcodeFiles, so we are done if that's the case.
+    if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
 
     // LTO may emit a non-hidden (extern) object file symbol even if the

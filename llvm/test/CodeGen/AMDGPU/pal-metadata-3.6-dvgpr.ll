@@ -196,7 +196,7 @@ define dllexport amdgpu_hs void @hs_shader() {
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
-attributes #0 = { nounwind memory(readwrite) "target-features"=",+wavefrontsize64,+cumode" "amdgpu-dynamic-vgpr-block-size"="16" }
+attributes #0 = { nounwind memory(readwrite) "target-features"="+wavefrontsize64,+cumode" "amdgpu-dynamic-vgpr-block-size"="16" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" "amdgpu-dynamic-vgpr-block-size"="16" }
 

@@ -1105,7 +1105,7 @@ static void processStubLibraries() {
       // the names of the stub imports
       for (auto [name, deps]: stub_file->symbolDependencies) {
         auto* sym = symtab->find(name);
-        if (sym && sym->isUndefined()) {
+        if (sym && sym->isUndefined() && sym->isUsedInRegularObj) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {
           if (sym && sym->traced)
@@ -1394,7 +1394,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!ctx.arg.relocatable && !ctx.arg.shared &&
       !ctx.sym.callCtors->isUsedInRegularObj &&
       ctx.sym.callCtors->getName() != ctx.arg.entry &&
-      !ctx.arg.exportedSymbols.count(ctx.sym.callCtors->getName())) {
+      !ctx.arg.exportedSymbols.contains(ctx.sym.callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {

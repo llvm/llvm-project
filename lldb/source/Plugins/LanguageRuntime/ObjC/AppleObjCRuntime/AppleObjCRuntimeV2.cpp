@@ -2119,7 +2119,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Fail();
   }
 
-  auto deallocate_class_infos = llvm::make_scope_exit([&] {
+  llvm::scope_exit deallocate_class_infos([&] {
     // Deallocate the memory we allocated for the ClassInfo array
     if (class_infos_addr != LLDB_INVALID_ADDRESS)
       process->DeallocateMemory(class_infos_addr);
@@ -2142,7 +2142,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     }
   }
 
-  auto deallocate_class_buffer = llvm::make_scope_exit([&] {
+  llvm::scope_exit deallocate_class_buffer([&] {
     // Deallocate the memory we allocated for the Class array
     if (class_buffer_addr != LLDB_INVALID_ADDRESS)
       process->DeallocateMemory(class_buffer_addr);

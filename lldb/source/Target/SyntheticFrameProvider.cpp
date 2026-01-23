@@ -34,6 +34,13 @@ void ScriptedFrameProviderDescriptor::Dump(Stream *s) const {
   if (!description.empty())
     s->Printf("  Description: %s\n", description.c_str());
 
+  // Show priority information.
+  std::optional<uint32_t> priority = GetPriority();
+  if (priority.has_value())
+    s->Printf("  Priority: %u\n", *priority);
+  else
+    s->PutCString("  Priority: Default (no priority specified)\n");
+
   // Show thread filter information.
   if (thread_specs.empty()) {
     s->PutCString("  Thread Filter: (applies to all threads)\n");
@@ -60,6 +67,13 @@ std::string ScriptedFrameProviderDescriptor::GetDescription() const {
   if (interface_sp && scripted_metadata_sp)
     return interface_sp->GetDescription(scripted_metadata_sp->GetClassName());
   return {};
+}
+
+std::optional<uint32_t> ScriptedFrameProviderDescriptor::GetPriority() const {
+  // If we have an interface, call get_priority() to fetch it.
+  if (interface_sp && scripted_metadata_sp)
+    return interface_sp->GetPriority(scripted_metadata_sp->GetClassName());
+  return std::nullopt;
 }
 
 llvm::Expected<SyntheticFrameProviderSP> SyntheticFrameProvider::CreateInstance(

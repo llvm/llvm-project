@@ -19,8 +19,10 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -411,6 +413,12 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Count the stats for InstCount and FunctionPropertiesAnalysis
+  if (AreStatisticsEnabled()) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
+  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -2339,7 +2347,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     // pipeline.
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
-                                        ThinOrFullLTOPhase::None, nullptr,
+                                        ThinOrFullLTOPhase::None, FS,
                                         /*DisableSampleProfileInlining=*/true,
                                         /*UseFlattenedProfile=*/true));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
@@ -2420,7 +2428,8 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
-  MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Emit annotation remarks.
+  addAnnotationRemarksPass(MPM);
 
   return MPM;
 }

@@ -160,12 +160,20 @@ define void @foo(i32 %v0) {
 
   auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
   auto *LLVMInt32Ty = llvm::Type::getInt32Ty(C);
+  auto *Int32VecTy =
+      sandboxir::VectorType::get(Int32Ty, ElementCount::getFixed(2u));
+  auto *LLVMInt32VecTy = llvm::FixedVectorType::get(LLVMInt32Ty, 2);
   {
     // Check get(Type, V).
     auto *FortyThree = sandboxir::ConstantInt::get(Int32Ty, 43);
     auto *LLVMFortyThree = llvm::ConstantInt::get(LLVMInt32Ty, 43);
     EXPECT_NE(FortyThree, FortyTwo);
     EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+
+    // Check vector splat.
+    auto *FortyThreeVec = sandboxir::ConstantInt::get(Int32VecTy, 43);
+    auto *LLVMFortyThreeVec = llvm::ConstantInt::get(LLVMInt32VecTy, 43);
+    EXPECT_EQ(FortyThreeVec, Ctx.getValue(LLVMFortyThreeVec));
   }
   {
     // Check get(Type, V, IsSigned).
@@ -268,7 +276,7 @@ define void @foo(i32 %v0) {
       sandboxir::ConstantInt::isValueValidForType(Int32Ty, (int64_t)42));
   // Check isNegative().
   EXPECT_FALSE(FortyTwo->isNegative());
-  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, -42));
+  EXPECT_TRUE(sandboxir::ConstantInt::getSigned(Int32Ty, -42));
   // Check isZero().
   EXPECT_FALSE(FortyTwo->isZero());
   EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, 0)->isZero());
@@ -277,7 +285,7 @@ define void @foo(i32 %v0) {
   EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, 1)->isOne());
   // Check isMinusOne().
   EXPECT_FALSE(FortyTwo->isMinusOne());
-  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, -1)->isMinusOne());
+  EXPECT_TRUE(sandboxir::ConstantInt::getSigned(Int32Ty, -1)->isMinusOne());
   // Check isMaxValue().
   EXPECT_FALSE(FortyTwo->isMaxValue(/*Signed=*/true));
   EXPECT_TRUE(
@@ -285,9 +293,9 @@ define void @foo(i32 %v0) {
           ->isMaxValue(/*Signed=*/true));
   // Check isMinValue().
   EXPECT_FALSE(FortyTwo->isMinValue(/*Signed=*/true));
-  EXPECT_TRUE(
-      sandboxir::ConstantInt::get(Int32Ty, std::numeric_limits<int32_t>::min())
-          ->isMinValue(/*Signed=*/true));
+  EXPECT_TRUE(sandboxir::ConstantInt::getSigned(
+                  Int32Ty, std::numeric_limits<int32_t>::min())
+                  ->isMinValue(/*Signed=*/true));
   // Check uge().
   EXPECT_TRUE(FortyTwo->uge(41));
   EXPECT_FALSE(FortyTwo->uge(43));
@@ -2339,7 +2347,7 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
     auto *False = sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx),
                                               0, /*IsSigned=*/false);
     auto *FortyTwo =
-        sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx), 42,
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42,
                                     /*IsSigned=*/false);
     auto *NewSel = sandboxir::SelectInst::create(False, FortyTwo, FortyTwo,
                                                  Ret->getIterator(), Ctx);
@@ -5955,17 +5963,15 @@ bb5:
            PHI->getIncomingBlock(Idx) == RemoveBB1;
   });
   EXPECT_EQ(PHI->getNumIncomingValues(), 3u);
-  EXPECT_EQ(PHI->getIncomingBlock(0), RemainBB0);
-  EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
-  EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
+  EXPECT_THAT(PHI->blocks(),
+              ::testing::UnorderedElementsAre(RemainBB0, RemainBB1, RemainBB2));
   // Check replaceIncomingBlockWith
   OrigBB = RemainBB0;
   auto *NewBB = RemainBB1;
   EXPECT_NE(NewBB, OrigBB);
   PHI->replaceIncomingBlockWith(OrigBB, NewBB);
-  EXPECT_EQ(PHI->getIncomingBlock(0), NewBB);
-  EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
-  EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
+  EXPECT_THAT(PHI->blocks(),
+              ::testing::UnorderedElementsAre(NewBB, RemainBB1, RemainBB2));
   // Check create().
   auto *NewPHI = cast<sandboxir::PHINode>(sandboxir::PHINode::create(
       PHI->getType(), 0, Br->getIterator(), Ctx, "NewPHI"));
