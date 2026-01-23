@@ -402,9 +402,9 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   if (!MTEList)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
-  assert(!SubExprList ||
-         MTEList->getLength() == SubExprList->getLength() + 1 &&
-             "MTE top level origin should contain a loan to the MTE itself");
+  assert((!SubExprList ||
+          MTEList->getLength() == (SubExprList->getLength() + 1)) &&
+         "MTE top level origin should contain a loan to the MTE itself");
   MTEList = getRValueOrigins(MTE, MTEList);
   if (getChildBinding(MTE)) {
     // Issue a loan to MTE for the storage location represented by MTE.

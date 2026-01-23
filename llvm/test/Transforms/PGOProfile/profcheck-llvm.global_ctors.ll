@@ -10,4 +10,4 @@ define internal void @dtor() {
   ret void
 }
 
-; CHECK-NOT: Profile verification failed: function entry count missing
+; CHECK-NOT: Profile verification failed for function {{.+}}: function entry count missing

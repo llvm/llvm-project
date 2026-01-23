@@ -447,7 +447,7 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
       return constrainSelectedInstRegOperands(*Add, TII, TRI, RBI);
     }
 
-    if (STI.hasAddNoCarry()) {
+    if (STI.hasAddNoCarryInsts()) {
       const unsigned Opc = Sub ? AMDGPU::V_SUB_U32_e64 : AMDGPU::V_ADD_U32_e64;
       I.setDesc(TII.get(Opc));
       I.addOperand(*MF, MachineOperand::CreateImm(0));
