@@ -345,7 +345,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
         {
           Caret.startToken();
           Caret.setKind(tok::caret);
-          Caret.setLocation(Tok.getLocation());
+          Caret.setLocation(OpToken.getLocation().getLocWithOffset(1));
           Caret.setLength(1);
         }
         UnconsumeToken(OpToken);
