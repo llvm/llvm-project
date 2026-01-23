@@ -12,4 +12,4 @@ class TestSwiftExprMissingType(lldbtest.TestBase):
         )
         self.expect("frame variable invisible", substrs=["1", "2"])
         self.expect("expr invisible", error=True,
-                    substrs=["Missing type debug info", "invisible"])
+                    substrs=["Missing debug info", "invisible"])

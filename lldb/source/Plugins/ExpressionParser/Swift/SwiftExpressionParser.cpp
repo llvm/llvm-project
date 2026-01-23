@@ -460,7 +460,7 @@ static CompilerType GetSwiftTypeForVariableValueObject(
     lldb::ValueObjectSP valobj_sp, lldb::StackFrameSP &stack_frame_sp,
     SwiftLanguageRuntime *runtime, lldb::BindGenericTypes bind_generic_types) {
   // Check that the passed ValueObject is valid.
-  if (!valobj_sp || valobj_sp->GetError().Fail())
+  if (!valobj_sp)
     return {};
   CompilerType result = valobj_sp->GetCompilerType();
   if (!result)
@@ -1862,16 +1862,19 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   if (expr_diagnostics->HasErrors()) {
     // Missing debug info for a variable could cause a spurious lookup error.
-    for (auto &var : m_local_variables) {
+    for (SwiftASTManipulator::VariableInfo &var : m_local_variables) {
       llvm::Error error = var.TakeLookupError();
       if (!error)
         continue;
+      auto get_name = [](SwiftASTManipulator::VariableInfo var) {
+        StringRef name = var.GetName().str();
+        if (name == "$__lldb_injected_self")
+          name = "self";
+        return name.str();
+      };
       diagnostic_manager.Printf(
-          eSeverityError,
-          "Missing type debug information for variable \"%s\": %s",
-          var.GetName().str().str().c_str(),
-          llvm::toString(std::move(error)).c_str());
-      return parse_result_failure;
+          eSeverityWarning, "Missing debug information for variable \"%s\": %s",
+          get_name(var).c_str(), llvm::toString(std::move(error)).c_str());
     }
     // Otherwise print the diagnostics from the Swift compiler.
     DiagnoseSwiftASTContextError();
