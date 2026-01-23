@@ -147,6 +147,7 @@ private:
   bool foldShuffleFromReductions(Instruction &I);
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
+  bool foldSignBitReductionCmp(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
@@ -4175,6 +4176,202 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
   return true;
 }
 
+/// Fold:
+///   icmp pred (reduce.{add,or,and,umax,umin}(signbit_extract(x))), C
+/// into:
+///   icmp sgt/slt (reduce.{or,umax,and,umin}(x)), -1/0
+///
+/// Sign-bit reductions produce values with known semantics:
+///   - reduce.{or,umax}: 0 if no element is negative, 1 if any is
+///   - reduce.{and,umin}: 1 if all elements are negative, 0 if any isn't
+///   - reduce.add: count of negative elements (0 to NumElts)
+///
+/// We transform to a direct sign check on reduce.{or,umax} or
+/// reduce.{and,umin} without explicit sign-bit extraction.
+///
+/// In spirit, it's similar to foldSignBitCheck in InstCombine.
+bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
+  CmpPredicate Pred;
+  Value *ReduceOp;
+  const APInt *CmpVal;
+  if (!match(&I, m_ICmp(Pred, m_Value(ReduceOp), m_APInt(CmpVal))))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
+  if (!II || !II->hasOneUse())
+    return false;
+
+  Intrinsic::ID OrigIID = II->getIntrinsicID();
+  switch (OrigIID) {
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_add:
+    break;
+  default:
+    return false;
+  }
+
+  Value *ReductionSrc = II->getArgOperand(0);
+  if (!ReductionSrc->hasOneUse())
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(ReductionSrc->getType());
+  if (!VecTy)
+    return false;
+
+  unsigned BitWidth = VecTy->getScalarSizeInBits();
+  unsigned NumElts = VecTy->getNumElements();
+
+  // For reduce.add, the result is the count of negative elements
+  // (0 to NumElts). This must fit in the scalar type without overflow.
+  // Otherwise, reduce.add can wrap and identity doesn't hold.
+  if (OrigIID == Intrinsic::vector_reduce_add && !isUIntN(BitWidth, NumElts))
+    return false;
+
+  // Match sign-bit extraction: shr X, (bitwidth-1)
+  Value *X;
+  if (!match(ReductionSrc, m_Shr(m_Value(X), m_SpecificInt(BitWidth - 1))))
+    return false;
+
+  // MaxVal: 1 for or/and/umax/umin, NumElts for add
+  APInt MaxVal(CmpVal->getBitWidth(),
+               OrigIID == Intrinsic::vector_reduce_add ? NumElts : 1);
+
+  // In addition to direct comparisons EQ 0, NE 0, EQ 1, NE 1, etc. we support
+  // inequalities that can be interpreted as either EQ or NE considering a
+  // rather narrow range of possible value of sign-bit reductions.
+  bool IsEq;
+  bool TestsHigh;
+  if (ICmpInst::isEquality(Pred)) {
+    // EQ/NE: comparison must be against 0 or MaxVal
+    if (!CmpVal->isZero() && *CmpVal != MaxVal)
+      return false;
+    IsEq = Pred == ICmpInst::ICMP_EQ;
+    TestsHigh = *CmpVal == MaxVal;
+  } else if (ICmpInst::isLT(Pred) && *CmpVal == MaxVal) {
+    // s/ult MaxVal -> ne MaxVal
+    IsEq = false;
+    TestsHigh = true;
+  } else if (ICmpInst::isGT(Pred) && *CmpVal == MaxVal - 1) {
+    // s/ugt MaxVal-1 -> eq MaxVal
+    IsEq = true;
+    TestsHigh = true;
+  } else {
+    return false;
+  }
+
+  // For this fold we support four types of checks:
+  //
+  //   1. All lanes are negative - AllNeg
+  //   2. All lanes are non-negative - AllNonNeg
+  //   3. At least one negative lane - AnyNeg
+  //   4. At least one non-negative lane - AnyNonNeg
+  //
+  // For each case, we can generate the following code:
+  //
+  //   1. AllNeg    - reduce.and/umin(X) < 0
+  //   2. AllNonNeg -  reduce.or/umax(X) > -1
+  //   3. AnyNeg    -  reduce.or/umax(X) < 0
+  //   4. AnyNonNeg - reduce.and/umin(X) > -1
+  //
+  // The table below shows the aggregation of all supported cases
+  // using these four cases.
+  //
+  //   Reduction   | == 0      | != 0      | == MAX    | != MAX
+  //   ------------+-----------+-----------+-----------+-----------
+  //   or/umax     | AllNonNeg | AnyNeg    | AnyNeg    | AllNonNeg
+  //   and/umin    | AnyNonNeg | AllNeg    | AllNeg    | AnyNonNeg
+  //   add         | AllNonNeg | AnyNeg    | AllNeg    | AnyNonNeg
+  //
+  // NOTE: MAX = 1 for or/and/umax/umin, and the vector size N for add
+  //
+  // For easier codegen and check inversion, we use the following encoding:
+  //
+  //   1. Bit-3 === requires or/umax (1) or and/umin (0) check
+  //   2. Bit-2 === checks < 0 (1) or > -1 (0)
+  //   3. Bit-1 === universal (1) or existential (0) check
+  //
+  //   AnyNeg    = 0b110: uses or/umax,  checks negative, any-check
+  //   AllNonNeg = 0b101: uses or/umax,  checks non-neg,  all-check
+  //   AnyNonNeg = 0b000: uses and/umin, checks non-neg,  any-check
+  //   AllNeg    = 0b011: uses and/umin, checks negative, all-check
+  //
+  // XOR with 0b011 inverts the check (swaps all/any and neg/non-neg).
+  //
+  enum CheckKind : unsigned {
+    AnyNonNeg = 0b000,
+    AllNeg = 0b011,
+    AllNonNeg = 0b101,
+    AnyNeg = 0b110,
+  };
+  // Return true if we fold this check into or/umax and false for and/umin
+  auto RequiresOr = [](CheckKind C) -> bool { return C & 0b100; };
+  // Return true if we should check if result is negative and false otherwise
+  auto IsNegativeCheck = [](CheckKind C) -> bool { return C & 0b010; };
+  // Logically invert the check
+  auto Invert = [](CheckKind C) { return CheckKind(C ^ 0b011); };
+
+  CheckKind Base;
+  switch (OrigIID) {
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_umax:
+    Base = TestsHigh ? AnyNeg : AllNonNeg;
+    break;
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_umin:
+    Base = TestsHigh ? AllNeg : AnyNonNeg;
+    break;
+  case Intrinsic::vector_reduce_add:
+    Base = TestsHigh ? AllNeg : AllNonNeg;
+    break;
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  }
+
+  CheckKind Check = IsEq ? Base : Invert(Base);
+
+  // Calculate old cost: shift + reduction
+  InstructionCost OldCost =
+      TTI.getInstructionCost(cast<Instruction>(ReductionSrc), CostKind);
+  OldCost += TTI.getInstructionCost(II, CostKind);
+
+  auto PickCheaper = [&](Intrinsic::ID Arith, Intrinsic::ID MinMax) {
+    InstructionCost ArithCost =
+        TTI.getArithmeticReductionCost(getArithmeticReductionInstruction(Arith),
+                                       VecTy, std::nullopt, CostKind);
+    InstructionCost MinMaxCost =
+        TTI.getMinMaxReductionCost(MinMax, VecTy, FastMathFlags(), CostKind);
+    return ArithCost <= MinMaxCost ? std::make_pair(Arith, ArithCost)
+                                   : std::make_pair(MinMax, MinMaxCost);
+  };
+
+  // Choose output reduction based on encoding's MSB
+  auto [NewIID, NewCost] = RequiresOr(Check)
+                               ? PickCheaper(Intrinsic::vector_reduce_or,
+                                             Intrinsic::vector_reduce_umax)
+                               : PickCheaper(Intrinsic::vector_reduce_and,
+                                             Intrinsic::vector_reduce_umin);
+
+  LLVM_DEBUG(dbgs() << "Found sign-bit reduction cmp: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Generate comparison based on encoding's neg bit: slt 0 for neg, sgt -1 for
+  // non-neg
+  Builder.SetInsertPoint(&I);
+  Type *ScalarTy = VecTy->getScalarType();
+  Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, NewIID, {X});
+  Value *NewCmp = IsNegativeCheck(Check) ? Builder.CreateIsNeg(NewReduce)
+                                         : Builder.CreateIsNotNeg(NewReduce);
+
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
 /// Returns true if this ShuffleVectorInst eventually feeds into a
 /// vector reduction intrinsic (e.g., vector_reduce_add) by only following
 /// chains of shuffles and binary operators (in any combination/order).
@@ -5207,6 +5404,9 @@ bool VectorCombine::run() {
           return true;
         break;
       case Instruction::ICmp:
+        if (foldSignBitReductionCmp(I))
+          return true;
+        [[fallthrough]];
       case Instruction::FCmp:
         if (foldExtractExtract(I))
           return true;

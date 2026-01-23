@@ -23,6 +23,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -5996,8 +5997,9 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (resVType.getElementType() != memType.getElementType())
-    return emitOpError("base and result element type should match");
+  if (failed(
+          verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (resVType.getShape() != maskVType.getShape())
@@ -6055,8 +6057,9 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (valueVType.getElementType() != memType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
+  if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
+                                     "valueToStore")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getShape() != maskVType.getShape())
@@ -6115,8 +6118,9 @@ LogicalResult GatherOp::verify() {
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
 
-  if (resVType.getElementType() != baseType.getElementType())
-    return emitOpError("base and result element type should match");
+  if (failed(
+          verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
+    return failure();
   if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
   if (resVType.getShape() != indVType.getShape())
@@ -6224,8 +6228,9 @@ LogicalResult ScatterOp::verify() {
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
 
-  if (valueVType.getElementType() != baseType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
+  if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
+                                     "valueToStore")))
+    return failure();
   if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
   if (valueVType.getShape() != indVType.getShape())
@@ -6307,8 +6312,9 @@ LogicalResult ExpandLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (resVType.getElementType() != memType.getElementType())
-    return emitOpError("base and result element type should match");
+  if (failed(
+          verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))
@@ -6360,8 +6366,9 @@ LogicalResult CompressStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (valueVType.getElementType() != memType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
+  if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
+                                     "valueToStore")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
@@ -6422,8 +6429,9 @@ LogicalResult ShapeCastOp::verify() {
   VectorType resultType = getResultVectorType();
 
   // Check that element type is preserved
-  if (sourceType.getElementType() != resultType.getElementType())
-    return emitOpError("has different source and result element types");
+  if (failed(verifyElementTypesMatch(*this, sourceType, resultType, "source",
+                                     "result")))
+    return failure();
 
   // Check that number of elements is preserved
   int64_t sourceNElms = sourceType.getNumElements();

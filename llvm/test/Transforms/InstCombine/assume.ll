@@ -11,18 +11,10 @@ declare void @llvm.assume(i1) #1
 ; Check that the assume has not been removed:
 
 define i32 @align_to_bundle(ptr %a) #0 {
-; DEFAULT-LABEL: @align_to_bundle(
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
-; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; DEFAULT-NEXT:    ret i32 [[T0]]
-;
-; BUNDLES-LABEL: @align_to_bundle(
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
-; BUNDLES-NEXT:    ret i32 [[T0]]
+; CHECK-LABEL: @align_to_bundle(
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
   %ptrint = ptrtoint ptr %a to i64
@@ -33,18 +25,10 @@ define i32 @align_to_bundle(ptr %a) #0 {
 }
 
 define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
-; DEFAULT-LABEL: @align_to_bundle_ptrtoaddr(
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoaddr ptr [[A]] to i64
-; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; DEFAULT-NEXT:    ret i32 [[T0]]
-;
-; BUNDLES-LABEL: @align_to_bundle_ptrtoaddr(
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
-; BUNDLES-NEXT:    ret i32 [[T0]]
+; CHECK-LABEL: @align_to_bundle_ptrtoaddr(
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
   %ptrint = ptrtoaddr ptr %a to i64
@@ -55,18 +39,10 @@ define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 }
 
 define i32 @align_assume_trunc_cond(ptr %a) #0 {
-; DEFAULT-LABEL: @align_assume_trunc_cond(
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
-; DEFAULT-NEXT:    [[TRUNC:%.*]] = trunc i64 [[PTRINT]] to i1
-; DEFAULT-NEXT:    [[MASKCOND:%.*]] = xor i1 [[TRUNC]], true
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; DEFAULT-NEXT:    ret i32 [[T0]]
-;
-; BUNDLES-LABEL: @align_assume_trunc_cond(
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
-; BUNDLES-NEXT:    ret i32 [[T0]]
+; CHECK-LABEL: @align_assume_trunc_cond(
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
   %ptrint = ptrtoint ptr %a to i64
@@ -79,18 +55,10 @@ define i32 @align_assume_trunc_cond(ptr %a) #0 {
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {
-; DEFAULT-LABEL: @foo2(
-; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
-; DEFAULT-NEXT:    ret i32 [[T0]]
-;
-; BUNDLES-LABEL: @foo2(
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
-; BUNDLES-NEXT:    ret i32 [[T0]]
+; CHECK-LABEL: @foo2(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %ptrint = ptrtoint ptr %a to i64
   %maskedptr = and i64 %ptrint, 31

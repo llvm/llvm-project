@@ -340,10 +340,9 @@ LogicalResult ReallocOp::verify() {
            << sourceType << " and result memref type " << resultType;
 
   // The source memref and the result memref should have the same element type.
-  if (sourceType.getElementType() != resultType.getElementType())
-    return emitError("different element types specified for source memref "
-                     "type ")
-           << sourceType << " and result memref type " << resultType;
+  if (failed(verifyElementTypesMatch(*this, sourceType, resultType, "source",
+                                     "result")))
+    return failure();
 
   // Verify that we have the dynamic dimension operand when it is needed.
   if (resultType.getNumDynamicDims() && !getDynamicResultSize())
@@ -1965,9 +1964,9 @@ LogicalResult ReinterpretCastOp::verify() {
   if (srcType.getMemorySpace() != resultType.getMemorySpace())
     return emitError("different memory spaces specified for source type ")
            << srcType << " and result memref type " << resultType;
-  if (srcType.getElementType() != resultType.getElementType())
-    return emitError("different element types specified for source type ")
-           << srcType << " and result memref type " << resultType;
+  if (failed(verifyElementTypesMatch(*this, srcType, resultType, "source",
+                                     "result")))
+    return failure();
 
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
