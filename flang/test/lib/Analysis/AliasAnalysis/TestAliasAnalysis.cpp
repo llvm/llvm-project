@@ -29,8 +29,7 @@ struct TestFIRAliasAnalysisPass
     return "Test alias analysis results.";
   }
   void runOnOperation() override {
-    mlir::AliasAnalysis aliasAnalysis(
-        getOperation(), /*includeDefaultAnalyses=*/false);
+    mlir::AliasAnalysis aliasAnalysis(getOperation());
     aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
     runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }

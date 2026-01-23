@@ -235,7 +235,7 @@ class AliasAnalysis {
   using Model = detail::AliasAnalysisTraits::Model<ImplT>;
 
 public:
-  AliasAnalysis(Operation *op, bool includeDefaultAnalyses = true);
+  AliasAnalysis(Operation *op);
 
   //===--------------------------------------------------------------------===//
   // Alias Implementations
@@ -279,6 +279,7 @@ public:
   /// Return the modify-reference behavior of `op` on `location`.
   ModRefResult getModRef(Operation *op, Value location);
 
+private:
   /// A set of internal alias analysis implementations.
   SmallVector<std::unique_ptr<Concept>, 4> aliasImpls;
 };
