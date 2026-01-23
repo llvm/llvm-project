@@ -120,6 +120,8 @@ LIBC_INLINE static constexpr float sinpif(float x) {
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 
+}
+
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
