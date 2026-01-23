@@ -2203,6 +2203,16 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"fp8", "ssve-fp8dot2"}},
 
+        // d128 -> { lse128, sys128 }
+        {AArch64::ARMV9_7A, {"nolse128", "d128"}, {"d128", "lse128"}, {}},
+        {AArch64::ARMV9_7A, {"d128", "nolse128"}, {}, {"d128", "lse128"}},
+        {AArch64::ARMV9_7A, {"nosys128", "d128"}, {"d128", "sys128"}, {}},
+        {AArch64::ARMV9_7A, {"d128", "nosys128"}, {}, {"d128", "sys128"}},
+
+        // tlbid -> sys128
+        {AArch64::ARMV9_7A, {"nosys128", "tlbid"}, {"tlbid", "sys128"}, {}},
+        {AArch64::ARMV9_7A, {"tlbid", "nosys128"}, {}, {"tlbid", "sys128"}},
+
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},

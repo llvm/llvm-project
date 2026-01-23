@@ -824,6 +824,27 @@ struct TLBI : SysAliasOptionalReg {
 namespace AArch64TLBIP {
 struct TLBIP : SysAliasOptionalReg {
   using SysAliasOptionalReg::SysAliasOptionalReg;
+
+  bool allowTLBID() const {
+    return FeaturesRequired[llvm::AArch64::FeatureTLBID];
+  }
+
+  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    if (ActiveFeatures[llvm::AArch64::FeatureAll])
+      return true;
+
+    if (!allowTLBID())
+      return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+
+    FeatureBitset BaseReq = FeaturesRequired;
+    BaseReq.reset(llvm::AArch64::FeatureD128);
+    BaseReq.reset(llvm::AArch64::FeatureTLBID);
+    if ((BaseReq & ActiveFeatures) != BaseReq)
+      return false;
+
+    return ActiveFeatures[llvm::AArch64::FeatureD128] ||
+           ActiveFeatures[llvm::AArch64::FeatureTLBID];
+  }
 };
 #define GET_TLBIPTable_DECL
 #include "AArch64GenSystemOperands.inc"

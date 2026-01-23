@@ -459,17 +459,20 @@ def FeatureGCS : ExtensionWithMArch<"gcs", "GCS", "FEAT_GCS",
 def FeatureITE : ExtensionWithMArch<"ite", "ITE", "FEAT_ITE",
   "Enable Armv9.4-A Instrumentation Extension", [FeatureETE, FeatureTRBE]>;
 
+def FeatureSYS128 : ExtensionWithMArch<"sys128", "SYS128", "FEAT_SYSINSTR128",
+  "Enable Armv9.4-A 128bit system instruction aliases">;
+
 def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128", "FEAT_LSE128",
   "Enable Armv9.4-A 128-bit Atomic instructions",
   [FeatureLSE]>;
 
-// FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, and FEAT_SYSINSTR128 are mutually implicit.
+// FEAT_D128, FEAT_LVA3 and FEAT_SYSREG128 are mutually implicit.
 // Therefore group them all under a single feature flag, d128:
 def FeatureD128 : ExtensionWithMArch<"d128", "D128",
-  "FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128",
+  "FEAT_D128, FEAT_LVA3, FEAT_SYSREG128",
   "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
   "and instructions",
-  [FeatureLSE128]>;
+  [FeatureLSE128, FeatureSYS128]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.5 Architecture Extensions
@@ -593,7 +596,7 @@ def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
   "Enable Armv9.7-A Load-acquire and store-release pair extension">;
 
 def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
-  "Enable Armv9.7-A TLBI Domains extension">;
+  "Enable Armv9.7-A TLBI Domains extension", [FeatureSYS128]>;
 
 def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
   "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;

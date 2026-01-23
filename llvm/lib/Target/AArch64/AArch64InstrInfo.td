@@ -391,6 +391,8 @@ def HasLSE128        : Predicate<"Subtarget->hasLSE128()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSE128), "lse128">;
 def HasD128          : Predicate<"Subtarget->hasD128()">,
                                  AssemblerPredicateWithAll<(all_of FeatureD128), "d128">;
+def HasSYS128        : Predicate<"Subtarget->hasSYS128()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSYS128), "sys128">;
 def HasCHK           : Predicate<"Subtarget->hasCHK()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCHK), "chk">;
 def HasGCS           : Predicate<"Subtarget->hasGCS()">,
@@ -11264,7 +11266,7 @@ let Predicates = [HasRCPC3, HasNEON] in {
 //===----------------------------------------------------------------------===//
 // 128-bit System Instructions (FEAT_SYSINSTR128)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasD128] in {
+let Predicates = [HasSYS128] in {
   def SYSPxt  : SystemPXtI<0, "sysp">;
 
   def SYSPxt_XZR

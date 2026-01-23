@@ -16,7 +16,7 @@
 // CHECK-NEXT:     crc                 FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     crypto              FEAT_Crypto                                            Enable cryptographic instructions
 // CHECK-NEXT:     cssc                FEAT_CSSC                                              Enable Common Short Sequence Compression (CSSC) instructions
-// CHECK-NEXT:     d128                FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128 Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers and instructions
+// CHECK-NEXT:     d128                FEAT_D128, FEAT_LVA3, FEAT_SYSREG128                   Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers and instructions
 // CHECK-NEXT:     dit                 FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions
 // CHECK-NEXT:     dotprod             FEAT_DotProd                                           Enable dot product support
 // CHECK-NEXT:     f16f32dot           FEAT_F16F32DOT                                         Enable Armv9.7-A Advanced SIMD half-precision dot product accumulate to single-precision
@@ -115,6 +115,7 @@
 // CHECK-NEXT:     sve2p1              FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions
 // CHECK-NEXT:     sve2p2              FEAT_SVE2p2                                            Enable Armv9.6-A Scalable Vector Extension 2.2 instructions
 // CHECK-NEXT:     sve2p3              FEAT_SVE2p3                                            Enable Armv9.7-A Scalable Vector Extension 2.3 instructions
+// CHECK-NEXT:     sys128              FEAT_SYSINSTR128                                       Enable Armv9.4-A 128bit system instruction aliases
 // CHECK-NEXT:     tev                 FEAT_TEV                                               Enable TIndex Exception-like Vector instructions
 // CHECK-NEXT:     the                 FEAT_THE                                               Enable Armv8.9-A Translation Hardening Extension
 // CHECK-NEXT:     tlbid               FEAT_TLBID                                             Enable Armv9.7-A TLBI Domains extension

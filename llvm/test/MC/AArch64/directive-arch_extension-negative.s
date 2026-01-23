@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 \
 // RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
-// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs,+cmpbr \
+// RUN: -mattr=+rcpc3,+lse128,+sys128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs,+cmpbr \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -177,18 +177,20 @@ cpyfp [x0]!, [x1]!, x2!
 // CHECK: [[@LINE-1]]:1: error: instruction requires: mops
 // CHECK-NEXT: cpyfp [x0]!, [x1]!, x2!
 
-// nolse128 implied nod128, so reinstate it
+// nolse128 implied nod128 and nosys128, so reinstate them
+.arch_extension sys128
 .arch_extension d128
 // This needs to come before `.arch_extension nothe` as it uses an instruction
 // that requires both the and d128
 sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
+// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: sys128
 // CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
-// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
+.arch_extension nosys128
 .arch_extension nod128
 sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
-// CHECK: [[@LINE-2]]:1: error: instruction requires: d128
+// CHECK: [[@LINE-2]]:1: error: instruction requires: sys128
 // CHECK-NEXT: sysp #0, c2, c0, #0, x0, x1
 // CHECK: [[@LINE-3]]:1: error: instruction requires: d128
 // CHECK-NEXT: rcwcasp   x0, x1, x6, x7, [x4]

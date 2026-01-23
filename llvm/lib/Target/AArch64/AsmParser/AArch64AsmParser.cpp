@@ -3883,6 +3883,7 @@ static const struct Extension {
     {"mec", {AArch64::FeatureMEC}},
     {"the", {AArch64::FeatureTHE}},
     {"d128", {AArch64::FeatureD128}},
+    {"sys128", {AArch64::FeatureSYS128}},
     {"lse128", {AArch64::FeatureLSE128}},
     {"ite", {AArch64::FeatureITE}},
     {"cssc", {AArch64::FeatureCSSC}},
@@ -4276,10 +4277,23 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
             ? TLBIPorig->FeaturesRequired | FeatureBitset({AArch64::FeatureXS})
             : TLBIPorig->FeaturesRequired);
     if (!TLBIP.haveFeatures(getSTI().getFeatureBits())) {
-      std::string Name =
-          std::string(TLBIP.Name) + (HasnXSQualifier ? "nXS" : "");
-      std::string Str("TLBIP " + Name + " requires: ");
-      setRequiredFeatureString(TLBIP.getRequiredFeatures(), Str);
+      FeatureBitset Active = getSTI().getFeatureBits();
+      FeatureBitset Missing = TLBIP.getRequiredFeatures() & ~Active;
+      if (TLBIP.allowTLBID()) {
+        FeatureBitset BaseReq = TLBIP.getRequiredFeatures();
+        BaseReq.reset(AArch64::FeatureD128);
+        BaseReq.reset(AArch64::FeatureTLBID);
+        FeatureBitset BaseMissing = BaseReq & ~Active;
+        Missing = BaseMissing;
+        if (!Active[AArch64::FeatureD128] && !Active[AArch64::FeatureTLBID]) {
+          if (BaseMissing.none())
+            return TokError("instruction requires: tlbid or d128");
+          Missing.set(AArch64::FeatureD128);
+          Missing.set(AArch64::FeatureTLBID);
+        }
+      }
+      std::string Str("instruction requires: ");
+      setRequiredFeatureString(Missing, Str);
       return TokError(Str);
     }
     createSysAlias(TLBIP.Encoding, Operands, S);
