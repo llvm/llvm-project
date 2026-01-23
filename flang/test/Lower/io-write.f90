@@ -30,8 +30,8 @@
 ! CHECK:  %[[Val_16:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:  %[[Val_17:.*]] = fir.convert %[[Val_16]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:  %[[Val_18:.*]] = fir.call @_FortranAioBeginInternalFormattedOutput(%[[Val_2]], %[[Val_3]], %[[Val_12]], %[[Val_13]],
-! %[[Val_14]], %[[Val_15]], %[[Const_0_i64_0]], %17, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.box<none>, !fir.ref<!fir.llvm_ptr<i8>>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:  %[[Val_19:.*]] = fir.call @_FortranAioEndIoStatement(%18) {{.*}}: (!fir.ref<i8>) -> i32
+! %[[Val_14]], %[[Val_15]], %[[Const_0_i64_0]], %[[Val_17]], %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.box<none>, !fir.ref<!fir.llvm_ptr<i8>>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:  %[[Val_19:.*]] = fir.call @_FortranAioEndIoStatement(%[[Val_18]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:  llvm.intr.stackrestore %[[Val_9]] : !llvm.ptr
   if (string/="hi") stop 'FAIL'
 contains

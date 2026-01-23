@@ -74,7 +74,8 @@ subroutine pointers_in_atomic_capture()
 !CHECK: %[[loaded_B:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[loaded_B_addr:.*]] = fir.box_addr %[[loaded_B]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK: %[[PRIVATE_LOADED_B:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK: %[[PRIVATE_LOADED_B_addr:.*]] = fir.box_addr %[[PRIVATE_LOADED_B]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK: %[[PRIVATE_LOADED_B_2:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[PRIVATE_LOADED_B_addr:.*]] = fir.box_addr %[[PRIVATE_LOADED_B_2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK: %[[loaded_value:.*]] = fir.load %[[PRIVATE_LOADED_B_addr]] : !fir.ptr<i32>
 !CHECK: acc.atomic.capture   {
 !CHECK: acc.atomic.update %[[loaded_A_addr]] : !fir.ptr<i32> {

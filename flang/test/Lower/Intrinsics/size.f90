@@ -81,19 +81,20 @@ subroutine size_optional_dim_2(array, dim, iSize)
   integer(8) :: iSize
   iSize = size(array, dim, 8)
 ! CHECK:         %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ptr<i32>) -> i64
-! CHECK:         %[[VAL_6:.*]] = arith.constant 0 : i64
-! CHECK:         %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
-! CHECK:         %[[VAL_8:.*]] = fir.if %[[VAL_7]] -> (i64) {
+! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:         %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<i32>) -> i64
+! CHECK:         %[[VAL_7:.*]] = arith.constant 0 : i64
+! CHECK:         %[[VAL_8:.*]] = arith.cmpi eq, %[[VAL_6]], %[[VAL_7]] : i64
+! CHECK:         %[[VAL_9:.*]] = fir.if %[[VAL_8]] -> (i64) {
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_13:.*]] = fir.call @_FortranASize(%[[VAL_11]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> i64
 ! CHECK:           fir.result %[[VAL_13]] : i64
 ! CHECK:         } else {
-! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_4]] : !fir.ptr<i32>
+! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_5]] : !fir.ptr<i32>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_19:.*]] = fir.call @_FortranASizeDim(%[[VAL_17]], %[[VAL_14]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
 ! CHECK:           fir.result %[[VAL_19]] : i64
 ! CHECK:         }
-! CHECK:         fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<i64>
+! CHECK:         fir.store %[[VAL_9]] to %[[VAL_2]] : !fir.ref<i64>
 end subroutine

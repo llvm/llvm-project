@@ -133,7 +133,8 @@ end subroutine
 ! CHECK:           %[[FROM_BOX:.*]] = fir.embox %[[FROM_ALLOC]](%[[FROM_SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[FROM_BOX]] to %[[FROM_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[STAT_BOX:.*]] = fir.load %[[STAT_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[STAT_ADDR:.*]] = fir.box_addr %[[STAT_BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:           %[[STAT_BOX_2:.*]] = fir.load %[[STAT_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[STAT_ADDR:.*]] = fir.box_addr %[[STAT_BOX_2]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:           %[[ABSENT:.*]] = fir.absent !fir.box<none>
 ! CHECK:           %[[TRUE:.*]] = arith.constant true
 ! CHECK:           %[[VAL_25:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<{{.*}}>>
@@ -199,4 +200,3 @@ end function
 ! CHECK:         }
 
 ! TODO: there seem to be no intrinsics with dynamically optional arguments lowered asInquired
-

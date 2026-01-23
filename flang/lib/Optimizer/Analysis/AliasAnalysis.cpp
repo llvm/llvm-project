@@ -34,20 +34,12 @@ llvm::cl::opt<bool> supportCrayPointers(
     llvm::cl::desc("Support Cray POINTERs that ALIAS with non-TARGET data"),
     llvm::cl::init(false));
 
-static bool ignoreAllocEffectsForOp(mlir::Operation *op) {
-  // These operations allocate as an implementation detail but not so far as
-  // language semantics are concerned. Using these effects to make decisions
-  // upsets the value tracking because the result of the operation is assumed to
-  // be a fresh value not related to the original source.
-  return mlir::isa<fir::LoadOp, fir::EmboxOp, fir::ReboxOp>(op);
-}
-
 // Inspect for value-scoped Allocate effects and determine whether
 // 'candidate' is a new allocation. Returns SourceKind::Allocate if a
 // MemAlloc effect is attached
 static fir::AliasAnalysis::SourceKind
 classifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate) {
-  if (!op || ignoreAllocEffectsForOp(op))
+  if (!op)
     return fir::AliasAnalysis::SourceKind::Unknown;
   auto interface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
   if (!interface)

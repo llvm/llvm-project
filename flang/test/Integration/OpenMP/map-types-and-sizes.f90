@@ -594,8 +594,10 @@ end subroutine mapType_common_block_members
 
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_alloca_derived_type_{{.*}}
-!CHECK: %[[DTYPE_DESC_UNUSED1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_COPY:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_ARRAY_MEMBER_DESC_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1, align 8
@@ -683,11 +685,14 @@ end subroutine mapType_common_block_members
 !CHECK: store ptr %[[DTYPE_NONALLOCA_MEMBER_ACCESS]], ptr %[[OFFLOAD_PTR_ARR]], align 8
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_alloca_nested_derived_type{{.*}}
-!CHECK: %[[DTYPE_DESC_UNUSED1_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA_1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_COPY_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[ALLOCATABLE_MEMBER_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1, align 8
+
 !CHECK: %[[ALLOCATABLE_MEMBER_ALLOCA_UB:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ALLOCATABLE_MEMBER_ALLOCA]], i32 0, i32 7, i64 0, i32 1
 !CHECK: %[[ALLOCATABLE_MEMBER_ALLOCA_UB_LOAD:.*]] = load i64, ptr %[[ALLOCATABLE_MEMBER_ALLOCA_UB]], align 8
 !CHECK: %[[ALLOCATABLE_MEMBER_SIZE_CALC_1:.*]] = sub i64 %[[ALLOCATABLE_MEMBER_ALLOCA_UB_LOAD]], 1

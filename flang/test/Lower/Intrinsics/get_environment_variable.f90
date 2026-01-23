@@ -7,6 +7,9 @@ subroutine name_only(name)
     character(len=32) :: name
     call get_environment_variable(name)
 ! CHECK-NOT: fir.call @_FortranAGetEnvVariable
+! CHECK-NEXT: fir.unboxchar
+! CHECK-NEXT: fir.convert
+! CHECK-NEXT: fir.embox
 ! CHECK-NEXT: return
 end subroutine name_only
 
@@ -89,6 +92,9 @@ subroutine name_and_trim_name_only(name, trim_name)
     logical :: trim_name
     call get_environment_variable(name, TRIM_NAME=trim_name)
     ! CHECK-NOT: fir.call @_FortranAGetEnvVariable
+    ! CHECK-NEXT: fir.unboxchar
+    ! CHECK-NEXT: fir.convert
+    ! CHECK-NEXT: fir.embox
     ! CHECK-NEXT: return
 end subroutine name_and_trim_name_only
 
@@ -169,6 +175,9 @@ subroutine getenv_name_only(name)
     character(len=32) :: name
     call getenv(name)
 ! CHECK-NOT: fir.call @_FortranAGetEnvVariable
+! CHECK-NEXT: fir.unboxchar
+! CHECK-NEXT: fir.convert
+! CHECK-NEXT: fir.embox
 ! CHECK-NEXT: return
 end subroutine getenv_name_only
 
@@ -251,6 +260,9 @@ subroutine getenv_name_and_trim_name_only(name, trim_name)
     logical :: trim_name
     call getenv(name, TRIM_NAME=trim_name)
     ! CHECK-NOT: fir.call @_FortranAGetEnvVariable
+    ! CHECK-NEXT: fir.unboxchar
+    ! CHECK-NEXT: fir.convert
+    ! CHECK-NEXT: fir.embox
     ! CHECK-NEXT: return
 end subroutine getenv_name_and_trim_name_only
 

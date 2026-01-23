@@ -65,7 +65,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPassign_c_devptr
 ! CHECK: %[[P:.*]] = fir.declare %arg0 dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFassign_c_devptrEp"}
-! CHECK: %[[C_DEVLOC_RES:.*]] = fir.declare %15 {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
+! CHECK: %[[C_DEVLOC_TMP:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
+! CHECK: %[[C_DEVLOC_RES:.*]] = fir.declare %[[C_DEVLOC_TMP]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
 ! CHECK: %[[RES_CPTR_COORD:.*]] = fir.coordinate_of %[[C_DEVLOC_RES]], cptr : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
 ! CHECK: %[[P_CPTR_COORD:.*]] = fir.coordinate_of %[[P]], cptr : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
 ! CHECK: %[[RES_ADDR_COORD:.*]] = fir.coordinate_of %[[RES_CPTR_COORD]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>

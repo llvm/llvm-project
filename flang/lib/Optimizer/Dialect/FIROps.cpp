@@ -2202,7 +2202,7 @@ static void allocateResultIfNotInGlobal(
   // temporary on the stack (see FIR to LLVM dialect conversion).
   if (!isInGlobalOp(op))
     effects.emplace_back(
-        mlir::MemoryEffects::Allocate::get(), op->getOpResult(0),
+        mlir::MemoryEffects::Allocate::get(),
         mlir::SideEffects::AutomaticAllocationScopeResource::get());
 }
 
@@ -3080,10 +3080,8 @@ void fir::LoadOp::getEffects(
 
   // Box loads create an implicit alloca when translating FIR to LLVM dialect.
   if (fir::isa_box_type(getType())) {
-    // Note: LoadOp::getResult() returns a Value not an OpResult.
-    mlir::OpResult result = getOperation()->getOpResult(0);
     effects.emplace_back(
-        mlir::MemoryEffects::Allocate::get(), result,
+        mlir::MemoryEffects::Allocate::get(),
         mlir::SideEffects::AutomaticAllocationScopeResource::get());
   }
 }
