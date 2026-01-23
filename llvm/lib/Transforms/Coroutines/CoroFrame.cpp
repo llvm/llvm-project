@@ -1061,9 +1061,6 @@ static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
 template <DbgVariableRecord::LocationType record_type>
 static TinyPtrVector<DbgVariableRecord *>
 findDbgRecordsThroughLoads(Function &F, Value *Def) {
-  if (!F.getSubprogram())
-    return {};
-
   static_assert(record_type == DbgVariableRecord::LocationType::Declare ||
                 record_type == DbgVariableRecord::LocationType::DeclareValue);
   constexpr auto FindFunc =
@@ -1072,6 +1069,10 @@ findDbgRecordsThroughLoads(Function &F, Value *Def) {
           : findDVRDeclareValues;
 
   TinyPtrVector<DbgVariableRecord *> Records = FindFunc(Def);
+
+  if (!F.getSubprogram())
+    return Records;
+
   Value *CurDef = Def;
   while (Records.empty() && isa<LoadInst>(CurDef)) {
     auto *LdInst = cast<LoadInst>(CurDef);
