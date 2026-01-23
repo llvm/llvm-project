@@ -1129,21 +1129,6 @@ def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
-// When enabled all memory operations (e.g. loads/stores) uses capability
-// registers as the base operand instead of the address sub-register.
-// Currently, capability mode needs to be chosen at assembly time, but follow-up
-// commits will add support for "hybrid" mode that adds instructions to
-// dynamically switch between capability mode and address mode (the latter being
-// fully backwards compatible with non-Y code).
-def FeatureCapMode : SubtargetFeature<"cap-mode", "IsCapMode", "true",
-                                      "Capability pointer mode">;
-def IsCapMode : Predicate<"Subtarget->isCapMode()">,
-                AssemblerPredicate<(all_of FeatureCapMode),
-                                   "Capability Pointer Mode">;
-def NotCapMode : Predicate<"!Subtarget->isCapMode()">,
-                 AssemblerPredicate<(all_of (not FeatureCapMode)),
-                                    "Not Capability Pointer Mode">;
-
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//

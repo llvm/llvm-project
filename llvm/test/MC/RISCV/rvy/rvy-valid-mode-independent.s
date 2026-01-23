@@ -1,20 +1,11 @@
-# RUN: llvm-mc --triple=riscv32 -mattr=+experimental-y --riscv-no-aliases --show-encoding --show-inst < %s \
+# RUN: llvm-mc --triple=riscv32 -mattr=+experimental-y --riscv-no-aliases --show-encoding --show-inst --defsym=XLEN=32 < %s \
 # RUN:   | FileCheck --check-prefixes=CHECK,CHECK-ASM,CHECK-ASM-32 -D"#XLEN=32" %s
-# RUN: llvm-mc --triple=riscv32 -mattr=+experimental-y,+cap-mode --riscv-no-aliases --show-encoding --show-inst < %s \
-# RUN:   | FileCheck --check-prefixes=CHECK,CHECK-ASM,CHECK-ASM-32 -D"#XLEN=32" %s
-# RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+experimental-y < %s \
+# RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+experimental-y --defsym=XLEN=32 --riscv-add-build-attributes < %s \
 # RUN:   | llvm-objdump --mattr=+experimental-y -M no-aliases -d --no-print-imm-hex - | FileCheck %s -D"#XLEN=32"
-# RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+experimental-y,+cap-mode < %s \
-# RUN:   | llvm-objdump --mattr=+experimental-y,+cap-mode -M no-aliases -d --no-print-imm-hex - | FileCheck %s -D"#XLEN=32"
-
-# RUN: llvm-mc --triple=riscv64 --mattr=+experimental-y --riscv-no-aliases --show-encoding --show-inst --defsym=RV64=1 < %s \
+# RUN: llvm-mc --triple=riscv64 --mattr=+experimental-y --riscv-no-aliases --show-encoding --show-inst --defsym=XLEN=64 < %s \
 # RUN:   | FileCheck --check-prefixes=CHECK,CHECK-ASM,CHECK-ASM-64 -D"#XLEN=64" %s
-# RUN: llvm-mc --triple=riscv64 --mattr=+experimental-y,+cap-mode --riscv-no-aliases --show-encoding --show-inst --defsym=RV64=1 < %s \
-# RUN:   | FileCheck --check-prefixes=CHECK,CHECK-ASM,CHECK-ASM-64 -D"#XLEN=64" %s
-# RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+experimental-y --defsym=RV64=1 < %s \
+# RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+experimental-y --defsym=XLEN=64 --riscv-add-build-attributes < %s \
 # RUN:   | llvm-objdump --mattr=+experimental-y -M no-aliases -d --no-print-imm-hex - | FileCheck %s -D"#XLEN=64"
-# RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+experimental-y,+cap-mode --defsym=RV64=1 < %s \
-# RUN:   | llvm-objdump --mattr=+experimental-y,+cap-mode -M no-aliases -d --no-print-imm-hex - | FileCheck %s -D"#XLEN=64"
 
 # CHECK: addy		a0, a0, a1
 # CHECK-ASM-SAME: # encoding: [0x33,0x05,0xb5,0x0c]
@@ -207,11 +198,7 @@ ytyper a0, a0
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10>
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 # CHECK-ASM-NEXT: #  <MCOperand Imm:[[#XLEN]]>>
-.ifdef RV64
-srliy a0, a0, 64
-.else
-srliy a0, a0, 32
-.endif
+srliy a0, a0, XLEN
 # CHECK-NEXT: srliy		a0, a0, [[#XLEN]]
 # CHECK-ASM-32-SAME: # encoding: [0x13,0x55,0x05,0x02]
 # CHECK-ASM-64-SAME: # encoding: [0x13,0x55,0x05,0x04]
