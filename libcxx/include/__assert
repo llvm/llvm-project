@@ -17,9 +17,10 @@
 #  pragma GCC system_header
 #endif
 
-// Note that we disable -Wfunction-effects inside _LIBCPP_ASSERT when the assertion fails since
-// function effect attributes don't provide any guarantees once a function is determined to be
-// out of contract.
+// Note that we disable -Wfunction-effects inside _LIBCPP_ASSERT when the assertion fails because
+// once function's preconditions are violated, function effect analysis can no longer provide any
+// meaningful guarantees (e.g., cannot guarantee the caller is non-blocking, regardless of function
+// effect attributes).
 #define _LIBCPP_ASSERT(expression, message)                                                                            \
   (__builtin_expect(static_cast<bool>(expression), 1)                                                                  \
        ? (void)0                                                                                                       \
