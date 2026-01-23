@@ -444,6 +444,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
+      CPU ${cpu}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}

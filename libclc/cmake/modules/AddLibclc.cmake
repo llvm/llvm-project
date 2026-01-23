@@ -235,6 +235,8 @@ endfunction()
 # Arguments:
 #  * ARCH <string>
 #      libclc architecture being built
+#  * CPU <string>
+#      libclc microarchitecture being built
 #  * ARCH_SUFFIX <string>
 #      libclc architecture/triple suffix
 #  * TRIPLE <string>
@@ -375,11 +377,18 @@ function(add_libclc_builtin_set)
   set( LIBCLC_OUTPUT_FILENAME libclc )
   set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
 
+  # We store the library according to its triple and cpu if present.
+  if (ARG_CPU)
+    set (library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${ARG_CPU})
+  else()
+    set (library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
+  endif()
+  file( MAKE_DIRECTORY ${library_dir} )
+
   # For SPIR-V targets we diverage at this point and generate SPIR-V using the
   # llvm-spirv tool.
-  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE} )
   if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
-    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${LIBCLC_OUTPUT_FILENAME}.spv )
+    set( libclc_builtins_lib ${library_dir}/${LIBCLC_OUTPUT_FILENAME}.spv )
     if ( LIBCLC_USE_SPIRV_BACKEND )
       add_custom_command( OUTPUT ${libclc_builtins_lib}
         COMMAND ${clang_exe} -c --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
@@ -393,7 +402,7 @@ function(add_libclc_builtin_set)
     endif()
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
-    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${LIBCLC_OUTPUT_FILENAME}.bc )
+    set( libclc_builtins_lib ${library_dir}/${LIBCLC_OUTPUT_FILENAME}.bc )
 
     add_custom_command( OUTPUT ${libclc_builtins_lib}
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${libclc_builtins_lib}
