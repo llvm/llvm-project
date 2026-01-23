@@ -62,10 +62,11 @@ class ConstraintLoweringContext:
         elif isinstance(type_, TypeVar):
             return self.lower(type_)
         elif origin and issubclass(origin, ir.Type):
-            # `origin.get` is to construct an instance of MLIR type/attribute.
+            # `origin.get` is to construct an instance of MLIR type.
             t = origin.get(*get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
+            # `origin.get` is to construct an instance of MLIR attribute.
             attr = origin.get(*get_args(type_))
             return irdl.is_(attr)
         elif issubclass(type_, ir.Type):
