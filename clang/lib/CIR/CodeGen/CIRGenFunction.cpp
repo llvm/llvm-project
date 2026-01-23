@@ -33,6 +33,27 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
 
 CIRGenFunction::~CIRGenFunction() {}
 
+std::optional<std::string> CIRGenFunction::getIntrinsicNameForBuiltin(unsigned builtinID) {
+  // First try explicit mappings for known builtins.
+  switch (builtinID) {
+  case X86::BI__builtin_ia32_rdpmc:
+    return std::string("x86.rdpmc");
+  default:
+    break;
+  }
+
+  // As a fallback, match common builtin names to avoid depending on the exact
+  // enum variant emitted by TableGen (e.g., "rdpmc" vs "__builtin_ia32_rdpmc").
+  std::string name = getContext().BuiltinInfo.getName(builtinID);
+
+  
+  if (name.size() >= 5 && name.compare(name.size() - 5, 5, "rdpmc") == 0) {
+    return std::string("x86.rdpmc");
+  }
+
+  return std::nullopt;
+}
+
 // This is copied from clang/lib/CodeGen/CodeGenFunction.cpp
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();

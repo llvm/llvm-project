@@ -883,3 +883,24 @@ void CIRGenFunction::emitCallArgs(
       std::reverse(args.begin() + callArgsStart, args.end());
   }
 }
+
+void CIRGenFunction::coerceCallArgsToASTTypes(
+    llvm::SmallVectorImpl<mlir::Value> &callArgs,
+    const clang::CallExpr *callExpr) {
+  CIRGenBuilderTy &builder = getBuilder();
+  for (unsigned i = 0; i < callArgs.size(); ++i) {
+    if (i >= callExpr->getNumArgs())
+      break;
+    QualType argTy = callExpr->getArg(i)->getType();
+    if (argTy->isIntegerType()) {
+      unsigned w = (unsigned)getContext().getTypeSize(argTy);
+      mlir::Type wantTy = argTy->isSignedIntegerOrEnumerationType()
+                              ? builder.getSIntNTy(w)
+                              : builder.getUIntNTy(w);
+      if (callArgs[i].getType() != wantTy)
+        callArgs[i] = builder.createBitcast(callArgs[i], wantTy);
+    }
+    // Pointer addrspace and other coercions are intentionally left to
+    // other lowering phases or specialized handlers.
+  }
+}

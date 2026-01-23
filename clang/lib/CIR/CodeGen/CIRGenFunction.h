@@ -1457,6 +1457,12 @@ public:
       CallArgList &args, PrototypeWrapper prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
       AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
+
+  /// Coerce a vector of emitted call operands so they match the AST argument
+  /// types (width and signedness) where possible. This mirrors the integer
+  /// coercion subset that Classic CodeGen performs for call arguments.
+  void coerceCallArgsToASTTypes(llvm::SmallVectorImpl<mlir::Value> &callArgs,
+                                const clang::CallExpr *callExpr);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
@@ -1868,6 +1874,17 @@ public:
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
                         ReturnValueSlot &returnValue);
+
+  // Only include builtins that lack special handling
+  std::optional<std::string> getIntrinsicNameForBuiltin(unsigned builtinID);
+
+  /// Emit a generic builtin as an LLVM intrinsic call if a mapping exists.
+  /// Returns std::nullopt if the builtin is not handled by the generic
+  /// intrinsic fallback.
+  std::optional<mlir::Value>
+  emitGenericBuiltinIntrinsic(unsigned builtinID,
+                              const clang::CallExpr *expr,
+                              llvm::ArrayRef<mlir::Value> ops);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.

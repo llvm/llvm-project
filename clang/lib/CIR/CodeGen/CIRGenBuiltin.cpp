@@ -32,6 +32,17 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
+template <typename... Operands>
+static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, const StringRef str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(str), resTy,
+                                          std::forward<Operands>(op)...)
+      .getResult();
+}
+
 static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
                               const CallExpr *e, mlir::Operation *calleeValue) {
   CIRGenCallee callee = CIRGenCallee::forDirect(calleeValue, GlobalDecl(fd));
@@ -347,6 +358,41 @@ static RValue emitBuiltinAlloca(CIRGenFunction &cgf, const CallExpr *e,
   // Bitcast the alloca to the expected type.
   return RValue::get(builder.createBitcast(
       allocaAddr, builder.getVoidPtrTy(cgf.getCIRAllocaAddressSpace())));
+}
+
+std::optional<mlir::Value> CIRGenFunction::emitGenericBuiltinIntrinsic(
+    unsigned builtinID, const CallExpr *expr, llvm::ArrayRef<mlir::Value> ops) {
+
+  mlir::Location loc = getLoc(expr->getExprLoc());
+
+  // Try to get an intrinsic name for the builtin
+  std::optional<std::string> maybeName = getIntrinsicNameForBuiltin(builtinID);
+  if (!maybeName)
+    return std::nullopt;
+  llvm::StringRef intrinsicName = *maybeName;
+
+  CIRGenBuilderTy &builder = getBuilder();
+
+  // Determine return type based on AST
+  QualType retAstTy = expr->getType();
+  mlir::Type retTy;
+  if (retAstTy->isIntegerType()) {
+    unsigned width = (unsigned)getContext().getTypeSize(retAstTy);
+    retTy = retAstTy->isSignedIntegerOrEnumerationType()
+                ? builder.getSIntNTy(width)
+                : builder.getUIntNTy(width);
+  } else if (retAstTy->isVoidType()) {
+    retTy = builder.getVoidTy();
+  } else {
+    // Not supported by the simple fallback.
+    return std::nullopt;
+  }
+
+  SmallVector<mlir::Value> callArgs(ops.begin(), ops.end());
+  coerceCallArgsToASTTypes(callArgs, expr);
+
+  return emitIntrinsicCallOp(
+      builder, loc, intrinsicName, retTy, callArgs);
 }
 
 static bool shouldCIREmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
@@ -1810,30 +1856,40 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   // Now see if we can emit a target-specific builtin.
   // FIXME: This is a temporary mechanism (double-optional semantics) that will
-  // go away once everything is implemented:
-  //   1. return `mlir::Value{}` for cases where we have issued the diagnostic.
-  //   2. return `std::nullopt` in cases where we didn't issue a diagnostic
-  //      but also didn't handle the builtin.
-  if (std::optional<mlir::Value> rst =
-          emitTargetBuiltinExpr(builtinID, e, returnValue)) {
-    mlir::Value v = rst.value();
-    // CIR dialect operations may have no results, no values will be returned
-    // even if it executes successfully.
-    if (!v)
-      return RValue::get(nullptr);
+  // go away once everything is implemented.
+  // Return semantics:
+  //  1. `std::nullopt`: the target did NOT handle the builtin (caller should
+  //    fall back or emit an error).
+  //  2. Engaged optional with a null `mlir::Value` (i.e., `mlir::Value{}`): the
+  //    target handled the builtin but produced no result (void) or issued a
+  //    diagnostic.
+  //  3. Engaged optional with a non-null `mlir::Value`: the target handled the
+  //    builtin and returned a value.
+  {
+    std::optional<mlir::Value> rst =
+        emitTargetBuiltinExpr(builtinID, e, returnValue);
+    if (rst) {
+      mlir::Value v = rst.value();
 
-    switch (evalKind) {
-    case cir::TEK_Scalar:
-      if (mlir::isa<cir::VoidType>(v.getType()))
+      // CIR dialect operations may have no results, no values will be returned
+      // even if it executes successfully.
+      if (!v)
         return RValue::get(nullptr);
-      return RValue::get(v);
-    case cir::TEK_Aggregate:
-      cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
-      return getUndefRValue(e->getType());
-    case cir::TEK_Complex:
-      llvm_unreachable("No current target builtin returns complex");
+
+      switch (evalKind) {
+      case cir::TEK_Scalar:
+        if (mlir::isa<cir::VoidType>(v.getType()))
+          return RValue::get(nullptr);
+        return RValue::get(v);
+      case cir::TEK_Aggregate:
+        cgm.errorNYI(e->getSourceRange(),
+                     "aggregate return value from builtin");
+        return getUndefRValue(e->getType());
+      case cir::TEK_Complex:
+        llvm_unreachable("No current target builtin returns complex");
+      }
+      llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
     }
-    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
 
   cgm.errorNYI(e->getSourceRange(),
@@ -1875,8 +1931,28 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
     return std::nullopt;
 
   case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    return cgf->emitX86BuiltinExpr(builtinID, e);
+  case llvm::Triple::x86_64: {
+    // Try the target-specific emitter first. If it doesn't handle the
+    // builtin, fall back to the generic builtin->intrinsic emitter so target
+    // files don't have to call it themselves.
+    if (std::optional<mlir::Value> res = cgf->emitX86BuiltinExpr(builtinID, e))
+      return *res;
+
+    // Build the operand list
+    llvm::SmallVector<mlir::Value> ops;
+    unsigned iceArguments = 0;
+    ASTContext::GetBuiltinTypeError error;
+    cgf->getContext().GetBuiltinType(builtinID, error, &iceArguments);
+    assert(error == ASTContext::GE_None && "Error while getting builtin type.");
+
+    for (auto [idx, arg] : llvm::enumerate(e->arguments()))
+      ops.push_back(cgf->emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+
+    if (std::optional<mlir::Value> maybeRes = cgf->emitGenericBuiltinIntrinsic(builtinID, e, ops))
+      return *maybeRes;
+
+    return std::nullopt;
+  }
 
   case llvm::Triple::ppc:
   case llvm::Triple::ppcle:
