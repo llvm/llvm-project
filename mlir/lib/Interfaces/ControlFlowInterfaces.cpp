@@ -443,28 +443,20 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
 }
 
 SmallVector<Value>
-RegionBranchOpInterface::getRegionNonForwardedValues(RegionBranchPoint src,
-                                                     RegionSuccessor dest) {
-  SmallVector<Value> nonForwardValues;
-  OperandRange successorOperands = getSuccessorOperands(src, dest);
+RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor dest) {
+  SmallVector<Value> results = llvm::to_vector(
+      dest.isParent() ? ValueRange(getOperation()->getResults())
+                      : ValueRange(dest.getSuccessor()->getArguments()));
   ValueRange successorInputs = getSuccessorInputs(dest);
-  size_t firstIndex = 0;
-  if (!successorOperands.empty()) {
-    firstIndex =
+  if (!successorInputs.empty()) {
+    unsigned inputBegin =
         dest.isParent()
             ? cast<OpResult>(successorInputs.front()).getResultNumber()
             : cast<BlockArgument>(successorInputs.front()).getArgNumber();
+    results.erase(results.begin() + inputBegin,
+                  results.begin() + inputBegin + successorInputs.size());
   }
-  ValueRange values;
-  if (dest.isParent()) {
-    values = this->getOperation()->getResults();
-  } else {
-    values = dest.getSuccessor()->getArguments();
-  }
-  nonForwardValues.append(llvm::to_vector(values.take_front(firstIndex)));
-  nonForwardValues.append(llvm::to_vector(
-      values.drop_front(firstIndex + successorOperands.size())));
-  return nonForwardValues;
+  return results;
 }
 
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
