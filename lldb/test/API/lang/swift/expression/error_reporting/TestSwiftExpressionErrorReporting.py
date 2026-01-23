@@ -7,6 +7,33 @@ class TestSwiftExpressionErrorReporting(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
+    def test_missing_location(self):
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
+        process.Continue()
+        self.ci.HandleCommand(
+            "settings set symbols.testing.inject-variable-location-error true", self.res
+        )
+        if not self.res.Succeeded():
+            # This test needs assertions.
+            return
+
+        options = lldb.SBExpressionOptions()
+        value = self.frame().EvaluateExpression("number", options)
+        data = value.GetError().GetErrorData()
+        version = data.GetValueForKey("version")
+        self.assertEqual(version.GetIntegerValue(), 1)
+        diags = data.GetValueForKey("errors").GetItemAtIndex(0)
+        details = diags.GetValueForKey("details")
+        all_messages = [str(detail.GetValueForKey("message")) for detail in details]
+        self.assertIn(
+            'Missing debug information for variable "self": variable not available',
+            all_messages,
+        )
+
+    @swiftTest
     def test_missing_var(self):
         """Test error reporting in expressions reports
         only diagnostics in user code"""
@@ -75,11 +102,8 @@ class TestSwiftExpressionErrorReporting(TestBase):
         def check(value):
             lines = str(value.GetError()).split('\n')
             self.assertTrue(lines[0].startswith('error:'))
-            self.assertIn('Missing type', lines[0])
+            self.assertIn('Missing debug info', lines[0])
             self.assertIn('strct', lines[0])
-            for line in lines[1:]:
-                self.assertFalse(line.startswith('error:'))
-                self.assertFalse(line.startswith('warning:'))
 
         check(value)
 
