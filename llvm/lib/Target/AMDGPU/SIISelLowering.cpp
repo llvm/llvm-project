@@ -17050,6 +17050,13 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
           return LHS.getOperand(0);
       }
     }
+
+    // setcc v.64, 0x1'000'000, ult => setcc v.hi32, 0, eq
+    if (VT == MVT::i64 && CRHSVal.getZExtValue() == 1ull << 32 &&
+        CC == ISD::SETULT) {
+      return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                          DAG.getConstant(0, SL, MVT::i32), ISD::SETEQ);
+    }
   }
 
   // Eliminate setcc by using carryout from add/sub instruction

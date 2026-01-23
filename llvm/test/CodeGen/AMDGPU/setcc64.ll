@@ -284,4 +284,15 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}i64_select:
+; GCN: s_cmp_eq_u32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+define amdgpu_kernel void @i64_select(ptr addrspace(1) %out, i64 %a, i64 %b, i64 %mask) #0 {
+  %mask.hi.z = icmp ult i64 %mask, 4294967296
+  %tmp = select i1 %mask.hi.z, i64 %a, i64 %b
+  store i64 %tmp, ptr addrspace(1) %out
+  ret void
+}
+
 attributes #0 = { nounwind }
