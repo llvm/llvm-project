@@ -176,10 +176,10 @@ parseXCOFFSectionType(StringRef TypeStr) {
 }
 
 // Find the base VMA of the unique section matching the given type for XCOFF.
-// The syntax (SECTION_TYPE)(+offset) represents an offset from the section base,
-// so we return the section's base address to compute: VMA = base + offset.
-// This function verifies there is exactly one section of the given type, as
-// multiple sections of the same type would make the address ambiguous.
+// The syntax (SECTION_TYPE)(+offset) represents an offset from the section
+// base, so we return the section's base address to compute: VMA = base +
+// offset. This function verifies there is exactly one section of the given
+// type, as multiple sections of the same type would make the address ambiguous.
 static Expected<uint64_t>
 getXCOFFSectionBaseAddress(const object::XCOFFObjectFile *XCOFFObj,
                            XCOFF::SectionTypeFlags TypeFlag) {
