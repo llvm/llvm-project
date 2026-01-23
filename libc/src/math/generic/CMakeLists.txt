@@ -487,6 +487,7 @@ add_entrypoint_object(
     ../tan.h
   DEPENDS
     libc.src.__support.math.tan
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

@@ -1248,5 +1248,4 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
-    libc.src.errno.errno
 )
