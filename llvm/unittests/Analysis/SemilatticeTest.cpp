@@ -98,7 +98,7 @@ TEST_F(SemilatticeTest, Iterators) {
   Semilattice EmptyLat(*F);
   SemilatticeNode *EmptyRoot = EmptyLat.getRootNode();
   EXPECT_TRUE(EmptyRoot->isLeaf());
-  EXPECT_EQ(EmptyRoot->begin(), EmptyRoot->end());
+  EXPECT_EQ(EmptyRoot->child_begin(), EmptyRoot->child_end());
   EXPECT_EQ(
       std::distance(EmptyRoot->children().begin(), EmptyRoot->children().end()),
       0u);
@@ -109,10 +109,10 @@ TEST_F(SemilatticeTest, Iterators) {
   EXPECT_TRUE(Root->isRoot());
   EXPECT_FALSE(Root->isLeaf());
 
-  auto *It = Root->begin();
-  EXPECT_NE(It, Root->end());
+  auto *It = Root->child_begin();
+  EXPECT_NE(It, Root->child_end());
   SemilatticeNode *Child = *It++;
-  EXPECT_EQ(It, Root->end());
+  EXPECT_EQ(It, Root->child_end());
   EXPECT_FALSE(Child->isRoot());
   EXPECT_TRUE(Child->isLeaf());
 
