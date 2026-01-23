@@ -362,6 +362,20 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
+  /// Create constant nullptr for pointer-to-data-member type ty.
+  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
+                                       mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
+  }
+
+  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
+  }
+
+  //
+  // UnaryOp creation helpers
+  // -------------------------
+  //
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
@@ -375,19 +389,18 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
+  mlir::Value createFNeg(mlir::Value value) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Minus, value);
+  }
+
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
     return cir::IsFPClassOp::create(*this, loc, src, flags);
-  }
-
-  /// Create constant nullptr for pointer-to-data-member type ty.
-  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
-                                       mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
-  }
-
-  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
@@ -414,6 +427,7 @@ public:
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
   }
+
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
