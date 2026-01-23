@@ -25,7 +25,7 @@
 // in libc++'s assertion macros, otherwise it becomes impossible to call a function
 // with hardened preconditions from e.g. a [[nonblocking]] function.
 
-// ADDITIONAL_COMPILE_FLAGS: -Wfunction-effects -Werror=function-effects
+// ADDITIONAL_COMPILE_FLAGS: -Werror=function-effects
 
 // RUN: %{build}
 // RUN: %{build} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE
