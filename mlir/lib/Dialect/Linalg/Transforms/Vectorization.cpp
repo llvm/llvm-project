@@ -1712,7 +1712,8 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
   }
 
   // If missing, initialize the write indices to 0.
-  assert((writeIndices.empty() ||
+  bool useDefaultWriteIdxs = writeIndices.empty();
+  assert((useDefaultWriteIdxs ||
           writeIndices.size() == static_cast<size_t>(destRank)) &&
          "Invalid number of write indices!");
   if (writeIndices.empty()) {
@@ -1743,8 +1744,22 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
       isa<MemRefType>(dest.getType())
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
-  SmallVector<OpFoldResult> maskSizes(destSizes.end() - vecToStoreRank,
-                                      destSizes.end());
+
+  // Compute sizes for write-mask
+  SmallVector<OpFoldResult> maskSizes;
+  if (useDefaultWriteIdxs) {
+    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
+                                          destSizes.end());
+  } else {
+    size_t diff = destShape.size() - vecToStoreRank;
+    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
+      auto value =
+          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
+      auto neg =
+          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
+      maskSizes.push_back(OpFoldResult(neg));
+    }
+  }
 
   if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
                               vecToStoreShape))

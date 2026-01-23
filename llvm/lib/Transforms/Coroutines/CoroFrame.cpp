@@ -25,6 +25,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -1085,6 +1086,20 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
+  MDBuilder MDB(C);
+  // Create a TBAA tag for accesses to certain coroutine frame slots, so that
+  // subsequent alias analysis will understand they do not intersect with
+  // user memory.
+  // We do this only if a suitable TBAA root already exists in the module.
+  MDNode *TBAATag = nullptr;
+  if (auto *CppTBAAStr = MDString::getIfExists(C, "Simple C++ TBAA")) {
+    auto *TBAARoot = MDNode::getIfExists(C, CppTBAAStr);
+    // Create a "fake" scalar type; all other types defined in the source
+    // language will be assumed non-aliasing with this type.
+    MDNode *Scalar = MDB.createTBAAScalarTypeNode(
+        (F->getName() + ".Frame Slot").str(), TBAARoot);
+    TBAATag = MDB.createTBAAStructTagNode(Scalar, Scalar, 0);
+  }
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
     Type *ByValTy = extractByvalIfArgument(Def);
@@ -1105,13 +1120,16 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
         auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
-        if (ByValTy)
+        if (ByValTy) {
           CurrentReload = GEP;
-        else {
+        } else {
           auto SpillAlignment = Align(FrameData.getAlign(Def));
-          CurrentReload = Builder.CreateAlignedLoad(
+          auto *LI = Builder.CreateAlignedLoad(
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
+          if (TBAATag)
+            LI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+          CurrentReload = LI;
         }
 
         TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(Def);
