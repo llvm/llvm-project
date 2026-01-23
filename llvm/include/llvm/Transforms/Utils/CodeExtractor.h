@@ -17,14 +17,15 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
 
 namespace llvm {
 
 template <typename PtrType> class SmallPtrSetImpl;
+class AddrSpaceCastInst;
 class AllocaInst;
-class BasicBlock;
 class BlockFrequency;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
@@ -84,7 +85,7 @@ public:
   ///    function to arguments.
   /// 3) Add allocas for any scalar outputs, adding all of the outputs' allocas
   ///    as arguments, and inserting stores to the arguments for any scalars.
-  class CodeExtractor {
+  class LLVM_ABI CodeExtractor {
     using ValueSet = SetVector<Value *>;
 
     // Various bits of state computed on construction.
@@ -94,15 +95,23 @@ public:
     BranchProbabilityInfo *BPI;
     AssumptionCache *AC;
 
-    // A block outside of the extraction set where any intermediate
-    // allocations will be placed inside. If this is null, allocations
-    // will be placed in the entry block of the function.
+    /// A block outside of the extraction set where any intermediate
+    /// allocations will be placed inside. If this is null, allocations
+    /// will be placed in the entry block of the function.
     BasicBlock *AllocationBlock;
 
-    // If true, varargs functions can be extracted.
+    /// A block outside of the extraction set where deallocations for
+    /// intermediate allocations can be placed inside. Not used for
+    /// automatically deallocated memory (e.g. `alloca`), which is the default.
+    ///
+    /// If it is null and needed, the end of the replacement basic block will be
+    /// used to place deallocations.
+    BasicBlock *DeallocationBlock;
+
+    /// If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
-    // Bits of intermediate state computed at various phases of extraction.
+    /// Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
 
     /// Lists of blocks that are branched from the code region to be extracted,
@@ -124,13 +133,13 @@ public:
     /// returns 1, etc.
     SmallVector<BasicBlock *> ExtractedFuncRetVals;
 
-    // Suffix to use when creating extracted function (appended to the original
-    // function name + "."). If empty, the default is to use the entry block
-    // label, if non-empty, otherwise "extracted".
+    /// Suffix to use when creating extracted function (appended to the original
+    /// function name + "."). If empty, the default is to use the entry block
+    /// label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
-    // If true, the outlined function has aggregate argument in zero address
-    // space.
+    /// If true, the outlined function has aggregate argument in zero address
+    /// space.
     bool ArgsInZeroAddressSpace;
 
   public:
@@ -146,25 +155,28 @@ public:
     /// however code extractor won't validate whether extraction is legal.
     /// Any new allocations will be placed in the AllocationBlock, unless
     /// it is null, in which case it will be placed in the entry block of
-    /// the function from which the code is being extracted.
+    /// the function from which the code is being extracted. Explicit
+    /// deallocations for the aforementioned allocations will be placed in the
+    /// DeallocationBlock or the end of the replacement block, if needed.
     /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
     /// param pointer of the outlined function is declared in zero address
     /// space.
-    LLVM_ABI
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
+                  BasicBlock *DeallocationBlock = nullptr,
                   std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
+
+    virtual ~CodeExtractor() = default;
 
     /// Perform the extraction, returning the new function.
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    LLVM_ABI Function *
-    extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
 
     /// Perform the extraction, returning the new function and providing an
     /// interface to see what was categorized as inputs and outputs.
@@ -177,15 +189,15 @@ public:
     /// newly outlined function.
     /// \returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    LLVM_ABI Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                         ValueSet &Inputs, ValueSet &Outputs);
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                ValueSet &Inputs, ValueSet &Outputs);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
     /// parameter to make this function stateless.
-    LLVM_ABI static bool verifyAssumptionCache(const Function &OldFunc,
-                                               const Function &NewFunc,
-                                               AssumptionCache *AC);
+    static bool verifyAssumptionCache(const Function &OldFunc,
+                                      const Function &NewFunc,
+                                      AssumptionCache *AC);
 
     /// Test whether this code extractor is eligible.
     ///
@@ -194,7 +206,7 @@ public:
     ///
     /// Checks that varargs handling (with vastart and vaend) is only done in
     /// the outlined blocks.
-    LLVM_ABI bool isEligible() const;
+    bool isEligible() const;
 
     /// Compute the set of input values and output values for the code.
     ///
@@ -204,15 +216,15 @@ public:
     /// a code sequence, that sequence is modified, including changing these
     /// sets, before extraction occurs. These modifications won't have any
     /// significant impact on the cost however.
-    LLVM_ABI void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
-                                    const ValueSet &Allocas,
-                                    bool CollectGlobalInputs = false) const;
+    void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
+                           const ValueSet &Allocas,
+                           bool CollectGlobalInputs = false) const;
 
     /// Check if life time marker nodes can be hoisted/sunk into the outline
     /// region.
     ///
     /// Returns true if it is safe to do the code motion.
-    LLVM_ABI bool
+    bool
     isLegalToShrinkwrapLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                                        Instruction *AllocaAddr) const;
 
@@ -224,9 +236,9 @@ public:
     /// are used by the lifetime markers are also candidates for shrink-
     /// wrapping. The instructions that need to be sunk are collected in
     /// 'Allocas'.
-    LLVM_ABI void findAllocas(const CodeExtractorAnalysisCache &CEAC,
-                              ValueSet &SinkCands, ValueSet &HoistCands,
-                              BasicBlock *&ExitBlock) const;
+    void findAllocas(const CodeExtractorAnalysisCache &CEAC,
+                     ValueSet &SinkCands, ValueSet &HoistCands,
+                     BasicBlock *&ExitBlock) const;
 
     /// Find or create a block within the outline region for placing hoisted
     /// code.
@@ -236,12 +248,24 @@ public:
     /// inside the region that is the predecessor of CommonExitBlock, that block
     /// will be returned. Otherwise CommonExitBlock will be split and the
     /// original block will be added to the outline region.
-    LLVM_ABI BasicBlock *
-    findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
+    BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
     /// Exclude a value from aggregate argument passing when extracting a code
     /// region, passing it instead as a scalar.
-    LLVM_ABI void excludeArgFromAggregate(Value *Arg);
+    void excludeArgFromAggregate(Value *Arg);
+
+  protected:
+    /// Allocate an intermediate variable at the specified point.
+    virtual Instruction *
+    allocateVar(BasicBlock *BB, BasicBlock::iterator AllocIP, Type *VarType,
+                const Twine &Name = Twine(""),
+                AddrSpaceCastInst **CastedAlloc = nullptr);
+
+    /// Deallocate a previously-allocated intermediate variable at the specified
+    /// point.
+    virtual Instruction *deallocateVar(BasicBlock *BB,
+                                       BasicBlock::iterator DeallocIP,
+                                       Value *Var, Type *VarType);
 
   private:
     struct LifetimeMarkerInfo {
