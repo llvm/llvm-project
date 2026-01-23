@@ -454,11 +454,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v16f64},
                      Custom);
 
-  if (isTypeLegal(MVT::f16))
-    setOperationAction(ISD::IS_FPCLASS,
-                       {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16},
-                       Custom);
-
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
 
