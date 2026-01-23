@@ -111,7 +111,8 @@ void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   assert(FragSpace >= Contents.size());
   // As this is performance-sensitive code, explicitly use std::memcpy.
   // Optimization of std::copy to memmove is unreliable.
-  std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
+  if (!Contents.empty())
+    std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
   CurFrag->FixedSize += Contents.size();
   FragSpace -= Contents.size();
 }
