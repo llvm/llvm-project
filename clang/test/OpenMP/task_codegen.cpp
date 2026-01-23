@@ -240,6 +240,8 @@ void test_threadset()
 
 void test_transparent()
 {
+#pragma omp task transparent
+  {}
 #pragma omp task transparent(omp_not_impex)
   {}
 #pragma omp task transparent(omp_import)
@@ -10308,6 +10310,7 @@ void test_transparent()
 // CHECK6-NEXT:       [[AGG_CAPTURED2:%.*]] = alloca [[STRUCT_ANON_29:%.*]], align 1
 // CHECK6-NEXT:       [[AGG_CAPTURED5:%.*]] = alloca [[STRUCT_ANON_31:%.*]], align 1
 // CHECK6-NEXT:       [[AGG_CAPTURED8:%.*]] = alloca [[STRUCT_ANON_33:%.*]], align 1
+// CHECK6-NEXT:        [[AGG_CAPTURED11:%.*]] = alloca [[STRUCT_ANON_35:%.*]], align 1
 // CHECK6-NEXT:       [[V:%.*]] = alloca ptr, align 8
 // CHECK6-NEXT:       [[AGG_CAPTURED11:%.*]] = alloca [[STRUCT_ANON_35:%.*]], align 1
 //CHECK6-NEXT:        [[AGG_CAPTURED14:%.*]] = alloca [[STRUCT_ANON_37:%.*]], align 1
@@ -10348,5 +10351,10 @@ void test_transparent()
  // CHECK6-NEXT:       [[TMP19:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP18]], i32 0, i32 0
  // CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM19:%.*]] = call i32 @__kmpc_global_thread_num(ptr @43)
  // CHECK6-NEXT:       [[TMP20:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM19]], ptr [[TMP18]])
+// CHECK6-NEXT:        [[OMP_GLOBAL_THREAD_NUM21:%.*]] = call i32 @__kmpc_global_thread_num(ptr @45)
+// CHECK6-NEXT:        [[TMP21:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM21]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY43:[0-9]+]])
+// CHECK6-NEXT:         [[TMP22:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP21]], i32 0, i32 0
+// CHECK6-NEXT:         [[OMP_GLOBAL_THREAD_NUM22:%.*]] = call i32 @__kmpc_global_thread_num(ptr @45)
+// CHECK6-NEXT:         [[TMP23:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM22]], ptr [[TMP21]])
 // CHECK6-NEXT:  ret void
 // CHECK6-NEXT:}

@@ -265,6 +265,9 @@ void test_threadset()
 
 void test_transparent()
 {
+#pragma omp taskloop transparent
+  for (int i = 0; i < 10; ++i) {
+  }
 #pragma omp taskloop transparent(omp_not_impex)
   for (int i = 0; i < 10; ++i) {
   }
