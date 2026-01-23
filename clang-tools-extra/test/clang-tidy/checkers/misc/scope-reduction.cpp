@@ -983,3 +983,68 @@ void test_simple_initialization_control() {
     int temp = I;
   }
 }
+
+// Test cases for for-loop increment modification - should NOT suggest for-loop initialization
+// These test the fix for variables modified in for-loop increment expressions
+
+struct Node {
+  Node* getNext();
+};
+
+// Variable initialized and modified in for-loop increment - should NOT warn
+void test_for_loop_increment_modification() {
+  Node root;
+
+  // Should NOT suggest moving to for-loop initialization
+  // M is initialized to &root, then modified in for-loop increment
+  // Moving would lose the initialization value
+  Node* M = &root;
+  for (; M; M = M->getNext()) {
+    // use M in loop body
+    if (M) {
+      // process node
+    }
+  }
+}
+
+// Similar case with different initialization - should NOT warn
+void test_for_loop_increment_modification_v2() {
+  Node nodes[10];
+
+  // Should NOT suggest moving to for-loop initialization
+  // ptr is initialized to nodes, then modified in increment
+  Node* ptr = nodes;
+  for (; ptr; ptr = ptr->getNext()) {
+    // process ptr
+  }
+}
+
+// Variable modified in for-loop increment but dependencies prevent moving - should NOT warn
+void test_for_loop_increment_uninitialized() {
+  Node root;
+
+  // Should NOT suggest moving root or current to for-loop initialization
+  // root: address taken in for-loop init (&root)
+  // current: modified in for-loop increment
+  Node* current;
+  for (current = &root; current; current = current->getNext()) {
+    // use current
+  }
+}
+
+// Variable used in for-loop but not modified in increment - should warn
+void test_for_loop_not_modified_in_increment() {
+  Node root;
+
+  // Should suggest moving to for-loop initialization
+  // node is used in condition but not modified in increment
+  Node* node = &root;
+  // CHECK-NOTES: :[[@LINE-1]]:9: warning: variable 'node' can be declared in for-loop initialization
+  // CHECK-NOTES: :[[@LINE+1]]:3: note: can be declared in this for-loop
+  for (int i = 0; node && i < 10; ++i) {
+    // use node but don't modify it in increment
+    if (node) {
+      // process
+    }
+  }
+}

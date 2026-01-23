@@ -462,6 +462,55 @@ void ScopeReductionCheck::check(
       }
 
       if (IsSmaller) {
+        // Check if variable is modified in this for-loop's increment
+        // Moving to for-loop initialization would create complex, hard-to-read
+        // code
+        if (CommonForLoop && CommonForLoop->getInc()) {
+          for (const auto *Use : Uses) {
+            auto UseParents =
+                Result.Context->getParentMapContext().getParents(*Use);
+            if (!UseParents.empty()) {
+              if (const auto *BinOp = UseParents[0].get<BinaryOperator>()) {
+                if (BinOp->isAssignmentOp() && BinOp->getLHS() == Use) {
+                  if (BinOp == CommonForLoop->getInc())
+                    return; // Skip - variable modified in for-loop increment
+                }
+              }
+            }
+          }
+        }
+
+        // Check if variable's address is taken in the same for-loop
+        // Moving would break the dependency
+        if (CommonForLoop) {
+          for (const auto *Use : Uses) {
+            auto UseParents =
+                Result.Context->getParentMapContext().getParents(*Use);
+            if (!UseParents.empty()) {
+              if (const auto *UnaryOp = UseParents[0].get<UnaryOperator>()) {
+                if (UnaryOp->getOpcode() == UO_AddrOf) {
+                  // Check if this address-of is in the for-loop init
+                  if (CommonForLoop->getInit()) {
+                    const Stmt *Current = UnaryOp;
+                    while (Current) {
+                      if (Current == CommonForLoop->getInit()) {
+                        return; // Skip - variable's address taken in for-loop
+                                // init
+                      }
+                      auto CurrentParents =
+                          Result.Context->getParentMapContext().getParents(
+                              *Current);
+                      if (CurrentParents.empty())
+                        break;
+                      Current = CurrentParents[0].get<Stmt>();
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         diag(Var->getLocation(),
              "variable '%0' can be declared in for-loop initialization")
             << Var->getName();
