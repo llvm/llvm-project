@@ -14,8 +14,8 @@
 
 #include "Protocol.h"
 #include "index/Symbol.h"
-#include "llvm/ADT/StringRef.h"
 #include "clang/AST/Decl.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 class NamedDecl;
