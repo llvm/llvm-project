@@ -1699,7 +1699,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    See :ref:`amdgpu-amdhsa-execution-barriers`.
                                                    Available starting GFX12.
 
-  llvm.amdgcn.flat.atomic.load.monitor             Available on GFX12.5 only.
+  llvm.amdgcn.flat.load.monitor                    Available on GFX12.5 only.
                                                    Corresponds to ``flat_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
                                                    instructions.
                                                    For the purposes of the memory model, this is an atomic load operation in
@@ -1712,7 +1712,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
                                                      Note that the scope used must ensure that the L2 cache will be hit.
 
-  llvm.amdgcn.global.atomic.load.monitor           Available on GFX12.5 only.
+  llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
                                                    Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
                                                    instructions.
                                                    For the purposes of the memory model, this is an atomic load operation in

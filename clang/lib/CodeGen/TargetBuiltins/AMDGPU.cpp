@@ -797,32 +797,32 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
   }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b32:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b128:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b32:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b128: {
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128: {
 
     Intrinsic::ID IID;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b32:
-      IID = Intrinsic::amdgcn_global_atomic_load_monitor_b32;
+    case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
+      IID = Intrinsic::amdgcn_global_load_monitor_b32;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b64:
-      IID = Intrinsic::amdgcn_global_atomic_load_monitor_b64;
+    case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
+      IID = Intrinsic::amdgcn_global_load_monitor_b64;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b128:
-      IID = Intrinsic::amdgcn_global_atomic_load_monitor_b128;
+    case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
+      IID = Intrinsic::amdgcn_global_load_monitor_b128;
       break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b32:
-      IID = Intrinsic::amdgcn_flat_atomic_load_monitor_b32;
+    case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
+      IID = Intrinsic::amdgcn_flat_load_monitor_b32;
       break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b64:
-      IID = Intrinsic::amdgcn_flat_atomic_load_monitor_b64;
+    case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
+      IID = Intrinsic::amdgcn_flat_load_monitor_b64;
       break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b128:
-      IID = Intrinsic::amdgcn_flat_atomic_load_monitor_b128;
+    case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
+      IID = Intrinsic::amdgcn_flat_load_monitor_b128;
       break;
     }
 

@@ -8209,21 +8209,21 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128:
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_load_monitor_b128:
     assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
-    B.buildInstr(AMDGPU::G_AMDGPU_FLAT_ATOMIC_LOAD_MONITOR)
+    B.buildInstr(AMDGPU::G_AMDGPU_FLAT_LOAD_MONITOR)
         .add(MI.getOperand(0))
         .add(MI.getOperand(2))
         .addMemOperand(*MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b128:
+  case Intrinsic::amdgcn_global_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b128:
     assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
-    B.buildInstr(AMDGPU::G_AMDGPU_GLOBAL_ATOMIC_LOAD_MONITOR)
+    B.buildInstr(AMDGPU::G_AMDGPU_GLOBAL_LOAD_MONITOR)
         .add(MI.getOperand(0))
         .add(MI.getOperand(2))
         .addMemOperand(*MI.memoperands_begin());

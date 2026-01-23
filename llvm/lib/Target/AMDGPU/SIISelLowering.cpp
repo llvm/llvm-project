@@ -1293,24 +1293,24 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
   case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b128:
+  case Intrinsic::amdgcn_flat_load_monitor_b128:
+  case Intrinsic::amdgcn_global_load_monitor_b128:
     return 128;
   default:
     llvm_unreachable("Unknown width");
@@ -1604,12 +1604,12 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b128: {
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_load_monitor_b128:
+  case Intrinsic::amdgcn_global_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b128: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getOperand(0);
@@ -11273,23 +11273,23 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
   }
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128: {
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_load_monitor_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);
-    return DAG.getMemIntrinsicNode(AMDGPUISD::FLAT_ATOMIC_LOAD_MONITOR, DL,
+    return DAG.getMemIntrinsicNode(AMDGPUISD::FLAT_LOAD_MONITOR, DL,
                                    Op->getVTList(), {Chain, Ptr},
                                    MII->getMemoryVT(), MII->getMemOperand());
   }
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
-  case Intrinsic::amdgcn_global_atomic_load_monitor_b128: {
+  case Intrinsic::amdgcn_global_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);
-    return DAG.getMemIntrinsicNode(AMDGPUISD::GLOBAL_ATOMIC_LOAD_MONITOR, DL,
+    return DAG.getMemIntrinsicNode(AMDGPUISD::GLOBAL_LOAD_MONITOR, DL,
                                    Op->getVTList(), {Chain, Ptr},
                                    MII->getMemoryVT(), MII->getMemOperand());
   }

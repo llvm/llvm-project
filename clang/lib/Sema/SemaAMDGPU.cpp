@@ -143,12 +143,12 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b32:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b128:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b32:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b128:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
     return checkAtomicMonitorLoad(TheCall);
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:

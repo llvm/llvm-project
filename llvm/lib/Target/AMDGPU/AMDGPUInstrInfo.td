@@ -402,13 +402,13 @@ def AMDGPUExportOp : SDTypeProfile<0, 8, [
 
 ]>;
 
-def AMDGPUflat_atomic_load_monitor : SDNode<
-  "AMDGPUISD::FLAT_ATOMIC_LOAD_MONITOR", SDTLoad,
+def AMDGPUflat_load_monitor : SDNode<
+  "AMDGPUISD::FLAT_LOAD_MONITOR", SDTLoad,
   [SDNPHasChain, SDNPMemOperand]
 >;
 
-def AMDGPUglobal_atomic_load_monitor : SDNode<
-  "AMDGPUISD::GLOBAL_ATOMIC_LOAD_MONITOR", SDTLoad,
+def AMDGPUglobal_load_monitor : SDNode<
+  "AMDGPUISD::GLOBAL_LOAD_MONITOR", SDTLoad,
   [SDNPHasChain, SDNPMemOperand]
 >;
 

@@ -331,8 +331,8 @@ def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
 
 def : GINodeEquiv<G_AMDGPU_SPONENTRY, sponentry>;
 
-def : GINodeEquiv<G_AMDGPU_FLAT_ATOMIC_LOAD_MONITOR, AMDGPUflat_atomic_load_monitor>;
-def : GINodeEquiv<G_AMDGPU_GLOBAL_ATOMIC_LOAD_MONITOR, AMDGPUglobal_atomic_load_monitor>;
+def : GINodeEquiv<G_AMDGPU_FLAT_LOAD_MONITOR, AMDGPUflat_load_monitor>;
+def : GINodeEquiv<G_AMDGPU_GLOBAL_LOAD_MONITOR, AMDGPUglobal_load_monitor>;
 
 
 class GISelSop2Pat <
