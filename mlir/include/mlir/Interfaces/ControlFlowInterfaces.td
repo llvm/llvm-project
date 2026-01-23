@@ -379,13 +379,12 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     ::mlir::OperandRange getSuccessorOperands(
         ::mlir::RegionBranchPoint src, ::mlir::RegionSuccessor dest);
 
-    /// Return the non-forwarded values from the source branch point to the
-    /// destination region successor.
+    /// Return all successor inputs for the given region successor.
     ///
-    /// If the `RegionSuccessor` is a region, it will return non-forwarded
-    /// arguments, if it is a parent, it will return non-forwarded results.
+    /// If the "successor" is a region, it will return non-forwarded arguments,
+    /// if it is a "parent", it will return non-forwarded results.
     ::llvm::SmallVector<Value> getNonSuccessorInputs(
-        ::mlir::RegionSuccessor dest);
+        ::mlir::RegionSuccessor successor);
 
     /// Build a mapping from successor operands to successor input. Each
     /// successor operand could be forwarded to multiple successor inputs.

@@ -614,11 +614,11 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   for (RegionSuccessor &successor : successors) {
     if (successor.isParent())
       continue;
-    auto ValueToArgument = [](Value value) {
+    auto valueToArgument = [](Value value) {
       return cast<BlockArgument>(value);
     };
     SmallVector<BlockArgument> noControlFlowArguments = llvm::map_to_vector(
-        branch.getNonSuccessorInputs(successor), ValueToArgument);
+        branch.getNonSuccessorInputs(successor), valueToArgument);
     visitNonControlFlowArguments(successor, noControlFlowArguments);
   }
 
