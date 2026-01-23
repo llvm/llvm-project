@@ -110,6 +110,21 @@ and only if absolutely required; for example for certain code that cannot
 tolerate any instrumentation and resulting side-effects. This attribute
 overrides ``no_sanitize("thread")``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+* `no_sanitize` functions will not be inlined heuristically by the compiler.
+* Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
+
+. code-block:: c
+
+    // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
+    #if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__) || ... <other sanitizers>
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED
+    #else
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
+    #endif
+
 Conditional Sanitizer Checks with ``__builtin_allow_sanitize_check``
 --------------------------------------------------------------------
 
