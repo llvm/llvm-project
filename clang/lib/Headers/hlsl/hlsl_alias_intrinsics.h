@@ -1109,7 +1109,7 @@ float4 f16tof32(uint4);
 // f32tof16 builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn uint f16tof32(float x)
+/// \fn uint f32tof16(float x)
 /// \brief Returns the float arg value converted to half in the low 16 bits of
 /// the uint return value
 /// \param x The float to be converted to half.

@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-intrinsic-expansion -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.9-library %s | FileCheck %s
+; RUN: opt -S -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.9-library %s | FileCheck %s
 
 define hidden noundef i32 @_Z11test_scalarj(float noundef %p0) local_unnamed_addr #0 {
 entry:

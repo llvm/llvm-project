@@ -184,28 +184,29 @@ static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
   if (CGF.CGM.getTriple().isSPIRV()) {
     // We use the SPIRV UnpackHalf2x16 operation to avoid the need for the
     // Int16 and Float16 capabilities
-    auto UnpackType =
+    auto *UnpackType =
         llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
+
     if (NumElements == 0) {
       // a scalar input - simply extract the first element of the unpacked
       // vector
       Value *Unpack = CGF.Builder.CreateIntrinsic(
           UnpackType, Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{Op0});
       return CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
-    } else {
-      // a vector input - build a congruent output vector by iterating through
-      // the input vector calling unpackhalf2x16 for each element
-      Value *Result = PoisonValue::get(ResType);
-      for (uint64_t i = 0; i < NumElements; i++) {
-        Value *InVal = CGF.Builder.CreateExtractElement(Op0, i);
-        Value *Unpack = CGF.Builder.CreateIntrinsic(
-            UnpackType, Intrinsic::spv_unpackhalf2x16,
-            ArrayRef<Value *>{InVal});
-        Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
-        Result = CGF.Builder.CreateInsertElement(Result, Res, i);
-      }
-      return Result;
     }
+
+    // a vector input - build a congruent output vector by iterating through
+    // the input vector calling unpackhalf2x16 for each element
+    Value *Result = PoisonValue::get(ResType);
+    for (uint64_t I = 0; I < NumElements; I++) {
+      Value *InVal = CGF.Builder.CreateExtractElement(Op0, I);
+      Value *Unpack = CGF.Builder.CreateIntrinsic(
+          UnpackType, Intrinsic::spv_unpackhalf2x16,
+          ArrayRef<Value *>{InVal});
+      Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
+      Result = CGF.Builder.CreateInsertElement(Result, Res, I);
+    }
+    return Result;
   }
 
   llvm_unreachable("Intrinsic F16ToF32 not supported by target architecture");
@@ -234,8 +235,9 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   if (CGF.CGM.getTriple().isSPIRV()) {
     // We use the SPIRV PackHalf2x16 operation to avoid the need for the
     // Int16 and Float16 capabilities
-    auto PackType =
+    auto *PackType =
         llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
+
     if (NumElements == 0) {
       // a scalar input - simply insert the scalar in the first element
       // of the 2 element float vector
@@ -244,20 +246,20 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
       Value *Result = CGF.Builder.CreateIntrinsic(
           ResType, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
       return Result;
-    } else {
-      // a vector input - build a congruent output vector by iterating through
-      // the input vector calling packhalf2x16 for each element
-      Value *Result = PoisonValue::get(ResType);
-      for (uint64_t i = 0; i < NumElements; i++) {
-        Value *Float2 = Constant::getNullValue(PackType);
-        Value *InVal = CGF.Builder.CreateExtractElement(Op0, i);
-        Float2 = CGF.Builder.CreateInsertElement(Float2, InVal, (uint64_t)0);
-        Value *Res = CGF.Builder.CreateIntrinsic(
-            CGF.IntTy, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
-        Result = CGF.Builder.CreateInsertElement(Result, Res, i);
-      }
-      return Result;
     }
+
+    // a vector input - build a congruent output vector by iterating through
+    // the input vector calling packhalf2x16 for each element
+    Value *Result = PoisonValue::get(ResType);
+    for (uint64_t I = 0; I < NumElements; I++) {
+      Value *Float2 = Constant::getNullValue(PackType);
+      Value *InVal = CGF.Builder.CreateExtractElement(Op0, I);
+      Float2 = CGF.Builder.CreateInsertElement(Float2, InVal, (uint64_t)0);
+      Value *Res = CGF.Builder.CreateIntrinsic(
+          CGF.IntTy, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
+      Result = CGF.Builder.CreateInsertElement(Result, Res, I);
+    }
+    return Result;
   }
 
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
