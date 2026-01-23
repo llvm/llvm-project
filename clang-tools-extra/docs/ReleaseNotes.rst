@@ -114,6 +114,10 @@ Changes in existing checks
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
+- Improved :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
+  algorithms: ``std::replace_copy`` and ``std::replace_copy_if``.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 
