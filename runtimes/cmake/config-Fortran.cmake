@@ -146,32 +146,30 @@ endif ()
 # Sets:
 #  * RUNTIMES_OUTPUT_RESOURCE_MOD_DIR   Path for .mod files in build dir
 #  * RUNTIMES_INSTALL_RESOURCE_MOD_PATH Path for .mod files in install dir, relative to CMAKE_INSTALL_PREFIX
-macro (fortran_output_and_install_paths)
-  if (RUNTIMES_FLANG_MODULES_ENABLED)
-    if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      # Flang expects its builtin modules in Clang's resource directory.
-      get_toolchain_module_subdir(toolchain_mod_subdir)
-      extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
-      extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
-    else ()
-      # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
-      extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
-      extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
-    endif ()
-    cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
-    cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
-
-    # No way to find out which mod files are built by a target, so install the
-    # entire output directory. flang_module_target() will copy (only) the PUBLIC
-    # .mod file into the output directory.
-    # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
-    set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
-    cmake_path(NORMAL_PATH destination)
-      install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
-        DESTINATION "${destination}"
-      )
+if (RUNTIMES_FLANG_MODULES_ENABLED)
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    # Flang expects its builtin modules in Clang's resource directory.
+    get_toolchain_module_subdir(toolchain_mod_subdir)
+    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
+    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
+  else ()
+    # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
+    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
   endif ()
-endmacro ()
+  cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
+  cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
+
+  # No way to find out which mod files are built by a target, so install the
+  # entire output directory. flang_module_target() will copy (only) the PUBLIC
+  # .mod file into the output directory.
+  # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
+  set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+  cmake_path(NORMAL_PATH destination)
+    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      DESTINATION "${destination}"
+    )
+endif ()
 
 
 # Set options to compile Fortran module files. Assumes the code above has run.

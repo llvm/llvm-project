@@ -88,11 +88,6 @@ include(CheckCXXCompilerFlag)
 include(GetToolchainDirs)
 include(ExtendPath)
 
-# Handle Fortran code. Sets RUNTIMES_FLANG_MODULES_ENABLED when a Fortran
-# toolchain is available and required by one or more of the
-# runtimes.
-include(config-Fortran)
-
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
 set(LLVM_TREE_AVAILABLE OFF)
@@ -258,7 +253,7 @@ else()
   set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
 endif()
 
-# Determine build and install paths. The ouptut paths are absolute, but the
+# Determine build and install paths. The output paths are absolute, but the
 # install dirs are relative to CMAKE_INSTALL_PREFIX to be resolved by CMake.
 get_toolchain_library_subdir(toolchain_lib_subdir)
 extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
@@ -272,7 +267,12 @@ cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
 cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
 
 
-fortran_output_and_install_paths()
+# Handle Fortran code. When a Fortran  toolchain is available and required by
+# one or more of the runtimes, enables CMake's Fortran support and sets
+# RUNTIMES_FLANG_MODULES_ENABLED.
+# Makes use of RUNTIMES_OUTPUT_RESOURCE_DIR, RUNTIMES_INSTALL_RESOURCE_PATH,
+# hence must be included their those variables are defined.
+include(config-Fortran)
 
 
 # For subprojects supporting offloading targets (offload, flang-rt, ..) specify
