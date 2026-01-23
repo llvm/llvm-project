@@ -151,10 +151,12 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-      // Remove leading unit dimensions from inst_data for vector operations
-      // For example, if the inst_data is [1, 1, 32]
-      // it will pass [32] as the unroll/blocking size.
-      // Skip it for xegpu nd ops since it will be 2D
+      // Remove leading unit dimensions from inst_data for non-rank-sensitive
+      // ops. For example, if the inst_data is [1, 1, 32] it will pass [32] as
+      // the unroll/blocking size.
+      // Skip it for rank-sensitive ops, whose semantics depend on the tensor
+      // rank (and consequently its shape), and therefore must not alter the
+      // input tile rank or shape, such as by dropping leading dimensions.
       bool skipLeadingUnitDimRemoval =
           ownerOp &&
           (isa<xegpu::CreateNdDescOp, xegpu::DpasOp, xegpu::ConvertLayoutOp,
