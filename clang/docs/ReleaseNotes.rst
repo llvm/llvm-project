@@ -109,6 +109,7 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- New CC1 option ``-fms-anonymous-structs`` added to enable only Microsoft's anonymous struct/union extension without enabling other ``-fms-extensions`` features [GH177607].
 
 Deprecated Compiler Flags
 -------------------------
