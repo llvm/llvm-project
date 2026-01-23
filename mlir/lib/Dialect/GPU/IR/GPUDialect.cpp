@@ -1485,7 +1485,7 @@ static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
         op.removeAddressSpacesAttr();
         return;
       }
-      // Fast path - mergge where the two barriers fence the same spaces.
+      // Fast path - merge where the two barriers fence the same spaces.
       if (*thisMemfence == *nextMemfence) {
         return;
       }

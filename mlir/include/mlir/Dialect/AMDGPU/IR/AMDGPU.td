@@ -967,7 +967,7 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
 
     `amdgpu.lds_barrier` is both a barrier (all workitems in a workgroup must reach
     the barrier before any of them may proceed past it) and a wait for all
-    operations that affect the Local Data Store (LDS) issued from that wrokgroup
+    operations that affect the Local Data Store (LDS) issued from that workgroup
     to complete before the workgroup may continue. Since the LDS is per-workgroup
     memory, this barrier may be used, for example, to ensure all workitems have
     written data to LDS before any workitem attempts to read from it.
