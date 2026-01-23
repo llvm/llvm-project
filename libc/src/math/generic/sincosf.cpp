@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/math/sincosf.h"
 #include "src/math/sincosf.h"
+#include "src/__support/math/sincosf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
