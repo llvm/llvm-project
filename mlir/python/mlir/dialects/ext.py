@@ -161,7 +161,13 @@ def normalize_value_range(
     return value_range
 
 
-def match_optional(type_):
+def match_optional(type_) -> Optional[Any]:
+    """
+    Try to match type hint like `Optional[T]`, `T | None` or `None | T`.
+    Returns the `T` inside `Optional[T]` if matched.
+    Returns `None` if not matched.
+    """
+
     origin = get_origin(type_)
     args = get_args(type_)
     if (
