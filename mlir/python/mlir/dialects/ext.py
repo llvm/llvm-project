@@ -124,7 +124,7 @@ def partition_fields(
 def normalize_value_range(
     value_range: Union[ir.OpOperandList, ir.OpResultList],
     variadicity: Variadicity,
-):
+) -> ir.Value | ir.OpOperandList | ir.OpResultList | None:
     if variadicity == Variadicity.single:
         return value_range[0]
     if variadicity == Variadicity.optional:
