@@ -26066,7 +26066,7 @@ SDValue X86TargetLowering::LowerConditionalBranch(SDValue Op,
     return DAG.getNode(X86ISD::BRCOND_SELF, dl, MVT::Other, Chain, CC, EFLAGS,
                        Op->getFlags());
   };
-  
+
   // Bail out when we don't have native compare instructions.
   if (Cond.getOpcode() == ISD::SETCC &&
       Cond.getOperand(0).getValueType() != MVT::f128 &&
