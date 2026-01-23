@@ -19400,6 +19400,8 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
     Flags |= MONoClobber;
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
+  if (I.getMetadata("amdgpu.non.volatile"))
+    Flags |= MONonVolatile;
   return Flags;
 }
 

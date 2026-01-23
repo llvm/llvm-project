@@ -52,6 +52,10 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+/// Mark the MMO of non-volatile memory operations.
+static const MachineMemOperand::Flags MONonVolatile =
+    MachineMemOperand::MOTargetFlag4;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
