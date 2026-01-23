@@ -1,4 +1,4 @@
-//===- ShardingInterfaceImpl.h ----------------------------------------===//
+//===- ShardingExtensions.h -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_BUFFERIZATION_SHARDSHARDINGINTERFACEIMPL_H
-#define MLIR_DIALECT_BUFFERIZATION_SHARDSHARDINGINTERFACEIMPL_H
+#ifndef MLIR_DIALECT_BUFFERIZATION_SHARDINGEXTENSIONS_H
+#define MLIR_DIALECT_BUFFERIZATION_SHARDINGEXTENSIONS_H
 
 namespace mlir {
 class DialectRegistry;
@@ -19,4 +19,4 @@ void registerShardingInterfaceExternalModels(DialectRegistry &registry);
 } // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_DIALECT_BUFFERIZATION_SHARDSHARDINGINTERFACEIMPL_H
+#endif // MLIR_DIALECT_BUFFERIZATION_SHARDINGEXTENSIONS_H
