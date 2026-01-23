@@ -102,9 +102,9 @@ define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
 define i1 @PR41069_commute_logical(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069_commute_logical(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno double [[C:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[UNO3:%.*]] = fcmp uno double [[D:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[UNO3]], i1 true, i1 [[UNO1]]
+; CHECK-NEXT:    [[UNO2:%.*]] = select i1 [[UNO1]], i1 true, i1 [[UNO3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D1:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 true, i1 [[UNO2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
