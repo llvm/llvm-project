@@ -64,7 +64,6 @@ static Value castValueTo(ConversionPatternRewriter &rewriter,
 }
 
 /// Checks if all XeGPU anchor ops and vector results have valid layouts.
-/// TODO: This function can be removed once the full layout refactoring is done.
 static LogicalResult verifyLayouts(Operation *root) {
   auto walkResult = root->walk([&](Operation *nestedOp) -> WalkResult {
     if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(nestedOp)) {
@@ -383,6 +382,7 @@ struct XeGPUSgToWiDistributeExperimentalPass
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
   // Verify if all XeGPU anchor ops and vector ops have result layouts.
+  // TODO: This can be removed once the full layout refactoring is done.
   Operation *root = getOperation();
   if (failed(verifyLayouts(root))) {
     LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
@@ -432,6 +432,11 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
   // UnrealizedConversionCastOps to materialize the SG type from type converted
   // WI type. These are redundant at this point and can be eliminated by
   // inserting shape casts instead.
+  // Example:
+  // %1 = UnrealizedConversionCastOp %0 : vector<16x1xf32> to vector<16x16xf32>
+  // %2 = UnrealizedConversionCastOp %1 : vector<16x16xf32> to vector<16xf32>
+  // This can be replaced with:
+  // %2 = vector.shape_cast %0 : vector<16x1xf32> to vector<16xf32>
   OpBuilder builder(root);
   root->walk([&](UnrealizedConversionCastOp op) {
     // If this op existed before, nothing to do.
@@ -485,22 +490,21 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(
     TypeConverter &typeConverter) {
-  // Populate type conversions.
-  // - Any type other than TensorDescType and VectorType are legal as is.
+  // Any type other than TensorDescType and VectorType are legal as is.
   typeConverter.addConversion([](Type type) -> std::optional<Type> {
     if (!isa<TensorDescType, VectorType>(type))
       return type;
     return std::nullopt;
   });
-  // - For TensorDescType, drop the layout attribute if any.
+  // For TensorDescType, drop the layout attribute if any.
   typeConverter.addConversion([](TensorDescType type) -> Type {
     if (type.getLayoutAttr()) {
       return type.dropLayouts();
     }
     return type;
   });
-  // - For VectorType, check if there is a distribute layout attribute on the
-  //   value. If so, convert to the distributed vector type based on the layout.
+  // For VectorType, check if there is a distribute layout attribute on the
+  // value. If so, convert to the distributed vector type based on the layout.
   typeConverter.addConversion([](Value v) -> std::optional<Type> {
     auto type = v.getType();
     // If value is not vector type, nothing to do.
@@ -522,26 +526,26 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target) {
   populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
-  // - CreateNdDescOp is legal only if its result type has no layout attribute.
+  // CreateNdDescOp is legal only if its result type has no layout attribute.
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
       [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });
-  // - Any anchor XeGPU op is legal only if it has no anchor layout.
+  // Any anchor XeGPU op is legal only if it has no anchor layout.
   target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>([](Operation *op) {
     auto anchorOp = dyn_cast<AnchorLayoutInterface>(op);
     if (!anchorOp)
       return true;
     return !anchorOp.getAnchorLayout();
   });
+  // Arith constants are legal only if they have no temporary layout attribute.
   target.addDynamicallyLegalOp<arith::ConstantOp>(
       [=](arith::ConstantOp op) -> bool {
         // If the result type is not a vector, it's legal.
         if (!isa<VectorType>(op.getResult().getType()))
           return true;
-        // For vector result types, check if it has a layout attribute.
         return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
       });
-  // - In math and arith dialects, only handle elementwise ops with a single
-  //   result and with a result layout attribute.
+  // In math and arith dialects, only handle elementwise ops with a single
+  // result and with a result layout attribute.
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
       [=](Operation *op) -> std::optional<bool> {
         // Only handle elementwise mappable ops
