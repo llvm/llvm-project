@@ -217,7 +217,7 @@ class min_pointer {
   TEST_CONSTEXPR_CXX14 explicit min_pointer(T* p) TEST_NOEXCEPT : ptr_(p) {}
 
 public:
-  min_pointer() TEST_NOEXCEPT = default;
+  TEST_CONSTEXPR_CXX14 min_pointer() TEST_NOEXCEPT : ptr_(nullptr) {}
   TEST_CONSTEXPR_CXX14 min_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr) {}
   TEST_CONSTEXPR_CXX14 explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
 
