@@ -20,8 +20,8 @@ lpad:
   %0 = landingpad { ptr, i32 } cleanup
 ; The Exception Pointer is %r1; the Exception Selector, %r2.
 ; CHECK: L#BB{{[^%]*}} %lpad
-; CHECK-DAG: stg 1, {{.*}}
-; CHECK-DAG: st 2, {{.*}}
+; CHECK-DAG: stg 1,{{.*}}
+; CHECK-DAG: st 2,{{.*}}
   %1 = extractvalue { ptr, i32 } %0, 0
   %2 = extractvalue { ptr, i32 } %0, 1
   store ptr %1, ptr %ehptr, align 8
@@ -37,5 +37,7 @@ lpad:
 ; CHECK: Personality routine
 ; CHECK: LSDA location
 ; Check that the exception table is emitted into .lsda section.
-; CHECK: .section ".gcc_exception_table.test1"
+; CHECK:  stdin#C CSECT
+; CHECK:  C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_exception_table.test1)
+; CHECK:  .gcc_exception_table.test1 XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK: GCC_except_table0:

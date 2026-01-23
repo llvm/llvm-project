@@ -157,10 +157,9 @@ define <vscale x 2 x i64> @xar_nxv2i64_l_neg1(<vscale x 2 x i64> %x, <vscale x 2
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
 ; CHECK-NEXT:    and z2.d, z2.d, #0x3f
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    lslr z3.d, p0/m, z3.d, z0.d
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z0.d, z3.d, z0.d
 ; CHECK-NEXT:    ret
     %a = xor <vscale x 2 x i64> %x, %y
     %b = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %z)
@@ -169,17 +168,84 @@ define <vscale x 2 x i64> @xar_nxv2i64_l_neg1(<vscale x 2 x i64> %x, <vscale x 2
 
 ; OR instead of an XOR.
 ; TODO: We could use usra instruction here for SVE2.
-define <vscale x 2 x i64> @xar_nxv2i64_l_neg2(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
-; CHECK-LABEL: xar_nxv2i64_l_neg2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    lsr z1.d, z0.d, #4
-; CHECK-NEXT:    lsl z0.d, z0.d, #60
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ret
+define <vscale x 2 x i64> @xar_nxv2i64_l_neg2_1(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
+; SVE-LABEL: xar_nxv2i64_l_neg2_1:
+; SVE:       // %bb.0:
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.d, z0.d, #4
+; SVE-NEXT:    lsl z0.d, z0.d, #60
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: xar_nxv2i64_l_neg2_1:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi v2.2d, #0000000000000000
+; SVE2-NEXT:    orr z0.d, z0.d, z1.d
+; SVE2-NEXT:    xar z0.d, z0.d, z2.d, #4
+; SVE2-NEXT:    ret
     %a = or <vscale x 2 x i64> %x, %y
     %b = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 60))
     ret <vscale x 2 x i64> %b
+}
+
+define <vscale x 4 x i32> @xar_nxv2i32_l_neg2_2(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+; SVE-LABEL: xar_nxv2i32_l_neg2_2:
+; SVE:       // %bb.0:
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.s, z0.s, #4
+; SVE-NEXT:    lsl z0.s, z0.s, #28
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: xar_nxv2i32_l_neg2_2:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi v2.2d, #0000000000000000
+; SVE2-NEXT:    orr z0.d, z0.d, z1.d
+; SVE2-NEXT:    xar z0.s, z0.s, z2.s, #4
+; SVE2-NEXT:    ret
+    %a = or <vscale x 4 x i32> %x, %y
+    %b = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 60))
+    ret <vscale x 4 x i32> %b
+}
+
+define <vscale x 8 x i16> @xar_nxv2i16_l_neg2_3(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
+; SVE-LABEL: xar_nxv2i16_l_neg2_3:
+; SVE:       // %bb.0:
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.h, z0.h, #4
+; SVE-NEXT:    lsl z0.h, z0.h, #12
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: xar_nxv2i16_l_neg2_3:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi v2.2d, #0000000000000000
+; SVE2-NEXT:    orr z0.d, z0.d, z1.d
+; SVE2-NEXT:    xar z0.h, z0.h, z2.h, #4
+; SVE2-NEXT:    ret
+    %a = or <vscale x 8 x i16> %x, %y
+    %b = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 60))
+    ret <vscale x 8 x i16> %b
+}
+
+define <vscale x 16 x i8> @xar_nxv2i8_l_neg2_4(<vscale x 16 x i8> %x, <vscale x 16 x i8> %y) {
+; SVE-LABEL: xar_nxv2i8_l_neg2_4:
+; SVE:       // %bb.0:
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.b, z0.b, #4
+; SVE-NEXT:    lsl z0.b, z0.b, #4
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: xar_nxv2i8_l_neg2_4:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi v2.2d, #0000000000000000
+; SVE2-NEXT:    orr z0.d, z0.d, z1.d
+; SVE2-NEXT:    xar z0.b, z0.b, z2.b, #4
+; SVE2-NEXT:    ret
+    %a = or <vscale x 16 x i8> %x, %y
+    %b = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 60))
+    ret <vscale x 16 x i8> %b
 }
 
 ; Rotate amount is 0.

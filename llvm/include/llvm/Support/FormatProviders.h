@@ -29,35 +29,26 @@ namespace support {
 namespace detail {
 template <typename T>
 struct use_integral_formatter
-    : public std::integral_constant<
-          bool, is_one_of<T, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
-                          int64_t, uint64_t, int, unsigned, long, unsigned long,
-                          long long, unsigned long long>::value> {};
+    : public is_one_of<T, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
+                       int64_t, uint64_t, int, unsigned, long, unsigned long,
+                       long long, unsigned long long> {};
 
 template <typename T>
-struct use_char_formatter
-    : public std::integral_constant<bool, std::is_same_v<T, char>> {};
+struct use_char_formatter : public std::is_same<T, char> {};
 
 template <typename T>
-struct is_cstring
-    : public std::integral_constant<bool,
-                                    is_one_of<T, char *, const char *>::value> {
-};
+struct is_cstring : public is_one_of<T, char *, const char *> {};
 
 template <typename T>
-struct use_string_formatter
-    : public std::integral_constant<bool,
-                                    std::is_convertible_v<T, llvm::StringRef>> {
-};
+struct use_string_formatter : public std::is_convertible<T, llvm::StringRef> {};
 
 template <typename T>
 struct use_pointer_formatter
-    : public std::integral_constant<bool, std::is_pointer_v<T> &&
-                                              !is_cstring<T>::value> {};
+    : public std::bool_constant<std::is_pointer_v<T> && !is_cstring<T>::value> {
+};
 
 template <typename T>
-struct use_double_formatter
-    : public std::integral_constant<bool, std::is_floating_point_v<T>> {};
+struct use_double_formatter : public std::is_floating_point<T> {};
 
 class HelperFunctions {
 protected:
@@ -270,7 +261,7 @@ template <> struct format_provider<bool> {
                   .Case("y", B ? "yes" : "no")
                   .CaseLower("D", B ? "1" : "0")
                   .Case("T", B ? "TRUE" : "FALSE")
-                  .Cases("t", "", B ? "true" : "false")
+                  .Cases({"t", ""}, B ? "true" : "false")
                   .Default(B ? "1" : "0");
   }
 };
@@ -330,8 +321,7 @@ using IterValue = typename std::iterator_traits<IterT>::value_type;
 
 template <typename IterT>
 struct range_item_has_provider
-    : public std::integral_constant<
-          bool,
+    : public std::bool_constant<
           !support::detail::uses_missing_provider<IterValue<IterT>>::value> {};
 } // namespace detail
 } // namespace support
@@ -394,7 +384,7 @@ template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
     StringRef Sep = consumeOneOption(Style, '$', ", ");
     StringRef Args = consumeOneOption(Style, '@', "");
     assert(Style.empty() && "Unexpected text in range option string!");
-    return std::make_pair(Sep, Args);
+    return {Sep, Args};
   }
 
 public:

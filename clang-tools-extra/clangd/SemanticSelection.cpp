@@ -11,12 +11,13 @@
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
-#include "clang-pseudo/Bracket.h"
-#include "clang-pseudo/DirectiveTree.h"
-#include "clang-pseudo/Token.h"
+#include "support/Bracket.h"
+#include "support/DirectiveTree.h"
+#include "support/Token.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
@@ -39,72 +40,6 @@ void addIfDistinct(const Range &R, std::vector<Range> &Result) {
   if (Result.empty() || Result.back() != R) {
     Result.push_back(R);
   }
-}
-
-std::optional<FoldingRange> toFoldingRange(SourceRange SR,
-                                           const SourceManager &SM) {
-  const auto Begin = SM.getDecomposedLoc(SR.getBegin()),
-             End = SM.getDecomposedLoc(SR.getEnd());
-  // Do not produce folding ranges if either range ends is not within the main
-  // file. Macros have their own FileID so this also checks if locations are not
-  // within the macros.
-  if ((Begin.first != SM.getMainFileID()) || (End.first != SM.getMainFileID()))
-    return std::nullopt;
-  FoldingRange Range;
-  Range.startCharacter = SM.getColumnNumber(Begin.first, Begin.second) - 1;
-  Range.startLine = SM.getLineNumber(Begin.first, Begin.second) - 1;
-  Range.endCharacter = SM.getColumnNumber(End.first, End.second) - 1;
-  Range.endLine = SM.getLineNumber(End.first, End.second) - 1;
-  return Range;
-}
-
-std::optional<FoldingRange>
-extractFoldingRange(const syntax::Node *Node,
-                    const syntax::TokenBufferTokenManager &TM) {
-  if (const auto *Stmt = dyn_cast<syntax::CompoundStatement>(Node)) {
-    const auto *LBrace = cast_or_null<syntax::Leaf>(
-        Stmt->findChild(syntax::NodeRole::OpenParen));
-    // FIXME(kirillbobyrev): This should find the last child. Compound
-    // statements have only one pair of braces so this is valid but for other
-    // node kinds it might not be correct.
-    const auto *RBrace = cast_or_null<syntax::Leaf>(
-        Stmt->findChild(syntax::NodeRole::CloseParen));
-    if (!LBrace || !RBrace)
-      return std::nullopt;
-    // Fold the entire range within braces, including whitespace.
-    const SourceLocation LBraceLocInfo =
-                             TM.getToken(LBrace->getTokenKey())->endLocation(),
-                         RBraceLocInfo =
-                             TM.getToken(RBrace->getTokenKey())->location();
-    auto Range = toFoldingRange(SourceRange(LBraceLocInfo, RBraceLocInfo),
-                                TM.sourceManager());
-    // Do not generate folding range for compound statements without any
-    // nodes and newlines.
-    if (Range && Range->startLine != Range->endLine)
-      return Range;
-  }
-  return std::nullopt;
-}
-
-// Traverse the tree and collect folding ranges along the way.
-std::vector<FoldingRange>
-collectFoldingRanges(const syntax::Node *Root,
-                     const syntax::TokenBufferTokenManager &TM) {
-  std::queue<const syntax::Node *> Nodes;
-  Nodes.push(Root);
-  std::vector<FoldingRange> Result;
-  while (!Nodes.empty()) {
-    const syntax::Node *Node = Nodes.front();
-    Nodes.pop();
-    const auto Range = extractFoldingRange(Node, TM);
-    if (Range)
-      Result.push_back(*Range);
-    if (const auto *T = dyn_cast<syntax::Tree>(Node))
-      for (const auto *NextNode = T->getFirstChild(); NextNode;
-           NextNode = NextNode->getNextSibling())
-        Nodes.push(NextNode);
-  }
-  return Result;
 }
 
 } // namespace
@@ -163,34 +98,81 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
   return std::move(Head);
 }
 
-// FIXME(kirillbobyrev): Collect comments, PP conditional regions, includes and
-// other code regions (e.g. public/private/protected sections of classes,
-// control flow statement bodies).
-// Related issue: https://github.com/clangd/clangd/issues/310
-llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
-  syntax::Arena A;
-  syntax::TokenBufferTokenManager TM(AST.getTokens(), AST.getLangOpts(),
-                                     AST.getSourceManager());
-  const auto *SyntaxTree = syntax::buildSyntaxTree(A, TM, AST.getASTContext());
-  return collectFoldingRanges(SyntaxTree, TM);
-}
+class PragmaRegionFinder {
+  // Record the token range of a region:
+  //
+  //   #pragma region name[[
+  //   ...
+  //   ]]#pragma endregion
+  std::vector<Token::Range> &Ranges;
+  const TokenStream &Code;
+  // Stack of starting token (the name of the region) indices for nested #pragma
+  // region.
+  std::vector<unsigned> Stack;
 
-// FIXME( usaxena95): Collect PP conditional regions, includes and other code
-// regions (e.g. public/private/protected sections of classes, control flow
-// statement bodies).
+public:
+  PragmaRegionFinder(std::vector<Token::Range> &Ranges, const TokenStream &Code)
+      : Ranges(Ranges), Code(Code) {}
+
+  void walk(const DirectiveTree &T) {
+    for (const auto &C : T.Chunks)
+      std::visit(*this, C);
+  }
+
+  void operator()(const DirectiveTree::Code &C) {}
+
+  void operator()(const DirectiveTree::Directive &D) {
+    // Get the tokens that make up this directive.
+    auto Tokens = Code.tokens(D.Tokens);
+    if (Tokens.empty())
+      return;
+    const Token &HashToken = Tokens.front();
+    assert(HashToken.Kind == tok::hash);
+    const Token &Pragma = HashToken.nextNC();
+    if (Pragma.text() != "pragma")
+      return;
+    const Token &Value = Pragma.nextNC();
+
+    // Handle "#pragma region name"
+    if (Value.text() == "region") {
+      // Find the last token at the same line.
+      const Token *T = &Value.next();
+      while (T < Tokens.end() && T->Line == Pragma.Line)
+        T = &T->next();
+      --T;
+      Stack.push_back(T->OriginalIndex);
+      return;
+    }
+
+    // Handle "#pragma endregion"
+    if (Value.text() == "endregion") {
+      if (Stack.empty())
+        return; // unmatched end region; ignore.
+
+      unsigned StartIdx = Stack.back();
+      Stack.pop_back();
+      Ranges.push_back(Token::Range{StartIdx, HashToken.OriginalIndex});
+    }
+  }
+
+  void operator()(const DirectiveTree::Conditional &C) {
+    // C.Branches needs to see the DirectiveTree definition, otherwise build
+    // fails in C++20.
+    [[maybe_unused]] DirectiveTree Dummy;
+    for (const auto &[_, SubTree] : C.Branches)
+      walk(SubTree);
+  }
+};
+
+// FIXME( usaxena95): Collect includes and other code regions (e.g.
+// public/private/protected sections of classes, control flow statement bodies).
 // Related issue: https://github.com/clangd/clangd/issues/310
 llvm::Expected<std::vector<FoldingRange>>
 getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
-  auto OrigStream = pseudo::lex(Code, clang::pseudo::genericLangOpts());
+  auto OrigStream = lex(Code, genericLangOpts());
 
-  auto DirectiveStructure = pseudo::DirectiveTree::parse(OrigStream);
-  pseudo::chooseConditionalBranches(DirectiveStructure, OrigStream);
-
-  // FIXME: Provide ranges in the disabled-PP regions as well.
-  auto Preprocessed = DirectiveStructure.stripDirectives(OrigStream);
-
-  auto ParseableStream = cook(Preprocessed, clang::pseudo::genericLangOpts());
-  pseudo::pairBrackets(ParseableStream);
+  auto DirectiveStructure = DirectiveTree::parse(OrigStream);
+  chooseConditionalBranches(DirectiveStructure, OrigStream);
 
   std::vector<FoldingRange> Result;
   auto AddFoldingRange = [&](Position Start, Position End,
@@ -205,22 +187,47 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
     FR.kind = Kind.str();
     Result.push_back(FR);
   };
-  auto OriginalToken = [&](const pseudo::Token &T) {
+  auto OriginalToken = [&](const Token &T) {
     return OrigStream.tokens()[T.OriginalIndex];
   };
-  auto StartOffset = [&](const pseudo::Token &T) {
+  auto StartOffset = [&](const Token &T) {
     return OriginalToken(T).text().data() - Code.data();
   };
-  auto StartPosition = [&](const pseudo::Token &T) {
+  auto StartPosition = [&](const Token &T) {
     return offsetToPosition(Code, StartOffset(T));
   };
-  auto EndOffset = [&](const pseudo::Token &T) {
+  auto EndOffset = [&](const Token &T) {
     return StartOffset(T) + OriginalToken(T).Length;
   };
-  auto EndPosition = [&](const pseudo::Token &T) {
+  auto EndPosition = [&](const Token &T) {
     return offsetToPosition(Code, EndOffset(T));
   };
+
+  // Preprocessor directives
+  auto PPRanges = pairDirectiveRanges(DirectiveStructure, OrigStream);
+  for (const auto &R : PPRanges) {
+    auto BTok = OrigStream.tokens()[R.Begin];
+    auto ETok = OrigStream.tokens()[R.End];
+    if (ETok.Kind == tok::eof)
+      continue;
+    if (BTok.Line >= ETok.Line)
+      continue;
+
+    Position Start = EndPosition(BTok);
+    Position End = StartPosition(ETok);
+    if (LineFoldingOnly)
+      End.line--;
+    AddFoldingRange(Start, End, FoldingRange::REGION_KIND);
+  }
+
+  // FIXME: Provide ranges in the disabled-PP regions as well.
+  auto Preprocessed = DirectiveStructure.stripDirectives(OrigStream);
+
+  auto ParseableStream = cook(Preprocessed, genericLangOpts());
+  pairBrackets(ParseableStream);
+
   auto Tokens = ParseableStream.tokens();
+
   // Brackets.
   for (const auto &Tok : Tokens) {
     if (auto *Paired = Tok.pair()) {
@@ -235,21 +242,22 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
       }
     }
   }
-  auto IsBlockComment = [&](const pseudo::Token &T) {
+  auto IsBlockComment = [&](const Token &T) {
     assert(T.Kind == tok::comment);
     return OriginalToken(T).Length >= 2 &&
            Code.substr(StartOffset(T), 2) == "/*";
   };
+
   // Multi-line comments.
   for (auto *T = Tokens.begin(); T != Tokens.end();) {
     if (T->Kind != tok::comment) {
       T++;
       continue;
     }
-    pseudo::Token *FirstComment = T;
+    Token *FirstComment = T;
     // Show starting sentinals (// and /*) of the comment.
     Position Start = offsetToPosition(Code, 2 + StartOffset(*FirstComment));
-    pseudo::Token *LastComment = T;
+    Token *LastComment = T;
     Position End = EndPosition(*T);
     while (T != Tokens.end() && T->Kind == tok::comment &&
            StartPosition(*T).line <= End.line + 1) {
@@ -266,6 +274,17 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
         End.character -= 2;
     }
     AddFoldingRange(Start, End, FoldingRange::COMMENT_KIND);
+  }
+
+  // #pragma region
+  std::vector<Token::Range> Ranges;
+  PragmaRegionFinder(Ranges, OrigStream).walk(DirectiveStructure);
+  auto Ts = OrigStream.tokens();
+  for (const auto &R : Ranges) {
+    auto End = StartPosition(Ts[R.End]);
+    if (LineFoldingOnly)
+      End.line--;
+    AddFoldingRange(EndPosition(Ts[R.Begin]), End, FoldingRange::REGION_KIND);
   }
   return Result;
 }

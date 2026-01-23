@@ -1,0 +1,109 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+# REQUIRES: asserts
+
+# Test that loop carried memory dependences are computed correctly.
+# The original code is as follows.
+#
+# ```
+# void f(int *a, int n) {
+#   for (int i = 0; i < n-2; i++) {
+#     a[i] += a[i+10];
+#     a[i+2] += i;
+#   }
+# }
+# ```
+#
+# Here is what each instruction does.
+# SU(2): Load a[i+10]
+# SU(3): Store it to a[i]
+# SU(4): Load a[i+2], add i, then store it
+#
+# FIXME: Currently the following dependencies are missed.
+#
+
+# CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT:   Loop carried edges from SU(2)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(3)
+# CHECK-NEXT:       SU(4)
+# CHECK-NEXT:   Loop carried edges from SU(4)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(3)
+# CHECK-NEXT: ===== Loop Carried Edges End =====
+
+--- |
+  define dso_local void @f(ptr nocapture noundef %a, i32 noundef %n) {
+  entry:
+    %cmp13 = icmp sgt i32 %n, 2
+    br i1 %cmp13, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:
+    %0 = add i32 %n, -2
+    br label %for.body
+
+  for.cond.cleanup:
+    ret void
+
+  for.body:
+    %lsr.iv15 = phi ptr [ %a, %for.body.preheader ], [ %cgep19, %for.body ]
+    %lsr.iv = phi i32 [ %0, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
+    %i.014 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
+    %cgep = getelementptr i8, ptr %lsr.iv15, i32 40
+    %1 = load i32, ptr %cgep, align 4, !tbaa !5
+    %2 = load i32, ptr %lsr.iv15, align 4, !tbaa !5
+    %add2 = add nsw i32 %2, %1
+    store i32 %add2, ptr %lsr.iv15, align 4, !tbaa !5
+    %cgep18 = getelementptr i8, ptr %lsr.iv15, i32 8
+    %3 = load i32, ptr %cgep18, align 4, !tbaa !5
+    %4 = add i32 %i.014, %3
+    store i32 %4, ptr %cgep18, align 4, !tbaa !5
+    %inc = add nuw nsw i32 %i.014, 1
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep19 = getelementptr i8, ptr %lsr.iv15, i32 4
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  !5 = !{!6, !6, i64 0}
+  !6 = !{!"int", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r1
+  
+    %8:intregs = COPY $r1
+    %7:intregs = COPY $r0
+    %9:predregs = C2_cmpgti %8, 2
+    J2_jumpf %9, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+  
+  bb.1.for.body.preheader:
+    %0:intregs = A2_addi %8, -2
+    %11:intregs = A2_tfrsi 0
+    %14:intregs = COPY %0
+    J2_loop0r %bb.3, %14, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+  
+  bb.2.for.cond.cleanup:
+    PS_jmpret $r31, implicit-def dead $pc
+  
+  bb.3.for.body:
+    successors: %bb.2, %bb.3
+  
+    %1:intregs = PHI %7, %bb.1, %6, %bb.3
+    %3:intregs = PHI %11, %bb.1, %4, %bb.3
+    %12:intregs = L2_loadri_io %1, 40 :: (load (s32) from %ir.cgep, !tbaa !5)
+    L4_add_memopw_io %1, 0, killed %12 :: (store (s32) into %ir.lsr.iv15, !tbaa !5), (load (s32) from %ir.lsr.iv15, !tbaa !5)
+    L4_add_memopw_io %1, 8, %3 :: (store (s32) into %ir.cgep18, !tbaa !5), (load (s32) from %ir.cgep18, !tbaa !5)
+    %4:intregs = nuw nsw A2_addi %3, 1
+    %6:intregs = A2_addi %1, 4
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def $pc
+...

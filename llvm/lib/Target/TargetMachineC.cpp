@@ -83,7 +83,8 @@ LLVMBool LLVMGetTargetFromTriple(const char* TripleStr, LLVMTargetRef *T,
                                  char **ErrorMessage) {
   std::string Error;
 
-  *T = wrap(TargetRegistry::lookupTarget(TripleStr, Error));
+  Triple TT(TripleStr);
+  *T = wrap(TargetRegistry::lookupTarget(TT, Error));
 
   if (!*T) {
     if (ErrorMessage)
@@ -197,14 +198,14 @@ void LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
 }
 
 LLVMTargetMachineRef
-LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *Triple,
+LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *TripleStr,
                                    LLVMTargetMachineOptionsRef Options) {
   auto *Opt = unwrap(Options);
   TargetOptions TO;
   TO.MCOptions.ABIName = Opt->ABI;
-  return wrap(unwrap(T)->createTargetMachine(Triple, Opt->CPU, Opt->Features,
-                                             TO, Opt->RM, Opt->CM, Opt->OL,
-                                             Opt->JIT));
+  return wrap(unwrap(T)->createTargetMachine(Triple(TripleStr), Opt->CPU,
+                                             Opt->Features, TO, Opt->RM,
+                                             Opt->CM, Opt->OL, Opt->JIT));
 }
 
 LLVMTargetMachineRef
@@ -363,11 +364,8 @@ char *LLVMGetHostCPUName(void) {
 
 char *LLVMGetHostCPUFeatures(void) {
   SubtargetFeatures Features;
-  StringMap<bool> HostFeatures;
-
-  if (sys::getHostCPUFeatures(HostFeatures))
-    for (const auto &[Feature, IsEnabled] : HostFeatures)
-      Features.AddFeature(Feature, IsEnabled);
+  for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+    Features.AddFeature(Feature, IsEnabled);
 
   return strdup(Features.getString().c_str());
 }

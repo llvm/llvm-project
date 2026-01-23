@@ -29,11 +29,11 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-DAG:     %[[RET_EMBOX:.*]] = fir.embox %[[RET_ADDR]](%[[RET_SHAPE]])
 // CHECK-DAG:     fir.store %[[RET_EMBOX]] to %[[RET_BOX]]
 
-// CHECK-DAG:     %[[M_BOX:.*]] = fir.embox %[[M_VAR]]#1(%[[M_SHAPE:.*]])
+// CHECK-DAG:     %[[M_BOX:.*]] = fir.embox %[[M_VAR]]#0(%[[M_SHAPE:.*]])
 
 // CHECK:         %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
 // CHECK:         %[[M_ARG:.*]] = fir.convert %[[M_BOX]] : (!fir.box<!fir.array<1x2xi32>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranATranspose(%[[RET_ARG]], %[[M_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK:         fir.call @_FortranATranspose(%[[RET_ARG]], %[[M_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK-DAG:     %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]

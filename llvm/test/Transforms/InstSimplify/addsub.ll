@@ -12,7 +12,7 @@ define i1 @test1(i1 %a) {
 
 define <2 x i1> @test2(<2 x i1> %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %b = xor <2 x i1> %a, <i1 true, i1 true>
   %res = sub <2 x i1> %a, %b

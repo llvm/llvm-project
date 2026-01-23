@@ -103,6 +103,7 @@ fputwc U
 free U
 freelocale U
 fwrite U
+getauxval U
 getc U
 getcwd U
 getenv U
@@ -149,6 +150,8 @@ posix_spawn_file_actions_adddup2 U
 posix_spawn_file_actions_addopen U
 posix_spawn_file_actions_destroy U
 posix_spawn_file_actions_init U
+printf U
+putchar U
 qsort U
 raise U
 rand U

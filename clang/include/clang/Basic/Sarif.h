@@ -322,7 +322,10 @@ class SarifResult {
   uint32_t RuleIdx;
   std::string RuleId;
   std::string DiagnosticMessage;
+  std::string HostedViewerURI;
+  llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
+  llvm::SmallVector<CharSourceRange, 8> RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
 
@@ -347,16 +350,34 @@ public:
     return *this;
   }
 
-  SarifResult setLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+  SarifResult setHostedViewerURI(llvm::StringRef URI) {
+    HostedViewerURI = URI.str();
+    return *this;
+  }
+
+  SarifResult addLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
 #ifndef NDEBUG
     for (const auto &Loc : DiagLocs) {
       assert(Loc.isCharRange() &&
              "SARIF Results require character granular source ranges!");
     }
 #endif
-    Locations.assign(DiagLocs.begin(), DiagLocs.end());
+    Locations.append(DiagLocs.begin(), DiagLocs.end());
     return *this;
   }
+
+  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+#ifndef NDEBUG
+    for (const auto &Loc : DiagLocs) {
+      assert(
+          Loc.isCharRange() &&
+          "SARIF RelatedLocations require character granular source ranges!");
+    }
+#endif
+    RelatedLocations.append(DiagLocs.begin(), DiagLocs.end());
+    return *this;
+  }
+
   SarifResult setThreadFlows(llvm::ArrayRef<ThreadFlow> ThreadFlowResults) {
     ThreadFlows.assign(ThreadFlowResults.begin(), ThreadFlowResults.end());
     return *this;
@@ -364,6 +385,12 @@ public:
 
   SarifResult setDiagnosticLevel(const SarifResultLevel &TheLevel) {
     LevelOverride = TheLevel;
+    return *this;
+  }
+
+  SarifResult addPartialFingerprint(llvm::StringRef key,
+                                    llvm::StringRef value) {
+    PartialFingerprints[key] = value;
     return *this;
   }
 };
@@ -474,6 +501,8 @@ public:
   /// Calling this will trigger a copy of the internal state including all
   /// reported diagnostics, resulting in an expensive call.
   llvm::json::Object createDocument();
+
+  static std::string fileNameToURI(llvm::StringRef Filename);
 
 private:
   /// Source Manager to use for the current SARIF document.

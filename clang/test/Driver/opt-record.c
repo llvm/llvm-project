@@ -58,12 +58,12 @@
 // CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-format=yaml"
 // CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS-A:      "-plugin-opt=opt-remarks-filename=a.out.opt.ld.yaml"
+// CHECK-PASS-A:      "-plugin-opt=opt-remarks-filename=a-opt.ld.yaml"
 // CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-passes=inline"
 // CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-format=yaml"
 // CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS:      "-plugin-opt=opt-remarks-filename=FOO.opt.ld.yaml"
+// CHECK-PASS:      "-plugin-opt=opt-remarks-filename=FOO-opt.ld.yaml"
 // CHECK-PASS-SAME: "-plugin-opt=opt-remarks-passes=inline"
 // CHECK-PASS-SAME: "-plugin-opt=opt-remarks-format=yaml"
 // CHECK-PASS-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
@@ -78,3 +78,17 @@
 // CHECK-PASS-RPASS-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
 // CHECK-PASS-AUTO:   "-plugin-opt=opt-remarks-hotness-threshold=auto"
+
+// Check -dumpdir effect on -foptimization-record-file.
+//
+// DEFINE: %{RUN-DUMPDIR} = \
+// DEFINE:   %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld \
+// DEFINE:       -flto -fsave-optimization-record -dumpdir /dir/file.ext %s
+//
+// RUN: %{RUN-DUMPDIR} 2>&1 | FileCheck %s -check-prefix=CHECK-DUMPDIR
+// RUN: %{RUN-DUMPDIR} -o FOO 2>&1 | FileCheck %s -check-prefix=CHECK-DUMPDIR
+// RUN: %{RUN-DUMPDIR} -foptimization-record-file=user-file.ext 2>&1 | \
+// RUN:   FileCheck %s -check-prefix=CHECK-DUMPDIR-IGNORE
+//
+//        CHECK-DUMPDIR: "-plugin-opt=opt-remarks-filename=/dir/file.extopt.ld.yaml"
+// CHECK-DUMPDIR-IGNORE: "-plugin-opt=opt-remarks-filename=user-file.ext.opt.ld.yaml"

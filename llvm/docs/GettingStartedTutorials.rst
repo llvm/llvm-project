@@ -11,6 +11,7 @@ For those new to the LLVM system.
    GettingStarted
    GettingStartedVS
    ProgrammersManual
+   DebuggingLLVM
    tutorial/index
    MyFirstTypoFix
 
@@ -26,6 +27,9 @@ For those new to the LLVM system.
 :doc:`ProgrammersManual`
   Introduction to the general layout of the LLVM sourcebase, important classes
   and APIs, and some tips & tricks.
+
+:doc:`DebuggingLLVM`
+  Provides information about how to debug LLVM.
 
 :doc:`Frontend/PerformanceTips`
    A collection of tips for frontend authors on how to generate IR

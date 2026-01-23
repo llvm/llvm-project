@@ -90,7 +90,7 @@
 ## MRM5m
 
 # ATT:   vscatterpf0dps	(%r16,%zmm0) {%k1}
-# INTEL: vscatterpf0dps	{k1}, zmmword ptr [r16 + zmm0]
+# INTEL: vscatterpf0dps	{k1}, dword ptr [r16 + zmm0]
 0x62,0xfa,0x7d,0x49,0xc6,0x2c,0x00
 
 # ATT:   subq	$127, 123(%r16), %r17

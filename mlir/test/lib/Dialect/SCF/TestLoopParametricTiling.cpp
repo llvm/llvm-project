@@ -40,6 +40,13 @@ public:
   }
 
   void runOnOperation() override {
+    if (sizes.empty()) {
+      emitError(
+          UnknownLoc::get(&getContext()),
+          "missing `test-outer-loop-sizes` pass-option for outer loop sizes");
+      signalPassFailure();
+      return;
+    }
     getOperation()->walk([this](scf::ForOp op) {
       // Ignore nested loops.
       if (op->getParentRegion()->getParentOfType<scf::ForOp>())

@@ -257,6 +257,14 @@ iretq
 // CHECK: encoding: [0x66,0xcf]          
 iretw 
 
+// CHECK: jecxz 64
+// CHECK: encoding: [0x67,0xe3,A]
+jecxz 64
+
+// CHECK: jrcxz 64
+// CHECK: encoding: [0xe3,A]
+jrcxz 64
+
 // CHECK: lodsl %gs:(%rsi), %eax 
 // CHECK: encoding: [0x65,0xad]        
 lodsl %gs:(%rsi), %eax 

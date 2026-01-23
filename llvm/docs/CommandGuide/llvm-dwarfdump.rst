@@ -45,6 +45,16 @@ OPTIONS
 
             Use colors in output.
 
+.. option:: --error-display=<value>       
+
+            Set the level of detail and summary to display when verifying.
+            Implies :option:`--verify`. The supported values are:
+
+            `quiet`   - Only display whether errors occurred.
+            `summary` - Display only a summary of the errors found.
+            `details` - Display each error in detail but no summary.
+            `full`    - Display each error as well as a summary. [default]
+
 .. option:: -f <name>, --find=<name>
 
             Search for the exact text <name> in the accelerator tables
@@ -73,7 +83,7 @@ OPTIONS
 .. option:: -n <name>, --name=<name>
 
             Find and print all debug info entries whose name
-            (`DW_AT_name` attribute) is <name>.
+            (`DW_AT_name`/`DW_AT_linkage_name` attribute) is <name>.
 
 .. option:: --lookup=<address>
 
@@ -124,6 +134,15 @@ OPTIONS
 
             Abbreviate the description of type unit entries.
 
+.. option:: -t, --filter-child-tag
+
+            Only dump children whose DWARF tag is one of the specified tags.
+            Example usage:
+
+            .. code-block:: c
+
+              llvm-dwarfdump -t DW_TAG_structure_type -t DW_TAG_member -c
+
 .. option:: -x, --regex
 
             Treat any <name> strings as regular expressions when searching
@@ -150,6 +169,12 @@ OPTIONS
             compile unit chains, DIE relationships graph, address
             ranges, and more.
 
+.. option:: --verify-json=<path>
+
+            Output JSON-formatted error summary to the file specified by
+            <path>. Implies :option:`--verify`.  The output format is described
+            in the section below (:ref:`verify-json-format`).
+
 .. option:: --version
 
             Display the version of the tool.
@@ -167,6 +192,17 @@ OPTIONS
             The :option:`--debug-macro` option prints both the .debug_macro and the .debug_macinfo sections.
 
             The :option:`--debug-frame` and :option:`--eh-frame` options are aliases, in cases where both sections are present one command outputs both.
+
+.. option:: --show-variable-coverage
+
+            Show per-variable coverage metrics. The output format is described
+            in the section below (:ref:`variable-coverage-format`).
+
+.. option:: --combine-inline-variable-instances
+
+            Use with :option:`--show-variable-coverage` to average variable
+            coverage across inlined subroutine instances instead of printing
+            them separately.
 
 .. option:: @<FILE>
 
@@ -195,6 +231,56 @@ For aggregated values, the following keys are used:
       - `#bytes` ==> the number of bytes
       - `#variables - entry values ...` ==> the number of variables excluding
         the entry values etc.
+
+.. _verify-json-format:
+
+FORMAT OF VERIFY JSON OUTPUT
+----------------------------
+
+The format of the JSON output created by the :option:`--verify-json` is::
+
+  { 
+    "error-categories": { 
+      "<first category description>": {"count": 1234},
+      "<next category description>": {"count": 4321}
+    },
+    "error-count": 5555
+  }
+
+The following is generated if there are no errors reported::
+
+  { 
+    "error-categories": {},
+    "error-count": 0
+  }
+
+.. _variable-coverage-format:
+
+FORMAT OF VARIABLE COVERAGE OUTPUT
+----------------------------------
+
+The :option:`--show-variable-coverage` option differs from
+:option:`--statistics` by printing per-variable debug info coverage metrics
+based on the number of source lines covered instead of the number of
+instruction bytes. Compared to counting instruction bytes, this is more stable
+across compilations and better reflects the debugging experience. The output is
+a tab-separated table containing the following columns:
+
+      - `Function` ==> Name of the function the variable was found in
+      - `InstanceCount` (when :option:`--combine-inline-variable-instances` is
+        specified) ==> Number of instances of the function; this is 1 for
+        functions that have not been inlined, and n+1 for functions that have
+        been inlined n times
+      - `InlChain` (when :option:`--combine-inline-variable-instances` is not
+        specified) ==> Chain of call sites (file and line number) that the
+        function has been inlined into; this will be empty if the function has
+        not been inlined
+      - `Variable` ==> Name of the variable
+      - `Decl` ==> Source location (file and line number) of the variable's
+        declaration
+      - `LinesCovered` ==> Number of source lines covered by the variable's
+        debug information in the input file
+
 
 EXIT STATUS
 -----------

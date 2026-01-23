@@ -65,6 +65,7 @@ public:
   ///     diagnostics (i.e. errors, warnings or notes from Clang).
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                         bool generate_debug_info,
+                        DiagnosticManager &diagnostic_manager,
                         std::vector<std::string> include_directories = {},
                         std::string filename = "<clang expression>");
 
@@ -118,15 +119,6 @@ public:
       lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
       bool &can_interpret,
       lldb_private::ExecutionPolicy execution_policy) override;
-
-  /// Returns a string representing current ABI.
-  ///
-  /// \param[in] target_arch
-  ///     The target architecture.
-  ///
-  /// \return
-  ///     A string representing target ABI for the current architecture.
-  std::string GetClangTargetABI(const ArchSpec &target_arch);
 
 private:
   /// Parses the expression.

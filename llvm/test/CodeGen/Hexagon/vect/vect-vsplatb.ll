@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hcp < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hcp < %s | FileCheck %s
 ; Make sure we build the constant vector <7, 7, 7, 7> with a vsplatb.
 ; CHECK: vsplatb
 @B = common global [400 x i8] zeroinitializer, align 8

@@ -1,18 +1,8 @@
-; RUN: opt %loadNPMPolly -polly-parallel \
-; RUN: -polly-parallel-force -passes=polly-codegen \
-; RUN: -S -verify-dom-info < %s \
-; RUN: | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadNPMPolly -polly-parallel \
-; RUN: -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM \
-; RUN: -S -verify-dom-info < %s \
-; RUN: | FileCheck %s -check-prefix=LIBOMP-IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -polly-omp-backend=LLVM -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR
 
-; RUN: opt %loadNPMPolly -polly-parallel \
-; RUN: -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM \
-; RUN: -polly-scheduling=static \
-; RUN: -S -verify-dom-info < %s \
-; RUN: | FileCheck %s -check-prefix=LIBOMP-STATIC-IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -polly-omp-backend=LLVM -polly-scheduling=static -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-STATIC-IR
 
 ; Ensure the scalars are initialized before the OpenMP code is launched.
 ;

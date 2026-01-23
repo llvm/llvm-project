@@ -1537,12 +1537,12 @@ def parse_gdb_log(file, options):
     a long time during a preset set of debugger commands."""
 
     tricky_commands = ["qRegisterInfo"]
-    timestamp_regex = re.compile("(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$")
+    timestamp_regex = re.compile(r"(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$")
     packet_name_regex = re.compile("([A-Za-z_]+)[^a-z]")
     packet_transmit_name_regex = re.compile(
         "(?P<direction>send|read) packet: (?P<packet>.*)"
     )
-    packet_contents_name_regex = re.compile("\$([^#]*)#[0-9a-fA-F]{2}")
+    packet_contents_name_regex = re.compile(r"\$([^#]*)#[0-9a-fA-F]{2}")
     packet_checksum_regex = re.compile(".*#[0-9a-fA-F]{2}$")
     packet_names_regex_str = "(" + "|".join(gdb_remote_commands.keys()) + ")(.*)"
     packet_names_regex = re.compile(packet_names_regex_str)

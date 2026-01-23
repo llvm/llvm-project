@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 
@@ -25,8 +26,8 @@ public:
   /// @param Data        Section content.
   /// @param IsLE        Flag determines if Data is in little endian form.
   /// @param Is64Bit     Flag determines if object is 64 bit.
-  static Expected<Decompressor> create(StringRef Name, StringRef Data,
-                                       bool IsLE, bool Is64Bit);
+  LLVM_ABI static Expected<Decompressor> create(StringRef Name, StringRef Data,
+                                                bool IsLE, bool Is64Bit);
 
   /// Resize the buffer and uncompress section data into it.
   /// @param Out         Destination buffer.
@@ -36,7 +37,7 @@ public:
   }
 
   /// Uncompress section data to raw buffer provided.
-  Error decompress(MutableArrayRef<uint8_t> Output);
+  LLVM_ABI Error decompress(MutableArrayRef<uint8_t> Output);
 
   /// Return memory buffer size required for decompression.
   uint64_t getDecompressedSize() { return DecompressedSize; }

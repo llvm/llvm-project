@@ -9,11 +9,15 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+
+using LIBC_NAMESPACE::Sign;
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};

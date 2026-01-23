@@ -1,5 +1,7 @@
 // RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %env_asan_opts=handle_sigill=1 not %run %t 2>&1 | FileCheck %s
+// msvc doesn't have a __builtin_trap equivalent
+// XFAIL: msvc
 
 // Test the error output from an illegal instruction.
 

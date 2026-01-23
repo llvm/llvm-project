@@ -40,7 +40,10 @@
 
 namespace scudo {
 
+#if !defined(SCUDO_PAGE_SIZE)
+// This function is only used when page size is not hard-coded.
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
+#endif
 
 void NORETURN die() { abort(); }
 
@@ -189,6 +192,12 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
       syscall(SYS_getrandom, Buffer, Length, Blocking ? 0 : GRND_NONBLOCK);
   if (ReadBytes == static_cast<ssize_t>(Length))
     return true;
+  // If this system call is not implemented in the kernel, then we will try
+  // and use /dev/urandom. Otherwise, if the syscall fails, return false
+  // assuming that trying to read /dev/urandom will cause a delay waiting for
+  // the random data to be usable.
+  if (errno != ENOSYS)
+    return false;
 #endif // defined(SYS_getrandom)
   // Up to 256 bytes, a read off /dev/urandom will not be interrupted.
   // Blocking is moot here, O_NONBLOCK has no effect when opening /dev/urandom.
@@ -235,6 +244,38 @@ extern "C" WEAK void android_set_abort_message(const char *);
 void setAbortMessage(const char *Message) {
   if (&android_set_abort_message)
     android_set_abort_message(Message);
+}
+
+u64 getResidentPages(uptr BaseAddress, uptr Size) {
+  unsigned char PageData[256];
+
+  uptr PageSize = getPageSizeCached();
+  uptr PageSizeLog = getPageSizeLogCached();
+
+  // Make sure the address is page aligned.
+  uptr CurrentAddress = BaseAddress & ~(PageSize - 1);
+  uptr LastAddress = roundUp(BaseAddress + Size, PageSize);
+  u64 ResidentPages = 0;
+  while (CurrentAddress < LastAddress) {
+    uptr Length = LastAddress - CurrentAddress;
+    if ((Length >> PageSizeLog) > sizeof(PageData)) {
+      Length = sizeof(PageData) << PageSizeLog;
+    }
+    if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
+        -1) {
+      ScopedString Str;
+      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.output();
+      break;
+    }
+    for (size_t I = 0; I < Length >> PageSizeLog; ++I) {
+      if (PageData[I])
+        ++ResidentPages;
+    }
+    CurrentAddress += Length;
+  }
+
+  return ResidentPages;
 }
 
 } // namespace scudo

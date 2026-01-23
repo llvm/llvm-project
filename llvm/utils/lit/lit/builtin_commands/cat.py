@@ -1,16 +1,12 @@
 import getopt
 import sys
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 
 def convertToCaretAndMNotation(data):
     newdata = StringIO()
     if isinstance(data, str):
-        data = bytearray(data)
+        data = bytearray(data.encode())
 
     for intval in data:
         if intval == 9 or intval == 10:
@@ -53,6 +49,9 @@ def main(argv):
             import os, msvcrt
 
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    if len(filenames) == 0:
+        sys.stdout.write(sys.stdin.read())
+        sys.exit(0)
     for filename in filenames:
         try:
             contents = None

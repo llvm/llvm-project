@@ -15,11 +15,11 @@ define void @func(i32 %n) {
 
 ; CHECK: [[CP1]]:
 ; CHECK-NEXT: [[CP1_TMP:.Ltmp[0-9]+]]:
-; CHECK-NEXT:     .long var(TLSGD)-(([[PCPOS1]]+4)-[[CP1_TMP]])
+; CHECK-NEXT:     .long var(TLSGD)-([[PCPOS1]]+4-[[CP1_TMP]])
 
 ; CHECK: [[CP2]]:
 ; CHECK-NEXT: [[CP2_TMP:.Ltmp[0-9]+]]:
-; CHECK-NEXT:     .long var(TLSGD)-(([[PCPOS2]]+4)-[[CP2_TMP]])
+; CHECK-NEXT:     .long var(TLSGD)-([[PCPOS2]]+4-[[CP2_TMP]])
 
 entry:
   br label %loop

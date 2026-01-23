@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple powerpc64le-unknown-linux-gnu
-; RUN: llc < %s -mtriple powerpc64-unknown-linux-gnu
-; RUN: llc < %s -mtriple powerpc-ibm-aix
-; RUN: llc < %s -mtriple powerpc64-ibm-aix
+; RUN: llc < %s -mcpu=ppc -mtriple powerpc64-unknown-linux-gnu
+; RUN: llc < %s -mcpu=ppc -mtriple powerpc-ibm-aix
+; RUN: llc < %s -mcpu=ppc -mtriple powerpc64-ibm-aix
 
 define void @xvcvdpsp_kill_flag() {
 entry:

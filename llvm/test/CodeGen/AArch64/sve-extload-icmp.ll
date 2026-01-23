@@ -19,8 +19,8 @@ define <vscale x 8 x i8> @extload_icmp_nxv8i8(ptr %in) #0 {
 define <vscale x 16 x i8> @extload_icmp_nxv16i8(ptr %in) #0 {
 ; CHECK-LABEL: extload_icmp_nxv16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    cnot z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 16 x i8>, ptr %in
@@ -45,8 +45,8 @@ define <vscale x 4 x i16> @extload_icmp_nxv4i16(ptr %in) #0 {
 define <vscale x 8 x i16> @extload_icmp_nxv8i16(ptr %in) #0 {
 ; CHECK-LABEL: extload_icmp_nxv8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    cnot z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 8 x i16>, ptr %in
@@ -71,8 +71,8 @@ define <vscale x 2 x i32> @extload_icmp_nxv2i32(ptr %in) #0 {
 define <vscale x 4 x i32> @extload_icmp_nxv4i32(ptr %in) #0 {
 ; CHECK-LABEL: extload_icmp_nxv4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    cnot z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 4 x i32>, ptr %in
@@ -84,8 +84,8 @@ define <vscale x 4 x i32> @extload_icmp_nxv4i32(ptr %in) #0 {
 define <vscale x 2 x i64> @extload_icmp_nxv2i64(ptr %in) #0 {
 ; CHECK-LABEL: extload_icmp_nxv2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    cnot z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 2 x i64>, ptr %in

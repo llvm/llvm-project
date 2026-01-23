@@ -28,7 +28,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 @E = common global ptr null, align 8
 
 ; CHECK-LABEL: @f(
-define void @f() {
+define void @f() !prof !{!"function_entry_count", i32 10} {
 entry:
   %a = load ptr, ptr @A, align 8
   %b = load ptr, ptr @B, align 8
@@ -55,7 +55,7 @@ entry:
 ; CHECK:     = icmp
 
 ; CHECK-NOT: = icmp
-; CHECK:     br i1 %conflict.rdx15, label %for.body.ph.lver.orig, label %for.body.ph.ldist1
+; CHECK:     br i1 %conflict.rdx15, label %for.body.ph.lver.orig, label %for.body.ph.ldist1, !prof ![[PROF1:[0-9]]]
 
 ; The non-distributed loop that the memchecks fall back on.
 
@@ -289,3 +289,4 @@ attributes #1 = { nounwind convergent }
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.distribute.enable", i1 true}
+; CHECK: ![[PROF1]] = !{!"unknown", !"loop-versioning"}

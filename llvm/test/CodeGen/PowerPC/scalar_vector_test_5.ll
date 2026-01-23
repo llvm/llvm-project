@@ -11,7 +11,10 @@
 define i8 @scalar_to_vector_half(ptr nocapture readonly %ad) {
 ; P9LE-LABEL: scalar_to_vector_half:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    lhz r3, 0(r3)
+; P9LE-NEXT:    lxsihzx v2, 0, r3
+; P9LE-NEXT:    li r3, 0
+; P9LE-NEXT:    vsplth v2, v2, 3
+; P9LE-NEXT:    vextubrx r3, r3, v2
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: scalar_to_vector_half:
@@ -25,6 +28,9 @@ define i8 @scalar_to_vector_half(ptr nocapture readonly %ad) {
 ; P8LE-LABEL: scalar_to_vector_half:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lhz r3, 0(r3)
+; P8LE-NEXT:    mtfprd f0, r3
+; P8LE-NEXT:    mffprd r3, f0
+; P8LE-NEXT:    clrldi r3, r3, 56
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: scalar_to_vector_half:

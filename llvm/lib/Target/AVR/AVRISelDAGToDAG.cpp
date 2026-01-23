@@ -122,8 +122,13 @@ bool AVRDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
     // offset allowed.
     MVT VT = cast<MemSDNode>(Op)->getMemoryVT().getSimpleVT();
 
-    // We only accept offsets that fit in 6 bits (unsigned).
-    if (isUInt<6>(RHSC) && (VT == MVT::i8 || VT == MVT::i16)) {
+    // We only accept offsets that fit in 6 bits (unsigned), with the exception
+    // of 16-bit loads - those can only go up to 62, because we desugar them
+    // into a pair of 8-bit loads like `ldd rx, RHSC` + `ldd ry, RHSC + 1`.
+    bool OkI8 = VT == MVT::i8 && RHSC <= 63;
+    bool OkI16 = VT == MVT::i16 && RHSC <= 62;
+
+    if (OkI8 || OkI16) {
       Base = N.getOperand(0);
       Disp = CurDAG->getTargetConstant(RHSC, dl, MVT::i8);
 
@@ -408,8 +413,7 @@ template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
     case MVT::i8:
       if (ProgMemBank == 0) {
         unsigned Opc = Subtarget->hasLPMX() ? AVR::LPMRdZ : AVR::LPMBRdZ;
-        ResNode =
-            CurDAG->getMachineNode(Opc, DL, MVT::i8, MVT::Other, Ptr);
+        ResNode = CurDAG->getMachineNode(Opc, DL, MVT::i8, MVT::Other, Ptr);
       } else {
         // Do not combine the LDI instruction into the ELPM pseudo instruction,
         // since it may be reused by other ELPM pseudo instructions.
@@ -566,7 +570,6 @@ void AVRDAGToDAGISel::Select(SDNode *N) {
 
 bool AVRDAGToDAGISel::trySelect(SDNode *N) {
   unsigned Opcode = N->getOpcode();
-  SDLoc DL(N);
 
   switch (Opcode) {
   // Nodes we fully handle.

@@ -13,7 +13,7 @@ on:
 
 jobs:
   buildbot_comment:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     if: >-
@@ -21,7 +21,7 @@ jobs:
       (github.event.pull_request.merged == true)
     steps:
       - name: Checkout Automation Script
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           sparse-checkout: llvm/utils/git/
           ref: main

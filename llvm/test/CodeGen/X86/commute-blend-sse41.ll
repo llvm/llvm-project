@@ -57,7 +57,7 @@ define void @baz(ptr %arg, ptr %arg1) optsize {
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [3,3]
 ; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; CHECK-NEXT:    movups %xmm1, (%rsi)
 ; CHECK-NEXT:    retq
 bb:

@@ -41,7 +41,7 @@ public:
   bool AppendIfUnique(const FileSpec &file);
   size_t GetSize() const { return m_files.size(); }
   const FileSpec &GetFileSpecAtIndex(size_t idx) const;
-  lldb::SupportFileSP GetSupportFileAtIndex(size_t idx) const;
+  SupportFileNSP GetSupportFileAtIndex(size_t idx) const;
   size_t FindFileIndex(size_t idx, const FileSpec &file, bool full) const;
   /// Find a compatible file index.
   ///
@@ -64,10 +64,16 @@ public:
   /// \param[in] file
   ///     The file specification to search for.
   ///
+  /// \param[in] realpath_prefixes
+  ///     Paths that start with one of the prefixes in this list will be
+  ///     realpath'ed to resolve any symlinks.
+  ///
   /// \return
   ///     The index of the file that matches \a file if it is found,
   ///     else UINT32_MAX is returned.
-  size_t FindCompatibleIndex(size_t idx, const FileSpec &file) const;
+  size_t
+  FindCompatibleIndex(size_t idx, const FileSpec &file,
+                      RealpathPrefixes *realpath_prefixes = nullptr) const;
 
   template <class... Args> void EmplaceBack(Args &&...args) {
     m_files.push_back(

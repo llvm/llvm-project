@@ -1,11 +1,7 @@
 # RUN: llc -run-pass=mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
-# RUN: llc -run-pass=mir-debugify -debugify-level=locations -o - %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg.value %s
+# RUN: llc -run-pass=mir-debugify -debugify-level=locations -o - %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg_value %s
 # RUN: llc -run-pass=mir-debugify,mir-strip-debug,mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
 # RUN: llc -run-pass=mir-debugify,mir-strip-debug -o - %s | FileCheck --check-prefix=STRIP %s
-# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
-# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify -debugify-level=locations -o - %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg.value %s
-# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify,mir-strip-debug,mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
-# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify,mir-strip-debug -o - %s | FileCheck --check-prefix=STRIP %s
 
 --- |
   ; ModuleID = 'loc-only.ll'

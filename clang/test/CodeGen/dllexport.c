@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-windows-gnu  -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-pc-cygwin      -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin    -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck %s
 
 
 

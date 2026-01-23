@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGVALUE_H
 
 #include "Address.h"
+#include "CGPointerAuthInfo.h"
 #include "CodeGenTBAA.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTContext.h"
@@ -63,6 +64,7 @@ public:
   bool isScalar() const { return Flavor == Scalar; }
   bool isComplex() const { return Flavor == Complex; }
   bool isAggregate() const { return Flavor == Aggregate; }
+  bool isIgnored() const { return isScalar() && !getScalarVal(); }
 
   bool isVolatileQualified() const { return IsVolatile; }
 
@@ -185,7 +187,8 @@ class LValue {
     BitField,     // This is a bitfield l-value, use getBitfield*.
     ExtVectorElt, // This is an extended vector subset, use getExtVectorComp
     GlobalReg,    // This is a register l-value, use getGlobalReg()
-    MatrixElt     // This is a matrix element, use getVector*
+    MatrixElt,    // This is a matrix element, use getVector*
+    MatrixRow     // This is a matrix vector subset, use getVector*
   } LVType;
 
   union {
@@ -197,12 +200,18 @@ class LValue {
     // Index into a vector subscript: V[i]
     llvm::Value *VectorIdx;
 
+    // Index into a matrix row subscript: M[i]
+    llvm::Value *MatrixRowIdx;
+
     // ExtVector element subset: V.xyx
     llvm::Constant *VectorElts;
 
     // BitField start bit and size
     const CGBitFieldInfo *BitFieldInfo;
   };
+
+  // Note: Only meaningful when isMatrixRow() and the row is swizzled.
+  llvm::Constant *MatrixRowElts = nullptr;
 
   QualType Type;
 
@@ -233,9 +242,6 @@ class LValue {
   // this lvalue.
   bool Nontemporal : 1;
 
-  // The pointer is known not to be null.
-  bool IsKnownNonNull : 1;
-
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
 
@@ -263,7 +269,6 @@ private:
     this->ImpreciseLifetime = false;
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
-    this->IsKnownNonNull = false;
     this->BaseIvarExp = nullptr;
   }
 
@@ -284,6 +289,10 @@ public:
   bool isExtVectorElt() const { return LVType == ExtVectorElt; }
   bool isGlobalReg() const { return LVType == GlobalReg; }
   bool isMatrixElt() const { return LVType == MatrixElt; }
+  bool isMatrixRow() const { return LVType == MatrixRow; }
+  bool isMatrixRowSwizzle() const {
+    return isMatrixRow() && MatrixRowElts != nullptr;
+  }
 
   bool isVolatileQualified() const { return Quals.hasVolatile(); }
   bool isRestrictQualified() const { return Quals.hasRestrict(); }
@@ -349,27 +358,25 @@ public:
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
-  KnownNonNull_t isKnownNonNull() const {
-    return (KnownNonNull_t)IsKnownNonNull;
-  }
+  KnownNonNull_t isKnownNonNull() const { return Addr.isKnownNonNull(); }
   LValue setKnownNonNull() {
-    IsKnownNonNull = true;
+    Addr.setKnownNonNull();
     return *this;
   }
 
   // simple lvalue
-  llvm::Value *getPointer(CodeGenFunction &CGF) const {
-    assert(isSimple());
-    return Addr.getBasePointer();
-  }
-  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
-    assert(isSimple());
-    return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;
-  }
+  llvm::Value *getPointer(CodeGenFunction &CGF) const;
+  llvm::Value *emitResignedPointer(QualType PointeeTy,
+                                   CodeGenFunction &CGF) const;
+  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const;
 
   Address getAddress() const { return Addr; }
 
   void setAddress(Address address) { Addr = address; }
+
+  CGPointerAuthInfo getPointerAuthInfo() const {
+    return Addr.getPointerAuthInfo();
+  }
 
   // vector elt lvalue
   Address getVectorAddress() const {
@@ -390,7 +397,7 @@ public:
   }
 
   Address getMatrixAddress() const {
-    assert(isMatrixElt());
+    assert(isMatrixElt() || isMatrixRow());
     return Addr;
   }
   llvm::Value *getMatrixPointer() const {
@@ -400,6 +407,16 @@ public:
   llvm::Value *getMatrixIdx() const {
     assert(isMatrixElt());
     return VectorIdx;
+  }
+
+  llvm::Value *getMatrixRowIdx() const {
+    assert(isMatrixRow());
+    return MatrixRowIdx;
+  }
+
+  llvm::Constant *getMatrixRowElts() const {
+    assert(isMatrixRowSwizzle() && "not a matrix row swizzle lvalue");
+    return MatrixRowElts;
   }
 
   // extended vector elements.
@@ -488,6 +505,31 @@ public:
                  LValueBaseInfo(AlignmentSource::Decl), TBAAAccessInfo());
     R.V = V;
     return R;
+  }
+
+  static LValue MakeMatrixRow(Address Addr, llvm::Value *RowIdx,
+                              QualType MatrixTy, LValueBaseInfo BaseInfo,
+                              TBAAAccessInfo TBAAInfo) {
+    LValue LV;
+    LV.LVType = MatrixRow;
+    LV.MatrixRowIdx = RowIdx; // store the row index here
+    LV.MatrixRowElts = nullptr; // use sequential indexing
+    LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), Addr, BaseInfo, TBAAInfo);
+    return LV;
+  }
+
+  static LValue MakeMatrixRowSwizzle(Address MatAddr, llvm::Value *RowIdx,
+                                     llvm::Constant *Cols, QualType MatrixTy,
+                                     LValueBaseInfo BaseInfo,
+                                     TBAAAccessInfo TBAAInfo) {
+    LValue LV;
+    LV.LVType = MatrixRow;
+    LV.Addr = MatAddr;
+    LV.MatrixRowIdx = RowIdx;
+    LV.MatrixRowElts = Cols; // use indices in list order
+    LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), MatAddr, BaseInfo,
+                  TBAAInfo);
+    return LV;
   }
 
   static LValue MakeMatrixElt(Address matAddress, llvm::Value *Idx,

@@ -50,10 +50,9 @@ define i32 @reduce_and4(i32 %acc, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <
 ; AVX512-LABEL: @reduce_and4(
 ; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
-; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP0]])
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
-; AVX512-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP2]])
-; AVX512-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP1]], [[TMP3]]
+; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
+; AVX512-NEXT:    [[RDX_OP:%.*]] = and <8 x i32> [[TMP0]], [[TMP1]]
+; AVX512-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[RDX_OP]])
 ; AVX512-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[ACC:%.*]]
 ; AVX512-NEXT:    ret i32 [[OP_RDX1]]
 ;
@@ -132,10 +131,9 @@ define i32 @reduce_and4_transpose(i32 %acc, <4 x i32> %v1, <4 x i32> %v2, <4 x i
 ;
 ; AVX512-LABEL: @reduce_and4_transpose(
 ; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
-; AVX512-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP1]])
-; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
-; AVX512-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
-; AVX512-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP2]], [[TMP4]]
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; AVX512-NEXT:    [[RDX_OP:%.*]] = and <8 x i32> [[TMP1]], [[TMP2]]
+; AVX512-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[RDX_OP]])
 ; AVX512-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[ACC:%.*]]
 ; AVX512-NEXT:    ret i32 [[OP_RDX1]]
 ;

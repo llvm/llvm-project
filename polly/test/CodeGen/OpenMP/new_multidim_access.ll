@@ -1,16 +1,15 @@
-; RUN: opt %loadPolly -polly-print-import-jscop \
-; RUN:                -disable-output < %s | FileCheck %s
-
-; RUN: opt %loadPolly -polly-import-jscop \
-; RUN:                -polly-codegen -S < %s \
-; RUN:                -polly-parallel \
-; RUN:                | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop>' -polly-print-import-jscop -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' -polly-print-ast -polly-parallel -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -S -polly-parallel < %s | FileCheck %s -check-prefix=IR
 
 ;    void new_multidim_access(long n, long m, float A[][m]) {
 ;      for (long i = 0; i < n; i++)
 ;        for (long j = 0; j < 100; j++)
 ;          A[i][2 * j] += i + j;
 ;    }
+
+; NOTE: The new access function has a new dependency:
+; Stmt_bb4[i0, i1] -> Stmt_bb4[i0' = i0, i1' = 30 + i1] : 0 <= i0 < n and 0 <= i1 <= 69
 
 ; CHECK:  ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:         [n, m] -> { Stmt_bb4[i0, i1] -> MemRef_A[i0, 2i1] };
@@ -19,17 +18,19 @@
 ; CHECK:         [n, m] -> { Stmt_bb4[i0, i1] -> MemRef_A[i0, 2i1] };
 ; CHECK:    new: [n, m] -> { Stmt_bb4[i0, i1] -> MemRef_A[i0, 43 + i1] };
 
+; AST: #pragma minimal dependence distance: 30
+
 ; IR: %polly.access.mul.polly.subfunc.arg.A = mul nsw i64 %polly.indvar, %polly.subfunc.arg.m
 ; IR: %6 = add nsw i64 %polly.indvar4, 13
 ; IR: %polly.access.add.polly.subfunc.arg.A = add nsw i64 %polly.access.mul.polly.subfunc.arg.A, %6
 ; IR: %polly.access.polly.subfunc.arg.A = getelementptr float, ptr %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A
-; IR: %tmp10_p_scalar_ = load float, ptr %polly.access.polly.subfunc.arg.A, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
+; IR: %tmp10_p_scalar_ = load float, ptr %polly.access.polly.subfunc.arg.A, align 4, !alias.scope !3, !noalias !6
 
 ; IR: %polly.access.mul.polly.subfunc.arg.A7 = mul nsw i64 %polly.indvar, %polly.subfunc.arg.m
 ; IR: %7 = add nsw i64 %polly.indvar4, 43
 ; IR: %polly.access.add.polly.subfunc.arg.A8 = add nsw i64 %polly.access.mul.polly.subfunc.arg.A7, %7
 ; IR: %polly.access.polly.subfunc.arg.A9 = getelementptr float, ptr %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A8
-; IR: store float %p_tmp11, ptr %polly.access.polly.subfunc.arg.A9, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
+; IR: store float %p_tmp11, ptr %polly.access.polly.subfunc.arg.A9, align 4, !alias.scope !3, !noalias !6
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @new_multidim_access(i64 %n, i64 %m, ptr %A) {

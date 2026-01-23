@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
@@ -20,7 +21,6 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
@@ -36,6 +36,12 @@ llvm::Constant *CodeGenModule::GetAddrOfThunk(StringRef Name, llvm::Type *FnTy,
                                               GlobalDecl GD) {
   return GetOrCreateLLVMFunction(Name, FnTy, GD, /*ForVTable=*/true,
                                  /*DontDefer=*/true, /*IsThunk=*/true);
+}
+
+llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTable(const CXXRecordDecl *RD) {
+  llvm::GlobalVariable *VTable =
+      CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
+  return VTable;
 }
 
 static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
@@ -124,7 +130,12 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   auto *DIS = Fn->getSubprogram();
   if (!DIS)
     return;
-  auto *NewDIS = DIS->replaceWithDistinct(DIS->clone());
+  auto *NewDIS = llvm::MDNode::replaceWithDistinct(DIS->clone());
+  // As DISubprogram remapping is avoided, clear retained nodes list of
+  // cloned DISubprogram from retained nodes local to original DISubprogram.
+  // FIXME: Thunk function signature is produced wrong in DWARF, as retained
+  // nodes are not remapped.
+  NewDIS->replaceRetainedNodes(llvm::MDTuple::get(Fn->getContext(), {}));
   VMap.MD()[DIS].reset(NewDIS);
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
@@ -727,14 +738,14 @@ static void AddPointerLayoutOffset(const CodeGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
   builder.add(llvm::ConstantExpr::getIntToPtr(
-      llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
+      llvm::ConstantInt::getSigned(CGM.PtrDiffTy, offset.getQuantity()),
       CGM.GlobalsInt8PtrTy));
 }
 
 static void AddRelativeLayoutOffset(const CodeGenModule &CGM,
                                     ConstantArrayBuilder &builder,
                                     CharUnits offset) {
-  builder.add(llvm::ConstantInt::get(CGM.Int32Ty, offset.getQuantity()));
+  builder.add(llvm::ConstantInt::getSigned(CGM.Int32Ty, offset.getQuantity()));
 }
 
 void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
@@ -770,7 +781,13 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD = component.getGlobalDecl();
+    GlobalDecl GD = component.getGlobalDecl(
+        CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+            CGM.getContext().getLangOpts()));
+
+    const bool IsThunk =
+        nextVTableThunkIndex < layout.vtable_thunks().size() &&
+        layout.vtable_thunks()[nextVTableThunkIndex].first == componentIndex;
 
     if (CGM.getLangOpts().CUDA) {
       // Emit NULL for methods we can't codegen on this
@@ -783,9 +800,12 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
           CGM.getLangOpts().CUDAIsDevice
               ? MD->hasAttr<CUDADeviceAttr>()
               : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
-      if (!CanEmitMethod)
+      if (!CanEmitMethod) {
+        if (IsThunk)
+          nextVTableThunkIndex++;
         return builder.add(
             llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+      }
       // Method is acceptable, continue processing as usual.
     }
 
@@ -831,9 +851,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       fnPtr = DeletedVirtualFn;
 
     // Thunks.
-    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
-               layout.vtable_thunks()[nextVTableThunkIndex].first ==
-                   componentIndex) {
+    } else if (IsThunk) {
       auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
 
       nextVTableThunkIndex++;
@@ -966,7 +984,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
-      CGM.getContext().getTagDeclType(Base.getBase()));
+      CGM.getContext().getCanonicalTagType(Base.getBase()));
 
   // Create and set the initializer.
   ConstantInitBuilder builder(CGM);
@@ -980,7 +998,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   assert(!VTable->isDeclaration() && "Shouldn't set properties on declaration");
   CGM.setGVProperties(VTable, RD);
 
-  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout.get());
+  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout);
 
   if (UsingRelativeLayout) {
     RemoveHwasanMetadata(VTable);
@@ -1013,7 +1031,7 @@ void CodeGenVTables::RemoveHwasanMetadata(llvm::GlobalValue *GV) const {
 // the VTable does not need a relocation and move into rodata. A frequent
 // time this can occur is for classes that should be made public from a DSO
 // (like in libc++). For cases like these, we can make the vtable hidden or
-// private and create a public alias with the same visibility and linkage as
+// internal and create a public alias with the same visibility and linkage as
 // the original vtable type.
 void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                                  llvm::StringRef AliasNameRef) {
@@ -1050,15 +1068,18 @@ void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
   VTableAlias->setVisibility(VTable->getVisibility());
   VTableAlias->setUnnamedAddr(VTable->getUnnamedAddr());
 
-  // Both of these imply dso_local for the vtable.
+  // Both of these will now imply dso_local for the vtable.
   if (!VTable->hasComdat()) {
-    // If this is in a comdat, then we shouldn't make the linkage private due to
-    // an issue in lld where private symbols can be used as the key symbol when
-    // choosing the prevelant group. This leads to "relocation refers to a
-    // symbol in a discarded section".
-    VTable->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    VTable->setLinkage(llvm::GlobalValue::InternalLinkage);
   } else {
-    // We should at least make this hidden since we don't want to expose it.
+    // If a relocation targets an internal linkage symbol, MC will generate the
+    // relocation against the symbol's section instead of the symbol itself
+    // (see ELFObjectWriter::shouldRelocateWithSymbol). If an internal symbol is
+    // in a COMDAT section group, that section might be discarded, and then the
+    // relocation to that section will generate a linker error. We therefore
+    // make COMDAT vtables hidden instead of internal: they'll still not be
+    // public, but relocations will reference the symbol instead of the section
+    // and COMDAT deduplication will thus work as expected.
     VTable->setVisibility(llvm::GlobalValue::HiddenVisibility);
   }
 
@@ -1078,9 +1099,11 @@ llvm::GlobalVariable::LinkageTypes
 CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
-
-  bool IsInNamedModule = RD->isInNamedModule();
-  // If the CXXRecordDecl are not in a module unit, we need to get
+  
+  // In windows, the linkage of vtable is not related to modules.
+  bool IsInNamedModule = !getTarget().getCXXABI().isMicrosoft() &&
+        RD->isInNamedModule();
+  // If the CXXRecordDecl is not in a module unit, we need to get
   // its key function. We're at the end of the translation unit, so the current
   // key function is fully correct.
   const CXXMethodDecl *keyFunction =
@@ -1128,7 +1151,9 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
                  llvm::Function::InternalLinkage;
 
       case TSK_ExplicitInstantiationDeclaration:
-        llvm_unreachable("Should not have been asked to emit this");
+        return IsExternalDefinition
+                   ? llvm::GlobalVariable::AvailableExternallyLinkage
+                   : llvm::GlobalVariable::ExternalLinkage;
       }
   }
 
@@ -1223,18 +1248,8 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
       TSK == TSK_ExplicitInstantiationDefinition)
     return false;
 
-  // Itanium C++ ABI [5.2.3]:
-  // Virtual tables for dynamic classes are emitted as follows:
-  //
-  // - If the class is templated, the tables are emitted in every object that
-  // references any of them.
-  // - Otherwise, if the class is attached to a module, the tables are uniquely
+  // Otherwise, if the class is attached to a module, the tables are uniquely
   // emitted in the object for the module unit in which it is defined.
-  // - Otherwise, if the class has a key function (see below), the tables are
-  // emitted in the object for the translation unit containing the definition of
-  // the key function. This is unique if the key function is not inline.
-  // - Otherwise, the tables are emitted in every object that references any of
-  // them.
   if (RD->isInNamedModule())
     return RD->shouldEmitInExternalSource();
 
@@ -1244,10 +1259,9 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   if (!keyFunction)
     return false;
 
-  const FunctionDecl *Def;
   // Otherwise, if we don't have a definition of the key function, the
   // vtable must be defined somewhere else.
-  return !keyFunction->hasBody(Def);
+  return !keyFunction->hasBody();
 }
 
 /// Given that we're currently at the end of the translation unit, and
@@ -1357,10 +1371,12 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
 void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                            llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // Emit type metadata on vtables with LTO or IR instrumentation or
+  // speculative devirtualization.
   // In IR instrumentation, the type metadata is used to find out vtable
   // definitions (for type profiling) among all global variables.
-  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr() &&
+      !getCodeGenOpts().DevirtualizeSpeculatively)
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());
@@ -1381,8 +1397,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                        AP.second.AddressPointIndex,
                    {}};
     llvm::raw_string_ostream Stream(N.TypeName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        QualType(N.Base->getTypeForDecl(), 0), Stream);
+    CanQualType T = getContext().getCanonicalTagType(N.Base);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(T, Stream);
     AddressPoints.push_back(std::move(N));
   }
 
@@ -1402,9 +1418,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
       if (Comps[I].getKind() != VTableComponent::CK_FunctionPointer)
         continue;
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
-          Context.getMemberPointerType(
-              Comps[I].getFunctionDecl()->getType(),
-              Context.getRecordType(AP.Base).getTypePtr()));
+          Context.getMemberPointerType(Comps[I].getFunctionDecl()->getType(),
+                                       /*Qualifier=*/std::nullopt, AP.Base));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true   < %s | FileCheck %s -check-prefix=lcb
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true < %s | FileCheck %s -check-prefix=lcb
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true   < %s | FileCheck %s -check-prefix=lcbn
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true < %s | FileCheck %s -check-prefix=lcbn
 
 @i = global i32 0, align 4
 @j = common global i32 0, align 4
@@ -115,7 +115,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; lcb: 	.end	btz
 ; lcbn:	.end	btz
 
-attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind }
 
 !llvm.ident = !{!0}

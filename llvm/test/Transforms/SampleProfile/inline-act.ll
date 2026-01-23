@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @t = global i32 0, align 4
 
 ; Function Attrs: nounwind uwtable
-define zeroext i1 @_Z3fooi(i32) #0 {
+define zeroext i1 @_Z3fooi(i32) {
   %switch.tableidx = sub i32 %0, 0
   %2 = icmp ult i32 %switch.tableidx, 4
   br i1 %2, label %switch.lookup, label %3
@@ -41,7 +41,7 @@ switch.lookup:                                    ; preds = %1
 }
 
 ; Function Attrs: nounwind uwtable
-define void @_Z3bari(i32) #0 !dbg !9 {
+define void @_Z3bari(i32) !dbg !9 {
   %2 = call zeroext i1 @_Z3fooi(i32 %0), !dbg !10
   br i1 %2, label %3, label %6, !dbg !10
 
@@ -54,8 +54,6 @@ define void @_Z3bari(i32) #0 !dbg !9 {
 ; <label>:6:                                      ; preds = %3, %1
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

@@ -19,7 +19,7 @@ namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
-    TEST_SKIP("Memory tagging is not supported");
+    TEST_SKIP("Memory tagging is not unsupported");
   // Skip when running with HWASan.
   if (&__hwasan_init != 0)
     TEST_SKIP("Incompatible with HWASan");
@@ -28,7 +28,6 @@ TEST(MemtagBasicDeathTest, Unsupported) {
   EXPECT_DEATH(untagPointer((uptr)0), "not supported");
   EXPECT_DEATH(extractTag((uptr)0), "not supported");
 
-  EXPECT_DEATH(systemSupportsMemoryTagging(), "not supported");
   EXPECT_DEATH(systemDetectsMemoryTagFaultsTestOnly(), "not supported");
   EXPECT_DEATH(enableSystemMemoryTaggingTestOnly(), "not supported");
 
@@ -63,7 +62,7 @@ protected:
   void TearDown() override {
     if (Buffer) {
       ASSERT_TRUE(MemMap.isAllocated());
-      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      MemMap.unmap();
     }
   }
 

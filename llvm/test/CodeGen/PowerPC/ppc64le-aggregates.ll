@@ -8,7 +8,7 @@
 ; Currently VSX support is disabled for this test because we generate lxsdx
 ; instead of lfd, and stxsdx instead of stfd.  That is a poor choice when we
 ; have reg+imm addressing, and is on the list of things to be fixed.
-; The second run step is to ensure that -march=ppc64le is adequate to select
+; The second run step is to ensure that is adequate to select
 ; the same feature set as with -mcpu=pwr8 since that is the baseline for ppc64le.
 
 target datalayout = "e-m:e-i64:64-n32:64"

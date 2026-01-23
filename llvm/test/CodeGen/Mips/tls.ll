@@ -28,10 +28,9 @@ entry:
 ; PIC64-DAG:   lw      $2, 0($2)
 
 ; MM-LABEL:       f1:
-; MM-DAG:   addu    $[[R0:[a-z0-9]+]], $2, $25
-; MM-DAG:   addiu   $4, $[[R0]], %tlsgd(t1)
-; MM-DAG:   lw      $25, %call16(__tls_get_addr)($[[R0]])
-; MM-DAG:   move    $gp, $2
+; MM-DAG:   addu    $gp, $2, $25
+; MM-DAG:   addiu   $4, $gp, %tlsgd(t1)
+; MM-DAG:   lw      $25, %call16(__tls_get_addr)($gp)
 ; MM-DAG:   jalr    $25
 ; MM-DAG:   lw16    $2, 0($2)
 }

@@ -60,4 +60,35 @@ struct alignas(std::max_align_t) MaxAligned {
 };
 #endif // TEST_STD_VER >= 17
 
+template <class F>
+void test_with_interesting_alignments(F f) {
+  // First, check the basic case, a large allocation with alignment == size.
+  f(/* size */ 64, /* alignment */ 64);
+
+  // Size being a multiple of alignment also needs to be supported.
+  f(/* size */ 64, /* alignment */ 32);
+
+  // Test with a non power-of-two size.
+  f(/* size */ 10, /* alignment */ 64);
+
+  // When aligned allocation is implemented using aligned_alloc,
+  // that function requires a minimum alignment of sizeof(void*).
+  //
+  // Check that we can also create overaligned allocations with
+  // an alignment argument less than sizeof(void*).
+  f(/* size */ 2, /* alignment */ 2);
+
+  // When implemented using the C11 aligned_alloc() function,
+  // that requires that size be a multiple of alignment.
+  // However, the C++ operator new has no such requirements.
+  //
+  // Check that we can create an overaligned allocation that does
+  // adhere to not have this constraint.
+  f(/* size */ 1, /* alignment */ 128);
+
+  // Finally, test size > alignment, but with size not being
+  // a multiple of alignment.
+  f(/* size */ 65, /* alignment */ 32);
+}
+
 #endif // TEST_STD_LANGUAGE_SUPPORT_SUPPORT_DYNAMIC_NEW_DELETE_TYPES_H

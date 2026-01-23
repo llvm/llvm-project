@@ -33,11 +33,13 @@
 
 // Platform-specific options.
 #if SANITIZER_APPLE
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
+#  define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #elif SANITIZER_WINDOWS64
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
+#  define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
+#elif SANITIZER_AIX
+#  define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #else
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 1
+#  define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 1
 #endif  // SANITIZER_APPLE
 
 #ifndef COMMON_INTERCEPTOR_MEMSET_IMPL
@@ -82,7 +84,7 @@
 #endif
 
 #if SANITIZER_INTERCEPT_MEMSET
-INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
+INTERCEPTOR(void *, memset, void *dst, int v, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size);
 }
@@ -93,7 +95,7 @@ INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
 #endif
 
 #if SANITIZER_INTERCEPT_MEMMOVE
-INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
+INTERCEPTOR(void *, memmove, void *dst, const void *src, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
 }
@@ -104,7 +106,7 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
 #endif
 
 #if SANITIZER_INTERCEPT_MEMCPY
-INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
+INTERCEPTOR(void *, memcpy, void *dst, const void *src, usize size) {
   // On OS X, calling internal_memcpy here will cause memory corruptions,
   // because memcpy and memmove are actually aliases of the same
   // implementation.  We need to use internal_memmove here.
@@ -133,63 +135,63 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
 #endif
 
 #if SANITIZER_INTERCEPT_AEABI_MEM
-INTERCEPTOR(void *, __aeabi_memmove, void *to, const void *from, uptr size) {
+INTERCEPTOR(void *, __aeabi_memmove, void *to, const void *from, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memmove4, void *to, const void *from, uptr size) {
+INTERCEPTOR(void *, __aeabi_memmove4, void *to, const void *from, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memmove8, void *to, const void *from, uptr size) {
+INTERCEPTOR(void *, __aeabi_memmove8, void *to, const void *from, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memcpy, void *to, const void *from, uptr size) {
+INTERCEPTOR(void *, __aeabi_memcpy, void *to, const void *from, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memcpy4, void *to, const void *from, uptr size) {
+INTERCEPTOR(void *, __aeabi_memcpy4, void *to, const void *from, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memcpy8, void *to, const void *from, uptr size) {
+INTERCEPTOR(void *, __aeabi_memcpy8, void *to, const void *from, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size);
 }
 
 // Note the argument order.
-INTERCEPTOR(void *, __aeabi_memset, void *block, uptr size, int c) {
+INTERCEPTOR(void *, __aeabi_memset, void *block, usize size, int c) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memset4, void *block, uptr size, int c) {
+INTERCEPTOR(void *, __aeabi_memset4, void *block, usize size, int c) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memset8, void *block, uptr size, int c) {
+INTERCEPTOR(void *, __aeabi_memset8, void *block, usize size, int c) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memclr, void *block, uptr size) {
+INTERCEPTOR(void *, __aeabi_memclr, void *block, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memclr4, void *block, uptr size) {
+INTERCEPTOR(void *, __aeabi_memclr4, void *block, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
 }
 
-INTERCEPTOR(void *, __aeabi_memclr8, void *block, uptr size) {
+INTERCEPTOR(void *, __aeabi_memclr8, void *block, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
 }
@@ -212,7 +214,7 @@ INTERCEPTOR(void *, __aeabi_memclr8, void *block, uptr size) {
 #endif  // SANITIZER_INTERCEPT_AEABI_MEM
 
 #if SANITIZER_INTERCEPT___BZERO
-INTERCEPTOR(void *, __bzero, void *block, uptr size) {
+INTERCEPTOR(void *, __bzero, void *block, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
 }
@@ -222,7 +224,7 @@ INTERCEPTOR(void *, __bzero, void *block, uptr size) {
 #endif  // SANITIZER_INTERCEPT___BZERO
 
 #if SANITIZER_INTERCEPT_BZERO
-INTERCEPTOR(void *, bzero, void *block, uptr size) {
+INTERCEPTOR(void *, bzero, void *block, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
 }

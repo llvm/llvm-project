@@ -1,0 +1,43 @@
+name: Commit Access Review
+
+on:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 7 1 * *'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  commit-access-review:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+      
+      - name: Run Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
+
+      - name: Upload Triage List
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: triagers
+          path: triagers.log
+
+      - name: Create the issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # There is a limit to the number of mentions you can have in one comment, so
+          # we need to limit the number of users we mention.
+          cat triagers.log | head -n 25 | python3 .github/workflows/commit-create-issue.py $GITHUB_TOKEN

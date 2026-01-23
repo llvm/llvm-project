@@ -11,12 +11,12 @@ target triple = "x86_64-apple-darwin"
 
 ; CHECK: if.end:
 ; CHECK: phi ptr [ %first.lcssa, %early.exit ]
-define i32 @test(ptr %first, ptr %last) uwtable ssp {
+define i32 @test(ptr %first, ptr %last, i1 %arg) uwtable ssp {
 entry:
-  br i1 undef, label %if.end, label %if.then
+  br i1 %arg, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  br i1 undef, label %if.end, label %do.body
+  br i1 %arg, label %if.end, label %do.body
 
 do.body:                                          ; preds = %if.else, %if.then
   %firstIV = phi ptr [ %incdec.ptr2, %if.else ], [ %first, %if.then ]

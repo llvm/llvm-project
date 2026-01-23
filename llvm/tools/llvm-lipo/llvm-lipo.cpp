@@ -49,7 +49,6 @@ static const StringRef ToolName = "llvm-lipo";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   reportError(Buf);
 }
 
@@ -58,7 +57,6 @@ static const StringRef ToolName = "llvm-lipo";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
   exit(EXIT_FAILURE);
 }
@@ -72,12 +70,13 @@ enum LipoID {
 };
 
 namespace lipo {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "LipoOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "LipoOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
@@ -89,7 +88,9 @@ static constexpr opt::OptTable::Info LipoInfoTable[] = {
 
 class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
+  LipoOptTable()
+      : opt::GenericOptTable(lipo::OptionStrTable, lipo::OptionPrefixesTable,
+                             lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {
@@ -142,7 +143,7 @@ static void validateArchitectureName(StringRef ArchitectureName) {
        << "\nValid architecture names are:";
     for (auto arch : MachOObjectFile::getValidArchs())
       OS << " " << arch;
-    reportError(OS.str());
+    reportError(Buf);
   }
 }
 
@@ -241,13 +242,13 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     OS << "only one of the following actions can be specified:";
     for (auto *Arg : ActionArgs)
       OS << " " << Arg->getSpelling();
-    reportError(OS.str());
+    reportError(Buf);
   }
 
   switch (ActionArgs[0]->getOption().getID()) {
   case LIPO_verify_arch:
-    for (auto A : InputArgs.getAllArgValues(LIPO_verify_arch))
-      C.VerifyArchList.push_back(A);
+    llvm::append_range(C.VerifyArchList,
+                       InputArgs.getAllArgValues(LIPO_verify_arch));
     if (C.VerifyArchList.empty())
       reportError(
           "verify_arch requires at least one architecture to be specified");
@@ -422,6 +423,11 @@ static void printBinaryArchs(LLVMContext &LLVMCtx, const Binary *Binary,
     return;
   }
 
+  if (const auto *A = dyn_cast<Archive>(Binary)) {
+    OS << createSliceFromArchive(LLVMCtx, *A).getArchString() << "\n";
+    return;
+  }
+
   // This should be always the case, as this is tested in readInputBinaries
   const auto *IR = cast<IRObjectFile>(Binary);
   Expected<Slice> SliceOrErr = createSliceFromIR(*IR, 0);
@@ -452,7 +458,8 @@ printInfo(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries) {
   for (auto &IB : InputBinaries) {
     const Binary *Binary = IB.getBinary();
     if (!Binary->isMachOUniversalBinary()) {
-      assert(Binary->isMachO() && "expected MachO binary");
+      assert((Binary->isMachO() || Binary->isArchive()) &&
+             "expected MachO binary");
       outs() << "Non-fat file: " << Binary->getFileName()
              << " is architecture: ";
       printBinaryArchs(LLVMCtx, Binary, outs());

@@ -1,17 +1,21 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+# `exec_script_allowlist` was added in GN version 2207, so that's the minimum
+# version of GN we require.
+assert(gn_version >= 2207,
+       "Your GN is too old! Update it, perhaps by running llvm/utils/gn/get.py")
 
 group("default") {
   deps = [
     "//clang-tools-extra/clangd/test",
-    "//clang-tools-extra/pseudo/test",
     "//clang-tools-extra/test",
     "//clang/test",
     "//clang/tools/scan-build",
     "//compiler-rt",
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
+    "//compiler-rt/test/builtins",
     "//lld/test",
     "//lldb/test",
     "//llvm/test",
@@ -22,12 +26,12 @@ group("default") {
       "//libcxxabi",
     ]
   }
-  if (current_os == "linux" || current_os == "win" || current_os=="mac") {
+  if (current_os == "linux" || current_os == "win" || current_os == "mac") {
     deps += [ "//compiler-rt/test/asan" ]
   }
 
   if (current_os == "linux" || current_os == "mac") {
-    deps += [ "//compiler-rt/test/lsan"]
+    deps += [ "//compiler-rt/test/lsan" ]
   }
 
   if (current_os == "linux" || current_os == "android") {
@@ -101,6 +105,9 @@ group("llvm-libtool-darwin") {
 }
 group("llvm-lipo") {
   deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
+}
+group("llvm-ml") {
+  deps = [ "//llvm/tools/llvm-ml:symlinks" ]
 }
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]

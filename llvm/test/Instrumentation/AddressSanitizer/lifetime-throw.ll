@@ -24,7 +24,7 @@ entry:
 
   call void @llvm.lifetime.start.p0(i64 4, ptr %x)
   ; CHECK: store i8 4, ptr %{{[0-9]+}}
-  ; CHECK-NEXT: @llvm.lifetime.start
+  ; CHECK-NOT: @llvm.lifetime.start
 
   %exception = call ptr @__cxa_allocate_exception(i64 4)
   invoke void @__cxa_throw(ptr %exception, ptr @_ZTI3ABC, ptr @_ZN3ABCD2Ev) noreturn
@@ -38,7 +38,7 @@ lpad:
   call void @_ZN3ABCD2Ev(ptr nonnull %x)
   call void @llvm.lifetime.end.p0(i64 4, ptr %x)
   ; CHECK: store i8 -8, ptr %{{[0-9]+}}
-  ; CHECK-NEXT: @llvm.lifetime.end
+  ; CHECK-NOT: @llvm.lifetime.end
 
   resume { ptr, i32 } %0
   ; CHECK: store i64 0, ptr %{{[0-9]+}}
@@ -77,7 +77,7 @@ entry:
 
   call void @llvm.lifetime.start.p0(i64 4, ptr %x)
   ; CHECK: store i8 4, ptr %{{[0-9]+}}
-  ; CHECK-NEXT: @llvm.lifetime.start
+  ; CHECK-NOT: @llvm.lifetime.start
 
   invoke void @_CxxThrowException(ptr %tmp, ptr nonnull @"_TI1?AUABC@@") noreturn
           to label %unreachable unwind label %ehcleanup
@@ -89,7 +89,7 @@ ehcleanup:
   call void @"\01??1ABC@@QEAA@XZ"(ptr nonnull %x) [ "funclet"(token %0) ]
   call void @llvm.lifetime.end.p0(i64 4, ptr %x)
   ; CHECK: store i8 -8, ptr %{{[0-9]+}}
-  ; CHECK-NEXT: @llvm.lifetime.end
+  ; CHECK-NOT: @llvm.lifetime.end
 
   cleanupret from %0 unwind to caller
   ; CHECK: store i64 0, ptr %{{[0-9]+}}

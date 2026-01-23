@@ -9,9 +9,6 @@ target triple = "wasm32-unknown-unknown"
 ; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -wasm-enable-sjlj 2>&1 | FileCheck %s --check-prefix=EM_EH_W_WASM_SJLJ
 ; EM_EH_W_WASM_SJLJ: LLVM ERROR: -enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj
 
-; RUN: not --crash llc < %s -wasm-enable-exnref 2>&1 | FileCheck %s --check-prefix=WASM_EXNREF_ONLY
-; WASM_EXNREF_ONLY: LLVM ERROR: -wasm-enable-exnref should be used with -wasm-enable-eh
-
 ; RUN: not --crash llc < %s -wasm-enable-eh -exception-model=dwarf 2>&1 | FileCheck %s --check-prefix=EH_MODEL_DWARF
 ; EH_MODEL_DWARF: LLVM ERROR: -exception-model should be either 'none' or 'wasm'
 

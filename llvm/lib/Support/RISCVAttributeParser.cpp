@@ -15,19 +15,19 @@ const RISCVAttributeParser::DisplayHandler
     RISCVAttributeParser::displayRoutines[] = {
         {
             RISCVAttrs::ARCH,
-            &ELFAttributeParser::stringAttribute,
+            &ELFCompactAttrParser::stringAttribute,
         },
         {
             RISCVAttrs::PRIV_SPEC,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             RISCVAttrs::PRIV_SPEC_MINOR,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             RISCVAttrs::PRIV_SPEC_REVISION,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             RISCVAttrs::STACK_ALIGN,
@@ -50,7 +50,8 @@ Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
 }
 
 Error RISCVAttributeParser::unalignedAccess(unsigned tag) {
-  static const char *strings[] = {"No unaligned access", "Unaligned access"};
+  static const char *const strings[] = {"No unaligned access",
+                                        "Unaligned access"};
   return parseStringAttribute("Unaligned_access", tag, ArrayRef(strings));
 }
 

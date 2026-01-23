@@ -30,6 +30,12 @@ tablegen("PPCGenRegisterBank") {
   td_file = "PPC.td"
 }
 
+tablegen("PPCGenSDNodeInfo") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "PPC.td"
+}
+
 static_library("LLVMPowerPCCodeGen") {
   deps = [
     ":PPCGenCallingConv",
@@ -37,6 +43,8 @@ static_library("LLVMPowerPCCodeGen") {
     ":PPCGenFastISel",
     ":PPCGenGlobalISel",
     ":PPCGenRegisterBank",
+    ":PPCGenSDNodeInfo",
+    "AsmParser:PPCGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -62,13 +70,11 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCBoolRetToInt.cpp",
     "PPCBranchCoalescing.cpp",
     "PPCBranchSelector.cpp",
-    "PPCCCState.cpp",
     "PPCCTRLoops.cpp",
     "PPCCTRLoopsVerify.cpp",
     "PPCCallingConv.cpp",
     "PPCEarlyReturn.cpp",
     "PPCExpandAtomicPseudoInsts.cpp",
-    "PPCExpandISEL.cpp",
     "PPCFastISel.cpp",
     "PPCFrameLowering.cpp",
     "PPCGenScalarMASSEntries.cpp",
@@ -83,19 +89,19 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCMachineFunctionInfo.cpp",
     "PPCMachineScheduler.cpp",
     "PPCMacroFusion.cpp",
-    "PPCMergeStringPool.cpp",
     "PPCPreEmitPeephole.cpp",
     "PPCReduceCRLogicals.cpp",
     "PPCRegisterInfo.cpp",
+    "PPCSelectionDAGInfo.cpp",
     "PPCSubtarget.cpp",
     "PPCTLSDynamicCall.cpp",
     "PPCTOCRegDeps.cpp",
     "PPCTargetMachine.cpp",
     "PPCTargetObjectFile.cpp",
     "PPCTargetTransformInfo.cpp",
-    "PPCVSXCopy.cpp",
     "PPCVSXFMAMutate.cpp",
     "PPCVSXSwapRemoval.cpp",
+    "PPCVSXWACCCopy.cpp",
   ]
 }
 

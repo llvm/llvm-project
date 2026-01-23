@@ -30,6 +30,8 @@
 #endif
 
 
+PPC_VECTOR_MMA_TYPE(__dmr2048, DMR2048, 2048)
+PPC_VECTOR_MMA_TYPE(__dmr1024, DMR1024, 1024)
 PPC_VECTOR_MMA_TYPE(__vector_quad, VectorQuad, 512)
 PPC_VECTOR_VSX_TYPE(__vector_pair, VectorPair, 256)
 

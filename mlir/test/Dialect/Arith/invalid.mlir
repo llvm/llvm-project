@@ -74,7 +74,7 @@ func.func @constant_out_of_range() {
 
 func.func @constant_invalid_scalable_1d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
   return
 }
@@ -83,7 +83,7 @@ func.func @constant_invalid_scalable_1d_vec_initialization() {
 
 func.func @constant_invalid_scalable_2d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
   return
 }
@@ -852,4 +852,20 @@ func.func @select_tensor_encoding(
   // expected-error @+1 {{'arith.select' op expected condition type to have the same shape as the result type}}
   %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "bar">, tensor<8xi32, "foo">
   return %0 : tensor<8xi32, "foo">
+}
+
+// -----
+
+func.func @bitcast_index_0(%arg0 : i64) -> index {
+  // expected-error @+1 {{'arith.bitcast' op result #0 must be signless-integer-or-float-like or memref of signless-integer or float, but got 'index'}}
+  %0 = arith.bitcast %arg0 : i64 to index
+  return %0 : index
+}
+
+// -----
+
+func.func @bitcast_index_1(%arg0 : index) -> i64 {
+  // expected-error @+1 {{'arith.bitcast' op operand #0 must be signless-integer-or-float-like or memref of signless-integer or float, but got 'index'}}
+  %0 = arith.bitcast %arg0 : index to i64
+  return %0 : i64
 }

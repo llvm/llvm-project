@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -relocation-model=pic < %s | FileCheck %s
 
 define private void @f1() {
   ret void

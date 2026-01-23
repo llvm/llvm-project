@@ -65,8 +65,8 @@ public:
 template <typename FuncMatcherT = ast_matchers::internal::TrueMatcher>
 BuildResult BuildCFG(const char *Code, CFG::BuildOptions Options = {},
                      FuncMatcherT FuncMatcher = ast_matchers::anything()) {
-  std::vector<std::string> Args = {"-std=c++11",
-                                   "-fno-delayed-template-parsing"};
+  const std::vector<std::string> Args = {
+      "-std=c++11", "-fno-delayed-template-parsing", "-Wno-everything"};
   std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCodeWithArgs(Code, Args);
   if (!AST)
     return BuildResult::ToolFailed;

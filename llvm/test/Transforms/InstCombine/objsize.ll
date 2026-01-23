@@ -14,19 +14,17 @@ define i32 @foo() nounwind {
   ret i32 %1
 }
 
-define ptr @bar() nounwind {
+define ptr @bar(ptr %retval) nounwind {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    br i1 true, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret ptr [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RETVAL:%.*]], align 4
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    ret ptr poison
 ;
 entry:
-  %retval = alloca ptr
   %0 = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
   %cmp = icmp ne i32 %0, -1
   br i1 %cmp, label %cond.true, label %cond.false
@@ -64,7 +62,7 @@ define i1 @baz() nounwind {
 define void @test1(ptr %q, i32 %x) nounwind noinline {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds (i8, ptr @window, i32 10), i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds nuw (i8, ptr @window, i32 10), i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %"47", label %"46"
 ; CHECK:       "46":
@@ -112,7 +110,7 @@ define void @test3(i1 %c1, ptr %ptr1, ptr %ptr2, ptr %ptr3) nounwind {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__inline_memcpy_chk(ptr nonnull getelementptr inbounds (i8, ptr @array, i32 4), ptr [[PTR3:%.*]], i32 512) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__inline_memcpy_chk(ptr nonnull getelementptr inbounds nuw (i8, ptr @array, i32 4), ptr [[PTR3:%.*]], i32 512) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:

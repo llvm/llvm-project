@@ -1,4 +1,4 @@
-//===--- RedundantPreprocessorCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@ public:
 
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override {
-    StringRef Condition =
+    const StringRef Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
                              PP.getSourceManager(), PP.getLangOpts());
     checkMacroRedundancy(Loc, Condition, IfStack, DK_If, DK_If, true);
@@ -44,7 +44,7 @@ public:
 
   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
              const MacroDefinition &MacroDefinition) override {
-    std::string MacroName = PP.getSpelling(MacroNameTok);
+    const std::string MacroName = PP.getSpelling(MacroNameTok);
     checkMacroRedundancy(Loc, MacroName, IfdefStack, DK_Ifdef, DK_Ifdef, true);
     checkMacroRedundancy(Loc, MacroName, IfndefStack, DK_Ifdef, DK_Ifndef,
                          false);
@@ -52,7 +52,7 @@ public:
 
   void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
               const MacroDefinition &MacroDefinition) override {
-    std::string MacroName = PP.getSpelling(MacroNameTok);
+    const std::string MacroName = PP.getSpelling(MacroNameTok);
     checkMacroRedundancy(Loc, MacroName, IfndefStack, DK_Ifndef, DK_Ifndef,
                          true);
     checkMacroRedundancy(Loc, MacroName, IfdefStack, DK_Ifndef, DK_Ifdef,

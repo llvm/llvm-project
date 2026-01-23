@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonInstrInfo.h"
-#include "Hexagon.h"
 #include "HexagonFrameLowering.h"
 #include "HexagonHazardRecognizer.h"
 #include "HexagonRegisterInfo.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -46,7 +45,6 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -119,9 +117,10 @@ const int Hexagon_ADDI_OFFSET_MIN = -32768;
 // Pin the vtable to this file.
 void HexagonInstrInfo::anchor() {}
 
-HexagonInstrInfo::HexagonInstrInfo(HexagonSubtarget &ST)
-  : HexagonGenInstrInfo(Hexagon::ADJCALLSTACKDOWN, Hexagon::ADJCALLSTACKUP),
-    Subtarget(ST) {}
+HexagonInstrInfo::HexagonInstrInfo(const HexagonSubtarget &ST)
+    : HexagonGenInstrInfo(ST, RegInfo, Hexagon::ADJCALLSTACKDOWN,
+                          Hexagon::ADJCALLSTACKUP),
+      RegInfo(ST.getHwMode()), Subtarget(ST) {}
 
 namespace llvm {
 namespace HexagonFUnits {
@@ -798,7 +797,11 @@ public:
     Loop->getOperand(1).setReg(NewLoopCount);
   }
 
-  void disposed() override { Loop->eraseFromParent(); }
+  void disposed(LiveIntervals *LIS) override {
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(*Loop);
+    Loop->eraseFromParent();
+  }
 };
 } // namespace
 
@@ -856,8 +859,10 @@ static void getLiveOutRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
 
 void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
   unsigned KillFlag = getKillRegState(KillSrc);
 
@@ -959,8 +964,8 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator I,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1007,8 +1012,8 @@ void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator I,
                                             Register DestReg, int FI,
                                             const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+                                            Register VReg, unsigned SubReg,
+                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1550,80 +1555,93 @@ HexagonInstrInfo::expandVGatherPseudo(MachineInstr &MI) const {
   MachineBasicBlock::iterator First;
 
   switch (Opc) {
-    case Hexagon::V6_vgathermh_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgather_vscatter_mh_pseudo:
+    // This is mainly a place holder. It will be extended.
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vscattermh))
+        .add(MI.getOperand(2))
+        .add(MI.getOperand(3))
+        .add(MI.getOperand(4))
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
+  case Hexagon::V6_vgathermh_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermw_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermw))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermw_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermw))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermhw_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhw))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermhw_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhw))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermhq_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhq))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4))
-                  .add(MI.getOperand(5));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermhq_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhq))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4))
+                .add(MI.getOperand(5));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermwq_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermwq))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4))
-                  .add(MI.getOperand(5));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermwq_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermwq))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4))
+                .add(MI.getOperand(5));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermhwq_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhwq))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4))
-                  .add(MI.getOperand(5));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermhwq_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhwq))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4))
+                .add(MI.getOperand(5));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
   }
 
   return MI.getIterator();
@@ -1788,6 +1806,20 @@ bool HexagonInstrInfo::isPredicable(const MachineInstr &MI) const {
     }
   }
   return true;
+}
+
+bool HexagonInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                   bool Invert) const {
+  if (Invert)
+    return false;
+
+  switch (Inst.getOpcode()) {
+  // TODO: Add more instructions to be handled by MachineCombiner.
+  case Hexagon::F2_sfadd:
+    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc);
+  default:
+    return false;
+  }
 }
 
 bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
@@ -2237,7 +2269,7 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
   return false;
 }
 
-// Returns true if the instruction is alread a .cur.
+// Returns true if the instruction is already a .cur.
 bool HexagonInstrInfo::isDotCurInst(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case Hexagon::V6_vL32b_cur_pi:
@@ -2800,7 +2832,9 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_cur_npred_ai:
   case Hexagon::V6_vL32b_nt_tmp_pred_ai:
   case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vS32Ub_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
+  case Hexagon::V6_vgather_vscatter_mh_pseudo:
   case Hexagon::V6_vgathermw_pseudo:
   case Hexagon::V6_vgathermhw_pseudo:
   case Hexagon::V6_vgathermhq_pseudo:
@@ -3292,11 +3326,11 @@ HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
                                    LocationSize &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
-      getAddrMode(MI) != HexagonII::BaseLongOffset &&
-      !isMemOp(MI) && !isPostIncrement(MI))
+      getAddrMode(MI) != HexagonII::BaseLongOffset && !isMemOp(MI) &&
+      !isPostIncrement(MI))
     return nullptr;
 
-  AccessSize = getMemAccessSize(MI);
+  AccessSize = LocationSize::precise(getMemAccessSize(MI));
 
   unsigned BasePos = 0, OffsetPos = 0;
   if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
@@ -3857,7 +3891,7 @@ int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
 int HexagonInstrInfo::getDotNewPredOp(const MachineInstr &MI,
       const MachineBranchProbabilityInfo *MBPI) const {
   switch (MI.getOpcode()) {
-  // Condtional Jumps
+  // Conditional Jumps
   case Hexagon::J2_jumpt:
   case Hexagon::J2_jumpf:
     return getDotNewPredJumpOp(MI, MBPI);
@@ -4322,7 +4356,7 @@ unsigned HexagonInstrInfo::getInstrTimingClassLatency(
 /// operand latency. But it may not be possible for instructions with variable
 /// number of defs / uses.
 ///
-/// This is a raw interface to the itinerary that may be directly overriden by
+/// This is a raw interface to the itinerary that may be directly overridden by
 /// a target. Use computeOperandLatency to get the best estimate of latency.
 std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
     const InstrItineraryData *ItinData, const MachineInstr &DefMI,
@@ -4732,6 +4766,19 @@ bool HexagonInstrInfo::getBundleNoShuf(const MachineInstr &MIB) const {
   assert(MIB.isBundle());
   const MachineOperand &Operand = MIB.getOperand(0);
   return (Operand.isImm() && (Operand.getImm() & memShufDisabledMask) != 0);
+}
+
+bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
+  return (MI->getOpcode() == Hexagon::V6_vmpy_qf16_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_sf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16 ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_qf16 ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32);
 }
 
 // Addressing mode relations.

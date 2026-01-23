@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -59,7 +58,7 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       config.followEquivalentOnly = true;
       config.alwaysIncludeLeaves = false;
       SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
-          in->get(), /*condition=*/
+          in, /*condition=*/
           [&](Value val) {
             return val.getDefiningOp<tensor::EmptyOp>() &&
                    val.getType() == in->get().getType();

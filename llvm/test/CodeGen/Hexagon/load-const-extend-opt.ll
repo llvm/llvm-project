@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ; This test checks the case if there are more than 2 uses of a constan address, move the
 ; value in to a register and replace all instances of constant with the register.
 ; The GenMemAbsolute pass generates a absolute-set instruction if there are more

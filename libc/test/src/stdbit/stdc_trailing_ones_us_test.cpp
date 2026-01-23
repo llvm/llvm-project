@@ -17,5 +17,7 @@ TEST(LlvmLibcStdcTrailingOnesUsTest, ALL) {
 
 TEST(LlvmLibcStdcTrailingOnesUsTest, ZeroHot) {
   for (unsigned i = 0U; i != USHRT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_trailing_ones_us(~(1U << i)), i);
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_trailing_ones_us(
+                  static_cast<unsigned short>(~(1U << i))),
+              i);
 }

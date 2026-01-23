@@ -38,6 +38,44 @@ def OpenMP_MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
   let summary = "Type for representing omp map clause bounds information";
 }
 
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Info Type
+//===---------------------------------------------------------------------===//
+
+def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
+  let summary = "Type for representing a reference to a canonical loop";
+  let description = [{
+    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
+    canonical loop in the same function. Values of this type are not
+    available at runtime and therefore cannot be used by the program itself,
+    i.e. an opaque type. It is similar to the transform dialect's
+    `!transform.interface` type, but instead of implementing an interface
+    for each transformation, the OpenMP dialect itself defines possible
+    operations on this type.
+
+    A value of type CanonicalLoopInfoType (in the following: CLI) value can be
+
+    1. created by omp.new_cli.
+    2. passed to omp.canonical_loop to associate the loop to that CLI. A CLI
+       can only be associated once.
+    3. passed to an omp loop transformation operation that modifies the loop
+       associated with the CLI. The CLI is the "applyee" and the operation is
+       the consumer. A CLI can only be consumed once.
+    4. passed to an omp loop transformation operation to associate the cli with
+       a result of that transformation. The CLI is the "generatee" and the
+       operation is the generator.
+
+    A CLI cannot
+
+    1. be returned from a function.
+    2. be passed to operations that are not specifically designed to take a
+       CanonicalLoopInfoType, including AnyType.
+
+    A CLI directly corresponds to an object of
+    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Base classes for OpenMP dialect operations.
 //===----------------------------------------------------------------------===//
@@ -59,18 +97,14 @@ def OpenMP_MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
 // Optionally, operation traits and extra class declarations might be attached
 // to clauses, which will be forwarded to all operations that include them.
 //
-// Each clause must specify whether it's required or optional. This impacts how
-// the `assemblyFormat` for operations including it get generated.
-//
 // An `OpenMP_Op` can inhibit the inheritance of `traits`, `arguments`,
-// `assemblyFormat`, `description` and `extraClassDeclaration` fields from any
-// given `OpenMP_Clause` by setting to 1 the corresponding "skip" template
-// argument bit.
-class OpenMP_Clause<bit isRequired, bit skipTraits, bit skipArguments,
-                    bit skipAssemblyFormat, bit skipDescription,
-                    bit skipExtraClassDeclaration> {
-  bit required = isRequired;
-
+// `description` and `extraClassDeclaration` fields from any given
+// `OpenMP_Clause` by setting to 1 the corresponding "skip" template argument
+// bit. Additionally, the `skipAssemblyFormat` bit inhibits the inheritance of
+// fields used to populate `OpenMP_Op`'s `assemblyFormat` (i.e.
+// `reqAssemblyFormat` and `optAssemblyFormat`).
+class OpenMP_Clause<bit skipTraits, bit skipArguments, bit skipAssemblyFormat,
+                    bit skipDescription, bit skipExtraClassDeclaration> {
   bit ignoreTraits = skipTraits;
   list<Trait> traits = [];
 
@@ -78,7 +112,8 @@ class OpenMP_Clause<bit isRequired, bit skipTraits, bit skipArguments,
   dag arguments;
 
   bit ignoreAsmFormat = skipAssemblyFormat;
-  string assemblyFormat = "";
+  string reqAssemblyFormat = "";
+  string optAssemblyFormat = "";
 
   bit ignoreDesc = skipDescription;
   string description = "";
@@ -98,15 +133,16 @@ class OpenMP_Clause<bit isRequired, bit skipTraits, bit skipArguments,
 //     are saved to a `clausesArgs` field to allow overriding the arguments
 //     field in the definition of the operation and still being able to include
 //     those inherited from clauses.
-//   - `assemblyFormat`: It is a concatenation of the `assemblyFormat` of
-//     all required clauses followed by an `oilist()` containing the
-//     `assemblyFormat` of all optional clauses. The format string is completed
-//     with $region (if `singleRegion = true`) followed by attr-dict. This field
-//     remains uninitialized if no non-empty `assemblyFormat` strings are
-//     inherited from clauses. The `clausesAssemblyFormat` field holds
-//     all the format except for "$region attr-dict", so that an operation
-//     overriding `assemblyFormat` can still benefit from the auto-generated
-//     format for its clauses.
+//   - `assemblyFormat`: It is a concatenation of the `reqAssemblyFormat`
+//     followed by an `oilist()` containing the `optAssemblyFormat` of all
+//     clauses. The format string is completed with $region (if `singleRegion =
+//     true`) followed by `attr-dict`. This field remains uninitialized if no
+//     non-empty `{req,opt}AssemblyFormat` strings are inherited from clauses.
+//     The `clausesAssemblyFormat` field holds all the format string except for
+//     "$region attr-dict", and the `clauses{Req,Opt}AssemblyFormat` fields
+//     hold the required and optional parts of the format string separately, so
+//     that an operation overriding `assemblyFormat` can still benefit from the
+//     auto-generated format for its clauses.
 //   - `description`: This is still required to be defined by the operation.
 //     However, a `clausesDescription` field is provided containing a
 //     concatenation of descriptions of all clauses, to be appended to the
@@ -135,6 +171,8 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = [],
         traits
       )
     )> {
+  list<OpenMP_Clause> clauseList = clauses;
+
   // Aggregate `arguments` fields of all clauses into a single dag, to be used
   // by operations to populate their `arguments` field.
   defvar argsFilteredClauses =
@@ -151,31 +189,29 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = [],
   // characters.
 
   // Required clauses.
-  defvar reqClauses = !filter(clause, clauses, clause.required);
   defvar asmFormatFilteredReqClauses =
-    !filter(clause, reqClauses, !not(!or(clause.ignoreAsmFormat,
-                                     !empty(clause.assemblyFormat))));
+    !filter(clause, clauses, !not(!or(clause.ignoreAsmFormat,
+                                     !empty(clause.reqAssemblyFormat))));
 
   defvar asmFormatReqClauseStrings =
-    !foreach(clause, asmFormatFilteredReqClauses, clause.assemblyFormat);
+    !foreach(clause, asmFormatFilteredReqClauses, clause.reqAssemblyFormat);
 
-  defvar asmFormatReqClauseBody = !interleave(asmFormatReqClauseStrings, " ");
+  string clausesReqAssemblyFormat = !interleave(asmFormatReqClauseStrings, " ");
 
   // Optional clauses.
-  defvar optClauses = !filter(clause, clauses, !not(clause.required));
   defvar asmFormatFilteredOptClauses =
-    !filter(clause, optClauses, !not(!or(clause.ignoreAsmFormat,
-                                     !empty(clause.assemblyFormat))));
+    !filter(clause, clauses, !not(!or(clause.ignoreAsmFormat,
+                                     !empty(clause.optAssemblyFormat))));
 
   defvar asmFormatOptClauseStrings =
-    !foreach(clause, asmFormatFilteredOptClauses, clause.assemblyFormat);
+    !foreach(clause, asmFormatFilteredOptClauses, clause.optAssemblyFormat);
 
-  defvar asmFormatOptClauseBody = !interleave(asmFormatOptClauseStrings, "|");
+  string clausesOptAssemblyFormat = !interleave(asmFormatOptClauseStrings, "|");
 
   string clausesAssemblyFormat =
-    !if(!empty(asmFormatReqClauseStrings), "", asmFormatReqClauseBody # " ") #
+    !if(!empty(asmFormatReqClauseStrings), "", clausesReqAssemblyFormat # " ") #
     !if(!empty(asmFormatOptClauseStrings), "",
-        "oilist(" # asmFormatOptClauseBody # ")");
+        "oilist(" # clausesOptAssemblyFormat # ")");
 
   // Put together descriptions of all clauses into a single string.
   defvar descFilteredClauses =
@@ -204,6 +240,44 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = [],
   // By default, the op will have zero regions. Setting `singleRegion = true`
   // will result in a single region named `$region`.
   let regions = !if(singleRegion, (region AnyRegion:$region), (region));
+}
+
+
+// Base class for OpenMP loop transformations (that either consume or generate
+// loops)
+//
+// Doesn't actually create a C++ base class (only defines default values for
+// tablegen classes that derive from this). Use LoopTransformationInterface
+// instead for common operations.
+class OpenMPTransform_Op<string mnemonic,
+                         list<Trait> traits = [],
+                         list<OpenMP_Clause> clauses = []> :
+      OpenMP_Op<mnemonic,
+                traits = !listconcat([DeclareOpInterfaceMethods<LoopTransformationInterface>], traits),
+                clauses = clauses> {
+}
+
+// Base clause for loop transformations using the standard syntax.
+//
+//     omp.opname ($generatees) <- ($applyees) clause(...) clause(...) ... <attr-dicr>
+//     omp.opname                  ($applyees) clause(...) clause(...) ... <attr-dict>
+//
+// $generatees is optional and is assumed to be empty if omitted
+class OpenMPTransformBase_Op<string mnemonic,
+                         list<Trait> traits = [],
+                         list<OpenMP_Clause> clauses = []> :
+      OpenMPTransform_Op<mnemonic,
+                         traits = !listconcat(traits, [AttrSizedOperandSegments]),
+                         clauses = clauses> {
+
+  let arguments = !con(
+                       (ins Variadic<CanonicalLoopInfoType>:$generatees,
+                            Variadic<CanonicalLoopInfoType>:$applyees
+                      ), clausesArgs);
+
+  let assemblyFormat = [{ custom<LoopTransformClis>($generatees, $applyees) }]
+                         # clausesAssemblyFormat
+                         # [{ attr-dict }];
 }
 
 #endif  // OPENMP_OP_BASE

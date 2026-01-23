@@ -27,7 +27,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -51,6 +50,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -161,7 +161,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
 
@@ -170,7 +170,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
             !this_var_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
       }
@@ -191,7 +191,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "are in a generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
 
@@ -200,7 +200,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
             !self_variable_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
       }
@@ -219,9 +219,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // whatever runtime the debug info says the object pointer belongs to.  Do
     // that here.
 
-    ClangASTMetadata *metadata =
-        TypeSystemClang::DeclContextGetMetaData(decl_context, function_decl);
-    if (metadata && metadata->HasObjectPtr()) {
+    if (std::optional<ClangASTMetadata> metadata =
+            TypeSystemClang::DeclContextGetMetaData(decl_context,
+                                                    function_decl);
+        metadata && metadata->HasObjectPtr()) {
       lldb::LanguageType language = metadata->GetObjectPtrLanguage();
       if (language == lldb::eLanguageTypeC_plus_plus) {
         if (m_enforce_valid_object) {
@@ -234,7 +235,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                         "are in a generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
 
@@ -243,7 +244,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
               !this_var_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
         }
@@ -261,7 +262,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
               "generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -270,21 +271,21 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
               !self_variable_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           Type *self_type = self_variable_sp->GetType();
 
           if (!self_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           CompilerType self_clang_type = self_type->GetForwardCompilerType();
 
           if (!self_clang_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -295,7 +296,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             m_in_objectivec_method = true;
             m_needs_object_ptr = true;
           } else {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
         } else {
@@ -370,26 +371,20 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
 
   if (!sc.comp_unit)
     return;
-  StreamString error_stream;
-
   ClangModulesDeclVendor::ModuleVector modules_for_macros =
       persistent_state->GetHandLoadedClangModules();
-  if (decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
-                                            error_stream))
+
+  auto err =
+      decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros);
+  if (!err)
     return;
 
-  // Failed to load some modules, so emit the error stream as a diagnostic.
-  if (!error_stream.Empty()) {
-    // The error stream already contains several Clang diagnostics that might
-    // be either errors or warnings, so just print them all as one remark
-    // diagnostic to prevent that the message starts with "error: error:".
-    diagnostic_manager.PutString(lldb::eSeverityInfo, error_stream.GetString());
-    return;
-  }
-
-  diagnostic_manager.PutString(lldb::eSeverityError,
-                               "Unknown error while loading modules needed for "
-                               "current compilation unit.");
+  // Module load errors aren't fatal to the expression evaluator. Printing
+  // them as diagnostics to the console would be too noisy and misleading
+  // Hence just print them to the expression log.
+  llvm::handleAllErrors(std::move(err), [](const llvm::StringError &e) {
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", e.getMessage());
+  });
 }
 
 ClangExpressionSourceCode::WrapKind ClangUserExpression::GetWrapKind() const {
@@ -558,7 +553,7 @@ bool ClangUserExpression::TryParse(
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
 
-  auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
+  llvm::scope_exit on_exit([this]() { ResetDeclMap(); });
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
@@ -573,7 +568,7 @@ bool ClangUserExpression::TryParse(
 
   m_parser = std::make_unique<ClangExpressionParser>(
       exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info,
-      m_include_directories, m_filename);
+      diagnostic_manager, m_include_directories, m_filename);
 
   unsigned num_errors = m_parser->Parse(diagnostic_manager);
 
@@ -802,7 +797,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 
   ResetDeclMap(exe_ctx, m_result_delegate, /*keep result in memory*/ true);
 
-  auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
+  llvm::scope_exit on_exit([this]() { ResetDeclMap(); });
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
@@ -817,7 +812,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   }
 
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               false);
+                               false, diagnostic_manager);
 
   // We have to find the source code location where the user text is inside
   // the transformed expression code. When creating the transformed text, we
@@ -860,7 +855,7 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    err.SetErrorStringWithFormatv(
+    err = Status::FromErrorStringWithFormatv(
         "Couldn't load '{0}' because its value couldn't be evaluated",
         object_name);
     return LLDB_INVALID_ADDRESS;
@@ -896,12 +891,13 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     Status object_ptr_error;
 
     if (m_ctx_obj) {
-      AddressType address_type;
-      object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
-      if (object_ptr == LLDB_INVALID_ADDRESS ||
-          address_type != eAddressTypeLoad)
-        object_ptr_error.SetErrorString("Can't get context object's "
-                                        "debuggee address");
+      ValueObject::AddrAndType address = m_ctx_obj->GetAddressOf(false);
+      if (address.address == LLDB_INVALID_ADDRESS ||
+          address.type != eAddressTypeLoad)
+        object_ptr_error = Status::FromErrorString("Can't get context object's "
+                                                   "debuggee address");
+      else
+        object_ptr = address.address;
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =

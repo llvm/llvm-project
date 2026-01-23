@@ -425,8 +425,8 @@ define i8 @test_mul_by_66(i8 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $6, %eax
-; X64-NEXT:    leal (%rax,%rdi,2), %eax
+; X64-NEXT:    shll $6, %edi
+; X64-NEXT:    leal (%rdi,%rax,2), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %m = mul i8 %x, 66

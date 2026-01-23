@@ -41,15 +41,17 @@ public:
   void finish() override;
   virtual void reset();
 
-  virtual void emitDirectiveOptionPush();
-  virtual void emitDirectiveOptionPop();
+  virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
+  virtual void emitDirectiveOptionExact();
+  virtual void emitDirectiveOptionNoExact();
   virtual void emitDirectiveOptionPIC();
   virtual void emitDirectiveOptionNoPIC();
-  virtual void emitDirectiveOptionRVC();
-  virtual void emitDirectiveOptionNoRVC();
+  virtual void emitDirectiveOptionPop();
+  virtual void emitDirectiveOptionPush();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
-  virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
+  virtual void emitDirectiveOptionRVC();
+  virtual void emitDirectiveOptionNoRVC();
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
@@ -78,15 +80,17 @@ class RISCVTargetAsmStreamer : public RISCVTargetStreamer {
 public:
   RISCVTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 
-  void emitDirectiveOptionPush() override;
-  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
+  void emitDirectiveOptionExact() override;
+  void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionPIC() override;
   void emitDirectiveOptionNoPIC() override;
-  void emitDirectiveOptionRVC() override;
-  void emitDirectiveOptionNoRVC() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
-  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
+  void emitDirectiveOptionRVC() override;
+  void emitDirectiveOptionNoRVC() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 };
 

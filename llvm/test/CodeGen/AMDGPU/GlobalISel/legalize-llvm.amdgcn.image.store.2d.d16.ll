@@ -87,8 +87,7 @@ define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, ha
   ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX10-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
-  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[TRUNC]](s16), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (s16), addrspace 8)
+  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[TRUNC]](s16), 1, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (s16), addrspace 8)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: image_store_f16
@@ -198,8 +197,7 @@ define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
-  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[COPY10]](<2 x s16>), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<2 x s16>), addrspace 8)
+  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[COPY10]](<2 x s16>), 3, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<2 x s16>), addrspace 8)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: image_store_v2f16
@@ -330,8 +328,7 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
-  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
+  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: image_store_v3f16
@@ -452,8 +449,7 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
-  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 15, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<4 x s16>), addrspace 8)
+  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 15, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<4 x s16>), addrspace 8)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: image_store_v4f16

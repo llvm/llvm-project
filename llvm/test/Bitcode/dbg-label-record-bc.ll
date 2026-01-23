@@ -1,12 +1,10 @@
 ;; Tests that we can parse and print a function containing a debug label record
-;; and no other debug record kinds.
+;; and no other debug record kinds. llvm-as should autoupgrade the intrinsic
+;; below into a debug record, that then round-trips through opt.
 
-; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=true %s -o - \
-; RUN: | opt -S | FileCheck %s --check-prefixes=CHECK,INTRINSIC
-
-; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=true %s -o - \
-; RUN: | opt -S --preserve-input-debuginfo-format=true \
-; RUN: | FileCheck %s --check-prefixes=CHECK,RECORD
+; RUN: llvm-as %s -o - \
+; RUN: | opt -S \
+; RUN: | FileCheck %s
 
 source_filename = "bbi-94196.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -14,8 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: void @foo()
 ; CHECK: bar:
-; INTRINSIC-NEXT: #dbg_label(![[LABEL:[0-9]+]],  ![[LOC:[0-9]+]]
-; RECORD-NEXT: #dbg_label(![[LABEL:[0-9]+]], ![[LOC:[0-9]+]])
+; CHECK-NEXT: #dbg_label(![[LABEL:[0-9]+]], ![[LOC:[0-9]+]])
 
 ; CHECK-DAG: ![[LABEL]] = !DILabel({{.*}}name: "bar"
 ; CHECK-DAG: ![[LOC]] = !DILocation(line: 5, column: 1

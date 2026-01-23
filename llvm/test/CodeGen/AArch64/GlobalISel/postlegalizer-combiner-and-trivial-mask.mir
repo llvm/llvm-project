@@ -12,20 +12,18 @@ body:             |
   bb.0:
     liveins: $w0, $w1
     ; G_ICMP produces a single bit. The mask is 1.
-    ;
     ; cmp = 000...0?
     ; mask = 000...01
     ; cmp & mask = 000...0?
-    ;
     ; Remove the G_AND.
-    ;
     ; CHECK-LABEL: name: remove_and_with_one_bit
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: %cmp:_(s32) = G_ICMP intpred(eq), %x(s32), %y
-    ; CHECK: $w0 = COPY %cmp(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %cmp:_(s32) = G_ICMP intpred(eq), %x(s32), %y
+    ; CHECK-NEXT: $w0 = COPY %cmp(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %cmp:_(s32) = G_ICMP intpred(eq), %x(s32), %y
@@ -43,12 +41,14 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2
     ; -1 is all ones. Therefore z & -1 = z. Remove the G_AND.
-    ;
     ; CHECK-LABEL: name: remove_and_all_ones_mask
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: $w0 = COPY %z(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: $w0 = COPY %z(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2
@@ -68,15 +68,16 @@ body:             |
     ; %z is a s32, so it can be at most the all-ones value on 32 bits.
     ; In decimal this is 4294967295. Any zero-extension of %z is at most this
     ; value.
-    ;
     ; Therefore, zext(z) & 4294967295 == z. Remove the G_AND.
-    ;
     ; CHECK-LABEL: name: remove_and_all_ones_zext
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: %ext:_(s64) = G_ZEXT %z(s32)
-    ; CHECK: $x0 = COPY %ext(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT %z(s32)
+    ; CHECK-NEXT: $x0 = COPY %ext(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2
@@ -95,13 +96,15 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2
     ; This is the same as the zext case.
-    ;
     ; CHECK-LABEL: name: remove_and_all_ones_anyext
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: %ext:_(s64) = G_ZEXT %z(s32)
-    ; CHECK: $x0 = COPY %ext(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT %z(s32)
+    ; CHECK-NEXT: $x0 = COPY %ext(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2
@@ -121,15 +124,17 @@ body:             |
     liveins: $w0, $w1, $w2
     ; We don't know if the sign bit is set on %z. So, the value in %ext may have
     ; higher bits set than 4294967295.
-    ;
     ; CHECK-LABEL: name: dont_remove_all_ones_sext
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: %ext:_(s64) = G_SEXT %z(s32)
-    ; CHECK: %mask:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK: %and:_(s64) = G_AND %ext, %mask
-    ; CHECK: $x0 = COPY %and(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: %ext:_(s64) = G_SEXT %z(s32)
+    ; CHECK-NEXT: %mask:_(s64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: %and:_(s64) = G_AND %ext, %mask
+    ; CHECK-NEXT: $x0 = COPY %and(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2
@@ -148,17 +153,18 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2
     ; We know the sign bit is not set on %z. Therefore,
-    ;
     ; z = ext = 42 = 000...0101010
     ; mask = 0000...0111111
-    ;
     ; So z & mask == z
     ; CHECK-LABEL: name: remove_and_positive_constant_sext
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %z:_(s32) = G_CONSTANT i32 42
-    ; CHECK: %ext:_(s64) = G_SEXT %z(s32)
-    ; CHECK: $x0 = COPY %ext(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = G_CONSTANT i32 42
+    ; CHECK-NEXT: %ext:_(s64) = G_SEXT %z(s32)
+    ; CHECK-NEXT: $x0 = COPY %ext(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = G_CONSTANT i32 42
@@ -177,16 +183,16 @@ body:             |
   bb.0:
     liveins: $w0, $w1
     ; 6 is not a mask, so we should still have the G_AND.
-    ;
     ; CHECK-LABEL: name: not_a_mask
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: %cmp:_(s32) = G_ICMP intpred(eq), %x(s32), %y
-    ; CHECK: %mask:_(s32) = G_CONSTANT i32 6
-    ; CHECK: %and:_(s32) = G_AND %cmp, %mask
-    ; CHECK: $w0 = COPY %and(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %cmp:_(s32) = G_ICMP intpred(eq), %x(s32), %y
+    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 6
+    ; CHECK-NEXT: %and:_(s32) = G_AND %cmp, %mask
+    ; CHECK-NEXT: $w0 = COPY %and(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %cmp:_(s32) = G_ICMP intpred(eq), %x(s32), %y
@@ -205,14 +211,16 @@ body:             |
     liveins: $w0, $w1, $w2
     ; We don't know what's in $w2, so we can't remove the G_AND without a mask
     ; that fills every bit in the type.
-    ;
     ; CHECK-LABEL: name: unknown_val
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 32
-    ; CHECK: %and:_(s32) = G_AND %z, %one
-    ; CHECK: $w0 = COPY %and(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: %and:_(s32) = G_AND %z, %one
+    ; CHECK-NEXT: $w0 = COPY %and(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2
@@ -233,10 +241,11 @@ body:             |
 
     ; CHECK-LABEL: name: remove_and_assert_zext
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %assert_zext:_(s32) = G_ASSERT_ZEXT %x, 8
-    ; CHECK: $w0 = COPY %assert_zext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %assert_zext:_(s32) = G_ASSERT_ZEXT %x, 8
+    ; CHECK-NEXT: $w0 = COPY %assert_zext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %assert_zext:_(s32) = G_ASSERT_ZEXT %x(s32), 8
     %mask:_(s32) = G_CONSTANT i32 255
@@ -253,14 +262,15 @@ body:             |
     liveins: $w0
     ; The mask here is for 8 bits, not 16.
 
-    ; CHECK-LABEL: name: dont_remove_and_assert_zext
+    ; CHECK-LABEL: name: dont_remove_and_assert_zext_wrong_mask
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %assert_zext:_(s32) = G_ASSERT_ZEXT %x, 16
-    ; CHECK: %mask:_(s32) = G_CONSTANT i32 255
-    ; CHECK: %and:_(s32) = G_AND %assert_zext, %mask
-    ; CHECK: $w0 = COPY %and(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %assert_zext:_(s32) = G_ASSERT_ZEXT %x, 16
+    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %and:_(s32) = G_AND %assert_zext, %mask
+    ; CHECK-NEXT: $w0 = COPY %and(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %assert_zext:_(s32) = G_ASSERT_ZEXT %x(s32), 16
     %mask:_(s32) = G_CONSTANT i32 255

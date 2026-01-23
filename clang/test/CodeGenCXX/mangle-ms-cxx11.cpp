@@ -358,3 +358,42 @@ struct s { enum {}; enum {}; };
 // DBG-DAG: DW_TAG_enumeration_type{{.*}}identifier: ".?AW4<unnamed-type-$S3>@s@pr37723@@"
 s x;
 }
+
+namespace InconsistentTagKinds {
+  namespace t1 {
+    class A;
+    struct A;
+    void f(A*) {}
+    // CHECK-DAG: @"?f@t1@InconsistentTagKinds@@YAXPAVA@12@@Z"
+  } // namespace t1
+  namespace t2 {
+    struct A;
+    class A;
+    void f(A*) {}
+    // CHECK-DAG: @"?f@t2@InconsistentTagKinds@@YAXPAUA@12@@Z"
+  } // namespace t2
+  namespace t3 {
+    class A {};
+    struct A;
+    void f(A*) {}
+    // CHECK-DAG: @"?f@t3@InconsistentTagKinds@@YAXPAVA@12@@Z"
+  } // namespace t3
+  namespace t4 {
+    struct A {};
+    class A;
+    void f(A*) {}
+    // CHECK-DAG: @"?f@t4@InconsistentTagKinds@@YAXPAUA@12@@Z"
+  } // namespace t4
+  namespace t5 {
+    class A;
+    struct A {};
+    void f(A*) {}
+    // CHECK-DAG: @"?f@t5@InconsistentTagKinds@@YAXPAUA@12@@Z"
+  } // namespace t5
+  namespace t6 {
+    struct A;
+    class A {};
+    void f(A*) {}
+    // CHECK-DAG: @"?f@t6@InconsistentTagKinds@@YAXPAVA@12@@Z"
+  } // namespace t6
+} // namespace InconsistentTagKinds

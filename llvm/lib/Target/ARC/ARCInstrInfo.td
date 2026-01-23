@@ -18,7 +18,7 @@ include "ARCInstrFormats.td"
 
 // Operand for printing out a condition code.
 let PrintMethod = "printCCOperand" in
-  def CCOp : PredicateOperand<i32, (ops i32imm), (ops)>;
+  def CCOp : PredicateOperand<i32, (ops), (ops)>;
 
 // The "u6" operand of a RRU6-type instruction
 let PrintMethod = "printU6" in {
@@ -55,8 +55,7 @@ def ARCcmp : SDNode<"ARCISD::CMP", SDT_ARCcmptst, [SDNPOutGlue]>;
 def ARCcmov : SDNode<"ARCISD::CMOV", SDT_ARCcmov, [SDNPInGlue]>;
 
 // Conditional Branch
-def ARCbrcc : SDNode<"ARCISD::BRcc", SDT_ARCbrcc,
-                       [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def ARCbrcc : SDNode<"ARCISD::BRcc", SDT_ARCbrcc, [SDNPHasChain]>;
 
 // Direct Call
 def ARCBranchLink     : SDNode<"ARCISD::BL",SDT_ARCBranchLink,

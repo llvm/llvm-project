@@ -148,6 +148,33 @@ G_EXTRACT for scalar types, but acts elementwise on vectors.
 
   %1:_(s16) = G_TRUNC %0:_(s32)
 
+G_TRUNC_SSAT_S
+^^^^^^^^^^^^^^
+
+Truncate a signed input to a signed result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_S %0:_(s32)
+
+G_TRUNC_SSAT_U
+^^^^^^^^^^^^^^
+
+Truncate a signed input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_U %0:_(s32)
+
+G_TRUNC_USAT_U
+^^^^^^^^^^^^^^
+
+Truncate a unsigned input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_USAT_U %0:_(s32)
+
 Type Conversions
 ----------------
 
@@ -348,6 +375,26 @@ G_ICMP
 Perform integer comparison producing non-zero (true) or zero (false). It's
 target specific whether a true value is 1, ~0U, or some other non-zero value.
 
+G_SCMP
+^^^^^^
+
+Perform signed 3-way integer comparison producing -1 (smaller), 0 (equal), or 1 (larger).
+
+.. code-block:: none
+
+  %5:_(s32) = G_SCMP %6, %2
+
+
+G_UCMP
+^^^^^^
+
+Perform unsigned 3-way integer comparison producing -1 (smaller), 0 (equal), or 1 (larger).
+
+.. code-block:: none
+
+  %7:_(s32) = G_UCMP %2, %6
+
+
 G_SELECT
 ^^^^^^^^
 
@@ -454,6 +501,40 @@ undefined.
   %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
   %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
+G_CTLS
+^^^^^^
+
+Count leading redundant sign bits. If the value is positive then the result is
+the number of extra leading zeros. If the value is negative then the result is
+the number of extra leading ones.
+
+.. code-block:: none
+
+  %2:_(s32) = G_CTLS %1
+
+G_ABDS, G_ABDU
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
+
+.. code-block:: none
+
+  %0:_(s33) = G_ABDS %2, %3
+  %1:_(s33) = G_ABDU %4, %5
+
+G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Computes the average of corresponding elements in two vectors (signed and unsigned).
+Resulting vector contains values that are either rounded or truncated. e.g. trunc(shr(add(ext(a),ext(b)),1)).
+
+.. code-block:: none
+
+  %0:_(<4 x i16>) = G_UAVGFLOOR %4:_(<4 x i16>), %5:_(<4 x i16>)
+  %1:_(<4 x i16>) = G_UAVGCEIL %6:_(<4 x i16>), %7:_(<4 x i16>)
+  %2:_(<4 x i16>) = G_SAVGFLOOR %8:_(<4 x i16>), %9:_(<4 x i16>)
+  %3:_(<4 x i16>) = G_SAVGCEIL %10:_(<4 x i16>), %11:_(<4 x i16>)
+
 Floating Point Operations
 -------------------------
 
@@ -483,6 +564,11 @@ G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Convert between integer and floating point.
+
+G_FPTOSI_SAT, G_FPTOUI_SAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Saturating convert between integer and floating point.
 
 G_FABS
 ^^^^^^
@@ -573,6 +659,16 @@ NaN-propagating maximum that also treat -0.0 as less than 0.0. While
 FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE
 754-2019 semantics.
 
+G_FMINIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 minimumNumber
+
+G_FMAXIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 maximumNumber
+
 G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -608,8 +704,8 @@ G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
 
 These correspond to the standard C functions of the same name.
 
-G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCOS, G_FSIN, G_FSINCOS, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH, G_FTANH
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C trigonometry functions of the same name.
 
@@ -681,6 +777,8 @@ vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
+Mixing scalable vectors and fixed vectors are not allowed.
+
 .. code-block:: none
 
   %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
@@ -688,7 +786,13 @@ undefined.
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
 
-Concatenate two vectors to form a longer vector.
+Concatenate vectors to form a longer vector.
+
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_CONCAT_VECTORS %0:_(<4 x i32>), %1:_(<4 x i32>),
+                                      %2:_(<4 x i32>), %3:_(<4 x i32>)
+
 
 G_BUILD_VECTOR, G_BUILD_VECTOR_TRUNC
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -700,15 +804,33 @@ same as all source operands)
 The _TRUNC version truncates the larger operand types to fit the
 destination vector elt type.
 
+.. code-block:: none
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR %0:_(i32), %1:_(i32), %2:_(i32), %3:_(i32)
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR_TRUNC %0:_(i64), %1:_(i64), %2:_(i64), %3:_(i64)
+
+
 G_INSERT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^
 
 Insert an element into a vector
 
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_INSERT_VECTOR_ELT %vec:_(<16 x i32>), %elt:_(i32), %idx:_(s64)
+
+
+
 G_EXTRACT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^^
 
 Extract an element from a vector
+
+.. code-block:: none
+
+  %elt:_(i32) = G_EXTRACT_VECTOR_ELT %vec:_(<16 x i32>), %idx:_(s64)
+
 
 G_SHUFFLE_VECTOR
 ^^^^^^^^^^^^^^^^
@@ -725,6 +847,31 @@ Create a vector where all elements are the scalar from the source operand.
 The type of the operand must be equal to or larger than the vector element
 type. If the operand is larger than the vector element type, the scalar is
 implicitly truncated to the vector element type.
+
+G_STEP_VECTOR
+^^^^^^^^^^^^^
+
+Create a scalable vector where all lanes are linear sequences starting at 0
+with a given unsigned step.
+
+The type of the operand must be equal to the vector element type. Arithmetic
+is performed modulo the bitwidth of the element. The step must be > 0.
+Otherwise the vector is zero.
+
+.. code-block::
+
+  %0:_(<vscale x 2 x s64>) = G_STEP_VECTOR i64 4
+
+  %1:_(<vscale x s32>) = G_STEP_VECTOR i32 4
+
+  0, 1*Step, 2*Step, 3*Step, 4*Step, ...
+
+G_VECTOR_COMPRESS
+^^^^^^^^^^^^^^^^^
+
+Given an input vector, a mask vector, and a passthru vector, continuously place
+all selected (i.e., where mask[i] = true) input lanes in an output vector. All
+remaining lanes in the output are taken from passthru, which may be undef.
 
 Vector Reduction Operations
 ---------------------------
@@ -836,7 +983,10 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAXIMUM,
+                               G_ATOMICRMW_FMINIMUM, G_ATOMICRMW_UINC_WRAP,
+			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
+			       G_ATOMICRMW_USUB_SAT
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.
@@ -979,7 +1129,7 @@ G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
-and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target-dependent
 trap instructions.
 
 .. code-block:: none
@@ -1023,6 +1173,15 @@ An alignment value of `0` or `1` means no specific alignment.
 .. code-block:: none
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
+
+G_FREEZE
+^^^^^^^^
+
+G_FREEZE is used to stop propagation of undef and poison values.
+
+.. code-block:: none
+
+  %1:_(s32) = G_FREEZE %0(s32)
 
 Optimization Hints
 ------------------
@@ -1070,3 +1229,6 @@ G_CONSTANT_FOLD_BARRIER
 This operation is used as an opaque barrier to prevent constant folding. Combines
 and other transformations should not look through this. These have no other
 semantics and can be safely eliminated if a target chooses.
+
+
+Unlisted: G_STACKSAVE, G_STACKRESTORE, G_FSHL, G_FSHR, G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT, G_SDIVFIX, G_UDIVFIX, G_SDIVFIXSAT, G_UDIVFIXSAT, G_FPOWI, G_FEXP10, G_FLDEXP, G_FFREXP, G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV, G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE, G_INTRINSIC_FPTRUNC_ROUND, G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT, G_INTRINSIC_ROUNDEVEN, G_READCYCLECOUNTER, G_READSTEADYCOUNTER, G_PREFETCH, G_READ_REGISTER, G_WRITE_REGISTER, G_STRICT_FADD, G_STRICT_FSUB, G_STRICT_FMUL, G_STRICT_FDIV, G_STRICT_FREM, G_STRICT_FMA, G_STRICT_FSQRT, G_STRICT_FLDEXP, G_ASSERT_ALIGN

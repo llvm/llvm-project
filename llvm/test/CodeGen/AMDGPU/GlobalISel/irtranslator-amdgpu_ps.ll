@@ -104,7 +104,7 @@ define amdgpu_ps { i32, i32 } @sgpr_struct_return_i32_i32(i32 %vgpr0, i32 %vgpr1
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
   ; CHECK-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
-  %insertvalue0 = insertvalue { i32, i32 } undef, i32 %vgpr0, 0
+  %insertvalue0 = insertvalue { i32, i32 } poison, i32 %vgpr0, 0
   %value = insertvalue { i32, i32 } %insertvalue0, i32 %vgpr1, 1
   ret { i32, i32 } %value
 }

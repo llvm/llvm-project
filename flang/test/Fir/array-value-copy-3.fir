@@ -23,7 +23,7 @@ func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_w
   %9 = fir.do_loop %arg1 = %c0 to %c9 step %c1 unordered iter_args(%arg2 = %2) -> (!fir.array<10x!t_with_alloc_comp>) {
     %10 = fir.array_access %7, %arg1 : (!fir.array<10x!t_with_alloc_comp>, index) -> !fir.ref<!t_with_alloc_comp>
     %11 = fir.array_access %arg2, %arg1 : (!fir.array<10x!t_with_alloc_comp>, index) -> !fir.ref<!t_with_alloc_comp>
-    fir.call @custom_assign(%11, %10) : (!fir.ref<!t_with_alloc_comp>, !fir.ref<!t_with_alloc_comp>) -> none
+    fir.call @custom_assign(%11, %10) : (!fir.ref<!t_with_alloc_comp>, !fir.ref<!t_with_alloc_comp>) -> ()
     %19 = fir.array_amend %arg2, %11 : (!fir.array<10x!t_with_alloc_comp>, !fir.ref<!t_with_alloc_comp>) -> !fir.array<10x!t_with_alloc_comp>
     fir.result %19 : !fir.array<10x!t_with_alloc_comp>
   }
@@ -41,7 +41,7 @@ func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_w
 // CHECK:   %[[VAL_11:.*]] = fir.allocmem !fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
 // CHECK:   %[[VAL_12:.*]] = fir.embox %[[VAL_11]](%[[VAL_9]]) : (!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
 // CHECK:   %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
-// CHECK:   fir.call @_FortranAInitialize(%[[VAL_16]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK:   fir.call @_FortranAInitialize(%[[VAL_16]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK:   fir.do_loop {{.*}} {
 // CHECK:     fir.call @_FortranAAssign
 // CHECK:   }
@@ -52,5 +52,5 @@ func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_w
 // CHECK:     fir.call @_FortranAAssign
 // CHECK:   }
 // CHECK:   %[[VAL_72:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
-// CHECK:   %[[VAL_73:.*]] = fir.call @_FortranADestroy(%[[VAL_72]]) : (!fir.box<none>) -> none
+// CHECK:   fir.call @_FortranADestroy(%[[VAL_72]]) : (!fir.box<none>) -> ()
 // CHECK:   fir.freemem %[[VAL_11]]

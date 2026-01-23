@@ -26,37 +26,37 @@ void noescapeFunc3(__attribute__((noescape)) union U);
 // CHECK: @[[BLOCK_DESCIPTOR_TMP_2:.*ls32l8"]] = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, i64 } { i64 0, i64 40, ptr @{{.*}}, i64 256 }, align 8
 
 // CHECK-LABEL: define{{.*}} void @test0(
-// CHECK: call void @noescapeFunc0({{.*}}, {{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc0(ptr noundef, {{.*}} nocapture noundef)
+// CHECK: call void @noescapeFunc0({{.*}}, {{.*}} captures(none) {{.*}})
+// CHECK: declare void @noescapeFunc0(ptr noundef, {{.*}} noundef captures(none))
 void test0(BlockTy b) {
   noescapeFunc0(0, b);
 }
 
 // CHECK-LABEL: define{{.*}} void @test1(
-// CHECK: call void @noescapeFunc1({{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc1({{.*}} nocapture noundef)
+// CHECK: call void @noescapeFunc1({{.*}} captures(none) {{.*}})
+// CHECK: declare void @noescapeFunc1({{.*}} noundef captures(none))
 void test1(int *i) {
   noescapeFunc1(i);
 }
 
 // CHECK-LABEL: define{{.*}} void @test2(
-// CHECK: call void @noescapeFunc2({{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc2({{.*}} nocapture noundef)
+// CHECK: call void @noescapeFunc2({{.*}} captures(none) {{.*}})
+// CHECK: declare void @noescapeFunc2({{.*}} noundef captures(none))
 void test2(id i) {
   noescapeFunc2(i);
 }
 
 // CHECK-LABEL: define{{.*}} void @test3(
-// CHECK: call void @noescapeFunc3({{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc3({{.*}} nocapture)
+// CHECK: call void @noescapeFunc3({{.*}} captures(none) {{.*}})
+// CHECK: declare void @noescapeFunc3({{.*}} captures(none))
 void test3(union U u) {
   noescapeFunc3(u);
 }
 
-// CHECK: define internal void @"\01-[C0 m0:]"({{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
+// CHECK: define internal void @"\01-[C0 m0:]"({{.*}}, {{.*}}, {{.*}} captures(none) {{.*}})
 
 // CHECK-LABEL: define{{.*}} void @test4(
-// CHECK: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}, ptr nocapture {{.*}})
+// CHECK: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}, ptr noundef captures(none) {{.*}})
 
 @interface C0
 -(void) m0:(int*)__attribute__((noescape)) p0;
@@ -72,9 +72,9 @@ void test4(C0 *c0, int *p) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test5(
-// CHECK: call void {{.*}}(ptr noundef @{{.*}}, ptr nocapture {{.*}})
-// CHECK: call void {{.*}}(ptr {{.*}}, ptr nocapture {{.*}})
-// CHECK: define internal void @{{.*}}(ptr {{.*}}, ptr nocapture {{.*}})
+// CHECK: call void {{.*}}(ptr noundef @{{.*}}, ptr noundef captures(none) {{.*}})
+// CHECK: call void {{.*}}(ptr {{.*}}, ptr noundef captures(none) {{.*}})
+// CHECK: define internal void @{{.*}}(ptr {{.*}}, ptr noundef captures(none) {{.*}})
 
 typedef void (^BlockTy2)(__attribute__((noescape)) int *);
 
@@ -93,13 +93,13 @@ void test5(BlockTy2 b, int *p) {
 // CHECK-NOARC: store ptr %[[B]], ptr %[[B_ADDR]], align 8
 // CHECK-ARC: store ptr null, ptr %[[B_ADDR]], align 8
 // CHECK-ARC: call void @llvm.objc.storeStrong(ptr %[[B_ADDR]], ptr %[[B]])
-// CHECK: %[[BLOCK_ISA:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 0
+// CHECK: %[[BLOCK_ISA:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 0
 // CHECK: store ptr @_NSConcreteGlobalBlock, ptr %[[BLOCK_ISA]], align 8
-// CHECK: %[[BLOCK_FLAGS:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 1
+// CHECK: %[[BLOCK_FLAGS:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 1
 // CHECK: store i32 -796917760, ptr %[[BLOCK_FLAGS]], align 8
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCIPTOR_TMP_2]], ptr %[[BLOCK_DESCRIPTOR]], align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK-NOARC: %[[V1:.*]] = load ptr, ptr %[[B_ADDR]], align 8
 // CHECK-NOARC: store ptr %[[V1]], ptr %[[BLOCK_CAPTURED]], align 8
 // CHECK-ARC: %[[V2:.*]] = load ptr, ptr %[[B_ADDR]], align 8
@@ -127,7 +127,7 @@ void test6(id a, id b) {
 // CHECK: alloca ptr, align 8
 // CHECK: %[[B0:.*]] = alloca ptr, align 8
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: store ptr %[[B0]], ptr %[[BLOCK_CAPTURED]], align 8
 
 // CHECK-ARC-NOT: define internal void @__Block_byref_object_copy_
@@ -146,7 +146,7 @@ void test7(void) {
 // CHECK: %[[B0:.*]] = alloca %[[STRUCT_BLOCK_BYREF_B0]], align 8
 // CHECK: alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
 // CHECK: %[[BLOCK1:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// CHECK: %[[BLOCK_CAPTURED7:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK1]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED7:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK1]], i32 0, i32 5
 // CHECK: store ptr %[[B0]], ptr %[[BLOCK_CAPTURED7]], align 8
 
 // CHECK-ARC: define internal void @__Block_byref_object_copy_

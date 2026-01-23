@@ -49,6 +49,7 @@ $ cd ${TOPLEV}/stage3
 $ CPATH=${TOPLEV}/stage2-prof-use-lto/install/bin/
 $ cmake -G Ninja ${TOPLEV}/llvm -DLLVM_TARGETS_TO_BUILD=X86 -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CPATH/clang -DCMAKE_CXX_COMPILER=$CPATH/clang++ \
+    -DLLVM_ENABLE_PROJECTS="clang" \
     -DLLVM_USE_LINKER=lld -DCMAKE_INSTALL_PREFIX=${TOPLEV}/stage3/install
 $ perf record -e cycles:u -j any,u -- ninja clang
 ```
@@ -96,7 +97,7 @@ BOLT-INFO: basic block reordering modified layout of 7848 (10.32%) functions
            790053908 : all conditional branches (=)
 ...
 ```
-The statistics in the output is based on the LBR profile collected with `perf`, and since we were using
+The statistics in the output is based on the brstack profile (LBR) collected with `perf`, and since we were using
 the `cycles` counter, its accuracy is affected. However, the relative improvement in `taken conditional
  branches` is a good indication that BOLT was able to straighten out the code even after PGO.
 

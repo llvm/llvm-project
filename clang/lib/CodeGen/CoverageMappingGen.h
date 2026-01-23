@@ -19,7 +19,12 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+
+namespace llvm::coverage {
+extern cl::opt<bool> SystemHeadersCoverage;
+}
 
 namespace clang {
 
@@ -90,6 +95,7 @@ public:
 namespace CodeGen {
 
 class CodeGenModule;
+class CounterPair;
 
 namespace MCDC {
 struct State;
@@ -153,7 +159,7 @@ class CoverageMappingGen {
   CoverageMappingModuleGen &CVM;
   SourceManager &SM;
   const LangOptions &LangOpts;
-  llvm::DenseMap<const Stmt *, unsigned> *CounterMap;
+  llvm::DenseMap<const Stmt *, CounterPair> *CounterMap;
   MCDC::State *MCDCState;
 
 public:
@@ -164,7 +170,7 @@ public:
 
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts,
-                     llvm::DenseMap<const Stmt *, unsigned> *CounterMap,
+                     llvm::DenseMap<const Stmt *, CounterPair> *CounterMap,
                      MCDC::State *MCDCState)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
         MCDCState(MCDCState) {}

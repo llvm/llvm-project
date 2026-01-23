@@ -18,8 +18,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
@@ -322,8 +322,8 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
 }
 void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
   if (getPropertiesStorageSize()) {
-    // We're spliting the providing array of attributes by removing the inherentAttr
-    // which will be stored in the properties.
+    // We're spliting the providing array of attributes by removing the
+    // inherentAttr which will be stored in the properties.
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
@@ -375,9 +375,6 @@ llvm::hash_code Operation::hashProperties() {
 // Operation Ordering
 //===----------------------------------------------------------------------===//
 
-constexpr unsigned Operation::kInvalidOrderIdx;
-constexpr unsigned Operation::kOrderStride;
-
 /// Given an operation 'other' that is within the same parent block, return
 /// whether the current operation is before 'other' in the operation list
 /// of the parent block.
@@ -406,7 +403,7 @@ void Operation::updateOrderIfNecessary() {
   assert(block && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
-  if (hasValidOrder())
+  if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
   Operation *blockFront = &block->front();
   Operation *blockBack = &block->back();
@@ -463,28 +460,26 @@ void Operation::updateOrderIfNecessary() {
 //===----------------------------------------------------------------------===//
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(pointer n) -> node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
-    -> const node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(const_pointer n) -> const node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(node_type *n) -> pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
-    -> const_pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(const node_type *n) -> const_pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
@@ -560,6 +555,8 @@ void Operation::moveBefore(Operation *existingOp) {
 /// before `iterator` in the specified basic block.
 void Operation::moveBefore(Block *block,
                            llvm::iplist<Operation>::iterator iterator) {
+  assert(getBlock() &&
+         "cannot move an operation that isn't contained in a block");
   block->getOperations().splice(iterator, getBlock()->getOperations(),
                                 getIterator());
 }
@@ -619,8 +616,8 @@ static void checkFoldResultTypes(Operation *op,
     if (auto value = dyn_cast<Value>(ofr)) {
       if (value.getType() != opResult.getType()) {
         op->emitOpError() << "folder produced a value of incorrect type: "
-                          << opResult.getType()
-                          << ", expected: " << value.getType();
+                          << value.getType()
+                          << ", expected: " << opResult.getType();
         assert(false && "incorrect fold result type");
       }
     }
@@ -808,13 +805,16 @@ void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
     ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
     llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedProps.begin(),
                                                   elidedProps.end());
-    bool atLeastOneAttr = llvm::any_of(attrs, [&](NamedAttribute attr) {
-      return !elidedAttrsSet.contains(attr.getName().strref());
-    });
-    if (atLeastOneAttr) {
-      p << "<";
-      p.printOptionalAttrDict(dictAttr.getValue(), elidedProps);
-      p << ">";
+    auto filteredAttrs =
+        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+          return !elidedAttrsSet.contains(attr.getName().strref());
+        });
+    if (!filteredAttrs.empty()) {
+      p << "<{";
+      interleaveComma(filteredAttrs, p, [&](NamedAttribute attr) {
+        p.printNamedAttribute(attr);
+      });
+      p << "}>";
     }
   } else {
     p << "<" << properties << ">";
@@ -1270,10 +1270,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
     return op->emitOpError("'")
            << attrName << "' attribute cannot have negative elements";
 
-  size_t totalCount =
-      std::accumulate(sizes.begin(), sizes.end(), 0,
-                      [](unsigned all, int32_t one) { return all + one; });
-
+  size_t totalCount = llvm::sum_of(sizes, size_t(0));
   if (totalCount != expectedCount)
     return op->emitOpError()
            << valueGroupName << " count (" << expectedCount
@@ -1309,10 +1306,10 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
   auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
-  auto resultMappableTypes = llvm::to_vector<1>(
-      llvm::make_filter_range(op->getResultTypes(), isMappableType));
-  auto operandMappableTypes = llvm::to_vector<2>(
-      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+  auto resultMappableTypes =
+      llvm::filter_to_vector<1>(op->getResultTypes(), isMappableType);
+  auto operandMappableTypes =
+      llvm::filter_to_vector<2>(op->getOperandTypes(), isMappableType);
 
   // If the op only has scalar operand/result types, then we have nothing to
   // check.

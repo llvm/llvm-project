@@ -1,5 +1,5 @@
-! Basic offloading test of arrays with provided lower
-! and upper bounds as specified by OpenMP's sectioning
+! Basic offloading test of arrays with provided lower and upper bounds as
+! specified by OpenMP's sectioning
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

@@ -15,6 +15,7 @@ int main() {
   free(x);
   __hwasan_disable_allocator_tagging();
   fprintf(stderr, ISREAD ? "Going to do a READ\n" : "Going to do a WRITE\n");
+  fflush(stderr);
   // CHECK: Going to do a [[TYPE:[A-Z]*]]
   int r = 0;
   if (ISREAD) r = x[5]; else x[5] = 42;  // should be on the same line.
@@ -31,11 +32,11 @@ int main() {
   //
   // CHECK: freed by thread {{.*}} here:
   // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_allocation_functions.cpp
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-19]]
+  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-20]]
 
   // CHECK: previously allocated by thread {{.*}} here:
   // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_allocation_functions.cpp
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-24]]
+  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-25]]
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
   // CHECK: =>{{.*}}[[MEM_TAG]]
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main

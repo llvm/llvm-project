@@ -18,11 +18,18 @@ tablegen("HexagonGenDFAPacketizer") {
   td_file = "Hexagon.td"
 }
 
+tablegen("HexagonGenSDNodeInfo") {
+  visibility = [ ":LLVMHexagonCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "Hexagon.td"
+}
+
 static_library("LLVMHexagonCodeGen") {
   deps = [
     ":HexagonGenCallingConv",
     ":HexagonGenDAGISel",
     ":HexagonGenDFAPacketizer",
+    ":HexagonGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -68,21 +75,23 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonISelLowering.cpp",
     "HexagonISelLoweringHVX.cpp",
     "HexagonInstrInfo.cpp",
+    "HexagonLoadStoreWidening.cpp",
     "HexagonLoopAlign.cpp",
     "HexagonLoopIdiomRecognition.cpp",
     "HexagonMCInstLower.cpp",
     "HexagonMachineFunctionInfo.cpp",
     "HexagonMachineScheduler.cpp",
+    "HexagonMask.cpp",
     "HexagonNewValueJump.cpp",
     "HexagonOptAddrMode.cpp",
     "HexagonOptimizeSZextends.cpp",
     "HexagonPeephole.cpp",
+    "HexagonQFPOptimizer.cpp",
     "HexagonRDFOpt.cpp",
     "HexagonRegisterInfo.cpp",
     "HexagonSelectionDAGInfo.cpp",
     "HexagonSplitConst32AndConst64.cpp",
     "HexagonSplitDouble.cpp",
-    "HexagonStoreWidening.cpp",
     "HexagonSubtarget.cpp",
     "HexagonTargetMachine.cpp",
     "HexagonTargetObjectFile.cpp",

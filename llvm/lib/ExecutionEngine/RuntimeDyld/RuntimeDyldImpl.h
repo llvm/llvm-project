@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
@@ -201,15 +202,9 @@ public:
            IsStubThumb == Other.IsStubThumb;
   }
   inline bool operator<(const RelocationValueRef &Other) const {
-    if (SectionID != Other.SectionID)
-      return SectionID < Other.SectionID;
-    if (Offset != Other.Offset)
-      return Offset < Other.Offset;
-    if (Addend != Other.Addend)
-      return Addend < Other.Addend;
-    if (IsStubThumb != Other.IsStubThumb)
-      return IsStubThumb < Other.IsStubThumb;
-    return SymbolName < Other.SymbolName;
+    return std::tie(SectionID, Offset, Addend, IsStubThumb, SymbolName) <
+           std::tie(Other.SectionID, Other.Offset, Other.Addend,
+                    Other.IsStubThumb, Other.SymbolName);
   }
 };
 
@@ -453,6 +448,16 @@ protected:
   // Return true if the relocation R may require allocating a stub.
   virtual bool relocationNeedsStub(const RelocationRef &R) const {
     return true;    // Conservative answer
+  }
+
+  // Return true if the relocation R may require allocating a DLL import stub.
+  virtual bool relocationNeedsDLLImportStub(const RelocationRef &R) const {
+    return false;
+  }
+
+  // Add the size of a DLL import stub to the buffer size
+  virtual unsigned sizeAfterAddingDLLImportStub(unsigned Size) const {
+    return Size;
   }
 
 public:

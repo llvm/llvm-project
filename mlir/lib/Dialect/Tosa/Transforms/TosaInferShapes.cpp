@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Propogate shapes forward along TOSA operations to resolve dynamic shape
+// Propagate shapes forward along TOSA operations to resolve dynamic shape
 // operations.
 //
 //===----------------------------------------------------------------------===//
@@ -18,14 +18,12 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 namespace tosa {
-#define GEN_PASS_DEF_TOSAINFERSHAPES
+#define GEN_PASS_DEF_TOSAINFERSHAPESPASS
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 } // namespace tosa
 } // namespace mlir
@@ -88,18 +86,36 @@ public:
     // For each use whose type changed, cast the value with the new type back to
     // the old type.
     for (auto [value, oldType] : oldTypes) {
-      tensor::CastOp castedValue;
-      for (auto &use : value.getUses()) {
-        if (canBeRefined(use.getOwner()))
+      // The call to 'use->set()' in the body of the loop below invalidates the
+      // iterator used to traverse op uses, so it is important to make a copy of
+      // these first.
+      llvm::SmallVector<OpOperand *> uses = llvm::map_to_vector(
+          value.getUses(),
+          [](OpOperand &use) -> OpOperand * {
+            return &use;
+          });
+
+      // A 'tensor.cast' op is emitted only if needed. Once emitted, it is
+      // cached and reused by all consumers.
+      tensor::CastOp castValue;
+
+      // Traverse all uses
+      for (OpOperand *use : uses) {
+        if (canBeRefined(use->getOwner()))
           continue;
 
-        // Cache the cast to avoid generating duplicates
-        if (!castedValue) {
-          ImplicitLocOpBuilder builder{value.getLoc(), use.getOwner()};
-          castedValue = builder.create<tensor::CastOp>(oldType, value);
+        if (!castValue) {
+          // Set the insertion point as far back as possible, since new
+          // consumers of the 'tensor.cast' op generated in future iterations
+          // are likely to be further up in the code due to the order in which
+          // they appear in the use list.
+          OpBuilder builder{value.getContext()};
+          builder.setInsertionPointAfter(value.getDefiningOp());
+          castValue =
+              tensor::CastOp::create(builder, value.getLoc(), oldType, value);
         }
 
-        use.set(castedValue);
+        use->set(castValue);
       }
     }
 
@@ -285,20 +301,45 @@ void propagateShapesInRegion(Region &region, TypeModificationState &state) {
   }
 }
 
+/// Recursively validate tosa ops with SameOperandsAndResultRank trait in region
+/// and all nested regions
+void validateSameOperandsAndResultRankTrait(Region &region) {
+  int errs = 0;
+  for (auto &block : region) {
+    for (auto &op : block) {
+      if (!op.getDialect() ||
+          op.getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
+        continue;
+      if (op.hasTrait<OpTrait::SameOperandsAndResultRank>()) {
+        if (OpTrait::impl::verifySameOperandsAndResultRank(&op).failed()) {
+          errs++;
+          (void)errs;
+        }
+      }
+      WhileOp whileOp = dyn_cast<WhileOp>(op);
+      IfOp ifOp = dyn_cast<IfOp>(op);
+      if (whileOp || ifOp) {
+        // recurse into whileOp's regions
+        for (auto &next : op.getRegions()) {
+          validateSameOperandsAndResultRankTrait(next);
+        }
+      }
+    }
+  }
+}
+
 /// Pass that performs shape propagation across TOSA operations. This includes
 /// migrating to within the regions of if/while operations.
 struct TosaInferShapes
-    : public tosa::impl::TosaInferShapesBase<TosaInferShapes> {
+    : public tosa::impl::TosaInferShapesPassBase<TosaInferShapes> {
 public:
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     TypeModificationState state;
     propagateShapesInRegion(func.getBody(), state);
     state.commit();
+
+    validateSameOperandsAndResultRankTrait(func.getBody());
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaInferShapesPass() {
-  return std::make_unique<TosaInferShapes>();
-}

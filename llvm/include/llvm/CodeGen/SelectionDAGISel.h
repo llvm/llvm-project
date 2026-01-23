@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGISEL_H
 #define LLVM_CODEGEN_SELECTIONDAGISEL_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -45,19 +46,20 @@ class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
+  const LibcallLoweringInfo *LibcallLowering;
+
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
-  SwiftErrorValueTracking *SwiftError;
+  std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
+  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA = nullptr;
+  mutable std::optional<BatchAAResults> BatchAA;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  TargetTransformInfo *TTI = nullptr;
-#endif
+  const TargetTransformInfo *TTI = nullptr;
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -76,9 +78,20 @@ public:
   bool MatchFilterFuncName = false;
   StringRef FuncName;
 
+  // HwMode to be used by getValueTypeForHwMode. This will be initialized
+  // based on the subtarget used by the MachineFunction.
+  unsigned HwMode;
+
   explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
   virtual ~SelectionDAGISel();
+
+  /// Returns a (possibly null) pointer to the current BatchAAResults.
+  BatchAAResults *getBatchAA() const {
+    if (BatchAA.has_value())
+      return &BatchAA.value();
+    return nullptr;
+  }
 
   const TargetLowering *getTargetLowering() const { return TLI; }
 
@@ -143,6 +156,7 @@ public:
     OPC_RecordChild7,
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
+    OPC_CaptureDeactivationSymbol,
     OPC_MoveChild,
     OPC_MoveChild0,
     OPC_MoveChild1,
@@ -193,7 +207,9 @@ public:
     // Space-optimized forms that implicitly encode VT.
     OPC_CheckTypeI32,
     OPC_CheckTypeI64,
+    OPC_CheckTypeByHwMode,
     OPC_CheckTypeRes,
+    OPC_CheckTypeResByHwMode,
     OPC_SwitchType,
     OPC_CheckChild0Type,
     OPC_CheckChild1Type,
@@ -222,6 +238,15 @@ public:
     OPC_CheckChild6TypeI64,
     OPC_CheckChild7TypeI64,
 
+    OPC_CheckChild0TypeByHwMode,
+    OPC_CheckChild1TypeByHwMode,
+    OPC_CheckChild2TypeByHwMode,
+    OPC_CheckChild3TypeByHwMode,
+    OPC_CheckChild4TypeByHwMode,
+    OPC_CheckChild5TypeByHwMode,
+    OPC_CheckChild6TypeByHwMode,
+    OPC_CheckChild7TypeByHwMode,
+
     OPC_CheckInteger,
     OPC_CheckChild0Integer,
     OPC_CheckChild1Integer,
@@ -248,17 +273,17 @@ public:
 
     OPC_EmitInteger,
     // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitInteger8,
-    OPC_EmitInteger16,
-    OPC_EmitInteger32,
-    OPC_EmitInteger64,
-    OPC_EmitStringInteger,
-    // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitStringInteger32,
+    OPC_EmitIntegerI8,
+    OPC_EmitIntegerI16,
+    OPC_EmitIntegerI32,
+    OPC_EmitIntegerI64,
+    OPC_EmitIntegerByHwMode,
     OPC_EmitRegister,
     OPC_EmitRegisterI32,
     OPC_EmitRegisterI64,
+    OPC_EmitRegisterByHwMode,
     OPC_EmitRegister2,
+    OPC_EmitRegisterByHwMode2,
     OPC_EmitConvertToTarget,
     OPC_EmitConvertToTarget0,
     OPC_EmitConvertToTarget1,
@@ -284,55 +309,54 @@ public:
     OPC_EmitCopyToRegTwoByte,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
+    OPC_EmitNodeByHwMode,
     // Space-optimized forms that implicitly encode number of result VTs.
     OPC_EmitNode0,
     OPC_EmitNode1,
     OPC_EmitNode2,
     // Space-optimized forms that implicitly encode EmitNodeInfo.
-    OPC_EmitNode0None,
     OPC_EmitNode1None,
     OPC_EmitNode2None,
     OPC_EmitNode0Chain,
     OPC_EmitNode1Chain,
     OPC_EmitNode2Chain,
     OPC_MorphNodeTo,
+    OPC_MorphNodeToByHwMode,
     // Space-optimized forms that implicitly encode number of result VTs.
     OPC_MorphNodeTo0,
     OPC_MorphNodeTo1,
     OPC_MorphNodeTo2,
     // Space-optimized forms that implicitly encode EmitNodeInfo.
-    OPC_MorphNodeTo0None,
     OPC_MorphNodeTo1None,
     OPC_MorphNodeTo2None,
     OPC_MorphNodeTo0Chain,
     OPC_MorphNodeTo1Chain,
     OPC_MorphNodeTo2Chain,
-    OPC_MorphNodeTo0GlueInput,
     OPC_MorphNodeTo1GlueInput,
     OPC_MorphNodeTo2GlueInput,
-    OPC_MorphNodeTo0GlueOutput,
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains offset in table for pattern being selected
+    // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
 
   enum {
-    OPFL_None       = 0,  // Node has no chain or glue input and isn't variadic.
-    OPFL_Chain      = 1,     // Node has a chain input.
-    OPFL_GlueInput  = 2,     // Node has a glue input.
-    OPFL_GlueOutput = 4,     // Node has a glue output.
-    OPFL_MemRefs    = 8,     // Node gets accumulated MemRefs.
-    OPFL_Variadic0  = 1<<4,  // Node is variadic, root has 0 fixed inputs.
-    OPFL_Variadic1  = 2<<4,  // Node is variadic, root has 1 fixed inputs.
-    OPFL_Variadic2  = 3<<4,  // Node is variadic, root has 2 fixed inputs.
-    OPFL_Variadic3  = 4<<4,  // Node is variadic, root has 3 fixed inputs.
-    OPFL_Variadic4  = 5<<4,  // Node is variadic, root has 4 fixed inputs.
-    OPFL_Variadic5  = 6<<4,  // Node is variadic, root has 5 fixed inputs.
-    OPFL_Variadic6  = 7<<4,  // Node is variadic, root has 6 fixed inputs.
+    OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.
+    OPFL_Chain = 1,      // Node has a chain input.
+    OPFL_GlueInput = 2,  // Node has a glue input.
+    OPFL_GlueOutput = 4, // Node has a glue output.
+    OPFL_MemRefs = 8,    // Node gets accumulated MemRefs.
+    OPFL_Variadic0 = 1 << 4, // Node is variadic, root has 0 fixed inputs.
+    OPFL_Variadic1 = 2 << 4, // Node is variadic, root has 1 fixed inputs.
+    OPFL_Variadic2 = 3 << 4, // Node is variadic, root has 2 fixed inputs.
+    OPFL_Variadic3 = 4 << 4, // Node is variadic, root has 3 fixed inputs.
+    OPFL_Variadic4 = 5 << 4, // Node is variadic, root has 4 fixed inputs.
+    OPFL_Variadic5 = 6 << 4, // Node is variadic, root has 5 fixed inputs.
+    OPFL_Variadic6 = 7 << 4, // Node is variadic, root has 6 fixed inputs.
+    OPFL_Variadic7 = 8 << 4, // Node is variadic, root has 7 fixed inputs.
 
-    OPFL_VariadicInfo = OPFL_Variadic6
+    OPFL_VariadicInfo = 15 << 4 // Mask for extracting the OPFL_VariadicN bits.
   };
 
   /// getNumFixedFromVariadicInfo - Transform an EmitNode flags word into the
@@ -416,7 +440,7 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation
   /// detail to the code tblgen produces.
-  virtual bool CheckNodePredicate(SDNode *N, unsigned PredNo) const {
+  virtual bool CheckNodePredicate(SDValue Op, unsigned PredNo) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
@@ -425,9 +449,9 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation detail to the
   /// code tblgen produces.
-  virtual bool CheckNodePredicateWithOperands(
-      SDNode *N, unsigned PredNo,
-      const SmallVectorImpl<SDValue> &Operands) const {
+  virtual bool
+  CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo,
+                                 ArrayRef<SDValue> Operands) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
@@ -441,7 +465,11 @@ public:
     llvm_unreachable("Tblgen should generate this!");
   }
 
-  void SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
+  virtual MVT getValueTypeForHwMode(unsigned Index) const {
+    llvm_unreachable("Tblgen should generate the implementation of this!");
+  }
+
+  void SelectCodeCommon(SDNode *NodeToMatch, const uint8_t *MatcherTable,
                         unsigned TableSize);
 
   /// Return true if complex patterns for this target can mutate the
@@ -462,6 +490,8 @@ private:
   void Select_READ_REGISTER(SDNode *Op);
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
+  void Select_FAKE_USE(SDNode *N);
+  void Select_RELOC_NONE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);
@@ -549,6 +579,7 @@ protected:
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 }
 

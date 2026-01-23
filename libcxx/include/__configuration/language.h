@@ -18,6 +18,9 @@
 
 // NOLINTBEGIN(libcpp-cpp-version-check)
 #ifdef __cplusplus
+#  if __cplusplus < 201103L
+#    define _LIBCPP_CXX03_LANG
+#  endif
 #  if __cplusplus <= 201103L
 #    define _LIBCPP_STD_VER 11
 #  elif __cplusplus <= 201402L
@@ -35,12 +38,16 @@
 #endif // __cplusplus
 // NOLINTEND(libcpp-cpp-version-check)
 
-#if !defined(__cpp_rtti) || __cpp_rtti < 199711L
-#  define _LIBCPP_HAS_NO_RTTI
+#if defined(__cpp_rtti) && __cpp_rtti >= 199711L
+#  define _LIBCPP_HAS_RTTI 1
+#else
+#  define _LIBCPP_HAS_RTTI 0
 #endif
 
-#if !defined(__cpp_exceptions) || __cpp_exceptions < 199711L
-#  define _LIBCPP_HAS_NO_EXCEPTIONS
+#if defined(__cpp_exceptions) && __cpp_exceptions >= 199711L
+#  define _LIBCPP_HAS_EXCEPTIONS 1
+#else
+#  define _LIBCPP_HAS_EXCEPTIONS 0
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_LANGUAGE_H

@@ -19,24 +19,33 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 
-template<class T, class Cont, class Comp = std::less<T> >
+template <class T, class Cont, class Comp = std::less<T> >
 struct PQ : std::priority_queue<T, Cont, Comp> {
-    typedef std::priority_queue<T, Cont, Comp> base;
+  typedef std::priority_queue<T, Cont, Comp> base;
 
-    template<class It, class Alloc>
-    explicit PQ(It first, It last, const Comp& compare, const Alloc& a) : base(first, last, compare, a) {}
+  template <class It, class Alloc>
+  TEST_CONSTEXPR_CXX26 explicit PQ(It first, It last, const Comp& compare, const Alloc& a)
+      : base(first, last, compare, a) {}
 
-    using base::c;
+  using base::c;
 };
 
-int main(int, char**)
-{
-    int a[] = {3, 5, 2, 0, 6, 8, 1};
-    typedef test_allocator<int> Alloc;
-    PQ<int, std::vector<int, Alloc>, std::greater<int> > q(a, a+7, std::greater<int>(), Alloc(2));
-    assert(q.size() == 7);
-    assert(q.top() == 0);
-    assert(q.c.get_allocator() == Alloc(2));
+TEST_CONSTEXPR_CXX26 bool test() {
+  int a[] = {3, 5, 2, 0, 6, 8, 1};
+  typedef test_allocator<int> Alloc;
+  PQ<int, std::vector<int, Alloc>, std::greater<int> > q(a, a + 7, std::greater<int>(), Alloc(2));
+  assert(q.size() == 7);
+  assert(q.top() == 0);
+  assert(q.c.get_allocator() == Alloc(2));
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
+  return 0;
 }

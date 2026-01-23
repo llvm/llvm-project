@@ -79,7 +79,7 @@ lldb_private::Status PlatformAppleSimulator::LaunchProcess(
     return spawned.GetError();
 #else
   Status err;
-  err.SetErrorString(UNSUPPORTED_ERROR);
+  err = Status::FromErrorString(UNSUPPORTED_ERROR);
   return err;
 #endif
 }
@@ -90,7 +90,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
   if (!sdk.empty())
     strm << "  SDK Path: \"" << sdk << "\"\n";
   else
-    strm << "  SDK Path: error: unable to locate SDK\n";
+    strm << "  SDK Path: <unable to locate SDK>\n";
 
 #if defined(__APPLE__)
   // This will get called by subclasses, so just output status on the current
@@ -157,17 +157,18 @@ Status PlatformAppleSimulator::ConnectRemote(Args &args) {
             }
           });
       if (!m_device)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "no device with UDID or name '%s' was found", arg_cstr);
     }
   } else {
-    error.SetErrorString("this command take a single UDID argument of the "
-                         "device you want to connect to.");
+    error = Status::FromErrorString(
+        "this command take a single UDID argument of the "
+        "device you want to connect to.");
   }
   return error;
 #else
   Status err;
-  err.SetErrorString(UNSUPPORTED_ERROR);
+  err = Status::FromErrorString(UNSUPPORTED_ERROR);
   return err;
 #endif
 }
@@ -178,7 +179,7 @@ Status PlatformAppleSimulator::DisconnectRemote() {
   return Status();
 #else
   Status err;
-  err.SetErrorString(UNSUPPORTED_ERROR);
+  err = Status::FromErrorString(UNSUPPORTED_ERROR);
   return err;
 #endif
 }
@@ -408,18 +409,17 @@ Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
       if (FileSystem::Instance().Exists(local_file))
         return error;
     }
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "unable to locate a platform file for '{0}' in platform '{1}'",
         platform_file_path, GetPluginName());
   } else {
-    error.SetErrorString("invalid platform file argument");
+    error = Status::FromErrorString("invalid platform file argument");
   }
   return error;
 }
 
 Status PlatformAppleSimulator::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   // For iOS/tvOS/watchOS, the SDK files are all cached locally on the
   // host system. So first we ask for the file in the cached SDK, then
@@ -431,13 +431,10 @@ Status PlatformAppleSimulator::GetSharedModule(
   error = GetSymbolFile(platform_file, module_spec.GetUUIDPtr(),
                         platform_module_spec.GetFileSpec());
   if (error.Success()) {
-    error = ResolveExecutable(platform_module_spec, module_sp,
-                              module_search_paths_ptr);
+    error = ResolveExecutable(platform_module_spec, module_sp);
   } else {
-    const bool always_create = false;
-    error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
-                                        did_create_ptr, always_create);
+    error = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
+                                        did_create_ptr);
   }
   if (module_sp)
     module_sp->SetPlatformFileSpec(platform_file);
@@ -659,4 +656,3 @@ void PlatformAppleSimulator::Terminate() {
       PlatformDarwin::Terminate();
     }
 }
-

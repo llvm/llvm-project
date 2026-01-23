@@ -2,6 +2,7 @@
 
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
+// XFAIL: intelgpu
 
 #include <assert.h>
 #include <omp.h>
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
   int rc = omp_target_associate_ptr(&x, x_dev, sizeof x, 0, dev);
   assert(!rc && "expected omp_target_associate_ptr to succeed");
 
-// To determine whether x needs to be transfered, the runtime cannot simply
+// To determine whether x needs to be transferred, the runtime cannot simply
 // check whether unified shared memory is enabled and the 'close' modifier is
 // specified.  It must check whether x was previously placed in device memory
 // by, for example, omp_target_associate_ptr.

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Timer.h"
 #include <memory>
 #include <utility>
@@ -31,16 +32,15 @@ class raw_ostream;
 /// If -time-passes has been specified, report the timings immediately and then
 /// reset the timers to zero. By default it uses the stream created by
 /// CreateInfoOutputFile().
-void reportAndResetTimings(raw_ostream *OutStream = nullptr);
+LLVM_ABI void reportAndResetTimings(raw_ostream *OutStream = nullptr);
 
 /// Request the timer for this legacy-pass-manager's pass instance.
-Timer *getPassTimer(Pass *);
+LLVM_ABI Timer *getPassTimer(Pass *);
 
 /// This class implements -time-passes functionality for new pass manager.
 /// It provides the pass-instrumentation callbacks that measure the pass
 /// execution time. They collect timing info into individual timers as
-/// passes are being run. At the end of its life-time it prints the resulting
-/// timing report.
+/// passes are being run.
 class TimePassesHandler {
   /// Value of this type is capable of uniquely identifying pass invocations.
   /// It is a pair of string Pass-Identifier (which for now is common
@@ -48,8 +48,10 @@ class TimePassesHandler {
   using PassInvocationID = std::pair<StringRef, unsigned>;
 
   /// Groups of timers for passes and analyses.
-  TimerGroup PassTG;
-  TimerGroup AnalysisTG;
+  TimerGroup &PassTG =
+      NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);
+  TimerGroup &AnalysisTG = NamedRegionTimer::getNamedTimerGroup(
+      AnalysisGroupName, AnalysisGroupDesc);
 
   using TimerVector = llvm::SmallVector<std::unique_ptr<Timer>, 4>;
   /// Map of timers for pass invocations
@@ -71,23 +73,26 @@ class TimePassesHandler {
   bool PerRun;
 
 public:
-  TimePassesHandler();
-  TimePassesHandler(bool Enabled, bool PerRun = false);
+  static constexpr StringRef PassGroupName = "pass";
+  static constexpr StringRef AnalysisGroupName = "analysis";
+  static constexpr StringRef PassGroupDesc = "Pass execution timing report";
+  static constexpr StringRef AnalysisGroupDesc =
+      "Analysis execution timing report";
 
-  /// Destructor handles the print action if it has not been handled before.
-  ~TimePassesHandler() { print(); }
+  LLVM_ABI TimePassesHandler();
+  LLVM_ABI TimePassesHandler(bool Enabled, bool PerRun = false);
 
   /// Prints out timing information and then resets the timers.
-  void print();
+  LLVM_ABI void print();
 
   // We intend this to be unique per-compilation, thus no copies.
   TimePassesHandler(const TimePassesHandler &) = delete;
   void operator=(const TimePassesHandler &) = delete;
 
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   /// Set a custom output stream for subsequent reporting.
-  void setOutStream(raw_ostream &OutStream);
+  LLVM_ABI void setOutStream(raw_ostream &OutStream);
 
 private:
   /// Dumps information for running/triggered timers, useful for debugging

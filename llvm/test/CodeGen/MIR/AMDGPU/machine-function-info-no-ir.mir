@@ -17,6 +17,8 @@
 # FULL-NEXT: waveLimiter:     true
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
@@ -39,6 +41,7 @@
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -51,6 +54,11 @@
 # FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
+# FULL-NEXT:  hasInitWholeWave: false
+# FULL-NEXT: dynamicVGPRBlockSize: 0
+# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -122,6 +130,8 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -142,6 +152,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -150,10 +161,15 @@ body:             |
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 8
+# FULL-NEXT:  occupancy: 10
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
+# FULL-NEXT: dynamicVGPRBlockSize: 0
+# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -171,7 +187,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT:  occupancy: 8
+# SIMPLE-NEXT:  occupancy: 10
 # SIMPLE-NEXT: body:
 
 name: no_mfi
@@ -196,6 +212,8 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -216,6 +234,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -224,10 +243,15 @@ body:             |
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 8
+# FULL-NEXT:  occupancy: 10
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
+# FULL-NEXT: dynamicVGPRBlockSize: 0
+# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -245,7 +269,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT:  occupancy: 8
+# SIMPLE-NEXT:  occupancy: 10
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
@@ -271,6 +295,8 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -291,6 +317,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -299,10 +326,15 @@ body:             |
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 8
+# FULL-NEXT:  occupancy: 10
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
+# FULL-NEXT: dynamicVGPRBlockSize: 0
+# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -321,7 +353,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT: occupancy: 8
+# SIMPLE-NEXT: occupancy: 10
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func
@@ -449,11 +481,11 @@ body:             |
 ...
 
 ---
-# ALL-LABEL: name: occupancy_0
-# ALL: occupancy: 8
-name: occupancy_0
+# ALL-LABEL: name: occupancy_10
+# ALL: occupancy: 10
+name: occupancy_10
 machineFunctionInfo:
-  occupancy: 0
+  occupancy: 10
 
 body:             |
   bb.0:
@@ -569,6 +601,33 @@ body:             |
 name: sgpr_for_exec_copy_noreg
 machineFunctionInfo:
   sgprForEXECCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+---
+name: vregs
+# FULL: registers:
+# FULL-NEXT:   - { id: 0, class: vgpr_32, preferred-register: '$vgpr1', flags: [ WWM_REG ] }
+# FULL-NEXT:   - { id: 1, class: sgpr_64, preferred-register: '$sgpr0_sgpr1', flags: [  ] }
+# FULL-NEXT:   - { id: 2, class: sgpr_64, preferred-register: '', flags: [  ] }
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: $vgpr1, flags: [ WWM_REG ]}
+  - { id: 1, class: sgpr_64, preferred-register: $sgpr0_sgpr1 }
+  - { id: 2, class: sgpr_64, flags: [ ] }
+body: |
+  bb.0:
+    %2:sgpr_64 = COPY %1
+    %1:sgpr_64 = COPY %0
+...
+
+---
+# ALL-LABEL: name: max_memory_cluster_dwords
+# ALL: maxMemoryClusterDWords: 16
+name: max_memory_cluster_dwords
+machineFunctionInfo:
+  maxMemoryClusterDWords: 16
 body:             |
   bb.0:
     SI_RETURN

@@ -8,8 +8,10 @@ body:             |
   liveins: $x0, $x1
 
     ; CHECK-LABEL: name: test_combine_inttoptr_same_addressspace
-    ; CHECK: [[COPY:%[0-9]+]]:_(p64) = COPY $x0
-    ; CHECK: $x1 = COPY [[COPY]](p64)
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p64) = COPY $x0
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](p64)
     %0:_(p64) = COPY $x0
     %1:_(s64) = G_PTRTOINT %0
     %2:_(p64) = G_INTTOPTR %1
@@ -22,10 +24,12 @@ body:             |
   liveins: $x0, $x1
 
     ; CHECK-LABEL: name: test_combine_inttoptr_diff_addressspace
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
-    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p64) = G_INTTOPTR [[PTRTOINT]](s64)
-    ; CHECK: $x1 = COPY [[INTTOPTR]](p64)
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p64) = G_INTTOPTR [[PTRTOINT]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[INTTOPTR]](p64)
     %0:_(p0) = COPY $x0
     %1:_(s64) = G_PTRTOINT %0
     %2:_(p64) = G_INTTOPTR %1

@@ -6,19 +6,17 @@
 define signext i64 @PR95284(i32 signext %0) {
 ; RV32I-LABEL: PR95284:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    seqz a1, a0
-; RV32I-NEXT:    neg a2, a1
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    srli a2, a2, 1
-; RV32I-NEXT:    srli a0, a0, 1
-; RV32I-NEXT:    slli a1, a1, 31
-; RV32I-NEXT:    or a0, a1, a0
-; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    seqz a1, a0
-; RV32I-NEXT:    add a1, a2, a1
-; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    addi a1, a0, -1
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    slli a2, a0, 31
 ; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    andi a0, a0, -2
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    seqz a2, a1
+; RV32I-NEXT:    sub a2, a2, a0
+; RV32I-NEXT:    andi a0, a1, -2
+; RV32I-NEXT:    slli a1, a2, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: PR95284:

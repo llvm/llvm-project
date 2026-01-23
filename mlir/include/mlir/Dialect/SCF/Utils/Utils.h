@@ -111,13 +111,23 @@ LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
-/// Unrolls this for operation by the specified unroll factor. Returns failure
-/// if the loop cannot be unrolled either due to restrictions or due to invalid
-/// unroll factors. Requires positive loop bounds and step. If specified,
-/// annotates the Ops in each unrolled iteration by applying `annotateFn`.
-LogicalResult loopUnrollByFactor(
+struct UnrolledLoopInfo {
+  std::optional<scf::ForOp> mainLoopOp = std::nullopt;
+  std::optional<scf::ForOp> epilogueLoopOp = std::nullopt;
+};
+
+/// Unrolls this for operation by the specified unroll factor. Returns the
+/// unrolled main loop and the epilogue loop, if the loop is unrolled. Otherwise
+/// returns failure if the loop cannot be unrolled either due to restrictions or
+/// due to invalid unroll factors. Requires positive loop bounds and step. If
+/// specified, annotates the Ops in each unrolled iteration by applying
+/// `annotateFn`.
+FailureOr<UnrolledLoopInfo> loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+
+/// Unrolls this loop completely.
+LogicalResult loopUnrollFull(scf::ForOp forOp);
 
 /// Unrolls and jams this `scf.for` operation by the specified unroll factor.
 /// Returns failure if the loop cannot be unrolled either due to restrictions or
@@ -127,15 +137,8 @@ LogicalResult loopUnrollByFactor(
 /// for operations with results are not supported.
 LogicalResult loopUnrollJamByFactor(scf::ForOp forOp, uint64_t unrollFactor);
 
-/// Transform a loop with a strictly positive step
-///   for %i = %lb to %ub step %s
-/// into a 0-based loop with step 1
-///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
-///     %i = %ii * %s + %lb
-/// Insert the induction variable remapping in the body of `inner`, which is
-/// expected to be either `loop` or another loop perfectly nested under `loop`.
-/// Insert the definition of new bounds immediate before `outer`, which is
-/// expected to be either `loop` or its parent in the loop nest.
+/// Materialize bounds and step of a zero-based and unit-step loop derived by
+/// normalizing the specified bounds and step.
 Range emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
                                OpFoldResult lb, OpFoldResult ub,
                                OpFoldResult step);
@@ -201,6 +204,55 @@ scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
 /// fuse.
 scf::ForOp fuseIndependentSiblingForLoops(scf::ForOp target, scf::ForOp source,
                                           RewriterBase &rewriter);
+
+/// Normalize an `scf.forall` operation. Returns `failure()`if normalization
+/// fails.
+// On `success()` returns the
+/// newly created operation with all uses of the original operation replaced
+/// with results of the new operation.
+FailureOr<scf::ForallOp> normalizeForallOp(RewriterBase &rewriter,
+                                           scf::ForallOp forallOp);
+
+/// Check if the provided loops are perfectly nested for-loops. Perfect nesting
+/// means:
+/// 1. All loops are scf.for operations
+/// 2. Each outer loop's region iter args match the inner loop's init args
+/// 3. Each outer loop's yields match the inner loop's results
+/// 4. Each region iter arg and result has exactly one use
+bool isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops);
+
+/// Generate unrolled copies of an scf loop's 'loopBodyBlock', with 'iterArgs'
+/// and 'yieldedValues' as the block arguments and yielded values of the loop.
+/// The content of the loop body is replicated 'unrollFactor' times, calling
+/// 'ivRemapFn' to remap 'iv' for each unrolled body. If specified, annotates
+/// the Ops in each unrolled iteration using annotateFn. If provided,
+/// 'clonedToSrcOpsMap' is populated with the mappings from the cloned ops to
+/// the original op.
+void generateUnrolledLoop(
+    Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
+    function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    ValueRange iterArgs, ValueRange yieldedValues,
+    IRMapping *clonedToSrcOpsMap = nullptr);
+
+/// Unroll this scf::Parallel loop by the specified unroll factors. Returns the
+/// unrolled loop if the unroll succeded; otherwise returns failure if the loop
+/// cannot be unrolled either due to restrictions or to invalid unroll factors.
+/// Requires positive loop bounds and step. If specified, annotates the Ops in
+/// each unrolled iteration by applying `annotateFn`.
+/// If provided, 'clonedToSrcOpsMap' is populated with the mappings from the
+/// cloned ops to the original op.
+FailureOr<scf::ParallelOp> parallelLoopUnrollByFactors(
+    scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
+    RewriterBase &rewriter,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr,
+    IRMapping *clonedToSrcOpsMap = nullptr);
+
+/// Get constant trip counts for each of the induction variables of the given
+/// loop operation. If any of the loop's trip counts is not constant, return an
+/// empty vector.
+llvm::SmallVector<int64_t>
+getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp);
 
 } // namespace mlir
 

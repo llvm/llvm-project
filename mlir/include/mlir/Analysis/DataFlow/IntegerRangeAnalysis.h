@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 
 namespace mlir {
+class RewriterBase;
 namespace dataflow {
 
 /// This lattice element represents the integer value range of an SSA value.
@@ -47,17 +48,18 @@ class IntegerRangeAnalysis
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
-  /// At an entry point, we cannot reason about interger value ranges.
+  /// At an entry point, we cannot reason about integer value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
     propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
-                                    lattice->getPoint())));
+                                    lattice->getAnchor())));
   }
 
   /// Visit an operation. Invoke the transfer function on each operation that
   /// implements `InferIntRangeInterface`.
-  void visitOperation(Operation *op,
-                      ArrayRef<const IntegerValueRangeLattice *> operands,
-                      ArrayRef<IntegerValueRangeLattice *> results) override;
+  LogicalResult
+  visitOperation(Operation *op,
+                 ArrayRef<const IntegerValueRangeLattice *> operands,
+                 ArrayRef<IntegerValueRangeLattice *> results) override;
 
   /// Visit block arguments or operation results of an operation with region
   /// control-flow for which values are not defined by region control-flow. This
@@ -66,9 +68,25 @@ public:
   /// known bounds.
   void
   visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
+                               ValueRange successorInputs,
                                ArrayRef<IntegerValueRangeLattice *> argLattices,
                                unsigned firstIndex) override;
 };
+
+/// Succeeds if an op can be converted to its unsigned equivalent without
+/// changing its semantics. This is the case when none of its openands or
+/// results can be below 0 when analyzed from a signed perspective.
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op);
+
+/// Succeeds when a value is statically non-negative in that it has a lower
+/// bound on its value (if it is treated as signed) and that bound is
+/// non-negative.
+/// Note, the results of this query may not be accurate for `index` if you plan
+/// to use a non-64-bit index.
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v);
+
+LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
+                                       RewriterBase &rewriter, Value value);
 
 } // end namespace dataflow
 } // end namespace mlir

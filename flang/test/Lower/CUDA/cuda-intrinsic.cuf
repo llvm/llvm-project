@@ -1,0 +1,194 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module mod1
+  type retf
+    real :: inf, sup, near, zero 
+  end type retf
+  type retd
+    real(8) :: inf, sup, near, zero 
+  end type retd
+contains
+  attributes(global) subroutine fadd(c, a, b)
+    real(4) :: a, b
+    type (retf) :: c
+    c%near = __fadd_rn(a, b)
+    c%zero = __fadd_rz(a, b)
+    c%inf =  __fadd_rd(a, b)
+    c%sup =  __fadd_ru(a, b)
+  end subroutine
+  attributes(global) subroutine dadd(c, a, b)
+    real(8) :: a, b
+    type (retd) :: c
+    c%near = __dadd_rn(a, b)
+    c%zero = __dadd_rz(a, b)
+    c%inf =  __dadd_rd(a, b)
+    c%sup =  __dadd_ru(a, b)
+  end subroutine
+  attributes(global) subroutine fmul(c, a, b)
+    real(4) :: a, b
+    type (retf) :: c
+    c%near = __fmul_rn(a, b)
+    c%zero = __fmul_rz(a, b)
+    c%inf  = __fmul_rd(a, b)
+    c%sup  = __fmul_ru(a, b)
+  end subroutine
+  attributes(global) subroutine dmul(c, a, b)
+    real(8) :: a, b
+    type (retf) :: c
+    c%near = __dmul_rn(a, b)
+    c%zero = __dmul_rz(a, b)
+    c%inf  = __dmul_rd(a, b)
+    c%sup  = __dmul_ru(a, b)
+  end subroutine
+  attributes(global) subroutine fmaf(c, a, b)
+    real(4) :: a, b
+    type (retf) :: c
+    c%near = __fmaf_rn(a, b, b)
+    c%zero = __fmaf_rz(a, b, b)
+    c%inf  = __fmaf_rd(a, b, b)
+    c%sup  = __fmaf_ru(a, b, b)
+  end subroutine
+  attributes(global) subroutine fma(c, a, b)
+    real(8) :: a, b
+    type (retd) :: c
+    c%near = __fma_rn(a, b, b)
+    c%zero = __fma_rz(a, b, b)
+    c%inf  = __fma_rd(a, b, b)
+    c%sup  = __fma_ru(a, b, b)
+  end subroutine
+  attributes(global) subroutine frcp(c,a)
+    real(4) :: a
+    type (retf) :: c
+    c%near = __frcp_rn(a)
+    c%zero = __frcp_rz(a)
+    c%inf  = __frcp_rd(a)
+    c%sup  = __frcp_ru(a)
+  end subroutine
+  attributes(global) subroutine fsqrt(c,a)
+    real(4) :: a
+    type (retf) :: c
+    c%near = __fsqrt_rn(a)
+    c%zero = __fsqrt_rz(a)
+    c%inf  = __fsqrt_rd(a)
+    c%sup  = __fsqrt_ru(a)
+  end subroutine
+  attributes(global) subroutine fdiv(c, a, b)
+    real(4) :: a, b
+    type (retf) :: c
+    c%near = __fdiv_rn(a, b)
+    c%zero = __fdiv_rz(a, b)
+    c%inf  = __fdiv_rd(a, b)
+    c%sup  = __fdiv_ru(a, b)
+  end subroutine
+  attributes(global) subroutine testsincosf(c, a, b)
+    real(4) :: a, b, c
+    call sincos(a, b, c)
+  end subroutine
+  attributes(global) subroutine testsincosd(c, a, b)
+    real(8) :: a, b, c
+    call sincos(a, b, c)
+  end subroutine
+  attributes(global) subroutine testsincospif(c, a, b)
+    real(4) :: a, b, c
+    call sincospi(a, b, c)
+  end subroutine
+  attributes(global) subroutine testsincospid(c, a, b)
+    real(8) :: a, b, c
+    call sincospi(a, b, c)
+  end subroutine
+  attributes(global) subroutine testmulhi(c, a, b)
+    integer(4) :: a, b, c
+    c = __mulhi(a, b)
+  end subroutine
+  attributes(global) subroutine testumulhi(c, a, b)
+    integer(4) :: a, b, c
+    c = __umulhi(a, b)
+  end subroutine
+  attributes(global) subroutine testmul64hi(c, a, b)
+    integer(8) :: a, b, c
+    c = __mul64hi(a, b)
+  end subroutine
+  attributes(global) subroutine testumul64hi(c, a, b)
+    integer(8) :: a, b, c
+    c = __umul64hi(a, b)
+  end subroutine
+
+end
+
+! CHECK-LABEL: func.func @_QMmod1Pfadd
+! CHECK: fir.call @__nv_fadd_rn
+! CHECK: fir.call @__nv_fadd_rz
+! CHECK: fir.call @__nv_fadd_rd
+! CHECK: fir.call @__nv_fadd_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pdadd
+! CHECK: fir.call @__nv_dadd_rn
+! CHECK: fir.call @__nv_dadd_rz
+! CHECK: fir.call @__nv_dadd_rd
+! CHECK: fir.call @__nv_dadd_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pfmul
+! CHECK: fir.call @__nv_fmul_rn
+! CHECK: fir.call @__nv_fmul_rz
+! CHECK: fir.call @__nv_fmul_rd
+! CHECK: fir.call @__nv_fmul_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pdmul
+! CHECK: fir.call @__nv_dmul_rn
+! CHECK: fir.call @__nv_dmul_rz
+! CHECK: fir.call @__nv_dmul_rd
+! CHECK: fir.call @__nv_dmul_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pfmaf
+! CHECK: fir.call @__nv_fmaf_rn
+! CHECK: fir.call @__nv_fmaf_rz
+! CHECK: fir.call @__nv_fmaf_rd
+! CHECK: fir.call @__nv_fmaf_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pfma
+! CHECK: fir.call @__nv_fma_rn
+! CHECK: fir.call @__nv_fma_rz
+! CHECK: fir.call @__nv_fma_rd
+! CHECK: fir.call @__nv_fma_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pfrcp
+! CHECK: fir.call @__nv_frcp_rn
+! CHECK: fir.call @__nv_frcp_rz
+! CHECK: fir.call @__nv_frcp_rd
+! CHECK: fir.call @__nv_frcp_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pfsqrt
+! CHECK: fir.call @__nv_fsqrt_rn
+! CHECK: fir.call @__nv_fsqrt_rz
+! CHECK: fir.call @__nv_fsqrt_rd
+! CHECK: fir.call @__nv_fsqrt_ru
+
+! CHECK-LABEL: func.func @_QMmod1Pfdiv
+! CHECK: fir.call @__nv_fdiv_rn
+! CHECK: fir.call @__nv_fdiv_rz
+! CHECK: fir.call @__nv_fdiv_rd
+! CHECK: fir.call @__nv_fdiv_ru
+
+! CHECK-LABEL: func.func @_QMmod1Ptestsincosf
+! CHECK: fir.call @__nv_sincosf
+
+! CHECK-LABEL: func.func @_QMmod1Ptestsincosd
+! CHECK: fir.call @__nv_sincos
+
+! CHECK-LABEL: func.func @_QMmod1Ptestsincospif
+! CHECK: fir.call @__nv_sincospif
+
+! CHECK-LABEL: func.func @_QMmod1Ptestsincospid
+! CHECK: fir.call @__nv_sincospi
+
+! CHECK-LABEL: func.func @_QMmod1Ptestmulhi
+! CHECK: fir.call @__nv_mulhi
+
+! CHECK-LABEL: func.func @_QMmod1Ptestumulhi
+! CHECK: fir.call @__nv_umulhi
+
+! CHECK-LABEL: func.func @_QMmod1Ptestmul64hi
+! CHECK: fir.call @__nv_mul64hi
+
+! CHECK-LABEL: func.func @_QMmod1Ptestumul64hi
+! CHECK: fir.call @__nv_umul64hi

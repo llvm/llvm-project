@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -emit-llvm -fno-rtti %s -std=c++11 -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-rtti > %t
-// RUN: FileCheck %s < %t
+// RUN: FileCheck --check-prefixes CHECK,CLANG22 %s < %t
 // vftables are emitted very late, so do another pass to try to keep the checks
 // in source order.
 // RUN: FileCheck --check-prefix DTORS %s < %t
@@ -8,6 +8,7 @@
 // RUN: FileCheck --check-prefix DTORS4 %s < %t
 //
 // RUN: %clang_cc1 -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti -std=c++11 | FileCheck --check-prefix DTORS-X64 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -emit-llvm -fno-rtti %s -std=c++11 -o - -mconstructor-aliases -triple=i386-pc-win32 -fclang-abi-compat=20 | FileCheck --check-prefixes CHECK,CLANG21 %s
 
 namespace basic {
 
@@ -52,7 +53,8 @@ struct C {
 // DTORS:        store ptr %{{.*}}, ptr %[[RETVAL:retval]]
 // DTORS:        %[[SHOULD_DELETE_VALUE:[0-9a-z._]+]] = load i32, ptr %[[SHOULD_DELETE_VAR]]
 // DTORS:        call x86_thiscallcc void @"??1C@basic@@UAE@XZ"(ptr {{[^,]*}} %[[THIS:[0-9a-z]+]])
-// DTORS-NEXT:   %[[CONDITION:[0-9]+]] = icmp eq i32 %[[SHOULD_DELETE_VALUE]], 0
+// DTORS-NEXT:   %[[AND:[0-9]+]] = and i32 %[[SHOULD_DELETE_VALUE]], 1
+// DTORS-NEXT:   %[[CONDITION:[0-9]+]] = icmp eq i32 %[[AND]], 0
 // DTORS-NEXT:   br i1 %[[CONDITION]], label %[[CONTINUE_LABEL:[0-9a-z._]+]], label %[[CALL_DELETE_LABEL:[0-9a-z._]+]]
 //
 // DTORS:      [[CALL_DELETE_LABEL]]
@@ -113,8 +115,9 @@ void call_deleting_dtor_and_global_delete(C *obj_ptr) {
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[OBJ_PTR_VALUE]]
 // CHECK-NEXT:   %[[PVDTOR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 0
 // CHECK-NEXT:   %[[VDTOR:.*]] = load ptr, ptr %[[PVDTOR]]
-// CHECK-NEXT:   %[[CALL:.*]] = call x86_thiscallcc ptr %[[VDTOR]](ptr {{[^,]*}} %[[OBJ_PTR_VALUE]], i32 0)
-// CHECK-NEXT:   call void @"??3@YAXPAX@Z"(ptr %[[CALL]])
+// CLANG22-NEXT:   %[[CALL:.*]] = call x86_thiscallcc ptr %[[VDTOR]](ptr {{[^,]*}} %[[OBJ_PTR_VALUE]], i32 5)
+// CLANG21-NEXT:   %[[CALL:.*]] = call x86_thiscallcc ptr %[[VDTOR]](ptr {{[^,]*}} %[[OBJ_PTR_VALUE]], i32 0)
+// CLANG21-NEXT: call void @"??3@YAXPAX@Z"(ptr %[[CALL]])
 // CHECK:      ret void
 }
 
@@ -166,7 +169,7 @@ void foo() {
 // DTORS2-LABEL: define linkonce_odr dso_local x86_thiscallcc ptr @"??_EC@dtor_in_second_nvbase@@W3AEPAXI@Z"(ptr %this, i32 %should_call_delete)
 //      Do an adjustment from B* to C*.
 // DTORS2:   getelementptr i8, ptr %{{.*}}, i32 -4
-// DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc ptr @"??_GC@dtor_in_second_nvbase@@UAEPAXI@Z"
+// DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc ptr @"??_EC@dtor_in_second_nvbase@@UAEPAXI@Z"
 // DTORS2:   ret ptr %[[CALL]]
 }
 
@@ -457,4 +460,58 @@ class G {
 
 extern void testG() {
   G g;
+}
+
+namespace operator_delete {
+
+class H { virtual ~H();
+  void operator delete(void *);
+};
+H::~H() { }
+
+void checkH() {
+  new H();
+}
+// DTORS:      define linkonce_odr dso_local x86_thiscallcc ptr @"??_GH@operator_delete@@EAEPAXI@Z"(ptr {{[^,]*}} %this, i32 %should_call_delete) {{.*}} comdat {{.*}} {
+// DTORS:        store i32 %should_call_delete, ptr %[[SHOULD_DELETE_VAR:[0-9a-z._]+]], align 4
+// DTORS:        store ptr %{{.*}}, ptr %[[RETVAL:retval]]
+// DTORS:        %[[SHOULD_DELETE_VALUE:[0-9a-z._]+]] = load i32, ptr %[[SHOULD_DELETE_VAR]]
+// DTORS:        call x86_thiscallcc void @"??1H@operator_delete@@EAE@XZ"(ptr {{[^,]*}} %[[THIS:[0-9a-z]+]])
+// DTORS-NEXT:   %[[AND:[0-9]+]] = and i32 %[[SHOULD_DELETE_VALUE]], 1
+// DTORS-NEXT:   %[[CONDITION:[0-9]+]] = icmp eq i32 %[[AND]], 0
+// DTORS-NEXT:   br i1 %[[CONDITION]], label %[[CONTINUE_LABEL:[0-9a-z._]+]], label %[[CALL_DELETE_LABEL:[0-9a-z._]+]]
+//
+// DTORS:      [[CALL_DELETE_LABEL]]
+// DTORS-NEXT:   %[[AND:[0-9]+]] = and i32 %[[SHOULD_DELETE_VALUE]], 4
+// DTORS-NEXT:   %[[CONDITION1:[0-9]+]] = icmp eq i32 %[[AND]], 0
+// DTORS-NEXT:   br i1 %[[CONDITION1]], label %[[CALL_CLASS_DELETE:[0-9a-z._]+]], label %[[CALL_GLOB_DELETE:[0-9a-z._]+]]
+//
+// DTORS:      [[CALL_GLOB_DELETE]]
+// DTORS-NEXT:   call void @"??3@YAXPAX@Z"(ptr %[[THIS]])
+// DTORS-NEXT:   br label %[[CONTINUE_LABEL]]
+//
+// DTORS:      [[CALL_CLASS_DELETE]]
+// DTORS-NEXT:   call void @"??3H@operator_delete@@CAXPAX@Z"(ptr %[[THIS]])
+// DTORS-NEXT:   br label %[[CONTINUE_LABEL]]
+//
+// DTORS:      [[CONTINUE_LABEL]]
+// DTORS-NEXT:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
+// DTORS-NEXT:   ret ptr %[[RET]]
+
+// CLANG21:      define linkonce_odr dso_local x86_thiscallcc ptr @"??_GH@operator_delete@@EAEPAXI@Z"(ptr {{[^,]*}} %this, i32 %should_call_delete) {{.*}} comdat {{.*}} {
+// CLANG21:        store i32 %should_call_delete, ptr %[[SHOULD_DELETE_VAR:[0-9a-z._]+]], align 4
+// CLANG21:        store ptr %{{.*}}, ptr %[[RETVAL:retval]]
+// CLANG21:        %[[SHOULD_DELETE_VALUE:[0-9a-z._]+]] = load i32, ptr %[[SHOULD_DELETE_VAR]]
+// CLANG21:        call x86_thiscallcc void @"??1H@operator_delete@@EAE@XZ"(ptr {{[^,]*}} %[[THIS:[0-9a-z]+]])
+// CLANG21-NEXT:   %[[AND:[0-9]+]] = and i32 %[[SHOULD_DELETE_VALUE]], 1
+// CLANG21-NEXT:   %[[CONDITION:[0-9]+]] = icmp eq i32 %[[AND]], 0
+// CLANG21-NEXT:   br i1 %[[CONDITION]], label %[[CONTINUE_LABEL:[0-9a-z._]+]], label %[[CALL_DELETE_LABEL:[0-9a-z._]+]]
+//
+// CLANG21:      [[CALL_DELETE_LABEL]]
+// CLANG21-NEXT:   call void @"??3H@operator_delete@@CAXPAX@Z"(ptr %[[THIS:[0-9a-z]+]])
+// CLANG21-NEXT:   br label %[[CONTINUE_LABEL]]
+//
+// CLANG21:      [[CONTINUE_LABEL]]
+// CLANG21-NEXT:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
+// CLANG21-NEXT:   ret ptr %[[RET]]
 }

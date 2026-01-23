@@ -11,6 +11,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/Support/Error.h"
@@ -44,41 +45,45 @@ void ObjectFileCOFF::Terminate() {
 }
 
 lldb_private::ObjectFile *
-ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
+ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
+                               DataExtractorSP extractor_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t file_offset, offset_t length) {
   Log *log = GetLog(LLDBLog::Object);
 
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOG(log,
                "Failed to create ObjectFileCOFF instance: cannot read file {0}",
                file->GetPath());
       return nullptr;
     }
+    extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  assert(data_sp && "must have mapped file at this point");
+  assert(extractor_sp && extractor_sp->HasData() &&
+         "must have mapped file at this point");
 
-  if (!IsCOFFObjectFile(data_sp))
+  if (!IsCOFFObjectFile(extractor_sp->GetSharedDataBuffer()))
     return nullptr;
 
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOG(log,
                "Failed to create ObjectFileCOFF instance: cannot read file {0}",
                file->GetPath());
       return nullptr;
     }
+    extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-
-  MemoryBufferRef buffer{toStringRef(data_sp->GetData()),
-                         file->GetFilename().GetStringRef()};
+  MemoryBufferRef buffer{
+      toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
+      file->GetFilename().GetStringRef()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -93,8 +98,8 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
            file->GetPath());
 
   return new ObjectFileCOFF(unique_dyn_cast<COFFObjectFile>(std::move(*binary)),
-                            module_sp, data_sp, data_offset, file, file_offset,
-                            length);
+                            module_sp, extractor_sp, data_offset, file,
+                            file_offset, length);
 }
 
 lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
@@ -191,19 +196,15 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
 
   auto SectionType = [](StringRef Name,
                         const coff_section *Section) -> lldb::SectionType {
-    lldb::SectionType type =
-        StringSwitch<lldb::SectionType>(Name)
-            // DWARF Debug Sections
-            .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
-            .Case(".debug_info", eSectionTypeDWARFDebugInfo)
-            .Case(".debug_line", eSectionTypeDWARFDebugLine)
-            .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
-            .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
-            .Case(".debug_str", eSectionTypeDWARFDebugStr)
-            // CodeView Debug Sections: .debug$S, .debug$T
-            .StartsWith(".debug$", eSectionTypeDebug)
-            .Case("clangast", eSectionTypeOther)
-            .Default(eSectionTypeInvalid);
+    // DWARF Debug Sections
+    if (Name.consume_front(".debug_"))
+      return GetDWARFSectionTypeFromName(Name);
+
+    lldb::SectionType type = StringSwitch<lldb::SectionType>(Name)
+                                 // CodeView Debug Sections: .debug$S, .debug$T
+                                 .StartsWith(".debug$", eSectionTypeDebug)
+                                 .Case("clangast", eSectionTypeOther)
+                                 .Default(eSectionTypeInvalid);
     if (type != eSectionTypeInvalid)
       return type;
 
@@ -304,8 +305,8 @@ bool ObjectFileCOFF::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module->GetMutex());
 
-  m_data.SetByteOrder(eByteOrderLittle);
-  m_data.SetAddressByteSize(GetAddressByteSize());
+  m_data_nsp->SetByteOrder(eByteOrderLittle);
+  m_data_nsp->SetAddressByteSize(GetAddressByteSize());
 
   return true;
 }

@@ -23,6 +23,12 @@ class IRBuilderBase;
 /// Convert the given Cmpxchg into primitive load and compare.
 bool lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI);
 
+/// Emit IR to implement the given cmpxchg operation on values in registers,
+/// returning the new value.
+std::pair<Value *, Value *> buildCmpXchgValue(IRBuilderBase &Builder,
+                                              Value *Ptr, Value *Cmp,
+                                              Value *Val, Align Alignment);
+
 /// Convert the given RMWI into primitive load and stores,
 /// assuming that doing so is legal. Return true if the lowering
 /// succeeds.

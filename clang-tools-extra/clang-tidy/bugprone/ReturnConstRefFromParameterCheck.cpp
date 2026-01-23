@@ -1,4 +1,4 @@
-//===--- ReturnConstRefFromParameterCheck.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReturnConstRefFromParameterCheck.h"
+#include "clang/AST/Attrs.inc"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -14,20 +16,35 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
+AST_MATCHER(ParmVarDecl, hasLifetimeBoundAttr) {
+  return Node.hasAttr<LifetimeBoundAttr>();
+}
+
+} // namespace
+
 void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
+  const auto DRef = ignoringParens(
+      declRefExpr(
+          to(parmVarDecl(hasType(hasCanonicalType(
+                             qualType(lValueReferenceType(pointee(
+                                          qualType(isConstQualified()))))
+                                 .bind("type"))),
+                         hasDeclContext(functionDecl(
+                             equalsBoundNode("func"),
+                             hasReturnTypeLoc(loc(qualType(
+                                 hasCanonicalType(equalsBoundNode("type"))))))),
+                         unless(hasLifetimeBoundAttr()))
+                 .bind("param")))
+          .bind("dref"));
+
   Finder->addMatcher(
       returnStmt(
-          hasReturnValue(declRefExpr(
-              to(parmVarDecl(hasType(hasCanonicalType(
-                                 qualType(lValueReferenceType(pointee(
-                                              qualType(isConstQualified()))))
-                                     .bind("type"))))
-                     .bind("param")))),
-          hasAncestor(
-              functionDecl(hasReturnTypeLoc(loc(qualType(
-                               hasCanonicalType(equalsBoundNode("type"))))))
-                  .bind("func")))
-          .bind("ret"),
+          hasAncestor(functionDecl().bind("func")),
+          hasReturnValue(anyOf(
+              DRef, ignoringParens(conditionalOperator(eachOf(
+                        hasTrueExpression(DRef), hasFalseExpression(DRef))))))),
       this);
 }
 
@@ -66,11 +83,10 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   // FIXME:
   // 1. overload in anonymous namespace
   // 2. forward reference
-  DeclContext::lookup_result LookupResult =
+  const DeclContext::lookup_result LookupResult =
       FD.getParent()->lookup(FD.getNameInfo().getName());
-  if (LookupResult.isSingleResult()) {
+  if (LookupResult.isSingleResult())
     return nullptr;
-  }
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;
@@ -85,8 +101,8 @@ void ReturnConstRefFromParameterCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *PD = Result.Nodes.getNodeAs<ParmVarDecl>("param");
-  const auto *R = Result.Nodes.getNodeAs<ReturnStmt>("ret");
-  const SourceRange Range = R->getRetValue()->getSourceRange();
+  const auto *DRef = Result.Nodes.getNodeAs<DeclRefExpr>("dref");
+  const SourceRange Range = DRef->getSourceRange();
   if (Range.isInvalid())
     return;
 

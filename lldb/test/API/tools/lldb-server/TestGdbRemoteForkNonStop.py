@@ -1,6 +1,6 @@
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.lldbutil import append_to_process_working_directory
 from fork_testbase import GdbRemoteForkTestBase
 
 
@@ -156,8 +156,8 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
 
     @add_test_categories(["fork"])
     def test_c_both_nonstop(self):
-        lock1 = self.getBuildArtifact("lock1")
-        lock2 = self.getBuildArtifact("lock2")
+        lock1 = lldbutil.append_to_process_working_directory(self, "lock1")
+        lock2 = lldbutil.append_to_process_working_directory(self, "lock2")
         parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
             [
                 "fork",
@@ -194,8 +194,8 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
 
     @add_test_categories(["fork"])
     def test_vCont_both_nonstop(self):
-        lock1 = self.getBuildArtifact("lock1")
-        lock2 = self.getBuildArtifact("lock2")
+        lock1 = lldbutil.append_to_process_working_directory(self, "lock1")
+        lock2 = lldbutil.append_to_process_working_directory(self, "lock2")
         parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
             [
                 "fork",
@@ -227,8 +227,8 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
         self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
 
     def vCont_both_nonstop_test(self, vCont_packet):
-        lock1 = self.getBuildArtifact("lock1")
-        lock2 = self.getBuildArtifact("lock2")
+        lock1 = lldbutil.append_to_process_working_directory(self, "lock1")
+        lock2 = lldbutil.append_to_process_working_directory(self, "lock2")
         parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
             [
                 "fork",

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-chained-comparison %t
+// RUN: %check_clang_tidy -std=c++98-or-later --extra-arg=-Wno-error=parentheses %s bugprone-chained-comparison %t
 
 void badly_chained_1(int x, int y, int z)
 {
@@ -89,3 +89,44 @@ bool mixedBinaryAndCpp(Value a, Value b, bool c) {
     return a < b == c;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: chained comparison 'v0 < v1 == v2' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]
+
+#define CHAINED_COMPARE(a, b, c) (a < b < c)
+
+void macro_test(int x, int y, int z) {
+    bool result = CHAINED_COMPARE(x, y, z);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:35: warning: chained comparison 'v0 < v1 < v2' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]
+
+#define NESTED_LESS(a, b) a < b
+#define NESTED_CHAIN(a, b, c) NESTED_LESS(a, b) < c
+
+void nested_macro_test(int x, int y, int z) {
+    bool result = NESTED_CHAIN(x, y, z);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:32: warning: chained comparison 'v0 < v1 < v2' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]
+
+#define LESS_OP <
+
+void operator_macro_test(int x, int y, int z) {
+    bool result = x LESS_OP y LESS_OP z;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:19: warning: chained comparison 'v0 < v1 < v2' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]
+
+#define PARTIAL_LESS(a, b) a < b
+
+void mixed_macro_test(int x, int y, int z) {
+    bool result = PARTIAL_LESS(x, y) < z;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:32: warning: chained comparison 'v0 < v1 < v2' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]
+
+void if_macro_test(int x, int y, int z) {
+    if (CHAINED_COMPARE(x, y, z)) {}
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:25: warning: chained comparison 'v0 < v1 < v2' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]
+
+#define LONG_CHAIN_MACRO(v) v[0] < v[1] < v[2] < v[3]
+
+void long_chain_macro_test(int v[4]) {
+    bool result = LONG_CHAIN_MACRO(v);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:36: warning: chained comparison 'v0 < v1 < v2 < v3' may generate unintended results, use parentheses to specify order of evaluation or a logical operator to separate comparison expressions [bugprone-chained-comparison]

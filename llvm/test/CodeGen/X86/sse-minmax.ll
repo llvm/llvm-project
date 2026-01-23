@@ -80,11 +80,11 @@ define double @olt_inverse(double %x, double %y)  {
 define double @oge(double %x, double %y)  {
 ; STRICT-LABEL: oge:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movapd %xmm1, %xmm2
-; STRICT-NEXT:    cmplesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    cmplesd %xmm2, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: oge:
@@ -100,10 +100,9 @@ define double @ole(double %x, double %y)  {
 ; STRICT-LABEL: ole:
 ; STRICT:       # %bb.0:
 ; STRICT-NEXT:    movapd %xmm0, %xmm2
-; STRICT-NEXT:    cmplesd %xmm1, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    cmplesd %xmm1, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ole:
@@ -118,11 +117,10 @@ define double @ole(double %x, double %y)  {
 define double @oge_inverse(double %x, double %y)  {
 ; STRICT-LABEL: oge_inverse:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movapd %xmm1, %xmm2
-; STRICT-NEXT:    cmplesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm1
-; STRICT-NEXT:    andnpd %xmm0, %xmm2
-; STRICT-NEXT:    orpd %xmm1, %xmm2
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    cmplesd %xmm2, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -145,10 +143,8 @@ define double @ole_inverse(double %x, double %y)  {
 ; STRICT-LABEL: ole_inverse:
 ; STRICT:       # %bb.0:
 ; STRICT-NEXT:    movapd %xmm0, %xmm2
-; STRICT-NEXT:    cmplesd %xmm1, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm1
-; STRICT-NEXT:    andnpd %xmm0, %xmm2
-; STRICT-NEXT:    orpd %xmm1, %xmm2
+; STRICT-NEXT:    cmplesd %xmm1, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -333,10 +329,9 @@ define double @ugt(double %x, double %y)  {
 ; STRICT-LABEL: ugt:
 ; STRICT:       # %bb.0:
 ; STRICT-NEXT:    movapd %xmm0, %xmm2
-; STRICT-NEXT:    cmpnlesd %xmm1, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    cmpnlesd %xmm1, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ugt:
@@ -351,11 +346,11 @@ define double @ugt(double %x, double %y)  {
 define double @ult(double %x, double %y)  {
 ; STRICT-LABEL: ult:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movapd %xmm1, %xmm2
-; STRICT-NEXT:    cmpnlesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    cmpnlesd %xmm2, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ult:
@@ -371,10 +366,8 @@ define double @ugt_inverse(double %x, double %y)  {
 ; STRICT-LABEL: ugt_inverse:
 ; STRICT:       # %bb.0:
 ; STRICT-NEXT:    movapd %xmm0, %xmm2
-; STRICT-NEXT:    cmpnlesd %xmm1, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm1
-; STRICT-NEXT:    andnpd %xmm0, %xmm2
-; STRICT-NEXT:    orpd %xmm1, %xmm2
+; STRICT-NEXT:    cmpnlesd %xmm1, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -396,11 +389,10 @@ define double @ugt_inverse(double %x, double %y)  {
 define double @ult_inverse(double %x, double %y)  {
 ; STRICT-LABEL: ult_inverse:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movapd %xmm1, %xmm2
-; STRICT-NEXT:    cmpnlesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm1
-; STRICT-NEXT:    andnpd %xmm0, %xmm2
-; STRICT-NEXT:    orpd %xmm1, %xmm2
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    cmpnlesd %xmm2, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -738,12 +730,12 @@ define double @olt_inverse_y(double %x)  {
 define double @oge_y(double %x)  {
 ; STRICT-LABEL: oge_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; STRICT-NEXT:    movapd %xmm1, %xmm2
-; STRICT-NEXT:    cmplesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
+; STRICT-NEXT:    cmplesd %xmm1, %xmm0
+; STRICT-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: oge_y:
@@ -758,12 +750,11 @@ define double @oge_y(double %x)  {
 define double @ole_y(double %x)  {
 ; STRICT-LABEL: ole_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; STRICT-NEXT:    movapd %xmm0, %xmm2
-; STRICT-NEXT:    cmplesd %xmm1, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    cmplesd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; STRICT-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ole_y:
@@ -778,12 +769,10 @@ define double @ole_y(double %x)  {
 define double @oge_inverse_y(double %x)  {
 ; STRICT-LABEL: oge_inverse_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm2 = [-0.0E+0,0.0E+0]
-; STRICT-NEXT:    movapd %xmm2, %xmm1
-; STRICT-NEXT:    cmplesd %xmm0, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
+; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
+; STRICT-NEXT:    cmplesd %xmm1, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -806,12 +795,9 @@ define double @oge_inverse_y(double %x)  {
 define double @ole_inverse_y(double %x)  {
 ; STRICT-LABEL: ole_inverse_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm2 = [-0.0E+0,0.0E+0]
 ; STRICT-NEXT:    movapd %xmm0, %xmm1
-; STRICT-NEXT:    cmplesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
+; STRICT-NEXT:    cmplesd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -834,12 +820,11 @@ define double @ole_inverse_y(double %x)  {
 define double @ugt_y(double %x)  {
 ; STRICT-LABEL: ugt_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; STRICT-NEXT:    movapd %xmm0, %xmm2
-; STRICT-NEXT:    cmpnlesd %xmm1, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    cmpnlesd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; STRICT-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ugt_y:
@@ -854,12 +839,12 @@ define double @ugt_y(double %x)  {
 define double @ult_y(double %x)  {
 ; STRICT-LABEL: ult_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; STRICT-NEXT:    movapd %xmm1, %xmm2
-; STRICT-NEXT:    cmpnlesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
+; STRICT-NEXT:    cmpnlesd %xmm1, %xmm0
+; STRICT-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; STRICT-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; STRICT-NEXT:    movapd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ult_y:
@@ -874,12 +859,9 @@ define double @ult_y(double %x)  {
 define double @ugt_inverse_y(double %x)  {
 ; STRICT-LABEL: ugt_inverse_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm2 = [-0.0E+0,0.0E+0]
 ; STRICT-NEXT:    movapd %xmm0, %xmm1
-; STRICT-NEXT:    cmpnlesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
+; STRICT-NEXT:    cmpnlesd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -902,12 +884,10 @@ define double @ugt_inverse_y(double %x)  {
 define double @ult_inverse_y(double %x)  {
 ; STRICT-LABEL: ult_inverse_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm2 = [-0.0E+0,0.0E+0]
-; STRICT-NEXT:    movapd %xmm2, %xmm1
-; STRICT-NEXT:    cmpnlesd %xmm0, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
+; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
+; STRICT-NEXT:    cmpnlesd %xmm1, %xmm0
+; STRICT-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;

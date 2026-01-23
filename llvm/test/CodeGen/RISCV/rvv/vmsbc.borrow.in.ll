@@ -4,12 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i8.nxv1i8(
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  <vscale x 1 x i1>,
-  iXLen);
-
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
@@ -26,12 +20,6 @@ entry:
 
   ret <vscale x 1 x i1> %a
 }
-
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i8.nxv2i8(
-  <vscale x 2 x i8>,
-  <vscale x 2 x i8>,
-  <vscale x 2 x i1>,
-  iXLen);
 
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i8_nxv2i8(<vscale x 2 x i8> %0, <vscale x 2 x i8> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i8_nxv2i8:
@@ -50,12 +38,6 @@ entry:
   ret <vscale x 2 x i1> %a
 }
 
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i8.nxv4i8(
-  <vscale x 4 x i8>,
-  <vscale x 4 x i8>,
-  <vscale x 4 x i1>,
-  iXLen);
-
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i8_nxv4i8(<vscale x 4 x i8> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
@@ -72,12 +54,6 @@ entry:
 
   ret <vscale x 4 x i1> %a
 }
-
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i8.nxv8i8(
-  <vscale x 8 x i8>,
-  <vscale x 8 x i8>,
-  <vscale x 8 x i1>,
-  iXLen);
 
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, <vscale x 8 x i8> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i8_nxv8i8:
@@ -96,12 +72,6 @@ entry:
   ret <vscale x 8 x i1> %a
 }
 
-declare <vscale x 16 x i1> @llvm.riscv.vmsbc.borrow.in.nxv16i8.nxv16i8(
-  <vscale x 16 x i8>,
-  <vscale x 16 x i8>,
-  <vscale x 16 x i1>,
-  iXLen);
-
 define <vscale x 16 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv16i1_nxv16i8_nxv16i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv16i1_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
@@ -118,12 +88,6 @@ entry:
 
   ret <vscale x 16 x i1> %a
 }
-
-declare <vscale x 32 x i1> @llvm.riscv.vmsbc.borrow.in.nxv32i8.nxv32i8(
-  <vscale x 32 x i8>,
-  <vscale x 32 x i8>,
-  <vscale x 32 x i1>,
-  iXLen);
 
 define <vscale x 32 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv32i1_nxv32i8_nxv32i8(<vscale x 32 x i8> %0, <vscale x 32 x i8> %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv32i1_nxv32i8_nxv32i8:
@@ -142,12 +106,6 @@ entry:
   ret <vscale x 32 x i1> %a
 }
 
-declare <vscale x 64 x i1> @llvm.riscv.vmsbc.borrow.in.nxv64i8.nxv64i8(
-  <vscale x 64 x i8>,
-  <vscale x 64 x i8>,
-  <vscale x 64 x i1>,
-  iXLen);
-
 define <vscale x 64 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv64i1_nxv64i8_nxv64i8(<vscale x 64 x i8> %0, <vscale x 64 x i8> %1, <vscale x 64 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv64i1_nxv64i8_nxv64i8:
 ; CHECK:       # %bb.0: # %entry
@@ -164,12 +122,6 @@ entry:
 
   ret <vscale x 64 x i1> %a
 }
-
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i16.nxv1i16(
-  <vscale x 1 x i16>,
-  <vscale x 1 x i16>,
-  <vscale x 1 x i1>,
-  iXLen);
 
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i16_nxv1i16(<vscale x 1 x i16> %0, <vscale x 1 x i16> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i16_nxv1i16:
@@ -188,12 +140,6 @@ entry:
   ret <vscale x 1 x i1> %a
 }
 
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i16.nxv2i16(
-  <vscale x 2 x i16>,
-  <vscale x 2 x i16>,
-  <vscale x 2 x i1>,
-  iXLen);
-
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i16_nxv2i16(<vscale x 2 x i16> %0, <vscale x 2 x i16> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
@@ -210,12 +156,6 @@ entry:
 
   ret <vscale x 2 x i1> %a
 }
-
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i16.nxv4i16(
-  <vscale x 4 x i16>,
-  <vscale x 4 x i16>,
-  <vscale x 4 x i1>,
-  iXLen);
 
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i16_nxv4i16(<vscale x 4 x i16> %0, <vscale x 4 x i16> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i16_nxv4i16:
@@ -234,12 +174,6 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i16.nxv8i16(
-  <vscale x 8 x i16>,
-  <vscale x 8 x i16>,
-  <vscale x 8 x i1>,
-  iXLen);
-
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i16_nxv8i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
@@ -256,12 +190,6 @@ entry:
 
   ret <vscale x 8 x i1> %a
 }
-
-declare <vscale x 16 x i1> @llvm.riscv.vmsbc.borrow.in.nxv16i16.nxv16i16(
-  <vscale x 16 x i16>,
-  <vscale x 16 x i16>,
-  <vscale x 16 x i1>,
-  iXLen);
 
 define <vscale x 16 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv16i1_nxv16i16_nxv16i16(<vscale x 16 x i16> %0, <vscale x 16 x i16> %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv16i1_nxv16i16_nxv16i16:
@@ -280,12 +208,6 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
-declare <vscale x 32 x i1> @llvm.riscv.vmsbc.borrow.in.nxv32i16.nxv32i16(
-  <vscale x 32 x i16>,
-  <vscale x 32 x i16>,
-  <vscale x 32 x i1>,
-  iXLen);
-
 define <vscale x 32 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv32i1_nxv32i16_nxv32i16(<vscale x 32 x i16> %0, <vscale x 32 x i16> %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv32i1_nxv32i16_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
@@ -302,12 +224,6 @@ entry:
 
   ret <vscale x 32 x i1> %a
 }
-
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i32.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  <vscale x 1 x i1>,
-  iXLen);
 
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i32_nxv1i32(<vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i32_nxv1i32:
@@ -326,12 +242,6 @@ entry:
   ret <vscale x 1 x i1> %a
 }
 
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i32.nxv2i32(
-  <vscale x 2 x i32>,
-  <vscale x 2 x i32>,
-  <vscale x 2 x i1>,
-  iXLen);
-
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i32_nxv2i32(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
@@ -348,12 +258,6 @@ entry:
 
   ret <vscale x 2 x i1> %a
 }
-
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  <vscale x 4 x i1>,
-  iXLen);
 
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i32_nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i32_nxv4i32:
@@ -372,12 +276,6 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i32.nxv8i32(
-  <vscale x 8 x i32>,
-  <vscale x 8 x i32>,
-  <vscale x 8 x i1>,
-  iXLen);
-
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i32_nxv8i32(<vscale x 8 x i32> %0, <vscale x 8 x i32> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
@@ -394,12 +292,6 @@ entry:
 
   ret <vscale x 8 x i1> %a
 }
-
-declare <vscale x 16 x i1> @llvm.riscv.vmsbc.borrow.in.nxv16i32.nxv16i32(
-  <vscale x 16 x i32>,
-  <vscale x 16 x i32>,
-  <vscale x 16 x i1>,
-  iXLen);
 
 define <vscale x 16 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv16i1_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32> %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv16i1_nxv16i32_nxv16i32:
@@ -418,12 +310,6 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i64.nxv1i64(
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  <vscale x 1 x i1>,
-  iXLen);
-
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
@@ -440,12 +326,6 @@ entry:
 
   ret <vscale x 1 x i1> %a
 }
-
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i64.nxv2i64(
-  <vscale x 2 x i64>,
-  <vscale x 2 x i64>,
-  <vscale x 2 x i1>,
-  iXLen);
 
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i64_nxv2i64:
@@ -464,12 +344,6 @@ entry:
   ret <vscale x 2 x i1> %a
 }
 
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i64.nxv4i64(
-  <vscale x 4 x i64>,
-  <vscale x 4 x i64>,
-  <vscale x 4 x i1>,
-  iXLen);
-
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
@@ -486,12 +360,6 @@ entry:
 
   ret <vscale x 4 x i1> %a
 }
-
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i64.nxv8i64(
-  <vscale x 8 x i64>,
-  <vscale x 8 x i64>,
-  <vscale x 8 x i1>,
-  iXLen);
 
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i64_nxv8i64:
@@ -510,12 +378,6 @@ entry:
   ret <vscale x 8 x i1> %a
 }
 
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i8.i8(
-  <vscale x 1 x i8>,
-  i8,
-  <vscale x 1 x i1>,
-  iXLen);
-
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i8_i8(<vscale x 1 x i8> %0, i8 %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -532,12 +394,6 @@ entry:
 
   ret <vscale x 1 x i1> %a
 }
-
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i8.i8(
-  <vscale x 2 x i8>,
-  i8,
-  <vscale x 2 x i1>,
-  iXLen);
 
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i8_i8(<vscale x 2 x i8> %0, i8 %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i8_i8:
@@ -556,12 +412,6 @@ entry:
   ret <vscale x 2 x i1> %a
 }
 
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i8.i8(
-  <vscale x 4 x i8>,
-  i8,
-  <vscale x 4 x i1>,
-  iXLen);
-
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i8_i8(<vscale x 4 x i8> %0, i8 %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -578,12 +428,6 @@ entry:
 
   ret <vscale x 4 x i1> %a
 }
-
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i8.i8(
-  <vscale x 8 x i8>,
-  i8,
-  <vscale x 8 x i1>,
-  iXLen);
 
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i8_i8(<vscale x 8 x i8> %0, i8 %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i8_i8:
@@ -602,12 +446,6 @@ entry:
   ret <vscale x 8 x i1> %a
 }
 
-declare <vscale x 16 x i1> @llvm.riscv.vmsbc.borrow.in.nxv16i8.i8(
-  <vscale x 16 x i8>,
-  i8,
-  <vscale x 16 x i1>,
-  iXLen);
-
 define <vscale x 16 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv16i1_nxv16i8_i8(<vscale x 16 x i8> %0, i8 %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv16i1_nxv16i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -624,12 +462,6 @@ entry:
 
   ret <vscale x 16 x i1> %a
 }
-
-declare <vscale x 32 x i1> @llvm.riscv.vmsbc.borrow.in.nxv32i8.i8(
-  <vscale x 32 x i8>,
-  i8,
-  <vscale x 32 x i1>,
-  iXLen);
 
 define <vscale x 32 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv32i1_nxv32i8_i8(<vscale x 32 x i8> %0, i8 %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv32i1_nxv32i8_i8:
@@ -648,12 +480,6 @@ entry:
   ret <vscale x 32 x i1> %a
 }
 
-declare <vscale x 64 x i1> @llvm.riscv.vmsbc.borrow.in.nxv64i8.i8(
-  <vscale x 64 x i8>,
-  i8,
-  <vscale x 64 x i1>,
-  iXLen);
-
 define <vscale x 64 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv64i1_nxv64i8_i8(<vscale x 64 x i8> %0, i8 %1, <vscale x 64 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv64i1_nxv64i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -670,12 +496,6 @@ entry:
 
   ret <vscale x 64 x i1> %a
 }
-
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i16.i16(
-  <vscale x 1 x i16>,
-  i16,
-  <vscale x 1 x i1>,
-  iXLen);
 
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i16_i16(<vscale x 1 x i16> %0, i16 %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i16_i16:
@@ -694,12 +514,6 @@ entry:
   ret <vscale x 1 x i1> %a
 }
 
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i16.i16(
-  <vscale x 2 x i16>,
-  i16,
-  <vscale x 2 x i1>,
-  iXLen);
-
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i16_i16(<vscale x 2 x i16> %0, i16 %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i16_i16:
 ; CHECK:       # %bb.0: # %entry
@@ -716,12 +530,6 @@ entry:
 
   ret <vscale x 2 x i1> %a
 }
-
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i16.i16(
-  <vscale x 4 x i16>,
-  i16,
-  <vscale x 4 x i1>,
-  iXLen);
 
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i16_i16(<vscale x 4 x i16> %0, i16 %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i16_i16:
@@ -740,12 +548,6 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i16.i16(
-  <vscale x 8 x i16>,
-  i16,
-  <vscale x 8 x i1>,
-  iXLen);
-
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i16_i16(<vscale x 8 x i16> %0, i16 %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i16_i16:
 ; CHECK:       # %bb.0: # %entry
@@ -762,12 +564,6 @@ entry:
 
   ret <vscale x 8 x i1> %a
 }
-
-declare <vscale x 16 x i1> @llvm.riscv.vmsbc.borrow.in.nxv16i16.i16(
-  <vscale x 16 x i16>,
-  i16,
-  <vscale x 16 x i1>,
-  iXLen);
 
 define <vscale x 16 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv16i1_nxv16i16_i16(<vscale x 16 x i16> %0, i16 %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv16i1_nxv16i16_i16:
@@ -786,12 +582,6 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
-declare <vscale x 32 x i1> @llvm.riscv.vmsbc.borrow.in.nxv32i16.i16(
-  <vscale x 32 x i16>,
-  i16,
-  <vscale x 32 x i1>,
-  iXLen);
-
 define <vscale x 32 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv32i1_nxv32i16_i16(<vscale x 32 x i16> %0, i16 %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv32i1_nxv32i16_i16:
 ; CHECK:       # %bb.0: # %entry
@@ -808,12 +598,6 @@ entry:
 
   ret <vscale x 32 x i1> %a
 }
-
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i32.i32(
-  <vscale x 1 x i32>,
-  i32,
-  <vscale x 1 x i1>,
-  iXLen);
 
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i32_i32(<vscale x 1 x i32> %0, i32 %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i32_i32:
@@ -832,12 +616,6 @@ entry:
   ret <vscale x 1 x i1> %a
 }
 
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i32.i32(
-  <vscale x 2 x i32>,
-  i32,
-  <vscale x 2 x i1>,
-  iXLen);
-
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i32_i32(<vscale x 2 x i32> %0, i32 %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i32_i32:
 ; CHECK:       # %bb.0: # %entry
@@ -854,12 +632,6 @@ entry:
 
   ret <vscale x 2 x i1> %a
 }
-
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i32.i32(
-  <vscale x 4 x i32>,
-  i32,
-  <vscale x 4 x i1>,
-  iXLen);
 
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i32_i32(<vscale x 4 x i32> %0, i32 %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i32_i32:
@@ -878,12 +650,6 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i32.i32(
-  <vscale x 8 x i32>,
-  i32,
-  <vscale x 8 x i1>,
-  iXLen);
-
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i32_i32(<vscale x 8 x i32> %0, i32 %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i32_i32:
 ; CHECK:       # %bb.0: # %entry
@@ -900,12 +666,6 @@ entry:
 
   ret <vscale x 8 x i1> %a
 }
-
-declare <vscale x 16 x i1> @llvm.riscv.vmsbc.borrow.in.nxv16i32.i32(
-  <vscale x 16 x i32>,
-  i32,
-  <vscale x 16 x i1>,
-  iXLen);
 
 define <vscale x 16 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv16i1_nxv16i32_i32(<vscale x 16 x i32> %0, i32 %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv16i1_nxv16i32_i32:
@@ -924,18 +684,12 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
-declare <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i64.i64(
-  <vscale x 1 x i64>,
-  i64,
-  <vscale x 1 x i1>,
-  iXLen);
-
 define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i64_i64(<vscale x 1 x i64> %0, i64 %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; RV32-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -960,18 +714,12 @@ entry:
   ret <vscale x 1 x i1> %a
 }
 
-declare <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i64.i64(
-  <vscale x 2 x i64>,
-  i64,
-  <vscale x 2 x i1>,
-  iXLen);
-
 define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i64_i64(<vscale x 2 x i64> %0, i64 %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; RV32-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -996,18 +744,12 @@ entry:
   ret <vscale x 2 x i1> %a
 }
 
-declare <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i64.i64(
-  <vscale x 4 x i64>,
-  i64,
-  <vscale x 4 x i1>,
-  iXLen);
-
 define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i64_i64(<vscale x 4 x i64> %0, i64 %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; RV32-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
@@ -1032,18 +774,12 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i64.i64(
-  <vscale x 8 x i64>,
-  i64,
-  <vscale x 8 x i1>,
-  iXLen);
-
 define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i64_i64(<vscale x 8 x i64> %0, i64 %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; RV32-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero

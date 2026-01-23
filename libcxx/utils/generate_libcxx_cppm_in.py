@@ -9,18 +9,18 @@
 import os.path
 import sys
 
-from libcxx.header_information import module_c_headers
-from libcxx.header_information import module_headers
-from libcxx.header_information import header_restrictions
-from libcxx.header_information import headers_not_available
+from libcxx.header_information import (
+    module_c_headers,
+    module_headers,
+    header_restrictions,
+    headers_not_available,
+    libcxx_root,
+)
 
 
 def write_file(module):
-    libcxx_module_directory = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "modules"
-    )
     with open(
-        os.path.join(libcxx_module_directory, f"{module}.cppm.in"), "w"
+        libcxx_root / "modules" / f"{module}.cppm.in", "w", encoding="utf-8"
     ) as module_cpp_in:
         module_cpp_in.write(
             """\
@@ -45,7 +45,7 @@ module;
 // and the headers of Table 25: C++ headers for C library facilities [tab:headers.cpp.c]
 """
         )
-        for header in module_headers if module == "std" else module_c_headers:
+        for header in sorted(module_headers if module == "std" else module_c_headers):
             if header in header_restrictions:
                 module_cpp_in.write(
                     f"""\

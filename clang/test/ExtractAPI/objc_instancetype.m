@@ -158,6 +158,10 @@
       "names": {
         "navigator": [
           {
+            "kind": "text",
+            "spelling": "- "
+          },
+          {
             "kind": "identifier",
             "spelling": "init"
           }
@@ -228,6 +232,10 @@
       },
       "names": {
         "navigator": [
+          {
+            "kind": "text",
+            "spelling": "- "
+          },
           {
             "kind": "identifier",
             "spelling": "reset"

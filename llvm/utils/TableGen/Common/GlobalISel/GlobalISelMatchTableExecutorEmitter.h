@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
-#define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
 
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -42,7 +42,7 @@ class GlobalISelMatchTableExecutorEmitter {
   /// Emits an enum + an array that stores references to
   /// \p ComplexOperandMatchers.
   void emitComplexPredicates(raw_ostream &OS,
-                             ArrayRef<Record *> ComplexOperandMatchers);
+                             ArrayRef<const Record *> ComplexOperandMatchers);
 
   /// Emits an enum + an array that stores references to
   /// \p CustomOperandRenderers.
@@ -79,8 +79,8 @@ class GlobalISelMatchTableExecutorEmitter {
       raw_ostream &OS, StringRef TypeIdentifier, StringRef ArgType,
       StringRef ArgName, StringRef AdditionalArgs,
       StringRef AdditionalDeclarations, ArrayRef<PredicateObject> Predicates,
-      std::function<StringRef(PredicateObject)> GetPredEnumName,
-      std::function<StringRef(PredicateObject)> GetPredCode,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
       StringRef Comment) {
     if (!Comment.empty())
       OS << "// " << Comment << "\n";
@@ -135,11 +135,31 @@ protected:
   void emitMIPredicateFnsImpl(
       raw_ostream &OS, StringRef AdditionalDecls,
       ArrayRef<PredicateObject> Predicates,
-      std::function<StringRef(PredicateObject)> GetPredEnumName,
-      std::function<StringRef(PredicateObject)> GetPredCode,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
       StringRef Comment = "") {
     return emitCxxPredicateFns(
         OS, "MI", "const MachineInstr &", "MI", ", const MatcherState &State",
+        AdditionalDecls, Predicates, GetPredEnumName, GetPredCode, Comment);
+  }
+
+  /// Emits `testMOPredicate_MO`.
+  /// \tparam PredicateObject An object representing a predicate to emit.
+  /// \param OS Output stream.
+  /// \param AdditionalDecls Additional C++ variable declarations.
+  /// \param Predicates Predicates to emit.
+  /// \param GetPredEnumName Returns an enum name for a given predicate.
+  /// \param GetPredCode Returns the C++ code of a given predicate.
+  /// \param Comment Optional comment for the enum declaration.
+  template <typename PredicateObject>
+  void emitLeafPredicateFnsImpl(
+      raw_ostream &OS, StringRef AdditionalDecls,
+      ArrayRef<PredicateObject> Predicates,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
+      StringRef Comment = "") {
+    return emitCxxPredicateFns(
+        OS, "MO", "const MachineOperand &", "MO", ", const MatcherState &State",
         AdditionalDecls, Predicates, GetPredEnumName, GetPredCode, Comment);
   }
 
@@ -160,8 +180,8 @@ protected:
   void emitImmPredicateFnsImpl(
       raw_ostream &OS, StringRef TypeIdentifier, StringRef ArgType,
       ArrayRef<PredicateObject> Predicates,
-      std::function<StringRef(PredicateObject)> GetPredEnumName,
-      std::function<StringRef(PredicateObject)> GetPredCode,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
       StringRef Comment = "") {
     return emitCxxPredicateFns(OS, TypeIdentifier, ArgType, "Imm", "", "",
                                Predicates, GetPredEnumName, GetPredCode,
@@ -189,6 +209,10 @@ public:
   /// Note: `emitMIPredicateFnsImpl` can be used to do most of the work.
   virtual void emitMIPredicateFns(raw_ostream &OS) = 0;
 
+  /// Emit the `testLeafPredicate` function
+  /// Note `emitLeafPredicateFnsImpl` can be used to do most of the work.
+  virtual void emitLeafPredicateFns(raw_ostream &OS) = 0;
+
   /// Emit the `testImmPredicate_I64` function.
   /// Note: `emitImmPredicateFnsImpl` can be used to do most of the work.
   virtual void emitI64ImmPredicateFns(raw_ostream &OS) = 0;
@@ -206,7 +230,7 @@ public:
   void emitExecutorImpl(raw_ostream &OS, const gi::MatchTable &Table,
                         ArrayRef<gi::LLTCodeGen> TypeObjects,
                         ArrayRef<gi::RuleMatcher> Rules,
-                        ArrayRef<Record *> ComplexOperandMatchers,
+                        ArrayRef<const Record *> ComplexOperandMatchers,
                         ArrayRef<StringRef> CustomOperandRenderers,
                         StringRef IfDefName);
   void emitPredicateBitset(raw_ostream &OS, StringRef IfDefName);
@@ -223,4 +247,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H

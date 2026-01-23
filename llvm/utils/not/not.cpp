@@ -57,10 +57,7 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  std::vector<StringRef> Argv;
-  Argv.reserve(argc);
-  for (int i = 0; i < argc; ++i)
-    Argv.push_back(argv[i]);
+  SmallVector<StringRef> Argv(ArrayRef(argv, argc));
   std::string ErrMsg;
   int Result =
       sys::ExecuteAndWait(*Program, Argv, std::nullopt, {}, 0, 0, &ErrMsg);

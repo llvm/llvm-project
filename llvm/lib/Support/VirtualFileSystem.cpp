@@ -31,13 +31,13 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstdint>
@@ -117,8 +117,9 @@ FileSystem::~FileSystem() = default;
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
-                             bool RequiresNullTerminator, bool IsVolatile) {
-  auto F = openFileForRead(Name);
+                             bool RequiresNullTerminator, bool IsVolatile,
+                             bool IsText) {
+  auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
 
@@ -133,7 +134,7 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  sys::path::make_absolute(WorkingDir.get(), Path);
   return {};
 }
 
@@ -219,6 +220,8 @@ public:
 RealFile::~RealFile() { close(); }
 
 ErrorOr<Status> RealFile::status() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(FD != kInvalidFile && "cannot stat closed file");
   if (!S.isStatusKnown()) {
     file_status RealStatus;
@@ -236,18 +239,24 @@ ErrorOr<std::string> RealFile::getName() {
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                     bool RequiresNullTerminator, bool IsVolatile) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
 
 std::error_code RealFile::close() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   std::error_code EC = sys::fs::closeFile(FD);
   FD = kInvalidFile;
   return EC;
 }
 
 void RealFile::setPath(const Twine &Path) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   RealName = Path.str();
   if (auto Status = status())
     S = Status.get().copyWithNewName(Status.get(), Path);
@@ -279,6 +288,8 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
@@ -298,8 +309,19 @@ private:
     if (!WD || !*WD)
       return Path;
     Path.toVector(Storage);
-    sys::fs::make_absolute(WD->get().Resolved, Storage);
+    sys::path::make_absolute(WD->get().Resolved, Storage);
     return Storage;
+  }
+
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
+    SmallString<256> RealName, Storage;
+    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
+        adjustPath(Name, Storage), Flags, &RealName);
+    if (!FDOrErr)
+      return errorToErrorCode(FDOrErr.takeError());
+    return std::unique_ptr<File>(
+        new RealFile(*FDOrErr, Name.str(), RealName.str()));
   }
 
   struct WorkingDirectory {
@@ -314,6 +336,8 @@ private:
 } // namespace
 
 ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<256> Storage;
   sys::fs::file_status RealStatus;
   if (std::error_code EC =
@@ -324,16 +348,21 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
-  SmallString<256> RealName, Storage;
-  Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
-  if (!FDOrErr)
-    return errorToErrorCode(FDOrErr.takeError());
-  return std::unique_ptr<File>(
-      new RealFile(*FDOrErr, Name.str(), RealName.str()));
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
+  return openFileForReadWithFlags(Name, sys::fs::OF_Text);
+}
+
+ErrorOr<std::unique_ptr<File>>
+RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
+  return openFileForReadWithFlags(Name, sys::fs::OF_None);
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (WD && *WD)
     return std::string(WD->get().Specified);
   if (WD)
@@ -346,6 +375,8 @@ llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
 }
 
 std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (!WD)
     return llvm::sys::fs::set_current_path(Path);
 
@@ -363,12 +394,16 @@ std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
 }
 
 std::error_code RealFileSystem::isLocal(const Twine &Path, bool &Result) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<256> Storage;
   return llvm::sys::fs::is_local(adjustPath(Path, Storage), Result);
 }
 
 std::error_code RealFileSystem::getRealPath(const Twine &Path,
                                             SmallVectorImpl<char> &Output) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<256> Storage;
   return llvm::sys::fs::real_path(adjustPath(Path, Storage), Output);
 }
@@ -385,11 +420,16 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
-  static IntrusiveRefCntPtr<FileSystem> FS(new RealFileSystem(true));
+  static IntrusiveRefCntPtr<FileSystem> FS =
+      makeIntrusiveRefCnt<RealFileSystem>(true);
+  sys::sandbox::violationIfEnabled();
+
   return FS;
 }
 
 std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
+  sys::sandbox::violationIfEnabled();
+
   return std::make_unique<RealFileSystem>(false);
 }
 
@@ -399,12 +439,17 @@ class RealFSDirIter : public llvm::vfs::detail::DirIterImpl {
   llvm::sys::fs::directory_iterator Iter;
 
 public:
-  RealFSDirIter(const Twine &Path, std::error_code &EC) : Iter(Path, EC) {
-    if (Iter != llvm::sys::fs::directory_iterator())
+  RealFSDirIter(const Twine &Path, std::error_code &EC) {
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+
+    Iter = sys::fs::directory_iterator(Path, EC);
+    if (Iter != sys::fs::directory_iterator())
       CurrentEntry = directory_entry(Iter->path(), Iter->type());
   }
 
   std::error_code increment() override {
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+
     std::error_code EC;
     Iter.increment(EC);
     CurrentEntry = (Iter == llvm::sys::fs::directory_iterator())
@@ -418,6 +463,8 @@ public:
 
 directory_iterator RealFileSystem::dir_begin(const Twine &Dir,
                                              std::error_code &EC) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<128> Storage;
   return directory_iterator(
       std::make_shared<RealFSDirIter>(adjustPath(Dir, Storage), EC));
@@ -591,7 +638,7 @@ public:
 
   CombiningDirIterImpl(ArrayRef<directory_iterator> DirIters,
                        std::error_code &EC)
-      : IterList(DirIters.begin(), DirIters.end()) {
+      : IterList(DirIters) {
     EC = incrementImpl(true);
   }
 
@@ -750,7 +797,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
+  std::map<std::string, std::unique_ptr<InMemoryNode>, std::less<>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)
@@ -766,7 +813,7 @@ public:
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
   InMemoryNode *getChild(StringRef Name) const {
-    auto I = Entries.find(Name.str());
+    auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
     return nullptr;
@@ -1696,11 +1743,12 @@ class llvm::vfs::RedirectingFileSystemParser {
   // false on error
   bool checkDuplicateOrUnknownKey(yaml::Node *KeyNode, StringRef Key,
                                   DenseMap<StringRef, KeyStatus> &Keys) {
-    if (!Keys.count(Key)) {
+    auto It = Keys.find(Key);
+    if (It == Keys.end()) {
       error(KeyNode, "unknown key");
       return false;
     }
-    KeyStatus &S = Keys[Key];
+    KeyStatus &S = It->second;
     if (S.Seen) {
       error(KeyNode, Twine("duplicate key '") + Key + "'");
       return false;
@@ -1894,7 +1942,12 @@ private:
           FullPath = FS->getOverlayFileDir();
           assert(!FullPath.empty() &&
                  "External contents prefix directory must exist");
-          llvm::sys::path::append(FullPath, Value);
+          SmallString<256> AbsFullPath = Value;
+          if (FS->makeAbsolute(FullPath, AbsFullPath)) {
+            error(N, "failed to make 'external-contents' absolute");
+            return nullptr;
+          }
+          FullPath = AbsFullPath;
         } else {
           FullPath = Value;
         }
@@ -1959,7 +2012,7 @@ private:
           EC = FS->makeAbsolute(FullPath, Name);
           Name = canonicalize(Name);
         } else {
-          EC = sys::fs::make_absolute(Name);
+          EC = FS->makeAbsolute(Name);
         }
         if (EC) {
           assert(NameValueNode && "Name presence should be checked earlier");
@@ -2190,7 +2243,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
     //  FS->OverlayFileDir => /<absolute_path_to>/dummy.cache/vfs
     //
     SmallString<256> OverlayAbsDir = sys::path::parent_path(YAMLFilePath);
-    std::error_code EC = llvm::sys::fs::make_absolute(OverlayAbsDir);
+    std::error_code EC = FS->makeAbsolute(OverlayAbsDir);
     assert(!EC && "Overlay dir final path must be absolute");
     (void)EC;
     FS->setOverlayFileDir(OverlayAbsDir);
@@ -2204,9 +2257,9 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
 
 std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-    bool UseExternalNames, FileSystem &ExternalFS) {
+    bool UseExternalNames, llvm::IntrusiveRefCntPtr<FileSystem> ExternalFS) {
   std::unique_ptr<RedirectingFileSystem> FS(
-      new RedirectingFileSystem(&ExternalFS));
+      new RedirectingFileSystem(ExternalFS));
   FS->UseExternalNames = UseExternalNames;
 
   StringMap<RedirectingFileSystem::Entry *> Entries;
@@ -2215,7 +2268,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     SmallString<128> From = StringRef(Mapping.first);
     SmallString<128> To = StringRef(Mapping.second);
     {
-      auto EC = ExternalFS.makeAbsolute(From);
+      auto EC = ExternalFS->makeAbsolute(From);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2237,7 +2290,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     }
     assert(Parent && "File without a directory?");
     {
-      auto EC = ExternalFS.makeAbsolute(To);
+      auto EC = ExternalFS->makeAbsolute(To);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2310,10 +2363,13 @@ RedirectingFileSystem::lookupPath(StringRef Path) const {
         lookupPathImpl(Start, End, Root.get(), Entries);
     if (UsageTrackingActive && Result && isa<RemapEntry>(Result->E))
       HasBeenUsed = true;
-    if (Result || Result.getError() != llvm::errc::no_such_file_or_directory) {
+    if (Result) {
       Result->Parents = std::move(Entries);
       return Result;
     }
+
+    if (Result.getError() != llvm::errc::no_such_file_or_directory)
+      return Result;
   }
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
@@ -2693,19 +2749,9 @@ static void getVFSEntries(RedirectingFileSystem::Entry *SrcE,
   Entries.push_back(YAMLVFSEntry(VPath.c_str(), FE->getExternalContentsPath()));
 }
 
-void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
-                             SourceMgr::DiagHandlerTy DiagHandler,
-                             StringRef YAMLFilePath,
-                             SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-                             void *DiagContext,
-                             IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
-      std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
-      std::move(ExternalFS));
-  if (!VFS)
-    return;
-  ErrorOr<RedirectingFileSystem::LookupResult> RootResult =
-      VFS->lookupPath("/");
+void vfs::collectVFSEntries(RedirectingFileSystem &VFS,
+                            SmallVectorImpl<YAMLVFSEntry> &CollectedEntries) {
+  ErrorOr<RedirectingFileSystem::LookupResult> RootResult = VFS.lookupPath("/");
   if (!RootResult)
     return;
   SmallVector<StringRef, 8> Components;
@@ -2780,7 +2826,7 @@ bool JSONWriter::containedIn(StringRef Parent, StringRef Path) {
 StringRef JSONWriter::containedPart(StringRef Parent, StringRef Path) {
   assert(!Parent.empty());
   assert(containedIn(Parent, Path));
-  return Path.slice(Parent.size() + 1, StringRef::npos);
+  return Path.substr(Parent.size() + 1);
 }
 
 void JSONWriter::startDirectory(StringRef Path) {
@@ -2846,7 +2892,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
     if (UseOverlayRelative) {
       assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDir.size(), RPath.size());
+      RPath = RPath.substr(OverlayDir.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2879,7 +2925,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       if (UseOverlayRelative) {
         assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDir.size(), RPath.size());
+        RPath = RPath.substr(OverlayDir.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
@@ -2945,8 +2991,34 @@ recursive_directory_iterator::increment(std::error_code &EC) {
   return *this;
 }
 
+void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
+                                  unsigned IndentLevel) const {
+  printIndent(OS, IndentLevel);
+  OS << "TracingFileSystem\n";
+  if (Type == PrintType::Summary)
+    return;
+
+  printIndent(OS, IndentLevel);
+  OS << "NumStatusCalls=" << NumStatusCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumOpenFileForReadCalls=" << NumOpenFileForReadCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumDirBeginCalls=" << NumDirBeginCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumGetRealPathCalls=" << NumGetRealPathCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumExistsCalls=" << NumExistsCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumIsLocalCalls=" << NumIsLocalCalls << "\n";
+
+  if (Type == PrintType::Contents)
+    Type = PrintType::Summary;
+  getUnderlyingFS().print(OS, Type, IndentLevel + 1);
+}
+
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
+const char TracingFileSystem::ID = 0;

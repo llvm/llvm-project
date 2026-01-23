@@ -10,5 +10,5 @@
 .long a + 4@GOTPCREL
 // CHECK: .long a@GOTPCREL+b@GOTPCREL
 .long (a + b)@GOTPCREL
-// CHECK: .long (10+b@GOTPCREL)+4
+// CHECK: .long 10+b@GOTPCREL+4
 .long 10 + b + 4@GOTPCREL

@@ -19,7 +19,7 @@ maskmovdqu	%xmm0, %xmm1
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
 # CHECK-NEXT:  4      5     1.00    *      *      U                   clflush	(%rax)
-# CHECK-NEXT:  1      1     1.00    *      *      U      *            lfence
-# CHECK-NEXT:  1      1     1.00    *      *      U      *      *     mfence
-# CHECK-NEXT:  1      1     1.00    *      *      U             *     sfence
+# CHECK-NEXT:  2      1     1.00    *      *      U      *            lfence
+# CHECK-NEXT:  2      1     1.00    *      *      U      *      *     mfence
+# CHECK-NEXT:  2      1     1.00    *      *      U             *     sfence
 # CHECK-NEXT:  1      1     1.00    *      *      U                   maskmovdqu	%xmm0, %xmm1

@@ -16,7 +16,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -168,7 +167,6 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
                  "non-imported functions inlined into importing module",
                  InlinedNotImportedFunctionsToImportingModuleCount,
                  NotImportedFuncCount, "non-imported functions");
-  Ostream.flush();
   dbgs() << Out;
 }
 

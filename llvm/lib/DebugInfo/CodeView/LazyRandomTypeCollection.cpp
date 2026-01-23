@@ -10,10 +10,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
-#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
@@ -104,7 +102,8 @@ std::optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
     return std::nullopt;
   }
 
-  assert(contains(Index));
+  if (!contains(Index))
+    return std::nullopt;
   return Records[Index.toArrayIndex()].Type;
 }
 

@@ -10,25 +10,22 @@
 
 #include "list.h"
 
-struct ListItem {
-  ListItem *Next;
-  ListItem *Prev;
+#include <array>
+
+struct ListItemLinkedWithPtr {
+  ListItemLinkedWithPtr *Next;
+  ListItemLinkedWithPtr *Prev;
 };
 
-static ListItem Items[6];
-static ListItem *X = &Items[0];
-static ListItem *Y = &Items[1];
-static ListItem *Z = &Items[2];
-static ListItem *A = &Items[3];
-static ListItem *B = &Items[4];
-static ListItem *C = &Items[5];
+struct ListItemLinkedWithIndex {
+  scudo::uptr Next;
+  scudo::uptr Prev;
+  static constexpr scudo::uptr EndOfListVal = 1ULL << 30;
+};
 
-typedef scudo::SinglyLinkedList<ListItem> SLList;
-typedef scudo::DoublyLinkedList<ListItem> DLList;
-
-template <typename ListT>
-static void setList(ListT *L, ListItem *I1 = nullptr, ListItem *I2 = nullptr,
-                    ListItem *I3 = nullptr) {
+template <typename ListT, typename ListItemTy>
+static void setList(ListT *L, ListItemTy *I1 = nullptr,
+                    ListItemTy *I2 = nullptr, ListItemTy *I3 = nullptr) {
   L->clear();
   if (I1)
     L->push_back(I1);
@@ -38,10 +35,10 @@ static void setList(ListT *L, ListItem *I1 = nullptr, ListItem *I2 = nullptr,
     L->push_back(I3);
 }
 
-template <typename ListT>
-static void checkList(ListT *L, ListItem *I1, ListItem *I2 = nullptr,
-                      ListItem *I3 = nullptr, ListItem *I4 = nullptr,
-                      ListItem *I5 = nullptr, ListItem *I6 = nullptr) {
+template <typename ListT, typename ListItemTy>
+static void checkList(ListT *L, ListItemTy *I1, ListItemTy *I2 = nullptr,
+                      ListItemTy *I3 = nullptr, ListItemTy *I4 = nullptr,
+                      ListItemTy *I5 = nullptr, ListItemTy *I6 = nullptr) {
   if (I1) {
     EXPECT_EQ(L->front(), I1);
     L->pop_front();
@@ -69,9 +66,16 @@ static void checkList(ListT *L, ListItem *I1, ListItem *I2 = nullptr,
   EXPECT_TRUE(L->empty());
 }
 
-template <typename ListT> static void testListCommon(void) {
-  ListT L;
+template <template <typename> class ListTy, typename ListItemTy>
+static void testListCommon(void) {
+  ListItemTy Items[3];
+  ListItemTy *X = &Items[0];
+  ListItemTy *Y = &Items[1];
+  ListItemTy *Z = &Items[2];
+
+  ListTy<ListItemTy> L;
   L.clear();
+  L.init(Items, sizeof(Items));
 
   EXPECT_EQ(L.size(), 0U);
   L.push_back(X);
@@ -123,16 +127,40 @@ template <typename ListT> static void testListCommon(void) {
   L.pop_front();
   EXPECT_TRUE(L.empty());
   L.checkConsistency();
+
+  L.push_back(X);
+  L.push_back(Y);
+  L.push_back(Z);
+
+  // Verify the iterator
+  std::array<ListItemTy *, 3> visitOrder{X, Y, Z};
+  auto Iter = visitOrder.begin();
+  for (const auto &Item : L) {
+    EXPECT_EQ(&Item, *Iter);
+    ++Iter;
+  }
 }
 
 TEST(ScudoListTest, LinkedListCommon) {
-  testListCommon<SLList>();
-  testListCommon<DLList>();
+  testListCommon<scudo::SinglyLinkedList, ListItemLinkedWithPtr>();
+  testListCommon<scudo::SinglyLinkedList, ListItemLinkedWithIndex>();
+  testListCommon<scudo::DoublyLinkedList, ListItemLinkedWithPtr>();
+  testListCommon<scudo::DoublyLinkedList, ListItemLinkedWithIndex>();
 }
 
-TEST(ScudoListTest, SinglyLinkedList) {
-  SLList L;
+template <template <typename> class ListTy, typename ListItemTy>
+static void testSinglyLinkedList() {
+  ListItemTy Items[6];
+  ListItemTy *X = &Items[0];
+  ListItemTy *Y = &Items[1];
+  ListItemTy *Z = &Items[2];
+  ListItemTy *A = &Items[3];
+  ListItemTy *B = &Items[4];
+  ListItemTy *C = &Items[5];
+
+  ListTy<ListItemTy> L;
   L.clear();
+  L.init(Items, sizeof(Items));
 
   L.push_back(X);
   L.push_back(Y);
@@ -150,9 +178,11 @@ TEST(ScudoListTest, SinglyLinkedList) {
   L.pop_front();
   EXPECT_TRUE(L.empty());
 
-  SLList L1, L2;
+  ListTy<ListItemTy> L1, L2;
   L1.clear();
   L2.clear();
+  L1.init(Items, sizeof(Items));
+  L2.init(Items, sizeof(Items));
 
   L1.append_back(&L2);
   EXPECT_TRUE(L1.empty());
@@ -180,9 +210,21 @@ TEST(ScudoListTest, SinglyLinkedList) {
   EXPECT_EQ(L1.size(), 1U);
 }
 
-TEST(ScudoListTest, DoublyLinkedList) {
-  DLList L;
+TEST(ScudoListTest, SinglyLinkedList) {
+  testSinglyLinkedList<scudo::SinglyLinkedList, ListItemLinkedWithPtr>();
+  testSinglyLinkedList<scudo::SinglyLinkedList, ListItemLinkedWithIndex>();
+}
+
+template <template <typename> class ListTy, typename ListItemTy>
+static void testDoublyLinkedList() {
+  ListItemTy Items[3];
+  ListItemTy *X = &Items[0];
+  ListItemTy *Y = &Items[1];
+  ListItemTy *Z = &Items[2];
+
+  ListTy<ListItemTy> L;
   L.clear();
+  L.init(Items, sizeof(Items));
 
   L.push_back(X);
   L.push_back(Y);
@@ -213,4 +255,9 @@ TEST(ScudoListTest, DoublyLinkedList) {
   L.checkConsistency();
   L.pop_front();
   EXPECT_TRUE(L.empty());
+}
+
+TEST(ScudoListTest, DoublyLinkedList) {
+  testDoublyLinkedList<scudo::DoublyLinkedList, ListItemLinkedWithPtr>();
+  testDoublyLinkedList<scudo::DoublyLinkedList, ListItemLinkedWithIndex>();
 }

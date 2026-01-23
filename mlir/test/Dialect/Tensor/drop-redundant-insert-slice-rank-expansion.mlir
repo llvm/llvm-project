@@ -51,16 +51,16 @@ func.func @no_fold_more_unit_dims_insert_slice_of_extract_slice(%in : tensor<?x8
 
 // -----
 
-func.func @no_fold_strided_insert_slice_of_extract_slice(%in : tensor<?x8x2x8xf32>, %dest : tensor<1x4x4xf32>) -> tensor<1x4x4xf32> {
+func.func @no_fold_strided_insert_slice_of_extract_slice(%in : tensor<?x8x2x8xf32>, %dest : tensor<1x15x15xf32>) -> tensor<1x15x15xf32> {
   %extracted_slice = tensor.extract_slice %in[0, 0, 0, 0] [1, 8, 1, 8] [1, 1, 1, 1] : tensor<?x8x2x8xf32> to tensor<8x8xf32>
-  %inserted_slice = tensor.insert_slice %extracted_slice into %dest[0, 0, 0] [1, 8, 8] [1, 2, 2] : tensor<8x8xf32> into tensor<1x4x4xf32>
-  return %inserted_slice : tensor<1x4x4xf32>
+  %inserted_slice = tensor.insert_slice %extracted_slice into %dest[0, 0, 0] [1, 8, 8] [1, 2, 2] : tensor<8x8xf32> into tensor<1x15x15xf32>
+  return %inserted_slice : tensor<1x15x15xf32>
 }
 // CHECK-LABEL: func.func @no_fold_strided_insert_slice_of_extract_slice(
 // CHECK-SAME:      %[[ARG0:.*]]: tensor<?x8x2x8xf32>
 // CHECK:         %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]]
 // CHECK:         %[[INSERTED_SLICE:.*]] = tensor.insert_slice %[[EXTRACTED_SLICE]]
-// CHECK:         return %[[INSERTED_SLICE]] : tensor<1x4x4xf32>
+// CHECK:         return %[[INSERTED_SLICE]] : tensor<1x15x15xf32>
 
 // -----
 

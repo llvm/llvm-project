@@ -62,11 +62,11 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
-// CHECK-NEXT:           "file-deps": [
+// CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m",
 // CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Missed.h",
-// CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
+// CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
+// CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }

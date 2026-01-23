@@ -160,9 +160,7 @@ class PPCBranchCoalescing : public MachineFunctionPass {
 public:
   static char ID;
 
-  PPCBranchCoalescing() : MachineFunctionPass(ID) {
-    initializePPCBranchCoalescingPass(*PassRegistry::getPassRegistry());
-  }
+  PPCBranchCoalescing() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();

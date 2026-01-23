@@ -311,13 +311,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemoteSP &remote) {
   return mode;
 }
 
-void ASLLogCallback(void *baton, uint32_t flags, const char *format,
-                    va_list args) {
-#if 0
-	vprintf(format, args);
-#endif
-}
-
 extern "C" int debug_server_main(int fd) {
 #if 1
   g_isatty = 0;
@@ -327,7 +320,6 @@ extern "C" int debug_server_main(int fd) {
   DNBLogSetDebug(1);
   DNBLogSetVerbose(1);
   DNBLogSetLogMask(-1);
-  DNBLogSetLogCallback(ASLLogCallback, NULL);
 #endif
 
   signal(SIGPIPE, signal_handler);

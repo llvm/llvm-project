@@ -35,9 +35,12 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
 // removed by dead code elimination if the value result is unused. Information
 // from the declare operation can be used to generate debug information so we
 // don't want to remove it as dead code
-def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+def hlfir_DeclareOp
+    : hlfir_Op<"declare", [AttrSizedOperandSegments,
+                           MemoryEffects<[MemAlloc<DebuggingResource>]>,
+                           DeclareOpInterfaceMethods<
+                               fir_FortranVariableStorageOpInterface>,
+                           fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable and produce an SSA value that can be used as a variable in HLFIR operations";
 
   let description = [{
@@ -45,6 +48,10 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     include bounds, length parameters, and Fortran attributes.
 
     The arguments are the same as for fir.declare.
+    The storage and storage_offset operands are optional and are required
+    for FortranVariableStorageOpInterface, where they are documented.
+    If these operands are absent, then the storage of the declared variable
+    is only known to start where the memref operand points to.
 
     The main difference with fir.declare is that hlfir.declare returns two
     values:
@@ -67,6 +74,10 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
         local lower bound values. It is intended to be used when generating FIR
         from HLFIR in order to avoid descriptor creation for simple entities.
 
+    The attribute skip_rebox can be set to indicate that the second and first
+    result are known to be the same descriptors (the input descriptor is known
+    to already have the correct attributes and lower bounds).
+
     Example:
 
     CHARACTER(n) :: c(10:n, 20:n)
@@ -84,30 +95,36 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
    ```
   }];
 
-  let arguments = (ins
-    AnyRefOrBox:$memref,
-    Optional<AnyShapeOrShiftType>:$shape,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_DummyScopeType>:$dummy_scope,
-    Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
-  );
+  let arguments = (ins AnyRefOrBox:$memref,
+      Optional<AnyShapeOrShiftType>:$shape,
+      Variadic<AnyIntegerType>:$typeparams,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Optional<AnyReferenceLike>:$storage,
+      DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
+      Builtin_StringAttr:$uniq_name,
+      OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+      OptionalAttr<UnitAttr>:$skip_rebox, OptionalAttr<UI32Attr>:$dummy_arg_no);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-    (`dummy_scope` $dummy_scope^)?
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
+    (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
+    (`skip_rebox` $skip_rebox^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$memref, "llvm::StringRef":$uniq_name,
-      CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+  let builders = [OpBuilder<(ins "mlir::Value":$memref,
+      "llvm::StringRef":$uniq_name, CArg<"mlir::Value", "{}">:$shape,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::Value", "{}">:$dummy_scope,
+      CArg<"mlir::Value", "{}">:$storage,
+      CArg<"std::uint64_t", "0">:$storage_offset,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
-      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr)>];
+      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr,
+      CArg<"unsigned", "0">:$dummy_arg_no)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks
@@ -125,12 +142,16 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     /// Given a FIR memory type, and information about non default lower
     /// bounds, get the related HLFIR variable type.
     static mlir::Type getHLFIRVariableType(mlir::Type type, bool hasLowerBounds);
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
   }];
 
   let hasVerifier = 1;
 }
 
-def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
+def fir_AssignOp : hlfir_Op<"assign", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Assign an expression or variable value to a Fortran variable";
 
   let description = [{
@@ -166,7 +187,7 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
-                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
+                   AnyFortranVariable:$lhs,
                    UnitAttr:$realloc,
                    UnitAttr:$keep_lhs_length_if_realloc,
                    UnitAttr:$temporary_lhs);
@@ -198,8 +219,11 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
   let hasVerifier = 1;
 }
 
-def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>, NoMemoryEffect]> {
+def hlfir_DesignateOp
+    : hlfir_Op<"designate",
+               [AttrSizedOperandSegments,
+                DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>,
+                NoMemoryEffect, fir_FortranObjectViewOpInterface]> {
   let summary = "Designate a Fortran variable";
 
   let description = [{
@@ -260,6 +284,12 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
     using Triplet = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
     using Subscript = std::variant<mlir::Value, Triplet>;
     using Subscripts = llvm::SmallVector<Subscript, 8>;
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
+      this->setFortranAttrs(std::optional<fir::FortranVariableFlagsEnum>(flags));
+    }
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
   }];
 
   let builders = [
@@ -310,9 +340,10 @@ def hlfir_ParentComponentOp : hlfir_Op<"parent_comp", [AttrSizedOperandSegments,
     // Implement FortranVariableInterface interface. Parent components have
     // no attributes (pointer, allocatable or contiguous can only be added
     // to regular components).
-    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() {
       return std::nullopt;
     }
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
   }];
 
   let results = (outs AnyFortranVariable);
@@ -343,6 +374,64 @@ def hlfir_ConcatOp : hlfir_Op<"concat",
   }];
 
   let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_CmpCharOp : hlfir_Op<"cmpchar",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "compare two characters";
+  let description = [{
+    Compare two character strings of a same character kind.
+  }];
+
+  let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
+                AnyScalarCharacterEntity:$lchr,
+                AnyScalarCharacterEntity:$rchr);
+
+  let results = (outs I1);
+
+  let assemblyFormat = [{
+      $predicate $lchr $rchr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_CharTrimOp
+    : hlfir_Op<
+          "char_trim", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "trim character";
+  let description = [{ Trim a character string. }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$chr);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+      $chr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$chr)>];
+}
+
+def hlfir_IndexOp
+    : hlfir_Op<"index", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "index transformational intrinsic";
+  let description = [{
+    Search for a substring position within a string, optionally backward
+    if back is set to true.
+  }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$substr,
+      AnyScalarCharacterEntity:$str,
+      Optional<Type<AnyLogicalLike.predicate>>:$back);
+
+  let results = (outs AnyIntegerType);
+
+  let assemblyFormat = [{
+      $substr `in` $str  (`back` $back^)? attr-dict `:` functional-type(operands, results)
+  }];
 
   let hasVerifier = 1;
 }
@@ -699,6 +788,75 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
   let hasVerifier = 1;
 }
 
+def hlfir_CShiftOp
+    : hlfir_Op<
+          "cshift", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "CSHIFT transformational intrinsic";
+  let description = [{
+    Circular shift of an array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array,
+      AnyFortranIntegerScalarOrArrayObject:$shift,
+      Optional<AnyIntegerType>:$dim);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $shift (`dim` $dim^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_EOShiftOp
+    : hlfir_Op<
+          "eoshift", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "EOSHIFT transformational intrinsic";
+  let description = [{
+    End-off shift of an array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array,
+      AnyFortranIntegerScalarOrArrayObject:$shift,
+      Optional<AnyFortranEntity>:$boundary, Optional<AnyIntegerType>:$dim);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $shift (`boundary` $boundary^)? (`dim` $dim^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_ReshapeOp
+    : hlfir_Op<
+          "reshape", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "RESHAPE transformational intrinsic";
+  let description = [{
+    Reshapes an ARRAY to correspond to the given SHAPE.
+    If PAD is specified the new array may be padded with elements
+    from PAD array.
+    If ORDER is specified the new array may be permuted accordingly.
+  }];
+
+  let arguments = (ins AnyFortranArrayEntity:$array,
+      AnyFortranNumericalArrayEntity:$shape,
+      Optional<AnyFortranArrayEntity>:$pad,
+      Optional<AnyFortranNumericalArrayEntity>:$order);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $shape (`pad` $pad^)? (`order` $order^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 // An allocation effect is needed because the value produced by the associate
 // is "deallocated" by hlfir.end_associate (the end_associate must not be
 // removed, and there must be only one hlfir.end_associate).
@@ -711,6 +869,13 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     For expressions, this operation is an incentive to re-use the expression
     storage, if any, after the bufferization pass when possible (if the
     expression is not used afterwards).
+
+    For aliasing purposes, hlfir.associate with the source being
+    a trivial FIR value is considered to be a unique allocation
+    that does not alias with anything else. For non-trivial cases
+    it may be a unique allocation or an alias for the source expression
+    storage, so FIR alias analysis will look through it for finding
+    the source.
   }];
 
   let arguments = (ins
@@ -738,6 +903,10 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
+      this->setFortranAttrs(std::optional<fir::FortranVariableFlagsEnum>(flags));
+    }
+
     /// Override FortranVariableInterface default implementation
     mlir::Value getBase() {
       return getResult(0);
@@ -781,8 +950,9 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
   let hasVerifier = 1;
 }
 
-def hlfir_AsExprOp : hlfir_Op<"as_expr",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def hlfir_AsExprOp
+    : hlfir_Op<
+          "as_expr", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Take the value of an array, character or derived variable";
 
   let description = [{
@@ -804,8 +974,8 @@ def hlfir_AsExprOp : hlfir_Op<"as_expr",
   let results = (outs hlfir_ExprType);
 
   let extraClassDeclaration = [{
-      // Is this a "move" ?
-      bool isMove() { return getMustFree() != mlir::Value{}; }
+    // Is this a "move" ?
+    bool isMove() { return getMustFree() != mlir::Value{}; }
   }];
 
   let assemblyFormat = [{
@@ -1031,6 +1201,7 @@ def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterf
     std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
       return std::nullopt;
     }
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
     mlir::Value getShape() const {return mlir::Value{};}
     mlir::OperandRange getExplicitTypeParams() const {
       // Return an empty range.
@@ -1184,6 +1355,7 @@ def hlfir_ShapeOfOp : hlfir_Op<"shape_of", [Pure]> {
   }];
 
   let builders = [OpBuilder<(ins "mlir::Value":$expr)>];
+  let hasFolder = 1;
 }
 
 def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
@@ -1329,7 +1501,9 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
         regions.push_back(&getUserDefinedAssignment());
     }
     mlir::Region* getSubTreeRegion() { return nullptr; }
-
+    bool isPointerAssignment();
+    bool isPointerObjectAssignment();
+    bool isProcedurePointerAssignment();
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -1716,6 +1890,7 @@ def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterfa
     std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
       return std::nullopt;
     }
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
     mlir::Value getShape() const {return mlir::Value{};}
     mlir::OperandRange getExplicitTypeParams() const {
       // Return an empty range.
@@ -1754,5 +1929,64 @@ def hlfir_CharExtremumOp : hlfir_Op<"char_extremum",
 
   let hasVerifier = 1;
 }
+
+def hlfir_EvaluateInMemoryOp : hlfir_Op<"eval_in_mem", [AttrSizedOperandSegments,
+    RecursiveMemoryEffects, RecursivelySpeculatable,
+    SingleBlockImplicitTerminator<"fir::FirEndOp">]> {
+  let summary = "Wrap an in-memory implementation that computes expression value";
+  let description = [{
+    Returns a Fortran expression value for which the computation is
+    implemented inside the region operating on the block argument which
+    is a raw memory reference corresponding to the expression type.
+
+    The shape and type parameters of the expressions are operands of the
+    operations.
+
+    The memory cannot escape the region, and it is not described how it is
+    allocated. This facilitates later elision of the temporary storage for the
+    expression evaluation if it can be evaluated in some other storage (like a
+    left-hand side variable).
+
+    Example:
+
+    A function returning an array can be represented as:
+    ```
+      %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+      %2 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+      ^bb0(%arg0: !fir.ref<!fir.array<10xf32>>):
+        %3 = fir.call @_QParray_func() fastmath<contract> : () -> !fir.array<10xf32>
+        fir.save_result %3 to %arg0(%1) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
+      }
+    ```
+  }];
+
+  let arguments = (ins
+    Optional<fir_ShapeType>:$shape,
+    Variadic<AnyIntegerType>:$typeparams
+  );
+
+  let results = (outs hlfir_ExprType);
+  let regions = (region  SizedRegion<1>:$body);
+
+  let assemblyFormat = [{
+    (`shape` $shape^)? (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+    $body}];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
+      CArg<"mlir::ValueRange", "{}">:$typeparams)>
+  ];
+
+  let extraClassDeclaration = [{
+      // Return block argument representing the memory where the expression
+      // is evaluated.
+      mlir::Value getMemory() {return getBody().getArgument(0);}
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

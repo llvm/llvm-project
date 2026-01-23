@@ -7,9 +7,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare void @use(i64 %x)
 
-define void @test() nounwind {
+define void @test(i1 %arg) nounwind {
 entry:
-  br i1 undef, label %for.body11, label %for.end285
+  br i1 %arg, label %for.body11, label %for.end285
 
 for.body11:                                       ; preds = %entry
   %shl = shl i32 1, 1
@@ -17,7 +17,7 @@ for.body11:                                       ; preds = %entry
   br label %for.body153
 
 for.body153:                                      ; preds = %for.body153, %for.body11
-  br i1 undef, label %for.body170, label %for.body153
+  br i1 %arg, label %for.body170, label %for.body153
 
 ; CHECK: add nuw nsw i64 %indvars.iv, 1
 ; CHECK: sub nsw i64 %indvars.iv, 2

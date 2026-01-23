@@ -20,6 +20,7 @@
 
 ; CHECK:      "#functions": 3,
 ; CHECK-NEXT: "#functions with location": 3,
+; CHECK-NEXT: "#out-of-line functions": 4,
 ; CHECK-NEXT: "#inlined functions": 0,
 ; CHECK-NEXT: "#inlined functions with abstract origins": 0,
 ; CHECK-NEXT: "#unique source variables": 1,

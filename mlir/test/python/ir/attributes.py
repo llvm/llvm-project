@@ -94,10 +94,10 @@ def testAttrIsInstance():
     with Context():
         a1 = Attribute.parse("42")
         a2 = Attribute.parse("[42]")
-        assert IntegerAttr.isinstance(a1)
-        assert not IntegerAttr.isinstance(a2)
-        assert not ArrayAttr.isinstance(a1)
-        assert ArrayAttr.isinstance(a2)
+        assert isinstance(a1, IntegerAttr)
+        assert not isinstance(a2, IntegerAttr)
+        assert not isinstance(a1, ArrayAttr)
+        assert isinstance(a2, ArrayAttr)
 
 
 # CHECK-LABEL: TEST: testAttrEqDoesNotRaise
@@ -158,6 +158,24 @@ def testAffineMapAttr():
         attr_built = AffineMapAttr.get(map0)
         print(str(attr_built))
         assert attr_built.value == map0
+        attr_parsed = Attribute.parse(str(attr_built))
+        assert attr_built == attr_parsed
+
+
+# CHECK-LABEL: TEST: testIntegerSetAttr
+@run
+def testIntegerSetAttr():
+    with Context() as ctx:
+        d0 = AffineDimExpr.get(0)
+        d1 = AffineDimExpr.get(1)
+        s0 = AffineSymbolExpr.get(0)
+        c42 = AffineConstantExpr.get(42)
+        set0 = IntegerSet.get(2, 1, [d0 - d1, s0 - c42], [True, False])
+
+        # CHECK: affine_set<(d0, d1)[s0] : (d0 - d1 == 0, s0 - 42 >= 0)>
+        attr_built = IntegerSetAttr.get(set0)
+        print(str(attr_built))
+
         attr_parsed = Attribute.parse(str(attr_built))
         assert attr_built == attr_parsed
 
@@ -347,6 +365,10 @@ def testDenseIntAttr():
 
         # CHECK: i1
         print(ShapedType(a.type).element_type)
+
+        shape = Attribute.parse("dense<[0, 1, 2, 3]> : vector<4xindex>")
+        # CHECK: attr: dense<[0, 1, 2, 3]>
+        print("attr:", shape)
 
 
 @run
@@ -695,3 +717,35 @@ def testConcreteAttributesRoundTrip():
         print(repr(Attribute.parse("42.0 : f32")))
 
         assert IntegerAttr.static_typeid is not None
+
+
+# CHECK-LABEL: TEST: testAttrNames
+@run
+def testAttrNames():
+    with Context():
+        # CHECK: builtin.affine_map
+        print(AffineMapAttr.attr_name)
+        # CHECK: builtin.integer_set
+        print(IntegerSetAttr.attr_name)
+        # CHECK: builtin.array
+        print(ArrayAttr.attr_name)
+        # CHECK: builtin.integer
+        print(IntegerAttr.attr_name)
+        # CHECK: builtin.symbol_ref
+        print(SymbolRefAttr.attr_name)
+        # CHECK: builtin.opaque
+        print(OpaqueAttr.attr_name)
+        # CHECK: builtin.dictionary
+        print(DictAttr.attr_name)
+        # CHECK: builtin.type
+        print(TypeAttr.attr_name)
+        # CHECK: builtin.unit
+        print(UnitAttr.attr_name)
+        # CHECK: builtin.strided_layout
+        print(StridedLayoutAttr.attr_name)
+        # CHECK: builtin.dense_resource_elements
+        print(DenseResourceElementsAttr.attr_name)
+        # CHECK: builtin.string
+        print(StringAttr.attr_name)
+        # CHECK: builtin.float
+        print(FloatAttr.attr_name)

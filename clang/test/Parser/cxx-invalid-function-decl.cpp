@@ -40,3 +40,13 @@ struct S : public Base1<int>, public Base2<float> {
   // All initializers are correct, nothing to skip, diagnose 2 missing commas.
   S(const S &) : Base1<int>(0) ::Base2<float>(1.0) x(2) {} // expected-error2{{missing ',' between base or member initializers}}
 };
+
+namespace GH113722 {
+struct S {
+  void m(int x = 0;   // expected-error {{unexpected end of default argument expression}} \
+                         expected-note {{to match this '('}}
+    #pragma unused(x) // expected-error {{expected ')'}} \
+                         expected-error {{expected ';' at end of declaration list}}
+  }                   // expected-error {{expected ';' after struct}}
+};
+}                     // expected-error {{extraneous closing brace ('}')}}

@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "orc"
 

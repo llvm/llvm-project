@@ -1,12 +1,16 @@
 # REQUIRES: native && x86_64-linux
 
+# Linux perf not supported by Windows Kernel's Linux syscall emulation layer
+# https://github.com/microsoft/WSL/issues/4595
+# UNSUPPORTED: wsl1
+
 # FIXME: Investigate why broken with MSAN
 # UNSUPPORTED: msan
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t/ELF_x86-64_perf.o %s
-# RUN: JITDUMPDIR="%t" llvm-jitlink -perf-support \
+# RUN: env JITDUMPDIR="%t" llvm-jitlink -perf-support \
 # RUN:     %t/ELF_x86-64_perf.o
 # RUN: test -f %t/.debug/jit/llvm-IR-jit-*/jit-*.dump
 

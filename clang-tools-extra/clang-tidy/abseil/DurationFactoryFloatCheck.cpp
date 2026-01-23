@@ -1,4 +1,4 @@
-//===--- DurationFactoryFloatCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -29,7 +28,7 @@ static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
 
 void DurationFactoryFloatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      callExpr(callee(functionDecl(DurationFactoryFunction())),
+      callExpr(callee(functionDecl(durationFactoryFunction())),
                hasArgument(0, anyOf(cxxStaticCastExpr(hasDestinationType(
                                         realFloatingPointType())),
                                     cStyleCastExpr(hasDestinationType(

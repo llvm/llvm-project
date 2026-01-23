@@ -19,11 +19,9 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
@@ -181,7 +179,7 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
 
     // CatchSwitchInst blocks can only have one instruction, so they are not
     // good candidates for insertion.
-    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHI())) {
+    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHIIt())) {
       for (BasicBlock *Pred : predecessors(UsersDominator))
         if (DT.isReachableFromEntry(Pred))
           UsersDominator = DT.findNearestCommonDominator(UsersDominator, Pred);

@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
 ;   void f(void) { }
@@ -10,7 +10,7 @@
 ; correct reference to the lines in the string table.
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local void @f() local_unnamed_addr #0 !dbg !7 {
+define dso_local void @f() local_unnamed_addr !dbg !7 {
 entry:
   ret void, !dbg !10
 }
@@ -62,8 +62,6 @@ entry:
 ; CHECK-NEXT:        .long   9
 ; CHECK-NEXT:        .long   18
 ; CHECK-NEXT:        .long   1040                    # Line 1 Col 16
-
-attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

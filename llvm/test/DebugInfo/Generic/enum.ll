@@ -1,9 +1,6 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
-; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
-
 ; IR generated from the following code compiled with clang -g:
 ; enum e1 { I, J = 0xffffffffU, K = 0xf000000000000000ULL } a;
 ; enum e2 { X };
@@ -50,7 +47,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!8}

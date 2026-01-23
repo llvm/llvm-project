@@ -9,16 +9,16 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_STAT_H
 #define LLVM_LIBC_TYPES_STRUCT_STAT_H
 
-#include "llvm-libc-types/blkcnt_t.h"
-#include "llvm-libc-types/blksize_t.h"
-#include "llvm-libc-types/dev_t.h"
-#include "llvm-libc-types/gid_t.h"
-#include "llvm-libc-types/ino_t.h"
-#include "llvm-libc-types/mode_t.h"
-#include "llvm-libc-types/nlink_t.h"
-#include "llvm-libc-types/off_t.h"
-#include "llvm-libc-types/struct_timespec.h"
-#include "llvm-libc-types/uid_t.h"
+#include "blkcnt_t.h"
+#include "blksize_t.h"
+#include "dev_t.h"
+#include "gid_t.h"
+#include "ino_t.h"
+#include "mode_t.h"
+#include "nlink_t.h"
+#include "off_t.h"
+#include "struct_timespec.h"
+#include "uid_t.h"
 
 struct stat {
   dev_t st_dev;

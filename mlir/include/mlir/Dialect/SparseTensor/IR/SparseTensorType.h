@@ -131,7 +131,7 @@ public:
   /// ambiguity whenever passing a `SparseTensorType` directly to a
   /// function which is overloaded to accept either `Type` or `TypeRange`.
   /// In particular, this includes `RewriterBase::replaceOpWithNewOp<OpTy>`
-  /// and `OpBuilder::create<OpTy>` whenever the `OpTy::build` is overloaded
+  /// and `OpTy::create` whenever the `OpTy::build` is overloaded
   /// thus.  This happens because the `TypeRange<T>(T&&)` ctor is implicit
   /// as well, and there's no SFINAE we can add to this method that would
   /// block subsequent application of that ctor.  The only way to fix the
@@ -293,7 +293,7 @@ public:
   /// Returns the number of dimensions which have dynamic sizes.
   /// The return type is `int64_t` to maintain consistency with
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
-  int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
+  size_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
   ArrayRef<LevelType> getLvlTypes() const { return enc.getLvlTypes(); }
   LevelType getLvlType(Level l) const {

@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm-c/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
@@ -442,7 +443,7 @@ TEST(Error, StringError) {
   raw_string_ostream S(Msg);
   logAllUnhandledErrors(
       make_error<StringError>("foo" + Twine(42), inconvertibleErrorCode()), S);
-  EXPECT_EQ(S.str(), "foo42\n") << "Unexpected StringError log result";
+  EXPECT_EQ(Msg, "foo42\n") << "Unexpected StringError log result";
 
   auto EC =
     errorToErrorCode(make_error<StringError>("", errc::invalid_argument));
@@ -457,20 +458,39 @@ TEST(Error, createStringError) {
   raw_string_ostream S(Msg);
   logAllUnhandledErrors(createStringError(EC, "foo%s%d0x%" PRIx8, Bar, 1, 0xff),
                         S);
-  EXPECT_EQ(S.str(), "foobar10xff\n")
-    << "Unexpected createStringError() log result";
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() log result";
 
-  S.flush();
   Msg.clear();
   logAllUnhandledErrors(createStringError(EC, Bar), S);
-  EXPECT_EQ(S.str(), "bar\n")
-    << "Unexpected createStringError() (overloaded) log result";
+  EXPECT_EQ(Msg, "bar\n")
+      << "Unexpected createStringError() (overloaded) log result";
 
-  S.flush();
   Msg.clear();
   auto Res = errorToErrorCode(createStringError(EC, "foo%s", Bar));
   EXPECT_EQ(Res, EC)
     << "Failed to convert createStringError() result to error_code.";
+}
+
+TEST(Error, createStringErrorV) {
+  static const char *Bar = "bar";
+  static const std::error_code EC = errc::invalid_argument;
+  std::string Msg;
+  raw_string_ostream S(Msg);
+  logAllUnhandledErrors(createStringErrorV(EC, "foo{0}{1}{2:x}", Bar, 1, 0xff),
+                        S);
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() log result";
+
+  Msg.clear();
+  auto Res = errorToErrorCode(createStringError(EC, "foo{0}", Bar));
+  EXPECT_EQ(Res, EC)
+      << "Failed to convert createStringError() result to error_code.";
+
+  Msg.clear();
+  logAllUnhandledErrors(createStringErrorV("foo{0}{1}{2:x}", Bar, 1, 0xff), S);
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() (no EC overload) log result";
 }
 
 // Test that the ExitOnError utility works as expected.
@@ -769,7 +789,7 @@ TEST(Error, Stream) {
     std::string Buf;
     llvm::raw_string_ostream S(Buf);
     S << OK;
-    EXPECT_EQ("success", S.str());
+    EXPECT_EQ("success", Buf);
     consumeError(std::move(OK));
   }
   {
@@ -777,7 +797,7 @@ TEST(Error, Stream) {
     std::string Buf;
     llvm::raw_string_ostream S(Buf);
     S << E1;
-    EXPECT_EQ("CustomError {0}", S.str());
+    EXPECT_EQ("CustomError {0}", Buf);
     consumeError(std::move(E1));
   }
 }
@@ -930,6 +950,8 @@ TEST(Error, C_API) {
     });
   EXPECT_TRUE(GotCSE) << "Failed to round-trip ErrorList via C API";
   EXPECT_TRUE(GotCE) << "Failed to round-trip ErrorList via C API";
+
+  LLVMCantFail(wrap(Error::success()));
 }
 
 TEST(Error, FileErrorTest) {
@@ -976,6 +998,17 @@ TEST(Error, FileErrorTest) {
   handleAllErrors(std::move(FE6), [](std::unique_ptr<FileError> F) {
     EXPECT_EQ(F->messageWithoutFileInfo(), "CustomError {6}");
   });
+
+  Error FE7 =
+      createFileError("file.bin", make_error_code(std::errc::invalid_argument),
+                      "invalid argument");
+  EXPECT_EQ(toString(std::move(FE7)), "'file.bin': invalid argument");
+
+  StringRef Argument = "arg";
+  Error FE8 =
+      createFileError("file.bin", make_error_code(std::errc::invalid_argument),
+                      "invalid argument '%s'", Argument.str().c_str());
+  EXPECT_EQ(toString(std::move(FE8)), "'file.bin': invalid argument 'arg'");
 }
 
 TEST(Error, FileErrorErrorCode) {

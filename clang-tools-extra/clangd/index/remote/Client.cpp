@@ -146,11 +146,29 @@ public:
     return streamRPC(Request, &remote::v1::SymbolIndex::Stub::Refs, Callback);
   }
 
+  bool containedRefs(const clangd::ContainedRefsRequest &Request,
+                     llvm::function_ref<void(const ContainedRefsResult &)>
+                         Callback) const override {
+    return streamRPC(Request, &remote::v1::SymbolIndex::Stub::ContainedRefs,
+                     Callback);
+  }
+
   void
   relations(const clangd::RelationsRequest &Request,
             llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
                 Callback) const override {
     streamRPC(Request, &remote::v1::SymbolIndex::Stub::Relations,
+              // Unpack protobuf Relation.
+              [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
+                Callback(SubjectAndObject.first, SubjectAndObject.second);
+              });
+  }
+
+  void reverseRelations(
+      const clangd::RelationsRequest &Request,
+      llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
+          Callback) const override {
+    streamRPC(Request, &remote::v1::SymbolIndex::Stub::ReverseRelations,
               // Unpack protobuf Relation.
               [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
                 Callback(SubjectAndObject.first, SubjectAndObject.second);

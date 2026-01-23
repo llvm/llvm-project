@@ -54,7 +54,7 @@ struct MapUnmapCallback {
   }
 };
 
-static char allocator_placeholder[sizeof(Allocator)] ALIGNED(64);
+alignas(64) static char allocator_placeholder[sizeof(Allocator)];
 Allocator *allocator() {
   return reinterpret_cast<Allocator*>(&allocator_placeholder);
 }
@@ -75,7 +75,7 @@ struct GlobalProc {
         internal_alloc_mtx(MutexTypeInternalAlloc) {}
 };
 
-static char global_proc_placeholder[sizeof(GlobalProc)] ALIGNED(64);
+alignas(64) static char global_proc_placeholder[sizeof(GlobalProc)];
 GlobalProc *global_proc() {
   return reinterpret_cast<GlobalProc*>(&global_proc_placeholder);
 }
@@ -182,10 +182,24 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   ObtainCurrentStack(thr, pc, &stack);
   if (IsFiredSuppression(ctx, ReportTypeSignalUnsafe, stack))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeSignalUnsafe);
-  rep.AddStack(stack, true);
-  OutputReport(thr, rep);
+  // Use alloca, because malloc during signal handling deadlocks
+  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  // Take a new scope as Apple platforms require the below locks released
+  // before symbolizing in order to avoid a deadlock
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    new (rep) ScopedReport(ReportTypeSignalUnsafe);
+    rep->AddStack(stack, true);
+#if SANITIZER_APPLE
+  }  // Close this scope to release the locks
+#endif
+    OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
+  }
+#endif
 }
 
 
@@ -252,7 +266,7 @@ void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
     if (AllocatorMayReturnNull())
       return SetErrnoOnNull(nullptr);
     GET_STACK_TRACE_FATAL(thr, pc);
-    ReportReallocArrayOverflow(size, n, &stack);
+    ReportReallocArrayOverflow(n, size, &stack);
   }
   return user_realloc(thr, pc, p, size * n);
 }
