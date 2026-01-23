@@ -658,7 +658,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     }
 
     bool TargetPrintedForAll = false;
-    bool TargetMemSameForAll = ME.targetMemSameForAll();
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
       if (MR == OtherMR)
@@ -668,13 +667,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         OS << ", ";
       First = false;
 
-      if (ME.isTargetMemLoc(Loc) && TargetMemSameForAll) {
+      if (ME.isTargetMemLoc(Loc) && ME.isTargetMemLocSameForAll()) {
         if (!TargetPrintedForAll) {
           OS << "target_mem: ";
           OS << getModRefStr(MR);
           TargetPrintedForAll = true;
         }
-        // Only works while  target memories are last to be listed in Location
+        // Only works when target memories are last to be listed in Location.
         continue;
       }
 
