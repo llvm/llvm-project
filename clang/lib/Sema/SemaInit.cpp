@@ -6942,7 +6942,8 @@ void InitializationSequence::InitializeFrom(Sema &S,
       S.getLangOpts().HLSL && Args.size() == 1 &&
       ((SourceType->isExtVectorType() && DestType->isConstantMatrixType()) ||
        (SourceType->isConstantMatrixType() && DestType->isExtVectorType()));
-  if (S.getLangOpts().HLSL && (IsHLSLMatToVecOrVecToMatInit || Args.size() > 1) &&
+  if (S.getLangOpts().HLSL &&
+      (IsHLSLMatToVecOrVecToMatInit || Args.size() > 1) &&
       (DestType->isExtVectorType() || DestType->isConstantMatrixType()) &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
