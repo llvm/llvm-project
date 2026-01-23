@@ -78,6 +78,9 @@ void buildGPUPassPipeline(OpPassManager &pm,
     layoutOptions.layoutKind = "lane";
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(layoutOptions));
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPeepHoleOptimizer());
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUPropagateLayout(layoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
@@ -117,6 +120,7 @@ void buildPostGPUCommonPassPipeline(
   pm.addPass(createReconcileUnrealizedCastsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  // XeVM-to-LLVM must be the last pass before gpu-module-to-binary.
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeVMToLLVMPass());
   // gpu-module-to-binary
   {

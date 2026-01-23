@@ -24,6 +24,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -197,6 +199,28 @@ struct VPIRValue : public VPValue {
   }
 };
 
+/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying constant.
+struct VPConstantInt : public VPIRValue {
+  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+
+  static bool classof(const VPValue *V) {
+    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+  }
+
+  bool isOne() const { return getAPInt().isOne(); }
+
+  bool isZero() const { return getAPInt().isZero(); }
+
+  const APInt &getAPInt() const {
+    return cast<ConstantInt>(getValue())->getValue();
+  }
+
+  unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
+
+  uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
+};
+
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
@@ -215,9 +239,9 @@ class VPRecipeValue : public VPValue {
   VPDef *Def;
 
 public:
-  VPRecipeValue(VPDef *Def, Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPRecipeValue(VPDef *Def, Value *UV = nullptr);
 
-  virtual ~VPRecipeValue();
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVRecipeValueSC;
@@ -386,7 +410,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.

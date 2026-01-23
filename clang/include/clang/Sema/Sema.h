@@ -1165,10 +1165,8 @@ public:
 
   /// getCurFunctionOrMethodDecl - Return the Decl for the current ObjC method
   /// or C function we're in, otherwise return null.  If we're currently
-  /// in a 'block', this returns the containing context. If \p AllowLambda is
-  /// true, this can return the call operator of an enclosing lambda, otherwise
-  /// lambdas are skipped when looking for an enclosing function.
-  NamedDecl *getCurFunctionOrMethodDecl(bool AllowLambda = false) const;
+  /// in a 'block', this returns the containing context.
+  NamedDecl *getCurFunctionOrMethodDecl() const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
   /// _Nonnull one.
@@ -3039,9 +3037,6 @@ private:
                                   const FunctionDecl *FDecl);
 
   void CheckMaxUnsignedZero(const CallExpr *Call, const FunctionDecl *FDecl);
-
-  void CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
-                                           const FunctionDecl *FDecl);
 
   /// Check for dangerous or invalid arguments to memset().
   ///
@@ -6993,7 +6988,7 @@ public:
                          const ObjCInterfaceDecl *UnknownObjCClass = nullptr,
                          bool ObjCPropertyAccess = false,
                          bool AvoidPartialAvailabilityChecks = false,
-                         ObjCInterfaceDecl *ClassReciever = nullptr,
+                         ObjCInterfaceDecl *ClassReceiver = nullptr,
                          bool SkipTrailingRequiresClause = false);
 
   /// Emit a note explaining that this function is deleted.
@@ -13477,7 +13472,7 @@ public:
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes);
+      TemplateArgumentListInfo &Out);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -14892,16 +14887,6 @@ public:
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction,
       const ConceptReference *TopLevelConceptId = nullptr,
       Expr **ConvertedExpr = nullptr);
-
-  /// \brief Check whether the given non-dependent constraint expression is
-  /// satisfied. Returns false and updates Satisfaction with the satisfaction
-  /// verdict if successful, emits a diagnostic and returns true if an error
-  /// occurred and satisfaction could not be determined.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool
-  CheckConstraintSatisfaction(const ConceptSpecializationExpr *ConstraintExpr,
-                              ConstraintSatisfaction &Satisfaction);
 
   /// Check whether the given function decl's trailing requires clause is
   /// satisfied, if any. Returns false and updates Satisfaction with the

@@ -148,6 +148,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ADDROFRETURNADDR:           return "ADDROFRETURNADDR";
   case ISD::FRAMEADDR:                  return "FRAMEADDR";
   case ISD::SPONENTRY:                  return "SPONENTRY";
+  case ISD::STACKADDRESS:               return "STACKADDRESS";
   case ISD::LOCAL_RECOVER:              return "LOCAL_RECOVER";
   case ISD::READ_REGISTER:              return "READ_REGISTER";
   case ISD::WRITE_REGISTER:             return "WRITE_REGISTER";

@@ -2143,7 +2143,7 @@ pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
   auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
     llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
 
-    // ip is currently in the block branched to if cancellation occured.
+    // ip is currently in the block branched to if cancellation occurred.
     // We need to create a branch to terminate that block.
     llvmBuilder.restoreIP(ip);
 
@@ -6287,15 +6287,20 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     attrs.TargetThreadLimit.front() =
         moduleTranslation.lookupValue(targetThreadLimit);
 
+  // The __kmpc_push_num_teams_51 function expects int32 as the arguments.  So,
+  // truncate or sign extend lower and upper num_teams bounds as well as
+  // thread_limit to match int32 ABI requirements for the OpenMP runtime.
   if (numTeamsLower)
-    attrs.MinTeams = moduleTranslation.lookupValue(numTeamsLower);
+    attrs.MinTeams = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(numTeamsLower), builder.getInt32Ty());
 
   if (numTeamsUpper)
-    attrs.MaxTeams.front() = moduleTranslation.lookupValue(numTeamsUpper);
+    attrs.MaxTeams.front() = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(numTeamsUpper), builder.getInt32Ty());
 
   if (teamsThreadLimit)
-    attrs.TeamsThreadLimit.front() =
-        moduleTranslation.lookupValue(teamsThreadLimit);
+    attrs.TeamsThreadLimit.front() = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
@@ -6313,6 +6318,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
       llvm::Value *lowerBound = moduleTranslation.lookupValue(loopLower);
       llvm::Value *upperBound = moduleTranslation.lookupValue(loopUpper);
       llvm::Value *step = moduleTranslation.lookupValue(loopStep);
+
+      if (!lowerBound || !upperBound || !step) {
+        attrs.LoopTripCount = nullptr;
+        break;
+      }
 
       llvm::OpenMPIRBuilder::LocationDescription loc(builder);
       llvm::Value *tripCount = ompBuilder->calculateCanonicalLoopTripCount(

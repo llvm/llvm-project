@@ -168,6 +168,7 @@ public:
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
+  bool processUniform(mlir::omp::UniformClauseOps &result) const;
 
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 s_load_b32 s4, s[2:3], 10 nv
 // GFX1250: s_load_b32 s4, s[2:3], 0xa nv           ; encoding: [0x01,0x01,0x10,0xf4,0x0a,0x00,0x00,0xf8]
