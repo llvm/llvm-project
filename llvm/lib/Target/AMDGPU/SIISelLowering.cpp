@@ -5080,7 +5080,7 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   // Compare the just read M0 value to all possible Idx values.
   BuildMI(LoopBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), CondReg)
       .addReg(CurrentIdxReg)
-      .addReg(Idx.getReg(), 0, Idx.getSubReg());
+      .addReg(Idx.getReg(), {}, Idx.getSubReg());
 
   // Update EXEC, save the original EXEC value to VCC.
   BuildMI(LoopBB, I, DL, TII->get(LMC.AndSaveExecOpc), NewExec)
@@ -5281,7 +5281,7 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
       setM0ToIndexFromSGPR(TII, MRI, MI, Offset);
 
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-          .addReg(SrcReg, 0, SubReg)
+          .addReg(SrcReg, {}, SubReg)
           .addReg(SrcReg, RegState::Implicit);
     }
 
@@ -5315,7 +5315,7 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
         .addImm(SubReg);
   } else {
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-        .addReg(SrcReg, 0, SubReg)
+        .addReg(SrcReg, {}, SubReg)
         .addReg(SrcReg, RegState::Implicit);
   }
 

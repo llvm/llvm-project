@@ -885,7 +885,7 @@ MCSection *MCStreamer::getAssociatedXDataSection(const MCSection *TextSec) {
                           TextSec);
 }
 
-void MCStreamer::emitSyntaxDirective() {}
+void MCStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {}
 
 static unsigned encodeSEHRegNum(MCContext &Ctx, MCRegister Reg) {
   return Ctx.getRegisterInfo()->getSEHRegNum(Reg);
