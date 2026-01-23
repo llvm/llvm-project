@@ -372,14 +372,14 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
-  set( LIBCLC_OUTPUT_FILENAME libclc.bc )
+  set( LIBCLC_OUTPUT_FILENAME libclc )
   set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
 
   # For SPIR-V targets we diverage at this point and generate SPIR-V using the
   # llvm-spirv tool.
+  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE} )
   if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
-    file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE} )
-    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/libclc.spv )
+    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${LIBCLC_OUTPUT_FILENAME}.spv )
     if ( LIBCLC_USE_SPIRV_BACKEND )
       add_custom_command( OUTPUT ${libclc_builtins_lib}
         COMMAND ${clang_exe} -c --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
@@ -393,8 +393,7 @@ function(add_libclc_builtin_set)
     endif()
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
-    file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE} )
-    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/libclc.bc )
+    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${LIBCLC_OUTPUT_FILENAME}.bc )
 
     add_custom_command( OUTPUT ${libclc_builtins_lib}
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${libclc_builtins_lib}
@@ -455,7 +454,7 @@ function(add_libclc_builtin_set)
     endif()
 
     file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${a} )
-    set( libclc_alias_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${a}/libclc.bc )
+    set( libclc_alias_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${a}/${LIBCLC_OUTPUT_FILENAME}.bc )
     add_custom_command(
       OUTPUT ${libclc_alias_lib}
       COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${LIBCLC_LINK_OR_COPY_SOURCE} ${libclc_alias_lib}
