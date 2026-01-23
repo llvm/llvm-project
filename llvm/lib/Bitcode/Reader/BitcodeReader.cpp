@@ -1199,12 +1199,13 @@ getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
   return {Hotness, HasTailCall};
 }
 
+// Deprecated, but still needed to read old bitcode files.
 static void getDecodedRelBFCallEdgeInfo(uint64_t RawFlags, uint64_t &RelBF,
                                         bool &HasTailCall) {
-  static constexpr uint64_t RelBlockFreqMask =
-      (1 << CalleeInfo::RelBlockFreqBits) - 1;
+  static constexpr unsigned RelBlockFreqBits = 28;
+  static constexpr uint64_t RelBlockFreqMask = (1 << RelBlockFreqBits) - 1;
   RelBF = RawFlags & RelBlockFreqMask; // RelBlockFreqBits bits
-  HasTailCall = (RawFlags & (1 << CalleeInfo::RelBlockFreqBits)); // 1 bit
+  HasTailCall = (RawFlags & (1 << RelBlockFreqBits)); // 1 bit
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -2384,6 +2385,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addInAllocaAttr(nullptr);
           else if (Kind == Attribute::UWTable)
             B.addUWTableAttr(UWTableKind::Default);
+          else if (Kind == Attribute::DeadOnReturn)
+            B.addDeadOnReturnAttr(DeadOnReturnInfo());
           else if (Attribute::isEnumAttrKind(Kind))
             B.addAttribute(Kind);
           else
@@ -2402,6 +2405,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableAttr(Record[++i]);
           else if (Kind == Attribute::DereferenceableOrNull)
             B.addDereferenceableOrNullAttr(Record[++i]);
+          else if (Kind == Attribute::DeadOnReturn)
+            B.addDeadOnReturnAttr(
+                DeadOnReturnInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
           else if (Kind == Attribute::VScaleRange)
@@ -7500,10 +7506,11 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
     } else if (HasProfile)
       std::tie(Hotness, HasTailCall) =
           getDecodedHotnessCallEdgeInfo(Record[++I]);
+    // Deprecated, but still needed to read old bitcode files.
     else if (HasRelBF)
       getDecodedRelBFCallEdgeInfo(Record[++I], RelBF, HasTailCall);
-    Ret.push_back(FunctionSummary::EdgeTy{
-        Callee, CalleeInfo(Hotness, HasTailCall, RelBF)});
+    Ret.push_back(
+        FunctionSummary::EdgeTy{Callee, CalleeInfo(Hotness, HasTailCall)});
   }
   return Ret;
 }
@@ -7766,12 +7773,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     // FS_PERMODULE_PROFILE: [valueid, flags, instcount, fflags, numrefs,
     //                        numrefs x valueid,
     //                        n x (valueid, hotness+tailcall flags)]
+    // Deprecated, but still needed to read old bitcode files.
     // FS_PERMODULE_RELBF: [valueid, flags, instcount, fflags, numrefs,
     //                      numrefs x valueid,
     //                      n x (valueid, relblockfreq+tailcall)]
     case bitc::FS_PERMODULE:
-    case bitc::FS_PERMODULE_RELBF:
-    case bitc::FS_PERMODULE_PROFILE: {
+    case bitc::FS_PERMODULE_PROFILE:
+    // Deprecated, but still needed to read old bitcode files.
+    case bitc::FS_PERMODULE_RELBF: {
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
       unsigned InstCount = Record[2];
@@ -7805,6 +7814,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
+      // Deprecated, but still needed to read old bitcode files.
       bool HasRelBF = (BitCode == bitc::FS_PERMODULE_RELBF);
       SmallVector<FunctionSummary::EdgeTy, 0> Calls = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
