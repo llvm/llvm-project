@@ -25,9 +25,108 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     "no-structured-fir", llvm::cl::desc("disable generation of structured FIR"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
+namespace Fortran::lower {
+llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
+    "lower-do-while-to-scf-while", llvm::cl::init(false),
+    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
+    llvm::cl::Hidden);
+} // namespace Fortran::lower
+
 using namespace Fortran;
 
 namespace {
+/// Return true iff \p eval is a DO WHILE construct.
+static bool isDoWhile(const lower::pft::Evaluation &eval) {
+  if (!eval.isA<parser::DoConstruct>() || !eval.evaluationList ||
+      eval.evaluationList->empty())
+    return false;
+  const auto *doStmt =
+      eval.evaluationList->front().getIf<parser::NonLabelDoStmt>();
+  if (!doStmt)
+    return false;
+  const auto &loopControl =
+      std::get<std::optional<parser::LoopControl>>(doStmt->t);
+  if (!loopControl.has_value())
+    return false;
+  return std::get_if<parser::ScalarLogicalExpr>(&loopControl->u) != nullptr;
+}
+
+/// Return true iff \p doWhile has early-exit/branchy control flow in its body.
+static bool doWhileHasEarlyExit(const lower::pft::Evaluation &doWhileEval) {
+  if (!doWhileEval.evaluationList || doWhileEval.evaluationList->empty())
+    return true;
+  const lower::pft::Evaluation &doStmtEval =
+      doWhileEval.evaluationList->front();
+  const lower::pft::Evaluation &endDoEval = doWhileEval.evaluationList->back();
+
+  std::function<bool(const lower::pft::Evaluation &)> walk =
+      [&](const lower::pft::Evaluation &e) -> bool {
+    // Skip structural nodes for the loop itself.
+    if (&e == &doStmtEval || &e == &endDoEval)
+      return false;
+
+    // Any explicit branch statement is considered an early-exit/unsupported
+    // construct for structured DO WHILE lowering.
+    if (e.isA<parser::GotoStmt>() || e.isA<parser::ComputedGotoStmt>() ||
+        e.isA<parser::AssignedGotoStmt>() ||
+        e.isA<parser::ArithmeticIfStmt>() || e.isA<parser::ExitStmt>() ||
+        e.isA<parser::CycleStmt>())
+      return true;
+
+    // Statements that exit the procedure are early exits from the loop.
+    if (e.isA<parser::ReturnStmt>() || e.isA<parser::StopStmt>() ||
+        e.isA<parser::FailImageStmt>())
+      return true;
+
+    // CFG-style branches represented through controlSuccessor (e.g. I/O
+    // ERR/END/EOR labels) are not supported in structured DO WHILE.
+    if (e.controlSuccessor && e.isActionStmt() && !e.isConstructStmt())
+      return true;
+
+    // Recurse.
+    if (!e.evaluationList)
+      return false;
+    for (const lower::pft::Evaluation &nested : *e.evaluationList)
+      if (walk(nested))
+        return true;
+    return false;
+  };
+
+  if (doWhileEval.evaluationList)
+    for (const lower::pft::Evaluation &nested : *doWhileEval.evaluationList)
+      if (walk(nested))
+        return true;
+  return false;
+}
+
+/// Finalize the structured/unstructured classification for DO WHILE constructs.
+/// This is done after branch analysis has populated control-flow links; the
+/// early-exit scan refines the final decision for scf.while eligibility.
+static void classifyDoWhiles(lower::pft::Evaluation &eval) {
+  if (eval.evaluationList)
+    for (lower::pft::Evaluation &nested : *eval.evaluationList)
+      classifyDoWhiles(nested);
+
+  if (!isDoWhile(eval))
+    return;
+
+  // When the scf.while lowering is enabled, mark DO WHILE as structured unless
+  // it contains early exits / branchy control flow.
+  if (Fortran::lower::lowerDoWhileToSCFWhile) {
+    const bool unstructured = eval.isUnstructured || doWhileHasEarlyExit(eval);
+    if (unstructured) {
+      eval.isUnstructured = true;
+      // If we decide this DO WHILE must be lowered as unstructured CFG after
+      // branch analysis has already run, ensure the construct exit starts a new
+      // block so that Bridge.cpp can form a valid loop CFG (needs an explicit
+      // exit target block for the conditional branch).
+      if (eval.constructExit)
+        eval.constructExit->isNewBlock = true;
+    } else {
+      eval.isUnstructured = false;
+    }
+  }
+}
 /// Helpers to unveil parser node inside Fortran::parser::Statement<>,
 /// Fortran::parser::UnlabeledStatement, and Fortran::common::Indirection<>
 template <typename A>
@@ -489,6 +588,10 @@ private:
     rewriteIfGotos();
     endFunctionBody();
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
+    // Finalize structured/unstructured DO WHILE classification when requested.
+    if (Fortran::lower::lowerDoWhileToSCFWhile && !evaluationListStack.empty())
+      for (auto &e : *evaluationListStack.back())
+        classifyDoWhiles(e);
     processEntryPoints();
     containsStmtStack.pop_back();
     popEvaluationList();
@@ -1060,7 +1163,11 @@ private:
                 eval.isUnstructured = true; // real-valued loop control
             } else if (std::get_if<parser::ScalarLogicalExpr>(
                            &loopControl->u)) {
-              eval.isUnstructured = true; // while loop
+              // DO WHILE structured/unstructured classification is handled by
+              // branch analysis plus the classifyDoWhiles() post-pass below
+              // when -lower-do-while-to-scf-while is enabled.
+              if (!Fortran::lower::lowerDoWhileToSCFWhile)
+                eval.isUnstructured = true; // while loop
             }
           },
           [&](const parser::EndDoStmt &) {

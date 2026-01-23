@@ -91,10 +91,9 @@ static llvm::cl::opt<bool> forceLoopToExecuteOnce(
     "always-execute-loop-body", llvm::cl::init(false),
     llvm::cl::desc("force the body of a loop to execute at least once"));
 
-static llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
-    "lower-do-while-to-scf-while", llvm::cl::init(false),
-    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
-    llvm::cl::Hidden);
+namespace Fortran::lower {
+extern llvm::cl::opt<bool> lowerDoWhileToSCFWhile;
+} // namespace Fortran::lower
 
 namespace {
 /// Information for generating a structured or unstructured increment loop.
@@ -1650,69 +1649,6 @@ private:
     genConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
 
-  bool doWhileHasEarlyExit(const Fortran::lower::pft::Evaluation &outerDoWhile,
-                           const Fortran::lower::pft::Evaluation &outerDoStmt,
-                           const Fortran::lower::pft::Evaluation &outerEndDo) {
-    auto branchTargetIsEarlyExit =
-        [&](const Fortran::lower::pft::Evaluation &target) -> bool {
-      // Disallow early "continue" of the outer loop (e.g. CYCLE outer) under
-      // the "only exit is condition false" restriction.
-      if (&target == &outerEndDo)
-        return true;
-      // Any branch target outside the outer loop is an early exit.
-      for (auto *e = &target; e; e = e->parentConstruct)
-        if (e == &outerDoWhile)
-          return false;
-      return true;
-    };
-
-    std::function<bool(const Fortran::lower::pft::Evaluation &)>
-        hasEarlyExitInSubtree =
-            [&](const Fortran::lower::pft::Evaluation &e) -> bool {
-      // Skip structural nodes for the outer loop itself.
-      if (&e == &outerDoStmt || &e == &outerEndDo)
-        return false;
-
-      // Any explicit branch statement in the loop body forces CFG and cannot be
-      // emitted inside scf.while's single-block regions by this lowering.
-      // TODO: can be improved to accept certain GOTOs within the loop
-      if (e.isA<Fortran::parser::GotoStmt>() ||
-          e.isA<Fortran::parser::ComputedGotoStmt>() ||
-          e.isA<Fortran::parser::AssignedGotoStmt>() ||
-          e.isA<Fortran::parser::ArithmeticIfStmt>() ||
-          e.isA<Fortran::parser::ExitStmt>() ||
-          e.isA<Fortran::parser::CycleStmt>())
-        return true;
-
-      if (e.controlSuccessor) {
-        if (!e.isConstruct() && !e.isConstructStmt())
-          return true;
-        if (branchTargetIsEarlyExit(*e.controlSuccessor))
-          return true;
-      }
-
-      // Statements that exit the procedure are early exits from the loop.
-      if (e.isA<Fortran::parser::ReturnStmt>() ||
-          e.isA<Fortran::parser::StopStmt>() ||
-          e.isA<Fortran::parser::FailImageStmt>())
-        return true;
-
-      if (!e.evaluationList)
-        return false;
-      for (const Fortran::lower::pft::Evaluation &nested : *e.evaluationList)
-        if (hasEarlyExitInSubtree(nested))
-          return true;
-      return false;
-    };
-
-    if (outerDoWhile.evaluationList)
-      for (const Fortran::lower::pft::Evaluation &nested :
-           *outerDoWhile.evaluationList)
-        if (hasEarlyExitInSubtree(nested))
-          return true;
-    return false;
-  }
-
   void
   genDoWhileAsSCFWhile(const Fortran::parser::ScalarLogicalExpr &whileCondition,
                        Fortran::lower::pft::Evaluation &doConstructEval,
@@ -2598,10 +2534,7 @@ private:
       // etc.) by requiring that the loop body is structured (as decided by the
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
-      Fortran::lower::pft::Evaluation &endDoEval =
-          eval.getLastNestedEvaluation();
-      if (lowerDoWhileToSCFWhile &&
-          !doWhileHasEarlyExit(eval, doStmtEval, endDoEval)) {
+      if (Fortran::lower::lowerDoWhileToSCFWhile && !unstructuredContext) {
         maybeStartBlock(preheaderBlock); // no block or empty block
         genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
         return;
