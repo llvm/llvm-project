@@ -1719,7 +1719,9 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
-def XeGPU_TruncfOp : XeGPU_Op<"truncf", [Pure]> {
+def XeGPU_TruncfOp
+    : XeGPU_Op<"truncf", [AllRanksMatch<["source", "result"]>,
+                          AllShapesMatch<["source", "result"]>, Pure]> {
   let summary = "It performs floating point truncation from higher precision "
                 "to lower precision.";
 
@@ -1736,8 +1738,8 @@ def XeGPU_TruncfOp : XeGPU_Op<"truncf", [Pure]> {
 
   }];
 
-  let arguments = (ins XeGPU_ValueType:$source);
-  let results = (outs XeGPU_ValueType:$result);
+  let arguments = (ins FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$source);
+  let results = (outs FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$result);
 
   let extraClassDeclaration = [{
 
@@ -1759,6 +1761,7 @@ def XeGPU_TruncfOp : XeGPU_Op<"truncf", [Pure]> {
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
+                                          AllElementTypesMatch<["a", "b"]>,
                                           AnchorLayoutInterface]> {
   let summary = "It performs scaled mma computation";
 
