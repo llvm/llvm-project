@@ -441,8 +441,15 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
   // Verify the signature of the printf function and skip if it isn't correct.
   const FunctionType *PrintfFunctionTy = PrintfFunction->getFunctionType();
   if (PrintfFunctionTy->getNumParams() != 1 || !PrintfFunctionTy->isVarArg() ||
-      !PrintfFunctionTy->getReturnType()->isIntegerTy(32) ||
-      !PrintfFunctionTy->getParamType(0)->isPointerTy())
+      !PrintfFunctionTy->getReturnType()->isIntegerTy(32))
+    return false;
+  Type *PrintfFormatArgTy = PrintfFunctionTy->getParamType(0);
+  if (!PrintfFormatArgTy->isPointerTy() ||
+      !(PrintfFormatArgTy->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+        PrintfFormatArgTy->getPointerAddressSpace() ==
+            AMDGPUAS::GLOBAL_ADDRESS ||
+        PrintfFormatArgTy->getPointerAddressSpace() ==
+            AMDGPUAS::CONSTANT_ADDRESS))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {
