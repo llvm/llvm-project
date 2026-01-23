@@ -579,3 +579,18 @@ namespace UnknownParams {
     return 1;
   }
 }
+
+namespace NonCompoundStmtBody {
+  /// The body of the constructor is NOT a CompoundStmt.
+  struct S {
+    constexpr S() try { x = 20; } catch(...) {}
+
+    int x = 0;
+  };
+
+  constexpr bool testS() {
+    S s;
+    return s.x == 20;
+  }
+  static_assert(testS());
+}

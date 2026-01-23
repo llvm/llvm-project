@@ -735,3 +735,27 @@ namespace PtrPtrCast {
   void foo() { ; }
   void bar(int *a) { a = (int *)(void *)(foo); }
 }
+
+namespace NestedDiags {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    throw; // both-note {{not valid in a constant expression}} \
+           // both-error {{cannot use 'throw' with exceptions disabled}}
+    return 0;
+  }
+  constexpr int bar() {
+    foo();
+    return 0;
+  }
+
+
+  struct S {
+    constexpr S() { // both-error {{never produces a constant expression}}
+      throw; // both-note {{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  constexpr bool callS() {
+    S s;
+    return true;
+  }
+}

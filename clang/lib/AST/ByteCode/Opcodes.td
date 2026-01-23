@@ -923,5 +923,7 @@ def DiagTypeid : Opcode;
 
 def CheckDestruction : Opcode;
 
+def CtorCheck : Opcode;
+
 def PushCC : Opcode { let Args = [ArgBool]; }
 def PopCC : Opcode;
