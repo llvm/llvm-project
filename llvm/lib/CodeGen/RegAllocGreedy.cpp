@@ -114,10 +114,10 @@ CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::desc("Cost for first time use of callee-saved register."),
               cl::init(0), cl::Hidden);
 
-static cl::opt<unsigned>
-CSRCostScale("regalloc-csr-cost-scale",
-             cl::desc("Scale for the callee-saved register cost, in percentage."),
-             cl::init(80), cl::Hidden);
+static cl::opt<unsigned> CSRCostScale(
+    "regalloc-csr-cost-scale",
+    cl::desc("Scale for the callee-saved register cost, in percentage."),
+    cl::init(80), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
@@ -2356,7 +2356,7 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
            E = MRI->reg_instr_nodbg_end();
        I != E;) {
     MachineInstr *MI = &*(I++);
-    if (MI->isImplicitDef())
+    if (MI->isMetaInstruction())
       continue;
     if (!Visited.insert(MI).second)
       continue;
