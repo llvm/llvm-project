@@ -66,28 +66,28 @@ llvm::json::Value toJSON(const MemoryEventBody &MEB) {
       {"count", MEB.count}};
 }
 
-static llvm::json::Value toJSON(const StopReason &SR) {
-  assert(SR != eStopReasonUninitialized && "StopReason Uninitialized");
+static llvm::json::Value toJSON(const StoppedReason &SR) {
+  assert(SR != eStoppedReasonUninitialized && "StopReason Uninitialized");
   switch (SR) {
-  case eStopReasonUninitialized:
+  case eStoppedReasonUninitialized:
     return "";
-  case eStopReasonStep:
+  case eStoppedReasonStep:
     return "step";
-  case eStopReasonBreakpoint:
+  case eStoppedReasonBreakpoint:
     return "breakpoint";
-  case eStopReasonException:
+  case eStoppedReasonException:
     return "exception";
-  case eStopReasonPause:
+  case eStoppedReasonPause:
     return "pause";
-  case eStopReasonEntry:
+  case eStoppedReasonEntry:
     return "entry";
-  case eStopReasonGoto:
+  case eStoppedReasonGoto:
     return "goto";
-  case eStopReasonFunctionBreakpoint:
+  case eStoppedReasonFunctionBreakpoint:
     return "function breakpoint";
-  case eStopReasonDataBreakpoint:
+  case eStoppedReasonDataBreakpoint:
     return "data breakpoint";
-  case eStopReasonInstructionBreakpoint:
+  case eStoppedReasonInstructionBreakpoint:
     return "instruction breakpoint";
   }
 }

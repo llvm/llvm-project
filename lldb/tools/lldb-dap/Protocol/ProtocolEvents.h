@@ -117,17 +117,17 @@ struct MemoryEventBody {
 };
 llvm::json::Value toJSON(const MemoryEventBody &);
 
-enum StopReason : unsigned {
-  eStopReasonUninitialized,
-  eStopReasonStep,
-  eStopReasonBreakpoint,
-  eStopReasonException,
-  eStopReasonPause,
-  eStopReasonEntry,
-  eStopReasonGoto,
-  eStopReasonFunctionBreakpoint,
-  eStopReasonDataBreakpoint,
-  eStopReasonInstructionBreakpoint,
+enum StoppedReason : unsigned {
+  eStoppedReasonUninitialized,
+  eStoppedReasonStep,
+  eStoppedReasonBreakpoint,
+  eStoppedReasonException,
+  eStoppedReasonPause,
+  eStoppedReasonEntry,
+  eStoppedReasonGoto,
+  eStoppedReasonFunctionBreakpoint,
+  eStoppedReasonDataBreakpoint,
+  eStoppedReasonInstructionBreakpoint,
 };
 
 /// The event indicates that the execution of the debuggee has stopped due to
@@ -140,7 +140,7 @@ struct StoppedEventBody {
   ///
   /// For backward compatibility this string is shown in the UI if the
   /// `description` attribute is missing (but it must not be translated).
-  StopReason reason = eStopReasonUninitialized;
+  StoppedReason reason = eStoppedReasonUninitialized;
 
   /// The full reason for the event, e.g. 'Paused on exception'. This string is
   /// shown in the UI as is and can be translated.

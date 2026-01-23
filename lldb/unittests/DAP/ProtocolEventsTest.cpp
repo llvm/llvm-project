@@ -19,14 +19,14 @@ using llvm::json::Value;
 
 TEST(ProtocolEventsTest, StoppedEventBody) {
   StoppedEventBody body;
-  body.reason = lldb_dap::protocol::eStopReasonBreakpoint;
+  body.reason = lldb_dap::protocol::eStoppedReasonBreakpoint;
   Expected<Value> expected_body = parse(R"({
     "reason": "breakpoint"
   })");
   ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
 
-  body.reason = eStopReasonBreakpoint;
+  body.reason = eStoppedReasonBreakpoint;
   body.description = "desc";
   body.text = "text";
   body.preserveFocusHint = true;

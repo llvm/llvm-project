@@ -181,25 +181,25 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
                              bool all_threads_stopped, bool preserve_focus) {
   protocol::StoppedEventBody body;
   if (on_entry) {
-    body.reason = protocol::eStopReasonEntry;
+    body.reason = protocol::eStoppedReasonEntry;
   } else {
     switch (thread.GetStopReason()) {
     case lldb::eStopReasonTrace:
     case lldb::eStopReasonPlanComplete:
     case lldb::eStopReasonProcessorTrace:
     case lldb::eStopReasonHistoryBoundary:
-      body.reason = protocol::eStopReasonStep;
+      body.reason = protocol::eStoppedReasonStep;
       break;
     case lldb::eStopReasonBreakpoint: {
       ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
       if (exc_bp) {
-        body.reason = protocol::eStopReasonException;
+        body.reason = protocol::eStoppedReasonException;
         body.text = exc_bp->GetLabel();
       } else {
         InstructionBreakpoint *inst_bp =
             dap.GetInstructionBPFromStopReason(thread);
-        body.reason = inst_bp ? protocol::eStopReasonInstructionBreakpoint
-                              : protocol::eStopReasonBreakpoint;
+        body.reason = inst_bp ? protocol::eStoppedReasonInstructionBreakpoint
+                              : protocol::eStoppedReasonBreakpoint;
 
         llvm::raw_string_ostream OS(body.text);
         OS << "breakpoint";
@@ -212,7 +212,7 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
       }
     } break;
     case lldb::eStopReasonWatchpoint: {
-      body.reason = protocol::eStopReasonDataBreakpoint;
+      body.reason = protocol::eStoppedReasonDataBreakpoint;
       lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
       body.hitBreakpointIds.push_back(bp_id);
       body.text = llvm::formatv("data breakpoint {0}", bp_id).str();
@@ -220,16 +220,16 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
     case lldb::eStopReasonSignal:
     case lldb::eStopReasonException:
     case lldb::eStopReasonInstrumentation:
-      body.reason = protocol::eStopReasonException;
+      body.reason = protocol::eStoppedReasonException;
       break;
     case lldb::eStopReasonExec:
     case lldb::eStopReasonFork:
     case lldb::eStopReasonVFork:
     case lldb::eStopReasonVForkDone:
-      body.reason = protocol::eStopReasonEntry;
+      body.reason = protocol::eStoppedReasonEntry;
       break;
     case lldb::eStopReasonInterrupt:
-      body.reason = protocol::eStopReasonPause;
+      body.reason = protocol::eStoppedReasonPause;
       break;
     case lldb::eStopReasonThreadExiting:
     case lldb::eStopReasonInvalid:
