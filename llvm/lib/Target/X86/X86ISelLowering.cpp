@@ -2081,8 +2081,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::v16f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v16f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v16f32, Custom);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
-                         ISD::FCANONICALIZE})
+    for (unsigned Opc :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCANONICALIZE})
       setOperationPromotedToType(Opc, MVT::v32f16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32f16, Custom);
 
@@ -33874,12 +33874,14 @@ static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerFCanonicalize(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
-  SDValue Operand = N->getOperand(0);
-  EVT VT = Operand.getValueType();
-  SDLoc dl(N);
-  SDValue One = DAG.getConstantFP(1.0, dl, VT);
-  SDValue NewNode = DAG.getNode(ISD::FCANONICALIZE_MUL, dl, VT, Operand, One);
-  return NewNode;
+  if (N->getNumOperands() == 1) {
+    SDLoc dl(N);
+    SDValue Operand = N->getOperand(0);
+    EVT VT = Operand.getValueType();
+    SDValue One = DAG.getConstantFP(1.0, dl, VT);
+    return DAG.getNode(ISD::FCANONICALIZE, dl, VT, Operand, One);
+  }
+  return Op;
 }
 
 static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
