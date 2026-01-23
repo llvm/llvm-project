@@ -59,15 +59,16 @@ private:
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
-  LifetimeSafetySemaHelper *Reporter;
+  LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
-                  AnalysisDeclContext &ADC, LifetimeSafetySemaHelper *Reporter)
+                  AnalysisDeclContext &ADC,
+                  LifetimeSafetySemaHelper *SemaHelper)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter), AST(ADC.getASTContext()) {
+        SemaHelper(SemaHelper), AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -146,7 +147,7 @@ public:
   }
 
   void issuePendingWarnings() {
-    if (!Reporter)
+    if (!SemaHelper)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
@@ -158,12 +159,12 @@ public:
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
-        Reporter->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
-                                     Confidence);
+        SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
+                                       Confidence);
       else if (const auto *OEF =
                    CausingFact.dyn_cast<const OriginEscapesFact *>())
-        Reporter->reportUseAfterReturn(IssueExpr, OEF->getEscapeExpr(),
-                                       ExpiryLoc, Confidence);
+        SemaHelper->reportUseAfterReturn(IssueExpr, OEF->getEscapeExpr(),
+                                         ExpiryLoc, Confidence);
       else
         llvm_unreachable("Unhandled CausingFact type");
     }
@@ -190,41 +191,41 @@ public:
     return nullptr;
   }
 
-  static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *Reporter,
+  static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *SemaHelper,
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
                                          const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
-      Reporter->suggestLifetimeboundToParmVar(
+      SemaHelper->suggestLifetimeboundToParmVar(
           SuggestionScope::CrossTU,
           CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), EscapeExpr);
     else
-      Reporter->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
-                                              EscapeExpr);
+      SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
+                                                EscapeExpr);
   }
 
   static void
-  suggestWithScopeForImplicitThis(LifetimeSafetySemaHelper *Reporter,
+  suggestWithScopeForImplicitThis(LifetimeSafetySemaHelper *SemaHelper,
                                   const CXXMethodDecl *MD, SourceManager &SM,
                                   const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
-      Reporter->suggestLifetimeboundToImplicitThis(
+      SemaHelper->suggestLifetimeboundToImplicitThis(
           SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
           EscapeExpr);
     else
-      Reporter->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU, MD,
-                                                   EscapeExpr);
+      SemaHelper->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU,
+                                                     MD, EscapeExpr);
   }
 
   void suggestAnnotations() {
-    if (!Reporter)
+    if (!SemaHelper)
       return;
     SourceManager &SM = AST.getSourceManager();
     for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
-        suggestWithScopeForParmVar(Reporter, PVD, SM, EscapeExpr);
+        suggestWithScopeForParmVar(SemaHelper, PVD, SM, EscapeExpr);
       else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>())
-        suggestWithScopeForImplicitThis(Reporter, MD, SM, EscapeExpr);
+        suggestWithScopeForImplicitThis(SemaHelper, MD, SM, EscapeExpr);
     }
   }
 
@@ -232,7 +233,7 @@ public:
     for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
         if (!implicitObjectParamIsLifetimeBound(MD))
-          Reporter->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
+          SemaHelper->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
       } else if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
         const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
         if (!FD)
@@ -254,9 +255,9 @@ public:
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const LiveOriginsAnalysis &LO,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetySemaHelper *Reporter) {
+                        LifetimeSafetySemaHelper *SemaHelper) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter);
+  LifetimeChecker Checker(LP, LO, FactMgr, ADC, SemaHelper);
 }
 
 } // namespace clang::lifetimes::internal

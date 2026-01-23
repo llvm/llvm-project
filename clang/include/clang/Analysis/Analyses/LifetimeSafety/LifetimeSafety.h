@@ -83,7 +83,7 @@ public:
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetySemaHelper *Reporter,
+                               LifetimeSafetySemaHelper *SemaHelper,
                                LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {
@@ -104,7 +104,7 @@ struct LifetimeFactory {
 class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                         LifetimeSafetySemaHelper *Reporter);
+                         LifetimeSafetySemaHelper *SemaHelper);
 
   void run();
 
@@ -117,7 +117,7 @@ public:
 
 private:
   AnalysisDeclContext &AC;
-  LifetimeSafetySemaHelper *Reporter;
+  LifetimeSafetySemaHelper *SemaHelper;
   LifetimeFactory Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;

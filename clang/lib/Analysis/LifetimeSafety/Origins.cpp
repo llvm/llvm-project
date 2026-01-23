@@ -88,9 +88,8 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
 
 OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
   if (const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
-      MD && MD->isInstance()) {
+      MD && MD->isInstance())
     ThisOrigins = buildListForType(MD->getThisType(), MD);
-  }
 }
 
 OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
