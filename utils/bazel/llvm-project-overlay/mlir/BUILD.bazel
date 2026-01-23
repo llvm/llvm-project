@@ -13997,9 +13997,15 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Bufferization/Transforms/*.cpp",
+            "lib/Dialect/Bufferization/Extensions/*.cpp",
         ],
     ),
-    hdrs = glob(["include/mlir/Dialect/Bufferization/Transforms/*.h"]),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/Bufferization/Transforms/*.h",
+            "include/mlir/Dialect/Bufferization/Extensions/*s.h",
+        ]
+    ),
     includes = ["include"],
     deps = [
         ":AllocationOpInterface",
