@@ -9,7 +9,7 @@
 // <optional>
 
 // REQUIRES: std-at-least-c++26, libcpp-has-abi-bounded-iterators-in-optional
-// UNSUPPORTED: libcpp-hardening-mode-none, libcpp-has-no-experimental-optional-iterator
+// UNSUPPORTED: libcpp-hardening-mode=none
 
 // Test that an assertion fires for invalid uses of the following operators on a bounded iterator:
 
