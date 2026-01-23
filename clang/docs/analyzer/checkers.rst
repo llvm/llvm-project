@@ -98,8 +98,8 @@ by setting their option to ``false``:
   ``operator delete``.
 * **ArgInitializedness** Check for undefined pass-by-value function arguments.
 * **ParameterCount** Check for correct number of passed arguments to functions
-  or ObjC blocks. This will warn if the actual argument count is less than the
-  required count (by the declaration).
+  or ObjC blocks. This will warn if the actual argument count is less (but not
+  if more) than the required count (by the declaration).
 * **NilReceiver** Check whether the receiver in a message expression is
   ``nil``.
 * **UndefReceiver** Check whether the receiver in a message expression is
