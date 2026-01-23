@@ -3,7 +3,7 @@
 
 define bfloat @bfloat_to_half() {
 ; CHECK-LABEL: define bfloat @bfloat_to_half() {
-; CHECK-NEXT:    ret bfloat bitcast (half 0xH7C00 to bfloat)
+; CHECK-NEXT:    ret bfloat 0xR7C00
 ;
   %val = bitcast half 0xH7C00 to bfloat
   ret bfloat %val
@@ -11,7 +11,7 @@ define bfloat @bfloat_to_half() {
 
 define <2 x bfloat> @bfloat_to_half_vec() {
 ; CHECK-LABEL: define <2 x bfloat> @bfloat_to_half_vec() {
-; CHECK-NEXT:    ret <2 x bfloat> <bfloat bitcast (half 0xH7C00 to bfloat), bfloat bitcast (half 0xH7C00 to bfloat)>
+; CHECK-NEXT:    ret <2 x bfloat> splat (bfloat 0xR7C00)
 ;
   %val = bitcast <2 x half> splat (half 0xH7C00) to <2 x bfloat>
   ret <2 x bfloat> %val
@@ -19,7 +19,7 @@ define <2 x bfloat> @bfloat_to_half_vec() {
 
 define half @half_to_bfloat() {
 ; CHECK-LABEL: define half @half_to_bfloat() {
-; CHECK-NEXT:    ret half bitcast (bfloat 0xR7C00 to half)
+; CHECK-NEXT:    ret half 0xH7C00
 ;
   %val = bitcast bfloat 0xR7C00 to half
   ret half %val
@@ -27,7 +27,7 @@ define half @half_to_bfloat() {
 
 define <2 x half> @half_to_bfloat_vec() {
 ; CHECK-LABEL: define <2 x half> @half_to_bfloat_vec() {
-; CHECK-NEXT:    ret <2 x half> <half bitcast (bfloat 0xR7C00 to half), half bitcast (bfloat 0xR7C00 to half)>
+; CHECK-NEXT:    ret <2 x half> splat (half 0xH7C00)
 ;
   %val = bitcast <2 x bfloat> splat (bfloat 0xR7C00) to <2 x half>
   ret <2 x half> %val
@@ -35,7 +35,7 @@ define <2 x half> @half_to_bfloat_vec() {
 
 define half @recursive() {
 ; CHECK-LABEL: define half @recursive() {
-; CHECK-NEXT:    ret half bitcast (bfloat 0xR7C00 to half)
+; CHECK-NEXT:    ret half 0xH7C00
 ;
   %first = bitcast bfloat 0xR7C00 to half
   %second = bitcast half %first to bfloat
