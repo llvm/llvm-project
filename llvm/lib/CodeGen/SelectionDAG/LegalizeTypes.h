@@ -394,6 +394,7 @@ private:
   SDValue PromoteIntOp_BUILD_PAIR(SDNode *N);
   SDValue PromoteIntOp_BR_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_BRCOND(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_COND_LOOP(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N);
