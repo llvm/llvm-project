@@ -444,16 +444,9 @@ RangeSelector transformer::spelled(RangeSelector S) {
     Expected<CharSourceRange> SRange = S(Result);
     if (!SRange)
       return SRange.takeError();
-    if (!SRange->isTokenRange()) {
-      return invalidArgumentError("spelled: only supports token ranges");
-    }
     const auto &SM = *Result.SourceManager;
     const auto B = SRange->getBegin();
     const auto E = SRange->getEnd();
-    if (SM.getFileID(B) != SM.getFileID(E)) {
-      return invalidArgumentError(
-          "spelled: range crosses file/macro boundaries");
-    }
     return CharSourceRange(
         SourceRange(SM.getSpellingLoc(B), SM.getSpellingLoc(E)),
         SRange->isTokenRange());
