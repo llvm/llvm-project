@@ -939,10 +939,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (NewFragment != OldFragment)
       return; // Don't try to handle fragment splitting cases.
     unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
-    // For now, allow over-estimates here. Some pseudos expand to a variable
-    // number of instructions, and for correctness using the upper bound size
-    // is fine.
-    if (ActualSize > ExpectedSize) {
+    // FIXME: InstrInfo currently over-estimates the size of STACKMAP.
+    if (ActualSize != ExpectedSize &&
+        MI->getOpcode() != TargetOpcode::STACKMAP) {
       dbgs() << "Size mismatch for: " << *MI << "\n";
       dbgs() << "Expected size: " << ExpectedSize << "\n";
       dbgs() << "Actual size: " << ActualSize << "\n";
