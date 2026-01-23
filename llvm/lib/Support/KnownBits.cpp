@@ -606,28 +606,30 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
 
   // An m*n result will always fit in m+n-1 bits since there are no carries.
-  unsigned ActiveBits = std::min(
-      BitWidth, LHS.countMaxActiveBits() + RHS.countMaxActiveBits() - 1);
+  // If either input is to be zero, the result is zero.
+  unsigned ActiveBitsLHS = LHS.countMaxActiveBits();
+  unsigned ActiveBitsRHS = RHS.countMaxActiveBits();
+  unsigned ActiveBits;
+  if (ActiveBitsLHS == 0 || ActiveBitsRHS == 0)
+    ActiveBits = 0;
+  else
+    ActiveBits = std::min(BitWidth, ActiveBitsLHS + ActiveBitsRHS - 1);
 
   // The result of the bottom bits of a clmul can be inferred by looking at the
   // bottom bits of both operands and carryless multiplying them together. The
   // number of bits we can determine follows the same logic as KnownBits::mul.
-  const APInt &Bottom0 = LHS.One;
-  const APInt &Bottom1 = RHS.One;
-
-  unsigned TrailBitsKnown0 = (LHS.Zero | LHS.One).countr_one();
-  unsigned TrailBitsKnown1 = (RHS.Zero | RHS.One).countr_one();
-  unsigned TrailZero0 = LHS.countMinTrailingZeros();
-  unsigned TrailZero1 = RHS.countMinTrailingZeros();
-  unsigned TrailZ = TrailZero0 + TrailZero1;
+  unsigned TrailBitsKnownLHS = (LHS.Zero | LHS.One).countr_one();
+  unsigned TrailBitsKnownRHS = (RHS.Zero | RHS.One).countr_one();
+  unsigned TrailZeroLHS = LHS.countMinTrailingZeros();
+  unsigned TrailZeroRHS = RHS.countMinTrailingZeros();
+  unsigned TrailZ = TrailZeroLHS + TrailZeroRHS;
 
   // Figure out the fewest known-bits operand.
-  unsigned SmallestOperand =
-      std::min(TrailBitsKnown0 - TrailZero0, TrailBitsKnown1 - TrailZero1);
+  unsigned SmallestOperand = std::min(TrailBitsKnownLHS - TrailZeroLHS,
+                                      TrailBitsKnownRHS - TrailZeroRHS);
   unsigned ResultBitsKnown = std::min(SmallestOperand + TrailZ, BitWidth);
 
-  APInt BottomKnown = APIntOps::clmul(Bottom0.getLoBits(TrailBitsKnown0),
-                                      Bottom1.getLoBits(TrailBitsKnown1));
+  APInt BottomKnown = APIntOps::clmul(LHS.One, RHS.One);
 
   KnownBits Res(BitWidth);
   Res.Zero.setBitsFrom(ActiveBits);
