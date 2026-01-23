@@ -107,7 +107,7 @@ class RVY_srli<string opcodestr, bits<7> imm>
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let Predicates = [HasStdExtY] in {
+let Predicates = [HasStdExtZyhybridOrY] in {
 //
 // Instructions to Update The Capability Pointer
 //
@@ -155,11 +155,11 @@ def YTYPER : RVY_r<0b00010, "ytyper", GPR, YGPR>;
 // instructions for RV32/RV64 so that it can be decoded correctly since a fixed
 // field is decoded before a given variable immediate one.
 // The alternative would be to use a decoder namespace
-let Predicates = [HasStdExtY, IsRV64] in {
+let Predicates = [HasStdExtZyhybridOrY, IsRV64] in {
 def SRLIY64 : RVY_srli<"srliy", 64>;
 def : InstAlias<"yhir $rd, $rs1", (SRLIY64 GPR:$rd, YGPR:$rs1, 64)>;
 }
-let Predicates = [HasStdExtY, IsRV32] in {
+let Predicates = [HasStdExtZyhybridOrY, IsRV32] in {
 def SRLIY32 : RVY_srli<"srliy", 32>;
 def : InstAlias<"yhir $rd, $rs1", (SRLIY32 GPR:$rd, YGPR:$rs1, 32)>;
 }
@@ -169,4 +169,24 @@ def : InstAlias<"yhir $rd, $rs1", (SRLIY32 GPR:$rd, YGPR:$rs1, 32)>;
 def SYEQ : RVY_rr<0b0000110, 0b100, "syeq", GPR, YGPR, YGPR>;
 def YLT : RVY_rr<0b0000110, 0b110, "ylt", GPR, YGPR, YGPR>;
 def YAMASK : RVY_r<0b00111, "yamask", GPR, GPR>;
-} // Predicates = [HasStdExtY]
+} // Predicates = [HasStdExtZyhybridOrY]
+
+//===----------------------------------------------------------------------===//
+// Zyhybrid extension
+//===----------------------------------------------------------------------===//
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class RVY_modesw<bits<7> funct7, string opcodestr>
+      : RVInst<(outs), (ins), opcodestr, "", [], InstFormatR> {
+  let Inst{31-25} = funct7;
+  let Inst{24-20} = 0b00000;
+  let Inst{19-15} = 0b00000;
+  let Inst{14-12} = 0b001;
+  let Inst{11-7}  = 0b00000;
+  let Inst{6-0}   = OPC_OP.Value;
+}
+let Predicates = [HasStdExtZyhybrid] in {
+def YMODER : RVY_r<0b00011, "ymoder", GPR, YGPR>;
+def YMODEW : RVY_rr<0b0000110, 0b111, "ymodew", YGPR, YGPR, GPR>;
+def YMODESWY : RVY_modesw<0b0001001, "ymodeswy">;
+def YMODESWI : RVY_modesw<0b0001010, "ymodeswi">;
+}

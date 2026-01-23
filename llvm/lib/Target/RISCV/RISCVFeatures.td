@@ -1128,6 +1128,28 @@ def HasStdExtZbkbOrP
 def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
+// The Zyhbrid extension adds new instructions to dynamically change between
+// using RVY or RVI as the base (i.e. changing between using integers or
+// capabilities for all pointers). In combination with the FeatureStdExtY this
+// allows for the following four modes:
+// - Y=0, Zyhybrid=0 (plain RVI mode): no CHERI instructions available
+// - Y=0, Zyhybrid=1 (hybrid RVI mode): RVI mode with CHERI instruction
+//                   available, but loads/store still use integer pointers (GPR)
+//                   that are checked against the DDC CSR.
+// - Y=1, Zyhybrid=0 (purecap RVY): all CHERI instructions other than *MODE*
+//                   are available and all memory accesses use capability
+//                   pointers (access checked against the base YGPR).
+// - Y=1, Zyhybrid=1: purecap RVY with the ability to switch to hybrid RVI mode.
+def FeatureStdExtZyhybrid
+    : RISCVExperimentalExtension<0, 96, "RVY hybrid support">;
+def HasStdExtZyhybrid
+    : Predicate<"Subtarget->hasStdExtZyhybrid()">,
+      AssemblerPredicate<(all_of FeatureStdExtZyhybrid), "CHERI hybrid support">;
+def HasStdExtZyhybridOrY
+    : Predicate<"Subtarget->hasStdExtZyhybrid() || Subtarget->hasStdExtY()">,
+      AssemblerPredicate<(any_of FeatureStdExtZyhybrid, FeatureStdExtY),
+                         "'Base I' with 'Zyhybrid' (CHERI hybrid support) or "
+                         "'Base Y' (CHERI)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -1990,4 +2012,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-
