@@ -6730,7 +6730,6 @@ cc_binary(
         "tools/llvm-ir2vec/**/*.cpp",
         "tools/llvm-ir2vec/lib/*.h",
     ],
-        allow_empty = True,
         exclude = [
             "tools/llvm-ir2vec/Bindings/*.cpp",
         ]),
