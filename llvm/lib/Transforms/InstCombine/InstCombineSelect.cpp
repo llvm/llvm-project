@@ -4527,8 +4527,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         }
         // select(C0, select(C1, b, a), b) -> select(C0&!C1, a, b)
         else if (TrueSI->getTrueValue() == FalseVal) {
-          Value *Negation = Builder.CreateNot(TrueSI->getCondition());
-          And = Builder.CreateLogicalAnd(CondVal, Negation);
+          Value *InvertedCond = Builder.CreateNot(TrueSI->getCondition());
+          And = Builder.CreateLogicalAnd(CondVal, InvertedCond);
           OtherVal = TrueSI->getFalseValue();
         }
         if (And && OtherVal) {
@@ -4556,8 +4556,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         }
         // select(C0, a, select(C1, b, a)) -> select(C0|!C1, a, b)
         else if (FalseSI->getFalseValue() == TrueVal) {
-          Value *Negation = Builder.CreateNot(FalseSI->getCondition());
-          Or = Builder.CreateLogicalOr(CondVal, Negation);
+          Value *InvertedCond = Builder.CreateNot(FalseSI->getCondition());
+          Or = Builder.CreateLogicalOr(CondVal, InvertedCond);
           OtherVal = FalseSI->getTrueValue();
         }
         if (Or && OtherVal) {
