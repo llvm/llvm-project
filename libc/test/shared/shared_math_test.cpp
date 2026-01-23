@@ -35,6 +35,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
   EXPECT_FP_EQ(float16(10.0), LIBC_NAMESPACE::shared::f16fma(2.0, 3.0, 4.0));
 
+  EXPECT_FP_EQ(float16(10.0),
+               LIBC_NAMESPACE::shared::f16fmal(2.0L, 3.0L, 4.0L));
+
   ASSERT_FP_EQ(float16(8 << 5), LIBC_NAMESPACE::shared::ldexpf16(8.0f16, 5));
   ASSERT_FP_EQ(float16(-1 * (8 << 5)),
                LIBC_NAMESPACE::shared::ldexpf16(-8.0f16, 5));
