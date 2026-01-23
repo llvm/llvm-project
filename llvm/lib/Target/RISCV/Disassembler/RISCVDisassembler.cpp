@@ -318,6 +318,15 @@ static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeYBNDSWImm(MCInst &Inst, uint64_t Imm, int64_t Address,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<10>(Imm) && "Invalid immediate");
+  const uint32_t Shift = Imm >> 8;
+  uint64_t Result = (((Imm & maxUIntN(8)) + 257) << Shift) - 256;
+  Inst.addOperand(MCOperand::createImm(Result));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -393,6 +402,20 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
 
   if (!Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) &&
       !isUInt<5>(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeUImm7SrliyOperand(MCInst &Inst, uint32_t Imm,
+                                            int64_t Address,
+                                            const MCDisassembler *Decoder) {
+  assert(isUInt<7>(Imm) && "Invalid immediate");
+
+  uint32_t ExpectedValue =
+      Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) ? 64 : 32;
+  if (Imm != ExpectedValue)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
