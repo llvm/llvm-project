@@ -3017,10 +3017,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
   case TargetOpcode::PATCHPOINT: {
     PatchPointOpers Opers(&MI);
-    // The call sequence is up to 44 bytes large.
-    // TODO: Per LangRef the client must ensure that the number of bytes is
-    // large enough, but many tests use patchpoint with 40 bytes.
-    return std::max(Opers.getNumPatchBytes(), 44u);
+    return Opers.getNumPatchBytes();
   }
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const MachineFunction *MF = MI.getParent()->getParent();
