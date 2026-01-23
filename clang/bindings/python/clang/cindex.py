@@ -3092,11 +3092,10 @@ class CompletionChunk:
         def __getitem__(self, value: int):
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
-        
+
         def __contains__(self, value: int):
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
-
 
     # Functions calls through the python interface are rather slow. Fortunately,
     # for most symbols, we do not need to perform a function call. Their spelling
