@@ -477,6 +477,7 @@ namespace {
     SDValue visitSHLSAT(SDNode *N);
     SDValue visitRotate(SDNode *N);
     SDValue visitABS(SDNode *N);
+    SDValue visitCLMUL(SDNode *N);
     SDValue visitBSWAP(SDNode *N);
     SDValue visitBITREVERSE(SDNode *N);
     SDValue visitCTLZ(SDNode *N);
@@ -1979,6 +1980,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SSHLSAT:
   case ISD::USHLSAT:            return visitSHLSAT(N);
   case ISD::ABS:                return visitABS(N);
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:             return visitCLMUL(N);
   case ISD::BSWAP:              return visitBSWAP(N);
   case ISD::BITREVERSE:         return visitBITREVERSE(N);
   case ISD::CTLZ:               return visitCTLZ(N);
@@ -11826,6 +11830,29 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
                       DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N0.getOperand(0))));
     }
   }
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitCLMUL(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fold (clmul c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
+    return C;
+
+  // canonicalize constant to RHS
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+    return DAG.getNode(Opcode, DL, VT, N1, N0);
+
+  // fold (clmul x, 0) -> 0
+  if (isNullConstant(N1) || ISD::isConstantSplatVectorAllZeros(N1.getNode()))
+    return DAG.getConstant(0, DL, VT);
 
   return SDValue();
 }
