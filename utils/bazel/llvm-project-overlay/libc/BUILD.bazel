@@ -4903,6 +4903,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "sincosf",
+    additional_deps = [
+        ":__support_math_sincosf",
+    ],
+)
+
+libc_math_function(
     name = "sinf",
     additional_deps = [
         ":__support_fputil_fma",
