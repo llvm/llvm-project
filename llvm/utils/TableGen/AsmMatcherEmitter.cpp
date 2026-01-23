@@ -3733,7 +3733,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (HasOptionalOperands)
-    OS << "  SmallBitVector OptionalOperandsMask(" << MaxNumOperands << ");\n";
+    OS << "  SmallBitVector OptionalOperandsMask("
+       << MaxNumOperands + HasMnemonicFirst << ");\n";
 
   // Emit code to search the table.
   OS << "  // Find the appropriate table for this asm variant.\n";
@@ -3802,7 +3803,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (!ReportMultipleNearMisses)
     OS << "    bool OperandsValid = true;\n";
   if (HasOptionalOperands)
-    OS << "    OptionalOperandsMask.reset(0, " << MaxNumOperands << ");\n";
+    OS << "    OptionalOperandsMask.reset(0, "
+       << MaxNumOperands + HasMnemonicFirst << ");\n";
   OS << "    for (unsigned FormalIdx = " << (HasMnemonicFirst ? "0" : "SIndex")
      << ", ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
      << "; FormalIdx != " << MaxNumOperands << "; ++FormalIdx) {\n";
@@ -3860,7 +3862,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     if (HasOptionalOperands) {
       OS << "          OptionalOperandsMask.set("
          << (HasMnemonicFirst ? "FormalIdx + 1, " : "FormalIdx, ")
-         << MaxNumOperands << ");\n";
+         << MaxNumOperands + HasMnemonicFirst << ");\n";
     }
     OS << "          break;\n";
     OS << "        }\n";
@@ -4063,8 +4065,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (HasOptionalOperands) {
     OS << "    unsigned DefaultsOffset[" << (MaxNumOperands + 1)
        << "] = { 0 };\n";
-    OS << "    assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-       << ");\n";
+    OS << "    assert(OptionalOperandsMask.size() == "
+       << (MaxNumOperands + HasMnemonicFirst) << ");\n";
     OS << "    for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
        << "; ++i) {\n";
     OS << "      NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
