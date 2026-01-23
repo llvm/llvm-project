@@ -87,8 +87,10 @@ void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParent(declStmt(hasParent(forStmt())))),
               unless(hasParent(declStmt(hasParent(cxxForRangeStmt())))),
               unless(hasParent(cxxCatchStmt())),
-              unless(hasInitializer(anyOf(callExpr(), cxxMemberCallExpr(),
-                                          cxxOperatorCallExpr()))))
+              unless(hasInitializer(anyOf(
+                  hasDescendant(callExpr()), hasDescendant(cxxMemberCallExpr()),
+                  hasDescendant(cxxOperatorCallExpr()), callExpr(),
+                  cxxMemberCallExpr(), cxxOperatorCallExpr()))))
           .bind("var"),
       this);
 }

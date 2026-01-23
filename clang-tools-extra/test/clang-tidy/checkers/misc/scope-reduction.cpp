@@ -925,3 +925,61 @@ void test_nested_switch_with_unary(int outer, int inner) {
       break;
   }
 }
+
+// Test cases for member function call initializers - should NOT suggest for-loop initialization
+// These test the fix for cases where B.buildUnmerge() was incorrectly flagged for for-loop init
+
+class Builder {
+public:
+  int buildUnmerge(int type, int reg);
+  int getNumOperands();
+};
+
+// Member function call in initializer - should NOT warn for for-loop initialization
+void test_member_function_call_initializer() {
+  Builder B;
+  int Reg = 42;
+  
+  // Should NOT suggest moving to for-loop initialization
+  // B.buildUnmerge() is a member function call and too complex for for-loop init
+  auto Unmerge = B.buildUnmerge(32, Reg);
+  for (int I = 0, E = Unmerge - 1; I != E; ++I) {
+    // use I in loop body
+    int temp = I * 2;
+  }
+}
+
+// Similar case with method chaining - should NOT warn
+void test_method_chaining() {
+  Builder B;
+  int Reg = 42;
+  
+  // Should NOT suggest moving to for-loop initialization  
+  // Method call is too complex for for-loop init
+  auto Result = B.buildUnmerge(32, Reg);
+  for (int I = 0; I < 10; ++I) {
+    int value = Result + I;
+  }
+}
+
+// Regular function call - should NOT warn (existing protection)
+int regularFunction(int x);
+void test_regular_function_call() {
+  int input = 5;
+  
+  // Should NOT suggest moving to for-loop initialization
+  auto result = regularFunction(input);
+  for (int I = 0; I < result; ++I) {
+    int temp = I;
+  }
+}
+
+// Simple initialization - should warn for for-loop initialization
+void test_simple_initialization_control() {
+  int limit = 10;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'limit' can be declared in for-loop initialization
+  // CHECK-NOTES: :[[@LINE+1]]:3: note: can be declared in this for-loop
+  for (int I = 0; I < limit; ++I) {
+    int temp = I;
+  }
+}
