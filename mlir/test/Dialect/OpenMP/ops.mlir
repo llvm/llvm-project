@@ -3463,9 +3463,36 @@ func.func @omp_target_allocmem(%device: i32, %x: index, %y: index, %z: i32) {
 }
 
 // CHECK-LABEL: func.func @omp_target_freemem(
-// CHECK-SAME: %[[DEVICE:.*]]: i32, %[[PTR:.*]]: i64) {
-func.func @omp_target_freemem(%device : i32, %ptr : i64) {
+// CHECK-SAME: %[[DEVICE:.*]]: i32) {
+func.func @omp_target_freemem(%device : i32) {
+  // CHECK: %[[PTR:.*]] = omp.target_allocmem
+  %ptr = omp.target_allocmem %device : i32, i64
   // CHECK: omp.target_freemem %[[DEVICE]], %[[PTR]] : i32, i64
   omp.target_freemem %device, %ptr : i32, i64
+  return
+}
+
+// CHECK-LABEL: func.func @omp_alloc_shared_mem(
+// CHECK-SAME: %[[X:.*]]: index, %[[Y:.*]]: index, %[[Z:.*]]: i32) {
+func.func @omp_alloc_shared_mem(%x: index, %y: index, %z: i32) {
+  // CHECK: %{{.*}} = omp.alloc_shared_mem i64 : !llvm.ptr
+  %0 = omp.alloc_shared_mem i64 : !llvm.ptr
+  // CHECK: %{{.*}} = omp.alloc_shared_mem vector<16x16xf32> {bindc_name = "bindc", uniq_name = "uniq"} : !llvm.ptr
+  %1 = omp.alloc_shared_mem vector<16x16xf32> {uniq_name="uniq", bindc_name="bindc"} : !llvm.ptr
+  // CHECK: %{{.*}} = omp.alloc_shared_mem !llvm.ptr(%[[X]], %[[Y]], %[[Z]] : index, index, i32) : !llvm.ptr
+  %2 = omp.alloc_shared_mem !llvm.ptr(%x, %y, %z : index, index, i32) : !llvm.ptr
+  // CHECK: %{{.*}} = omp.alloc_shared_mem !llvm.ptr, %[[X]], %[[Y]] : !llvm.ptr
+  %3 = omp.alloc_shared_mem !llvm.ptr, %x, %y : !llvm.ptr
+  // CHECK: %{{.*}} = omp.alloc_shared_mem !llvm.ptr(%[[X]], %[[Y]], %[[Z]] : index, index, i32), %[[X]], %[[Y]] : !llvm.ptr
+  %4 = omp.alloc_shared_mem !llvm.ptr(%x, %y, %z : index, index, i32), %x, %y : !llvm.ptr
+  return
+}
+
+// CHECK-LABEL: func.func @omp_free_shared_mem() {
+func.func @omp_free_shared_mem() {
+  // CHECK: %[[PTR:.*]] = omp.alloc_shared_mem
+  %0 = omp.alloc_shared_mem i64 : !llvm.ptr
+  // CHECK: omp.free_shared_mem %[[PTR]] : !llvm.ptr
+  omp.free_shared_mem %0 : !llvm.ptr
   return
 }
