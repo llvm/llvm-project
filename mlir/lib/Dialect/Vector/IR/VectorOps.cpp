@@ -5463,7 +5463,7 @@ LogicalResult TransferWriteOp::verify() {
       maskType ? inferTransferOpMaskType(vectorType, permutationMap)
                : VectorType();
 
-  if (failed(verifyIndexCount(*this, shapedType, llvm::size(getIndices()))))
+  if (failed(verifyIndexCount(*this, shapedType, llvm::size(getIndices().size()))))
     return failure();
 
   // We do not allow broadcast dimensions on TransferWriteOps for the moment,
