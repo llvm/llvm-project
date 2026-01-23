@@ -959,9 +959,7 @@ defm MadMacF32Insts : AMDGPUSubtargetFeature<"mad-mac-f32-insts",
   "Has v_mad_f32/v_mac_f32/v_madak_f32/v_madmk_f32 instructions"
 >;
 
-def FeatureDsSrc2Insts : SubtargetFeature<"ds-src2-insts",
-  "HasDsSrc2Insts",
-  "true",
+defm DsSrc2Insts : AMDGPUSubtargetFeature<"ds-src2-insts",
   "Has ds_*_src2 instructions"
 >;
 
@@ -2459,8 +2457,6 @@ def HasAtomicDsCondSubClampInsts :
 def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
-def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
-  AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
