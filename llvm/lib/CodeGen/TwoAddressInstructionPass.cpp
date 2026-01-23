@@ -2011,7 +2011,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
   LaneBitmask UsedLanes = LaneBitmask::getNone();
   if (!LIS) {
     for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
-      auto SubReg = Use.getSubReg();
+      unsigned SubReg = Use.getSubReg();
       if (SubReg) {
         UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
       }
@@ -2025,7 +2025,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
-    // Unless there's no live intervals, and they are used at a later
+    // Unless there are no live intervals, and they are used at a later
     // instruction as operand.
     if (UseMO.isUndef()) {
       LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
