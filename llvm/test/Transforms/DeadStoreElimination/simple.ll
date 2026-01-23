@@ -886,5 +886,74 @@ define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
   ret ptr %p
 }
 
+define void @test_dead_on_return_oob(ptr dead_on_return(4) %p) {
+; CHECK-LABEL: @test_dead_on_return_oob(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i8, ptr %p, i64 8
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_zero_offset(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_dead_on_return_zero_offset(
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p
+  ret void
+}
+
+define void @test_dead_on_return_inbounds(ptr dead_on_return(16) %p) {
+; CHECK-LABEL: @test_dead_on_return_inbounds(
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 2
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_overlapping_oob(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_dead_on_return_overlapping_oob(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 4
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_negative_oob(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_dead_on_return_negative_oob(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 -4
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 -4
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_two_stores(ptr dead_on_return(16) %p) {
+; CHECK-LABEL: @test_dead_on_return_two_stores(
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p
+  %p1 = getelementptr inbounds i8, ptr %p, i64 8
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_variable_memset(ptr dead_on_return(8) %p, i64 %s) {
+; CHECK-LABEL: @test_dead_on_return_variable_memset(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 [[S:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 %s, i1 false)
+  ret void
+}
+
 declare void @opaque(ptr)
 declare void @maythrow() memory(none)
