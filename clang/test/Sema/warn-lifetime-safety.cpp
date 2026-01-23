@@ -1553,4 +1553,19 @@ void uaf_anonymous_union() {
   } // expected-note {{destroyed here}}
   (void)ip;  // expected-note {{later used here}}
 }
+
+struct RefMember {
+  std::string& str_ref;
+  std::string* str_ptr;
+  std::string str;
+  RefMember();
+  ~RefMember();
+};
+
+std::string_view refMemberReturnView1(RefMember a) { return a.str_ref; }
+std::string_view refMemberReturnView2(RefMember a) { return *a.str_ptr; }
+std::string_view refMemberReturnView3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string& refMemberReturnRef1(RefMember a) { return a.str_ref; }
+std::string& refMemberReturnRef2(RefMember a) { return *a.str_ptr; }
+std::string& refMemberReturnRef3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
 } // namespace field_access
