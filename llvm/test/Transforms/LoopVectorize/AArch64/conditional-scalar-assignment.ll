@@ -470,7 +470,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-LABEL: define i32 @int_select_with_extra_arith_payload(
 ; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) {
 ; NEON-NEXT:  [[ENTRY:.*]]:
-; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
+; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NEON:       [[VECTOR_PH]]:
 ; NEON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
