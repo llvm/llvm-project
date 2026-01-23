@@ -16,10 +16,11 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/math/sincosf_utils.h"
+#include "sincosf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
+
 LIBC_INLINE static constexpr float sinpif(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
@@ -115,6 +116,8 @@ LIBC_INLINE static constexpr float sinpif(float x) {
   return static_cast<float>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
+
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF_H
