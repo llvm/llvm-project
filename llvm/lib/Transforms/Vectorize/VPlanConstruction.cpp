@@ -1530,7 +1530,8 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
         m_VPInstruction<VPInstruction::ComputeReductionResult>(m_VPValue())));
     // Find the icmp -> select pattern wrapping the reduction result.
     auto *FindIVCmp = findUserOf<Instruction::ICmp>(FindIVRdxResult);
-    auto *FindIVSelect = findUserOf<Instruction::Select>(FindIVCmp);
+    [[maybe_unused]] auto *FindIVSelect =
+        findUserOf<Instruction::Select>(FindIVCmp);
     assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
     MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
