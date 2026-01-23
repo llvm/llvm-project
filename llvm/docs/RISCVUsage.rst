@@ -613,8 +613,11 @@ The small data limit threshold is also used to separate small constants into sec
 
 Data suggests that these options can produce significant improvements across a range of benchmarks.
 
-Sanitizer Support
-=================
+Sanitizers
+==========
+
+.. note::
+   This is a summary of the current state of sanitizers, and not an official support statement.
 
 * UBSan is not platform-specific, and should work out of the box.
 
