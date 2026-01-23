@@ -1080,18 +1080,71 @@ StmtResult SemaRipple::CreateRippleParallelComputeStmt(
     ValueDecl *BlockShape, ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
     bool NoRemainder, bool MaskPostlude, bool IsThread, ValueDecl *ThreadChunk,
     std::optional<uint64_t> ThreadChunkVal) {
+
+  auto NestedRipple = dyn_cast<RippleComputeConstruct>(AssociatedStatement);
   auto ForLoop = dyn_cast<ForStmt>(AssociatedStatement);
-  if (!ForLoop) {
+  if (NestedRipple && !IsThread) {
+    if (NestedRipple->vectorCodegen()) {
+      if (BlockShape != NestedRipple->getBlockShape()) {
+        // Error when nesting vector(vector) with different blocks
+        Diag(BlockShapeLoc.getBegin(),
+             diag::err_ripple_invalid_nesting_different_block_shape)
+            << IsThread << BlockShapeLoc;
+        Diag(NestedRipple->getProcessingElementRange().getBegin(),
+             diag::note_matching)
+            << "block" << NestedRipple->getProcessingElementRange();
+        return StmtError();
+      }
+      bool SameVectorOptions =
+          NoRemainder == !NestedRipple->generateRemainder() &&
+          MaskPostlude == NestedRipple->generateMaskedPostlude();
+      if (!SameVectorOptions) {
+        Diag(PragmaLoc.getBegin(), diag::err_ripple_non_matching_nested_options)
+            << PragmaLoc;
+        Diag(NestedRipple->getBeginLoc(), diag::note_previous_use)
+            << NestedRipple->getPragmaRange();
+        return StmtError();
+      }
+    } else {
+      // Error when we vectorize over threads
+      Diag(PragmaLoc.getBegin(), diag::err_ripple_invalid_nesting_vector_thread)
+          << PragmaLoc;
+      Diag(NestedRipple->getBeginLoc(), diag::note_previous_use)
+          << NestedRipple->getPragmaRange();
+      return StmtError();
+    }
+  } else if (!(ForLoop || NestedRipple)) {
     Diag(AssociatedStatement->getBeginLoc(),
          diag::err_ripple_loop_not_for_loop);
     Diag(PragmaLoc.getBegin(), diag::note_pragma_entered_here) << PragmaLoc;
     return StmtError();
   }
 
-  auto *RPC = RippleComputeConstruct::Create(
-      getASTContext(), PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape, Dims,
-      cast<ForStmt>(AssociatedStatement), NoRemainder, MaskPostlude, IsThread,
-      ThreadChunk, ThreadChunkVal);
+  RippleComputeConstruct *RPC = nullptr;
+  if (!IsThread && NestedRipple && NestedRipple->vectorCodegen()) {
+    // Diagnosed before, but this code assumes that the blocks are the same
+    if (BlockShape != NestedRipple->getBlockShape())
+      llvm_unreachable("unsupported vectorization");
+    // Merge the dimension indices
+    SourceRange MetaPragmaLoc(PragmaLoc.getBegin(), NestedRipple->getEndLoc());
+    SmallVector<uint64_t, 0> NewDims;
+    std::copy(NestedRipple->getDimensionIds().begin(),
+              NestedRipple->getDimensionIds().end(),
+              std::back_inserter(NewDims));
+    std::copy(Dims.begin(), Dims.end(), std::back_inserter(NewDims));
+    Stmt *AssociatedStmt = NestedRipple->getNestedParallelConstruct();
+    if (!AssociatedStmt)
+      AssociatedStmt = NestedRipple->getAssociatedForStmt();
+    RPC = RippleComputeConstruct::Create(
+        getASTContext(), MetaPragmaLoc, MetaPragmaLoc, MetaPragmaLoc,
+        BlockShape, NewDims, AssociatedStmt, !NestedRipple->generateRemainder(),
+        NestedRipple->generateMaskedPostlude(), NestedRipple->threadCodegen(),
+        NestedRipple->getChunkDecl(), NestedRipple->getChunkVal());
+  } else
+    RPC = RippleComputeConstruct::Create(
+        getASTContext(), PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape, Dims,
+        AssociatedStatement, NoRemainder, MaskPostlude, IsThread, ThreadChunk,
+        ThreadChunkVal);
 
   ActOnDuplicateDimensionIndex(*RPC);
   ActOnRippleComputeConstruct(*RPC);
@@ -2096,9 +2149,21 @@ void CreateMultiThreadExpressions(Sema &SemaRef, const LoopIterationSpace &LIS,
 
 void SemaRipple::ActOnRippleComputeConstruct(RippleComputeConstruct &S) {
 
-  // We only have ripple 'parallel' applying on for loops for now
-  LoopIterationSpace LIS;
+  assert(S.getNestedParallelConstruct() ||
+         S.getAssociatedForStmt() &&
+             "Non-nested RippleComputeConstruct should have an associated "
+             "ForStmt by construction");
+  // Because of the recursive parser in clang we end up with this situations:
+  // - No nested parallel construct: leaf node; process as usual
+  // - Nested and no associated for stmt: we are processing from the parser
+  // bottom-up
+  // - Nested and have an associated for stmt: we are processing from this
+  // function with the correct for loop structure
+  if (S.getNestedParallelConstruct() && !S.getAssociatedForStmt())
+    S.setAssociatedForStmt(
+        S.getNestedParallelConstruct()->getAssociatedForStmt());
 
+  LoopIterationSpace LIS;
   if (ActOnAssociatedLoop(SemaRef, S.getAssociatedForStmt(), LIS)) {
     LLVM_DEBUG(llvm::dbgs() << "Ripple parallel has errors!\n");
     return;
@@ -2183,5 +2248,23 @@ void SemaRipple::ActOnRippleComputeConstruct(RippleComputeConstruct &S) {
         LIS.CounterVar, S.getOriginLowerBound(), S.getAssociatedLoopIters(),
         LIS.CounterStep);
     S.setEndLoopIVUpdate(SetLoopIVToUB);
+  }
+
+  // We fixup the nested construct now that we are done
+  if (auto *Nested = S.getNestedParallelConstruct()) {
+    if (S.vectorCodegen())
+      llvm_unreachable(
+          "Unsupported nesting RippleComputeConstruct for vector of threads");
+
+    assert(S.getInnerThreadLoop());
+    auto *RPC = RippleComputeConstruct::Create(
+        getASTContext(), Nested->getPragmaRange(),
+        Nested->getProcessingElementRange(), Nested->getDimsRange(),
+        Nested->getBlockShape(), Nested->getDimensionIds(),
+        S.getInnerThreadLoop(), !Nested->generateRemainder(),
+        Nested->generateMaskedPostlude(), Nested->threadCodegen(),
+        Nested->getChunkDecl(), Nested->getChunkVal());
+    ActOnRippleComputeConstruct(*RPC);
+    S.setInnerThreadLoop(RPC);
   }
 }

@@ -14168,6 +14168,12 @@ def err_ripple_stmt_depends_on_loop_counter : Error<
   "the loop %select{initializer|condition|increment}0 expression depends on the current loop control variable">;
 def err_ripple_loop_body_cannot_contain
     : Error<"the Ripple parallel loop body cannot contain %0">;
+def err_ripple_invalid_nesting_different_block_shape
+    : Error<"cannot nest Ripple parallel %select{vector|thread}0 with different block shape">;
+def err_ripple_invalid_nesting_vector_thread
+    : Error<"invalid use of a ripple parallel vector on top of a ripple parallel thread">;
+def err_ripple_non_matching_nested_options
+    : Error<"non matching options of consecutive ripple parallel vector">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

@@ -17,7 +17,8 @@ void check(int Chunk, int N, int start, int end, f32 x[restrict N],
     xpy[i] = x[i] + y[i];
 }
 
-// CHECK: thread-chunk-not-in-scope.c:15:45: error: use of undeclared identifier 'chunk'
+// CHECK: thread-chunk-not-in-scope.c:15:57: error: use of undeclared identifier 'chunk'; did you mean 'Chunk'?
 // CHECK:    15 |   #pragma ripple parallel Block(BS) Dims(0) ThreadChunk(chunk)
-// CHECK:       |                                             ^
+// CHECK:       |                                                         ^~~~~
+// CHECK:       |                                                         Chunk
 // CHECK: 1 error generated.

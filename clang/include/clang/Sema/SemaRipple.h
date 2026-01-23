@@ -16,6 +16,7 @@
 #include "clang/AST/StmtRipple.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
@@ -56,16 +57,14 @@ public:
   bool CheckHasRippleBlockType(const Expr *E, unsigned BuiltinID);
 
   struct AnnotationData {
-    SourceRange BlockShapeRange;
     SourceRange DimsRange;
-    IdentifierInfo *BlockShape;
+    UnqualifiedId BlockShape;
     SmallVector<uint64_t, 4> Dims;
     bool IgnoreNullStatements = false;
     bool NoRemainder = false;
     bool MaskPostlude = true;
     bool IsThread = false;
-    SourceRange ThreadChunkIDRange;
-    IdentifierInfo *ThreadChunkID = nullptr;
+    UnqualifiedId ThreadChunkID;
     std::optional<uint64_t> ThreadChunkVal = std::nullopt;
   };
 

@@ -484,47 +484,29 @@ Retry:
              isa<NullStmt>(Stmt.get()));
     if (!Stmt.isUsable())
       return Stmt;
-    // Name lookup for the BlockShape variable
-    LookupResult R(Actions, PragmaVals->BlockShape,
-                   PragmaVals->BlockShapeRange.getBegin(),
-                   Sema::LookupOrdinaryName);
-    if (!Actions.LookupName(R, Actions.getCurScope(),
-                            /*CreateBuiltins*/ false)) {
-      PP.Diag(PragmaVals->BlockShapeRange.getBegin(),
-              diag::err_undeclared_var_use)
-          << PragmaVals->BlockShape;
+
+    CXXScopeSpec ScopeSpec;
+    SourceLocation TemplateKWLoc;
+    auto BlockRefExpr = Actions.ActOnIdExpression(
+        getCurScope(), ScopeSpec, TemplateKWLoc, PragmaVals->BlockShape,
+        /*HasTrailingLParen=*/false,
+        /*isAddressOfOperand=*/false);
+    if (!BlockRefExpr.isUsable() || !BlockRefExpr.getAs<DeclRefExpr>())
       return StmtError();
-    }
-    ValueDecl *BlockShape = R.getAsSingle<ValueDecl>();
-    if (!BlockShape) {
-      PP.Diag(PragmaVals->BlockShapeRange.getBegin(),
-              diag::err_ambiguous_reference)
-          << PragmaVals->BlockShape;
-      return StmtError();
-    }
     ValueDecl *ThreadChunkDecl = nullptr;
-    if (PragmaVals->ThreadChunkID) {
-      LookupResult TCR(Actions, PragmaVals->ThreadChunkID,
-                       PragmaVals->ThreadChunkIDRange.getBegin(),
-                       Sema::LookupOrdinaryName);
-      if (!Actions.LookupName(TCR, Actions.getCurScope(),
-                              /*CreateBuiltins*/ false)) {
-        PP.Diag(PragmaVals->ThreadChunkIDRange.getBegin(),
-                diag::err_undeclared_var_use)
-            << PragmaVals->ThreadChunkID;
+    if (PragmaVals->ThreadChunkID.isValid()) {
+      auto ThreadChunkExpr = Actions.ActOnIdExpression(
+          getCurScope(), ScopeSpec, TemplateKWLoc, PragmaVals->ThreadChunkID,
+          /*HasTrailingLParen=*/false,
+          /*isAddressOfOperand=*/false);
+      if (!ThreadChunkExpr.isUsable() || !ThreadChunkExpr.getAs<DeclRefExpr>())
         return StmtError();
-      }
-      ThreadChunkDecl = TCR.getAsSingle<ValueDecl>();
-      if (!ThreadChunkDecl) {
-        PP.Diag(PragmaVals->ThreadChunkIDRange.getBegin(),
-                diag::err_ambiguous_reference)
-            << PragmaVals->ThreadChunkID;
-        return StmtError();
-      }
+      ThreadChunkDecl = ThreadChunkExpr.getAs<DeclRefExpr>()->getDecl();
     }
     return Actions.Ripple().CreateRippleParallelComputeStmt(
-        AnnotRange, PragmaVals->BlockShapeRange, PragmaVals->DimsRange,
-        BlockShape, PragmaVals->Dims, Stmt.get(), PragmaVals->NoRemainder,
+        AnnotRange, PragmaVals->BlockShape.getSourceRange(),
+        PragmaVals->DimsRange, BlockRefExpr.getAs<DeclRefExpr>()->getDecl(),
+        PragmaVals->Dims, Stmt.get(), PragmaVals->NoRemainder,
         PragmaVals->MaskPostlude, PragmaVals->IsThread, ThreadChunkDecl,
         PragmaVals->ThreadChunkVal);
   }

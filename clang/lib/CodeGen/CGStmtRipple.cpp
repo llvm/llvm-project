@@ -714,7 +714,7 @@ void CodeGenFunction::EmitRippleComputeConstruct(
   }
   EmitForStmt(*S.getRippleLoopStmt(), Attrs);
 
-  if (S.generateRemainder()) {
+  if (!S.threadCodegen() && S.generateRemainder()) {
     if (S.generateMaskedPostlude()) {
       // Update the loop IV for the last time for the masked Postlude
       EmitStmt(S.getLoopIVUpdate());
