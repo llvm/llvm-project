@@ -1974,7 +1974,7 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
 ; CI-NEXT:    s_add_u32 s4, s4, external_void_func_f16@rel32@lo+4
 ; CI-NEXT:    s_addc_u32 s5, s5, external_void_func_f16@rel32@hi+12
 ; CI-NEXT:    s_mov_b64 s[2:3], s[38:39]
-; CI-NEXT:    v_mov_b32_e32 v0, 4.0
+; CI-NEXT:    v_mov_b32_e32 v0, 0x4400
 ; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    s_endpgm

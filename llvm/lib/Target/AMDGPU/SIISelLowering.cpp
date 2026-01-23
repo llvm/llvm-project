@@ -1121,6 +1121,9 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return Size == 32 ? ScalarVT.getSimpleVT() : MVT::i32;
   }
 
+  if (!Subtarget->has16BitInsts() && VT.getSizeInBits() == 16)
+    return MVT::i32;
+
   if (VT.getSizeInBits() > 32)
     return MVT::i32;
 
@@ -5077,7 +5080,7 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   // Compare the just read M0 value to all possible Idx values.
   BuildMI(LoopBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), CondReg)
       .addReg(CurrentIdxReg)
-      .addReg(Idx.getReg(), 0, Idx.getSubReg());
+      .addReg(Idx.getReg(), {}, Idx.getSubReg());
 
   // Update EXEC, save the original EXEC value to VCC.
   BuildMI(LoopBB, I, DL, TII->get(LMC.AndSaveExecOpc), NewExec)
@@ -5278,7 +5281,7 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
       setM0ToIndexFromSGPR(TII, MRI, MI, Offset);
 
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-          .addReg(SrcReg, 0, SubReg)
+          .addReg(SrcReg, {}, SubReg)
           .addReg(SrcReg, RegState::Implicit);
     }
 
@@ -5312,7 +5315,7 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
         .addImm(SubReg);
   } else {
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-        .addReg(SrcReg, 0, SubReg)
+        .addReg(SrcReg, {}, SubReg)
         .addReg(SrcReg, RegState::Implicit);
   }
 
@@ -9037,17 +9040,17 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
       GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
     if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
         GV->hasExternalLinkage()) {
-      Type *Ty = GV->getValueType();
+      const GlobalVariable &GVar = *cast<GlobalVariable>(GV);
       // HIP uses an unsized array `extern __shared__ T s[]` or similar
       // zero-sized type in other languages to declare the dynamic shared
       // memory which size is not known at the compile time. They will be
       // allocated by the runtime and placed directly after the static
       // allocated ones. They all share the same offset.
-      if (DAG.getDataLayout().getTypeAllocSize(Ty).isZero()) {
+      if (GVar.getGlobalSize(GVar.getDataLayout()) == 0) {
         assert(PtrVT == MVT::i32 && "32-bit pointer is expected.");
         // Adjust alignment for that dynamic shared memory array.
         Function &F = DAG.getMachineFunction().getFunction();
-        MFI->setDynLDSAlign(F, *cast<GlobalVariable>(GV));
+        MFI->setDynLDSAlign(F, GVar);
         MFI->setUsesDynamicLDS(true);
         return SDValue(
             DAG.getMachineNode(AMDGPU::GET_GROUPSTATICSIZE, DL, PtrVT), 0);
@@ -15270,8 +15273,9 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // for some types, but at a higher cost since it's implemented with a 3
   // operand form.
   const SDNodeFlags Flags = N->getFlags();
-  if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
-      !Subtarget->hasIEEEMinimumMaximumInsts() && Flags.hasNoNaNs()) {
+  if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) && Flags.hasNoNaNs() &&
+      !Subtarget->hasIEEEMinimumMaximumInsts() &&
+      isOperationLegal(ISD::FMINNUM_IEEE, VT.getScalarType())) {
     unsigned NewOpc =
         Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);

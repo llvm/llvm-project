@@ -13,7 +13,7 @@ define bfloat @v_uitofp_i1_to_bf16(i1 %num) {
 ; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc
-; GFX7-NEXT:    v_and_b32_e32 v0, 0x7fff0000, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_uitofp_i1_to_bf16:
@@ -1337,7 +1337,7 @@ define bfloat @v_sitofp_i1_to_bf16(i1 %num) {
 ; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_sitofp_i1_to_bf16:
