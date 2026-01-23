@@ -1258,12 +1258,10 @@ public:
   getDivRemSpeculationCost(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction with consecutive memory
-  /// access that can be widened.
+  /// access that can be widened. If AllowStridedPointerIVs is true, we
+  // check that strided pointers of the form {base * stride} can be widened.
+  // Will return true if stride is a loop invariant runtime constant.
   bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
-
-  // Returns true if \p is a memory instruction with strided memory access that
-  // can be widened.
-  bool stridedMemoryAccessCanBeWidened(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction in an interleaved-group
   /// of memory accesses that can be vectorized with wide vector loads/stores
@@ -3086,32 +3084,6 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
 
   // In order to be widened, the pointer should be consecutive, first of all.
   if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
-    return false;
-
-  // If the instruction is a store located in a predicated block, it will be
-  // scalarized.
-  if (isScalarWithPredication(I, VF))
-    return false;
-
-  // If the instruction's allocated size doesn't equal it's type size, it
-  // requires padding and will be scalarized.
-  auto &DL = I->getDataLayout();
-  if (hasIrregularType(ScalarTy, DL))
-    return false;
-
-  return true;
-}
-
-bool LoopVectorizationCostModel::stridedMemoryAccessCanBeWidened(
-    Instruction *I, ElementCount VF) {
-  // Get and ensure we have a valid memory instruction.
-  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
-
-  auto *Ptr = getLoadStorePointerOperand(I);
-  auto *ScalarTy = getLoadStoreType(I);
-
-  // In order to be widened, the pointer should be consecutive, first of all.
-  if (!Legal->isConstRuntimeStridedPtr(ScalarTy, Ptr))
     return false;
 
   // If the instruction is a store located in a predicated block, it will be
@@ -5345,10 +5317,6 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
   unsigned AS = getLoadStoreAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(ValTy, Ptr);
 
-  ConsecutiveStride = (!ConsecutiveStride && IsRuntimeConstStrided)
-                          ? Legal->isConstRuntimeStridedPtr(ValTy, Ptr)
-                          : ConsecutiveStride;
-
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
@@ -5800,23 +5768,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
         setWideningDecision(&I, VF, Decision, Cost);
-        continue;
-      } else if (stridedMemoryAccessCanBeWidened(&I, VF)) {
-        int BaseStride = Legal->isConstRuntimeStridedPtr(
-            getLoadStoreType(&I), getLoadStorePointerOperand(&I));
-        assert((BaseStride >= 1) && "Expected base stride to be >= 1");
-
-        // For base strides greater than 1 we should default to
-        // gather/scatters
-        InstructionCost Cost;
-        if (BaseStride == 1) {
-          Cost = getConsecutiveMemOpCost(&I, VF, true);
-          setWideningDecision(&I, VF, CM_Widen, Cost);
-        } else {
-          Cost = isLegalGatherOrScatter(&I, VF) ? getGatherScatterCost(&I, VF)
-                                                : InstructionCost::getInvalid();
-          setWideningDecision(&I, VF, CM_GatherScatter, Cost);
-        }
         continue;
       }
 
