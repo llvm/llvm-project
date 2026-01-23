@@ -1080,7 +1080,6 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
-    libc.src.__support.math.sincosf_utils
 
   libc.src.__support.macros.properties.types
 
