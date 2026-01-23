@@ -477,7 +477,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                    .addReg(Rn)
                    .addImm(PredImm)
                    .addReg(PredReg)
-                   .addReg(Rt, IsStore ? 0 : RegState::Define);
+                   .addReg(Rt, getDefRegState(!IsStore));
 
     // Transfer memoperands.
     MIB.setMemRefs(MI->memoperands());

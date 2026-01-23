@@ -78,44 +78,23 @@ LLVMInitializeRISCVDisassembler() {
                                          createRISCVDisassembler);
 }
 
-static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                           uint64_t Address,
-                                           const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
-
-  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::X0 + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRF16RegisterClass(MCInst &Inst, uint32_t RegNo,
+template <unsigned FirstReg, unsigned NumRegsInClass, unsigned RVELimit = 0>
+static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  bool CheckRVE = RVELimit != 0 &&
+                  Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
 
-  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
+  if (RegNo >= NumRegsInClass || (CheckRVE && RegNo >= RVELimit))
     return MCDisassembler::Fail;
 
-  MCRegister Reg = RISCV::X0_H + RegNo;
+  MCRegister Reg = FirstReg + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRF32RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
-
-  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::X0_W + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
+constexpr auto DecodeGPRRegisterClass =
+    DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
 
 static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
@@ -124,72 +103,6 @@ static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
   if (Reg != RISCV::X1 && Reg != RISCV::X5)
     return MCDisassembler::Fail;
 
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFPR16RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                             uint64_t Address,
-                                             const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::F0_H + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                             uint64_t Address,
-                                             const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::F0_F + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFPR32CRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder) {
-  if (RegNo >= 8) {
-    return MCDisassembler::Fail;
-  }
-  MCRegister Reg = RISCV::F8_F + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                             uint64_t Address,
-                                             const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::F0_D + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFPR64CRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder) {
-  if (RegNo >= 8) {
-    return MCDisassembler::Fail;
-  }
-  MCRegister Reg = RISCV::F8_D + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::F0_Q + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -246,17 +159,6 @@ static DecodeStatus DecodeGPRNoX31RegisterClass(MCInst &Inst, uint32_t RegNo,
   }
 
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
-  if (RegNo >= 8)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::X8 + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -686,6 +588,8 @@ static constexpr FeatureBitset XAndesGroup = {
 
 static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
 
+static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
@@ -701,6 +605,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
+    {DecoderTableXAIF32, XAIFGroup, "AI Foundry extensions"},
     // Standard Extensions
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},

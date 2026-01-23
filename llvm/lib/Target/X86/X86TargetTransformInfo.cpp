@@ -1799,7 +1799,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                 return;
               }
               if (SrcReg != DestReg &&
-                  any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
+                  any_of(RegMask, not_equal_to(PoisonMaskElem))) {
                 // Just a copy of the source register.
                 Cost += TTI::TCC_Free;
               }

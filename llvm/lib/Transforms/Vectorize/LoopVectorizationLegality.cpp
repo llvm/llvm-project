@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -1434,15 +1435,12 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
   // When vectorizing early exits, create predicates for the latch block only.
-  // The early exiting block must be a direct predecessor of the latch at the
-  // moment.
+  // For a single early exit, it must be a direct predecessor of the latch.
+  // For multiple early exits, they form a chain where each exiting block
+  // dominates all subsequent blocks up to the latch.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  if (hasUncountableEarlyExit()) {
-    assert(
-        is_contained(predecessors(Latch), getUncountableEarlyExitingBlock()) &&
-        "Uncountable exiting block must be a direct predecessor of latch");
+  if (hasUncountableEarlyExit())
     return BB == Latch;
-  }
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
 
@@ -1719,7 +1717,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
-  BasicBlock *SingleUncountableExitingBlock = nullptr;
+  SmallVector<BasicBlock *> UncountableExitingBlocks;
   for (BasicBlock *BB : ExitingBlocks) {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
@@ -1732,15 +1730,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         return false;
       }
 
-      if (SingleUncountableExitingBlock) {
-        reportVectorizationFailure(
-            "Loop has too many uncountable exits",
-            "Cannot vectorize early exit loop with more than one early exit",
-            "TooManyUncountableEarlyExits", ORE, TheLoop);
-        return false;
-      }
-
-      SingleUncountableExitingBlock = BB;
+      UncountableExitingBlocks.push_back(BB);
     } else
       CountableExitingBlocks.push_back(BB);
   }
@@ -1750,18 +1740,36 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // PSE.getSymbolicMaxBackedgeTakenCount() below.
   Predicates.clear();
 
-  if (!SingleUncountableExitingBlock) {
-    LLVM_DEBUG(dbgs() << "LV: Cound not find any uncountable exits");
+  if (UncountableExitingBlocks.empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
     return false;
   }
 
-  // The only supported early exit loops so far are ones where the early
-  // exiting block is a unique predecessor of the latch block.
+  // Sort exiting blocks by dominance order to establish a clear chain.
+  llvm::sort(UncountableExitingBlocks, [this](BasicBlock *A, BasicBlock *B) {
+    return DT->properlyDominates(A, B);
+  });
+
+  // Verify that exits form a strict dominance chain: each block must
+  // dominate the next. This ensures each exit is only dominated by its
+  // predecessors in the chain.
+  for (unsigned I = 0; I + 1 < UncountableExitingBlocks.size(); ++I) {
+    if (!DT->properlyDominates(UncountableExitingBlocks[I],
+                               UncountableExitingBlocks[I + 1])) {
+      reportVectorizationFailure(
+          "Uncountable early exits do not form a dominance chain",
+          "Cannot vectorize early exit loop with non-dominating exits",
+          "NonDominatingEarlyExits", ORE, TheLoop);
+      return false;
+    }
+  }
+
   BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != SingleUncountableExitingBlock) {
-    reportVectorizationFailure("Early exit is not the latch predecessor",
-                               "Cannot vectorize early exit loop",
-                               "EarlyExitNotLatchPredecessor", ORE, TheLoop);
+  if (LatchPredBB != UncountableExitingBlocks.back()) {
+    reportVectorizationFailure(
+        "Last early exiting block in the chain is not the latch predecessor",
+        "Cannot vectorize early exit loop", "EarlyExitNotLatchPredecessor", ORE,
+        TheLoop);
     return false;
   }
 
@@ -1818,10 +1826,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
       }
     }
 
-  // The vectoriser cannot handle loads that occur after the early exit block.
-  assert(LatchBB->getUniquePredecessor() == SingleUncountableExitingBlock &&
-         "Expected latch predecessor to be the early exiting block");
-
   SmallVector<LoadInst *, 4> NonDerefLoads;
   // TODO: Handle loops that may fault.
   if (!HasSideEffects) {
@@ -1834,9 +1838,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
       return false;
     }
-  } else if (!canUncountableExitConditionLoadBeMoved(
-                 SingleUncountableExitingBlock))
-    return false;
+  } else {
+    // Check all uncountable exiting blocks for movable loads.
+    for (BasicBlock *ExitingBB : UncountableExitingBlocks) {
+      if (!canUncountableExitConditionLoadBeMoved(ExitingBB))
+        return false;
+    }
+  }
 
   // Check non-dereferenceable loads if any.
   for (LoadInst *LI : NonDerefLoads) {
@@ -1864,7 +1872,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
-  UncountableExitingBB = SingleUncountableExitingBlock;
+  HasUncountableEarlyExit = true;
   UncountableExitWithSideEffects = HasSideEffects;
   return true;
 }

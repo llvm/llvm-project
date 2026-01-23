@@ -414,6 +414,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20,
   OPERAND_SIMM20_LI,
   OPERAND_SIMM26,
   OPERAND_CLUI_IMM,
@@ -770,12 +771,18 @@ namespace RISCVVInversePseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
+  uint16_t VLMul : 3;
+  uint16_t SEW : 8;
+  uint16_t IsAltFmt : 1;
 };
 
 #define GET_RISCVVInversePseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"
+
+inline const PseudoInfo *getBaseInfo(unsigned BaseInstr, uint8_t VLMul,
+                                     uint8_t SEW, bool IsAltFmt = false) {
+  return getBaseInfoImpl(BaseInstr, VLMul, SEW, IsAltFmt);
+}
 } // namespace RISCVVInversePseudosTable
 
 namespace RISCV {

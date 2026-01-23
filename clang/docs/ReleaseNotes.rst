@@ -54,6 +54,24 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Remove ``CompletionString.Availability``. No libclang interfaces returned instances of it.
+- ``CompletionString.availability`` now returns instances of ``CompletionString.AvailabilityKindCompat``.
+
+  Instances of ``AvailabilityKindCompat`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind`` and are equality-comparable with
+  the existing ``AvailabilityKind`` enum. It will be replaced by ``AvailabilityKind``
+  in a future release. When this happens, the return type of ``CompletionString.availability``
+  will change to ``AvailabilityKind``, so it is recommended to use ``AvailabilityKind``
+  to compare with the return values of ``CompletionString.availability``.
+- Remove ``availabilityKinds``. In this release, uses of ``availabilityKinds``
+  need to be replaced by ``CompletionString.AvailabilityKind``.
+- ``CompletionChunk.kind`` now returns instances of ``CompletionChunkKind``.
+
+  Instances of ``CompletionChunkKind`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind`` for compatibility.
+  These representations will be changed in a future release to match other enums.
+- Remove ``completionChunkKindMap``. In this release, uses of ``completionChunkKindMap``
+  need to be replaced by ``CompletionChunkKind``.
 
 What's New in Clang |release|?
 ==============================
@@ -69,6 +87,8 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports `P1857R3 <https://wg21.link/p1857r3>`_ Modules Dependency Discovery. (#GH54047)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -88,6 +108,12 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+  for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
+  counts are normalized modulo the bit-width and support negative values.
+  Usable in constant expressions. Implicit conversion is supported for
+  class/struct types with conversion operators.
+
 New Compiler Flags
 ------------------
 
@@ -105,6 +131,33 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
+  a CFG-based intra-procedural analysis that detects use-after-free and related
+  temporal safety bugs. See the
+  `RFC <https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291>`_
+  for more details. By design, this warning is enabled in ``-Wall``. To disable
+  the analysis, use ``-Wno-lifetime-safety`` or ``-fno-lifetime-safety``.
+
+- Added ``-Wlifetime-safety-suggestions`` to enable lifetime annotation suggestions.
+  This provides suggestions for function parameters that
+  should be marked ``[[clang::lifetimebound]]`` based on lifetime analysis. For
+  example, for the following function:
+
+  .. code-block:: c++
+
+    int* p(int *in) { return in; }
+
+  Clang will suggest:
+
+  .. code-block:: c++
+
+    warning: parameter in intra-TU function should be marked [[clang::lifetimebound]]
+    int* p(int *in) { return in; }
+           ^~~~~~~
+                   [[clang::lifetimebound]]
+    note: param returned here
+    int* p(int *in) { return in; }
+                             ^~
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -116,14 +169,18 @@ Bug Fixes in This Version
 -------------------------
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
+- Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -134,6 +191,10 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+- Fixed a crash when using loop hint with a value dependent argument inside a
+  generic lambda. (#GH172289)
+
 OpenACC Specific Changes
 ------------------------
 
@@ -142,6 +203,8 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+
+- Initial support for gfx1310
 
 NVPTX Support
 ^^^^^^^^^^^^^^
@@ -182,6 +245,9 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -196,6 +262,7 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
 clang-format
 ------------
@@ -209,17 +276,13 @@ Code Completion
 Static Analyzer
 ---------------
 
-New features
-^^^^^^^^^^^^
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-Moved checkers
-^^^^^^^^^^^^^^
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
@@ -231,6 +294,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for ``transparent`` clause in task and taskloop directives.
 
 Improvements
 ^^^^^^^^^^^^

@@ -214,9 +214,7 @@ public:
 
   BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
-  BasicBlockPathCloning() : MachineFunctionPass(ID) {
-    initializeBasicBlockPathCloningPass(*PassRegistry::getPassRegistry());
-  }
+  BasicBlockPathCloning() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Basic Block Path Cloning"; }
 

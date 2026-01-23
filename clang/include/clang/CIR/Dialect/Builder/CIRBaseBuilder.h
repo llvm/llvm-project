@@ -179,6 +179,11 @@ public:
     return getPointerTo(cir::VoidType::get(getContext()), as);
   }
 
+  cir::MethodAttr getMethodAttr(cir::MethodType ty, cir::FuncOp methodFuncOp) {
+    auto methodFuncSymbolRef = mlir::FlatSymbolRefAttr::get(methodFuncOp);
+    return cir::MethodAttr::get(ty, methodFuncSymbolRef);
+  }
+
   cir::BoolAttr getCIRBoolAttr(bool state) {
     return cir::BoolAttr::get(getContext(), state);
   }
@@ -704,6 +709,36 @@ public:
   /// Create a yield operation.
   cir::YieldOp createYield(mlir::Location loc, mlir::ValueRange value = {}) {
     return cir::YieldOp::create(*this, loc, value);
+  }
+
+  struct GetMethodResults {
+    mlir::Value callee;
+    mlir::Value adjustedThis;
+  };
+
+  GetMethodResults createGetMethod(mlir::Location loc, mlir::Value method,
+                                   mlir::Value objectPtr) {
+    // Build the callee function type.
+    auto methodFuncTy =
+        mlir::cast<cir::MethodType>(method.getType()).getMemberFuncTy();
+    auto methodFuncInputTypes = methodFuncTy.getInputs();
+
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
+    mlir::Type adjustedThisTy = getVoidPtrTy(objectPtrTy.getAddrSpace());
+
+    llvm::SmallVector<mlir::Type> calleeFuncInputTypes{adjustedThisTy};
+    calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
+                                methodFuncInputTypes.begin(),
+                                methodFuncInputTypes.end());
+    cir::FuncType calleeFuncTy =
+        methodFuncTy.clone(calleeFuncInputTypes, methodFuncTy.getReturnType());
+    // TODO(cir): consider the address space of the callee.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType calleeTy = getPointerTo(calleeFuncTy);
+
+    auto op = cir::GetMethodOp::create(*this, loc, calleeTy, adjustedThisTy,
+                                       method, objectPtr);
+    return {op.getCallee(), op.getAdjustedThis()};
   }
 };
 

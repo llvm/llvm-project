@@ -702,7 +702,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
-      _LIBCPP_HAS_MUSL_LIBC || defined(__OpenBSD__) || defined(__LLVM_LIBC__)
+      _LIBCPP_HAS_MUSL_LIBC || defined(__OpenBSD__) || _LIBCPP_LIBC_LLVM_LIBC
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
@@ -729,14 +729,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS [[_Clang::__no_thread_safety_analysis__]]
 #  else
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
-#  endif
-
-#  if _LIBCPP_STD_VER >= 20
-#    define _LIBCPP_CONSTINIT constinit
-#  elif __has_attribute(__require_constant_initialization__)
-#    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
-#  else
-#    define _LIBCPP_CONSTINIT
 #  endif
 
 #  if defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)
