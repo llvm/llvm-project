@@ -250,6 +250,16 @@ VoidTask silly_task() {
 // CIR:   },)
 // CIR: }
 
+// Call builtin coro end and return
+
+// CIR-NEXT: %[[CoroEndArg0:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR-NEXT: %[[CoroEndArg1:.*]] = cir.const #false
+// CIR-NEXT: = cir.call @__builtin_coro_end(%[[CoroEndArg0]], %[[CoroEndArg1]])
+
+// CIR: %[[Tmp1:.*]] = cir.load{{.*}} %[[VoidTaskAddr]]
+// CIR-NEXT: cir.return %[[Tmp1]]
+// CIR-NEXT: }
+
 folly::coro::Task<int> byRef(const std::string& s) {
   co_return s.size();
 }

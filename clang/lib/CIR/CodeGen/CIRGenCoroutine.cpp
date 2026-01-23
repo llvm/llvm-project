@@ -215,6 +215,26 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
       mlir::ValueRange{curCoro.data->coroId.getResult(), coroframeAddr});
 }
 
+cir::CallOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
+                                                   mlir::Value nullPtr) {
+  cir::BoolType boolTy = builder.getBoolTy();
+  mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroEnd);
+
+  cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = cgm.createCIRBuiltinFunction(
+        loc, cgm.builtinCoroEnd,
+        cir::FuncType::get({voidPtrTy, boolTy}, boolTy),
+        /*fd=*/nullptr);
+    assert(fnOp && "should always succeed");
+  } else {
+    fnOp = cast<cir::FuncOp>(builtin);
+  }
+
+  return builder.createCallOp(
+      loc, fnOp, mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
