@@ -11269,6 +11269,8 @@ def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
+def err_ppc_invalid_arg_type : Error<
+  "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<

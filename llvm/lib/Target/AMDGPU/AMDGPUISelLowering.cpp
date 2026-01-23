@@ -427,22 +427,13 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                      Expand);
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Expand);
-
-  if (Subtarget->has16BitInsts()) {
-    setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
-    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Legal);
-  } else {
-    setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
-    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
-  }
+  setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
+  setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
 
   setOperationAction({ISD::FLOG10, ISD::FLOG, ISD::FEXP, ISD::FEXP10}, MVT::f16,
                      Custom);
 
   setOperationAction(ISD::FCANONICALIZE, {MVT::f32, MVT::f64}, Legal);
-  if (Subtarget->has16BitInsts()) {
-    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
-  }
 
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
@@ -453,11 +444,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64,
                       MVT::v16f64},
                      Custom);
-
-  if (isTypeLegal(MVT::f16))
-    setOperationAction(ISD::IS_FPCLASS,
-                       {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16},
-                       Custom);
 
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
@@ -481,7 +467,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64},
       Custom);
 
-  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction({ISD::FP16_TO_FP, ISD::STRICT_FP16_TO_FP}, MVT::f64,
+                     Expand);
   setOperationAction(ISD::FP_TO_FP16, {MVT::f64, MVT::f32}, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
@@ -967,8 +954,8 @@ bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
   assert(VT.isFloatingPoint());
 
   // Packed operations do not have a fabs modifier.
-  return VT == MVT::f32 || VT == MVT::f64 ||
-         (Subtarget->has16BitInsts() && (VT == MVT::f16 || VT == MVT::bf16));
+  // Report this based on the end legalized type.
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16 || VT == MVT::bf16;
 }
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
@@ -1535,7 +1522,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());

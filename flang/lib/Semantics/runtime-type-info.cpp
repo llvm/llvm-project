@@ -773,6 +773,10 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
       symbol, foldingContext)};
   bool isDevice{object.cudaDataAttr() &&
       *object.cudaDataAttr() == common::CUDADataAttr::Device};
+  bool isManaged{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Managed};
+  bool isUnified{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Unified};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   int rank{typeAndShape->Rank()};
@@ -885,19 +889,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   // Default component initialization
   bool hasDataInit{false};
   if (IsAllocatable(symbol)) {
-    if (isDevice) {
-      AddValue(values, componentSchema_, "genre"s,
-          GetEnumValue("allocatabledevice"));
-    } else {
-      AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
-    }
+    AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
   } else if (IsPointer(symbol)) {
-    if (isDevice) {
-      AddValue(
-          values, componentSchema_, "genre"s, GetEnumValue("pointerdevice"));
-    } else {
-      AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
-    }
+    AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
     hasDataInit = InitializeDataPointer(
         values, symbol, object, scope, dtScope, distinctName);
   } else if (IsAutomatic(symbol)) {
@@ -913,6 +907,15 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
                                  .str()),
               object));
     }
+  }
+  if (isDevice) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("device"));
+  } else if (isManaged) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("managed"));
+  } else if (isUnified) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("unified"));
+  } else {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("host"));
   }
   if (!hasDataInit) {
     AddValue(values, componentSchema_, "initialization"s,
