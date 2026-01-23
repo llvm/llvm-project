@@ -2206,11 +2206,6 @@ static bool isFADD(unsigned Opc) {
     return true;
   }
 }
-static bool isVFADD(unsigned Opc) {
-  unsigned VOpc = RISCV::getRVVMCOpcode(Opc);
-  // TODO: Support VFADD_VF;
-  return VOpc == RISCV::VFADD_VV;
-}
 
 static bool isFSUB(unsigned Opc) {
   switch (Opc) {
@@ -2221,11 +2216,6 @@ static bool isFSUB(unsigned Opc) {
   case RISCV::FSUB_D:
     return true;
   }
-}
-static bool isVFSUB(unsigned Opc) {
-  unsigned VOpc = RISCV::getRVVMCOpcode(Opc);
-  // TODO: Support VFSUB_VF and VFRSUB_VF;
-  return VOpc == RISCV::VFSUB_VV;
 }
 
 static bool isFMUL(unsigned Opc) {
@@ -2684,11 +2674,11 @@ canCombineVecFPFusedMultiply(const MachineInstr &Root, const MachineOperand &MO,
   // or Root's addend.
   if (RootPassthru != PrevPassthru)
     return VecFMACombineVariant::Invalid;
-  if (RootPassthru != RISCV::NoRegister) {
+  if (RootPassthru.isValid()) {
     const MachineOperand &AddendOp =
         Root.getOperand(MO.getOperandNo() == 2 ? 3 : 2);
     if (RootPassthru == AddendOp.getReg()) {
-      // Passthru equals to addend, has to use the accumulate variant.
+      // Passthru is equal to addend, has to use the accumulate variant.
       Variant = VecFMACombineVariant::MulAcc;
     } else if (RootPassthru != Prev->getOperand(2).getReg() &&
                RootPassthru != Prev->getOperand(3).getReg()) {
@@ -2718,7 +2708,10 @@ static bool getFPFusedMultiplyPatterns(MachineInstr &Root,
                                 : RISCVMachineCombinerPattern::FNMSUB);
       HasAnyPattern = true;
     }
-  } else if (bool IsVFAdd = isVFADD(Opc); IsVFAdd || isVFSUB(Opc)) {
+  } else if (unsigned VOpc = RISCV::getRVVMCOpcode(Opc);
+             VOpc == RISCV::VFADD_VV || VOpc == RISCV::VFSUB_VV) {
+    // TODO: Support .vf variants like VFADD_VF
+    bool IsVFAdd = VOpc == RISCV::VFADD_VV;
     if (auto Variant = canCombineVecFPFusedMultiply(Root, Root.getOperand(2),
                                                     DoRegPressureReduce)) {
       if (Variant == VecFMACombineVariant::MulAdd)
@@ -3004,7 +2997,7 @@ combineVecFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   unsigned Mul1Idx = 2, Mul2Idx = 3;
-  // If we're mul-add patterns and the passthru of Prev is not NoReg,
+  // If we're using multiply-add patterns and the passthru of Prev is not NoReg,
   // we need to make sure Mul1 is the same as passthru.
   switch (Pattern) {
   case RISCVMachineCombinerPattern::VFMADD_AX:
@@ -3067,8 +3060,7 @@ combineVecFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
     llvm_unreachable("unexpected RISCVMachineCombinerPattern");
   }
   // Append rest of the mask, VTYPE, and VL operands.
-  MIB.add(
-      ArrayRef<MachineOperand>(Root.operands_begin() + 4, Root.operands_end()));
+  MIB.add(ArrayRef(Root.operands_begin() + 4, Root.operands_end()));
 
   InsInstrs.push_back(MIB);
   if (MRI.hasOneNonDBGUser(Prev.getOperand(0).getReg()))
