@@ -104,8 +104,8 @@ and resulting side-effects. This attribute overrides ``no_sanitize("memory")``.
 Interaction of Inlining with Disabling Sanitizer Instrumentation
 -----------------------------------------------------------------
 
-* `no_sanitize` functions will not be inlined heuristically by the compiler into sanitized functions.
-* `always_inline` function will share the instrumentation status of the function it is inlined into.
+* A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
+* An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
 * Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
 
 . code-block:: c
