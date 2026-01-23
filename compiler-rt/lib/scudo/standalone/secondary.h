@@ -290,6 +290,7 @@ public:
     Entry.BlockBegin = BlockBegin;
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
+    Entry.Flags = CachedBlock::None;
 
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
@@ -306,8 +307,7 @@ public:
                                          MAP_NOACCESS);
       }
       Entry.Flags = CachedBlock::NoAccess;
-    } else
-      Entry.Flags = CachedBlock::None;
+    }
 
     // Usually only one entry will be evicted from the cache.
     // Only in the rare event that the cache shrinks in real-time
@@ -761,8 +761,11 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
       LargeBlock::addHeaderTag<Config>(EntryHeaderPos));
   bool Zeroed = Entry.Time == 0;
 
-  if (UNLIKELY(Entry.Flags & CachedBlock::NoAccess))
-    Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
+  if (UNLIKELY(Entry.Flags & CachedBlock::NoAccess)) {
+    // NOTE: Flags set to 0 actually restores read-write.
+    Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
+                                     /*Flags=*/0);
+  }
 
   if (useMemoryTagging<Config>(Options)) {
     uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
