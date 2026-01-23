@@ -307,7 +307,7 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
     setOperationAction(ISD::SETCC, MVT::f64, Legal);
-    setOperationAction(ISD::SELECT, MVT::f64, Custom);
+    setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
     setOperationAction(ISD::BRCOND, MVT::Other, Legal);
@@ -317,11 +317,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
 
     setCondCodeAction(ISD::SETOGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETOGT, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f64, Expand);
   }
 
   if (Subtarget.hasMips64r6()) {

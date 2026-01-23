@@ -24,7 +24,7 @@ void NoSuspendWithLockCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void NoSuspendWithLockCheck::registerMatchers(MatchFinder *Finder) {
   auto LockType = templateSpecializationType(
-      hasDeclaration(namedDecl(matchers::matchesAnyListedName(
+      hasDeclaration(namedDecl(matchers::matchesAnyListedRegexName(
           utils::options::parseStringList(LockGuards)))));
 
   const StatementMatcher Lock =

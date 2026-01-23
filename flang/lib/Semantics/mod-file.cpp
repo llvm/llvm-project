@@ -887,6 +887,25 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
+static void CollectModules(const Scope &scope, const SymbolVector &symbols,
+    SourceOrderedSymbolSet &modules) {
+  for (const Symbol &symbol : symbols) {
+    const auto *generic{symbol.detailsIf<GenericDetails>()};
+    if (generic) {
+      for (const Symbol &used : generic->uses()) {
+        modules.insert(GetUsedModule(used.get<UseDetails>()));
+      }
+    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+      modules.insert(GetUsedModule(*use));
+    }
+  }
+  for (const Scope &child : scope.children()) {
+    if (!child.IsSubmodule()) {
+      CollectModules(child, child.GetSymbols(), modules);
+    }
+  }
+}
+
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
@@ -895,20 +914,13 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
+  CollectModules(scope, symbols, modules);
   for (const Symbol &symbol : symbols) {
-    const auto *generic{symbol.detailsIf<GenericDetails>()};
-    if (generic) {
-      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
-      for (const Symbol &used : generic->uses()) {
-        modules.insert(GetUsedModule(used.get<UseDetails>()));
-      }
-    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
-      modules.insert(GetUsedModule(*use));
-    }
     if (symbol.test(Symbol::Flag::ParentComp)) {
     } else if (symbol.has<NamelistDetails>()) {
       namelist.push_back(symbol);
-    } else if (generic) {
+    } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
       if (generic->specific() &&
           &generic->specific()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->specific());

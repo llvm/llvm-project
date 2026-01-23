@@ -12,12 +12,6 @@
 ; XFAIL: expensive_checks
 
 ; CHECK-DAG: OpName %[[#Struct:]] "struct"
-; CHECK-DAG: OpName %[[#Arg:]] "arg"
-; CHECK-DAG: OpName %[[#QArg:]] "qarg"
-; CHECK-DAG: OpName %[[#R:]] "r"
-; CHECK-DAG: OpName %[[#Q:]] "q"
-; CHECK-DAG: OpName %[[#Tr:]] "tr"
-; CHECK-DAG: OpName %[[#Tq:]] "tq"
 ; CHECK-DAG: %[[#Struct]] = OpTypeStruct %[[#]] %[[#]] %[[#]]
 ; CHECK-DAG: %[[#PtrStruct:]] = OpTypePointer CrossWorkgroup %[[#Struct]]
 ; CHECK-EXT-DAG: %[[#Int40:]] = OpTypeInt 40 0
@@ -26,19 +20,21 @@
 ; CHECK-DAG: %[[#PtrInt40:]] = OpTypePointer CrossWorkgroup %[[#Int40]]
 
 ; CHECK: OpFunction
-
-; CHECK-EXT: %[[#Tr]] = OpUConvert %[[#Int40]] %[[#R]]
+; CHECK: %[[#Arg:]] = OpFunctionParameter
+; CHECK-EXT: %[[#Tr:]] = OpUConvert %[[#Int40]] %[[#R:]]
 ; CHECK-EXT: %[[#Store:]] = OpInBoundsPtrAccessChain %[[#PtrStruct]] %[[#Arg]] %[[#]]
 ; CHECK-EXT: %[[#StoreAsInt40:]] = OpBitcast %[[#PtrInt40]] %[[#Store]]
 ; CHECK-EXT: OpStore %[[#StoreAsInt40]] %[[#Tr]]
 
 ; CHECK-NOEXT: %[[#Store:]] = OpInBoundsPtrAccessChain %[[#PtrStruct]] %[[#Arg]] %[[#]]
 ; CHECK-NOEXT: %[[#StoreAsInt40:]] = OpBitcast %[[#PtrInt40]] %[[#Store]]
-; CHECK-NOEXT: OpStore %[[#StoreAsInt40]] %[[#R]]
+; CHECK-NOEXT: OpStore %[[#StoreAsInt40]] %[[#R:]]
 
 ; CHECK: OpFunction
 
-; CHECK-EXT: %[[#Tq]] = OpUConvert %[[#Int40]] %[[#Q]]
+; CHECK: %[[#QArg:]] = OpFunctionParameter
+; CHECK: %[[#Q:]] = OpFunctionParameter
+; CHECK-EXT: %[[#Tq:]] = OpUConvert %[[#Int40]] %[[#Q]]
 ; CHECK-EXT: OpStore %[[#QArg]] %[[#Tq]]
 
 ; CHECK-NOEXT: OpStore %[[#QArg]] %[[#Q]]

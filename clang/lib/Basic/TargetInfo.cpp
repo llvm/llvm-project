@@ -52,6 +52,7 @@ static const LangASMap FakeAddrSpaceMap = {
     15, // hlsl_private
     16, // hlsl_device
     17, // hlsl_input
+    18, // hlsl_push_constant
     20, // wasm_funcref
 };
 

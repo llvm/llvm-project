@@ -35,6 +35,17 @@ func.func @launch_requires_gpu_return(%sz : index) {
 
 // -----
 
+func.func @launch_result_no_async() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{gpu.launch requires 'async' keyword to return a value}}
+  %0 = gpu.launch blocks(%bx, %by, %bz) in (%gx = %c1, %gy = %c1, %gz = %c1) threads(%tx, %ty, %tz) in (%lx = %c1, %ly = %c1, %lz = %c1) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
@@ -777,7 +788,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count greater than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 2, expected 1}}
    %1 = gpu.alloc(%0, %0) : memref<2x?xf32, 1>
    return
 }
@@ -787,7 +798,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count less than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
    %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
    return
 }

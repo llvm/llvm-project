@@ -267,11 +267,11 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
 /// Converts linalg.generic to named linalg.*conv/pooling* where possible.
 static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
                                                         GenericOp genericOp) {
-  SmallVector<int64_t> dilations, strides;
 #define CONV_OP_SPECIALIZER(ConvOpTy)                                          \
-  if (isaConvolutionOpOfType<ConvOpTy>(genericOp, &dilations, &strides))       \
-    return specializeToConvOp<ConvOpTy>(rewriter, genericOp, dilations,        \
-                                        strides);                              \
+  if (std::optional<DilationsAndStrides> convParams =                          \
+          matchConvolutionOpOfType<ConvOpTy>(genericOp))                       \
+    return specializeToConvOp<ConvOpTy>(                                       \
+        rewriter, genericOp, convParams->dilations, convParams->strides);      \
   // -----------------------------
   // Convolution ops.
   // -----------------------------
@@ -316,6 +316,18 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcSumOp);
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxUnsignedOp);
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNchwSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNchwMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNcwSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMaxUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNcwMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMinOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMinUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcMinOp);
 #undef CONV_OP_SPECIALIZER
   return failure();
 }

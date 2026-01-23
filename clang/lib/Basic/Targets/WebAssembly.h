@@ -46,6 +46,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_private
     0,  // hlsl_device
     0,  // hlsl_input
+    0,  // hlsl_push_constant
     20, // wasm_funcref
 };
 
@@ -80,6 +81,7 @@ public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T) {
     AddrSpaceMap = &WebAssemblyAddrSpaceMap;
+    UseAddrSpaceMapMangling = true;
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;

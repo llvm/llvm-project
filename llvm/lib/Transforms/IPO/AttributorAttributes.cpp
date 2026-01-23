@@ -2149,9 +2149,12 @@ bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
   case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
   case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
-  case Intrinsic::nvvm_barrier0_and:
-  case Intrinsic::nvvm_barrier0_or:
-  case Intrinsic::nvvm_barrier0_popc:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_count:
     return true;
   case Intrinsic::amdgcn_s_barrier:
     if (ExecutedAligned)
@@ -10483,13 +10486,32 @@ struct AANoFPClassImpl : AANoFPClass {
       addKnownBits(Attr.getNoFPClass());
     }
 
-    const DataLayout &DL = A.getDataLayout();
+    Instruction *CtxI = getCtxI();
+
     if (getPositionKind() != IRPosition::IRP_RETURNED) {
-      KnownFPClass KnownFPClass = computeKnownFPClass(&V, DL);
+      const DataLayout &DL = A.getDataLayout();
+      InformationCache &InfoCache = A.getInfoCache();
+
+      const DominatorTree *DT = nullptr;
+      AssumptionCache *AC = nullptr;
+      const TargetLibraryInfo *TLI = nullptr;
+      Function *F = getAssociatedFunction();
+      if (F) {
+        TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
+        if (!F->isDeclaration()) {
+          DT =
+              InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
+          AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
+        }
+      }
+
+      SimplifyQuery Q(DL, TLI, DT, AC, CtxI);
+
+      KnownFPClass KnownFPClass = computeKnownFPClass(&V, fcAllFlags, Q);
       addKnownBits(~KnownFPClass.KnownFPClasses);
     }
 
-    if (Instruction *CtxI = getCtxI())
+    if (CtxI)
       followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
@@ -13229,7 +13251,7 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 
 // TODO: this is similar to AAAddressSpace, most of the code should be merged.
 // But merging it created failing cased on gateway test that cannot be
-// reproduced locally. So should open a seperated PR to hande the merge of
+// reproduced locally. So should open a separated PR to handle the merge of
 // AANoAliasAddrSpace and AAAddressSpace attribute
 
 namespace {

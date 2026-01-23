@@ -94,10 +94,18 @@ void removeLayoutAttr(const T &operandOrResult);
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
+/// Updates the NamedAttribute sequence by dropping sg-layout and
+/// sg-data information from any DistributeLayoutAttr found.
+SmallVector<NamedAttribute>
+dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
+/// Updates the NamedAttribute sequence by dropping inst-data information from
+/// any DistributeLayoutAttr found.
+SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, source shape, and broadcasted dims.
-DistributeLayoutAttr inferBroadcastSourceLayout(MLIRContext *context,
-                                                DistributeLayoutAttr resLayout,
+DistributeLayoutAttr inferBroadcastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
 
@@ -110,15 +118,13 @@ inferReductionSourceLayout(DistributeLayoutAttr resLayout,
 /// Infers the source layout attribute for a bitcast operation given the
 /// result layout attribute, result element type bitwidth, and source element
 /// type bitwidth.
-DistributeLayoutAttr inferBitCastSourceLayout(MLIRContext *context,
-                                              DistributeLayoutAttr resLayout,
+DistributeLayoutAttr inferBitCastSourceLayout(DistributeLayoutAttr resLayout,
                                               int resElemTyBitWidth,
                                               int srcElemTyBitWidth);
 
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
-DistributeLayoutAttr inferShapecastSourceLayout(MLIRContext *context,
-                                                DistributeLayoutAttr resLayout,
+DistributeLayoutAttr inferShapecastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
 

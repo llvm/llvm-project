@@ -390,10 +390,10 @@ bool ClauseProcessor::processInitializer(
                                  mlir::Type type, mlir::Value ompOrig) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
-      const clause::StylizedInstance &inst = clause->v.front();
+      const StylizedInstance &inst = clause->v.front();
 
       for (const Object &object :
-           std::get<clause::StylizedInstance::Variables>(inst.t)) {
+           std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
         fir::StoreOp::create(builder, loc, ompOrig, addr);
         fir::FortranVariableFlagsEnum extraFlags = {};
@@ -412,7 +412,7 @@ bool ClauseProcessor::processInitializer(
       // Lower the expression/function call
       lower::StatementContext stmtCtx;
       const semantics::SomeExpr &initExpr =
-          std::get<clause::StylizedInstance::Instance>(inst.t);
+          std::get<StylizedInstance::Instance>(inst.t);
       mlir::Value result = common::visit(
           common::visitors{
               [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
@@ -439,7 +439,9 @@ bool ClauseProcessor::processInitializer(
     };
     return true;
   }
-  return false;
+  TODO(converter.getCurrentLocation(),
+       "declare reduction without an initializer clause is not yet "
+       "supported");
 }
 
 bool ClauseProcessor::processMergeable(
@@ -1019,17 +1021,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
-    using Depend = omp::clause::Depend;
-    if (!std::holds_alternative<Depend::TaskDep>(clause.u)) {
-      TODO(converter.getCurrentLocation(),
-           "DEPEND clause with SINK or SOURCE is not supported yet");
-    }
-    auto &taskDep = std::get<Depend::TaskDep>(clause.u);
-    auto depType = std::get<clause::DependenceType>(taskDep.t);
-    auto &objects = std::get<omp::ObjectList>(taskDep.t);
+    auto depType = std::get<clause::DependenceType>(clause.t);
+    auto &objects = std::get<omp::ObjectList>(clause.t);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-    if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
+    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
       TODO(converter.getCurrentLocation(),
            "Support for iterator modifiers is not implemented yet");
     }
@@ -1718,6 +1714,16 @@ bool ClauseProcessor::processUseDevicePtr(
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.useDevicePtrVars, useDeviceSyms);
   return clauseFound;
+}
+
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        const auto &objects = clause.v;
+        if (!objects.empty())
+          genObjectList(objects, converter, result.uniformVars);
+      });
 }
 
 } // namespace omp

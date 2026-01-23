@@ -272,7 +272,7 @@ void CommandObject::Cleanup() {
 void CommandObject::HandleCompletion(CompletionRequest &request) {
 
   m_exe_ctx = m_interpreter.GetExecutionContext();
-  auto reset_ctx = llvm::make_scope_exit([this]() { Cleanup(); });
+  llvm::scope_exit reset_ctx([this]() { Cleanup(); });
 
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument

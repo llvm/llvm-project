@@ -31,10 +31,26 @@ void InitializePlatformInterceptors();
 // really defined to replace libc functions.
 #if !SANITIZER_FUCHSIA
 
+// Sanitizer on AIX is currently unable to retrieve the address
+// of the real longjump (or an alternative thereto).
+// TODO: Consider intercepting longjmpx on AIX.
+#  if !SANITIZER_AIX
+#    define ASAN_INTERCEPT_LONGJMP 1
+#  else
+#    define ASAN_INTERCEPT_LONGJMP 0
+#  endif
+
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #  if !SANITIZER_WINDOWS
-#    define ASAN_INTERCEPT__LONGJMP 1
+   // Sanitizer on AIX is currently unable to retrieve the address
+   // of the real _longjump (or an alternative thereto).
+   // TODO: Consider intercepting _longjmpx on AIX.
+#    if !SANITIZER_AIX
+#      define ASAN_INTERCEPT__LONGJMP 1
+#    else
+#      define ASAN_INTERCEPT__LONGJMP 0
+#    endif
 #    define ASAN_INTERCEPT_INDEX 1
 #    define ASAN_INTERCEPT_PTHREAD_CREATE 1
 #  else
@@ -56,7 +72,10 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_SWAPCONTEXT 0
 #  endif
 
-#  if !SANITIZER_WINDOWS
+// Sanitizer on AIX is currently unable to retrieve the address
+// of the real siglongjump (or an alternative thereto).
+// TODO: Consider intercepting sigsetjmpx on AIX.
+#  if !SANITIZER_WINDOWS && !SANITIZER_AIX
 #    define ASAN_INTERCEPT_SIGLONGJMP 1
 #  else
 #    define ASAN_INTERCEPT_SIGLONGJMP 0
@@ -84,7 +103,10 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 0
 #  endif
 
-#  if !SANITIZER_WINDOWS
+// Clang on AIX neither uses `__cxa_atexit` nor links against a library with
+// such.
+// TODO: Consider intercepting `atexit` and `unatexit` on AIX.
+#  if !SANITIZER_WINDOWS && !SANITIZER_AIX
 #    define ASAN_INTERCEPT___CXA_ATEXIT 1
 #  else
 #    define ASAN_INTERCEPT___CXA_ATEXIT 0

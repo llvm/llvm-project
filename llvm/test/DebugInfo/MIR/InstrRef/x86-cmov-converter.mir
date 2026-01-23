@@ -1,4 +1,5 @@
 # RUN: llc %s -o - --run-pass=x86-cmov-conversion -mtriple=x86_64-- | FileCheck %s
+# RUN: llc %s -o - -passes=x86-cmov-conversion -mtriple=x86_64-- | FileCheck %s
 # REQUIRES: x86-registered-target
 #
 # Check that when we create new blocks and PHIs to represent CMOVs, that the

@@ -219,7 +219,7 @@ exceptions to this are:
      `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90`.
 
 Implicit mapping detection (for mapping to the target device) is still quite
-limited and work to make it smarter is underway for both OpenMP in general 
+limited and work to make it smarter is underway for both OpenMP in general
 and `do concurrent` mapping.
 
 #### Non-perfectly-nested loops' IVs
@@ -318,7 +318,7 @@ as well.
 
 Similar to locality specifiers, mapping reductions from `do concurrent` to OpenMP
 is also still an open TODO. We can potentially extend the MLIR infrastructure
-proposed in the previous section to share reduction records among the different 
+proposed in the previous section to share reduction records among the different
 relevant dialects as well.
 
 ### More advanced detection of loop nests

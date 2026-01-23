@@ -7065,7 +7065,9 @@ def CFIUncheckedCalleeDocs : Documentation {
   let Content = [{
 ``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
 `Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
-function calls. Specifically, the attribute has the following semantics:
+function calls. This also includes control flow checks added by
+`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+Specifically, the attribute has the following semantics:
 
 1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
    the indirect call will not be checked. Note that this only changes the behavior for indirect calls
@@ -8792,6 +8794,22 @@ storage class, and the `BuiltIn 26` decoration.
 The full documentation for this inline SPIR-V attribute can be found here:
 https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
   }];
+}
+
+def HLSLVkPushConstantDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `PushConstants`
+
+The ``[[vk::push_constant]]`` attribute allows you to declare this
+global variable as a push constant when targeting Vulkan.
+This attribute is ignored otherwise.
+
+This attribute must be applied to the variable, not underlying type.
+The variable type must be a struct, per the requirements of Vulkan, "there
+must be no more than one push constant block statically used per shader entry
+point."
+}];
 }
 
 def AnnotateTypeDocs : Documentation {

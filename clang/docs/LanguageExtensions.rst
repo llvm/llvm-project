@@ -3699,6 +3699,42 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin. These builtins can be used within constant
 expressions.
 
+``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+------------------------------------------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+    T __builtin_stdc_rotate_left(T value, count)
+    T __builtin_stdc_rotate_right(T value, count)
+
+where ``T`` is any unsigned integer type and ``count`` is any integer type.
+
+**Description**:
+
+These builtins rotate the bits in ``value`` by ``count`` positions. The
+``__builtin_stdc_rotate_left`` builtin rotates bits to the left, while
+``__builtin_stdc_rotate_right`` rotates bits to the right. The first
+argument (``value``) must be an unsigned integer type, including ``_BitInt`` types.
+The second argument (``count``) can be any integer type. The rotation count is
+normalized modulo the bit-width of the value being rotated, with negative
+counts converted to equivalent positive rotations (e.g., rotating left
+by ``-1`` is equivalent to rotating left by ``BitWidth-1``). These builtins can
+be used within constant expressions.
+
+**Example of use**:
+
+.. code-block:: c
+
+  unsigned char rotated_left = __builtin_stdc_rotate_left((unsigned char)0xB1, 3);
+  unsigned int rotated_right = __builtin_stdc_rotate_right(0x12345678U, 8);
+
+  unsigned char neg_rotate = __builtin_stdc_rotate_left((unsigned char)0xB1, -1);
+
+  unsigned _BitInt(20) value = 0xABCDE;
+  unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
+
 ``__builtin_unreachable``
 -------------------------
 
@@ -4378,6 +4414,39 @@ implemented in a way where the counter assignment can happen automatically.
 to a variable, have its address taken, or passed into or returned from a
 function, because doing so violates bounds safety conventions.
 
+.. _builtin_stack_address-doc:
+
+``__builtin_stack_address``
+---------------------------
+
+``__builtin_stack_address`` returns the address that separates the current
+function's (i.e. the one calling the builtin) stack space and the region of the
+stack that may be modified by called functions. The semantics match those of
+GCC's builtin of the same name.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  void *__builtin_stack_address()
+
+**Example**:
+
+.. code-block:: c++
+
+  void *sp = __builtin_stack_address();
+
+**Description**:
+
+The address returned by ``__builtin_stack_address`` identifies the starting
+address of the stack region that may be used by called functions.
+
+On some architectures (e.g. x86), it's sufficient to return the value in the
+stack pointer register directly. On others (e.g. SPARCv9), adjustments are
+required to the value of the stack pointer register.
+``__builtin_stack_address`` performs the necessary adjustments and returns the
+correct boundary address.
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
@@ -4790,6 +4859,20 @@ The syntax and semantics are similar to GCC-compatible __atomic_* builtins.
 The builtins work with signed and unsigned integers and require to specify memory ordering.
 The return value is the original value that was stored in memory before comparison.
 
+Clang provides two additional atomic builtins with incrementing behavior. These
+builtins perform an unsigned increment or decrement modulo a  wrap-around value.
+
+* ``__atomic_fetch_uinc``
+* ``__atomic_fetch_udec``
+
+See the LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the complete semantics of uinc_wrap and udec_wrap.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+
 Example:
 
 .. code-block:: c
@@ -4856,18 +4939,6 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
-
-Clang provides two additional __scoped_atomic builtins:
-
-* ``__scoped_atomic_uinc_wrap``
-* ``__scoped_atomic_udec_wrap``
-
-See LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
-instruction for the semantics of uinc_wrap and udec_wrap.
-
-Atomic memory scopes are designed to assist optimizations for systems with
-several levels of memory hierarchy like GPUs. The following memory scopes are
-currently supported:
 
 * ``__MEMORY_SCOPE_SYSTEM``
 * ``__MEMORY_SCOPE_DEVICE``

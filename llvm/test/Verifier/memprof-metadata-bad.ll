@@ -8,6 +8,8 @@ entry:
   %call3 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !3
   %call4 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !5
   %call5 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !7, !callsite !9
+  %call6 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !12
+  %call7 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !15
   ret ptr %call5
 }
 
@@ -45,10 +47,18 @@ declare dso_local noalias noundef ptr @malloc(i64 noundef)
 ; CHECK: call stack metadata should have at least 1 operand
 ; CHECK: Not all !memprof MemInfoBlock operands 2 to N are MDNode
 !8 = !{!0, !"default", i64 0, i64 5}
+!12 = !{!13}
+; CHECK: Not all !memprof MemInfoBlock operands 2 to N are MDNode
+!13 = !{!14, !"default", !"tag"}
+!15 = !{!16}
+; CHECK: Not all !memprof MemInfoBlock operands 2 to N are MDNode with 2 operands
+!16 = !{!14, !"default", !17}
+!17 = !{i64 789}
 !9 = !{i64 123}
 ; CHECK: call stack metadata operand should be constant integer
 !10 = !{!"wrongtype"}
 !11 = !{i64 789, i64 678}
+!14 = !{i64 234}
 
 ; Errors from annotating incorrect instruction type in @wronginsttype.
 ; CHECK: !memprof metadata should only exist on calls

@@ -382,11 +382,9 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   return MessageSendInfo(argsInfo, signatureType);
 }
 
-bool CGObjCRuntime::canMessageReceiverBeNull(CodeGenFunction &CGF,
-                                             const ObjCMethodDecl *method,
-                                             bool isSuper,
-                                       const ObjCInterfaceDecl *classReceiver,
-                                             llvm::Value *receiver) {
+bool CGObjCRuntime::canMessageReceiverBeNull(
+    CodeGenFunction &CGF, const ObjCMethodDecl *method, bool isSuper,
+    const ObjCInterfaceDecl *classReceiver, llvm::Value *receiver) {
   // Super dispatch assumes that self is non-null; even the messenger
   // doesn't have a null check internally.
   if (isSuper)
@@ -399,8 +397,7 @@ bool CGObjCRuntime::canMessageReceiverBeNull(CodeGenFunction &CGF,
 
   // If we're emitting a method, and self is const (meaning just ARC, for now),
   // and the receiver is a load of self, then self is a valid object.
-  if (auto curMethod =
-               dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+  if (auto curMethod = dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
     auto self = curMethod->getSelfDecl();
     if (self->getType().isConstQualified()) {
       if (auto LI = dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
@@ -466,11 +463,11 @@ clang::CodeGen::emitObjCProtocolObject(CodeGenModule &CGM,
 }
 
 std::string CGObjCRuntime::getSymbolNameForMethod(const ObjCMethodDecl *OMD,
-                                                  bool includeCategoryName) {
+                                                  bool includeCategoryName,
+                                                  bool includePrefixByte) {
   std::string buffer;
   llvm::raw_string_ostream out(buffer);
-  CGM.getCXXABI().getMangleContext().mangleObjCMethodName(OMD, out,
-                                       /*includePrefixByte=*/true,
-                                       includeCategoryName);
+  CGM.getCXXABI().getMangleContext().mangleObjCMethodName(
+      OMD, out, includePrefixByte, includeCategoryName);
   return buffer;
 }

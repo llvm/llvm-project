@@ -3006,6 +3006,82 @@ LogicalResult NVVM::ReduxOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::TensormapReplaceOp::verify() {
+  auto ord = getOrd();
+  Value newVal = getNewValue();
+  auto newValAttr = getNewValueAttr();
+  auto fieldName = stringifyEnum(getField());
+
+  if (ord && !llvm::is_contained({NVVM::TensormapField::BOX_DIM,
+                                  NVVM::TensormapField::GLOBAL_DIM,
+                                  NVVM::TensormapField::GLOBAL_STRIDE,
+                                  NVVM::TensormapField::ELEMENT_STRIDE},
+                                 getField()))
+    return emitOpError("ordinal is not supported for ")
+           << fieldName << " field";
+
+  auto invalidNewVal = [&](llvm::Twine type) -> std::string {
+    return llvm::Twine("new_value must be specified and must be an " + type +
+                       " for " + llvm::Twine(fieldName) + " field")
+        .str();
+  };
+
+  auto invalidNewValAttr = [&]() -> std::string {
+    return (llvm::Twine(
+                "new_value_attr must be specified and must be a valid ") +
+            llvm::Twine(fieldName) + " attribute for " + fieldName + " field")
+        .str();
+  };
+
+  switch (getField()) {
+  case NVVM::TensormapField::GLOBAL_ADDRESS:
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError(invalidNewVal("i64"));
+    break;
+  case NVVM::TensormapField::RANK:
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(invalidNewVal("i32"));
+    break;
+  case NVVM::TensormapField::GLOBAL_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for global_stride field");
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError(invalidNewVal("i64"));
+    break;
+  case NVVM::TensormapField::BOX_DIM:
+  case NVVM::TensormapField::GLOBAL_DIM:
+  case NVVM::TensormapField::ELEMENT_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for ")
+             << stringifyEnum(getField()) << " field";
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(invalidNewVal("i32"));
+    break;
+  case NVVM::TensormapField::ELEMTYPE:
+    if (!(newValAttr && llvm::isa<TensormapElemtypeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::INTERLEAVE_LAYOUT:
+    if (!(newValAttr && llvm::isa<TensormapInterleaveLayoutAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::SWIZZLE_MODE:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleModeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::SWIZZLE_ATOMICITY:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleAtomicityAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::FILL_MODE:
+    if (!(newValAttr && llvm::isa<TensormapFillModeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  }
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3093,27 +3169,26 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
   llvm::Intrinsic::ID id;
-  llvm::SmallVector<llvm::Value *> args;
+  llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
-    args.push_back(barrierId);
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   } else if (thisOp.getReductionOp()) {
     switch (*thisOp.getReductionOp()) {
     case NVVM::BarrierReduction::AND:
-      id = llvm::Intrinsic::nvvm_barrier0_and;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
       break;
     case NVVM::BarrierReduction::OR:
-      id = llvm::Intrinsic::nvvm_barrier0_or;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
       break;
     case NVVM::BarrierReduction::POPC:
-      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
       break;
     }
-    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+    args.push_back(builder.CreateICmpNE(
+        mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
-    args.push_back(barrierId);
   }
 
   return {id, std::move(args)};
@@ -4545,6 +4620,8 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
+  } else {
+    setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
 }
 
@@ -4774,6 +4851,50 @@ PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(mt.lookupValue(thisOp.getSelector()));
 
   return {IDs[modeIndex], args};
+}
+
+mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::TensormapReplaceOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  if (thisOp.getOrd())
+    args.push_back(builder.getInt32(thisOp.getOrd().value()));
+  if (thisOp.getNewValue())
+    args.push_back(mt.lookupValue(thisOp.getNewValue()));
+  if (auto attr = thisOp.getNewValueAttr()) {
+    auto val =
+        llvm::TypeSwitch<mlir::Attribute, unsigned>(*attr)
+            .Case<TensormapElemtypeAttr, TensormapInterleaveLayoutAttr,
+                  TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr,
+                  TensormapFillModeAttr>([](auto attr) {
+              return static_cast<unsigned>(attr.getValue());
+            })
+            .Default([](auto attr) {
+              llvm_unreachable("Invalid attribute type");
+              return 0;
+            });
+    args.push_back(builder.getInt32(val));
+  }
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_tensormap_replace_global_address,
+      llvm::Intrinsic::nvvm_tensormap_replace_rank,
+      llvm::Intrinsic::nvvm_tensormap_replace_box_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_element_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_elemtype,
+      llvm::Intrinsic::nvvm_tensormap_replace_interleave_layout,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_mode,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_atomicity,
+      llvm::Intrinsic::nvvm_tensormap_replace_fill_mode,
+  };
+
+  unsigned fieldIndex = static_cast<unsigned>(thisOp.getField());
+
+  return {IDs[fieldIndex], args};
 }
 
 //===----------------------------------------------------------------------===//

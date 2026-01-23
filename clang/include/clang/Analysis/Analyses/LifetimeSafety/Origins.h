@@ -17,7 +17,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeBase.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
 
@@ -149,6 +151,9 @@ public:
   unsigned getNumOrigins() const { return NextOriginID.Value; }
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
+
+  /// Collects statistics about expressions that lack associated origins.
+  void collectMissingOrigins(Stmt &FunctionBody, LifetimeSafetyStats &LSStats);
 
 private:
   OriginID getNextOriginID() { return NextOriginID++; }

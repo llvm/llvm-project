@@ -1,0 +1,41 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!void = !cir.void
+
+!rec_Foo = !cir.record<struct "Foo" {!cir.vptr}>
+!s32i = !cir.int<s, 32>
+module {
+  cir.func private @_ZN3Foo2m1Ei(!s32i)
+  cir.func no_inline dso_local @_Z16make_non_virtualv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
+    %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
+    %1 = cir.const #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+    cir.store %1, %0 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
+    %2 = cir.load %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+  }
+
+// CHECK:  cir.func no_inline dso_local @_Z16make_non_virtualv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
+// CHECK:    %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
+// CHECK:    %1 = cir.const #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:    cir.store %1, %0 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
+// CHECK:    %2 = cir.load %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:  }
+
+  cir.func no_inline dso_local @_Z9make_nullv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
+    %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
+    %1 = cir.const #cir.method<null> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+    cir.store %1, %0 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
+    %2 = cir.load %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+  }
+
+// CHECK:  cir.func no_inline dso_local @_Z9make_nullv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
+// CHECK:    %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
+// CHECK:    %1 = cir.const #cir.method<null> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:    cir.store %1, %0 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
+// CHECK:    %2 = cir.load %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:  }
+
+}

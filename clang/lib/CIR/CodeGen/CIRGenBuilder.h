@@ -189,9 +189,23 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
+  //
+  // Operation creation helpers
+  // --------------------------
+  //
+  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
+                             mlir::Value src, mlir::Value len) {
+    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  }
+  // ---------------------------
+
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
                                         unsigned memberIndex) {
     return cir::DataMemberAttr::get(ty, memberIndex);
+  }
+
+  cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
+    return cir::DataMemberAttr::get(ty);
   }
 
   // Return true if the value is a null constant such as null pointer, (+0.0)
@@ -358,6 +372,12 @@ public:
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
     return cir::IsFPClassOp::create(*this, loc, src, flags);
+  }
+
+  /// Create constant nullptr for pointer-to-data-member type ty.
+  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
+                                       mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast

@@ -93,6 +93,12 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
+                                 "is required for SPIR-V compilation. "
+                                 "It can be obtained from your system package "
+                                 "manager or from KhronosGroup/SPIRV-Tools "
+                                 "on GitHub">;
+
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
@@ -154,6 +160,9 @@ def warn_drv_unsupported_diag_option_for_flang : Warning<
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
+  InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_runtime : Warning<
+  "ignoring '%0' option as it is not currently supported for runtime '%1'">,
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
@@ -861,9 +870,6 @@ def err_drv_loongarch_invalid_simd_option_combination : Error<
 def err_drv_loongarch_invalid_msimd_EQ : Error<
   "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
 
-def err_drv_loongarch_unsupported_with_linker_relaxation : Error<
-  "%0 is unsupported with LoongArch linker relaxation (-mrelax)">;
-
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
 
@@ -881,6 +887,10 @@ def warn_drv_multilib_not_available_for_target: Warning<
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
   "CREL is experimental and uses a non-standard section type code">;
+
+def err_drv_experimental_sframe : Error<
+  "-Wa,--allow-experimental-sframe must be specified to use -Wa,--gsframe. "
+  "SFrames are experimental and may be removed at any time without warning">;
 
 def warn_android_unversioned_fallback : Warning<
   "using unversioned Android target directory %0 for target %1; unversioned "

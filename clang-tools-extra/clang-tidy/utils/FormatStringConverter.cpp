@@ -14,6 +14,7 @@
 
 #include "FormatStringConverter.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
@@ -793,16 +794,18 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // Now we need to modify the ArgFix index too so that we fix the right
     // argument. We don't need to care about the width and precision indices
     // since they never need fixing.
-    for (auto &ArgFix : ArgFixes) {
+    for (auto &ArgFix : ArgFixes)
       if (ArgFix.ArgIndex == ValueArgIndex)
         ArgFix.ArgIndex = ValueArgIndex - ArgCount;
-    }
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    const SourceLocation AfterOtherSide =
-        Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
-            ->getLocation();
+    const std::optional<Token> NextToken =
+        utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
+                                                    SM, LangOpts);
+    if (!NextToken)
+      continue;
+    const SourceLocation AfterOtherSide = NextToken->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),
                                        Replacement, true)

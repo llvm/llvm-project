@@ -273,13 +273,13 @@ define void @freeze_dominated_uses_catchswitch(i1 %c, i32 %x) personality ptr @_
 ; CHECK-NEXT:            to label %[[CLEANUP]] unwind label %[[CATCH_DISPATCH]]
 ; CHECK:       [[CATCH_DISPATCH]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[IF_THEN]] ], [ [[X]], %[[IF_ELSE]] ]
-; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %[[CATCH:.*]], label %catch2] unwind to caller
+; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %[[CATCH:.*]], label %[[CATCH2:.*]]] unwind to caller
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    [[PHI_FREEZE:%.*]] = freeze i32 [[PHI]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI_FREEZE]]) [ "funclet"(token [[CP]]) ]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[CATCH2:.*:]]
+; CHECK:       [[CATCH2]]:
 ; CHECK-NEXT:    [[CP2:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI]]) [ "funclet"(token [[CP2]]) ]
 ; CHECK-NEXT:    unreachable
@@ -482,7 +482,7 @@ define i32 @freeze_callbr_use_after_phi(i1 %c) {
 ; CHECK-LABEL: define i32 @freeze_callbr_use_after_phi(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:            to label %[[CALLBR_CONT:.*]] []
 ; CHECK:       [[CALLBR_CONT]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], %[[ENTRY]] ], [ 0, %[[CALLBR_CONT]] ]
@@ -1189,6 +1189,119 @@ exit:
   ret void
 }
 
+declare ptr @get_ptr()
+
+; When the phi isn't a simple recurrence and has multiple inputs from the same
+; predecessor, we need to be careful to avoid iterator invalidation. The phi
+; must have identical values for the predecessor and at no point should the
+; freeze be pushed to a single one of the uses, e.g.
+;
+;   %iv.2 = phi ptr [ %iv.0, %loop ], [ %iv.1.fr, %if.else ], [ %iv.1, %if.else ]
+;
+; We don't support this case, although it could be handled if there's a use
+; case.
+define void @fold_phi_non_simple_recurrence_multiple_forward_edges(ptr noundef %init, i1 %cond.0, i1 %cond.1) {
+; CHECK-LABEL: define void @fold_phi_non_simple_recurrence_multiple_forward_edges(
+; CHECK-SAME: ptr noundef [[INIT:%.*]], i1 [[COND_0:%.*]], i1 [[COND_1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[IV_0_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[COND_0]], label %[[LOOP_LATCH]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[IV_1:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_0]], %[[LOOP]] ], [ [[IV_1]], %[[IF_ELSE]] ], [ [[IV_1]], %[[IF_ELSE]] ]
+; CHECK-NEXT:    [[IV_2_FR:%.*]] = freeze ptr [[IV_2]]
+; CHECK-NEXT:    [[IV_2_FR_INT:%.*]] = ptrtoint ptr [[IV_2_FR]] to i64
+; CHECK-NEXT:    [[IV_0_INT:%.*]] = ptrtoint ptr [[IV_0]] to i64
+; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[IV_0_INT]], [[IV_2_FR_INT]]
+; CHECK-NEXT:    [[IV_0_NEXT]] = getelementptr i8, ptr [[IV_0]], i64 [[IDX]]
+; CHECK-NEXT:    br i1 [[COND_1]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.0 = phi ptr [ %init, %entry ], [ %iv.0.next, %loop.latch ]
+  br i1 %cond.0, label %loop.latch, label %if.else
+
+if.else:
+  %iv.1 = call ptr @get_ptr()
+  br i1 %cond.0, label %loop.latch, label %loop.latch
+
+loop.latch:
+  %iv.2 = phi ptr [ %iv.0, %loop ], [ %iv.1, %if.else ], [ %iv.1, %if.else ]
+  %iv.2.fr = freeze ptr %iv.2
+  %iv.2.fr.int = ptrtoint ptr %iv.2.fr to i64
+  %iv.0.int = ptrtoint ptr %iv.0 to i64
+  %idx = sub i64 %iv.0.int, %iv.2.fr.int
+  %iv.0.next = getelementptr i8, ptr %iv.0, i64 %idx
+  br i1 %cond.1, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; When the phi input comes from an invoke, we need to be careful the freeze
+; isn't pushed after the invoke.
+define void @fold_phi_noundef_start_value_with_invoke(ptr noundef %init, i1 %cond.0, i1 %cond.1) personality ptr undef {
+; CHECK-LABEL: define void @fold_phi_noundef_start_value_with_invoke(
+; CHECK-SAME: ptr noundef [[INIT:%.*]], i1 [[COND_0:%.*]], i1 [[COND_1:%.*]]) personality ptr undef {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[IV_0_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[COND_0]], label %[[LOOP_LATCH]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[IV_1:%.*]] = invoke ptr @get_ptr()
+; CHECK-NEXT:            to label %[[LOOP_LATCH]] unwind label %[[UNWIND:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_0]], %[[LOOP]] ], [ [[IV_1]], %[[IF_ELSE]] ]
+; CHECK-NEXT:    [[IV_2_FR:%.*]] = freeze ptr [[IV_2]]
+; CHECK-NEXT:    [[IV_2_FR_INT:%.*]] = ptrtoint ptr [[IV_2_FR]] to i64
+; CHECK-NEXT:    [[IV_0_INT:%.*]] = ptrtoint ptr [[IV_0]] to i64
+; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[IV_0_INT]], [[IV_2_FR_INT]]
+; CHECK-NEXT:    [[IV_0_NEXT]] = getelementptr i8, ptr [[IV_0]], i64 [[IDX]]
+; CHECK-NEXT:    br i1 [[COND_1]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[UNWIND]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    unreachable
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.0 = phi ptr [ %init, %entry ], [ %iv.0.next, %loop.latch ]
+  br i1 %cond.0, label %loop.latch, label %if.else
+
+if.else:
+  %iv.1 = invoke ptr @get_ptr()
+  to label %loop.latch unwind label %unwind
+
+loop.latch:
+  %iv.2 = phi ptr [ %iv.0, %loop ], [ %iv.1, %if.else ]
+  %iv.2.fr = freeze ptr %iv.2
+  %iv.2.fr.int = ptrtoint ptr %iv.2.fr to i64
+  %iv.0.int = ptrtoint ptr %iv.0 to i64
+  %idx = sub i64 %iv.0.int, %iv.2.fr.int
+  %iv.0.next = getelementptr i8, ptr %iv.0, i64 %idx
+  br i1 %cond.1, label %exit, label %loop
+
+unwind:
+  landingpad i8 cleanup
+  unreachable
+
+exit:
+  ret void
+}
+
 define void @fold_phi_invoke_start_value(i32 %n) personality ptr undef {
 ; CHECK-LABEL: define void @fold_phi_invoke_start_value(
 ; CHECK-SAME: i32 [[N:%.*]]) personality ptr undef {
@@ -1483,6 +1596,131 @@ define i64 @pr161492_2(i1 %cond) {
   %fr = freeze i64 poison
   %ret = select i1 %cond, i64 %fr, i64 %fr
   ret i64 %ret
+}
+
+; Reduced from: https://github.com/dtcxzyw/llvm-opt-benchmark/blob/main/bench/duckdb/original/miniz.ll
+;
+; This test is sensitive to an infinite combine loop whereby 'nneg' flag can be
+; added to zext and then dropped by the freeze handling code and so on.
+;
+; https://github.com/llvm/llvm-project/pull/171435
+define i32 @pr171435_1(ptr noundef %arg) {
+; CHECK-LABEL: define i32 @pr171435_1(
+; CHECK-SAME: ptr noundef [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB_1:.*]]:
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[ARG]], align 8
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i32 [[LOAD1]], 0
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[BB_2:.*]], label %[[BB_3:.*]]
+; CHECK:       [[BB_2]]:
+; CHECK-NEXT:    br label %[[BB_3]]
+; CHECK:       [[BB_3]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LOAD]], %[[BB_1]] ], [ 0, %[[BB_2]] ]
+; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i32 [[PHI]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[PHI_FR]], -8
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    ret i32 0
+;
+bb.1:
+  %getelementptr = getelementptr inbounds nuw i8, ptr %arg, i64 4
+  %load = load i32, ptr %getelementptr, align 4
+  %load1 = load i32, ptr %arg, align 8
+  %icmp = icmp eq i32 %load1, 0
+  br i1 %icmp, label %bb.2, label %bb.3
+
+bb.2:                                              ; preds = %bb.1
+  br label %bb.3
+
+bb.3:                                              ; preds = %bb.2, %bb.1
+  %phi = phi i32 [ %load, %bb.1 ], [ 0, %bb.2 ]
+  %add = add i32 %phi, -8
+  %zext = zext i32 %add to i64
+  %lshr = lshr i64 %zext, 3
+  %freeze = freeze i64 %lshr
+  %call = call i64 @llvm.umin.i64(i64 %freeze, i64 0)
+  %trunc = trunc i64 %call to i32
+  %shl = shl nuw i32 %trunc, 3
+  %sub = sub i32 %add, %shl
+  store i32 %sub, ptr %getelementptr, align 4
+  ret i32 0
+}
+
+; Reduced from: https://github.com/dtcxzyw/llvm-opt-benchmark/blob/main/bench/ffmpeg/original/avc.ll
+;
+; This test is sensitive to an infinite combine loop whereby freeze gets pushed
+; around the loop.
+;
+; https://github.com/llvm/llvm-project/pull/171435
+define i32 @pr171435_2(ptr noundef %arg, i32 noundef %arg1) "instcombine-no-verify-fixpoint" {
+; CHECK-LABEL: define i32 @pr171435_2(
+; CHECK-SAME: ptr noundef [[ARG:%.*]], i32 noundef [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[BB_1:.*]]:
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    br label %[[BB_2:.*]]
+; CHECK:       [[BB_2]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 8, %[[BB_1]] ], [ [[PHI14:%.*]], %[[BB_13:.*]] ]
+; CHECK-NEXT:    [[ICMP:%.*]] = phi i1 [ false, %[[BB_1]] ], [ true, %[[BB_13]] ]
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[BB_13]], label %[[BB_4:.*]]
+; CHECK:       [[BB_4]]:
+; CHECK-NEXT:    br i1 true, label %[[BB_5:.*]], label %[[BB_7:.*]]
+; CHECK:       [[BB_5]]:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[CALL]], align 1
+; CHECK-NEXT:    [[CALL6:%.*]] = call i32 @llvm.bswap.i32(i32 [[LOAD]])
+; CHECK-NEXT:    br label %[[BB_8:.*]]
+; CHECK:       [[BB_7]]:
+; CHECK-NEXT:    br label %[[BB_8]]
+; CHECK:       [[BB_8]]:
+; CHECK-NEXT:    [[PHI9:%.*]] = phi i32 [ [[CALL6]], %[[BB_5]] ], [ poison, %[[BB_7]] ]
+; CHECK-NEXT:    [[PHI9_FR:%.*]] = freeze i32 [[PHI9]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PHI9_FR]], 1
+; CHECK-NEXT:    [[ASHR:%.*]] = lshr i32 [[PHI9_FR]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[ASHR]], [[AND]]
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[PHI]], [[ADD]]
+; CHECK-NEXT:    [[AND11:%.*]] = and i32 [[ADD10]], 255
+; CHECK-NEXT:    [[ICMP12:%.*]] = icmp eq i32 [[AND11]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP12]], i32 [[PHI]], i32 [[AND11]]
+; CHECK-NEXT:    br label %[[BB_13]]
+; CHECK:       [[BB_13]]:
+; CHECK-NEXT:    [[PHI14]] = phi i32 [ [[PHI]], %[[BB_2]] ], [ [[SELECT]], %[[BB_8]] ]
+; CHECK-NEXT:    br label %[[BB_2]]
+;
+bb.1:
+  %call = call ptr @get_ptr()
+  br label %bb.2
+
+bb.2:                                              ; preds = %bb.13, %bb.1
+  %phi = phi i32 [ 8, %bb.1 ], [ %phi14, %bb.13 ]
+  %phi3 = phi i32 [ 8, %bb.1 ], [ 0, %bb.13 ]
+  %icmp = icmp eq i32 %phi3, 0
+  br i1 %icmp, label %bb.13, label %bb.4
+
+bb.4:                                              ; preds = %bb.2
+  br i1 true, label %bb.5, label %bb.7
+
+bb.5:                                              ; preds = %bb.4
+  %load = load i32, ptr %call, align 1
+  %call6 = call i32 @llvm.bswap.i32(i32 %load)
+  br label %bb.8
+
+bb.7:                                              ; preds = %bb.4
+  br label %bb.8
+
+bb.8:                                              ; preds = %bb.7, %bb.5
+  %phi9 = phi i32 [ %call6, %bb.5 ], [ 0, %bb.7 ]
+  %and = and i32 %phi9, 1
+  %ashr = ashr i32 %phi9, 1
+  %add = add nsw i32 %ashr, %and
+  %add10 = add nsw i32 %phi, %add
+  %and11 = and i32 %add10, 255
+  %icmp12 = icmp eq i32 %and11, 0
+  %freeze = freeze i1 %icmp12
+  %select = select i1 %freeze, i32 %phi, i32 %and11
+  br label %bb.13
+
+bb.13:                                             ; preds = %bb.8, %bb.2
+  %phi14 = phi i32 [ %phi, %bb.2 ], [ %select, %bb.8 ]
+  br label %bb.2
 }
 
 !0 = !{}

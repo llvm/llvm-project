@@ -1928,11 +1928,19 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     return getResult();
   }
 
-  Operation *container = getContainer().getDefiningOp();
-  OpFoldResult result = {};
+  Attribute containerAttr;
+  if (matchPattern(getContainer(), m_Constant(&containerAttr))) {
+    for (int64_t pos : getPosition()) {
+      containerAttr = extractElementAt(containerAttr, pos);
+      if (!containerAttr)
+        return nullptr;
+    }
+    return containerAttr;
+  }
+
+  Value container = getContainer();
   ArrayRef<int64_t> extractPos = getPosition();
-  bool switchedToInsertedValue = false;
-  while (auto insertValueOp = dyn_cast_if_present<InsertValueOp>(container)) {
+  while (auto insertValueOp = container.getDefiningOp<InsertValueOp>()) {
     ArrayRef<int64_t> insertPos = insertValueOp.getPosition();
     auto extractPosSize = extractPos.size();
     auto insertPosSize = insertPos.size();
@@ -1955,18 +1963,16 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     // In the above example, %4 is folded to %arg1.
     if (extractPosSize > insertPosSize &&
         extractPos.take_front(insertPosSize) == insertPos) {
-      container = insertValueOp.getValue().getDefiningOp();
+      container = insertValueOp.getValue();
       extractPos = extractPos.drop_front(insertPosSize);
-      switchedToInsertedValue = true;
       continue;
     }
 
     // Case 3: Try to continue the traversal with the container value.
-    unsigned min = std::min(extractPosSize, insertPosSize);
 
-    // If one is fully prefix of the other, stop propagating back as it will
-    // miss dependencies. For instance, %3 should not fold to %f0 in the
-    // following example:
+    // If extract position is a prefix of insert position, stop propagating back
+    // as it will miss dependencies. For instance, %3 should not fold to %f0 in
+    // the following example:
     // ```
     //   %1 = llvm.insertvalue %f0, %0[0, 0] :
     //     !llvm.array<4 x !llvm.array<4 x f32>>
@@ -1974,31 +1980,23 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     //     !llvm.array<4 x !llvm.array<4 x f32>>
     //   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
     // ```
-    if (extractPos.take_front(min) == insertPos.take_front(min))
-      return result;
+    if (insertPosSize > extractPosSize &&
+        extractPos == insertPos.take_front(extractPosSize))
+      break;
     // If neither a prefix, nor the exact position, we can extract out of the
     // value being inserted into. Moreover, we can try again if that operand
     // is itself an insertvalue expression.
-    if (!switchedToInsertedValue) {
-      // Do not swap out the container operand if we decided earlier to
-      // continue the traversal with the inserted value (Case 2).
-      getContainerMutable().assign(insertValueOp.getContainer());
-      result = getResult();
-    }
-    container = insertValueOp.getContainer().getDefiningOp();
+    container = insertValueOp.getContainer();
   }
-  if (!container)
-    return result;
 
-  Attribute containerAttr;
-  if (!matchPattern(container, m_Constant(&containerAttr)))
-    return nullptr;
-  for (int64_t pos : extractPos) {
-    containerAttr = extractElementAt(containerAttr, pos);
-    if (!containerAttr)
-      return nullptr;
-  }
-  return containerAttr;
+  // We failed to resolve past this container either because it is not an
+  // InsertValueOp, or it is an InsertValueOp that partially overlaps with the
+  // value being extracted. Update to read from this container instead.
+  if (container == getContainer())
+    return {};
+  setPosition(extractPos);
+  getContainerMutable().assign(container);
+  return getResult();
 }
 
 LogicalResult ExtractValueOp::verify() {
@@ -2026,6 +2024,104 @@ void ExtractValueOp::build(OpBuilder &builder, OperationState &state,
 //===----------------------------------------------------------------------===//
 // InsertValueOp
 //===----------------------------------------------------------------------===//
+
+namespace {
+/// Update any ExtractValueOps using a given InsertValueOp to instead read from
+/// the closest InsertValueOp in the chain leading up to the current op that
+/// writes to the same member. This traversal could be done entirely in
+/// ExtractValueOp::fold, but doing it here significantly speeds things up
+/// because we can handle several ExtractValueOps with a single traversal.
+/// For instance, in this example:
+///   %i0 = llvm.insertvalue %v0, %undef[0]
+///   %i1 = llvm.insertvalue %v1, %0[1]
+///   ...
+///   %i999 = llvm.insertvalue %v999, %998[999]
+///   %e0 = llvm.extractvalue %i999[0]
+///   %e1 = llvm.extractvalue %i999[1]
+///   ...
+///   %e999 = llvm.extractvalue %i999[999]
+/// Individually running the folder on each extractvalue would require
+/// traversing the insertvalue chain 1000 times, but running this pattern on the
+/// InsertValueOp would allow us to achieve the same result with a single
+/// traversal. The resulting IR after this pattern will then be:
+///   %i0 = llvm.insertvalue %v0, %undef[0]
+///   %i1 = llvm.insertvalue %v1, %0[1]
+///   ...
+///   %i999 = llvm.insertvalue %v999, %998[999]
+///   %e0 = llvm.extractvalue %i0[0]
+///   %e1 = llvm.extractvalue %i1[1]
+///   ...
+///   %e999 = llvm.extractvalue %i999[999]
+struct ResolveExtractValueSource : public OpRewritePattern<InsertValueOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertValueOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    // Map each position in the top-level struct to the ExtractOps that read
+    // from it. For the example in the doc-comment above this map will be empty
+    // when we visit ops %i0 - %i998. For %i999, it will contain:
+    //   0 -> { %e0 }, 1 -> { %e1 }, ... 999-> { %e999 }
+    DenseMap<int64_t, SmallVector<ExtractValueOp, 4>> posToExtractOps;
+    auto insertBaseIdx = insertOp.getPosition()[0];
+    for (auto &use : insertOp->getUses()) {
+      if (auto extractOp = dyn_cast<ExtractValueOp>(use.getOwner())) {
+        auto baseIdx = extractOp.getPosition()[0];
+        // We can skip reads of the member that insertOp writes to since they
+        // will not be updated.
+        if (baseIdx == insertBaseIdx)
+          continue;
+        posToExtractOps[baseIdx].push_back(extractOp);
+      }
+    }
+    // Walk up the chain of insertions and try to resolve the remaining
+    // extractions that access the same member.
+    Value nextContainer = insertOp.getContainer();
+    while (!posToExtractOps.empty()) {
+      auto curInsert =
+          dyn_cast_or_null<InsertValueOp>(nextContainer.getDefiningOp());
+      if (!curInsert)
+        break;
+      nextContainer = curInsert.getContainer();
+
+      // Check if any extractions read the member written by this insertion.
+      auto curInsertBaseIdx = curInsert.getPosition()[0];
+      auto it = posToExtractOps.find(curInsertBaseIdx);
+      if (it == posToExtractOps.end())
+        continue;
+
+      // Update the ExtractOps to read from the current insertion.
+      for (auto &extractOp : it->second) {
+        rewriter.modifyOpInPlace(extractOp, [&] {
+          extractOp.getContainerMutable().assign(curInsert);
+        });
+      }
+      // The entry should never be empty if it exists, so if we are at this
+      // point, set changed to true.
+      assert(!it->second.empty());
+      changed |= true;
+      posToExtractOps.erase(it);
+    }
+    // There was no insertion along the chain that wrote the member accessed by
+    // these extracts. So we can update them to use the top of the chain.
+    for (auto &[baseIdx, extracts] : posToExtractOps) {
+      for (auto &extractOp : extracts) {
+        rewriter.modifyOpInPlace(extractOp, [&] {
+          extractOp.getContainerMutable().assign(nextContainer);
+        });
+      }
+      assert(!extracts.empty() && "Empty list in map");
+      changed = true;
+    }
+    return success(changed);
+  }
+};
+} // namespace
+
+void InsertValueOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<ResolveExtractValueSource>(context);
+}
 
 /// Infer the value type from the container type and position.
 static ParseResult

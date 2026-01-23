@@ -711,7 +711,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
-    IdentifierInfo *IIEnv = A->getEnvironment();
+    const IdentifierInfo *IIEnv = A->getEnvironment();
     auto &Triple = Context.getTargetInfo().getTriple();
     StringRef TargetEnv = Triple.getEnvironmentName();
     StringRef EnvName =

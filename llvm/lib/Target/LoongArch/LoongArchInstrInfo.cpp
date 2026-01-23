@@ -18,6 +18,7 @@
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 
 using namespace llvm;
@@ -149,7 +150,7 @@ void LoongArchInstrInfo::storeRegToStackSlot(
 
 void LoongArchInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC, Register VReg,
+    int FI, const TargetRegisterClass *RC, Register VReg, unsigned SubReg,
     MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -630,30 +631,40 @@ void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   LoongArchMachineFunctionInfo *LAFI =
       MF->getInfo<LoongArchMachineFunctionInfo>();
+  bool Has32S = STI.hasFeature(LoongArch::Feature32S);
 
   if (!isInt<32>(BrOffset))
     report_fatal_error(
         "Branch offsets outside of the signed 32-bit range not supported");
 
   Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+  MachineInstr *PCAI = nullptr;
+  MachineInstr *ADDI = nullptr;
   auto II = MBB.end();
+  unsigned ADDIOp = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
 
-  MachineInstr &PCALAU12I =
-      *BuildMI(MBB, II, DL, get(LoongArch::PCALAU12I), ScratchReg)
-           .addMBB(&DestBB, LoongArchII::MO_PCREL_HI);
-  MachineInstr &ADDI =
-      *BuildMI(MBB, II, DL,
-               get(STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W),
-               ScratchReg)
-           .addReg(ScratchReg)
-           .addMBB(&DestBB, LoongArchII::MO_PCREL_LO);
+  if (Has32S) {
+    PCAI = BuildMI(MBB, II, DL, get(LoongArch::PCALAU12I), ScratchReg)
+               .addMBB(&DestBB, LoongArchII::MO_PCREL_HI);
+    ADDI = BuildMI(MBB, II, DL, get(ADDIOp), ScratchReg)
+               .addReg(ScratchReg)
+               .addMBB(&DestBB, LoongArchII::MO_PCREL_LO);
+  } else {
+    MCSymbol *PCAddSymbol = MF->getContext().createNamedTempSymbol("pcadd_hi");
+    PCAI = BuildMI(MBB, II, DL, get(LoongArch::PCADDU12I), ScratchReg)
+               .addMBB(&DestBB, LoongArchII::MO_PCADD_HI);
+    PCAI->setPreInstrSymbol(*MF, PCAddSymbol);
+    ADDI = BuildMI(MBB, II, DL, get(ADDIOp), ScratchReg)
+               .addReg(ScratchReg)
+               .addSym(PCAddSymbol, LoongArchII::MO_PCADD_LO);
+  }
   BuildMI(MBB, II, DL, get(LoongArch::PseudoBRIND))
       .addReg(ScratchReg, RegState::Kill)
       .addImm(0);
 
   RS->enterBasicBlockEnd(MBB);
   Register Scav = RS->scavengeRegisterBackwards(
-      LoongArch::GPRRegClass, PCALAU12I.getIterator(), /*RestoreAfter=*/false,
+      LoongArch::GPRRegClass, PCAI->getIterator(), /*RestoreAfter=*/false,
       /*SPAdj=*/0, /*AllowSpill=*/false);
   if (Scav != LoongArch::NoRegister)
     RS->setRegUsed(Scav);
@@ -664,12 +675,13 @@ void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     int FrameIndex = LAFI->getBranchRelaxationSpillFrameIndex();
     if (FrameIndex == -1)
       report_fatal_error("The function size is incorrectly estimated.");
-    storeRegToStackSlot(MBB, PCALAU12I, Scav, /*IsKill=*/true, FrameIndex,
+    storeRegToStackSlot(MBB, PCAI, Scav, /*IsKill=*/true, FrameIndex,
                         &LoongArch::GPRRegClass, Register());
-    TRI->eliminateFrameIndex(std::prev(PCALAU12I.getIterator()),
+    TRI->eliminateFrameIndex(std::prev(PCAI->getIterator()),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
-    PCALAU12I.getOperand(1).setMBB(&RestoreBB);
-    ADDI.getOperand(2).setMBB(&RestoreBB);
+    PCAI->getOperand(1).setMBB(&RestoreBB);
+    if (Has32S)
+      ADDI->getOperand(2).setMBB(&RestoreBB);
     loadRegFromStackSlot(RestoreBB, RestoreBB.end(), Scav, FrameIndex,
                          &LoongArch::GPRRegClass, Register());
     TRI->eliminateFrameIndex(RestoreBB.back(),
@@ -744,6 +756,7 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_IE_PC64_HI, "loongarch-ie-pc64-hi"},
       {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
       {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
+      {MO_CALL30, "loongarch-call30"},
       {MO_CALL36, "loongarch-call36"},
       {MO_DESC_PC_HI, "loongarch-desc-pc-hi"},
       {MO_DESC_PC_LO, "loongarch-desc-pc-lo"},
@@ -753,7 +766,19 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_DESC_CALL, "loongarch-desc-call"},
       {MO_LE_HI_R, "loongarch-le-hi-r"},
       {MO_LE_ADD_R, "loongarch-le-add-r"},
-      {MO_LE_LO_R, "loongarch-le-lo-r"}};
+      {MO_LE_LO_R, "loongarch-le-lo-r"},
+      {MO_PCADD_HI, "loongarch-pcadd-hi"},
+      {MO_PCADD_LO, "loongarch-pcadd-lo"},
+      {MO_GOT_PCADD_HI, "loongarch-got-pcadd-hi"},
+      {MO_GOT_PCADD_LO, "loongarch-got-pcadd-lo"},
+      {MO_IE_PCADD_HI, "loongarch-ie-pcadd-hi"},
+      {MO_IE_PCADD_LO, "loongarch-ie-pcadd-lo"},
+      {MO_LD_PCADD_HI, "loongarch-ld-pcadd-hi"},
+      {MO_LD_PCADD_LO, "loongarch-ld-pcadd-lo"},
+      {MO_GD_PCADD_HI, "loongarch-gd-pcadd-hi"},
+      {MO_GD_PCADD_LO, "loongarch-gd-pcadd-lo"},
+      {MO_DESC_PCADD_HI, "loongarch-pcadd-desc-hi"},
+      {MO_DESC_PCADD_LO, "loongarch-pcadd-desc-lo"}};
   return ArrayRef(TargetFlags);
 }
 
@@ -890,8 +915,7 @@ LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
   switch (MemIOp) {
   default:
     return BuildMI(MBB, MemI, DL, get(MemIOp))
-        .addReg(MemI.getOperand(0).getReg(),
-                MemI.mayLoad() ? RegState::Define : 0)
+        .addReg(MemI.getOperand(0).getReg(), getDefRegState(MemI.mayLoad()))
         .addReg(AM.BaseReg)
         .addImm(AM.Displacement)
         .setMemRefs(MemI.memoperands())

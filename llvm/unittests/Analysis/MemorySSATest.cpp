@@ -580,14 +580,14 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
 // We had a bug with caching where the walker would report MemoryDef#3's clobber
 // (below) was MemoryDef#1.
 //
-// define void @F(i8*) {
+// define void @F(ptr) {
 //   %A = alloca i8, i8 1
 // ; 1 = MemoryDef(liveOnEntry)
-//   store i8 0, i8* %A
+//   store i8 0, ptr %A
 // ; 2 = MemoryDef(1)
-//   store i8 1, i8* %A
+//   store i8 1, ptr %A
 // ; 3 = MemoryDef(2)
-//   store i8 2, i8* %A
+//   store i8 2, ptr %A
 // }
 TEST_F(MemorySSATest, TestTripleStore) {
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
@@ -641,7 +641,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
 // Another bug (related to the above two fixes): It was noted that, given the
 // following code:
 // ; 1 = MemoryDef(liveOnEntry)
-// store i8 0, i8* %1
+// store i8 0, ptr %1
 //
 // ...A query to getClobberingMemoryAccess(MemoryAccess*, MemoryLocation) would
 // hand back the store (correctly). A later call to
@@ -907,9 +907,9 @@ TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
   // Create:
   //   %1 = alloca i8
   //   ; 1 = MemoryDef(liveOnEntry)
-  //   store i8 0, i8* %1
+  //   store i8 0, ptr %1
   //   ; 2 = MemoryDef(1)
-  //   store i8 0, i8* %1
+  //   store i8 0, ptr %1
   //
   // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
   // `2` after `1` is removed.
@@ -949,11 +949,11 @@ TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
   //   %x = alloca i8
   //   %y = alloca i8
   //   ; 1 = MemoryDef(liveOnEntry)
-  //   store i8 0, i8* %x
+  //   store i8 0, ptr %x
   //   ; 2 = MemoryDef(1)
-  //   store i8 0, i8* %y
+  //   store i8 0, ptr %y
   //   ; 3 = MemoryDef(2)
-  //   store i8 0, i8* %x
+  //   store i8 0, ptr %x
   //
   // And be sure that MSSA's caching handles the removal of def `1`
   // appropriately.
@@ -1548,18 +1548,16 @@ TEST_F(MemorySSATest, TestLoadClobber) {
 TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
   SMDiagnostic E;
   auto LocalM =
-      parseAssemblyString("define void @test(i64 %a0, i8* %a1, i1* %a2) {\n"
+      parseAssemblyString("define void @test(i64 %a0, ptr %a1, ptr %a2) {\n"
                           "entry:\n"
-                          "%v0 = getelementptr i8, i8* %a1, i64 %a0\n"
-                          "%v1 = bitcast i8* %v0 to i64*\n"
-                          "%v2 = bitcast i8* %v0 to i32*\n"
-                          "%v3 = load i1, i1* %a2\n"
+                          "%v0 = getelementptr i8, ptr %a1, i64 %a0\n"
+                          "%v3 = load i1, ptr %a2\n"
                           "br i1 %v3, label %body, label %exit\n"
                           "body:\n"
-                          "store i32 1, i32* %v2\n"
+                          "store i32 1, ptr %v0\n"
                           "br label %exit\n"
                           "exit:\n"
-                          "store i64 0, i64* %v1\n"
+                          "store i64 0, ptr %v0\n"
                           "ret void\n"
                           "}",
                           E, C);
@@ -1592,12 +1590,12 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
 
 TEST_F(MemorySSATest, TestInvariantGroup) {
   SMDiagnostic E;
-  auto M = parseAssemblyString("declare void @f(i8*)\n"
-                               "define i8 @test(i8* %p) {\n"
+  auto M = parseAssemblyString("declare void @f(ptr)\n"
+                               "define i8 @test(ptr %p) {\n"
                                "entry:\n"
-                               "  store i8 42, i8* %p, !invariant.group !0\n"
-                               "  call void @f(i8* %p)\n"
-                               "  %v = load i8, i8* %p, !invariant.group !0\n"
+                               "  store i8 42, ptr %p, !invariant.group !0\n"
+                               "  call void @f(ptr %p)\n"
+                               "  %v = load i8, ptr %p, !invariant.group !0\n"
                                "  ret i8 %v\n"
                                "}\n"
                                "!0 = !{}",
@@ -1654,7 +1652,7 @@ static Instruction *getInstructionByName(Function &F, StringRef Name) {
 TEST_F(MemorySSATest, TestVisitedBlocks) {
   SMDiagnostic E;
   auto M = parseAssemblyString(
-      "define void @test(i64* noalias %P, i64 %N) {\n"
+      "define void @test(ptr noalias %P, i64 %N) {\n"
       "preheader.n:\n"
       "  br label %header.n\n"
       "header.n:\n"
@@ -1667,8 +1665,8 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
       "  br label %header.i\n"
       "header.i:\n"
       "  %i = phi i64 [ 0, %preheader.i ], [ %inc.i, %header.i ]\n"
-      "  %v1 = load i64, i64* %P, align 8\n"
-      "  %v2 = load i64, i64* %P, align 8\n"
+      "  %v1 = load i64, ptr %P, align 8\n"
+      "  %v2 = load i64, ptr %P, align 8\n"
       "  %inc.i = add nsw i64 %i, 1\n"
       "  %cmp.i = icmp slt i64 %inc.i, %N\n"
       "  br i1 %cmp.i, label %header.i, label %exit.i\n"
