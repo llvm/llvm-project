@@ -11386,10 +11386,11 @@ shuffle mask selects an element from one of the input vectors to copy
 to the result. Non-negative elements in the mask represent an index
 into the concatenated pair of input vectors.
 
-A ``poison`` element in the mask vector specifies that the resulting element
-is ``poison``.
-For backwards-compatibility reasons, LLVM temporarily also accepts ``undef``
-mask elements, which will be interpreted the same way as ``poison`` elements.
+A ``poison`` element in the mask vector specifies that the resulting element is
+``poison``. For backwards-compatibility reasons, LLVM temporarily also accepts
+``undef`` mask elements. These will be interpreted the same way as ``poison``
+mask elements, also producing a ``poison`` element in the result.
+
 If the shuffle mask selects an ``undef`` element from one of the input
 vectors, the resulting element is ``undef``.
 
