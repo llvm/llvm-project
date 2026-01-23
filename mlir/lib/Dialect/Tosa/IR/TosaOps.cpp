@@ -2147,9 +2147,8 @@ LogicalResult tosa::PadOp::verify() {
 
   auto inputRank = inputType.getRank();
   DenseIntElementsAttr paddingAttr;
-  if (!matchPattern(getPadding(), m_Constant(&paddingAttr))) {
-    return failure();
-  }
+  if (!matchPattern(getPadding(), m_Constant(&paddingAttr)))
+    return success();
 
   auto paddingValues = paddingAttr.getValues<APInt>();
   if (paddingValues.size() != static_cast<size_t>(inputRank * 2))
