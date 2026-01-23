@@ -1222,15 +1222,16 @@ struct DSEState {
     if (isa<AllocaInst>(V))
       return true;
 
-    if (InvisibleToCallerAfterRetBounded.contains(V)) {
+    auto IBounded = InvisibleToCallerAfterRetBounded.find(V);
+    if (IBounded != InvisibleToCallerAfterRetBounded.end()) {
       int64_t ValueOffset;
       const Value *BaseValue =
           GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL);
       assert(BaseValue == V);
       // This store is only invisible after return if we are in bounds of the
       // range marked dead.
-      if (ValueOffset + StoreSize.getValue() <=
-              InvisibleToCallerAfterRetBounded[BaseValue] &&
+      if (StoreSize.hasValue() &&
+          ValueOffset + StoreSize.getValue() <= IBounded->second &&
           ValueOffset >= 0)
         return true;
     }

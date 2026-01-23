@@ -1182,8 +1182,8 @@ struct InlineRegionBranchOp : public RewritePattern {
     // Inline all regions on the path into the enclosing block.
     rewriter.setInsertionPoint(op);
     ArrayRef remainingPath = path;
-    OperandRange successorOperands =
-        regionBranchOp.getEntrySuccessorOperands(remainingPath.front());
+    SmallVector<Value> successorOperands = llvm::to_vector(
+        regionBranchOp.getEntrySuccessorOperands(remainingPath.front()));
     while (!remainingPath.empty()) {
       RegionSuccessor nextSuccessor = remainingPath.consume_front();
       ValueRange successorInputs =
@@ -1239,8 +1239,8 @@ struct InlineRegionBranchOp : public RewritePattern {
       rewriter.inlineBlockBefore(&nextSuccessor.getSuccessor()->front(),
                                  op->getBlock(), op->getIterator(),
                                  replacements);
-      successorOperands =
-          terminator.getSuccessorOperands(remainingPath.front());
+      successorOperands = llvm::to_vector(
+          terminator.getSuccessorOperands(remainingPath.front()));
       rewriter.eraseOp(terminator);
     }
 

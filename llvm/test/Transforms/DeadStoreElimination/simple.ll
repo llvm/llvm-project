@@ -888,85 +888,70 @@ define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
 
 define void @test_dead_on_return_oob(ptr dead_on_return(4) %p) {
 ; CHECK-LABEL: @test_dead_on_return_oob(
-; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
-; CHECK-NEXT:    store ptr [[LOCAL_VAR]], ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %local.var = alloca ptr
-  call void @opaque(ptr %local.var)
   %p1 = getelementptr i8, ptr %p, i64 8
-  store ptr %local.var, ptr %p1
+  store i64 0, ptr %p1
   ret void
 }
 
 define void @test_dead_on_return_zero_offset(ptr dead_on_return(8) %p) {
 ; CHECK-LABEL: @test_dead_on_return_zero_offset(
-; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
 ; CHECK-NEXT:    ret void
 ;
-  %local.var = alloca ptr
-  call void @opaque(ptr %local.var)
-  store ptr %local.var, ptr %p
+  store i64 0, ptr %p
   ret void
 }
 
 define void @test_dead_on_return_inbounds(ptr dead_on_return(16) %p) {
 ; CHECK-LABEL: @test_dead_on_return_inbounds(
-; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
 ; CHECK-NEXT:    ret void
 ;
-  %local.var = alloca ptr
-  call void @opaque(ptr %local.var)
   %p1 = getelementptr inbounds i8, ptr %p, i64 2
-  store ptr %local.var, ptr %p1
+  store i64 0, ptr %p1
   ret void
 }
 
 define void @test_dead_on_return_overlapping_oob(ptr dead_on_return(8) %p) {
 ; CHECK-LABEL: @test_dead_on_return_overlapping_oob(
-; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    store ptr [[LOCAL_VAR]], ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %local.var = alloca ptr
-  call void @opaque(ptr %local.var)
   %p1 = getelementptr inbounds i8, ptr %p, i64 4
-  store ptr %local.var, ptr %p1
+  store i64 0, ptr %p1
   ret void
 }
 
 define void @test_dead_on_return_negative_oob(ptr dead_on_return(8) %p) {
 ; CHECK-LABEL: @test_dead_on_return_negative_oob(
-; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 -4
-; CHECK-NEXT:    store ptr [[LOCAL_VAR]], ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %local.var = alloca ptr
-  call void @opaque(ptr %local.var)
   %p1 = getelementptr inbounds i8, ptr %p, i64 -4
-  store ptr %local.var, ptr %p1
+  store i64 0, ptr %p1
   ret void
 }
 
 define void @test_dead_on_return_two_stores(ptr dead_on_return(16) %p) {
 ; CHECK-LABEL: @test_dead_on_return_two_stores(
-; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
 ; CHECK-NEXT:    ret void
 ;
-  %local.var = alloca ptr
-  call void @opaque(ptr %local.var)
-  store ptr %local.var, ptr %p
+  store i64 0, ptr %p
   %p1 = getelementptr inbounds i8, ptr %p, i64 8
-  store ptr %local.var, ptr %p1
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_variable_memset(ptr dead_on_return(8) %p, i64 %s) {
+; CHECK-LABEL: @test_dead_on_return_variable_memset(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 [[S:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 %s, i1 false)
   ret void
 }
 
