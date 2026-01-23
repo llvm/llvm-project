@@ -602,14 +602,7 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
 )
 
-add_header_library(
-  ilogbf128
-  HDRS
-    ilogbf128.h
-  DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
-)
+
 
 add_header_library(
   fsqrt
@@ -666,6 +659,15 @@ add_header_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ilogbf128
+  HDRS
+    ilogbf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_header_library(
