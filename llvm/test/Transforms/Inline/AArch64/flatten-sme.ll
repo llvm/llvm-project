@@ -1,4 +1,5 @@
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -mattr=+sme -S -passes=always-inline | FileCheck %s
+; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -mattr=+sme -S -passes=inline | FileCheck %s
 
 ; Test that flatten attribute respects ABI restrictions for SME.
 ; Streaming callee cannot be inlined into non-streaming caller.
