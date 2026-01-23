@@ -1,0 +1,52 @@
+'-experimental-zacas' is not a recognized feature for this target (ignoring feature)
+'-experimental-zcmop' is not a recognized feature for this target (ignoring feature)
+'-experimental-zfbfmin' is not a recognized feature for this target (ignoring feature)
+'-experimental-zimop' is not a recognized feature for this target (ignoring feature)
+'-experimental-ztso' is not a recognized feature for this target (ignoring feature)
+'-experimental-zvfbfmin' is not a recognized feature for this target (ignoring feature)
+'-experimental-zvfbfwma' is not a recognized feature for this target (ignoring feature)
+'-experimental-zacas' is not a recognized feature for this target (ignoring feature)
+'-experimental-zcmop' is not a recognized feature for this target (ignoring feature)
+'-experimental-zfbfmin' is not a recognized feature for this target (ignoring feature)
+'-experimental-zimop' is not a recognized feature for this target (ignoring feature)
+'-experimental-ztso' is not a recognized feature for this target (ignoring feature)
+'-experimental-zvfbfmin' is not a recognized feature for this target (ignoring feature)
+'-experimental-zvfbfwma' is not a recognized feature for this target (ignoring feature)
+Number of LR/SC instruction: 2
+{
+  "functions": {
+    "": {
+      "basic_blocks": [
+        {
+          "bb_index": 0,
+          "bb_total_lrsc_occurrences": 0,
+          "flavors": {},
+          "mbb_number": -1
+        },
+        {
+          "bb_index": 1,
+          "bb_total_lrsc_occurrences": 1,
+          "flavors": {
+            "LR_W_AQRL": 1
+          },
+          "mbb_number": -1
+        },
+        {
+          "bb_index": 2,
+          "bb_total_lrsc_occurrences": 1,
+          "flavors": {
+            "SC_W_RL": 1
+          },
+          "mbb_number": 0
+        },
+        {
+          "bb_index": 3,
+          "bb_total_lrsc_occurrences": 0,
+          "flavors": {},
+          "mbb_number": -1
+        }
+      ],
+      "total_lrsc_occurrences": 2
+    }
+  }
+}
