@@ -458,6 +458,9 @@ public:
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
 
+  /// Compute known bits for clmul(LHS, RHS).
+  LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Determine if these known bits always give the same ICMP_EQ result.
   LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,
                                          const KnownBits &RHS);

@@ -602,6 +602,43 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
+KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+
+  // An m*n result will always fit in m+n-1 bits since there are no carries.
+  // If either input is to be zero, the result is zero.
+  unsigned ActiveBitsLHS = LHS.countMaxActiveBits();
+  unsigned ActiveBitsRHS = RHS.countMaxActiveBits();
+  unsigned ActiveBits;
+  if (ActiveBitsLHS == 0 || ActiveBitsRHS == 0)
+    ActiveBits = 0;
+  else
+    ActiveBits = std::min(BitWidth, ActiveBitsLHS + ActiveBitsRHS - 1);
+
+  // The result of the bottom bits of a clmul can be inferred by looking at the
+  // bottom bits of both operands and carryless multiplying them together. The
+  // number of bits we can determine follows the same logic as KnownBits::mul.
+  unsigned TrailBitsKnownLHS = (LHS.Zero | LHS.One).countr_one();
+  unsigned TrailBitsKnownRHS = (RHS.Zero | RHS.One).countr_one();
+  unsigned TrailZeroLHS = LHS.countMinTrailingZeros();
+  unsigned TrailZeroRHS = RHS.countMinTrailingZeros();
+  unsigned TrailZ = TrailZeroLHS + TrailZeroRHS;
+
+  // Figure out the fewest known-bits operand.
+  unsigned SmallestOperand = std::min(TrailBitsKnownLHS - TrailZeroLHS,
+                                      TrailBitsKnownRHS - TrailZeroRHS);
+  unsigned ResultBitsKnown = std::min(SmallestOperand + TrailZ, BitWidth);
+
+  APInt BottomKnown = APIntOps::clmul(LHS.One, RHS.One);
+
+  KnownBits Res(BitWidth);
+  Res.Zero.setBitsFrom(ActiveBits);
+  Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
+  Res.One = BottomKnown.getLoBits(ResultBitsKnown);
+
+  return Res;
+}
+
 std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
     return std::optional<bool>(LHS.getConstant() == RHS.getConstant());
