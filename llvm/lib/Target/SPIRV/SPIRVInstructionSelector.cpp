@@ -224,6 +224,9 @@ private:
   bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
                                     MachineInstr &I) const;
 
+  bool selectWaveBitOr(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
+
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
@@ -2711,6 +2714,33 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveBitOr(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(1).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+  Register InputRegister = I.getOperand(1).getReg();
+  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+
+  if (!InputType)
+    report_fatal_error("Input Type could not be determined.");
+  if (!GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeInt))
+    report_fatal_error("WaveActiveBitOr requires integer input");
+
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpGroupNonUniformBitwiseOr))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
+      .addImm(SPIRV::GroupOperation::Reduce)
+      .addUse(InputRegister)
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
@@ -3815,6 +3845,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
+  case Intrinsic::spv_wave_bit_or:
+    return selectWaveBitOr(ResVReg, ResType, I);
   case Intrinsic::spv_subgroup_ballot:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformBallot);

@@ -276,6 +276,51 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getFirstBitUHighIntrinsic();
 }
 
+// select and return a specific wave bit op intrinsic,
+// based on the provided op kind.
+// OpKinds:
+// And = 0, bitwise and of values
+// Or = 1,  bitwise or of values
+// Xor = 2, bitwise xor of values
+static Intrinsic::ID getWaveBitOpIntrinsic(int OpKind,
+                                           llvm::Triple::ArchType Arch,
+                                           CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    switch (OpKind) {
+
+    case 0:
+    case 2: {
+      llvm_unreachable("Not implemented yet!");
+    }
+    case 1: {
+      return Intrinsic::spv_wave_bit_or;
+    }
+    default: {
+      llvm_unreachable("Unexpected SubOp ID");
+    }
+    }
+  case llvm::Triple::dxil: {
+    switch (OpKind) {
+
+    case 0:
+    case 2: {
+      llvm_unreachable("Not implemented yet!");
+    }
+    case 1: {
+      return Intrinsic::dx_wave_bit_or;
+    }
+    default: {
+      llvm_unreachable("Unexpected SubOp ID");
+    }
+    }
+  }
+  default:
+    llvm_unreachable("Intrinsic WaveActiveBitOr"
+                     " not supported by target architecture");
+  }
+}
+
 // Return wave active sum that corresponds to the QT scalar type
 static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
                                                CGHLSLRuntime &RT, QualType QT) {
@@ -871,6 +916,19 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "Intrinsic WaveActiveBallot operand must be a bool");
 
     return handleHlslWaveActiveBallot(*this, E);
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy() &&
+           "Intrinsic WaveActiveBitOr operand must be an integer type");
+
+    Intrinsic::ID IID = getWaveBitOpIntrinsic(
+        /* OpKind */ 1, getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
+        E->getArg(0)->getType());
+
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {Op->getType()}),
+                           ArrayRef{Op}, "hlsl.wave.active.bit.or");
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
