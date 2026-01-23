@@ -1579,9 +1579,10 @@ private:
     }
   }
 
-  // Return true if Reg is reserved one, for example, stack pointer
-  bool isReservedRegister(VirtRegOrUnit Reg) const {
-    return !Reg.isVirtualReg() && MRI.isReservedRegUnit(Reg.asMCRegUnit());
+  // Return true if \p VRegOrUnit is reserved one, for example, stack pointer
+  bool isReservedRegUnit(VirtRegOrUnit VRegOrUnit) const {
+    return !VRegOrUnit.isVirtualReg() &&
+           MRI.isReservedRegUnit(VRegOrUnit.asMCRegUnit());
   }
 
   bool isDefinedInThisLoop(VirtRegOrUnit Reg) const {
@@ -1609,7 +1610,7 @@ private:
         if (MI.isPHI() && Reg.isVirtualReg() &&
             Reg.asVirtualReg() != getLoopPhiReg(MI, OrigMBB))
           continue;
-        if (isReservedRegister(Reg))
+        if (isReservedRegUnit(Reg))
           continue;
         if (isDefinedInThisLoop(Reg))
           continue;
@@ -1652,12 +1653,7 @@ private:
     for (MachineInstr *MI : OrderedInsts) {
       if (MI->isPHI()) {
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
-        if (Reg.isVirtual()) {
-          UpdateTargetRegs(VirtRegOrUnit(Reg));
-        } else if (MRI.isAllocatable(Reg)) {
-          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            UpdateTargetRegs(VirtRegOrUnit(Unit));
-        }
+        UpdateTargetRegs(VirtRegOrUnit(Reg));
       } else {
         for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
           UpdateTargetRegs(Use.VRegOrUnit);
@@ -1727,7 +1723,7 @@ private:
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                    VirtRegOrUnit Reg) {
-      if (isReservedRegister(Reg))
+      if (isReservedRegUnit(Reg))
         return;
 
       bool Inserted = RegSet.insert(Reg).second;
@@ -1741,7 +1737,7 @@ private:
 
     const auto EraseReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                   VirtRegOrUnit Reg) {
-      if (isReservedRegister(Reg))
+      if (isReservedRegUnit(Reg))
         return;
 
       // live-in register
