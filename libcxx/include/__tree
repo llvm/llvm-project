@@ -871,12 +871,12 @@ struct __specialized_algorithm<
 };
 #endif
 
-template <class _Tp, class _Compare>
-#ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Compare const&, _Tp const&, _Tp const&>,
-                         "the specified comparator type does not provide a viable const call operator")
-#endif
-int __diagnose_non_const_comparator();
+#define _LIBCPP_DIAGNOSE_ASSOCIATIVE_CONTAINER_REQUIREMENTS(T, Comparator)                                             \
+  _LIBCPP_DIAGNOSE_IF(                                                                                                 \
+      !__is_invocable_v<Comparator const&, T const&, T const&>,                                                        \
+      "the specified comparator type does not provide a viable const call operator",                                   \
+      "warning",                                                                                                       \
+      "discard-qual")
 
 template <class _Tp, class _Compare, class _Allocator>
 class __tree {

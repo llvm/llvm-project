@@ -1024,7 +1024,8 @@ public:
   unordered_map(initializer_list<value_type> __il, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_map(__il, __n, __hf, key_equal(), __a) {}
 #  endif
-  _LIBCPP_HIDE_FROM_ABI ~unordered_map() {
+  _LIBCPP_HIDE_FROM_ABI ~unordered_map()
+      _LIBCPP_DIAGNOSE_UNORDERED_CONTAINER_REQUIREMENTS(key_type, hasher, key_equal) {
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
   }
 
@@ -1800,7 +1801,8 @@ public:
   unordered_multimap(initializer_list<value_type> __il, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_multimap(__il, __n, __hf, key_equal(), __a) {}
 #  endif
-  _LIBCPP_HIDE_FROM_ABI ~unordered_multimap() {
+  _LIBCPP_HIDE_FROM_ABI ~unordered_multimap()
+      _LIBCPP_DIAGNOSE_UNORDERED_CONTAINER_REQUIREMENTS(key_type, hasher, key_equal) {
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
   }
 

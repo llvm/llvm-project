@@ -726,7 +726,8 @@ public:
       : unordered_set(__il, __n, __hf, key_equal(), __a) {}
 #    endif
 #  endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI ~unordered_set() {
+  _LIBCPP_HIDE_FROM_ABI ~unordered_set()
+      _LIBCPP_DIAGNOSE_UNORDERED_CONTAINER_REQUIREMENTS(key_type, hasher, key_equal) {
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
   }
 
@@ -1322,7 +1323,8 @@ public:
       : unordered_multiset(__il, __n, __hf, key_equal(), __a) {}
 #    endif
 #  endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI ~unordered_multiset() {
+  _LIBCPP_HIDE_FROM_ABI ~unordered_multiset()
+      _LIBCPP_DIAGNOSE_UNORDERED_CONTAINER_REQUIREMENTS(key_type, hasher, key_equal) {
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
   }
 

@@ -521,7 +521,7 @@ public:
     return *this;
   }
 
-  // FIXME: Use _LIBCPP_DIAGNOSE_WARNING to produce a diagnostic when __src
+  // FIXME: Use _LIBCPP_DIAGNOSE_IF to produce a diagnostic when __src
   // is known at compile time to be "/' since the user almost certainly intended
   // to append a separator instead of overwriting the path with "/"
   template <class _Source>
