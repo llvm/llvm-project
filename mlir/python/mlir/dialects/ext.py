@@ -404,6 +404,23 @@ class Operation(ir.OpView):
 class Dialect(ir.Dialect):
     """
     Base class of a Python-defined dialect.
+
+    It can be used like the following example:
+    ```python
+    class MyInt(Dialect, name="myint"):
+        pass
+
+    i32 = IntegerType[32]
+
+    class ConstantOp(MyInt.Operation, name="constant"):
+        value: IntegerAttr
+        cst: Result[i32]
+
+    class AddOp(MyInt.Operation, name="add"):
+        lhs: Operand[i32]
+        rhs: Operand[i32]
+        res: Result[i32]
+    ```
     """
 
     @classmethod
