@@ -20,6 +20,16 @@ define i64 @combine_i64_cmul_larger() nounwind {
   ret i64 %res
 }
 
+define i64 @combine_i64_cmul_rhs(i64 %x) nounwind {
+; CHECK-LABEL: combine_i64_cmul_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    clmul a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.clmul.i64(i64 32, i64 %x)
+  ret i64 %res
+}
+
 define i64 @combine_i64_cmul_zero(i64 %x) nounwind {
 ; CHECK-LABEL: combine_i64_cmul_zero:
 ; CHECK:       # %bb.0:
