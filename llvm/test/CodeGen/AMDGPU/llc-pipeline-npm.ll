@@ -76,9 +76,8 @@
 ; GCN-O0-NEXT: post-RA-hazard-rec
 ; GCN-O0-NEXT: amdgpu-wait-sgpr-hazards
 ; GCN-O0-NEXT: amdgpu-lower-vgpr-encoding
-; GCN-O0-NEXT: branch-relaxation)))
-; GCN-O0-NEXT: require<reg-usage>
-; GCN-O0-NEXT: cgscc(function(machine-function(reg-usage-collector
+; GCN-O0-NEXT: branch-relaxation
+; GCN-O0-NEXT: reg-usage-collector
 ; GCN-O0-NEXT: remove-loads-into-fake-uses
 ; GCN-O0-NEXT: live-debug-values
 ; GCN-O0-NEXT: machine-sanmd
@@ -214,6 +213,7 @@
 ; GCN-O2-NEXT: amdgpu-reserve-wwm-regs
 ; GCN-O2-NEXT: greedy<vgpr>
 ; GCN-O2-NEXT: amdgpu-nsa-reassign
+; GCN-O2-NEXT: amdgpu-rewrite-agpr-copy-mfma
 ; GCN-O2-NEXT: virt-reg-rewriter
 ; GCN-O2-NEXT: amdgpu-mark-last-scratch-load
 ; GCN-O2-NEXT: stack-slot-coloring
@@ -248,9 +248,8 @@
 ; GCN-O2-NEXT: amdgpu-wait-sgpr-hazards
 ; GCN-O2-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O2-NEXT: amdgpu-insert-delay-alu
-; GCN-O2-NEXT: branch-relaxation)))
-; GCN-O2-NEXT: require<reg-usage>
-; GCN-O2-NEXT: cgscc(function(machine-function(reg-usage-collector
+; GCN-O2-NEXT: branch-relaxation
+; GCN-O2-NEXT: reg-usage-collector
 ; GCN-O2-NEXT: remove-loads-into-fake-uses
 ; GCN-O2-NEXT: live-debug-values
 ; GCN-O2-NEXT: machine-sanmd
@@ -386,6 +385,7 @@
 ; GCN-O3-NEXT: amdgpu-reserve-wwm-regs
 ; GCN-O3-NEXT: greedy<vgpr>
 ; GCN-O3-NEXT: amdgpu-nsa-reassign
+; GCN-O3-NEXT: amdgpu-rewrite-agpr-copy-mfma
 ; GCN-O3-NEXT: virt-reg-rewriter
 ; GCN-O3-NEXT: amdgpu-mark-last-scratch-load
 ; GCN-O3-NEXT: stack-slot-coloring
@@ -420,9 +420,8 @@
 ; GCN-O3-NEXT: amdgpu-wait-sgpr-hazards
 ; GCN-O3-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O3-NEXT: amdgpu-insert-delay-alu
-; GCN-O3-NEXT: branch-relaxation)))
-; GCN-O3-NEXT: require<reg-usage>
-; GCN-O3-NEXT: cgscc(function(machine-function(reg-usage-collector
+; GCN-O3-NEXT: branch-relaxation
+; GCN-O3-NEXT: reg-usage-collector
 ; GCN-O3-NEXT: remove-loads-into-fake-uses
 ; GCN-O3-NEXT: live-debug-values
 ; GCN-O3-NEXT: machine-sanmd

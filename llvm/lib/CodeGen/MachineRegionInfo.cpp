@@ -76,9 +76,7 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
 // MachineRegionInfoPass implementation
 //
 
-MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {
-  initializeMachineRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {}
 
 MachineRegionInfoPass::~MachineRegionInfoPass() = default;
 

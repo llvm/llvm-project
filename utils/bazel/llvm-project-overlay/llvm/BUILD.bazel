@@ -2,9 +2,12 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
@@ -208,19 +211,92 @@ cc_library(
     deps = [":config"],
 )
 
-genrule(
+write_file(
     name = "generate_vcs_revision",
-    outs = ["include/llvm/Support/VCSRevision.h"],
-    cmd = "echo '#undef LLVM_REVISION' >> $@\n" +
-          "echo '#undef LLVM_REPOSITORY' >> $@\n",
+    out = "include/llvm/Support/VCSRevision.h",
+    content = [
+        "#undef LLVM_REVISION",
+        "#undef LLVM_REPOSITORY",
+    ],
 )
 
-genrule(
+write_file(
     name = "generate_static_extension_registry",
-    outs = ["include/llvm/Support/Extension.def"],
-    cmd = "echo -e '// extension handlers' >> $@\n" +
-          "echo -e '#undef HANDLE_EXTENSION' >> $@\n",
+    out = "include/llvm/Support/Extension.def",
+    content = [
+        "// extension handlers",
+        "#undef HANDLE_EXTENSION",
+    ],
 )
+
+config_setting(
+    name = "is_windows_clang_mingw",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_windows_clang_cl",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_windows_msvc",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
+    name = "is_x86_64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+# TODO(zbarsky): Is there a better way to express this?
+config_setting(
+    name = "_stamp_binary_on_check",
+    values = {"stamp": "1"},
+)
+
+config_setting(
+    name = "_stamp_binary_off_check",
+    values = {"stamp": "0"},
+)
+
+selects.config_setting_group(
+    name = "_true",
+    match_any = [
+        ":_stamp_binary_on_check",
+        ":_stamp_binary_off_check",
+    ],
+)
+
+alias(
+    name = "non_windows",
+    actual = select({
+        "@platforms//os:windows": "@platforms//os:macos",
+        "//conditions:default": ":_true",
+    }),
+)
+
+selects.config_setting_group(
+    name = "is_x86_64_non_windows",
+    match_all = [
+        "@platforms//cpu:x86_64",
+        ":non_windows",
+    ],
+)
+
+BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
+    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
+]
 
 cc_library(
     name = "Support",
@@ -250,11 +326,13 @@ cc_library(
         "@platforms//cpu:aarch64": [
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
-        "@platforms//cpu:x86_64": [
-            "lib/Support/BLAKE3/blake3_avx2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
+        ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        ":is_x86_64_non_windows": [
+            pattern % "unix"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
         "//conditions:default": [
         ],
@@ -297,7 +375,21 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lole32",
+            "-luuid",
+            "-lws2_32",
+            "-lntdll",
+        ],
+        ":is_windows_clang_cl": [
+            "ole32.lib",
+            "uuid.lib",
+            "ws2_32.lib",
+            "ntdll.lib",
+        ],
+        ":is_windows_msvc": [
+            "ole32.lib",
+            "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
         ],
@@ -4541,6 +4633,13 @@ cc_library(
         "tools/dsymutil/*.h",
     ]),
     copts = llvm_copts,
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-framework",
+            "CoreFoundation",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":AllTargetsCodeGens",
         ":BinaryFormat",
@@ -4972,10 +5071,12 @@ cc_binary(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
+        ":IRReader",
         ":MC",
         ":Object",
         ":Support",
         ":TargetParser",
+        ":ir_headers",
     ],
 )
 
@@ -6625,10 +6726,15 @@ cc_binary(
 cc_binary(
     name = "llvm-ir2vec",
     testonly = True,
-    srcs = glob([
-        "tools/llvm-ir2vec/**/*.cpp",
-        "tools/llvm-ir2vec/lib/*.h",
-    ]),
+    srcs = glob(
+        [
+            "tools/llvm-ir2vec/**/*.cpp",
+            "tools/llvm-ir2vec/lib/*.h",
+        ],
+        exclude = [
+            "tools/llvm-ir2vec/Bindings/*.cpp",
+        ],
+    ),
     copts = llvm_copts,
     includes = ["tools/llvm-ir2vec/lib"],
     stamp = 0,

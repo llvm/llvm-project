@@ -29,7 +29,7 @@ using namespace ompx;
 // hidden visibility.
 [[gnu::used, gnu::retain, gnu::weak,
   gnu::visibility("protected")]] Constant<DeviceEnvironmentTy>
-    __omp_rtl_device_environment = {};
+    __omp_rtl_device_environment{};
 
 uint32_t config::getAssumeTeamsOversubscription() {
   return __omp_rtl_assume_teams_oversubscription;

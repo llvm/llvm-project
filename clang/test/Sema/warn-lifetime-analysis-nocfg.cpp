@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -35,6 +36,8 @@ struct [[gsl::Pointer(long)]] MyLongPointerFromConversion {
 
 struct [[gsl::Owner(long)]] MyLongOwnerWithConversion {
   MyLongOwnerWithConversion();
+  // TODO: Do this behind a macro and run tests without this dtor to verify trivial dtor cases.
+  ~MyLongOwnerWithConversion();
   operator MyLongPointerFromConversion();
   long &operator*();
   MyIntPointer releaseAsMyPointer();
@@ -120,7 +123,8 @@ MyIntPointer danglingGslPtrFromTemporary2() {
 }
 
 MyLongPointerFromConversion danglingGslPtrFromTemporaryConv() {
-  return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}}
+  return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}} \
+                                      // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }
 
 int *noFalsePositive(MyIntOwner &o) {
@@ -151,12 +155,15 @@ void initLocalGslPtrWithTempOwner() {
                          // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   use(global);           // cfg-note {{later used here}}
 
-  MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  use(p2);
+  MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                                                // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p2);                                                      // cfg-note {{later used here}}
 
-  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }}
-  global2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'global2' }}
-  use(global2, p2);
+  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }} \
+                                    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  global2 = MyLongOwnerWithConversion{};  // expected-warning {{object backing the pointer 'global2' }} \
+                                          // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
 
 
@@ -1009,15 +1016,12 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
   const char* q = (*v.begin()).second.data();
   const std::string& r = (*v.begin()).second;
 
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        Detect dangling references to struct field.
-  //        https://github.com/llvm/llvm-project/issues/176144
   auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
-  const char* x = temporary().begin()->second.data();
-  const char* y = (*temporary().begin()).second.data();
-  const std::string& z = (*temporary().begin()).second;
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  use(p, q, r, x, y, z);
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
 } // namespace iterator_arrow
 
@@ -1057,24 +1061,27 @@ struct S {
 };
 struct Q {
   const S* get() const [[clang::lifetimebound]];
+  ~Q();
 };
 
 std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 
-// FIXME: Detect this using the CFG-based lifetime analysis.
-//        Detect dangling references to struct field.
-//        https://github.com/llvm/llvm-project/issues/176144
 void test1() {
   std::string_view k1 = S().sv; // OK
-  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
+                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   std::string_view k3 = Q().get()->sv; // OK
-  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
+                                       // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
-  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
 
-  use(k1, k2, k3, k4, lb1, lb2);
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
+                                     // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}
 }
 
 struct Bar {};
