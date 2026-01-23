@@ -1532,7 +1532,7 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
                       common::Indirection<parser::ArrayElement>;
                   if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
                     const parser::ArrayElement &arrayElement{ind->value()};
-                    const parser::DataRef &base{arrayElement.base};
+                    const parser::DataRef &base{arrayElement.Base()};
                     if (auto *name{std::get_if<parser::Name>(&base.u)}) {
                       CopySymbolWithDevice(name);
                     }
@@ -2142,7 +2142,7 @@ public:
   void Post(const parser::SubstringInquiry &);
   template <typename A, typename B>
   void Post(const parser::LoopBounds<A, B> &x) {
-    ResolveName(parser::UnwrapRef<parser::Name>(x.name));
+    ResolveName(parser::UnwrapRef<parser::Name>(x.Name()));
   }
   void Post(const parser::ProcComponentRef &);
   bool Pre(const parser::FunctionReference &);
@@ -7936,13 +7936,13 @@ bool ConstructVisitor::Pre(const parser::AcImpliedDo &x) {
   // of the implied DO variable appears in one of the bound expressions. Thus
   // this extension, which shrinks the scope of the variable to exclude the
   // expressions in the bounds.
-  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.name)};
-  Walk(bounds.lower);
-  Walk(bounds.upper);
-  Walk(bounds.step);
+  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.Name())};
+  Walk(bounds.Lower());
+  Walk(bounds.Upper());
+  Walk(bounds.Step());
   EndCheckOnIndexUseInOwnBounds(restore);
   PushScope(Scope::Kind::ImpliedDos, nullptr);
-  DeclareStatementEntity(bounds.name, type);
+  DeclareStatementEntity(bounds.Name(), type);
   Walk(values);
   PopScope();
   return false;
@@ -7953,13 +7953,13 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   auto &type{std::get<std::optional<parser::IntegerTypeSpec>>(x.t)};
   auto &bounds{std::get<parser::DataImpliedDo::Bounds>(x.t)};
   // See comment in Pre(AcImpliedDo) above.
-  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.name)};
-  Walk(bounds.lower);
-  Walk(bounds.upper);
-  Walk(bounds.step);
+  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.Name())};
+  Walk(bounds.Lower());
+  Walk(bounds.Upper());
+  Walk(bounds.Step());
   EndCheckOnIndexUseInOwnBounds(restore);
   PushScope(Scope::Kind::ImpliedDos, nullptr);
-  DeclareStatementEntity(bounds.name, type);
+  DeclareStatementEntity(bounds.Name(), type);
   Walk(objects);
   PopScope();
   return false;
@@ -8016,7 +8016,7 @@ bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
   const auto &data{std::get<parser::DataStmtConstant>(x.t)};
   auto &mutableData{const_cast<parser::DataStmtConstant &>(data)};
   if (auto *elem{parser::Unwrap<parser::ArrayElement>(mutableData)}) {
-    if (const auto *name{std::get_if<parser::Name>(&elem->base.u)}) {
+    if (const auto *name{std::get_if<parser::Name>(&elem->Base().u)}) {
       if (const Symbol * symbol{FindSymbol(*name)};
           symbol && symbol->GetUltimate().has<DerivedTypeDetails>()) {
         mutableData.u = elem->ConvertToStructureConstructor(
@@ -8793,7 +8793,7 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
 
 const parser::Name *DeclarationVisitor::ResolveStructureComponent(
     const parser::StructureComponent &x) {
-  return FindComponent(ResolveDataRef(x.base), x.component);
+  return FindComponent(ResolveDataRef(x.Base()), x.Component());
 }
 
 const parser::Name *DeclarationVisitor::ResolveDesignator(
@@ -8818,8 +8818,8 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return ResolveStructureComponent(y.value());
           },
           [&](const Indirection<parser::ArrayElement> &y) {
-            Walk(y.value().subscripts);
-            const parser::Name *name{ResolveDataRef(y.value().base)};
+            Walk(y.value().Subscripts());
+            const parser::Name *name{ResolveDataRef(y.value().Base())};
             if (name && name->symbol) {
               if (!IsProcedure(*name->symbol)) {
                 ConvertToObjectEntity(*name->symbol);
@@ -8832,8 +8832,9 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return name;
           },
           [&](const Indirection<parser::CoindexedNamedObject> &y) {
-            Walk(y.value().imageSelector);
-            return ResolveDataRef(y.value().base);
+            const auto &[base, selector]{y.value().t};
+            Walk(selector);
+            return ResolveDataRef(base);
           },
       },
       x.u);
@@ -9340,7 +9341,7 @@ void ResolveNamesVisitor::HandleCall(
           [&](const parser::Name &x) { HandleProcedureName(procFlag, x); },
           [&](const parser::ProcComponentRef &x) {
             Walk(x);
-            const parser::Name &name{x.v.thing.component};
+            const parser::Name &name{x.v.thing.Component()};
             if (Symbol * symbol{name.symbol}) {
               if (IsProcedure(*symbol)) {
                 SetProcFlag(name, *symbol, procFlag);
@@ -10160,12 +10161,14 @@ void ResolveNamesVisitor::Post(const parser::AssignStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteDefinedSymbol(*name->symbol);
   }
 }
 void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteUsedSymbol(*name->symbol);
   }
 }
 

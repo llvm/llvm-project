@@ -438,57 +438,57 @@
 # CHECK-NEXT:  1      1     0.25                        asr	x21, x22, x23
 # CHECK-NEXT:  1      1     0.25                        ror	w24, w25, w26
 # CHECK-NEXT:  1      1     0.25                        ror	x27, x28, x29
-# CHECK-NEXT:  1      2     2.00                        crc32cb	w30, w23, w15
-# CHECK-NEXT:  1      2     2.00                        crc32cb	wzr, w12, w14
-# CHECK-NEXT:  1      2     2.00                        crc32cb	w28, w10, w11
-# CHECK-NEXT:  1      2     2.00                        crc32b	w27, w12, w15
-# CHECK-NEXT:  1      2     2.00                        crc32h	w3, w15, w21
-# CHECK-NEXT:  1      2     2.00                        crc32w	w9, w18, w24
-# CHECK-NEXT:  1      2     2.00                        crc32x	w19, w6, x25
-# CHECK-NEXT:  1      2     2.00                        crc32ch	w25, w26, w16
-# CHECK-NEXT:  1      2     2.00                        crc32cw	w27, w12, w23
-# CHECK-NEXT:  1      2     2.00                        crc32cx	w21, w28, x5
+# CHECK-NEXT:  1      2     1.00                        crc32cb	w30, w23, w15
+# CHECK-NEXT:  1      2     1.00                        crc32cb	wzr, w12, w14
+# CHECK-NEXT:  1      2     1.00                        crc32cb	w28, w10, w11
+# CHECK-NEXT:  1      2     1.00                        crc32b	w27, w12, w15
+# CHECK-NEXT:  1      2     1.00                        crc32h	w3, w15, w21
+# CHECK-NEXT:  1      2     1.00                        crc32w	w9, w18, w24
+# CHECK-NEXT:  1      2     1.00                        crc32x	w19, w6, x25
+# CHECK-NEXT:  1      2     1.00                        crc32ch	w25, w26, w16
+# CHECK-NEXT:  1      2     1.00                        crc32cw	w27, w12, w23
+# CHECK-NEXT:  1      2     1.00                        crc32cx	w21, w28, x5
 # CHECK-NEXT:  1      3     0.50                        smulh	x30, x29, x28
 # CHECK-NEXT:  1      3     0.50                        smulh	xzr, x27, x26
 # CHECK-NEXT:  1      3     0.50                        umulh	x30, x29, x28
 # CHECK-NEXT:  1      3     0.50                        umulh	x23, x30, xzr
-# CHECK-NEXT:  1      2     0.50                        madd	w1, w3, w7, w4
-# CHECK-NEXT:  1      2     0.50                        madd	wzr, w0, w9, w11
-# CHECK-NEXT:  1      2     0.50                        madd	w13, wzr, w4, w4
-# CHECK-NEXT:  1      2     0.50                        madd	w19, w30, wzr, w29
+# CHECK-NEXT:  1      2     1.00                        madd	w1, w3, w7, w4
+# CHECK-NEXT:  1      2     1.00                        madd	wzr, w0, w9, w11
+# CHECK-NEXT:  1      2     1.00                        madd	w13, wzr, w4, w4
+# CHECK-NEXT:  1      2     1.00                        madd	w19, w30, wzr, w29
 # CHECK-NEXT:  1      2     0.50                        mul	w4, w5, w6
-# CHECK-NEXT:  1      2     0.50                        madd	x1, x3, x7, x4
-# CHECK-NEXT:  1      2     0.50                        madd	xzr, x0, x9, x11
-# CHECK-NEXT:  1      2     0.50                        madd	x13, xzr, x4, x4
-# CHECK-NEXT:  1      2     0.50                        madd	x19, x30, xzr, x29
+# CHECK-NEXT:  1      2     1.00                        madd	x1, x3, x7, x4
+# CHECK-NEXT:  1      2     1.00                        madd	xzr, x0, x9, x11
+# CHECK-NEXT:  1      2     1.00                        madd	x13, xzr, x4, x4
+# CHECK-NEXT:  1      2     1.00                        madd	x19, x30, xzr, x29
 # CHECK-NEXT:  1      2     0.50                        mul	x4, x5, x6
-# CHECK-NEXT:  1      2     0.50                        msub	w1, w3, w7, w4
-# CHECK-NEXT:  1      2     0.50                        msub	wzr, w0, w9, w11
-# CHECK-NEXT:  1      2     0.50                        msub	w13, wzr, w4, w4
-# CHECK-NEXT:  1      2     0.50                        msub	w19, w30, wzr, w29
+# CHECK-NEXT:  1      2     1.00                        msub	w1, w3, w7, w4
+# CHECK-NEXT:  1      2     1.00                        msub	wzr, w0, w9, w11
+# CHECK-NEXT:  1      2     1.00                        msub	w13, wzr, w4, w4
+# CHECK-NEXT:  1      2     1.00                        msub	w19, w30, wzr, w29
 # CHECK-NEXT:  1      2     0.50                        mneg	w4, w5, w6
-# CHECK-NEXT:  1      2     0.50                        msub	x1, x3, x7, x4
-# CHECK-NEXT:  1      2     0.50                        msub	xzr, x0, x9, x11
-# CHECK-NEXT:  1      2     0.50                        msub	x13, xzr, x4, x4
-# CHECK-NEXT:  1      2     0.50                        msub	x19, x30, xzr, x29
+# CHECK-NEXT:  1      2     1.00                        msub	x1, x3, x7, x4
+# CHECK-NEXT:  1      2     1.00                        msub	xzr, x0, x9, x11
+# CHECK-NEXT:  1      2     1.00                        msub	x13, xzr, x4, x4
+# CHECK-NEXT:  1      2     1.00                        msub	x19, x30, xzr, x29
 # CHECK-NEXT:  1      2     0.50                        mneg	x4, x5, x6
-# CHECK-NEXT:  1      2     0.50                        smaddl	x3, w5, w2, x9
-# CHECK-NEXT:  1      2     0.50                        smaddl	xzr, w10, w11, x12
-# CHECK-NEXT:  1      2     0.50                        smaddl	x13, wzr, w14, x15
-# CHECK-NEXT:  1      2     0.50                        smaddl	x16, w17, wzr, x18
+# CHECK-NEXT:  1      2     1.00                        smaddl	x3, w5, w2, x9
+# CHECK-NEXT:  1      2     1.00                        smaddl	xzr, w10, w11, x12
+# CHECK-NEXT:  1      2     1.00                        smaddl	x13, wzr, w14, x15
+# CHECK-NEXT:  1      2     1.00                        smaddl	x16, w17, wzr, x18
 # CHECK-NEXT:  1      2     0.50                        smull	x19, w20, w21
-# CHECK-NEXT:  1      2     0.50                        smsubl	x3, w5, w2, x9
-# CHECK-NEXT:  1      2     0.50                        smsubl	xzr, w10, w11, x12
-# CHECK-NEXT:  1      2     0.50                        smsubl	x13, wzr, w14, x15
-# CHECK-NEXT:  1      2     0.50                        smsubl	x16, w17, wzr, x18
+# CHECK-NEXT:  1      2     1.00                        smsubl	x3, w5, w2, x9
+# CHECK-NEXT:  1      2     1.00                        smsubl	xzr, w10, w11, x12
+# CHECK-NEXT:  1      2     1.00                        smsubl	x13, wzr, w14, x15
+# CHECK-NEXT:  1      2     1.00                        smsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  1      2     0.50                        smnegl	x19, w20, w21
-# CHECK-NEXT:  1      2     0.50                        umaddl	x3, w5, w2, x9
-# CHECK-NEXT:  1      2     0.50                        umaddl	xzr, w10, w11, x12
-# CHECK-NEXT:  1      2     0.50                        umaddl	x13, wzr, w14, x15
-# CHECK-NEXT:  1      2     0.50                        umaddl	x16, w17, wzr, x18
+# CHECK-NEXT:  1      2     1.00                        umaddl	x3, w5, w2, x9
+# CHECK-NEXT:  1      2     1.00                        umaddl	xzr, w10, w11, x12
+# CHECK-NEXT:  1      2     1.00                        umaddl	x13, wzr, w14, x15
+# CHECK-NEXT:  1      2     1.00                        umaddl	x16, w17, wzr, x18
 # CHECK-NEXT:  1      2     0.50                        umull	x19, w20, w21
-# CHECK-NEXT:  1      2     0.50                        umsubl	x3, w5, w2, x9
-# CHECK-NEXT:  1      2     0.50                        umsubl	x16, w17, wzr, x18
+# CHECK-NEXT:  1      2     1.00                        umsubl	x3, w5, w2, x9
+# CHECK-NEXT:  1      2     1.00                        umsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  1      2     0.50                        umnegl	x19, w20, w21
 # CHECK-NEXT:  1      3     0.50                        smulh	x23, x22, xzr
 # CHECK-NEXT:  1      3     0.50                        umulh	x23, x22, xzr
@@ -1270,7 +1270,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  56.00  56.00  56.00  94.33  165.33 165.33 538.00 252.00 169.00 169.00 254.00 101.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  56.00  56.00  56.00  94.33  165.33 165.33 543.00 237.00 169.00 169.00 254.00 101.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -1702,57 +1702,57 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     asr	x21, x22, x23
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     ror	w24, w25, w26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     ror	x27, x28, x29
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32cb	w30, w23, w15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32cb	wzr, w12, w14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32cb	w28, w10, w11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32b	w27, w12, w15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32h	w3, w15, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32w	w9, w18, w24
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32x	w19, w6, x25
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32ch	w25, w26, w16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32cw	w27, w12, w23
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     crc32cx	w21, w28, x5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32cb	w30, w23, w15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32cb	wzr, w12, w14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32cb	w28, w10, w11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32b	w27, w12, w15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32h	w3, w15, w21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32w	w9, w18, w24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32x	w19, w6, x25
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32ch	w25, w26, w16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32cw	w27, w12, w23
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     crc32cx	w21, w28, x5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smulh	x30, x29, x28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smulh	xzr, x27, x26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umulh	x30, x29, x28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umulh	x23, x30, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	w1, w3, w7, w4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	wzr, w0, w9, w11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	w13, wzr, w4, w4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	w19, w30, wzr, w29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	w1, w3, w7, w4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	wzr, w0, w9, w11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	w13, wzr, w4, w4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	w19, w30, wzr, w29
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     mul	w4, w5, w6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	x1, x3, x7, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	xzr, x0, x9, x11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	x13, xzr, x4, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     madd	x19, x30, xzr, x29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	x1, x3, x7, x4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	xzr, x0, x9, x11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	x13, xzr, x4, x4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	x19, x30, xzr, x29
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     mul	x4, x5, x6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	w1, w3, w7, w4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	wzr, w0, w9, w11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	w13, wzr, w4, w4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	w19, w30, wzr, w29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	w1, w3, w7, w4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	wzr, w0, w9, w11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	w13, wzr, w4, w4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	w19, w30, wzr, w29
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     mneg	w4, w5, w6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	x1, x3, x7, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	xzr, x0, x9, x11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	x13, xzr, x4, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     msub	x19, x30, xzr, x29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	x1, x3, x7, x4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	xzr, x0, x9, x11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	x13, xzr, x4, x4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	x19, x30, xzr, x29
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     mneg	x4, x5, x6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smaddl	x3, w5, w2, x9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smaddl	xzr, w10, w11, x12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smaddl	x13, wzr, w14, x15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smaddl	x16, w17, wzr, x18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smaddl	x3, w5, w2, x9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smaddl	xzr, w10, w11, x12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smaddl	x13, wzr, w14, x15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smaddl	x16, w17, wzr, x18
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smull	x19, w20, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smsubl	x3, w5, w2, x9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smsubl	xzr, w10, w11, x12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smsubl	x13, wzr, w14, x15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smsubl	x16, w17, wzr, x18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smsubl	x3, w5, w2, x9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smsubl	xzr, w10, w11, x12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smsubl	x13, wzr, w14, x15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smnegl	x19, w20, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umaddl	x3, w5, w2, x9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umaddl	xzr, w10, w11, x12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umaddl	x13, wzr, w14, x15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umaddl	x16, w17, wzr, x18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umaddl	x3, w5, w2, x9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umaddl	xzr, w10, w11, x12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umaddl	x13, wzr, w14, x15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umaddl	x16, w17, wzr, x18
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umull	x19, w20, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umsubl	x3, w5, w2, x9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umsubl	x16, w17, wzr, x18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umsubl	x3, w5, w2, x9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umnegl	x19, w20, w21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smulh	x23, x22, xzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umulh	x23, x22, xzr
