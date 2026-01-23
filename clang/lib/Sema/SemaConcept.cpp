@@ -2012,7 +2012,7 @@ class SubstituteParameterMappings {
   // When normalizing a fold constraint, e.g.
   //   C<Pack1, Pack2...> && ...
   // we want the TreeTransform to expand only Pack2 but not Pack1,
-  // since Pack1 will be expanded during the evaluation of C.
+  // since Pack1 will be expanded during the evaluation of the fold expression.
   // This flag helps rewrite any non-PackExpansion packs into "expanded"
   // parameters.
   bool RemovePacksForFoldExpr;
@@ -2273,7 +2273,6 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
               /*PartialTemplateArgs=*/false, CTAI))
         return true;
       InnerArgs = std::move(CTAI.SugaredConverted);
-      RemovePacksForFoldExpr = false;
     }
 
     MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
