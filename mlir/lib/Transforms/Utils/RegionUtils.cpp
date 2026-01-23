@@ -1115,20 +1115,41 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
 
   // Find the backward slice of operation for each `Value` the operation
   // depends on. Prune the slice to only include operations not already
-  // dominated by the `insertionPoint`
+  // dominated by the `insertionPoint`.
   BackwardSliceOptions options;
   options.inclusive = false;
   options.omitUsesFromAbove = false;
   // Since current support is to only move within a same basic block,
   // the slices dont need to look past block arguments.
   options.omitBlockArguments = true;
+  bool dependsOnSideEffectingOp = false;
   options.filter = [&](Operation *sliceBoundaryOp) {
-    return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    // Skip the root op - we're moving its dependencies, not the op itself.
+    // The root op is filtered out by options.inclusive = false anyway.
+    if (sliceBoundaryOp == op)
+      return true;
+    bool dominated =
+        dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    // Op is already before insertion point, no need to include in slice.
+    if (dominated)
+      return false;
+    // Op needs to move but is side-effecting - stop traversal early.
+    if (!isPure(sliceBoundaryOp)) {
+      dependsOnSideEffectingOp = true;
+      return false;
+    }
+    return true;
   };
   llvm::SetVector<Operation *> slice;
   LogicalResult result = getBackwardSlice(op, &slice, options);
   assert(result.succeeded() && "expected a backward slice");
   (void)result;
+
+  // Check if any operation in the slice is side-effecting.
+  if (dependsOnSideEffectingOp) {
+    return rewriter.notifyMatchFailure(
+        op, "cannot move operation with side-effecting dependencies");
+  }
 
   // If the slice contains `insertionPoint` cannot move the dependencies.
   if (slice.contains(insertionPoint)) {
@@ -1189,11 +1210,17 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   options.omitBlockArguments = true;
   bool dependsOnSideEffectingOp = false;
   options.filter = [&](Operation *sliceBoundaryOp) {
-    bool mustMove =
-        !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
-    if (mustMove && !isPure(sliceBoundaryOp))
+    bool dominated =
+        dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    // Op is already before insertion point, no need to include in slice.
+    if (dominated)
+      return false;
+    // Op needs to move but is side-effecting - stop traversal early.
+    if (!isPure(sliceBoundaryOp)) {
       dependsOnSideEffectingOp = true;
-    return mustMove;
+      return false;
+    }
+    return true;
   };
   llvm::SetVector<Operation *> slice;
   for (auto value : prunedValues) {
@@ -1203,8 +1230,11 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   }
 
   // Check if any operation in the slice is side-effecting.
-  if (dependsOnSideEffectingOp)
-    return failure();
+  if (dependsOnSideEffectingOp) {
+    return rewriter.notifyMatchFailure(
+        insertionPoint, "cannot move value definitions with side-effecting "
+                        "operations in the slice");
+  }
 
   // If the slice contains `insertionPoint` cannot move the dependencies.
   if (slice.contains(insertionPoint)) {
