@@ -23,6 +23,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -5068,8 +5069,8 @@ LogicalResult TransferReadOp::verify() {
                : VectorType();
   auto sourceElementType = shapedType.getElementType();
 
-  if (static_cast<int64_t>(getIndices().size()) != shapedType.getRank())
-    return emitOpError("requires ") << shapedType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, shapedType, getIndices().size())))
+    return failure();
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
@@ -5529,8 +5530,8 @@ LogicalResult TransferWriteOp::verify() {
       maskType ? inferTransferOpMaskType(vectorType, permutationMap)
                : VectorType();
 
-  if (llvm::size(getIndices()) != shapedType.getRank())
-    return emitOpError("requires ") << shapedType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, shapedType, getIndices().size())))
+    return failure();
 
   // We do not allow broadcast dimensions on TransferWriteOps for the moment,
   // as the semantics is unclear. This can be revisited later if necessary.
@@ -5920,8 +5921,8 @@ LogicalResult vector::LoadOp::verify() {
 
   if (resVecTy.getElementType() != memElemTy)
     return emitOpError("base and result element types should match");
-  if (llvm::size(getIndices()) != memRefTy.getRank())
-    return emitOpError("requires ") << memRefTy.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, memRefTy, llvm::size(getIndices()))))
+    return failure();
   return success();
 }
 
@@ -5966,8 +5967,8 @@ LogicalResult vector::StoreOp::verify() {
 
   if (valueVecTy.getElementType() != memElemTy)
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getIndices()) != memRefTy.getRank())
-    return emitOpError("requires ") << memRefTy.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, memRefTy, llvm::size(getIndices()))))
+    return failure();
   return success();
 }
 
@@ -5998,8 +5999,8 @@ LogicalResult MaskedLoadOp::verify() {
 
   if (resVType.getElementType() != memType.getElementType())
     return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, memType, llvm::size(getIndices()))))
+    return failure();
   if (resVType.getShape() != maskVType.getShape())
     return emitOpError("expected result shape to match mask shape");
   if (resVType != passVType)
@@ -6057,8 +6058,8 @@ LogicalResult MaskedStoreOp::verify() {
 
   if (valueVType.getElementType() != memType.getElementType())
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, memType, llvm::size(getIndices()))))
+    return failure();
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore shape to match mask shape");
   return success();
@@ -6117,8 +6118,8 @@ LogicalResult GatherOp::verify() {
 
   if (resVType.getElementType() != baseType.getElementType())
     return emitOpError("base and result element type should match");
-  if (llvm::size(getOffsets()) != baseType.getRank())
-    return emitOpError("requires ") << baseType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, baseType, llvm::size(getOffsets()))))
+    return failure();
   if (resVType.getShape() != indVType.getShape())
     return emitOpError("expected result dim to match indices dim");
   if (resVType.getShape() != maskVType.getShape())
@@ -6226,8 +6227,8 @@ LogicalResult ScatterOp::verify() {
 
   if (valueVType.getElementType() != baseType.getElementType())
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getOffsets()) != baseType.getRank())
-    return emitOpError("requires ") << baseType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, baseType, llvm::size(getOffsets()))))
+    return failure();
   if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
@@ -6309,8 +6310,8 @@ LogicalResult ExpandLoadOp::verify() {
 
   if (resVType.getElementType() != memType.getElementType())
     return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, memType, llvm::size(getIndices()))))
+    return failure();
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))
     return emitOpError("expected result dim to match mask dim");
   if (resVType != passVType)
@@ -6362,8 +6363,8 @@ LogicalResult CompressStoreOp::verify() {
 
   if (valueVType.getElementType() != memType.getElementType())
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (failed(verifyIndexCount(*this, memType, llvm::size(getIndices()))))
+    return failure();
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
     return emitOpError("expected valueToStore dim to match mask dim");
   return success();

@@ -36,3 +36,13 @@ LogicalResult mlir::verifyRanksMatch(Operation *op, ShapedType lhs,
   }
   return success();
 }
+
+LogicalResult mlir::verifyIndexCount(Operation *op, ShapedType type,
+                                     size_t indexCount) {
+  int64_t rank = type.getRank();
+  if (static_cast<int64_t>(indexCount) != rank) {
+    return op->emitOpError("incorrect number of indices, expected ")
+           << rank << " but got " << indexCount;
+  }
+  return success();
+}
