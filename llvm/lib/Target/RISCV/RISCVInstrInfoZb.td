@@ -53,11 +53,6 @@ def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
 // RV64IZbb absolute value for i32. Expanded to (max (negw X), X) during isel.
 def riscv_negw_max : RVSDNode<"NEGW_MAX",    SDTIntUnaryOp>;
 
-// Scalar cryptography
-def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
-def riscv_clmulh  : RVSDNode<"CLMULH",  SDTIntBinOp>;
-def riscv_clmulr  : RVSDNode<"CLMULR",  SDTIntBinOp>;
-
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
   return CurDAG->getTargetConstant(llvm::countr_one(N->getZExtValue()),
@@ -860,12 +855,12 @@ def : Sh3AddPat<SH3ADD>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {
-def : PatGprGpr<riscv_clmul, CLMUL>;
-def : PatGprGpr<riscv_clmulh, CLMULH>;
+def : PatGprGpr<clmul, CLMUL>;
+def : PatGprGpr<clmulh, CLMULH>;
 } // Predicates = [HasStdExtZbcOrZbkc]
 
 let Predicates = [HasStdExtZbc] in
-def : PatGprGpr<riscv_clmulr, CLMULR>;
+def : PatGprGpr<clmulr, CLMULR>;
 
 let Predicates = [HasStdExtZbkx] in {
 def : PatGprGpr<int_riscv_xperm4, XPERM4>;

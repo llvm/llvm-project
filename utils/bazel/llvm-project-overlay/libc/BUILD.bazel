@@ -3026,6 +3026,56 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_log10",
+    hdrs = ["src/__support/math/log10.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_log_range_reduction",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log1p",
+    hdrs = ["src/__support/math/log1p.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log2",
+    hdrs = ["src/__support/math/log2.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_log_range_reduction",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logbf",
     hdrs = ["src/__support/math/logbf.h"],
     deps = [
@@ -4623,16 +4673,7 @@ libc_math_function(
 libc_math_function(
     name = "log10",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
-        ":__support_math_log_range_reduction",
+        ":__support_math_log10",
     ],
 )
 
@@ -4658,15 +4699,7 @@ libc_math_function(
 libc_math_function(
     name = "log1p",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
+        ":__support_math_log1p",
     ],
 )
 
@@ -4685,16 +4718,7 @@ libc_math_function(
 libc_math_function(
     name = "log2",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
-        ":__support_math_log_range_reduction",
+        ":__support_math_log2",
     ],
 )
 
