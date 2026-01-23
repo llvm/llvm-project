@@ -329,8 +329,9 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
       }
     }
 
-    for (auto it : llvm::zip(*operands, lattices.drop_front(firstIndex)))
-      join(std::get<1>(it), *getLatticeElementFor(point, std::get<0>(it)));
+    for (auto [lattice, operand] :
+         llvm::zip(lattices.drop_front(firstIndex), *operands))
+      join(lattice, *getLatticeElementFor(point, operand));
   }
 }
 
@@ -606,7 +607,6 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
       unaccounted.reset(operand->getOperandNumber());
     }
   }
-
   Operation *op = branch.getOperation();
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
@@ -614,17 +614,11 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   for (RegionSuccessor &successor : successors) {
     if (successor.isParent())
       continue;
-    SmallVector<BlockArgument> noControlFlowArguments;
-    MutableArrayRef<BlockArgument> arguments =
-        successor.getSuccessor()->getArguments();
-    ValueRange inputs = branch.getSuccessorInputs(successor);
-    for (BlockArgument argument : arguments) {
-      // Visit blockArgument of RegionBranchOp which isn't "control
-      // flow block arguments". For example, the IV of a loop.
-      if (!llvm::is_contained(inputs, argument)) {
-        noControlFlowArguments.push_back(argument);
-      }
-    }
+    auto valueToArgument = [](Value value) {
+      return cast<BlockArgument>(value);
+    };
+    SmallVector<BlockArgument> noControlFlowArguments = llvm::map_to_vector(
+        branch.getNonSuccessorInputs(successor), valueToArgument);
     visitNonControlFlowArguments(successor, noControlFlowArguments);
   }
 
