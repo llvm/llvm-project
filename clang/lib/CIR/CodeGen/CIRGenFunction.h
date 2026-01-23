@@ -1882,8 +1882,7 @@ public:
   /// Returns std::nullopt if the builtin is not handled by the generic
   /// intrinsic fallback.
   std::optional<mlir::Value>
-  emitGenericBuiltinIntrinsic(unsigned builtinID,
-                              const clang::CallExpr *expr,
+  emitGenericBuiltinIntrinsic(unsigned builtinID, const clang::CallExpr *expr,
                               llvm::ArrayRef<mlir::Value> ops);
 
   /// Given a value and its clang type, returns the value casted to its memory

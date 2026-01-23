@@ -391,8 +391,7 @@ std::optional<mlir::Value> CIRGenFunction::emitGenericBuiltinIntrinsic(
   SmallVector<mlir::Value> callArgs(ops.begin(), ops.end());
   coerceCallArgsToASTTypes(callArgs, expr);
 
-  return emitIntrinsicCallOp(
-      builder, loc, intrinsicName, retTy, callArgs);
+  return emitIntrinsicCallOp(builder, loc, intrinsicName, retTy, callArgs);
 }
 
 static bool shouldCIREmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
@@ -1948,7 +1947,8 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
     for (auto [idx, arg] : llvm::enumerate(e->arguments()))
       ops.push_back(cgf->emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
 
-    if (std::optional<mlir::Value> maybeRes = cgf->emitGenericBuiltinIntrinsic(builtinID, e, ops))
+    if (std::optional<mlir::Value> maybeRes =
+            cgf->emitGenericBuiltinIntrinsic(builtinID, e, ops))
       return *maybeRes;
 
     return std::nullopt;
