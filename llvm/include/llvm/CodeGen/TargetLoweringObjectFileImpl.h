@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
@@ -32,7 +31,7 @@ class MCSymbol;
 class Module;
 class TargetMachine;
 
-class LLVM_ABI TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
+class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   bool UseInitArray = false;
   mutable unsigned NextUniqueID = 1;  // ID 0 is reserved for execute-only sections
   SmallPtrSet<GlobalObject *, 2> Used;
@@ -131,7 +130,7 @@ public:
   MCSection *getSectionForCommandLines() const override;
 };
 
-class LLVM_ABI TargetLoweringObjectFileMachO : public TargetLoweringObjectFile {
+class TargetLoweringObjectFileMachO : public TargetLoweringObjectFile {
 public:
   TargetLoweringObjectFileMachO();
   ~TargetLoweringObjectFileMachO() override = default;
@@ -181,7 +180,7 @@ public:
   MCSection *getSectionForCommandLines() const override;
 };
 
-class LLVM_ABI TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
+class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
   const TargetMachine *TM = nullptr;
 
@@ -226,7 +225,7 @@ public:
                                    Align &Alignment) const override;
 };
 
-class LLVM_ABI TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
+class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
   SmallPtrSet<GlobalObject *, 2> Used;
 
@@ -252,7 +251,7 @@ public:
                                   const MCSymbol *KeySym) const override;
 };
 
-class LLVM_ABI TargetLoweringObjectFileXCOFF : public TargetLoweringObjectFile {
+class TargetLoweringObjectFileXCOFF : public TargetLoweringObjectFile {
 public:
   TargetLoweringObjectFileXCOFF() = default;
   ~TargetLoweringObjectFileXCOFF() override = default;
@@ -316,7 +315,7 @@ public:
                                const TargetMachine &TM) const override;
 };
 
-class LLVM_ABI TargetLoweringObjectFileGOFF : public TargetLoweringObjectFile {
+class TargetLoweringObjectFileGOFF : public TargetLoweringObjectFile {
   std::string DefaultRootSDName;
   std::string DefaultADAPRName;
 
