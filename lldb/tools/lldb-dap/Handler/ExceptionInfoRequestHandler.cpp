@@ -54,8 +54,6 @@ struct MainThreadCheckerReport {
 using RuntimeInstrumentReport =
     std::variant<UBSanReport, MainThreadCheckerReport>;
 
-} // end namespace
-
 static bool fromJSON(const json::Value &params, UBSanReport &report,
                      json::Path path) {
   json::ObjectMapper O(params, path);
@@ -100,6 +98,8 @@ static bool fromJSON(const json::Value &params, RuntimeInstrumentReport &report,
   // FIXME: Support additional runtime instruments with specific formatters.
   return false;
 }
+
+} // end namespace
 
 static raw_ostream &operator<<(raw_ostream &OS, UBSanReport &report) {
   if (!report.filename.empty()) {
