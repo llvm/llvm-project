@@ -349,7 +349,8 @@ protected:
   const AMDGPU::HardwareLimits *Limits = nullptr;
 
 public:
-  WaitcntGenerator() = default;
+  WaitcntGenerator() = delete;
+  WaitcntGenerator(const WaitcntGenerator &) = delete;
   WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter,
                    const AMDGPU::HardwareLimits *Limits)
       : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
@@ -414,10 +415,22 @@ public:
   }
 };
 
-class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
+class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
+  static constexpr const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] =
+      {eventMask({VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
+       eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
+       eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
+                  EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+       eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+       0,
+       0,
+       0,
+       0,
+       0,
+       0};
+
 public:
   using WaitcntGenerator::WaitcntGenerator;
-
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
@@ -430,33 +443,31 @@ public:
 
   const unsigned *getWaitEventMask() const override {
     assert(ST);
-
-    static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
-        eventMask(
-            {VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
-        eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
-        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
-                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
-        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
-        0,
-        0,
-        0,
-        0,
-        0,
-        0};
-
     return WaitEventMaskForInstPreGFX12;
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
-class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
+class WaitcntGeneratorGFX12Plus final : public WaitcntGenerator {
 protected:
   bool IsExpertMode;
+  static constexpr const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] =
+      {eventMask({VMEM_ACCESS, GLOBAL_INV_ACCESS}),
+       eventMask({LDS_ACCESS, GDS_ACCESS}),
+       eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
+                  EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+       eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+       eventMask({VMEM_SAMPLER_READ_ACCESS}),
+       eventMask({VMEM_BVH_READ_ACCESS}),
+       eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
+       eventMask({VMEM_GROUP, SMEM_GROUP}),
+       eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
+                  VGPR_XDL_WRITE}),
+       eventMask({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
 
 public:
-  WaitcntGeneratorGFX12Plus() = default;
+  WaitcntGeneratorGFX12Plus() = delete;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
                             InstCounterType MaxCounter,
                             const AMDGPU::HardwareLimits *Limits,
@@ -475,21 +486,6 @@ public:
 
   const unsigned *getWaitEventMask() const override {
     assert(ST);
-
-    static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS, GLOBAL_INV_ACCESS}),
-        eventMask({LDS_ACCESS, GDS_ACCESS}),
-        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
-                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
-        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
-        eventMask({VMEM_SAMPLER_READ_ACCESS}),
-        eventMask({VMEM_BVH_READ_ACCESS}),
-        eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
-        eventMask({VMEM_GROUP, SMEM_GROUP}),
-        eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
-                   VGPR_XDL_WRITE}),
-        eventMask({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
-
     return WaitEventMaskForInstGFX12Plus;
   }
 
