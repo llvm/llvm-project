@@ -706,7 +706,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             "baz",
             "Frame 0 should be 'baz' from last provider in chain",
         )
-        self.assertEqual(frame0.GetPC(), 0xBAD)
+        self.assertEqual(frame0.GetPC(), 0xBAC)
 
         frame1 = thread.GetFrameAtIndex(1)
         self.assertIsNotNone(frame1)
@@ -715,7 +715,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             "bar",
             "Frame 1 should be 'bar' from second provider in chain",
         )
-        self.assertEqual(frame1.GetPC(), 0xBAB)
+        self.assertEqual(frame1.GetPC(), 0xBAA)
 
         frame2 = thread.GetFrameAtIndex(2)
         self.assertIsNotNone(frame2)
