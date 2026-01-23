@@ -9,4 +9,4 @@ c
 q
 
 # Check the ASCII escape code
-# CHECK: 
+# CHECK: {{\[[0-9;]+m}}
