@@ -4944,9 +4944,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (Rep)
+    if (Rep) {
       CI->replaceAllUsesWith(Rep);
-    CI->eraseFromParent();
+      CI->eraseFromParent();
+    }
     return;
   }
 
@@ -5668,7 +5669,7 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    if (F != NewFn)
+    if (NewFn != nullptr && F != NewFn)
       F->eraseFromParent();
   }
 }
