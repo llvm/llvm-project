@@ -16,8 +16,8 @@
 
 # RUN: export PATH="%{system-path}"
 #
-# RUN: strace -f -e trace=openat %{lit} -j1 %{inputs}/shtest-format \
-# RUN:     > %t.j1.out 2>&1 || true
+# RUN: strace -f -e trace=openat not %{lit} -j1 %{inputs}/shtest-format \
+# RUN:     > %t.j1.out 2>&1
 # RUN: FileCheck --check-prefix=CHECK-J1 %s < %t.j1.out
 #
 # CHECK-J1: 1 workers
@@ -28,8 +28,8 @@
 # POSIX semaphores. This validates that the CHECK-NOT pattern above is correct
 # and won't become stale if Python/glibc changes how semaphores are created.
 #
-# RUN: strace -f -e trace=openat %{lit} -j2 %{inputs}/shtest-format \
-# RUN:     > %t.j2.out 2>&1 || true
+# RUN: strace -f -e trace=openat not %{lit} -j2 %{inputs}/shtest-format \
+# RUN:     > %t.j2.out 2>&1
 # RUN: FileCheck --check-prefix=CHECK-J2 %s < %t.j2.out
 #
 # CHECK-J2: /dev/shm/sem
