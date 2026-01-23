@@ -496,26 +496,24 @@ bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // The num_teams directive accepts a list of team lower/upper bounds.
-    // With dims modifier (OpenMP 6.1): multiple values for multi-dimensional
-    // Without dims modifier: single value (upper bound only)
-    assert(!clause->v.empty());
+    // Structure: {LB?, [UB]} - single optional lower bound, list of upper
+    // bounds
+    auto &lowerBound = std::get<std::optional<ExprTy>>(clause->t);
+    auto &upperBounds =
+        std::get<omp::clause::NumTeams::UpperBoundList>(clause->t);
+    assert(!upperBounds.empty());
 
-    // For single value case, also handle the optional lower bound
-    if (clause->v.size() == 1) {
-      auto &lowerBound = std::get<std::optional<ExprTy>>(clause->v[0].t);
-      if (lowerBound) {
-        result.numTeamsLower =
-            fir::getBase(converter.genExprValue(*lowerBound, stmtCtx));
-      }
+    // Extract optional lower bound
+    if (lowerBound) {
+      result.numTeamsLower =
+          fir::getBase(converter.genExprValue(*lowerBound, stmtCtx));
     }
 
-    // Extract upper bounds from all Range elements
-    result.numTeamsUpperVars.reserve(clause->v.size());
-    for (const auto &range : clause->v) {
-      auto &upperBound = std::get<ExprTy>(range.t);
+    // Extract all upper bounds
+    result.numTeamsUpperVars.reserve(upperBounds.size());
+    for (const auto &ub : upperBounds) {
       result.numTeamsUpperVars.push_back(
-          fir::getBase(converter.genExprValue(upperBound, stmtCtx)));
+          fir::getBase(converter.genExprValue(ub, stmtCtx)));
     }
 
     return true;

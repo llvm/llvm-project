@@ -997,18 +997,11 @@ template <typename T, typename I, typename E> //
 struct NumTeamsT {
   using LowerBound = E;
   using UpperBound = E;
+  using UpperBoundList = ListT<UpperBound>;
 
-  // The name Range is not a spec name.
-  struct Range {
-    using TupleTrait = std::true_type;
-    std::tuple<OPT(LowerBound), UpperBound> t;
-  };
-
-  // The name List is not a spec name. The list is an extension to allow
-  // specifying a grid with the dims modifier (OpenMP 6.1) or ompx_bare clause.
-  using List = ListT<Range>;
-  using WrapperTrait = std::true_type;
-  List v;
+  using TupleTrait = std::true_type;
+  // Representation: {LB?, [UB]}
+  std::tuple<OPT(LowerBound), UpperBoundList> t;
 };
 
 // V5.2: [10.1.2] `num_threads` clause
