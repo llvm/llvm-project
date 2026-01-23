@@ -134,7 +134,8 @@ HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
 }
 } // namespace llvm::sys::windows
 
-SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+llvm::SetThreadPriorityResult
+llvm::set_thread_priority(ThreadPriority Priority) {
 #ifdef THREAD_POWER_THROTTLING_CURRENT_VERSION
   HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
   if (kernelM) {
@@ -237,9 +238,9 @@ static std::optional<std::vector<USHORT>> getActiveGroups() {
   return Groups;
 }
 
-static ArrayRef<ProcessorGroup> getProcessorGroups() {
+static llvm::ArrayRef<ProcessorGroup> getProcessorGroups() {
   auto computeGroups = []() {
-    SmallVector<ProcessorGroup, 4> Groups;
+    llvm::SmallVector<ProcessorGroup, 4> Groups;
 
     auto HandleGroup = [&](SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *ProcInfo) {
       GROUP_RELATIONSHIP &El = ProcInfo->Group;
@@ -303,7 +304,7 @@ static ArrayRef<ProcessorGroup> getProcessorGroups() {
     return std::vector<ProcessorGroup>(Groups.begin(), Groups.end());
   };
   static auto Groups = computeGroups();
-  return ArrayRef<ProcessorGroup>(Groups);
+  return llvm::ArrayRef<ProcessorGroup>(Groups);
 }
 
 template <typename R, typename UnaryPredicate>
