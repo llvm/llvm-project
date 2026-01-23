@@ -84,10 +84,12 @@ jobs:
     - name: Debug
       shell: bash
       run: |
-        find /c/vcpkg -iname '*openssl*'
+        find /c/vcpkg -iname '*ssl*'
 
     - name: Install Dependencies
       shell: bash
+      env:
+        OPENSSL_DIR: /c/vcpkg/installed/arm64-windows/
       run: |
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
