@@ -637,7 +637,7 @@ xegpu::inferShapecastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
                                   ArrayRef<int64_t> resShape,
                                   ArrayRef<int64_t> srcShape) {
 
-  // there are two use cases:
+  // there are three use cases:
   // 1. expand dims of low-rank dimensions (e.g., 1D to 2D): to set up the
   // tensor before broadcast
   // 2. split dim of a high-rank dimension (e.g., 1D to 2D): to setup tensor
@@ -763,10 +763,10 @@ xegpu::inferShapecastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 xegpu::SliceAttr
 xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
                                 SmallVector<int64_t> reductionDims,
-                                DistributeLayoutAttr consumerPreferredLayout) {
+                                DistributeLayoutAttr consumerLayout) {
 
-  xegpu::SliceAttr sliceCPL =
-      dyn_cast<xegpu::SliceAttr>(consumerPreferredLayout);
+  xegpu::SliceAttr consumerSliceLayout =
+      dyn_cast<xegpu::SliceAttr>(consumerLayout);
 
   // Hardware constraints (TODO: these should ideally be queried from device
   // capabilities)
@@ -775,7 +775,7 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
   const int vectorSize = 8;     // Elements processed per vector instruction
   int srcShapeSize = srcShape.size();
   xegpu::DistributeLayoutAttr proposedSrcLayout;
-  auto context = consumerPreferredLayout.getContext();
+  auto context = consumerLayout.getContext();
   // Reduction layout requires at least 2D tensors
   if (srcShapeSize < 2)
     return nullptr;
@@ -797,58 +797,69 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
   // dims, we can directly use its parent layout as our source layout. This
   // ensures best alignment and avoids any data movement across subgroups
   // and lanes.
-  bool failToAlignSliceStruct = false;
-  if (sliceCPL && sliceCPL.getDims().asArrayRef().equals(reductionDims) &&
-      sliceCPL.getParent().getRank() == srcShapeSize) {
-    // The consumer is expecting a slice along the current reduction dimensions
-    xegpu::DistributeLayoutAttr parentCPL = sliceCPL.getParent();
 
+  auto canPreserveSliceLayout =
+      [&](ArrayRef<int64_t> srcShape, SmallVector<int64_t> reductionDims,
+          DistributeLayoutAttr consumerLayout) -> bool {
     // Verify that the consumer layout can be adapted to the source shape:
     // For each dimension, check if srcShape[i] is divisible by the parent's
-    // sg_layout[i]. If so, we can reuse the subgroup distribution pattern
+    // sg_layout[i] and lane_layout[i]. If so, sg_layout and lane_layout can be
+    // reused.
+
+    if (!consumerSliceLayout)
+      return false;
+    if (!consumerSliceLayout.getDims().asArrayRef().equals(reductionDims))
+      return false;
+    xegpu::DistributeLayoutAttr parentLayout = consumerSliceLayout.getParent();
+    if (!parentLayout.getRank() == srcShapeSize)
+      return false;
+
+    SmallVector<int64_t> parentSgLayout =
+        parentLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> parentLaneLayout =
+        parentLayout.getEffectiveLaneLayoutAsInt();
+
+    if (parentSgLayout.size() != static_cast<size_t>(srcShapeSize))
+      return false;
+    if (parentLaneLayout.size() != static_cast<size_t>(srcShapeSize))
+      return false;
+    for (int i = 0; i < srcShapeSize; i++) {
+      if (srcShape[i] % parentSgLayout[i] != 0)
+        return false;
+      if (instData[i] % parentLaneLayout[i] != 0)
+        return false;
+    }
+    return true;
+  };
+
+  if (canPreserveSliceLayout(srcShape, reductionDims, consumerLayout)) {
     // for each slice dim in source shape, if the dim size is different than the
     // result shape, try to adjust the sg_data/inst_data accordingly.
-    SmallVector<int64_t> pcplSgLayout = parentCPL.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> pcplLaneLayout =
-        parentCPL.getEffectiveLaneLayoutAsInt();
-    SmallVector<int64_t> pcplLaneData = parentCPL.getEffectiveLaneDataAsInt();
+    SmallVector<int64_t> parentSgLayout =
+        consumerSliceLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> parentLaneLayout =
+        consumerSliceLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> parentLaneData =
+        consumerSliceLayout.getEffectiveLaneDataAsInt();
 
-    proposedSrcLayout = parentCPL;
-
-    if (pcplSgLayout.size() == static_cast<size_t>(srcShapeSize)) {
-      for (int i = 0; i < srcShapeSize; i++) {
-        if (srcShape[i] % pcplSgLayout[i] == 0) {
-          sgLayout[i] = pcplSgLayout[i];
-          sgData[i] = srcShape[i] / sgLayout[i];
-          instData[i] = std::min(instData[i], sgData[i]);
-        } else {
-          failToAlignSliceStruct = true;
-          break;
-        }
-      }
+    for (int i = 0; i < srcShapeSize; i++) {
+      sgLayout[i] = parentSgLayout[i];
+      sgData[i] = srcShape[i] / sgLayout[i];
+      instData[i] = std::min(instData[i], sgData[i]);
+      laneLayout[i] = parentLaneLayout[i];
+      laneData[i] = parentLaneData[i];
     }
 
-    if (pcplLaneLayout.size() == static_cast<size_t>(srcShapeSize)) {
-      for (int i = 0; i < srcShapeSize; i++) {
-        if (instData[i] % pcplLaneLayout[i] == 0) {
-          laneLayout[i] = pcplLaneLayout[i];
-          laneData[i] = pcplLaneData[i];
-        } else {
-          failToAlignSliceStruct = true;
-          break;
-        }
-      }
-    }
   } else {
-    failToAlignSliceStruct = true;
-  }
+    // Strategy 2: Construct a new layout aligned with consumer's sg_layout for
+    // the result (non-reduction dims) then distribute remaining subgroups
+    // across reduced dimensions
 
-  // Strategy 2: Construct a new layout aligned with consumer's sg_layout for
-  // the result (non-reduction dims) then distribute remaining subgroups across
-  // other dimensions
-  if (failToAlignSliceStruct) {
     SmallVector<int64_t> cplSgLayout =
-        consumerPreferredLayout.getEffectiveSgLayoutAsInt();
+        consumerLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> cplSgData = consumerLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> cplInstData =
+        consumerLayout.getEffectiveInstDataAsInt();
     int remainingSgCount = workgroupSize;
     SmallVector<int64_t> remainingDims;
     int cplId = cplSgLayout.size() - 1;
@@ -856,31 +867,29 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
     // This ensures the result after reduction has the expected distribution
     for (int i = srcShapeSize - 1; i >= 0; i--) {
       if (!llvm::is_contained(reductionDims, i) && cplId >= 0) {
-        if (srcShape[i] % cplSgLayout[cplId] == 0) {
-          sgLayout[i] = cplSgLayout[cplId];
-          sgData[i] = srcShape[i] / sgLayout[i];
-          instData[i] = std::min(instData[i], sgData[i]);
-          remainingSgCount /= sgLayout[i];
-          cplId--;
-          continue;
-        }
+        assert((srcShape[i] % cplSgLayout[cplId] == 0) &&
+               "source shape not divisible by consumer sg_layout");
+        sgLayout[i] = cplSgLayout[cplId];
+        sgData[i] = srcShape[i] / sgLayout[i];
+        instData[i] = std::min(cplInstData[cplId], sgData[i]);
+        remainingSgCount /= sgLayout[i];
+        cplId--;
       }
-      remainingDims.push_back(i);
     }
 
     // Second pass: Distribute remaining subgroups across unhandled dimensions
     // This handles reduction dimensions and dimensions that didn't align with
     // consumer
     for (int i = srcShapeSize - 1; i >= 0; i--) {
-      sgLayout[i] = std::min((srcShape[i] / laneLayout[i]),
-                             static_cast<int64_t>(remainingSgCount));
-      sgData[i] = srcShape[i] / sgLayout[i];
-      instData[i] = std::min(instData[i], sgData[i]);
-      remainingSgCount /= sgLayout[i];
-      if (remainingSgCount == 1) {
-        break;
+      if (llvm::is_contained(reductionDims, i)) {
+        sgLayout[i] = std::min((srcShape[i] / laneLayout[i]),
+                               static_cast<int64_t>(remainingSgCount));
+        sgData[i] = srcShape[i] / sgLayout[i];
+        instData[i] = std::min(instData[i], sgData[i]);
+        remainingSgCount /= sgLayout[i];
       }
     }
+    assert(remainingSgCount == 1 && "not all subgroups have been distributed");
   }
 
   SmallVector<int32_t> sgLayout32(sgLayout.begin(), sgLayout.end());
@@ -893,8 +902,7 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
       DenseI32ArrayAttr::get(context, sgData32),
       DenseI32ArrayAttr::get(context, instData32),
       DenseI32ArrayAttr::get(context, laneLayout32),
-      DenseI32ArrayAttr::get(context, laneData32),
-      consumerPreferredLayout.getOrder());
+      DenseI32ArrayAttr::get(context, laneData32), consumerLayout.getOrder());
   xegpu::SliceAttr reductionResLayout =
       xegpu::SliceAttr::get(context, proposedSrcLayout,
                             DenseI64ArrayAttr::get(context, reductionDims));
