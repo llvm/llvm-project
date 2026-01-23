@@ -168,8 +168,8 @@ jobs:
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
-          windows-2022-arm)
-            build_runs_on="windows-2022-arm-16core"
+          windows-11-arm)
+            build_runs_on="windows-11-arm-16core"
             test_runs_on=$build_runs_on
             ;;
           macos-14)

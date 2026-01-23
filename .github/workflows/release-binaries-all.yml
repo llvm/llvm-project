@@ -90,7 +90,7 @@ jobs:
         # We use ubuntu-22.04 rather than the latest version to make the built
         # binaries more portable (eg functional aginast older glibc).
         runs-on:
-          - windows-2022-arm
+          - windows-11-arm
 
     uses: ./.github/workflows/release-binaries.yml
     with:
