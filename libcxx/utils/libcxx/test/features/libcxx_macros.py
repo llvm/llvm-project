@@ -79,7 +79,8 @@ for mode in ("none", "fast", "extensive", "debug"):
     check_program = f"""
         #include <stddef.h> // any header to get the definitions
         int main(int, char**) {{
-        #if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()}
+        #if defined(_LIBCPP_VERSION) && \\
+                defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()}
             return 0;
         #else
             return 1;
