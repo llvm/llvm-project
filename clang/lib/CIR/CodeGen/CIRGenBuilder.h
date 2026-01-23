@@ -678,6 +678,15 @@ public:
         getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
     return createVecShuffle(loc, vec1, poison, mask);
   }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy, Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(*this, loc,
+                                            this->getStringAttr(str), resTy,
+                                            std::forward<Operands>(op)...)
+        .getResult();
+  }
 };
 
 } // namespace clang::CIRGen
