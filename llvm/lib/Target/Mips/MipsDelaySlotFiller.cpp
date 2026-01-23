@@ -650,8 +650,8 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
 
     // R5900 short loop erratum fix: skip delay slot filling for short backward
     // loops to avoid triggering a hardware bug where short loops may exit
-    // early.
-    if (STI.isR5900() && isR5900ShortLoopBranch(&*I, MBB)) {
+    // early. The fix can be controlled with -mfix-r5900 / -mno-fix-r5900.
+    if (STI.fixR5900() && isR5900ShortLoopBranch(&*I, MBB)) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": skipping delay slot fill for R5900 "
                                       "short loop branch.\n");
       ++R5900ShortLoopNops;

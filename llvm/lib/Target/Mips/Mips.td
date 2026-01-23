@@ -186,9 +186,13 @@ def FeatureCnMipsP : SubtargetFeature<"cnmipsp", "HasCnMipsP",
                                       "true", "Octeon+ cnMIPS Support",
                                       [FeatureCnMips]>;
 
+def FeatureFixR5900 : SubtargetFeature<"fix-r5900", "FixR5900", "true",
+                                       "Enable R5900 short loop erratum fix">;
+
 def FeatureR5900 : SubtargetFeature<"r5900", "IsR5900", "true",
                                     "R5900 (PS2 Emotion Engine) Support",
-                                    [FeatureMips3, FeatureSoftFloat]>;
+                                    [FeatureMips3, FeatureSoftFloat,
+                                     FeatureFixR5900]>;
 
 def FeatureUseTCCInDIV : SubtargetFeature<
                                "use-tcc-in-div",

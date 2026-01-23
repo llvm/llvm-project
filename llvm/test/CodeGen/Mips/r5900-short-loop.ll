@@ -1,18 +1,24 @@
 ; RUN: llc -mtriple=mips64el -mcpu=r5900 < %s | FileCheck %s -check-prefix=FIX
+; RUN: llc -mtriple=mips64el -mcpu=r5900 -mattr=-fix-r5900 < %s | FileCheck %s -check-prefix=NOFIX
 ;
 ; Test R5900 short loop erratum fix.
 ; The R5900 has a hardware bug where short loops (6 instructions or fewer)
 ; with a branch may exit after 1-2 iterations instead of the expected count.
 ; The fix ensures the delay slot contains a NOP for such short backward branches.
-; The fix is always enabled for R5900 - there is no way to disable it.
 
-; Short loop test with store - delay slot NOT filled due to short loop fix
-; bnez followed by nop (short loop workaround)
+; Short loop test with store - delay slot can be filled when fix is disabled
+; With fix enabled: bnez followed by nop
+; With fix disabled: bnez followed by daddiu (delay slot filled)
 
 ; FIX-LABEL: test_short_loop_store:
 ; FIX:       .LBB0_1:
 ; FIX:       bnez
 ; FIX-NEXT:  nop
+
+; NOFIX-LABEL: test_short_loop_store:
+; NOFIX:     .LBB0_1:
+; NOFIX:     bnez
+; NOFIX-NEXT: daddiu
 define void @test_short_loop_store(ptr %arr, i32 %n) {
 entry:
   br label %loop
@@ -37,6 +43,11 @@ exit:
 ; FIX:       bnez ${{[0-9]+}}, .LBB1_1
 ; Delay slot should be filled with actual instruction, not nop
 ; FIX-NEXT:  {{sw|daddiu|addu}}
+
+; NOFIX-LABEL: test_long_loop:
+; NOFIX:     .LBB1_1:
+; NOFIX:     bnez ${{[0-9]+}}, .LBB1_1
+; NOFIX-NEXT: {{sw|daddiu|addu}}
 define i32 @test_long_loop(ptr %arr, i32 %n) {
 entry:
   br label %loop
