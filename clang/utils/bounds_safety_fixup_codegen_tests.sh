@@ -58,7 +58,8 @@ fi
 # TESTS=( \
 #   BoundsSafety/CodeGen/constant-forge-ptr-expr.c \
 # )
-TESTS=( )
+TESTS=( BoundsSafety/CodeGen/bounds-attributed-return-O0.c \ 
+)
 
 for t in "${TESTS[@]}"; do
   TEST=${TEST_ROOT}/$t

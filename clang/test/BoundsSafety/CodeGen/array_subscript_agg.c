@@ -12,7 +12,7 @@ struct Foo {
 };
 
 // NEW-LABEL: define dso_local i64 @access_Foo_bi(
-// NEW-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// NEW-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // NEW-NEXT:  [[ENTRY:.*:]]
 // NEW-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -54,7 +54,7 @@ struct Foo {
 // NEW-NEXT:    ret i64 [[TMP5]]
 //
 // LEGACY-LABEL: define dso_local i64 @access_Foo_bi(
-// LEGACY-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// LEGACY-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -747,7 +747,7 @@ struct NestedArrayOfStructs {
 // NEW-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
 // NEW-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[NAOS_ADDR]], align 8
 // NEW-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw [[STRUCT_NESTEDARRAYOFSTRUCTS:%.*]], ptr [[TMP0]], i32 0, i32 0
-// NEW-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [5 x %struct.Foo], ptr [[ARR]], i64 0, i64 0
+// NEW-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [5 x [[STRUCT_FOO]]], ptr [[ARR]], i64 0, i64 0
 // NEW-NEXT:    [[UPPER:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[ARRAYDECAY]], i64 5
 // NEW-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // NEW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
@@ -785,7 +785,7 @@ struct NestedArrayOfStructs {
 // LEGACY-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
 // LEGACY-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[NAOS_ADDR]], align 8
 // LEGACY-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw [[STRUCT_NESTEDARRAYOFSTRUCTS:%.*]], ptr [[TMP0]], i32 0, i32 0
-// LEGACY-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [5 x %struct.Foo], ptr [[ARR]], i64 0, i64 0
+// LEGACY-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [5 x [[STRUCT_FOO]]], ptr [[ARR]], i64 0, i64 0
 // LEGACY-NEXT:    [[UPPER:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[ARRAYDECAY]], i64 5
 // LEGACY-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // LEGACY-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
@@ -807,7 +807,7 @@ struct HasFAM {
 // ArraySubscriptExpr (rdar://145253815).
 
 // NEW-LABEL: define dso_local i64 @access_Foo_from_HasFAM(
-// NEW-SAME: ptr dead_on_return noundef [[HAS_FAM:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// NEW-SAME: ptr noundef dead_on_return [[HAS_FAM:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*:]]
 // NEW-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 // NEW-NEXT:    [[HAS_FAM_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -838,7 +838,7 @@ struct HasFAM {
 // NEW-NEXT:    unreachable, !annotation [[META4]]
 // NEW:       [[CONT3]]:
 // NEW-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw [[STRUCT_HASFAM]], ptr [[WIDE_PTR_PTR]], i32 0, i32 1
-// NEW-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x %struct.Foo], ptr [[FAM]], i64 0, i64 0
+// NEW-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x [[STRUCT_FOO]]], ptr [[FAM]], i64 0, i64 0
 // NEW-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP4]], ptr align 8 [[HAS_FAM]], i64 24, i1 false)
 // NEW-NEXT:    [[WIDE_PTR_UB_ADDR5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 1
 // NEW-NEXT:    [[WIDE_PTR_UB6:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR5]], align 8
@@ -885,7 +885,7 @@ struct HasFAM {
 // NEW-NEXT:    ret i64 [[TMP12]]
 //
 // LEGACY-LABEL: define dso_local i64 @access_Foo_from_HasFAM(
-// LEGACY-SAME: ptr dead_on_return noundef [[HAS_FAM:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: ptr noundef dead_on_return [[HAS_FAM:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 // LEGACY-NEXT:    [[HAS_FAM_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -916,7 +916,7 @@ struct HasFAM {
 // LEGACY-NEXT:    unreachable, !annotation [[META5]]
 // LEGACY:       [[CONT3]]:
 // LEGACY-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw [[STRUCT_HASFAM]], ptr [[WIDE_PTR_PTR]], i32 0, i32 1
-// LEGACY-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x %struct.Foo], ptr [[FAM]], i64 0, i64 0
+// LEGACY-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x [[STRUCT_FOO]]], ptr [[FAM]], i64 0, i64 0
 // LEGACY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP4]], ptr align 8 [[HAS_FAM]], i64 24, i1 false)
 // LEGACY-NEXT:    [[WIDE_PTR_UB_ADDR5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP4]], i32 0, i32 1
 // LEGACY-NEXT:    [[WIDE_PTR_UB6:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR5]], align 8
@@ -1031,7 +1031,7 @@ struct Foo access_Foo_eb(struct Foo* __ended_by(end) start, int idx, struct Foo*
 }
 
 // NEW-LABEL: define dso_local i32 @access_Foo_member_bi(
-// NEW-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// NEW-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*:]]
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // NEW-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -1072,7 +1072,7 @@ struct Foo access_Foo_eb(struct Foo* __ended_by(end) start, int idx, struct Foo*
 // NEW-NEXT:    ret i32 [[TMP5]]
 //
 // LEGACY-LABEL: define dso_local i32 @access_Foo_member_bi(
-// LEGACY-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LEGACY-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -1423,7 +1423,7 @@ struct Foo access_MemberIsAgg_member_bidi(struct MemberIsAgg* __indexable ptr, i
 // Access using ptr arithmetic has identical codegen
 
 // NEW-LABEL: define dso_local i64 @access_Foo_bi_ptr_arith(
-// NEW-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// NEW-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*:]]
 // NEW-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1478,7 +1478,7 @@ struct Foo access_MemberIsAgg_member_bidi(struct MemberIsAgg* __indexable ptr, i
 // NEW-NEXT:    ret i64 [[TMP14]]
 //
 // LEGACY-LABEL: define dso_local i64 @access_Foo_bi_ptr_arith(
-// LEGACY-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1530,7 +1530,7 @@ struct Foo access_Foo_bi_ptr_arith(struct Foo* __bidi_indexable ptr, int idx) {
 }
 
 // NEW-LABEL: define dso_local void @compute_addr_with_subscript_Foo_bi(
-// NEW-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// NEW-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*:]]
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // NEW-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -1557,7 +1557,7 @@ struct Foo access_Foo_bi_ptr_arith(struct Foo* __bidi_indexable ptr, int idx) {
 // NEW-NEXT:    ret void
 //
 // LEGACY-LABEL: define dso_local void @compute_addr_with_subscript_Foo_bi(
-// LEGACY-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LEGACY-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -1588,7 +1588,7 @@ void compute_addr_with_subscript_Foo_bi(struct Foo* __bidi_indexable ptr, int id
 }
 
 // NEW-LABEL: define dso_local void @compute_addr_with_ptr_arith_Foo_bi(
-// NEW-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// NEW-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*:]]
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // NEW-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -1648,7 +1648,7 @@ void compute_addr_with_subscript_Foo_bi(struct Foo* __bidi_indexable ptr, int id
 // NEW-NEXT:    ret void
 //
 // LEGACY-LABEL: define dso_local void @compute_addr_with_ptr_arith_Foo_bi(
-// LEGACY-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LEGACY-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4

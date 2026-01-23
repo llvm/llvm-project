@@ -15,7 +15,7 @@
 
 // This should have 3 traps
 // CHECK-LABEL: define i32 @i_want_to_be_inlined(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -53,7 +53,7 @@ __attribute__((always_inline)) int i_want_to_be_inlined(
 
 // This should have 6 traps
 // CHECK-LABEL: define i32 @consume(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[PTR:%.*]], ptr dead_on_return noundef readonly captures(none) [[PTR2:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[PTR:%.*]], ptr noundef readonly captures(none) dead_on_return [[PTR2:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR2]], align 8
 // CHECK-NEXT:    [[BYVAL_TEMP_SROA_4_0_PTR2_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 8

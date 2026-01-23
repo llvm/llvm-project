@@ -38,7 +38,7 @@
 // OPT: @trap.reason.2 = private unnamed_addr constant [41 x i8] c"indexing below lower bound in 'ptr[idx]'\00", align 4
 //.
 // UNOPT-LABEL: define dso_local i32 @read(
-// UNOPT-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNOPT-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNOPT-NEXT:  [[ENTRY:.*:]]
 // UNOPT-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // UNOPT-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -78,7 +78,7 @@
 // UNOPT-NEXT:    ret i32 [[TMP5]]
 //
 // UNOPT-TF-LABEL: define dso_local i32 @read(
-// UNOPT-TF-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNOPT-TF-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNOPT-TF-NEXT:  [[ENTRY:.*:]]
 // UNOPT-TF-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // UNOPT-TF-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -118,7 +118,7 @@
 // UNOPT-TF-NEXT:    ret i32 [[TMP5]]
 //
 // OPT-LABEL: define dso_local i32 @read(
-// OPT-SAME: ptr dead_on_return noundef readonly captures(none) [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// OPT-SAME: ptr noundef readonly captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR]], align 8
 // OPT-NEXT:    [[AGG_TEMP_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8

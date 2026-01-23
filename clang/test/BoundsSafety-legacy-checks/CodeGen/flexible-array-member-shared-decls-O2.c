@@ -41,12 +41,12 @@ int * __counted_by(len) baz(int len);
 // CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR3]], !annotation [[META13:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[CALL1]], [[ADD_PTR3]], !annotation [[META13]]
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[DOTNOT106]], [[TMP2]], !annotation [[META11]]
-// CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[DOTNOT]], i1 [[TMP3]], i1 false, !annotation [[META11]]
-// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT95]], label %[[TRAP]], !prof [[PROF14:![0-9]+]], !annotation [[META12]]
+// CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[DOTNOT]], i1 [[TMP3]], i1 false, !prof [[PROF14:![0-9]+]], !annotation [[META11]]
+// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT95]], label %[[TRAP]], !prof [[PROF15:![0-9]+]], !annotation [[META12]]
 // CHECK:       [[CONT95]]:
 // CHECK-NEXT:    [[LEN70:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL1]], i64 8
-// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN70]], align 8, !tbaa [[TBAA15:![0-9]+]]
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA19:![0-9]+]]
+// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN70]], align 8, !tbaa [[TBAA16:![0-9]+]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA20:![0-9]+]]
 // CHECK-NEXT:    ret ptr [[CALL1]]
 //
 struct Outer *foo(int len) {
@@ -82,12 +82,12 @@ struct Outer *foo(int len) {
 // CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR3]], !annotation [[META13]]
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[CALL1]], [[ADD_PTR3]], !annotation [[META13]]
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[DOTNOT106]], [[TMP2]], !annotation [[META11]]
-// CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[DOTNOT]], i1 [[TMP3]], i1 false, !annotation [[META11]]
-// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !prof [[PROF14]], !annotation [[META12]]
+// CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[DOTNOT]], i1 [[TMP3]], i1 false, !prof [[PROF14]], !annotation [[META11]]
+// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !prof [[PROF15]], !annotation [[META12]]
 // CHECK:       [[CONT69]]:
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA19]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA20]]
 // CHECK-NEXT:    [[LEN78:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL1]], i64 8
-// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN78]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN78]], align 8, !tbaa [[TBAA16]]
 // CHECK-NEXT:    ret ptr [[CALL1]]
 //
 struct Outer *foo2(int len) {
@@ -109,10 +109,11 @@ struct Outer *foo2(int len) {
 // CHECK: [[META11]] = !{!"bounds-safety-check-ptr-neq-null"}
 // CHECK: [[META12]] = !{!"bounds-safety-check-one-past-end-overflow"}
 // CHECK: [[META13]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// CHECK: [[PROF14]] = !{!"branch_weights", i32 -16385, i32 16380}
-// CHECK: [[TBAA15]] = !{[[META16:![0-9]+]], [[META3]], i64 8}
-// CHECK: [[META16]] = !{!"Inner", [[META17:![0-9]+]], i64 0, [[META3]], i64 8}
-// CHECK: [[META17]] = !{!"p1 int", [[META18:![0-9]+]], i64 0}
-// CHECK: [[META18]] = !{!"any pointer", [[META4]], i64 0}
-// CHECK: [[TBAA19]] = !{[[META16]], [[META17]], i64 0}
+// CHECK: [[PROF14]] = !{!"branch_weights", i32 -12288, i32 12286}
+// CHECK: [[PROF15]] = !{!"branch_weights", i32 -16385, i32 16380}
+// CHECK: [[TBAA16]] = !{[[META17:![0-9]+]], [[META3]], i64 8}
+// CHECK: [[META17]] = !{!"Inner", [[META18:![0-9]+]], i64 0, [[META3]], i64 8}
+// CHECK: [[META18]] = !{!"p1 int", [[META19:![0-9]+]], i64 0}
+// CHECK: [[META19]] = !{!"any pointer", [[META4]], i64 0}
+// CHECK: [[TBAA20]] = !{[[META17]], [[META18]], i64 0}
 //.

@@ -9,7 +9,7 @@
 #include <ptrcheck.h>
 
 // OPT0-LABEL: define i32 @consume(
-// OPT0-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// OPT0-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // OPT0-NEXT:  [[ENTRY:.*:]]
 // OPT0-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // OPT0-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -49,7 +49,7 @@
 // OPT0-NEXT:    ret i32 [[TMP5]]
 //
 // OPT2-LABEL: define i32 @consume(
-// OPT2-SAME: ptr dead_on_return noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// OPT2-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // OPT2-NEXT:  [[ENTRY:.*:]]
 // OPT2-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // OPT2-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4

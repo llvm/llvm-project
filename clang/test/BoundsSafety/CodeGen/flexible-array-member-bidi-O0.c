@@ -14,7 +14,7 @@ struct Simple {
 // rdar://132731845 the flexible arrays are not bounds checked
 
 // CHECK-LABEL: define dso_local void @simple_no_flexbase_update(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
@@ -48,7 +48,7 @@ void simple_no_flexbase_update(struct Simple * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @simple_flexbase_update(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
@@ -85,7 +85,7 @@ void simple_flexbase_update(struct Simple * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @simple_flexbase_self_assign(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
@@ -128,7 +128,7 @@ struct Shared {
 int * __counted_by(len) baz(int len);
 
 // CHECK-LABEL: define dso_local void @shared_no_flexbase_update(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -266,7 +266,7 @@ void shared_no_flexbase_update(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_no_flexbase_update_reverse(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -401,7 +401,7 @@ void shared_no_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_update(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P3:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -542,7 +542,7 @@ void shared_flexbase_update(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_update_reverse(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P3:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -683,7 +683,7 @@ void shared_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -823,7 +823,7 @@ void shared_flexbase_self_assign(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign_reverse(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -963,7 +963,7 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign_fr(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -1146,7 +1146,7 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign_fr_reverse(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -1335,7 +1335,7 @@ struct Double {
 };
 
 // CHECK-LABEL: define dso_local void @double_no_flexbase_update_once(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.2", align 8
@@ -1369,7 +1369,7 @@ void double_no_flexbase_update_once(struct Double * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @double_no_flexbase_update_both(
-// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.2", align 8
