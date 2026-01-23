@@ -4515,23 +4515,27 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
               *TrueSI, CondVal, /*CondIsTrue=*/true, DL))
         return replaceOperand(SI, 1, V);
 
-      // select(C0, select(C1, a, b), b) -> select(C0&C1, a, b)
       // We choose this as normal form to enable folding on the And and
       // shortening paths for the values (this helps getUnderlyingObjects() for
       // example).
-      if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
-        Value *And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
-        replaceOperand(SI, 0, And);
-        replaceOperand(SI, 1, TrueSI->getTrueValue());
-        return &SI;
-      }
-      // select(C0, select(C1, b, a), b) -> select(C0&!C1, a, b)
-      if (TrueSI->getTrueValue() == FalseVal && TrueSI->hasOneUse()) {
-        Value *Negation = Builder.CreateNot(TrueSI->getCondition());
-        Value *And = Builder.CreateLogicalAnd(CondVal, Negation);
-        replaceOperand(SI, 0, And);
-        replaceOperand(SI, 1, TrueSI->getFalseValue());
-        return &SI;
+      if (TrueSI->hasOneUse()) {
+        Value *And = nullptr, *OtherVal = nullptr;
+        // select(C0, select(C1, a, b), b) -> select(C0&C1, a, b)
+        if (TrueSI->getFalseValue() == FalseVal) {
+          And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
+          OtherVal = TrueSI->getTrueValue();
+        }
+        // select(C0, select(C1, b, a), b) -> select(C0&!C1, a, b)
+        else if (TrueSI->getTrueValue() == FalseVal) {
+          Value *Negation = Builder.CreateNot(TrueSI->getCondition());
+          And = Builder.CreateLogicalAnd(CondVal, Negation);
+          OtherVal = TrueSI->getFalseValue();
+        }
+        if (And && OtherVal) {
+          replaceOperand(SI, 0, And);
+          replaceOperand(SI, 1, OtherVal);
+          return &SI;
+        }
       }
     }
   }
@@ -4543,20 +4547,24 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
               *FalseSI, CondVal, /*CondIsTrue=*/false, DL))
         return replaceOperand(SI, 2, V);
 
-      // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
-      if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
-        Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
-        replaceOperand(SI, 0, Or);
-        replaceOperand(SI, 2, FalseSI->getFalseValue());
-        return &SI;
-      }
-      // select(C0, a, select(C1, b, a)) -> select(C0|!C1, a, b)
-      if (FalseSI->getFalseValue() == TrueVal && FalseSI->hasOneUse()) {
-        Value *Negation = Builder.CreateNot(FalseSI->getCondition());
-        Value *Or = Builder.CreateLogicalOr(CondVal, Negation);
-        replaceOperand(SI, 0, Or);
-        replaceOperand(SI, 2, FalseSI->getTrueValue());
-        return &SI;
+      if (FalseSI->hasOneUse()) {
+        Value *Or = nullptr, *OtherVal = nullptr;
+        // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
+        if (FalseSI->getTrueValue() == TrueVal) {
+          Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
+          OtherVal = FalseSI->getFalseValue();
+        }
+        // select(C0, a, select(C1, b, a)) -> select(C0|!C1, a, b)
+        else if (FalseSI->getFalseValue() == TrueVal) {
+          Value *Negation = Builder.CreateNot(FalseSI->getCondition());
+          Or = Builder.CreateLogicalOr(CondVal, Negation);
+          OtherVal = FalseSI->getTrueValue();
+        }
+        if (Or && OtherVal) {
+          replaceOperand(SI, 0, Or);
+          replaceOperand(SI, 2, OtherVal);
+          return &SI;
+        }
       }
     }
   }
