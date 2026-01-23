@@ -536,8 +536,9 @@ define i32 @fshl_i32_undef1_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshl_i32_undef1_msk:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    andb $7, %cl
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andl $7, %ecx
+; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE2-NEXT:    shll %cl, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -545,7 +546,7 @@ define i32 @fshl_i32_undef1_msk(i32 %a0, i32 %a1) nounwind {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl %esi, %ecx
 ; X64-AVX-NEXT:    movl %edi, %eax
-; X64-AVX-NEXT:    andb $7, %cl
+; X64-AVX-NEXT:    andl $7, %ecx
 ; X64-AVX-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-AVX-NEXT:    shll %cl, %eax
 ; X64-AVX-NEXT:    retq
@@ -629,8 +630,9 @@ define i32 @fshr_i32_undef0_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshr_i32_undef0_msk:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    andb $7, %cl
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andl $7, %ecx
+; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE2-NEXT:    shrl %cl, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -638,7 +640,7 @@ define i32 @fshr_i32_undef0_msk(i32 %a0, i32 %a1) nounwind {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl %esi, %ecx
 ; X64-AVX-NEXT:    movl %edi, %eax
-; X64-AVX-NEXT:    andb $7, %cl
+; X64-AVX-NEXT:    andl $7, %ecx
 ; X64-AVX-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-AVX-NEXT:    shrl %cl, %eax
 ; X64-AVX-NEXT:    retq

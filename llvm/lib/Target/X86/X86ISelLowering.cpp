@@ -61944,13 +61944,22 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   // TODO: Almost no 8-bit ops are desirable because they have no actual
   //       size/speed advantages vs. 32-bit ops, but they do have a major
   //       potential disadvantage by causing partial register stalls.
-  //
-  // 8-bit multiply/shl is probably not cheaper than 32-bit multiply/shl, and
-  // we have specializations to turn 32-bit multiply/shl into LEA or other ops.
-  // Also, see the comment in "IsDesirableToPromoteOp" - where we additionally
-  // check for a constant operand to the multiply.
-  if ((Opc == ISD::MUL || Opc == ISD::SHL) && VT == MVT::i8)
-    return false;
+  if (VT == MVT::i8) {
+    switch (Opc) {
+    default:
+      break;
+    case ISD::MUL:
+    case ISD::SHL:
+    case ISD::SRA:
+    case ISD::SRL:
+    case ISD::SUB:
+    case ISD::ADD:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+      return Subtarget.hasNDD();
+    }
+  }
 
   // i16 instruction encodings are longer and some i16 instructions are slow,
   // so those are not desirable.
