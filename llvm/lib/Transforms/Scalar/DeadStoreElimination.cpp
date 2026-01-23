@@ -1224,7 +1224,7 @@ struct DSEState {
 
     auto IBounded = InvisibleToCallerAfterRetBounded.find(V);
     if (IBounded != InvisibleToCallerAfterRetBounded.end()) {
-      int64_t ValueOffset;
+      int64_t ValueOffset = 0;
       [[maybe_unused]] const Value *BaseValue =
           GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL);
       assert(BaseValue == V);
