@@ -257,7 +257,10 @@ private:
   /// specify proper operation (e.g. 'module') so that the discovered
   /// SymbolTable contains all the symbols that may appear during
   /// the aliasing queries through the constructed AliasAnalysis
-  /// entity.
+  /// entity. On ther other hand, this approach may be too expensive
+  /// for the clients that create AliasAnalysis on the fly for just
+  /// a few values that are likely not globals.
+  /// We can have both modes for different clients.
   llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
 };
 
