@@ -17052,10 +17052,22 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
 
     // setcc v.64, 0x1'000'000, ult => setcc v.hi32, 0, eq
-    if (VT == MVT::i64 && CRHSVal.getZExtValue() == 1ull << 32 &&
-        CC == ISD::SETULT) {
-      return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
-                          DAG.getConstant(0, SL, MVT::i32), ISD::SETEQ);
+    if (VT == MVT::i64) {
+      const uint64_t Bit32 = 1ull << 32;
+      const uint64_t CRHSInt = CRHSVal.getZExtValue();
+
+      ISD::CondCode NewCC = ISD::SETCC_INVALID;
+      if ((CRHSInt == Bit32 && CC == ISD::SETULT) ||
+          (CRHSInt == Bit32 - 1 && CC == ISD::SETULE)) {
+        NewCC = ISD::SETEQ;
+      } else if ((CRHSInt == Bit32 && CC == ISD::SETUGE) ||
+                 (CRHSInt == Bit32 - 1 && CC == ISD::SETUGT)) {
+        NewCC = ISD::SETNE;
+      }
+
+      if (NewCC != ISD::SETCC_INVALID)
+        return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                            DAG.getConstant(0, SL, MVT::i32), NewCC);
     }
   }
 
