@@ -484,11 +484,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::BITCAST);
   }
 
-  // Set DAG combine for 'LASX' feature.
-
-  if (Subtarget.hasExtLASX())
-    setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
@@ -6867,42 +6862,6 @@ performSPLIT_PAIR_F64Combine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue
-performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const LoongArchSubtarget &Subtarget) {
-  if (!DCI.isBeforeLegalize())
-    return SDValue();
-
-  MVT EltVT = N->getSimpleValueType(0);
-  SDValue Vec = N->getOperand(0);
-  EVT VecTy = Vec->getValueType(0);
-  SDValue Idx = N->getOperand(1);
-  unsigned IdxOp = Idx.getOpcode();
-  SDLoc DL(N);
-
-  if (!VecTy.is256BitVector() || isa<ConstantSDNode>(Idx))
-    return SDValue();
-
-  // Combine:
-  //   t2 = truncate t1
-  //   t3 = {zero/sign/any}_extend t2
-  //   t4 = extract_vector_elt t0, t3
-  // to:
-  //   t4 = extract_vector_elt t0, t1
-  if (IdxOp == ISD::ZERO_EXTEND || IdxOp == ISD::SIGN_EXTEND ||
-      IdxOp == ISD::ANY_EXTEND) {
-    SDValue IdxOrig = Idx.getOperand(0);
-    if (!(IdxOrig.getOpcode() == ISD::TRUNCATE))
-      return SDValue();
-
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
-                       IdxOrig.getOperand(0));
-  }
-
-  return SDValue();
-}
-
 /// Do target-specific dag combines on LoongArchISD::VANDN nodes.
 static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
@@ -7040,8 +6999,6 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::SPLIT_PAIR_F64:
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
-  case ISD::EXTRACT_VECTOR_ELT:
-    return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::VANDN:
     return performVANDNCombine(N, DAG, DCI, Subtarget);
   }

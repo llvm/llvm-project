@@ -59,6 +59,10 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -80,6 +84,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Initial support for gfx1310
+
 Changes to the ARM Backend
 --------------------------
 
@@ -100,6 +106,13 @@ Changes to the LoongArch Backend
 
 Changes to the MIPS Backend
 ---------------------------
+
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
 Changes to the PowerPC Backend
 ------------------------------
