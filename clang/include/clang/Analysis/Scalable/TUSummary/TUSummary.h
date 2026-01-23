@@ -13,7 +13,7 @@
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
-#include "clang/Analysis/Scalable/TUSummary/TUSummaryData.h"
+#include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include <map>
 #include <memory>
 
@@ -25,7 +25,7 @@ class TUSummary {
   BuildNamespace TUNamespace;
   EntityIdTable IdTable;
 
-  std::map<SummaryName, std::map<EntityId, std::unique_ptr<TUSummaryData>>>
+  std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
       Data;
 
 public:
