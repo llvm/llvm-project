@@ -13,26 +13,21 @@
 
 #include <dispatch/dispatch.h>
 #include <dlfcn.h>
-#if __has_include(<responsibility.h>)
-#include <responsibility.h>
-#endif
 
 errno_t responsibility_spawnattrs_setdisclaim(posix_spawnattr_t *attrs,
                                               bool disclaim);
 
 static inline int setup_posix_spawn_responsible_flag(posix_spawnattr_t *attr) {
-  if (@available(macOS 10.14, *)) {
-    static __typeof__(responsibility_spawnattrs_setdisclaim)
-        *responsibility_spawnattrs_setdisclaim_ptr;
-    static dispatch_once_t pred;
-    dispatch_once(&pred, ^{
-      responsibility_spawnattrs_setdisclaim_ptr =
-          reinterpret_cast<__typeof__(&responsibility_spawnattrs_setdisclaim)>
-          (dlsym(RTLD_DEFAULT, "responsibility_spawnattrs_setdisclaim"));
-    });
-    if (responsibility_spawnattrs_setdisclaim_ptr)
-      return responsibility_spawnattrs_setdisclaim_ptr(attr, true);
-  }
+  static __typeof__(responsibility_spawnattrs_setdisclaim)
+      *responsibility_spawnattrs_setdisclaim_ptr;
+  static dispatch_once_t pred;
+  dispatch_once(&pred, ^{
+    responsibility_spawnattrs_setdisclaim_ptr =
+        reinterpret_cast<__typeof__(&responsibility_spawnattrs_setdisclaim)>(
+            dlsym(RTLD_DEFAULT, "responsibility_spawnattrs_setdisclaim"));
+  });
+  if (responsibility_spawnattrs_setdisclaim_ptr)
+    return responsibility_spawnattrs_setdisclaim_ptr(attr, true);
   return 0;
 }
 
