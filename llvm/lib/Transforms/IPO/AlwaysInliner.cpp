@@ -22,6 +22,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/IPO/InliningUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -83,17 +84,8 @@ public:
     return true;
   }
 
-  void addNewCallsToWorklist(
-      SmallVectorImpl<std::pair<CallBase *, int>> &Worklist,
-      int InlineHistoryID,
-      SmallVectorImpl<std::pair<Function *, int>> &InlineHistory,
-      Function *InlinedCallee) {
-    if (IFI.InlinedCallSites.empty())
-      return;
-    int NewHistoryID = InlineHistory.size();
-    InlineHistory.push_back({InlinedCallee, InlineHistoryID});
-    for (CallBase *CB : IFI.InlinedCallSites)
-      Worklist.push_back({CB, NewHistoryID});
+  ArrayRef<CallBase *> getInlinedCallSites() const {
+    return IFI.InlinedCallSites;
   }
 
   void addToMaybeInlinedFunctions(Function &F) {
@@ -133,64 +125,20 @@ public:
   }
 };
 
-static bool inlineHistoryIncludes(
-    Function *F, int InlineHistoryID,
-    const SmallVectorImpl<std::pair<Function *, int>> &InlineHistory) {
-  while (InlineHistoryID != -1) {
-    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
-           "Invalid inline history ID");
-    if (InlineHistory[InlineHistoryID].first == F)
-      return true;
-    InlineHistoryID = InlineHistory[InlineHistoryID].second;
-  }
-  return false;
-}
+/// Policy for flattenFunction template used by AlwaysInliner.
+class AlwaysInlinerFlattenPolicy {
+  InlinerHelper &IH;
+  function_ref<TargetTransformInfo &(Function &)> GetTTI;
 
-bool flattenFunction(Function &F, InlinerHelper &IH,
-                     function_ref<TargetTransformInfo &(Function &)> GetTTI) {
-  SmallVector<std::pair<CallBase *, int>, 16> Worklist;
-  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
-  OptimizationRemarkEmitter ORE(&F);
+public:
+  AlwaysInlinerFlattenPolicy(
+      InlinerHelper &IH, function_ref<TargetTransformInfo &(Function &)> GetTTI)
+      : IH(IH), GetTTI(GetTTI) {}
 
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (CB->getAttributes().hasFnAttr(Attribute::NoInline))
-          continue;
-        Function *Callee = CB->getCalledFunction();
-        if (!Callee)
-          continue;
-        if (!IH.canInline(*Callee)) {
-          continue;
-        }
-        Worklist.push_back({CB, -1});
-      }
-    }
-  }
-  bool Changed = false;
-  while (!Worklist.empty()) {
-    std::pair<CallBase *, int> P = Worklist.pop_back_val();
-    CallBase *CB = P.first;
-    int InlineHistoryID = P.second;
-    Function *Callee = CB->getCalledFunction();
-    if (!Callee)
-      continue;
-
-    if (Callee == &F ||
-        inlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory)) {
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined",
-                                        CB->getDebugLoc(), CB->getParent())
-               << "'" << ore::NV("Callee", Callee) << "' is not inlined into '"
-               << ore::NV("Caller", CB->getCaller())
-               << "': recursive call during flattening";
-      });
-      continue;
-    }
-
-    if (!IH.canInline(*Callee))
-      continue;
-
+  bool canInlineCall(Function &F, CallBase &CB) {
+    Function *Callee = CB.getCalledFunction();
+    if (!Callee || !IH.canInline(*Callee))
+      return false;
     // Use TTI to check for target-specific hard inlining restrictions.
     // This includes checks like:
     // - Cannot inline streaming callee into non-streaming caller
@@ -198,18 +146,19 @@ bool flattenFunction(Function &F, InlinerHelper &IH,
     // For flatten, we respect the user's intent to inline as much as possible,
     // but these are fundamental ABI violations that cannot be worked around.
     TargetTransformInfo &TTI = GetTTI(*Callee);
-    if (!TTI.areInlineCompatible(&F, Callee))
-      continue;
-
-    if (IH.tryInline(*CB, "flatten attribute")) {
-      Changed = true;
-      IH.addToMaybeInlinedFunctions(*Callee);
-      IH.addNewCallsToWorklist(Worklist, InlineHistoryID, InlineHistory,
-                               Callee);
-    }
+    return TTI.areInlineCompatible(&F, Callee);
   }
-  return Changed;
-}
+
+  bool doInline(Function &F, CallBase &CB, Function &Callee) {
+    if (IH.tryInline(CB, "flatten attribute")) {
+      IH.addToMaybeInlinedFunctions(Callee);
+      return true;
+    }
+    return false;
+  }
+
+  ArrayRef<CallBase *> getNewCallSites() { return IH.getInlinedCallSites(); }
+};
 
 bool AlwaysInlineImpl(
     Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
@@ -249,8 +198,11 @@ bool AlwaysInlineImpl(
   // Only call flattenFunction (which uses TTI) if there are functions to
   // flatten. This ensures TTI analysis is not requested at -O0 when there are
   // no flatten functions, avoiding any overhead.
-  for (Function *F : NeedFlattening)
-    Changed |= flattenFunction(*F, IH, GetTTI);
+  for (Function *F : NeedFlattening) {
+    AlwaysInlinerFlattenPolicy Policy(IH, GetTTI);
+    OptimizationRemarkEmitter ORE(F);
+    Changed |= flattenFunction(*F, Policy, ORE);
+  }
 
   Changed |= IH.postInlinerCleanup();
   return Changed;
