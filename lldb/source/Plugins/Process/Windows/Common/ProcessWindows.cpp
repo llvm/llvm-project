@@ -1047,7 +1047,9 @@ public:
         if (isConsole) {
           auto hasInputOrErr = ConsoleHasTextInput(hStdin);
           if (!hasInputOrErr) {
-            llvm::consumeError(hasInputOrErr.takeError());
+            Log *log = GetLog(WindowsLog::Process);
+            LLDB_LOG_ERROR(log, hasInputOrErr.takeError(),
+                           "failed to process debuggee's IO: {0}");
             goto exit_loop;
           }
 

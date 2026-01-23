@@ -121,7 +121,8 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 
   if (auto error = DrainInitSequences()) {
     Log *log = GetLog(LLDBLog::Host);
-    LLDB_LOG(log, "error: {0}", error);
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "failed to finalize ConPTY's setup: {0}");
   }
 
   return llvm::Error::success();
