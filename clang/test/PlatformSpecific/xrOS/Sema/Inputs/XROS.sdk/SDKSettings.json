@@ -1,0 +1,21 @@
+{
+  "DefaultVariant": "xrOS", "DisplayName": "xrOS",
+  "Version": "1.0",
+  "CanonicalName": "xros1.0",
+  "MaximumDeploymentTarget": "1.0.99",
+  "SupportedTargets": {
+    "xros": {
+      "Archs": ["arm64e", "arm64"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "xros",
+      "LLVMTargetTripleEnvironment": "",
+      "SystemPrefix": ""
+    }
+  },
+  "VersionMap": {
+    "iOS_visionOS": {"17.1": "1.0"},
+    "iOS_xrOS": {"17.1": "1.0"},
+    "visionOS_iOS": {"1.0": "17.1"},
+    "xrOS_iOS": {"1.0": "17.1"}
+  }
+}
