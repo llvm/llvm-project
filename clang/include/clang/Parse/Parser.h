@@ -5155,10 +5155,10 @@ private:
   //===--------------------------------------------------------------------===//
   // Reflection parsing
 
-  /// ParseCXXReflectExpression - parses the operand of reflection operator
+  /// ParseCXXReflectExpression - parses the operand of reflection operator.
   ///
   /// \returns on success, an expression holding the constructed CXXReflectExpr;
-  ///          on failture, an ExprError
+  ///          on failure, an ExprError.
   ExprResult ParseCXXReflectExpression();
 
   //

@@ -40,7 +40,6 @@ ExprResult Parser::ParseCXXReflectExpression() {
     if (!TSI)
       TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, OperandLoc);
 
-    // TypeLoc TL = TSI->getTypeLoc();
     QT = QT.getCanonicalType().getUnqualifiedType();
     if (TSI && QT.getTypePtr()->isBuiltinType()) {
       // Only supports builtin types for now
