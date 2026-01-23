@@ -3074,6 +3074,27 @@ class CompletionChunkKind(BaseEnumeration):
 
 
 class CompletionChunk:
+    class SpellingCacheAlias:
+        """
+        A temporary utility that acts as an alias to CompletionChunk.SPELLING_CACHE.
+        This will be removed without deprecation warning in a future release.
+        Please do not use it directly!
+        """
+        def __getitem__(self, value: int):
+            warnings.warn(
+                "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
+                "and adapted to use 'CompletionChunkKind's as keys instea of their "
+                "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
+                "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
+                "will be removed in a future release.",
+                DeprecationWarning,
+            )
+            return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
+        
+        def __contains__(self, value: int):
+            return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
+
+
     # Functions calls through the python interface are rather slow. Fortunately,
     # for most symbols, we do not need to perform a function call. Their spelling
     # never changes and is consequently provided by this spelling cache.
@@ -3145,6 +3166,9 @@ class CompletionChunk:
 
     def isKindResultType(self) -> bool:
         return self.kind == CompletionChunkKind.RESULT_TYPE
+
+
+SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
 
 
 class CompletionString(ClangObject):
