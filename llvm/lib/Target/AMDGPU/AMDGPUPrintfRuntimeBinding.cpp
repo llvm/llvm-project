@@ -438,6 +438,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
       M.getModuleFlag("openmp"))
     return false;
 
+  // Verify the signature of the printf function and skip if it isn't correct.
+  const FunctionType *PrintfFunctionTy = PrintfFunction->getFunctionType();
+  if (PrintfFunctionTy->getNumParams() != 1 || !PrintfFunctionTy->isVarArg() ||
+      !PrintfFunctionTy->getReturnType()->isIntegerTy(32) ||
+      !PrintfFunctionTy->getParamType(0)->isPointerTy())
+    return false;
+
   for (auto &U : PrintfFunction->uses()) {
     if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
       if (CI->isCallee(&U) && !CI->isNoBuiltin())
