@@ -86,8 +86,9 @@ core.CallAndMessage (C, C++, ObjC)
 Check for logical errors for function calls and Objective-C message expressions
 (e.g., uninitialized arguments, null function pointers).
 
-This checker is a collection of related checks that can be turned on or off by
-checker options.
+This checker is a collection of related checks that are controlled by checker
+options. The following checks are all enabled by default, but can be turned off
+by setting their option to ``false``:
 
 * **FunctionPointer** Check for null or undefined function pointer at function
   call.
@@ -96,33 +97,33 @@ checker options.
 * **CXXDeallocationArg** Check for null or undefined argument of
   ``operator delete``.
 * **ArgInitializedness** Check for undefined pass-by-value function arguments.
-* **ArgPointeeInitializedness** Check for undefined pass-by-reference (pointer
-  to constant value or constant reference) function arguments. In special cases
-  non-constant arguments are checked. This happens for C library functions where
-  it is required to initialize (at least partially) a passed structure which
-  is used for both input and output (for example last argument of ``mktime`` or
-  ``mbrlen``).
 * **ParameterCount** Check for correct number of passed arguments to functions
   or ObjC blocks. This will warn if the actual argument count is less than the
   required count (by the declaration).
-* **NilReceiver** Check whether the receiver in a message expression is ``nil``.
+* **NilReceiver** Check whether the receiver in a message expression is
+  ``nil``.
 * **UndefReceiver** Check whether the receiver in a message expression is
   undefined.
 
-For example to turn off the check for parameter count, set the checker option
-``ParameterCount`` to ``false``. By default all of these checks is enabled
-except **ArgPointeeInitializedness** because this check is more likely to
-produce false positives.
+The following check is disabled by default (because it is more likely to
+produce false positives), this can be turned on by set the option to ``true``:
+
+* **ArgPointeeInitializedness** Check for undefined pass-by-reference (pointer
+  to constant value or constant reference) function arguments. In special cases
+  non-constant arguments are checked. This happens for C library functions
+  where it is required to initialize (at least partially) a passed structure
+  which is used for both input and output (for example last argument of
+  ``mktime`` or ``mbrlen``).
 
 **Additional options**
 
-* **ArgPointeeInitializednessComplete** Controls when to emit the warning at the
-  **ArgPointeeInitializedness** check. If set to ``true`` the warning will be
-  emitted if any member of the passed structure is not initialized. If set to
-  ``false`` the warning is emitted only if all members (the complete structure)
-  are not initialized. The default is ``false``. (Arguments of C library
-  functions which require initialization are always checked as if the option
-  would be ``false``.)
+* **ArgPointeeInitializednessComplete** Controls when to emit the warning at
+  the **ArgPointeeInitializedness** check. If this option is ``false`` (the
+  default), a ``struct`` is considered to be "initialized" when at least one
+  member is initialized. When this option is set to ``true``, structures are
+  only accepted as initialized when all members are initialized. (Arguments of
+  C library functions which require initialization are always checked as if the
+  option would be ``false``.)
 
 **Some examples**
 
