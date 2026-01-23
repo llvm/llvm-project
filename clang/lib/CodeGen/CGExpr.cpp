@@ -7117,8 +7117,6 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
   while (!WorkList.empty()) {
     auto [LVal, T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
-
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {
@@ -7190,6 +7188,25 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
         LValue LV =
             LValue::MakeVectorElt(Base.getAddress(), Idx, VT->getElementType(),
                                   Base.getBaseInfo(), TBAAAccessInfo());
+        AccessList.emplace_back(LV);
+      }
+    } else if (const auto *MT = dyn_cast<ConstantMatrixType>(T)) {
+      // Matrices are represented as flat arrays in memory, but has a vector
+      // value type. So we use ConvertMatrixAddress to convert the address from
+      // array to vector, and extract elements similar to the vector case above.
+      // The order in which we iterate over the elements is sequentially in
+      // memory; whether the matrix is in row- or column-major order does not
+      // matter.
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
+                                              Align, "matrix.gep");
+      LValue Base = MakeAddrLValue(GEP, T);
+      Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
+      for (unsigned I = 0, E = MT->getNumElementsFlattened(); I < E; I++) {
+        llvm::Constant *Idx = llvm::ConstantInt::get(IdxTy, I);
+        LValue LV = LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
+                                          Base.getBaseInfo(), TBAAAccessInfo());
         AccessList.emplace_back(LV);
       }
     } else { // a scalar/builtin type
