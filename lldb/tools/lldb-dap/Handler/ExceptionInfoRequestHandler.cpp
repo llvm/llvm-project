@@ -54,6 +54,8 @@ struct MainThreadCheckerReport {
 using RuntimeInstrumentReport =
     std::variant<UBSanReport, MainThreadCheckerReport>;
 
+} // end namespace
+
 static bool fromJSON(const json::Value &params, UBSanReport &report,
                      json::Path path) {
   json::ObjectMapper O(params, path);
@@ -251,8 +253,6 @@ FormatRuntimeInstrumentStackTrace(lldb::SBThread &thread,
   }
 }
 
-} // end namespace
-
 /// Retrieves the details of the exception that caused this event to be raised.
 ///
 /// Clients should only call this request if the corresponding capability
@@ -269,7 +269,7 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   body.exceptionId = FormatExceptionId(dap, thread);
   body.details = FormatException(thread);
 
-  llvm::raw_string_ostream OS(body.description);
+  raw_string_ostream OS(body.description);
   OS << FormatStopDescription(thread);
 
   if (std::string stop_info = FormatExtendedStopInfo(thread);
