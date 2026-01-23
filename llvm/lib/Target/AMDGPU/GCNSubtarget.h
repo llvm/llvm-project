@@ -64,6 +64,7 @@
   X(LDSMisalignedBug)                                                          \
   X(UnalignedBufferAccess)                                                     \
   X(UnalignedScratchAccess)                                                    \
+  X(RealTrue16Insts)                                                           \
   X(UserSGPRInit16Bug)
 
 // Features with both member and getter.
@@ -109,6 +110,7 @@
   X(CvtPkF16F32Inst)                                                           \
   X(CvtPkNormVOP2Insts)                                                        \
   X(CvtPkNormVOP3Insts)                                                        \
+  X(D16Writes32BitVgpr)                                                        \
   X(DefaultComponentBroadcast)                                                 \
   X(DefaultComponentZero)                                                      \
   X(DLInsts)                                                                   \
@@ -243,6 +245,7 @@
   X(TransposeLoadF4F6Insts)                                                    \
   X(TrapHandler)                                                               \
   X(TrigReducedRange)                                                          \
+  X(True16BitInsts)                                                            \
   X(UnalignedAccessMode)                                                       \
   X(UnalignedDSAccess)                                                         \
   X(UnpackedD16VMem)                                                           \
@@ -320,6 +323,7 @@ protected:
   bool EnableLoadStoreOpt = false;
   bool EnablePreciseMemory = false;
   bool EnablePRTStrictNull = false;
+  bool EnableRealTrue16Insts = false;
   bool EnableSIScheduler = false;
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -1279,6 +1283,16 @@ public:
     return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
             getGeneration() == AMDGPUSubtarget::GFX12) ||
            isWave32();
+  }
+
+  /// Return true if real (non-fake) variants of True16 instructions using
+  /// 16-bit registers should be code-generated. Fake True16 instructions are
+  /// identical to non-fake ones except that they take 32-bit registers as
+  /// operands and always use their low halves.
+  // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
+  // supported and the support for fake True16 instructions is removed.
+  bool useRealTrue16Insts() const {
+    return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 };
 
