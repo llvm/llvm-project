@@ -57,12 +57,12 @@ public:
                                     Confidence Confidence) {}
 
   // Suggests lifetime bound annotations for function paramters.
-  virtual void SuggestLifetimeboundToParmVar(SuggestionScope Scope,
+  virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
                                              const Expr *EscapeExpr) {}
 
   // Suggests lifetime bound annotations for implicit this.
-  virtual void SuggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+  virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
 

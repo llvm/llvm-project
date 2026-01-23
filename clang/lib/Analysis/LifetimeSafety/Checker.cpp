@@ -190,29 +190,29 @@ public:
     return nullptr;
   }
 
-  static void SuggestWithScopeForParmVar(LifetimeSafetyReporter *Reporter,
+  static void suggestWithScopeForParmVar(LifetimeSafetyReporter *Reporter,
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
                                          const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
-      Reporter->SuggestLifetimeboundToParmVar(
+      Reporter->suggestLifetimeboundToParmVar(
           SuggestionScope::CrossTU,
           CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), EscapeExpr);
     else
-      Reporter->SuggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
+      Reporter->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
                                               EscapeExpr);
   }
 
-  static void SuggestWithScopeForImplicitThis(LifetimeSafetyReporter *Reporter,
+  static void suggestWithScopeForImplicitThis(LifetimeSafetyReporter *Reporter,
                                               const CXXMethodDecl *MD,
                                               SourceManager &SM,
                                               const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
-      Reporter->SuggestLifetimeboundToImplicitThis(
+      Reporter->suggestLifetimeboundToImplicitThis(
           SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
           EscapeExpr);
     else
-      Reporter->SuggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU, MD,
+      Reporter->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU, MD,
                                                    EscapeExpr);
   }
 
@@ -222,9 +222,9 @@ public:
     SourceManager &SM = AST.getSourceManager();
     for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
-        SuggestWithScopeForParmVar(Reporter, PVD, SM, EscapeExpr);
+        suggestWithScopeForParmVar(Reporter, PVD, SM, EscapeExpr);
       else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>())
-        SuggestWithScopeForImplicitThis(Reporter, MD, SM, EscapeExpr);
+        suggestWithScopeForImplicitThis(Reporter, MD, SM, EscapeExpr);
     }
   }
 

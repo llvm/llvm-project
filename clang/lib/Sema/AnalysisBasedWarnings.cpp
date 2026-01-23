@@ -2903,7 +2903,7 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
-  void SuggestLifetimeboundToParmVar(SuggestionScope Scope,
+  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      const Expr *EscapeExpr) override {
     unsigned DiagID;
@@ -2929,7 +2929,7 @@ public:
         << EscapeExpr->getSourceRange();
   }
 
-  void SuggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                           const CXXMethodDecl *MD,
                                           const Expr *EscapeExpr) override {
     unsigned DiagID = (Scope == SuggestionScope::CrossTU)
