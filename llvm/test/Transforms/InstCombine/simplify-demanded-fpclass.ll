@@ -585,8 +585,7 @@ define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero(float n
 define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero_multiple_uses(float nofpclass(nan ninf nnorm nsub) %always.positive.or.nzero, ptr %ptr) {
 ; CHECK-LABEL: define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero_multiple_uses
 ; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ALWAYS_POSITIVE_OR_NZERO:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[ALWAYS_POSITIVE_OR_NZERO]])
-; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store float [[ALWAYS_POSITIVE_OR_NZERO]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE_OR_NZERO]]
 ;
   %fabs = call nsz float @llvm.fabs.f32(float %always.positive.or.nzero)

@@ -198,7 +198,8 @@ public:
     Put(x == Sign::Negative ? '-' : '+');
   }
   void Unparse(const RealLiteralConstant &x) { // R714, R715
-    Put(x.real.source.ToString()), Walk("_", x.kind);
+    const auto &[real, kind]{x.t};
+    Put(real.source.ToString()), Walk("_", kind);
   }
   void Unparse(const ComplexLiteralConstant &x) { // R718 - R720
     Put('('), Walk(x.t, ","), Put(')');
@@ -371,13 +372,15 @@ public:
     Word("PRIVATE");
   }
   void Unparse(const TypeBoundProcedureStmt::WithoutInterface &x) { // R749
-    Word("PROCEDURE"), Walk(", ", x.attributes, ", ");
-    Put(" :: "), Walk(x.declarations, ", ");
+    const auto &[attributes, declarations]{x.t};
+    Word("PROCEDURE"), Walk(", ", attributes, ", ");
+    Put(" :: "), Walk(declarations, ", ");
   }
   void Unparse(const TypeBoundProcedureStmt::WithInterface &x) {
-    Word("PROCEDURE("), Walk(x.interfaceName), Put("), ");
-    Walk(x.attributes);
-    Put(" :: "), Walk(x.bindingNames, ", ");
+    const auto &[interfaceName, attributes, bindingNames]{x.t};
+    Word("PROCEDURE("), Walk(interfaceName), Put("), ");
+    Walk(attributes);
+    Put(" :: "), Walk(bindingNames, ", ");
   }
   void Unparse(const TypeBoundProcDecl &x) { // R750
     Walk(std::get<Name>(x.t));
@@ -437,8 +440,8 @@ public:
     Walk(std::get<std::list<AcValue>>(x.t), ", ");
   }
   template <typename A, typename B> void Unparse(const LoopBounds<A, B> &x) {
-    Walk(x.name), Put('='), Walk(x.lower), Put(','), Walk(x.upper);
-    Walk(",", x.step);
+    Walk(x.Name()), Put('='), Walk(x.Lower()), Put(','), Walk(x.Upper());
+    Walk(",", x.Step());
   }
   void Unparse(const AcImpliedDo &x) { // R774
     Put('('), Walk(std::get<std::list<AcValue>>(x.t), ", ");
@@ -789,23 +792,24 @@ public:
     Walk(x.t, ":");
   }
   void Unparse(const PartRef &x) { // R912
-    Walk(x.name);
-    Walk("(", x.subscripts, ",", ")");
-    Walk(x.imageSelector);
+    const auto &[name, subscripts, imageSelector]{x.t};
+    Walk(name);
+    Walk("(", subscripts, ",", ")");
+    Walk(imageSelector);
   }
   void Unparse(const StructureComponent &x) { // R913
-    Walk(x.base);
-    if (structureComponents_.find(x.component.source) !=
+    Walk(x.Base());
+    if (structureComponents_.find(x.Component().source) !=
         structureComponents_.end()) {
       Put('.');
     } else {
       Put('%');
     }
-    Walk(x.component);
+    Walk(x.Component());
   }
   void Unparse(const ArrayElement &x) { // R917
-    Walk(x.base);
-    Put('('), Walk(x.subscripts, ","), Put(')');
+    Walk(x.Base());
+    Put('('), Walk(x.Subscripts(), ","), Put(')');
   }
   void Unparse(const SubscriptTriplet &x) { // R921
     Walk(std::get<0>(x.t)), Put(':'), Walk(std::get<1>(x.t));
@@ -1692,15 +1696,16 @@ public:
     Put('('), Walk(std::get<std::list<ActualArgSpec>>(x.v.t), ", "), Put(')');
   }
   void Unparse(const CallStmt &x) { // R1521
+    const auto &[call, chevrons]{x.t};
     if (asFortran_ && x.typedCall.get()) {
       Put(' ');
       asFortran_->call(out_, *x.typedCall);
       Put('\n');
     } else {
-      const auto &pd{std::get<ProcedureDesignator>(x.call.t)};
+      const auto &pd{std::get<ProcedureDesignator>(call.t)};
       Word("CALL "), Walk(pd);
-      Walk("<<<", x.chevrons, ">>>");
-      const auto &args{std::get<std::list<ActualArgSpec>>(x.call.t)};
+      Walk("<<<", chevrons, ">>>");
+      const auto &args{std::get<std::list<ActualArgSpec>>(call.t)};
       if (args.empty()) {
         if (std::holds_alternative<ProcComponentRef>(pd.u)) {
           Put("()"); // pgf90 crashes on CALL to tbp without parentheses
@@ -1745,11 +1750,12 @@ public:
     Walk(" ", std::get<std::optional<Suffix>>(x.t)), Indent();
   }
   void Unparse(const Suffix &x) { // R1532
-    if (x.resultName) {
-      Word("RESULT("), Walk(x.resultName), Put(')');
-      Walk(" ", x.binding);
+    const auto &[resultName, binding]{x.t};
+    if (resultName) {
+      Word("RESULT("), Walk(resultName), Put(')');
+      Walk(" ", binding);
     } else {
-      Walk(x.binding);
+      Walk(binding);
     }
   }
   void Unparse(const EndFunctionStmt &x) { // R1533
