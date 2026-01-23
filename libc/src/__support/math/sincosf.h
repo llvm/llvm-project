@@ -24,11 +24,13 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
+namespace sincosf_internal {
+
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Exceptional values
-static constexpr int N_EXCEPTS = 6;
+LIBC_INLINE_VAR constexpr int N_EXCEPTS = 6;
 
-static constexpr uint32_t EXCEPT_INPUTS[N_EXCEPTS] = {
+LIBC_INLINE_VAR constexpr uint32_t EXCEPT_INPUTS[N_EXCEPTS] = {
     0x46199998, // x = 0x1.33333p13   x
     0x55325019, // x = 0x1.64a032p43  x
     0x5922aa80, // x = 0x1.4555p51    x
@@ -37,7 +39,7 @@ static constexpr uint32_t EXCEPT_INPUTS[N_EXCEPTS] = {
     0x7beef5ef, // x = 0x1.ddebdep120 x
 };
 
-static constexpr uint32_t EXCEPT_OUTPUTS_SIN[N_EXCEPTS][4] = {
+LIBC_INLINE_VAR constexpr uint32_t EXCEPT_OUTPUTS_SIN[N_EXCEPTS][4] = {
     {0xbeb1fa5d, 0, 1, 0}, // x = 0x1.33333p13, sin(x) = -0x1.63f4bap-2 (RZ)
     {0xbf171adf, 0, 1, 1}, // x = 0x1.64a032p43, sin(x) = -0x1.2e35bep-1 (RZ)
     {0xbf587521, 0, 1, 1}, // x = 0x1.4555p51, sin(x) = -0x1.b0ea42p-1 (RZ)
@@ -46,7 +48,7 @@ static constexpr uint32_t EXCEPT_OUTPUTS_SIN[N_EXCEPTS][4] = {
     {0xbf587d1b, 0, 1, 1}, // x = 0x1.ddebdep120, sin(x) = -0x1.b0fa36p-1 (RZ)
 };
 
-static constexpr uint32_t EXCEPT_OUTPUTS_COS[N_EXCEPTS][4] = {
+LIBC_INLINE_VAR constexpr uint32_t EXCEPT_OUTPUTS_COS[N_EXCEPTS][4] = {
     {0xbf70090b, 0, 1, 0}, // x = 0x1.33333p13, cos(x) = -0x1.e01216p-1 (RZ)
     {0x3f4ea5d2, 1, 0, 0}, // x = 0x1.64a032p43, cos(x) = 0x1.9d4ba4p-1 (RZ)
     {0x3f08aebe, 1, 0, 1}, // x = 0x1.4555p51, cos(x) = 0x1.115d7cp-1 (RZ)
@@ -55,8 +57,10 @@ static constexpr uint32_t EXCEPT_OUTPUTS_COS[N_EXCEPTS][4] = {
     {0x3f08a21c, 1, 0, 0}, // x = 0x1.ddebdep120, cos(x) = 0x1.114438p-1 (RZ)
 };
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+} // namespace sincosf_internal
 
 LIBC_INLINE static constexpr void sincosf(float x, float *sinp, float *cosp) {
+  using namespace sincosf_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
