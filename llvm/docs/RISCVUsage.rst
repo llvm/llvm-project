@@ -622,6 +622,6 @@ Sanitizer Support
 
 * HWASan may work on very new versions of LLVM (e.g., after https://github.com/llvm/llvm-project/pull/176616), though RISC-V Pointer Masking (also very new) is needed as well to make it run efficiently.
 
-* MTE: N/A - there is currently no ratified RISC-V memory tagging spec.
+* Memtag: N/A - there is currently no ratified RISC-V memory tagging spec.
 
 * MSan is unlikely to work: there are currently no RISC-V-specific shadow mappings (this is probably easy to fix; perhaps the default Linux 64-bit mapping will work) and MSan does not explicitly handle any of the `@llvm.riscv.*` intrinsics (this is significantly more work to fix). Some intrinsics will be handled correctly anyway, if the RISC-V intrinsic is auto-upgraded into cross-platform LLVM intrinsics. Some others will be "heuristically" handled (possibly incorrectly). The rest will default to the "strict" handler, which checks that all the parameters are fully initialized.
