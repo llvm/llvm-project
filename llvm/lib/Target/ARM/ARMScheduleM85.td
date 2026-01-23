@@ -436,7 +436,7 @@ def : InstRW<[M85WriteALUsi, M85ReadALUsi],
 def : InstRW<[M85WriteShift2],
                (instregex "t2RRX$")>;
 def : InstRW<[WriteALU],
-               (instregex "(t|t2)(LSL|LSR|ASR|ROR|SBFX|UBFX)", "t2MOVsr(a|l)")>;
+             (instregex "(t|t2)(LSL|LSR|ASR|ROR|SBFX|UBFX)")>;
 
 // Instructions that use the shifter, but have normal timing
 

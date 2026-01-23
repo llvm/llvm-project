@@ -33,10 +33,8 @@ void addEvalFooCheckers(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.EvalFoo1", true},
                                 {"test.EvalFoo2", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<EvalCallFoo1>("test.EvalFoo1", "EmptyDescription",
-                                      "EmptyDocsUri");
-    Registry.addChecker<EvalCallFoo2>("test.EvalFoo2", "EmptyDescription",
-                                      "EmptyDocsUri");
+    Registry.addChecker<EvalCallFoo1>("test.EvalFoo1", "MockDescription");
+    Registry.addChecker<EvalCallFoo2>("test.EvalFoo2", "MockDescription");
   });
 }
 } // namespace

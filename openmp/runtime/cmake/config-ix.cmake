@@ -16,7 +16,6 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
-include(LibompCheckFortranFlag)
 include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
@@ -97,9 +96,10 @@ if(WIN32)
     endforeach()
   endforeach()
 endif()
-if(${LIBOMP_FORTRAN_MODULES})
-  libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
-endif()
+
+# Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
+check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_PTHREAD_SETNAME_NP)
+check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" LIBOMP_HAVE_PTHREAD_SET_NAME_NP)
 
 # Check for Unix shared memory
 check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)
@@ -312,10 +312,12 @@ else()
       (LIBOMP_ARCH STREQUAL ppc64) OR
       (LIBOMP_ARCH STREQUAL riscv64) OR
       (LIBOMP_ARCH STREQUAL loongarch64) OR
-      (LIBOMP_ARCH STREQUAL s390x))
+      (LIBOMP_ARCH STREQUAL s390x) OR
+      (LIBOMP_ARCH STREQUAL sparc) OR
+      (LIBOMP_ARCH STREQUAL sparcv9))
      AND # OS supported?
      ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
-      (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
+      (NOT (WIN32 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

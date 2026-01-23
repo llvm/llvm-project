@@ -8,6 +8,7 @@
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>

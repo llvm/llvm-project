@@ -139,7 +139,8 @@ public:
   /// Compute the lattice values that change as a result of executing the given
   /// instruction. We only handle the few instructions needed for the tests.
   void ComputeInstructionState(
-      Instruction &I, DenseMap<TestLatticeKey, TestLatticeVal> &ChangedValues,
+      Instruction &I,
+      SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
       SparseSolver<TestLatticeKey, TestLatticeVal> &SS) override {
     switch (I.getOpcode()) {
     case Instruction::Call:
@@ -159,7 +160,7 @@ private:
   /// actual argument state. The call site state is the merge of the call site
   /// state with the returned value state of the called function.
   void visitCallBase(CallBase &I,
-                     DenseMap<TestLatticeKey, TestLatticeVal> &ChangedValues,
+                     SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
                      SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     Function *F = I.getCalledFunction();
     auto RegI = TestLatticeKey(&I, IPOGrouping::Register);
@@ -183,7 +184,7 @@ private:
   /// Handle return instructions. The function's return state is the merge of
   /// the returned value state and the function's current return state.
   void visitReturn(ReturnInst &I,
-                   DenseMap<TestLatticeKey, TestLatticeVal> &ChangedValues,
+                   SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
                    SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     Function *F = I.getParent()->getParent();
     if (F->getReturnType()->isVoidTy())
@@ -199,7 +200,7 @@ private:
   /// is the merge of the stored value state with the current global variable
   /// state.
   void visitStore(StoreInst &I,
-                  DenseMap<TestLatticeKey, TestLatticeVal> &ChangedValues,
+                  SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
                   SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     auto *GV = dyn_cast<GlobalVariable>(I.getPointerOperand());
     if (!GV)
@@ -213,7 +214,7 @@ private:
   /// Handle all other instructions. All other instructions are marked
   /// overdefined.
   void visitInst(Instruction &I,
-                 DenseMap<TestLatticeKey, TestLatticeVal> &ChangedValues,
+                 SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
                  SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     auto RegI = TestLatticeKey(&I, IPOGrouping::Register);
     ChangedValues[RegI] = getOverdefinedVal();
@@ -277,12 +278,12 @@ TEST_F(SparsePropagationTest, MarkBlockExecutable) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -318,12 +319,12 @@ TEST_F(SparsePropagationTest, GlobalVariableConstant) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 0, i64* @gv
+///   store i64 0, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -356,9 +357,9 @@ TEST_F(SparsePropagationTest, GlobalVariableOverDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:
@@ -396,9 +397,9 @@ TEST_F(SparsePropagationTest, FunctionDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:

@@ -247,7 +247,7 @@ MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
   return unpacked;
 }
 
-std::vector<lldb::addr_t>
+llvm::Expected<std::vector<lldb::addr_t>>
 MemoryTagManagerAArch64MTE::UnpackTagsFromCoreFileSegment(
     CoreReaderFn reader, lldb::addr_t tag_segment_virtual_address,
     lldb::addr_t tag_segment_data_address, lldb::addr_t addr,
@@ -290,8 +290,12 @@ MemoryTagManagerAArch64MTE::UnpackTagsFromCoreFileSegment(
   const size_t bytes_copied =
       reader(tag_segment_data_address + file_offset_in_bytes, tag_bytes_to_read,
              tag_data.data());
-  UNUSED_IF_ASSERT_DISABLED(bytes_copied);
-  assert(bytes_copied == tag_bytes_to_read);
+  if (bytes_copied != tag_bytes_to_read) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Could not read tags from core file segment. Segment "
+        "is missing some or all tag data.");
+  }
 
   std::vector<lldb::addr_t> tags;
   tags.reserve(2 * tag_data.size());

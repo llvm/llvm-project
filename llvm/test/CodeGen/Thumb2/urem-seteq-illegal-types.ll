@@ -117,7 +117,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:    .short 9 @ 0x9
 ; CHECK-NEXT:    .short 10 @ 0xa
 ; CHECK-NEXT:    .short 10 @ 0xa
-; CHECK-NEXT:    .short 10 @ 0xa
+; CHECK-NEXT:    .short 0 @ 0x0
 ; CHECK-NEXT:  .LCPI4_4:
 ; CHECK-NEXT:    .short 341 @ 0x155
 ; CHECK-NEXT:    .short 292 @ 0x124

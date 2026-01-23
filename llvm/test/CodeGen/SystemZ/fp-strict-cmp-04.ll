@@ -298,6 +298,43 @@ exit:
   ret float %add
 }
 
+define half @f12_half(half %dummy, half %val) #0 {
+; CHECK-LABEL: f12_half:
+; CHECK:      ler %f9, %f2
+; CHECK-NEXT: ler %f0, %f2
+; CHECK-NEXT: #APP
+; CHECK-NEXT: ler %f8, %f0
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT: lzer %f0
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: ler %f10, %f0
+; CHECK-NEXT: ler %f0, %f9
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: cebr %f0, %f10
+; CHECK-NEXT: jl .LBB11_2
+; CHECK-NEXT:# %bb.1:        # %store
+; CHECK-NEXT: #APP
+; CHECK-NEXT: blah
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT:.LBB11_2:        # %exit
+; CHECK-NEXT: ler %f0, %f8
+; CHECK:      br  %r14
+entry:
+  %ret = call half asm "ler $0, $1", "=f,{f0}"(half %val) #0
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(
+                                               half %val, half 0.0,
+                                               metadata !"olt",
+                                               metadata !"fpexcept.strict") #0
+  br i1 %cmp, label %exit, label %store
+
+store:
+  call void asm sideeffect "blah", ""() #0
+  br label %exit
+
+exit:
+  ret half %ret
+}
+
 ; Test that LER does not get converted to LTEBR as %f0 is live after it.
 define float @f12(float %dummy, float %val) #0 {
 ; CHECK-LABEL: f12:
@@ -309,7 +346,7 @@ define float @f12(float %dummy, float %val) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call float asm "blah $1", "=f,{f0}"(float %val) #0
+  %ret = call float asm "$0 = blah $1", "=f,{f0}"(float %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %val, float 0.0,
                                                metadata !"olt",
@@ -382,6 +419,43 @@ store:
 
 exit:
   ret void
+}
+
+define half @f15_half(half %val, half %dummy) #0 {
+; CHECK-LABEL: f15_half:
+; CHECK:      ler %f9, %f0
+; CHECK-NEXT: ler %f2, %f0
+; CHECK-NEXT: #APP
+; CHECK-NEXT: ler %f8, %f2
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT: lzer %f0
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: ler %f10, %f0
+; CHECK-NEXT: ler %f0, %f9
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: cebr %f0, %f10
+; CHECK-NEXT: jl .LBB15_2
+; CHECK-NEXT:# %bb.1:          # %store
+; CHECK-NEXT: #APP
+; CHECK-NEXT: blah
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT:.LBB15_2:         # %exit
+; CHECK-NEXT: ler %f0, %f8
+; CHECK: br %r14
+entry:
+  %ret = call half asm "ler $0, $1", "=f,{f2}"(half %val) #0
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(
+                                               half %val, half 0.0,
+                                               metadata !"olt",
+                                               metadata !"fpexcept.strict") #0
+  br i1 %cmp, label %exit, label %store
+
+store:
+  call void asm sideeffect "blah", ""() #0
+  br label %exit
+
+exit:
+  ret half %ret
 }
 
 ; Test a case where it is the source rather than destination of LER that
@@ -491,6 +565,43 @@ exit:
   ret float %res
 }
 
+define half @f19_half(half %dummy, half %val) #0 {
+; CHECK-LABEL: f19_half:
+; CHECK:      ler %f9, %f2
+; CHECK-NEXT: ler %f0, %f2
+; CHECK-NEXT: #APP
+; CHECK-NEXT: ler %f8, %f0
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT: lzer %f0
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: ler %f10, %f0
+; CHECK-NEXT: ler %f0, %f9
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: cebr %f0, %f10
+; CHECK-NEXT: jl .LBB20_2
+; CHECK-NEXT:# %bb.1:           # %store
+; CHECK-NEXT: #APP
+; CHECK-NEXT: blah
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT:.LBB20_2:          # %exit
+; CHECK-NEXT: ler %f0, %f8
+; CHECK: br %r14
+entry:
+  %ret = call half asm sideeffect "ler $0, $1", "=f,{f0}"(half %val) #0
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(
+                                               half %val, half 0.0,
+                                               metadata !"olt",
+                                               metadata !"fpexcept.strict") #0
+  br i1 %cmp, label %exit, label %store
+
+store:
+  call void asm sideeffect "blah", ""() #0
+  br label %exit
+
+exit:
+  ret half %ret
+}
+
 ; Verify that we cannot convert LER to LTEBR and omit the compare if
 ; there may be an intervening change to the exception flags.
 define float @f19(float %dummy, float %val) #0 {
@@ -524,6 +635,7 @@ declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, me
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f128(fp128, fp128, metadata, metadata)

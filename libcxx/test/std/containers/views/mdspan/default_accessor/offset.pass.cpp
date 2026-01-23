@@ -27,7 +27,7 @@ constexpr void test_offset() {
   ElementPool<std::remove_const_t<T>, 10> data;
   T* ptr = data.get_ptr();
   std::default_accessor<T> acc;
-  for(int i = 0; i < 10; i++) {
+  for (int i = 0; i < 10; i++) {
     static_assert(std::is_same_v<decltype(acc.offset(ptr, i)), typename std::default_accessor<T>::data_handle_type>);
     ASSERT_NOEXCEPT(acc.offset(ptr, i));
     assert(acc.offset(ptr, i) == ptr + i);

@@ -13,13 +13,12 @@
 #ifndef LLVM_CLANG_SEMA_SEMAMIPS_H
 #define LLVM_CLANG_SEMA_SEMAMIPS_H
 
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/TargetInfo.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
 class ParsedAttr;
+class TargetInfo;
 
 class SemaMIPS : public SemaBase {
 public:

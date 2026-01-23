@@ -1,0 +1,148 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x400144
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .note.gnu.build-id
+    LastSec:         .eh_frame
+    VAddr:           0x400000
+    Align:           0x200000
+    Offset:          0x0
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.build-id
+    LastSec:         .note.gnu.build-id
+    VAddr:           0x4000E8
+    Align:           0x4
+    Offset:          0xE8
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+    Offset:          0x0
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4000E8
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            01DF54A6045E657D3F8FFB9CE111878914F8BD6D
+        Type:            NT_PRPSINFO
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x40010C
+    AddressAlign:    0x1
+    Content:         554889E548897DE8C645FF62488B45E8C6002F5DC3554889E54883EC2048897DE8488975E0C645FF66488B55E8488B45E04889D7FFD0C9C3554889E54883EC10C645FF5FBE0C014000BF00000000E8C2FFFFFFC9C3
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400168
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C00000084FFFFFF1500000000410E108602430D06500C07080000001C0000003C00000079FFFFFF2300000000410E108602430D065E0C07080000001C0000005C0000007CFFFFFF1D00000000410E108602430D06580C0708000000
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4743433A20285562756E747520342E382E342D327562756E7475317E31342E30342920342E382E3400
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         EC00000004000000000008011300000001070000003F0000000C01400000000000550000000000000000000000026261720001010C014000000000001500000000000000019C65000000030E00000001016500000002915804460001036B00000002916F0005086B0000000601065800000007666F6F00010721014000000000002300000000000000019CB8000000030E00000001076500000002915803000000000107C300000002915004460001096B00000002916F0008C30000000965000000000508B80000000A51000000010D44014000000000001D00000000000000019C044600010F6B00000002916F0000
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101250E130B030E1B0E1101120710170000022E0103083A0B3B0B271911011207401897421901130000030500030E3A0B3B0B49130218000004340003083A0B3B0B491302180000050F000B0B491300000624000B0B3E0B030E0000072E0103083A0B3B0B271911011207401896421901130000081501271901130000090500491300000A2E013F19030E3A0B3B0B2719110112074018964219000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         3F00000002001D0000000101FB0E0D000101010100000001000001006D61696E2E6300000000000009020C0140000000000013834B7531F34BC931834BE50202000101
+Symbols:
+  - Name:            .note.gnu.build-id
+    Type:            STT_SECTION
+    Section:         .note.gnu.build-id
+    Value:           0x4000E8
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x40010C
+  - Name:            .eh_frame
+    Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x400168
+  - Name:            .comment
+    Type:            STT_SECTION
+    Section:         .comment
+  - Name:            .debug_aranges
+    Type:            STT_SECTION
+    Section:         .debug_aranges
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            bar
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x40010C
+    Size:            0x15
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x400121
+    Size:            0x23
+  - Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x400144
+    Size:            0x1D
+  - Name:            __bss_start
+    Section:         .eh_frame
+    Binding:         STB_GLOBAL
+    Value:           0x601000
+  - Name:            _edata
+    Section:         .eh_frame
+    Binding:         STB_GLOBAL
+    Value:           0x601000
+  - Name:            _end
+    Section:         .eh_frame
+    Binding:         STB_GLOBAL
+    Value:           0x601000
+DWARF:
+  debug_str:
+    - boomer
+    - main.c
+    - boom
+    - 'GNU C 4.8.4 -mtune=generic -march=x86-64 -g'
+    - '/home/labath/test'
+    - _start
+    - char
+  debug_aranges:
+    - Length:          0x2C
+      Version:         2
+      CuOffset:        0x0
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x40010C
+          Length:          0x55
+...

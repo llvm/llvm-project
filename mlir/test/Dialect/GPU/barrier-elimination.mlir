@@ -182,3 +182,20 @@ attributes {__parallel_region_boundary_for_test} {
   %4 = memref.load %C[] : memref<f32>
   return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
+
+// CHECK-LABEL: @nested_loop_barrier_only
+func.func @nested_loop_barrier_only() attributes {__parallel_region_boundary_for_test} {
+  %c0 = arith.constant 0 : index
+  %c42 = arith.constant 42 : index
+  %c1 = arith.constant 1 : index
+  // Note: the barrier can be removed and as consequence the loops get folded
+  // by the greedy rewriter.
+  // CHECK-NOT: scf.for
+  // CHECK-NOT: gpu.barrier
+  scf.for %j = %c0 to %c42 step %c1 {
+    scf.for %i = %c0 to %c42 step %c1 {
+      gpu.barrier
+    }
+  }
+  return
+}

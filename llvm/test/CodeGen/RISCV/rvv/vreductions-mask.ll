@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -verify-machineinstrs < %s | FileCheck %s
 
-declare i1 @llvm.vector.reduce.or.nxv1i1(<vscale x 1 x i1>)
-
 define zeroext i1 @vreduce_or_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv1i1:
 ; CHECK:       # %bb.0:
@@ -15,8 +13,6 @@ define zeroext i1 @vreduce_or_nxv1i1(<vscale x 1 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv1i1(<vscale x 1 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv1i1:
 ; CHECK:       # %bb.0:
@@ -27,8 +23,6 @@ define zeroext i1 @vreduce_xor_nxv1i1(<vscale x 1 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv1i1(<vscale x 1 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv1i1(<vscale x 1 x i1>)
 
 define zeroext i1 @vreduce_and_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv1i1:
@@ -42,8 +36,6 @@ define zeroext i1 @vreduce_and_nxv1i1(<vscale x 1 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv1i1(<vscale x 1 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv1i1:
 ; CHECK:       # %bb.0:
@@ -54,8 +46,6 @@ define zeroext i1 @vreduce_umax_nxv1i1(<vscale x 1 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv1i1(<vscale x 1 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv1i1(<vscale x 1 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv1i1:
@@ -69,8 +59,6 @@ define zeroext i1 @vreduce_smax_nxv1i1(<vscale x 1 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv1i1(<vscale x 1 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv1i1:
 ; CHECK:       # %bb.0:
@@ -83,8 +71,6 @@ define zeroext i1 @vreduce_umin_nxv1i1(<vscale x 1 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv1i1(<vscale x 1 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv1i1:
 ; CHECK:       # %bb.0:
@@ -95,8 +81,6 @@ define zeroext i1 @vreduce_smin_nxv1i1(<vscale x 1 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv1i1(<vscale x 1 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1>)
 
 define zeroext i1 @vreduce_or_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv2i1:
@@ -109,8 +93,6 @@ define zeroext i1 @vreduce_or_nxv2i1(<vscale x 2 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -121,8 +103,6 @@ define zeroext i1 @vreduce_xor_nxv2i1(<vscale x 2 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1>)
 
 define zeroext i1 @vreduce_and_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv2i1:
@@ -136,8 +116,6 @@ define zeroext i1 @vreduce_and_nxv2i1(<vscale x 2 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv2i1(<vscale x 2 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -148,8 +126,6 @@ define zeroext i1 @vreduce_umax_nxv2i1(<vscale x 2 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv2i1(<vscale x 2 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv2i1(<vscale x 2 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv2i1:
@@ -163,8 +139,6 @@ define zeroext i1 @vreduce_smax_nxv2i1(<vscale x 2 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv2i1(<vscale x 2 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -177,8 +151,6 @@ define zeroext i1 @vreduce_umin_nxv2i1(<vscale x 2 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv2i1(<vscale x 2 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -189,8 +161,6 @@ define zeroext i1 @vreduce_smin_nxv2i1(<vscale x 2 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv2i1(<vscale x 2 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1>)
 
 define zeroext i1 @vreduce_or_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv4i1:
@@ -203,8 +173,6 @@ define zeroext i1 @vreduce_or_nxv4i1(<vscale x 4 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv4i1(<vscale x 4 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv4i1:
 ; CHECK:       # %bb.0:
@@ -215,8 +183,6 @@ define zeroext i1 @vreduce_xor_nxv4i1(<vscale x 4 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv4i1(<vscale x 4 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv4i1(<vscale x 4 x i1>)
 
 define zeroext i1 @vreduce_and_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv4i1:
@@ -230,8 +196,6 @@ define zeroext i1 @vreduce_and_nxv4i1(<vscale x 4 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv4i1(<vscale x 4 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv4i1:
 ; CHECK:       # %bb.0:
@@ -242,8 +206,6 @@ define zeroext i1 @vreduce_umax_nxv4i1(<vscale x 4 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv4i1(<vscale x 4 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv4i1(<vscale x 4 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv4i1:
@@ -257,8 +219,6 @@ define zeroext i1 @vreduce_smax_nxv4i1(<vscale x 4 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv4i1(<vscale x 4 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv4i1:
 ; CHECK:       # %bb.0:
@@ -271,8 +231,6 @@ define zeroext i1 @vreduce_umin_nxv4i1(<vscale x 4 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv4i1(<vscale x 4 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv4i1:
 ; CHECK:       # %bb.0:
@@ -283,8 +241,6 @@ define zeroext i1 @vreduce_smin_nxv4i1(<vscale x 4 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv4i1(<vscale x 4 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1>)
 
 define zeroext i1 @vreduce_or_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv8i1:
@@ -297,8 +253,6 @@ define zeroext i1 @vreduce_or_nxv8i1(<vscale x 8 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv8i1(<vscale x 8 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv8i1:
 ; CHECK:       # %bb.0:
@@ -309,8 +263,6 @@ define zeroext i1 @vreduce_xor_nxv8i1(<vscale x 8 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv8i1(<vscale x 8 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv8i1(<vscale x 8 x i1>)
 
 define zeroext i1 @vreduce_and_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv8i1:
@@ -324,8 +276,6 @@ define zeroext i1 @vreduce_and_nxv8i1(<vscale x 8 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv8i1(<vscale x 8 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv8i1:
 ; CHECK:       # %bb.0:
@@ -336,8 +286,6 @@ define zeroext i1 @vreduce_umax_nxv8i1(<vscale x 8 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv8i1(<vscale x 8 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv8i1(<vscale x 8 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv8i1:
@@ -351,8 +299,6 @@ define zeroext i1 @vreduce_smax_nxv8i1(<vscale x 8 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv8i1(<vscale x 8 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv8i1:
 ; CHECK:       # %bb.0:
@@ -365,8 +311,6 @@ define zeroext i1 @vreduce_umin_nxv8i1(<vscale x 8 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv8i1(<vscale x 8 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv8i1:
 ; CHECK:       # %bb.0:
@@ -377,8 +321,6 @@ define zeroext i1 @vreduce_smin_nxv8i1(<vscale x 8 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv8i1(<vscale x 8 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1>)
 
 define zeroext i1 @vreduce_or_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv16i1:
@@ -391,8 +333,6 @@ define zeroext i1 @vreduce_or_nxv16i1(<vscale x 16 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv16i1(<vscale x 16 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv16i1:
 ; CHECK:       # %bb.0:
@@ -403,8 +343,6 @@ define zeroext i1 @vreduce_xor_nxv16i1(<vscale x 16 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv16i1(<vscale x 16 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv16i1(<vscale x 16 x i1>)
 
 define zeroext i1 @vreduce_and_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv16i1:
@@ -418,8 +356,6 @@ define zeroext i1 @vreduce_and_nxv16i1(<vscale x 16 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv16i1(<vscale x 16 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv16i1:
 ; CHECK:       # %bb.0:
@@ -430,8 +366,6 @@ define zeroext i1 @vreduce_umax_nxv16i1(<vscale x 16 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv16i1(<vscale x 16 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv16i1(<vscale x 16 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv16i1:
@@ -445,8 +379,6 @@ define zeroext i1 @vreduce_smax_nxv16i1(<vscale x 16 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv16i1(<vscale x 16 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv16i1:
 ; CHECK:       # %bb.0:
@@ -459,8 +391,6 @@ define zeroext i1 @vreduce_umin_nxv16i1(<vscale x 16 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv16i1(<vscale x 16 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv16i1:
 ; CHECK:       # %bb.0:
@@ -471,8 +401,6 @@ define zeroext i1 @vreduce_smin_nxv16i1(<vscale x 16 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv16i1(<vscale x 16 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.or.nxv32i1(<vscale x 32 x i1>)
 
 define zeroext i1 @vreduce_or_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv32i1:
@@ -485,8 +413,6 @@ define zeroext i1 @vreduce_or_nxv32i1(<vscale x 32 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv32i1(<vscale x 32 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv32i1:
 ; CHECK:       # %bb.0:
@@ -497,8 +423,6 @@ define zeroext i1 @vreduce_xor_nxv32i1(<vscale x 32 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv32i1(<vscale x 32 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv32i1(<vscale x 32 x i1>)
 
 define zeroext i1 @vreduce_and_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv32i1:
@@ -512,8 +436,6 @@ define zeroext i1 @vreduce_and_nxv32i1(<vscale x 32 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv32i1(<vscale x 32 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv32i1:
 ; CHECK:       # %bb.0:
@@ -524,8 +446,6 @@ define zeroext i1 @vreduce_umax_nxv32i1(<vscale x 32 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv32i1(<vscale x 32 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv32i1(<vscale x 32 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv32i1:
@@ -539,8 +459,6 @@ define zeroext i1 @vreduce_smax_nxv32i1(<vscale x 32 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv32i1(<vscale x 32 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv32i1:
 ; CHECK:       # %bb.0:
@@ -553,8 +471,6 @@ define zeroext i1 @vreduce_umin_nxv32i1(<vscale x 32 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv32i1(<vscale x 32 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv32i1:
 ; CHECK:       # %bb.0:
@@ -565,8 +481,6 @@ define zeroext i1 @vreduce_smin_nxv32i1(<vscale x 32 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv32i1(<vscale x 32 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.or.nxv64i1(<vscale x 64 x i1>)
 
 define zeroext i1 @vreduce_or_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv64i1:
@@ -579,8 +493,6 @@ define zeroext i1 @vreduce_or_nxv64i1(<vscale x 64 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.xor.nxv64i1(<vscale x 64 x i1>)
-
 define zeroext i1 @vreduce_xor_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv64i1:
 ; CHECK:       # %bb.0:
@@ -591,8 +503,6 @@ define zeroext i1 @vreduce_xor_nxv64i1(<vscale x 64 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.xor.nxv64i1(<vscale x 64 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.and.nxv64i1(<vscale x 64 x i1>)
 
 define zeroext i1 @vreduce_and_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv64i1:
@@ -606,8 +516,6 @@ define zeroext i1 @vreduce_and_nxv64i1(<vscale x 64 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umax.nxv64i1(<vscale x 64 x i1>)
-
 define zeroext i1 @vreduce_umax_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv64i1:
 ; CHECK:       # %bb.0:
@@ -618,8 +526,6 @@ define zeroext i1 @vreduce_umax_nxv64i1(<vscale x 64 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.umax.nxv64i1(<vscale x 64 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.smax.nxv64i1(<vscale x 64 x i1>)
 
 define zeroext i1 @vreduce_smax_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv64i1:
@@ -633,8 +539,6 @@ define zeroext i1 @vreduce_smax_nxv64i1(<vscale x 64 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.umin.nxv64i1(<vscale x 64 x i1>)
-
 define zeroext i1 @vreduce_umin_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv64i1:
 ; CHECK:       # %bb.0:
@@ -647,8 +551,6 @@ define zeroext i1 @vreduce_umin_nxv64i1(<vscale x 64 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.smin.nxv64i1(<vscale x 64 x i1>)
-
 define zeroext i1 @vreduce_smin_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv64i1:
 ; CHECK:       # %bb.0:
@@ -659,8 +561,6 @@ define zeroext i1 @vreduce_smin_nxv64i1(<vscale x 64 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv64i1(<vscale x 64 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.add.nxv1i1(<vscale x 1 x i1>)
 
 define zeroext i1 @vreduce_add_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv1i1:
@@ -673,8 +573,6 @@ define zeroext i1 @vreduce_add_nxv1i1(<vscale x 1 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1>)
-
 define zeroext i1 @vreduce_add_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -685,8 +583,6 @@ define zeroext i1 @vreduce_add_nxv2i1(<vscale x 2 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.add.nxv4i1(<vscale x 4 x i1>)
 
 define zeroext i1 @vreduce_add_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv4i1:
@@ -699,8 +595,6 @@ define zeroext i1 @vreduce_add_nxv4i1(<vscale x 4 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1>)
-
 define zeroext i1 @vreduce_add_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv8i1:
 ; CHECK:       # %bb.0:
@@ -711,8 +605,6 @@ define zeroext i1 @vreduce_add_nxv8i1(<vscale x 8 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1> %v)
   ret i1 %red
 }
-
-declare i1 @llvm.vector.reduce.add.nxv16i1(<vscale x 16 x i1>)
 
 define zeroext i1 @vreduce_add_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv16i1:
@@ -725,8 +617,6 @@ define zeroext i1 @vreduce_add_nxv16i1(<vscale x 16 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.add.nxv32i1(<vscale x 32 x i1>)
-
 define zeroext i1 @vreduce_add_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv32i1:
 ; CHECK:       # %bb.0:
@@ -738,8 +628,6 @@ define zeroext i1 @vreduce_add_nxv32i1(<vscale x 32 x i1> %v) {
   ret i1 %red
 }
 
-declare i1 @llvm.vector.reduce.add.nxv64i1(<vscale x 64 x i1>)
-
 define zeroext i1 @vreduce_add_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv64i1:
 ; CHECK:       # %bb.0:
@@ -748,5 +636,495 @@ define zeroext i1 @vreduce_add_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv64i1(<vscale x 64 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_or_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_or_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_xor_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_and_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_and_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umax_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smax_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umin_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smin_nxv128i1(<vscale x 128 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.nxv128i1(<vscale x 128 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_or_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_or_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v0, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_xor_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v9, v0, v9
+; CHECK-NEXT:    vmxor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_and_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_and_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umax_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v0, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smax_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umin_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smin_nxv256i1(<vscale x 256 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_nxv256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v0, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.nxv256i1(<vscale x 256 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_or_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_or_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v0, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_xor_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v10, v10, v14
+; CHECK-NEXT:    vmxor.mm v8, v8, v12
+; CHECK-NEXT:    vmxor.mm v9, v9, v13
+; CHECK-NEXT:    vmxor.mm v11, v0, v11
+; CHECK-NEXT:    vmxor.mm v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v9, v11, v9
+; CHECK-NEXT:    vmxor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_and_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_and_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v0, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umax_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v0, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smax_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v0, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umin_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v0, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smin_nxv512i1(<vscale x 512 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_nxv512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v0, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.nxv512i1(<vscale x 512 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_or_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_or_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v14, v14, v22
+; CHECK-NEXT:    vmor.mm v10, v10, v18
+; CHECK-NEXT:    vmor.mm v12, v12, v20
+; CHECK-NEXT:    vmor.mm v8, v8, v16
+; CHECK-NEXT:    vmor.mm v13, v13, v21
+; CHECK-NEXT:    vmor.mm v9, v9, v17
+; CHECK-NEXT:    vmor.mm v11, v11, v19
+; CHECK-NEXT:    vmor.mm v15, v0, v15
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v15, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.nxv1024i1(<vscale x 1024 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_xor_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v14, v14, v22
+; CHECK-NEXT:    vmxor.mm v10, v10, v18
+; CHECK-NEXT:    vmxor.mm v12, v12, v20
+; CHECK-NEXT:    vmxor.mm v8, v8, v16
+; CHECK-NEXT:    vmxor.mm v13, v13, v21
+; CHECK-NEXT:    vmxor.mm v9, v9, v17
+; CHECK-NEXT:    vmxor.mm v11, v11, v19
+; CHECK-NEXT:    vmxor.mm v15, v0, v15
+; CHECK-NEXT:    vmxor.mm v10, v10, v14
+; CHECK-NEXT:    vmxor.mm v8, v8, v12
+; CHECK-NEXT:    vmxor.mm v9, v9, v13
+; CHECK-NEXT:    vmxor.mm v11, v15, v11
+; CHECK-NEXT:    vmxor.mm v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v9, v11, v9
+; CHECK-NEXT:    vmxor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.nxv1024i1(<vscale x 1024 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_and_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_and_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v14, v14, v22
+; CHECK-NEXT:    vmand.mm v10, v10, v18
+; CHECK-NEXT:    vmand.mm v12, v12, v20
+; CHECK-NEXT:    vmand.mm v8, v8, v16
+; CHECK-NEXT:    vmand.mm v13, v13, v21
+; CHECK-NEXT:    vmand.mm v9, v9, v17
+; CHECK-NEXT:    vmand.mm v11, v11, v19
+; CHECK-NEXT:    vmand.mm v15, v0, v15
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v15, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umax_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v14, v14, v22
+; CHECK-NEXT:    vmor.mm v10, v10, v18
+; CHECK-NEXT:    vmor.mm v12, v12, v20
+; CHECK-NEXT:    vmor.mm v8, v8, v16
+; CHECK-NEXT:    vmor.mm v13, v13, v21
+; CHECK-NEXT:    vmor.mm v9, v9, v17
+; CHECK-NEXT:    vmor.mm v11, v11, v19
+; CHECK-NEXT:    vmor.mm v15, v0, v15
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v15, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.nxv1024i1(<vscale x 1024 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smax_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v14, v14, v22
+; CHECK-NEXT:    vmand.mm v10, v10, v18
+; CHECK-NEXT:    vmand.mm v12, v12, v20
+; CHECK-NEXT:    vmand.mm v8, v8, v16
+; CHECK-NEXT:    vmand.mm v13, v13, v21
+; CHECK-NEXT:    vmand.mm v9, v9, v17
+; CHECK-NEXT:    vmand.mm v11, v11, v19
+; CHECK-NEXT:    vmand.mm v15, v0, v15
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v15, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.nxv1024i1(<vscale x 1024 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_umin_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v14, v14, v22
+; CHECK-NEXT:    vmand.mm v10, v10, v18
+; CHECK-NEXT:    vmand.mm v12, v12, v20
+; CHECK-NEXT:    vmand.mm v8, v8, v16
+; CHECK-NEXT:    vmand.mm v13, v13, v21
+; CHECK-NEXT:    vmand.mm v9, v9, v17
+; CHECK-NEXT:    vmand.mm v11, v11, v19
+; CHECK-NEXT:    vmand.mm v15, v0, v15
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v15, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.nxv1024i1(<vscale x 1024 x i1> %v)
+  ret i1 %red
+}
+
+define zeroext i1 @vreduce_smin_nxv1024i1(<vscale x 1024 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_nxv1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v14, v14, v22
+; CHECK-NEXT:    vmor.mm v10, v10, v18
+; CHECK-NEXT:    vmor.mm v12, v12, v20
+; CHECK-NEXT:    vmor.mm v8, v8, v16
+; CHECK-NEXT:    vmor.mm v13, v13, v21
+; CHECK-NEXT:    vmor.mm v9, v9, v17
+; CHECK-NEXT:    vmor.mm v11, v11, v19
+; CHECK-NEXT:    vmor.mm v15, v0, v15
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v15, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.nxv1024i1(<vscale x 1024 x i1> %v)
   ret i1 %red
 }

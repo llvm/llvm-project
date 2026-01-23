@@ -675,15 +675,15 @@ void test1() {
 
   /* vec_sr */
   res_vsll = vec_sr(vsll, vull);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, splat (i64 64)
 // CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, splat (i64 64)
 // CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vull = vec_sr(vull, vull);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, splat (i64 64)
 // CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, splat (i64 64)
 // CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   /* vec_sra */
@@ -831,299 +831,299 @@ void test1() {
   /* vec_nand */
   res_vsc = vec_nand(vsc, vsc);
 // CHECK: [[T1:%.+]] = and <16 x i8>
-// CHECK: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: xor <16 x i8> [[T1]], splat (i8 -1)
 // CHECK-LE: [[T1:%.+]] = and <16 x i8>
-// CHECK-LE: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: xor <16 x i8> [[T1]], splat (i8 -1)
 // CHECK-PPC: error: call to undeclared function 'vec_nand'
 
   res_vbc = vec_nand(vbc, vbc);
 // CHECK: [[T1:%.+]] = and <16 x i8>
-// CHECK: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: xor <16 x i8> [[T1]], splat (i8 -1)
 // CHECK-LE: [[T1:%.+]] = and <16 x i8>
-// CHECK-LE: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: xor <16 x i8> [[T1]], splat (i8 -1)
 
   res_vuc = vec_nand(vuc, vuc);
 // CHECK: [[T1:%.+]] = and <16 x i8>
-// CHECK: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: xor <16 x i8> [[T1]], splat (i8 -1)
 // CHECK-LE: [[T1:%.+]] = and <16 x i8>
-// CHECK-LE: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: xor <16 x i8> [[T1]], splat (i8 -1)
 
   res_vss = vec_nand(vss, vss);
 // CHECK: [[T1:%.+]] = and <8 x i16>
-// CHECK: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: xor <8 x i16> [[T1]], splat (i16 -1)
 // CHECK-LE: [[T1:%.+]] = and <8 x i16>
-// CHECK-LE: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: xor <8 x i16> [[T1]], splat (i16 -1)
 
   res_vbs = vec_nand(vbs, vbs);
 // CHECK: [[T1:%.+]] = and <8 x i16>
-// CHECK: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: xor <8 x i16> [[T1]], splat (i16 -1)
 // CHECK-LE: [[T1:%.+]] = and <8 x i16>
-// CHECK-LE: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: xor <8 x i16> [[T1]], splat (i16 -1)
 
   res_vus = vec_nand(vus, vus);
 // CHECK: [[T1:%.+]] = and <8 x i16>
-// CHECK: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: xor <8 x i16> [[T1]], splat (i16 -1)
 // CHECK-LE: [[T1:%.+]] = and <8 x i16>
-// CHECK-LE: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: xor <8 x i16> [[T1]], splat (i16 -1)
 
   res_vsi = vec_nand(vsi, vsi);
 // CHECK: [[T1:%.+]] = and <4 x i32>
-// CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> [[T1]], splat (i32 -1)
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
-// CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> [[T1]], splat (i32 -1)
 
   res_vbi = vec_nand(vbi, vbi);
 // CHECK: [[T1:%.+]] = and <4 x i32>
-// CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> [[T1]], splat (i32 -1)
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
-// CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> [[T1]], splat (i32 -1)
 
   res_vui = vec_nand(vui, vui);
 // CHECK: [[T1:%.+]] = and <4 x i32>
-// CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> [[T1]], splat (i32 -1)
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
-// CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> [[T1]], splat (i32 -1)
 
   res_vf = vec_nand(vfa, vfa);
 // CHECK: [[T1:%.+]] = and <4 x i32>
-// CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> [[T1]], splat (i32 -1)
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
-// CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> [[T1]], splat (i32 -1)
 
   res_vsll = vec_nand(vsll, vsll);
 // CHECK: [[T1:%.+]] = and <2 x i64>
-// CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK: xor <2 x i64> [[T1]], splat (i64 -1)
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
-// CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK-LE: xor <2 x i64> [[T1]], splat (i64 -1)
 
   res_vbll = vec_nand(vbll, vbll);
 // CHECK: [[T1:%.+]] = and <2 x i64>
-// CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK: xor <2 x i64> [[T1]], splat (i64 -1)
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
-// CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK-LE: xor <2 x i64> [[T1]], splat (i64 -1)
 
   res_vull = vec_nand(vull, vull);
 // CHECK: [[T1:%.+]] = and <2 x i64>
-// CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK: xor <2 x i64> [[T1]], splat (i64 -1)
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
-// CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK-LE: xor <2 x i64> [[T1]], splat (i64 -1)
 
   res_vd = vec_nand(vda, vda);
 // CHECK: [[T1:%.+]] = and <2 x i64>
-// CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK: xor <2 x i64> [[T1]], splat (i64 -1)
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
-// CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK-LE: xor <2 x i64> [[T1]], splat (i64 -1)
 
   res_vf = vec_nand(vfa, vfa);
 // CHECK: [[T1:%.+]] = and <4 x i32>
-// CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> [[T1]], splat (i32 -1)
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
-// CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> [[T1]], splat (i32 -1)
 
   /* vec_orc */
   res_vsc = vec_orc(vsc, vsc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 // CHECK-PPC: error: call to undeclared function 'vec_orc'
 
   res_vsc = vec_orc(vsc, vbc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 
   res_vsc = vec_orc(vbc, vsc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 
   res_vuc = vec_orc(vuc, vuc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 
   res_vuc = vec_orc(vuc, vbc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 
   res_vuc = vec_orc(vbc, vuc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 
   res_vbc = vec_orc(vbc, vbc);
-// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, splat (i8 -1)
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
 
   res_vss = vec_orc(vss, vss);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vss = vec_orc(vss, vbs);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vss = vec_orc(vbs, vss);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vus = vec_orc(vus, vus);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vus = vec_orc(vus, vbs);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vus = vec_orc(vbs, vus);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vbs = vec_orc(vbs, vbs);
-// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK: or <8 x i16> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-LE: [[T1:%.+]] = xor <8 x i16> {{%.+}}, splat (i16 -1)
 // CHECK-LE: or <8 x i16> {{%.+}}, [[T1]]
 
   res_vsi = vec_orc(vsi, vsi);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vsi = vec_orc(vsi, vbi);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vsi = vec_orc(vbi, vsi);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vui = vec_orc(vui, vui);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vui = vec_orc(vui, vbi);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vui = vec_orc(vbi, vui);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vbi = vec_orc(vbi, vbi);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vf = vec_orc(vbi, vfa);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vf = vec_orc(vfa, vbi);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vf = vec_orc(vfa, vfb);
-// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK: or <4 x i32> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, splat (i32 -1)
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
   res_vsll = vec_orc(vsll, vsll);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vsll = vec_orc(vsll, vbll);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vsll = vec_orc(vbll, vsll);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vull = vec_orc(vull, vull);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vull = vec_orc(vull, vbll);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vull = vec_orc(vbll, vull);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vbll = vec_orc(vbll, vbll);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vd = vec_orc(vbll, vda);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vd = vec_orc(vda, vbll);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vd = vec_orc(vda, vdb);
-// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
-// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, splat (i64 -1)
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   /* vec_sub */
@@ -1250,7 +1250,7 @@ vector unsigned int test_vec_addec_unsigned (vector unsigned int a, vector unsig
 vector signed int test_vec_subec_signed (vector signed int a, vector signed int b, vector signed int c) {
   return vec_subec(a, b, c);
 // CHECK-LABEL: @test_vec_subec_signed
-// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> {{%[0-9]+}}, splat (i32 -1)
 // CHECK: ret <4 x i32>
 }
 
@@ -1258,7 +1258,7 @@ vector unsigned int test_vec_subec_unsigned (vector unsigned int a, vector unsig
   return vec_subec(a, b, c);
 
 // CHECK-LABEL: @test_vec_subec_unsigned
-// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> {{%[0-9]+}}, splat (i32 -1)
 // CHECK: ret <4 x i32>
 }
 

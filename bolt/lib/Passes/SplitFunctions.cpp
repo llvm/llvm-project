@@ -86,29 +86,6 @@ static cl::opt<unsigned> SplitThreshold(
              "increase after splitting."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<SplitFunctionsStrategy> SplitStrategy(
-    "split-strategy", cl::init(SplitFunctionsStrategy::Profile2),
-    cl::values(clEnumValN(SplitFunctionsStrategy::Profile2, "profile2",
-                          "split each function into a hot and cold fragment "
-                          "using profiling information")),
-    cl::values(clEnumValN(SplitFunctionsStrategy::CDSplit, "cdsplit",
-                          "split each function into a hot, warm, and cold "
-                          "fragment using profiling information")),
-    cl::values(clEnumValN(
-        SplitFunctionsStrategy::Random2, "random2",
-        "split each function into a hot and cold fragment at a randomly chosen "
-        "split point (ignoring any available profiling information)")),
-    cl::values(clEnumValN(
-        SplitFunctionsStrategy::RandomN, "randomN",
-        "split each function into N fragments at a randomly chosen split "
-        "points (ignoring any available profiling information)")),
-    cl::values(clEnumValN(
-        SplitFunctionsStrategy::All, "all",
-        "split all basic blocks of each function into fragments such that each "
-        "fragment contains exactly a single basic block")),
-    cl::desc("strategy used to partition blocks into fragments"),
-    cl::cat(BoltOptCategory));
-
 static cl::opt<double> CallScale(
     "call-scale",
     cl::desc("Call score scale coefficient (when --split-strategy=cdsplit)"),
@@ -229,7 +206,7 @@ private:
   }
 
   void initializeAuxiliaryVariables() {
-    for (BinaryFunction *BF : BC.getSortedFunctions()) {
+    for (BinaryFunction *BF : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*BF))
         continue;
 
@@ -257,7 +234,7 @@ private:
   void buildCallGraph() {
     Callers.resize(TotalNumBlocks);
     Callees.resize(TotalNumBlocks);
-    for (const BinaryFunction *SrcFunction : BC.getSortedFunctions()) {
+    for (const BinaryFunction *SrcFunction : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*SrcFunction))
         continue;
 
@@ -360,7 +337,7 @@ private:
     const BinaryBasicBlock *ThisBB = &(ThisBF->front());
     const size_t ThisGI = GlobalIndices[ThisBB];
 
-    for (const BinaryFunction *DstBF : BC.getSortedFunctions()) {
+    for (const BinaryFunction *DstBF : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*DstBF))
         continue;
 
@@ -409,7 +386,7 @@ private:
   }
 
   /// Compute sum of scores over jumps within \p BlockOrder given \p SplitIndex.
-  /// Increament Score.LocalScore in place by the sum.
+  /// Increment Score.LocalScore in place by the sum.
   void computeJumpScore(const BasicBlockOrder &BlockOrder,
                         const size_t SplitIndex, SplitScore &Score) {
 
@@ -436,7 +413,7 @@ private:
   }
 
   /// Compute sum of scores over calls originated in the current function
-  /// given \p SplitIndex. Increament Score.LocalScore in place by the sum.
+  /// given \p SplitIndex. Increment Score.LocalScore in place by the sum.
   void computeLocalCallScore(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex, SplitScore &Score) {
     if (opts::CallScale == 0)
@@ -478,7 +455,7 @@ private:
   }
 
   /// Compute sum of splitting scores for cover calls of the input function.
-  /// Increament Score.CoverCallScore in place by the sum.
+  /// Increment Score.CoverCallScore in place by the sum.
   void computeCoverCallScore(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex,
                              const std::vector<CallInfo> &CoverCalls,
@@ -490,7 +467,7 @@ private:
       assert(CI.Length >= Score.HotSizeReduction &&
              "Length of cover calls must exceed reduced size of hot fragment.");
       // Compute the new length of the call, which is shorter than the original
-      // one by the size of the splitted fragment minus the total size increase.
+      // one by the size of the split fragment minus the total size increase.
       const size_t NewCallLength = CI.Length - Score.HotSizeReduction;
       Score.CoverCallScore += computeCallScore(CI.Count, NewCallLength);
     }
@@ -525,12 +502,12 @@ private:
 
     // First part of LocalScore is the sum over call edges originated in the
     // input function. These edges can get shorter or longer depending on
-    // SplitIndex. Score.LocalScore is increamented in place.
+    // SplitIndex. Score.LocalScore is incremented in place.
     computeLocalCallScore(BlockOrder, SplitIndex, Score);
 
     // Second part of LocalScore is the sum over jump edges with src basic block
     // and dst basic block in the current function. Score.LocalScore is
-    // increamented in place.
+    // incremented in place.
     computeJumpScore(BlockOrder, SplitIndex, Score);
 
     // Compute CoverCallScore and store in Score in place.
@@ -724,14 +701,14 @@ Error SplitFunctions::runOnFunctions(BinaryContext &BC) {
   // If split strategy is not CDSplit, then a second run of the pass is not
   // needed after function reordering.
   if (BC.HasFinalizedFunctionOrder &&
-      opts::SplitStrategy != SplitFunctionsStrategy::CDSplit)
+      opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit)
     return Error::success();
 
   std::unique_ptr<SplitStrategy> Strategy;
   bool ForceSequential = false;
 
   switch (opts::SplitStrategy) {
-  case SplitFunctionsStrategy::CDSplit:
+  case opts::SplitFunctionsStrategy::CDSplit:
     // CDSplit runs two splitting passes: hot-cold splitting (SplitPrfoile2)
     // before function reordering and hot-warm-cold splitting
     // (SplitCacheDirected) after function reordering.
@@ -742,21 +719,21 @@ Error SplitFunctions::runOnFunctions(BinaryContext &BC) {
     opts::AggressiveSplitting = true;
     BC.HasWarmSection = true;
     break;
-  case SplitFunctionsStrategy::Profile2:
+  case opts::SplitFunctionsStrategy::Profile2:
     Strategy = std::make_unique<SplitProfile2>();
     break;
-  case SplitFunctionsStrategy::Random2:
+  case opts::SplitFunctionsStrategy::Random2:
     Strategy = std::make_unique<SplitRandom2>();
     // If we split functions randomly, we need to ensure that across runs with
     // the same input, we generate random numbers for each function in the same
     // order.
     ForceSequential = true;
     break;
-  case SplitFunctionsStrategy::RandomN:
+  case opts::SplitFunctionsStrategy::RandomN:
     Strategy = std::make_unique<SplitRandomN>();
     ForceSequential = true;
     break;
-  case SplitFunctionsStrategy::All:
+  case opts::SplitFunctionsStrategy::All:
     Strategy = std::make_unique<SplitAll>();
     break;
   }
@@ -901,8 +878,47 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
   // have to be placed in the same fragment. When we split them, create
   // trampoline landing pads that will redirect the execution to real LPs.
   TrampolineSetType Trampolines;
-  if (!BC.HasFixedLoadAddress && BF.hasEHRanges() && BF.isSplit())
-    Trampolines = createEHTrampolines(BF);
+  if (BF.hasEHRanges() && BF.isSplit()) {
+    // If all landing pads for this fragment are grouped in one (potentially
+    // different) fragment, we can set LPStart to the start of that fragment
+    // and avoid trampoline code.
+    bool NeedsTrampolines = false;
+    for (FunctionFragment &FF : BF.getLayout().fragments()) {
+      // Vector of fragments that contain landing pads for this fragment.
+      SmallVector<FragmentNum, 4> LandingPadFragments;
+      for (const BinaryBasicBlock *BB : FF)
+        for (const BinaryBasicBlock *LPB : BB->landing_pads())
+          LandingPadFragments.push_back(LPB->getFragmentNum());
+
+      // Eliminate duplicate entries from the vector.
+      llvm::sort(LandingPadFragments);
+      auto Last = llvm::unique(LandingPadFragments);
+      LandingPadFragments.erase(Last, LandingPadFragments.end());
+
+      if (LandingPadFragments.size() == 0) {
+        // If the fragment has no landing pads, we can safely set itself as its
+        // landing pad fragment.
+        BF.setLPFragment(FF.getFragmentNum(), FF.getFragmentNum());
+      } else if (LandingPadFragments.size() == 1) {
+        BF.setLPFragment(FF.getFragmentNum(), LandingPadFragments.front());
+      } else {
+        if (!BC.HasFixedLoadAddress) {
+          NeedsTrampolines = true;
+          break;
+        } else {
+          BF.setLPFragment(FF.getFragmentNum(), std::nullopt);
+        }
+      }
+    }
+
+    // Trampolines guarantee that all landing pads for any given fragment will
+    // be contained in the same fragment.
+    if (NeedsTrampolines) {
+      for (FunctionFragment &FF : BF.getLayout().fragments())
+        BF.setLPFragment(FF.getFragmentNum(), FF.getFragmentNum());
+      Trampolines = createEHTrampolines(BF);
+    }
+  }
 
   // Check the new size to see if it's worth splitting the function.
   if (BC.isX86() && LayoutUpdated) {
@@ -932,6 +948,10 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
       SplitBytesCold += ColdSize;
     }
   }
+
+  // Restore LP fragment for the main fragment if the splitting was undone.
+  if (BF.hasEHRanges() && !BF.isSplit())
+    BF.setLPFragment(FragmentNum::main(), FragmentNum::main());
 
   // Fix branches if the splitting decision of the pass after function
   // reordering is different from that of the pass before function reordering.

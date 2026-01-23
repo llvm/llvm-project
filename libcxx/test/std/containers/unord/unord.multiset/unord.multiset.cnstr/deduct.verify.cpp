@@ -50,48 +50,47 @@
 #include <functional>
 #include <unordered_set>
 
-int main(int, char**)
-{
-    {
-        // cannot deduce Key from nothing
-        std::unordered_multiset s;
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Size)
-        std::unordered_multiset s(42);
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Size, Hash)
-        std::unordered_multiset s(42, std::hash<int>());
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Size, Hash, Pred)
-        std::unordered_multiset s(42, std::hash<int>(), std::equal_to<>());
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Size, Hash, Pred, Allocator)
-        std::unordered_multiset s(42, std::hash<int>(), std::equal_to<>(), std::allocator<int>());
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Allocator)
-        std::unordered_multiset s(std::allocator<int>{});
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Size, Allocator)
-        std::unordered_multiset s(42, std::allocator<int>());
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
-    {
-        // cannot deduce Key from just (Size, Hash, Allocator)
-        std::unordered_multiset s(42, std::hash<short>(), std::allocator<int>());
-            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
-    }
+int main(int, char**) {
+  {
+    // cannot deduce Key from nothing
+    std::unordered_multiset s;
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Size)
+    std::unordered_multiset s(42);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Size, Hash)
+    std::unordered_multiset s(42, std::hash<int>());
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Size, Hash, Pred)
+    std::unordered_multiset s(42, std::hash<int>(), std::equal_to<>());
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Size, Hash, Pred, Allocator)
+    std::unordered_multiset s(42, std::hash<int>(), std::equal_to<>(), std::allocator<int>());
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Allocator)
+    std::unordered_multiset s(std::allocator<int>{});
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Size, Allocator)
+    std::unordered_multiset s(42, std::allocator<int>());
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
+  {
+    // cannot deduce Key from just (Size, Hash, Allocator)
+    std::unordered_multiset s(42, std::hash<short>(), std::allocator<int>());
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multiset'}}
+  }
 
-    return 0;
+  return 0;
 }

@@ -16,7 +16,7 @@
 #endif
 #endif
 
-#include <__memory/aligned_alloc.h>
+#include "include/aligned_alloc.h" // from libc++
 #include <__assert>
 #include <stdlib.h> // for malloc, calloc, free
 #include <string.h> // for memset
@@ -35,9 +35,9 @@ namespace {
 
 // When POSIX threads are not available, make the mutex operations a nop
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-static _LIBCPP_CONSTINIT std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
+static constinit std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
 #else
-static _LIBCPP_CONSTINIT void* heap_mutex = 0;
+static constinit void* heap_mutex = 0;
 #endif
 
 class mutexor {
@@ -259,7 +259,7 @@ void* __aligned_malloc_with_fallback(size_t size) {
 #if defined(_WIN32)
   if (void* dest = std::__libcpp_aligned_alloc(alignof(__aligned_type), size))
     return dest;
-#elif defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
+#elif !_LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
   if (void* dest = ::malloc(size))
     return dest;
 #else
@@ -286,7 +286,7 @@ void __aligned_free_with_fallback(void* ptr) {
   if (is_fallback_ptr(ptr))
     fallback_free(ptr);
   else {
-#if defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
+#if !_LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
     ::free(ptr);
 #else
     std::__libcpp_aligned_free(ptr);

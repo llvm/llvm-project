@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/TableGen/Record.h"
 
@@ -71,7 +70,7 @@ StringRef Attribute::getReturnType() const {
 // Return the type constraint corresponding to the type of this attribute, or
 // std::nullopt if this is not a TypedAttr.
 std::optional<Type> Attribute::getValueType() const {
-  if (auto *defInit = dyn_cast<llvm::DefInit>(def->getValueInit("valueType")))
+  if (const auto *defInit = dyn_cast<DefInit>(def->getValueInit("valueType")))
     return Type(defInit->getDef());
   return std::nullopt;
 }
@@ -92,8 +91,7 @@ StringRef Attribute::getConstBuilderTemplate() const {
 }
 
 Attribute Attribute::getBaseAttr() const {
-  if (const auto *defInit =
-          llvm::dyn_cast<llvm::DefInit>(def->getValueInit("baseAttr"))) {
+  if (const auto *defInit = dyn_cast<DefInit>(def->getValueInit("baseAttr"))) {
     return Attribute(defInit).getBaseAttr();
   }
   return *this;
@@ -126,13 +124,13 @@ StringRef Attribute::getDerivedCodeBody() const {
 Dialect Attribute::getDialect() const {
   const llvm::RecordVal *record = def->getValue("dialect");
   if (record && record->getValue()) {
-    if (DefInit *init = dyn_cast<DefInit>(record->getValue()))
+    if (const DefInit *init = dyn_cast<DefInit>(record->getValue()))
       return Dialect(init->getDef());
   }
   return Dialect(nullptr);
 }
 
-const llvm::Record &Attribute::getDef() const { return *def; }
+const Record &Attribute::getDef() const { return *def; }
 
 ConstantAttr::ConstantAttr(const DefInit *init) : def(init->getDef()) {
   assert(def->isSubClassOf("ConstantAttr") &&
@@ -145,100 +143,6 @@ Attribute ConstantAttr::getAttribute() const {
 
 StringRef ConstantAttr::getConstantValue() const {
   return def->getValueAsString("value");
-}
-
-EnumAttrCase::EnumAttrCase(const llvm::Record *record) : Attribute(record) {
-  assert(isSubClassOf("EnumAttrCaseInfo") &&
-         "must be subclass of TableGen 'EnumAttrInfo' class");
-}
-
-EnumAttrCase::EnumAttrCase(const llvm::DefInit *init)
-    : EnumAttrCase(init->getDef()) {}
-
-StringRef EnumAttrCase::getSymbol() const {
-  return def->getValueAsString("symbol");
-}
-
-StringRef EnumAttrCase::getStr() const { return def->getValueAsString("str"); }
-
-int64_t EnumAttrCase::getValue() const { return def->getValueAsInt("value"); }
-
-const llvm::Record &EnumAttrCase::getDef() const { return *def; }
-
-EnumAttr::EnumAttr(const llvm::Record *record) : Attribute(record) {
-  assert(isSubClassOf("EnumAttrInfo") &&
-         "must be subclass of TableGen 'EnumAttr' class");
-}
-
-EnumAttr::EnumAttr(const llvm::Record &record) : Attribute(&record) {}
-
-EnumAttr::EnumAttr(const llvm::DefInit *init) : EnumAttr(init->getDef()) {}
-
-bool EnumAttr::classof(const Attribute *attr) {
-  return attr->isSubClassOf("EnumAttrInfo");
-}
-
-bool EnumAttr::isBitEnum() const { return isSubClassOf("BitEnumAttr"); }
-
-StringRef EnumAttr::getEnumClassName() const {
-  return def->getValueAsString("className");
-}
-
-StringRef EnumAttr::getCppNamespace() const {
-  return def->getValueAsString("cppNamespace");
-}
-
-StringRef EnumAttr::getUnderlyingType() const {
-  return def->getValueAsString("underlyingType");
-}
-
-StringRef EnumAttr::getUnderlyingToSymbolFnName() const {
-  return def->getValueAsString("underlyingToSymbolFnName");
-}
-
-StringRef EnumAttr::getStringToSymbolFnName() const {
-  return def->getValueAsString("stringToSymbolFnName");
-}
-
-StringRef EnumAttr::getSymbolToStringFnName() const {
-  return def->getValueAsString("symbolToStringFnName");
-}
-
-StringRef EnumAttr::getSymbolToStringFnRetType() const {
-  return def->getValueAsString("symbolToStringFnRetType");
-}
-
-StringRef EnumAttr::getMaxEnumValFnName() const {
-  return def->getValueAsString("maxEnumValFnName");
-}
-
-std::vector<EnumAttrCase> EnumAttr::getAllCases() const {
-  const auto *inits = def->getValueAsListInit("enumerants");
-
-  std::vector<EnumAttrCase> cases;
-  cases.reserve(inits->size());
-
-  for (const llvm::Init *init : *inits) {
-    cases.emplace_back(cast<llvm::DefInit>(init));
-  }
-
-  return cases;
-}
-
-bool EnumAttr::genSpecializedAttr() const {
-  return def->getValueAsBit("genSpecializedAttr");
-}
-
-llvm::Record *EnumAttr::getBaseAttrClass() const {
-  return def->getValueAsDef("baseAttrClass");
-}
-
-StringRef EnumAttr::getSpecializedAttrClassName() const {
-  return def->getValueAsString("specializedAttrClassName");
-}
-
-bool EnumAttr::printBitEnumPrimaryGroups() const {
-  return def->getValueAsBit("printBitEnumPrimaryGroups");
 }
 
 const char * ::mlir::tblgen::inferTypeOpInterface = "InferTypeOpInterface";

@@ -62,9 +62,21 @@ struct TestInt {
   }
 };
 
+template <typename T>
+struct ConvertibleTo {
+  operator T() const { return T(); }
+};
+
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
+
+  // Make sure we can call `std::isnan` with convertible types
+  {
+    assert(!std::isnan(ConvertibleTo<float>()));
+    assert(!std::isnan(ConvertibleTo<double>()));
+    assert(!std::isnan(ConvertibleTo<long double>()));
+  }
 
   return 0;
 }

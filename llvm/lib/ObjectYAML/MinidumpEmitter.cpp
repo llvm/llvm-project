@@ -84,9 +84,9 @@ private:
 template <typename T, typename RangeType>
 std::pair<size_t, MutableArrayRef<T>>
 BlobAllocator::allocateNewArray(const iterator_range<RangeType> &Range) {
-  size_t Num = std::distance(Range.begin(), Range.end());
+  size_t Num = llvm::size(Range);
   MutableArrayRef<T> Array(Temporaries.Allocate<T>(Num), Num);
-  std::uninitialized_copy(Range.begin(), Range.end(), Array.begin());
+  llvm::uninitialized_copy(Range, Array.begin());
   return {allocateArray(Array), Array};
 }
 
@@ -132,6 +132,30 @@ static size_t layout(BlobAllocator &File, MinidumpYAML::ExceptionStream &S) {
   // the cases where location descriptions overlap vs happen to reference
   // identical data.
   S.MDExceptionStream.ThreadContext = layout(File, S.ThreadContext);
+
+  return DataEnd;
+}
+
+static size_t layout(BlobAllocator &File, MinidumpYAML::Memory64ListStream &S) {
+  size_t BaseRVA = File.tell() + sizeof(minidump::Memory64ListHeader);
+  BaseRVA += S.Entries.size() * sizeof(minidump::MemoryDescriptor_64);
+  S.Header.BaseRVA = BaseRVA;
+  S.Header.NumberOfMemoryRanges = S.Entries.size();
+  File.allocateObject(S.Header);
+  for (auto &E : S.Entries)
+    File.allocateObject(E.Entry);
+
+  // Save the new offset for the stream size.
+  size_t DataEnd = File.tell();
+  for (auto &E : S.Entries) {
+    File.allocateBytes(E.Content);
+    if (E.Entry.DataSize > E.Content.binary_size()) {
+      size_t Padding = E.Entry.DataSize - E.Content.binary_size();
+      File.allocateCallback(Padding, [Padding](raw_ostream &OS) {
+        OS << std::string(Padding, '\0');
+      });
+    }
+  }
 
   return DataEnd;
 }
@@ -189,6 +213,9 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   }
   case Stream::StreamKind::MemoryList:
     DataEnd = layout(File, cast<MemoryListStream>(S));
+    break;
+  case Stream::StreamKind::Memory64List:
+    DataEnd = layout(File, cast<Memory64ListStream>(S));
     break;
   case Stream::StreamKind::ModuleList:
     DataEnd = layout(File, cast<ModuleListStream>(S));

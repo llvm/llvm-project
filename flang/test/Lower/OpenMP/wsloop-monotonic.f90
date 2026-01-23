@@ -11,13 +11,12 @@ program wsloop_dynamic
 !CHECK:  omp.parallel {
 
 !$OMP DO SCHEDULE(monotonic:dynamic)
-!CHECK:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
 !CHECK:     %[[WS_LB:.*]] = arith.constant 1 : i32
 !CHECK:     %[[WS_UB:.*]] = arith.constant 9 : i32
 !CHECK:     %[[WS_STEP:.*]] = arith.constant 1 : i32
-!CHECK:     omp.wsloop schedule(dynamic, monotonic) nowait {
+!CHECK:     omp.wsloop nowait schedule(dynamic, monotonic) private({{.*}}) {
 !CHECK-NEXT:  omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
-!CHECK:         fir.store %[[I]] to %[[ALLOCA_IV:.*]]#1 : !fir.ref<i32>
+!CHECK:         hlfir.assign %[[I]] to %[[ALLOCA_IV:.*]]#0 : i32, !fir.ref<i32>
 
   do i=1, 9
     print*, i
@@ -27,7 +26,6 @@ program wsloop_dynamic
 !CHECK:         fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) {{.*}}: (!fir.ref<i8>) -> i32
   end do
 !CHECK:         omp.yield
-!CHECK:       omp.terminator
 !CHECK:     omp.terminator
 !CHECK:   }
 

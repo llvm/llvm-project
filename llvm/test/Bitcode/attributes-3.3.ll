@@ -108,7 +108,7 @@ define void @f17(i8 align 4 %0)
 }
 
 define void @f18(i8* nocapture %0)
-; CHECK: define void @f18(ptr nocapture %0)
+; CHECK: define void @f18(ptr captures(none) %0)
 {
         ret void;
 }

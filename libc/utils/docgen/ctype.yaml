@@ -1,0 +1,72 @@
+functions:
+  isalnum:
+    c-definition: 7.4.1.1
+    in-latest-posix: ''
+  isalnum_l:
+    in-latest-posix: ''
+  isalpha:
+    c-definition: 7.4.1.2
+    in-latest-posix: ''
+  isalpha_l:
+    in-latest-posix: ''
+  isblank:
+    c-definition: 7.4.1.3
+    in-latest-posix: ''
+  isblank_l:
+    in-latest-posix: ''
+  iscntrl:
+    c-definition: 7.4.1.4
+    in-latest-posix: ''
+  iscntrl_l:
+    in-latest-posix: ''
+  isdigit:
+    c-definition: 7.4.1.5
+    in-latest-posix: ''
+  isdigit_l:
+    in-latest-posix: ''
+  isgraph:
+    c-definition: 7.4.1.6
+    in-latest-posix: ''
+  isgraph_l:
+    in-latest-posix: ''
+  islower:
+    c-definition: 7.4.1.7
+    in-latest-posix: ''
+  islower_l:
+    in-latest-posix: ''
+  isprint:
+    c-definition: 7.4.1.8
+    in-latest-posix: ''
+  isprint_l:
+    in-latest-posix: ''
+  ispunct:
+    c-definition: 7.4.1.9
+    in-latest-posix: ''
+  ispunct_l:
+    in-latest-posix: ''
+  isspace:
+    c-definition: 7.4.1.10
+    in-latest-posix: ''
+  isspace_l:
+    in-latest-posix: ''
+  isupper:
+    c-definition: 7.4.1.11
+    in-latest-posix: ''
+  isupper_l:
+    in-latest-posix: ''
+  isxdigit:
+    c-definition: 7.4.1.12
+    in-latest-posix: ''
+  isxdigit_l:
+    in-latest-posix: ''
+  tolower:
+    c-definition: 7.4.2.1
+    in-latest-posix: ''
+  tolower_l:
+    in-latest-posix: ''
+  toupper:
+    c-definition: 7.4.2.2
+    in-latest-posix: ''
+  toupper_l:
+    in-latest-posix: ''
+

@@ -13,6 +13,9 @@ namespace find_all_symbols {
 
 const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
   static const HeaderMapCollector::RegexHeaderMap STLPostfixHeaderMap = {
+      {"include/__float_float.h$", "<cfloat>"},
+      {"include/__float_header_macro.h$", "<cfloat>"},
+      {"include/__float_infinity_nan.h$", "<cfloat>"},
       {"include/__stdarg___gnuc_va_list.h$", "<cstdarg>"},
       {"include/__stdarg___va_copy.h$", "<cstdarg>"},
       {"include/__stdarg_header_macro.h$", "<cstdarg>"},
@@ -606,6 +609,9 @@ const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
       {"sys/xattr.h$", "<sys/xattr.h>"},
       {"bits/epoll.h$", "<sys/epoll.h>"},
       {"bits/eventfd.h$", "<sys/eventfd.h>"},
+      {"bits/getopt_core.h$", "<getopt.h>"},
+      {"bits/getopt_ext.h$", "<getopt.h>"},
+      {"bits/getopt_posix.h$", "<getopt.h>"},
       {"bits/inotify.h$", "<sys/inotify.h>"},
       {"bits/ipc.h$", "<sys/ipc.h>"},
       {"bits/ipctypes.h$", "<sys/ipc.h>"},
@@ -655,6 +661,7 @@ const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
       {"bits/syslog-path.h$", "<sys/syslog.h>"},
       {"bits/termios.h$", "<termios.h>"},
       {"bits/types.h$", "<sys/types.h>"},
+      {"bits/types/struct_iovec.h$", "<sys/uio.h>"},
       {"bits/typesizes.h$", "<sys/types.h>"},
       {"bits/uio.h$", "<sys/uio.h>"},
       {"bits/ustat.h$", "<sys/ustat.h>"},

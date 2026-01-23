@@ -21,6 +21,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "x86tti"
 
@@ -44,8 +45,7 @@ static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
 
   // Mask was extended from a boolean vector.
   Value *ExtMask;
-  if (PatternMatch::match(
-          Mask, PatternMatch::m_SExt(PatternMatch::m_Value(ExtMask))) &&
+  if (match(Mask, m_SExt(m_Value(ExtMask))) &&
       ExtMask->getType()->isIntOrIntVectorTy(1))
     return ExtMask;
 
@@ -67,15 +67,9 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   // The mask is constant or extended from a bool vector. Convert this x86
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
   if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
-    // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-    // the LLVM intrinsic definition for the pointer argument.
-    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
-    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
-
     // The pass-through vector for an x86 masked load is a zero vector.
     CallInst *NewMaskedLoad = IC.Builder.CreateMaskedLoad(
-        II.getType(), PtrCast, Align(1), BoolMask, ZeroVec);
+        II.getType(), Ptr, Align(1), BoolMask, ZeroVec);
     return IC.replaceInstUsesWith(II, NewMaskedLoad);
   }
 
@@ -105,7 +99,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
   if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
     unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
+    PointerType *VecPtrTy = PointerType::get(Vec->getContext(), AddrSpace);
     Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
     IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
@@ -523,10 +517,10 @@ static Value *simplifyX86pmulh(IntrinsicInst &II,
 
   // Multiply by one.
   if (!IsRounding) {
-    if (match(Arg0, PatternMatch::m_One()))
+    if (match(Arg0, m_One()))
       return IsSigned ? Builder.CreateAShr(Arg1, 15)
                       : ConstantAggregateZero::get(ResTy);
-    if (match(Arg1, PatternMatch::m_One()))
+    if (match(Arg1, m_One()))
       return IsSigned ? Builder.CreateAShr(Arg0, 15)
                       : ConstantAggregateZero::get(ResTy);
   }
@@ -623,10 +617,12 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   if (isa<UndefValue>(Arg))
     return Constant::getNullValue(ResTy);
 
-  auto *ArgTy = dyn_cast<FixedVectorType>(Arg->getType());
-  // We can't easily peek through x86_mmx types.
-  if (!ArgTy)
+  // Preserve previous behavior and give up.
+  // TODO: treat as <8 x i8>.
+  if (II.getIntrinsicID() == Intrinsic::x86_mmx_pmovmskb)
     return nullptr;
+
+  auto *ArgTy = cast<FixedVectorType>(Arg->getType());
 
   // Expand MOVMSK to compare/bitcast/zext:
   // e.g. PMOVMSKB(v16i8 x):
@@ -655,7 +651,7 @@ static Value *simplifyX86addcarry(const IntrinsicInst &II,
          "Unexpected types for x86 addcarry");
 
   // If carry-in is zero, this is just an unsigned add with overflow.
-  if (match(CarryIn, PatternMatch::m_ZeroInt())) {
+  if (match(CarryIn, m_ZeroInt())) {
     Value *UAdd = Builder.CreateIntrinsic(Intrinsic::uadd_with_overflow, OpTy,
                                           {Op1, Op2});
     // The types have to be adjusted to match the x86 call types.
@@ -699,9 +695,9 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
   auto Xnor = [&](auto Lhs, auto Rhs) { return Not(Xor(Lhs, Rhs)); };
   auto Nand = [&](auto Lhs, auto Rhs) { return Not(And(Lhs, Rhs)); };
 
-  bool AIsConst = match(ArgA, PatternMatch::m_ImmConstant());
-  bool BIsConst = match(ArgB, PatternMatch::m_ImmConstant());
-  bool CIsConst = match(ArgC, PatternMatch::m_ImmConstant());
+  bool AIsConst = match(ArgA, m_ImmConstant());
+  bool BIsConst = match(ArgB, m_ImmConstant());
+  bool CIsConst = match(ArgC, m_ImmConstant());
 
   bool ABIsConst = AIsConst && BIsConst;
   bool ACIsConst = AIsConst && CIsConst;
@@ -1738,6 +1734,46 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
   return Res.first;
 }
 
+static Value *simplifyX86FPMaxMin(const IntrinsicInst &II, InstCombiner &IC,
+                                  Intrinsic::ID NewIID, bool IsScalar = false) {
+
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  unsigned VWidth = cast<FixedVectorType>(Arg0->getType())->getNumElements();
+
+  SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&II);
+  APInt DemandedElts =
+      IsScalar ? APInt::getOneBitSet(VWidth, 0) : APInt::getAllOnes(VWidth);
+
+  // Verify that the inputs are not one of (NaN, Inf, Subnormal, NegZero),
+  // otherwise we cannot safely generalize to MAXNUM/MINNUM.
+  FPClassTest Forbidden = fcNan | fcInf | fcSubnormal | fcNegZero;
+  KnownFPClass KnownArg0 =
+      computeKnownFPClass(Arg0, DemandedElts, Forbidden, SQ);
+  KnownFPClass KnownArg1 =
+      computeKnownFPClass(Arg1, DemandedElts, Forbidden, SQ);
+
+  if (KnownArg0.isKnownNever(Forbidden) && KnownArg1.isKnownNever(Forbidden)) {
+    if (IsScalar) {
+      // It performs the operation on the first element and puts it back into
+      // the vector.
+      Value *Scalar0 = IC.Builder.CreateExtractElement(Arg0, (uint64_t)0);
+      Value *Scalar1 = IC.Builder.CreateExtractElement(Arg1, (uint64_t)0);
+
+      Value *NewScalar = (NewIID == Intrinsic::maxnum)
+                             ? IC.Builder.CreateMaxNum(Scalar0, Scalar1)
+                             : IC.Builder.CreateMinNum(Scalar0, Scalar1);
+      return IC.Builder.CreateInsertElement(Arg0, NewScalar, (uint64_t)0);
+    } else {
+      return (NewIID == Intrinsic::maxnum)
+                 ? IC.Builder.CreateMaxNum(Arg0, Arg1)
+                 : IC.Builder.CreateMinNum(Arg0, Arg1);
+    }
+  }
+
+  return nullptr;
+}
+
 static Value *simplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
@@ -1873,9 +1909,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     // If we were an EXTRQ call, we'll save registers if we convert to EXTRQI.
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
-      Module *M = II.getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
-      return Builder.CreateCall(F, Args);
+      return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_extrqi, Args);
     }
   }
 
@@ -1972,9 +2006,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Constant *CIIndex = ConstantInt::get(IntTy8, Index, false);
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
-    Module *M = II.getModule();
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
-    return Builder.CreateCall(F, Args);
+    return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_insertqi, Args);
   }
 
   return nullptr;
@@ -2140,6 +2172,22 @@ static Value *simplifyX86vpermv3(const IntrinsicInst &II,
   auto V1 = II.getArgOperand(0);
   auto V2 = II.getArgOperand(2);
   return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, Size));
+}
+
+// Simplify VPERMV/VPERMV3 mask - only demand the active index bits.
+static bool simplifyX86VPERMMask(Instruction *II, bool IsBinary,
+                                 InstCombiner &IC) {
+  auto *VecTy = cast<FixedVectorType>(II->getType());
+  unsigned EltSizeInBits = VecTy->getScalarSizeInBits();
+  unsigned NumElts = VecTy->getNumElements();
+  assert(isPowerOf2_32(NumElts) && isPowerOf2_32(EltSizeInBits) &&
+         "Unexpected shuffle mask size");
+
+  unsigned IdxSizeInBits = Log2_32(IsBinary ? (2 * NumElts) : NumElts);
+  APInt DemandedMask = APInt::getLowBitsSet(EltSizeInBits, IdxSizeInBits);
+
+  KnownBits KnownMask(EltSizeInBits);
+  return IC.SimplifyDemandedBits(II, /*OpNo=*/1, DemandedMask, KnownMask);
 }
 
 std::optional<Instruction *>
@@ -2492,6 +2540,46 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     }
     break;
+
+  // Generalize SSE/AVX FP to maxnum/minnum.
+  case Intrinsic::x86_sse_max_ps:
+  case Intrinsic::x86_sse2_max_pd:
+  case Intrinsic::x86_avx_max_pd_256:
+  case Intrinsic::x86_avx_max_ps_256:
+  case Intrinsic::x86_avx512_max_pd_512:
+  case Intrinsic::x86_avx512_max_ps_512:
+  case Intrinsic::x86_avx512fp16_max_ph_128:
+  case Intrinsic::x86_avx512fp16_max_ph_256:
+  case Intrinsic::x86_avx512fp16_max_ph_512:
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::maxnum))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+  case Intrinsic::x86_sse_max_ss:
+  case Intrinsic::x86_sse2_max_sd: {
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::maxnum, true))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+  }
+
+  case Intrinsic::x86_sse_min_ps:
+  case Intrinsic::x86_sse2_min_pd:
+  case Intrinsic::x86_avx_min_pd_256:
+  case Intrinsic::x86_avx_min_ps_256:
+  case Intrinsic::x86_avx512_min_pd_512:
+  case Intrinsic::x86_avx512_min_ps_512:
+  case Intrinsic::x86_avx512fp16_min_ph_128:
+  case Intrinsic::x86_avx512fp16_min_ph_256:
+  case Intrinsic::x86_avx512fp16_min_ph_512:
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::minnum))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+
+  case Intrinsic::x86_sse_min_ss:
+  case Intrinsic::x86_sse2_min_sd: {
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::minnum, true))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+  }
 
   // Constant fold ashr( <A x Bi>, Ci ).
   // Constant fold lshr( <A x Bi>, Ci ).
@@ -2863,6 +2951,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx_blendv_pd_256:
   case Intrinsic::x86_avx2_pblendvb: {
     // fold (blend A, A, Mask) -> A
+    auto *OpTy = cast<FixedVectorType>(II.getType());
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
     Value *Mask = II.getArgOperand(2);
@@ -2881,33 +2970,64 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           getNegativeIsTrueBoolVec(ConstantMask, IC.getDataLayout());
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
+    unsigned BitWidth = Mask->getType()->getScalarSizeInBits();
+
+    if (Mask->getType()->isIntOrIntVectorTy()) {
+      KnownBits Known(BitWidth);
+      if (IC.SimplifyDemandedBits(&II, 2, APInt::getSignMask(BitWidth), Known))
+        return &II;
+    } else if (auto *BC = dyn_cast<BitCastInst>(Mask)) {
+      if (BC->hasOneUse()) {
+        Value *Src = BC->getOperand(0);
+        if (Src->getType()->isIntOrIntVectorTy()) {
+          unsigned SrcBitWidth = Src->getType()->getScalarSizeInBits();
+          if (SrcBitWidth == BitWidth) {
+            KnownBits KnownSrc(SrcBitWidth);
+            if (IC.SimplifyDemandedBits(BC, 0, APInt::getSignMask(SrcBitWidth),
+                                        KnownSrc))
+              return &II;
+          }
+        }
+      }
+    }
+    Mask = InstCombiner::peekThroughBitcast(Mask);
+
+    // Bitshift upto the signbit can always be converted to an efficient
+    // test+select pattern.
+    if (match(Mask, m_Shl(m_Value(), m_Value()))) {
+      if (auto *MaskTy = dyn_cast<FixedVectorType>(Mask->getType())) {
+        if (MaskTy->getScalarSizeInBits() == OpTy->getScalarSizeInBits()) {
+          Value *BoolVec = IC.Builder.CreateICmpSGT(
+              ConstantAggregateZero::get(MaskTy), Mask);
+          Value *Sel = IC.Builder.CreateSelect(BoolVec, Op1, Op0);
+          return new BitCastInst(Sel, II.getType());
+        }
+      }
+    }
 
     // Peek through a one-use shuffle - VectorCombine should have simplified
     // this for cases where we're splitting wider vectors to use blendv
     // intrinsics.
     Value *MaskSrc = nullptr;
     ArrayRef<int> ShuffleMask;
-    if (match(Mask, PatternMatch::m_OneUse(PatternMatch::m_Shuffle(
-                        PatternMatch::m_Value(MaskSrc), PatternMatch::m_Undef(),
-                        PatternMatch::m_Mask(ShuffleMask))))) {
+    if (match(Mask, m_OneUse(m_Shuffle(m_Value(MaskSrc), m_Undef(),
+                                       m_Mask(ShuffleMask))))) {
       // Bail if the shuffle was irregular or contains undefs.
       int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
       if (NumElts < (int)ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
           any_of(ShuffleMask,
                  [NumElts](int M) { return M < 0 || M >= NumElts; }))
         break;
-      Mask = MaskSrc;
+      Mask = InstCombiner::peekThroughBitcast(MaskSrc);
     }
 
     // Convert to a vector select if we can bypass casts and find a boolean
     // vector condition value.
     Value *BoolVec;
-    Mask = InstCombiner::peekThroughBitcast(Mask);
-    if (match(Mask, PatternMatch::m_SExt(PatternMatch::m_Value(BoolVec))) &&
+    if (match(Mask, m_SExt(m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
       auto *MaskTy = cast<FixedVectorType>(Mask->getType());
-      auto *OpTy = cast<FixedVectorType>(II.getType());
       unsigned NumMaskElts = MaskTy->getNumElements();
       unsigned NumOperandElts = OpTy->getNumElements();
 
@@ -2948,22 +3068,42 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
   case Intrinsic::x86_ssse3_pshuf_b_128:
   case Intrinsic::x86_avx2_pshuf_b:
-  case Intrinsic::x86_avx512_pshuf_b_512:
+  case Intrinsic::x86_avx512_pshuf_b_512: {
     if (Value *V = simplifyX86pshufb(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+
+    KnownBits KnownMask(8);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(8, 0b10001111), KnownMask))
+      return &II;
     break;
+  }
 
   case Intrinsic::x86_avx_vpermilvar_ps:
   case Intrinsic::x86_avx_vpermilvar_ps_256:
-  case Intrinsic::x86_avx512_vpermilvar_ps_512:
-  case Intrinsic::x86_avx_vpermilvar_pd:
-  case Intrinsic::x86_avx_vpermilvar_pd_256:
-  case Intrinsic::x86_avx512_vpermilvar_pd_512:
+  case Intrinsic::x86_avx512_vpermilvar_ps_512: {
     if (Value *V = simplifyX86vpermilvar(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+
+    KnownBits KnownMask(32);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(32, 0b00011), KnownMask))
+      return &II;
     break;
+  }
+
+  case Intrinsic::x86_avx_vpermilvar_pd:
+  case Intrinsic::x86_avx_vpermilvar_pd_256:
+  case Intrinsic::x86_avx512_vpermilvar_pd_512: {
+    if (Value *V = simplifyX86vpermilvar(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+
+    KnownBits KnownMask(64);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(64, 0b00010), KnownMask))
+      return &II;
+    break;
+  }
 
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:
@@ -2982,20 +3122,22 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Value *V = simplifyX86vpermv(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+    if (simplifyX86VPERMMask(&II, /*IsBinary=*/false, IC))
+      return &II;
     break;
 
   case Intrinsic::x86_avx512_vpermi2var_d_128:
   case Intrinsic::x86_avx512_vpermi2var_d_256:
   case Intrinsic::x86_avx512_vpermi2var_d_512:
-  case Intrinsic::x86_avx512_vpermi2var_hi_128: 
-  case Intrinsic::x86_avx512_vpermi2var_hi_256: 
-  case Intrinsic::x86_avx512_vpermi2var_hi_512: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_128: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_256: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_512: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_128: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_256: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_512: 
+  case Intrinsic::x86_avx512_vpermi2var_hi_128:
+  case Intrinsic::x86_avx512_vpermi2var_hi_256:
+  case Intrinsic::x86_avx512_vpermi2var_hi_512:
+  case Intrinsic::x86_avx512_vpermi2var_pd_128:
+  case Intrinsic::x86_avx512_vpermi2var_pd_256:
+  case Intrinsic::x86_avx512_vpermi2var_pd_512:
+  case Intrinsic::x86_avx512_vpermi2var_ps_128:
+  case Intrinsic::x86_avx512_vpermi2var_ps_256:
+  case Intrinsic::x86_avx512_vpermi2var_ps_512:
   case Intrinsic::x86_avx512_vpermi2var_q_128:
   case Intrinsic::x86_avx512_vpermi2var_q_256:
   case Intrinsic::x86_avx512_vpermi2var_q_512:
@@ -3005,6 +3147,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Value *V = simplifyX86vpermv3(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+    if (simplifyX86VPERMMask(&II, /*IsBinary=*/true, IC))
+      return &II;
     break;
 
   case Intrinsic::x86_avx_maskload_ps:
@@ -3051,6 +3195,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, V);
     }
     break;
+
   default:
     break;
   }

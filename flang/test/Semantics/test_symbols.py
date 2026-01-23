@@ -29,7 +29,7 @@ flang_fc1_options = "-fdebug-unparse-with-symbols"
 # Strips out blank lines and all comments except for "!DEF:", "!REF:", "!$acc" and "!$omp"
 with open(src, "r") as text_in:
     for line in text_in:
-        text = re.sub(r"!(?![DR]EF:|\$omp|\$acc).*", "", line)
+        text = re.sub(r"!(?![DR]EF:|\$omp|\$acc).*", "", line, flags=re.I)
         text = re.sub(r"^\s*$", "", text)
         diff1 += text
 

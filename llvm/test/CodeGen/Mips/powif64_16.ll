@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static < %s | FileCheck %s
 
 declare float     @llvm.powi.f32.i32(float  %Val, i32 %power)
 declare double    @llvm.powi.f64.i32(double %Val, i32 %power)
@@ -17,7 +17,7 @@ define double @foo_pow_f64(double %y, i32 %p)  {
   ret double %1
 } 
 
-attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="true" }
+attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="true" }
 attributes #1 = { nounwind readonly }
 
 !0 = !{!"double", !1}

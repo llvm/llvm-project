@@ -2,7 +2,7 @@
 
 # RUN: echo -e ".global variable\n.global DllMainCRTStartup\n.text\nDllMainCRTStartup:\nret\n.data\nvariable:\n.long 42" > %t-lib.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %t-lib.s -filetype=obj -o %t-lib.obj
-# RUN: lld-link -out:%t-lib.dll -dll -entry:DllMainCRTStartup %t-lib.obj -lldmingw -implib:%t-lib.lib
+# RUN: lld-link -out:%t-lib.dll -dll %t-lib.obj -lldmingw -implib:%t-lib.lib
 
 # RUN: llvm-mc -triple=x86_64-windows-gnu -defsym listptrs=1 %s -filetype=obj -o %t.obj
 # RUN: lld-link -lldmingw -debug:symtab -out:%t.exe -entry:main %t.obj %t-lib.lib -verbose

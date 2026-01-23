@@ -1,0 +1,37 @@
+header: inttypes.h
+header_template: inttypes.h.def
+macros: []
+types:
+  - type_name: imaxdiv_t
+enums: []
+objects: []
+functions:
+  - name: imaxabs
+    standards:
+      - stdc
+    return_type: intmax_t
+    arguments:
+      - type: intmax_t
+  - name: imaxdiv
+    standards:
+      - stdc
+    return_type: imaxdiv_t
+    arguments:
+      - type: intmax_t
+      - type: intmax_t
+  - name: strtoimax
+    standards:
+      - stdc
+    return_type: intmax_t
+    arguments:
+      - type: const char *__restrict
+      - type: char * *__restrict
+      - type: int
+  - name: strtoumax
+    standards:
+      - stdc
+    return_type: uintmax_t
+    arguments:
+      - type: const char *__restrict
+      - type: char * *__restrict
+      - type: int

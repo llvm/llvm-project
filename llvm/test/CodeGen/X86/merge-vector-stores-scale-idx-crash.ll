@@ -21,10 +21,10 @@ define void @testfn(ptr nocapture %p) {
 
 ; CHECK-LABEL: testfn_scalar
 ; CHECK: retq
-define void @testfn_scalar(ptr nocapture %j) local_unnamed_addr #0 align 2 {
+define void @testfn_scalar(ptr nocapture %j, i1 %arg) local_unnamed_addr #0 align 2 {
 entry:
   %0 = bitcast i64 undef to <2 x float>
-  br i1 undef, label %if.end, label %if.then
+  br i1 %arg, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
   unreachable
@@ -41,5 +41,5 @@ if.end:                                           ; preds = %entry
 
 declare <4 x float> @_Z1bv() local_unnamed_addr 
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 

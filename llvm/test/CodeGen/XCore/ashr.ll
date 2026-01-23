@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore -asm-verbose=0 | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -asm-verbose=0 | FileCheck %s
 define i32 @ashr(i32 %a, i32 %b) nounwind {
 	%1 = ashr i32 %a, %b
 	ret i32 %1

@@ -195,13 +195,13 @@ body:             |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[C1]](s64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[UV]](s64), [[COPY]](p0) :: (store (s32), align 16)
     ; CHECK-NEXT: G_STORE [[LSHR1]](s64), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 4, align 4)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C3]](s64)
     ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C1]](s64)
-    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C2]](s64)
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[PTR_ADD1]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[UV1]](s64), [[PTR_ADD1]](p0) :: (store (s32) into unknown-address + 6, align 2)
     ; CHECK-NEXT: G_STORE [[LSHR2]](s64), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 10)
     ; CHECK-NEXT: RET_ReallyLR

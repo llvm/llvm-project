@@ -22,8 +22,7 @@ namespace clang {
 namespace tooling {
 
 static StringRef getDriverMode(const CommandLineArguments &Args) {
-  for (const auto &Arg : Args) {
-    StringRef ArgRef = Arg;
+  for (StringRef ArgRef : Args) {
     if (ArgRef.consume_front("--driver-mode=")) {
       return ArgRef;
     }
@@ -49,10 +48,11 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
           }))
         continue;
 
-      if (!Arg.starts_with("-fcolor-diagnostics") &&
+      if (Arg != "-c" && Arg != "-S" &&
+          !Arg.starts_with("-fcolor-diagnostics") &&
           !Arg.starts_with("-fdiagnostics-color"))
         AdjustedArgs.push_back(Args[i]);
-      // If we strip a color option, make sure we strip any preceeding `-Xclang`
+      // If we strip an option, make sure we strip any preceeding `-Xclang`
       // option as well.
       // FIXME: This should be added to most argument adjusters!
       else if (!AdjustedArgs.empty() && AdjustedArgs.back() == "-Xclang")

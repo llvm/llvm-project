@@ -22,7 +22,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -246,6 +245,8 @@ public:
 
   unsigned GetNumToksToSkip() const { return NumToksToSkip; }
   void ResetSkipToks() { NumToksToSkip = 0; }
+
+  const Token &GetPrevToken() const { return PrevTok; }
 };
 }  // end anonymous namespace
 
@@ -569,8 +570,7 @@ void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
   SourceLocation DefLoc = MI->getDefinitionLoc();
   if (DirectivesOnly && !MI->isUsed()) {
     SourceManager &SM = PP.getSourceManager();
-    if (SM.isWrittenInBuiltinFile(DefLoc) ||
-        SM.isWrittenInCommandLineFile(DefLoc))
+    if (SM.isInPredefinedFile(DefLoc))
       return;
   }
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
@@ -760,7 +760,8 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
        !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
-       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed)))
+       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed) &&
+       !Tok.is(tok::annot_module_name)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -895,6 +896,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
                       !PP.getCommentRetentionState();
 
   bool IsStartOfLine = false;
+  bool IsCXXModuleDirective = false;
   char Buffer[256];
   while (true) {
     // Two lines joined with line continuation ('\' as last character on the
@@ -916,8 +918,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       PP.Lex(Tok);
       continue;
     } else if (Tok.is(tok::annot_repl_input_end)) {
-      PP.Lex(Tok);
-      continue;
+      // Fall through to exit the loop.
     } else if (Tok.is(tok::eod)) {
       // Don't print end of directive tokens, since they are typically newlines
       // that mess up our line tracking. These come from unknown pre-processor
@@ -953,13 +954,15 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       continue;
     } else if (Tok.is(tok::annot_header_unit)) {
       // This is a header-name that has been (effectively) converted into a
-      // module-name.
+      // module-name, print them inside quote.
       // FIXME: The module name could contain non-identifier module name
-      // components. We don't have a good way to round-trip those.
+      // components and OS specific file paths components. We don't have a good
+      // way to round-trip those.
       Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
       std::string Name = M->getFullModuleName();
-      Callbacks->OS->write(Name.data(), Name.size());
-      Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
+      *Callbacks->OS << '"';
+      Callbacks->OS->write_escaped(Name);
+      *Callbacks->OS << '"';
     } else if (Tok.is(tok::annot_embed)) {
       // Manually explode the binary data out to a stream of comma-delimited
       // integer values. If the user passed -dE, that is handled by the
@@ -973,17 +976,42 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // Loop over the contents and print them as a comma-delimited list of
       // values.
       bool PrintComma = false;
-      for (auto Iter = Data->BinaryData.begin(), End = Data->BinaryData.end();
-           Iter != End; ++Iter) {
+      for (unsigned char Byte : Data->BinaryData.bytes()) {
         if (PrintComma)
           *Callbacks->OS << ", ";
-        *Callbacks->OS << static_cast<unsigned>(*Iter);
+        *Callbacks->OS << static_cast<int>(Byte);
         PrintComma = true;
       }
-      IsStartOfLine = true;
+    } else if (Tok.is(tok::annot_module_name)) {
+      auto *NameLoc = static_cast<ModuleNameLoc *>(Tok.getAnnotationValue());
+      *Callbacks->OS << NameLoc->str();
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
       // will be reproduced in the preprocessed output.
+      PP.Lex(Tok);
+      continue;
+    } else if (PP.getLangOpts().CPlusPlusModules && Tok.is(tok::kw_import) &&
+               !Callbacks->GetPrevToken().is(tok::at)) {
+      assert(!IsCXXModuleDirective && "Is an import directive being printed?");
+      IsCXXModuleDirective = true;
+      IsStartOfLine = false;
+      *Callbacks->OS << tok::getPPKeywordSpelling(
+          tok::pp___preprocessed_import);
+      PP.Lex(Tok);
+      continue;
+    } else if (PP.getLangOpts().CPlusPlusModules && Tok.is(tok::kw_module)) {
+      assert(!IsCXXModuleDirective && "Is an module directive being printed?");
+      IsCXXModuleDirective = true;
+      IsStartOfLine = false;
+      *Callbacks->OS << tok::getPPKeywordSpelling(
+          tok::pp___preprocessed_module);
+      PP.Lex(Tok);
+      continue;
+    } else if (PP.getLangOpts().CPlusPlusModules && IsCXXModuleDirective &&
+               Tok.is(tok::semi)) {
+      IsCXXModuleDirective = false;
+      IsStartOfLine = true;
+      *Callbacks->OS << ';';
       PP.Lex(Tok);
       continue;
     } else if (IdentifierInfo *II = Tok.getIdentifierInfo()) {
@@ -1026,7 +1054,8 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     Callbacks->setEmittedTokensOnThisLine();
     IsStartOfLine = false;
 
-    if (Tok.is(tok::eof)) break;
+    if (Tok.is(tok::eof) || Tok.is(tok::annot_repl_input_end))
+      break;
 
     PP.Lex(Tok);
     // If lexing that token causes us to need to skip future tokens, do so now.
@@ -1049,9 +1078,7 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   // the macro table at the end.
   PP.EnterMainSourceFile();
 
-  Token Tok;
-  do PP.Lex(Tok);
-  while (Tok.isNot(tok::eof));
+  PP.LexTokensUntilEOF();
 
   SmallVector<id_macro_pair, 128> MacrosByID;
   for (Preprocessor::macro_iterator I = PP.macro_begin(), E = PP.macro_end();

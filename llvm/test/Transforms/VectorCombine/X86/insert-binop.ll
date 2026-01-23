@@ -155,12 +155,19 @@ define <2 x i64> @ins1_ins1_urem(i64 %x, i64 %y) {
 ; Extra use is accounted for in cost calculation.
 
 define <4 x i32> @ins0_ins0_xor(i32 %x, i32 %y) {
-; CHECK-LABEL: @ins0_ins0_xor(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    call void @use(<4 x i32> [[I0]])
-; CHECK-NEXT:    [[R_SCALAR:%.*]] = xor i32 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[R_SCALAR]], i64 0
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; SSE-LABEL: @ins0_ins0_xor(
+; SSE-NEXT:    [[I0:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
+; SSE-NEXT:    call void @use(<4 x i32> [[I0]])
+; SSE-NEXT:    [[I1:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
+; SSE-NEXT:    [[R:%.*]] = xor <4 x i32> [[I0]], [[I1]]
+; SSE-NEXT:    ret <4 x i32> [[R]]
+;
+; AVX-LABEL: @ins0_ins0_xor(
+; AVX-NEXT:    [[I0:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
+; AVX-NEXT:    call void @use(<4 x i32> [[I0]])
+; AVX-NEXT:    [[R_SCALAR:%.*]] = xor i32 [[X]], [[Y:%.*]]
+; AVX-NEXT:    [[R:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[R_SCALAR]], i64 0
+; AVX-NEXT:    ret <4 x i32> [[R]]
 ;
   %i0 = insertelement <4 x i32> undef, i32 %x, i32 0
   call void @use(<4 x i32> %i0)

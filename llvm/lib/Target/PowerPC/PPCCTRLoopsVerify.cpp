@@ -18,7 +18,6 @@
 #ifndef NDEBUG
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_iterator.h"
@@ -33,10 +32,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -95,7 +92,7 @@ static bool clobbersCTR(const MachineInstr &MI) {
 static bool verifyCTRBranch(MachineBasicBlock *MBB,
                             MachineBasicBlock::iterator I) {
   MachineBasicBlock::iterator BI = I;
-  SmallSet<MachineBasicBlock *, 16>   Visited;
+  SmallPtrSet<MachineBasicBlock *, 16> Visited;
   SmallVector<MachineBasicBlock *, 8> Preds;
   bool CheckPreds;
 

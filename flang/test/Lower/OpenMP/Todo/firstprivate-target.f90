@@ -3,7 +3,7 @@
 
 integer :: i
 ! CHECK: not yet implemented: Unhandled clause FIRSTPRIVATE in TARGET construct
-!$omp target firstprivate(i)
+!$omp target firstprivate(i) nowait
 !$omp end target
 
 end program

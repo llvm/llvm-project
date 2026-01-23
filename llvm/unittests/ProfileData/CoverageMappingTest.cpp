@@ -64,6 +64,7 @@ namespace {
 struct OutputFunctionCoverageData {
   StringRef Name;
   uint64_t Hash;
+  std::vector<std::string> FilenamesStorage;
   std::vector<StringRef> Filenames;
   std::vector<CounterMappingRegion> Regions;
   std::vector<CounterExpression> Expressions;
@@ -71,8 +72,10 @@ struct OutputFunctionCoverageData {
   OutputFunctionCoverageData() : Hash(0) {}
 
   OutputFunctionCoverageData(OutputFunctionCoverageData &&OFCD)
-      : Name(OFCD.Name), Hash(OFCD.Hash), Filenames(std::move(OFCD.Filenames)),
-        Regions(std::move(OFCD.Regions)) {}
+      : Name(OFCD.Name), Hash(OFCD.Hash),
+        FilenamesStorage(std::move(OFCD.FilenamesStorage)),
+        Filenames(std::move(OFCD.Filenames)), Regions(std::move(OFCD.Regions)) {
+  }
 
   OutputFunctionCoverageData(const OutputFunctionCoverageData &) = delete;
   OutputFunctionCoverageData &
@@ -135,7 +138,6 @@ struct InputFunctionCoverageData {
 struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
   bool UseMultipleReaders;
   StringMap<unsigned> Files;
-  std::vector<std::string> Filenames;
   std::vector<InputFunctionCoverageData> InputFunctions;
   std::vector<OutputFunctionCoverageData> OutputFunctions;
 
@@ -233,13 +235,11 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
 
   void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
-    // We will re-use the StringRef in duplicate tests, clear it to avoid
-    // clobber previous ones.
-    Filenames.clear();
-    Filenames.resize(Files.size() + 1);
+    // +1 here since `Files` (filename to index map) uses 1-based index.
+    Data.FilenamesStorage.resize(Files.size() + 1);
     for (const auto &E : Files)
-      Filenames[E.getValue()] = E.getKey().str();
-    ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(Filenames);
+      Data.FilenamesStorage[E.getValue()] = E.getKey().str();
+    ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(Data.FilenamesStorage);
     RawCoverageMappingReader Reader(Coverage, FilenameRefs, Data.Filenames,
                                     Data.Expressions, Data.Regions);
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());
@@ -277,7 +277,9 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
       CoverageReaders.push_back(
           std::make_unique<CoverageMappingReaderMock>(Funcs));
     }
-    return CoverageMapping::load(CoverageReaders, *ProfileReader);
+    auto ProfileReaderRef = std::make_optional(
+        std::reference_wrapper<IndexedInstrProfReader>(*ProfileReader));
+    return CoverageMapping::load(CoverageReaders, ProfileReaderRef);
   }
 
   Error loadCoverageMapping(bool EmitFilenames = true) {
@@ -290,6 +292,45 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     return Error::success();
   }
 };
+
+TEST(CoverageMappingTest, expression_subst) {
+  CounterExpressionBuilder Builder;
+  CounterExpressionBuilder::SubstMap MapToExpand;
+
+  auto C = [](unsigned ID) { return Counter::getCounter(ID); };
+  auto A = [&](Counter LHS, Counter RHS) { return Builder.add(LHS, RHS); };
+  // returns {E, N} in clangCodeGen
+  auto getBranchCounterPair = [&](Counter E, Counter P, Counter N) {
+    auto Skipped = Builder.subtract(P, E);
+    MapToExpand[N] = Builder.subst(Skipped, MapToExpand);
+  };
+
+  auto E18 = C(5);
+  auto P18 = C(2);
+  auto S18 = C(18);
+  // #18 => (#2 - #5)
+  getBranchCounterPair(E18, P18, S18);
+
+  auto E22 = S18;
+  auto P22 = C(0);
+  auto S22 = C(22);
+  // #22 => #0 - (#2 - #5)
+  getBranchCounterPair(E22, P22, S22);
+
+  auto E28 = A(A(C(9), C(11)), C(14));
+  auto P28 = S22;
+  auto S28 = C(28);
+  // #28 => (((((#0 + #5) - #2) - #9) - #11) - #14)
+  getBranchCounterPair(E28, P28, S28);
+
+  auto LHS = A(E28, A(S28, S18));
+  auto RHS = C(0);
+
+  // W/o subst, LHS cannot be reduced.
+  ASSERT_FALSE(Builder.subtract(LHS, RHS).isZero());
+  // W/ subst, C(18) and C(28) in LHS will be reduced.
+  ASSERT_TRUE(Builder.subst(Builder.subtract(LHS, RHS), MapToExpand).isZero());
+}
 
 TEST_P(CoverageMappingTest, basic_write_read) {
   startFunction("func", 0x1234);

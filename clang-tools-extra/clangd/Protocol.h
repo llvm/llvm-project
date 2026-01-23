@@ -452,6 +452,7 @@ struct ClientCapabilities {
   std::optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
   /// Whether the client accepts diagnostics with codeActions attached inline.
+  /// This is a clangd extension.
   /// textDocument.publishDiagnostics.codeActionsInline.
   bool DiagnosticFixes = false;
 
@@ -475,6 +476,7 @@ struct ClientCapabilities {
 
   /// Client supports displaying a container string for results of
   /// textDocument/reference (clangd extension)
+  /// textDocument.references.container
   bool ReferenceContainer = false;
 
   /// Client supports hierarchical document symbols.
@@ -526,8 +528,9 @@ struct ClientCapabilities {
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
   bool TheiaSemanticHighlighting = false;
 
-  /// Supported encodings for LSP character offsets. (clangd extension).
-  std::optional<std::vector<OffsetEncoding>> offsetEncoding;
+  /// Supported encodings for LSP character offsets.
+  /// general.positionEncodings
+  std::optional<std::vector<OffsetEncoding>> PositionEncodings;
 
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
@@ -563,6 +566,7 @@ struct ClientCapabilities {
 
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
+  /// textDocument.inactiveRegionsCapabilities.inactiveRegions
   bool InactiveRegions = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
@@ -853,6 +857,16 @@ struct DocumentRangeFormattingParams {
   Range range;
 };
 bool fromJSON(const llvm::json::Value &, DocumentRangeFormattingParams &,
+              llvm::json::Path);
+
+struct DocumentRangesFormattingParams {
+  /// The document to format.
+  TextDocumentIdentifier textDocument;
+
+  /// The list of ranges to format
+  std::vector<Range> ranges;
+};
+bool fromJSON(const llvm::json::Value &, DocumentRangesFormattingParams &,
               llvm::json::Path);
 
 struct DocumentOnTypeFormattingParams {
@@ -1613,6 +1627,12 @@ struct CallHierarchyIncomingCall {
   /// The range at which the calls appear.
   /// This is relative to the caller denoted by `From`.
   std::vector<Range> fromRanges;
+
+  /// For the case of being a virtual function we also return calls
+  /// to the base function. This caller might be a false positive.
+  /// We currently have no way of discerning this.
+  /// This is a clangd extension.
+  bool mightNeverCall = false;
 };
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &);
 
@@ -1680,6 +1700,15 @@ enum class InlayHintKind {
   /// Uses comment-like syntax like "// func".
   /// This is a clangd extension.
   BlockEnd = 4,
+
+  /// An inlay hint that is for a default argument.
+  ///
+  /// An example of a parameter hint for a default argument:
+  ///    void foo(bool A = true);
+  ///    foo(^);
+  /// Adds an inlay hint "A: true".
+  /// This is a clangd extension.
+  DefaultArgument = 6,
 
   /// Other ideas for hints that are not currently implemented:
   ///

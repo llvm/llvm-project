@@ -235,3 +235,38 @@ define <3 x i4> @shuf_bitcast_wrong_size(<2 x i8> %v, i8 %x) {
   %r = shufflevector <4 x i4> %b, <4 x i4> undef, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x i4> %r
 }
+
+; Negative test - chain of bitcasts.
+
+define <16 x i8> @shuf_bitcast_chain(<8 x i32> %v) {
+; CHECK-LABEL: @shuf_bitcast_chain(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[V:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[C:%.*]] = bitcast <4 x i32> [[S]] to <16 x i8>
+; CHECK-NEXT:    ret <16 x i8> [[C]]
+;
+  %s = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = bitcast <4 x i32> %s to <2 x i64>
+  %b = bitcast <2 x i64> %a to i128
+  %c = bitcast i128 %b to <16 x i8>
+  ret <16 x i8> %c
+}
+
+; Same as above, but showing why it's not feasable to implement the reverse
+; fold in VectorCombine (see #136998).
+
+define <4 x i32> @shuf_bitcast_chain_2(<8 x i32> %v) {
+; CHECK-LABEL: @shuf_bitcast_chain_2(
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[S0]], [[S1]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %s0 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s1 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %b0 = bitcast <4 x i32> %s0 to i128
+  %b1 = bitcast <4 x i32> %s1 to i128
+  %c0 = bitcast i128 %b0 to <4 x i32>
+  %c1 = bitcast i128 %b1 to <4 x i32>
+  %r = or <4 x i32> %c0, %c1
+  ret <4 x i32> %r
+}

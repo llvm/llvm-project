@@ -227,18 +227,18 @@ int test(void) {
 // ignored.
 // For details see https://github.com/llvm/llvm-project/issues/55790
 void test_standard_syntax() {
-  [[clang::noderef]] int i; // expected-warning {{'noderef' attribute ignored}}
+  [[clang::noderef]] int i; // expected-warning {{'clang::noderef' attribute ignored}}
 
-  [[clang::noderef]] int *p1; // expected-warning {{'noderef' attribute ignored}}
+  [[clang::noderef]] int *p1; // expected-warning {{'clang::noderef' attribute ignored}}
   *p1;
 
-  int *p2 [[clang::noderef]]; // expected-warning {{'noderef' attribute ignored}}
+  int *p2 [[clang::noderef]]; // expected-warning {{'clang::noderef' attribute ignored}}
   *p2;
 
-  int * [[clang::noderef]] p3; // expected-warning {{'noderef' attribute ignored}}
+  int * [[clang::noderef]] p3; // expected-warning {{'clang::noderef' attribute ignored}}
   *p3;
 
   typedef int* IntPtr;
-  [[clang::noderef]] IntPtr p4; // expected-warning {{'noderef' attribute ignored}}
+  [[clang::noderef]] IntPtr p4; // expected-warning {{'clang::noderef' attribute ignored}}
   *p4;
 }

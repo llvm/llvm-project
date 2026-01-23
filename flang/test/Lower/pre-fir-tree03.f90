@@ -2,7 +2,7 @@
 
 ! Test Pre-FIR Tree captures OpenMP related constructs
 
-! CHECK: Program test_omp
+! CHECK: Program TEST_OMP
 program test_omp
   ! CHECK: PrintStmt
   print *, "sequential"

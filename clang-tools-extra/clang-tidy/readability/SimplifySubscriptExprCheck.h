@@ -1,4 +1,4 @@
-//===--- SimplifySubscriptExprCheck.h - clang-tidy---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Simplifies subscript expressions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-subscript-expr.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-subscript-expr.html
 class SimplifySubscriptExprCheck : public ClangTidyCheck {
 public:
   SimplifySubscriptExprCheck(StringRef Name, ClangTidyContext *Context);
@@ -25,7 +25,7 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  void storeOptions(ClangTidyOptions::OptionMap& Opts) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }

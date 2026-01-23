@@ -6,45 +6,44 @@
 ; status. This was caught by the expensive check introduced in D86589.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
-@ptr = external global i64
-
-define dso_local void @hoge() local_unnamed_addr {
+define void @hoge(i64 %x, i64 %idx.start, ptr %ptr) {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = sdiv exact i64 undef, 40
+; CHECK-NEXT:    [[N:%.*]] = sdiv exact i64 [[X:%.*]], 40
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IDX_START:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[N]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH:%.*]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LATCH:%.*]] ], [ [[TMP1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH]] ], [ [[IDX_START]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[N]], [[IDX]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[INNER_PREHEADER:%.*]]
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[INNER]] ], [ 0, [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[INNER]] ], [ [[N]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], 1
-; CHECK-NEXT:    store i64 undef, ptr @ptr, align 8
-; CHECK-NEXT:    [[COND1:%.*]] = icmp slt i64 [[J]], [[IDX]]
-; CHECK-NEXT:    br i1 [[COND1]], label [[INNER]], label [[INNER_EXIT:%.*]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
+; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[I_NEXT]], [[INDVARS_IV]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner_exit:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[I_NEXT]], [[INNER]] ]
 ; CHECK-NEXT:    [[INDVAR_USE:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i64 [[IDX]], -1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
 entry:                                            ; preds = %entry
-  %n = sdiv exact i64 undef, 40
+  %n = sdiv exact i64 %x, 40
   br label %header
 
 header:                                           ; preds = %latch, %entry
-  %idx = phi i64 [ %idx.next, %latch ], [ undef, %entry ]
+  %idx = phi i64 [ %idx.next, %latch ], [ %idx.start, %entry ]
   %cond = icmp sgt i64 %n, %idx
   br i1 %cond, label %end, label %inner
 
@@ -53,7 +52,7 @@ inner:                                            ; preds = %inner, %header
   %j = phi i64 [ %j.next, %inner ], [ %n, %header ]
   %i.next = add nsw i64 %i, 1
   %j.next = add nsw i64 %j, 1
-  store i64 undef, ptr @ptr
+  store i64 0, ptr %ptr
   %cond1 = icmp slt i64 %j, %idx
   br i1 %cond1, label %inner, label %inner_exit
 
@@ -69,3 +68,44 @@ latch:                                            ; preds = %inner_exit
 end:                                              ; preds = %header
   ret void
 }
+
+
+declare void @foo()
+
+define i64 @narow_canonical_iv_wide_multiplied_iv(i32 %x, i64 %y, ptr %0) {
+; CHECK-LABEL: @narow_canonical_iv_wide_multiplied_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 1)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[SMAX]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    ret i64 [[TMP6]]
+;
+entry:
+  %smax = tail call i32 @llvm.smax.i32(i32 %x, i32 1)
+  %mul.y = shl i64 %y, 1
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.mul = phi i64 [ 1, %entry ], [ %iv.mul.next, %loop ]
+  %iv.mul.next = add i64 %iv.mul, %mul.y
+  call void @foo()
+  %iv.next = add i32 %iv, 1
+  %ec = icmp ult i32 %iv.next, %smax
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret i64 %iv.mul.next
+}
+
+declare i32 @llvm.smax.i32(i32, i32)

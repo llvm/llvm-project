@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that we generate new value stores.
 
 ; CHECK: r[[REG:[0-9]+]] = sfadd(r{{[0-9]+}},r{{[0-9]+}})

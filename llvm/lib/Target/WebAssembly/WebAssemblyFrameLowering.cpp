@@ -29,11 +29,9 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-frame-info"
@@ -83,7 +81,7 @@ WebAssemblyFrameLowering::getLocalForStackObject(MachineFunction &MF,
   // Abuse object size to record number of WebAssembly locals allocated to
   // this object.
   MFI.setObjectSize(FrameIndex, ValueVTs.size());
-  return static_cast<unsigned>(Local);
+  return Local;
 }
 
 /// We need a base pointer in the case of having items on the stack that
@@ -98,7 +96,7 @@ bool WebAssemblyFrameLowering::hasBP(const MachineFunction &MF) const {
 
 /// Return true if the specified function should have a dedicated frame pointer
 /// register.
-bool WebAssemblyFrameLowering::hasFP(const MachineFunction &MF) const {
+bool WebAssemblyFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // When we have var-sized objects, we move the stack pointer by an unknown
@@ -280,7 +278,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const TargetRegisterClass *PtrRC =
-      MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+      MRI.getTargetRegisterInfo()->getPointerRegClass();
   unsigned SPReg = getSPReg(MF);
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
@@ -351,7 +349,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
     SPReg = FI->getBasePointerVreg();
   } else if (StackSize) {
     const TargetRegisterClass *PtrRC =
-        MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+        MRI.getTargetRegisterInfo()->getPointerRegClass();
     Register OffsetReg = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, InsertPt, DL, TII->get(getOpcConst(MF)), OffsetReg)
         .addImm(StackSize);

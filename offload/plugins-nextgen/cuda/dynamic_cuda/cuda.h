@@ -30,15 +30,19 @@ typedef uintptr_t CUdeviceptr;
 typedef struct CUmod_st *CUmodule;
 typedef struct CUctx_st *CUcontext;
 typedef struct CUfunc_st *CUfunction;
+typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
+typedef struct CUuuid_st {
+  char bytes[16];
+} CUuuid;
 
-#define CU_DEVICE_INVALID ((CUdevice)-2)
+#define CU_DEVICE_INVALID ((CUdevice)(-2))
 
 typedef unsigned long long CUmemGenericAllocationHandle_v1;
 typedef CUmemGenericAllocationHandle_v1 CUmemGenericAllocationHandle;
 
-#define CU_DEVICE_INVALID ((CUdevice)-2)
+#define CU_DEVICE_INVALID ((CUdevice)(-2))
 
 typedef enum CUmemAllocationGranularity_flags_enum {
   CU_MEM_ALLOC_GRANULARITY_MINIMUM = 0x0,
@@ -105,6 +109,7 @@ typedef enum cudaError_enum {
   CUDA_ERROR_INVALID_VALUE = 1,
   CUDA_ERROR_NO_DEVICE = 100,
   CUDA_ERROR_INVALID_HANDLE = 400,
+  CUDA_ERROR_NOT_FOUND = 500,
   CUDA_ERROR_NOT_READY = 600,
   CUDA_ERROR_TOO_MANY_PEERS = 711,
 } CUresult;
@@ -256,6 +261,7 @@ typedef enum CUdevice_attribute_enum {
 
 typedef enum CUfunction_attribute_enum {
   CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK = 0,
+  CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES = 8,
 } CUfunction_attribute;
 
 typedef enum CUctx_flags_enum {
@@ -286,14 +292,19 @@ static inline void *CU_LAUNCH_PARAM_END = (void *)0x00;
 static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
 static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
 
+typedef void (*CUstreamCallback)(CUstream, CUresult, void *);
+typedef size_t (*CUoccupancyB2DSize)(int);
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
 CUresult cuDeviceGetCount(int *);
 CUresult cuFuncGetAttribute(int *, CUfunction_attribute, CUfunction);
+CUresult cuFuncSetAttribute(CUfunction, CUfunction_attribute, int);
 
 // Device info
 CUresult cuDeviceGetName(char *, int, CUdevice);
+CUresult cuDeviceGetUuid(CUuuid *, CUdevice);
 CUresult cuDeviceTotalMem(size_t *, CUdevice);
 CUresult cuDriverGetVersion(int *);
 
@@ -302,6 +313,7 @@ CUresult cuInit(unsigned);
 CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
                         unsigned, unsigned, unsigned, CUstream, void **,
                         void **);
+CUresult cuLaunchHostFunc(CUstream, CUhostFn, void *);
 
 CUresult cuMemAlloc(CUdeviceptr *, size_t);
 CUresult cuMemAllocHost(void **, size_t);
@@ -313,6 +325,16 @@ CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
 CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyHtoD(CUdeviceptr, const void *, size_t);
 CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
+
+CUresult cuMemsetD8Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD16Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD32Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD2D8Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                           CUstream);
+CUresult cuMemsetD2D16Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
+CUresult cuMemsetD2D32Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
 
 CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
@@ -326,6 +348,7 @@ CUresult cuStreamCreate(CUstream *, unsigned);
 CUresult cuStreamDestroy(CUstream);
 CUresult cuStreamSynchronize(CUstream);
 CUresult cuStreamQuery(CUstream);
+CUresult cuStreamAddCallback(CUstream, CUstreamCallback, void *, unsigned int);
 CUresult cuCtxSetCurrent(CUcontext);
 CUresult cuDevicePrimaryCtxRelease(CUdevice);
 CUresult cuDevicePrimaryCtxGetState(CUdevice, unsigned *, int *);
@@ -344,6 +367,7 @@ CUresult cuCtxSetLimit(CUlimit, size_t);
 
 CUresult cuEventCreate(CUevent *, unsigned int);
 CUresult cuEventRecord(CUevent, CUstream);
+CUresult cuEventQuery(CUevent);
 CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
 CUresult cuEventSynchronize(CUevent);
 CUresult cuEventDestroy(CUevent);
@@ -364,5 +388,8 @@ CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
 CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        const CUmemAllocationProp *prop,
                                        CUmemAllocationGranularity_flags option);
+CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
+                                          CUoccupancyB2DSize, size_t, int);
+CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif

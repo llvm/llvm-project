@@ -55,7 +55,7 @@ static bool isShapePreserving(ForOp forOp, int64_t arg) {
                              ? forOp.getInitArgs()[opResult.getResultNumber()]
                              : Value();
                 })
-                .Default([&](auto op) { return Value(); });
+                .Default(nullptr);
   }
   return false;
 }
@@ -167,7 +167,7 @@ struct SCFForLoopCanonicalization
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(parentOp, std::move(patterns))))
+    if (failed(applyPatternsGreedily(parentOp, std::move(patterns))))
       signalPassFailure();
   }
 };

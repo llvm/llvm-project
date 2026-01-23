@@ -298,34 +298,50 @@ _start:
 // CHECK-ARM-PLT-NEXT:     1624:     d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK-ARM-PLT-NEXT:     1628:     d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK-ARM-PLT-NEXT:     162c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <thumb_callee1@plt>
 // CHECK-ARM-PLT-NEXT:     1630:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1634:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1638:             ldr     pc, [r12, #648]!
 // CHECK-ARM-PLT-NEXT:     163c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <arm_callee1@plt>
 // CHECK-ARM-PLT-NEXT:     1640:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1644:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1648:             ldr     pc, [r12, #636]!
 // CHECK-ARM-PLT-NEXT:     164c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <arm_caller@plt>
 // CHECK-ARM-PLT-NEXT:     1650:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1654:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1658:             ldr     pc, [r12, #624]!
 // CHECK-ARM-PLT-NEXT:     165c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <thumb_callee2@plt>
 // CHECK-ARM-PLT-NEXT:     1660:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1664:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1668:             ldr     pc, [r12, #612]!
 // CHECK-ARM-PLT-NEXT:     166c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <thumb_callee3@plt>
 // CHECK-ARM-PLT-NEXT:     1670:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1674:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1678:             ldr     pc, [r12, #600]!
 // CHECK-ARM-PLT-NEXT:     167c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <arm_callee2@plt>
 // CHECK-ARM-PLT-NEXT:     1680:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1684:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1688:             ldr     pc, [r12, #588]!
 // CHECK-ARM-PLT-NEXT:     168c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <arm_callee3@plt>
 // CHECK-ARM-PLT-NEXT:     1690:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1694:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     1698:             ldr     pc, [r12, #576]!
 // CHECK-ARM-PLT-NEXT:     169c:     d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-ARM-PLT-EMPTY:
+// CHECK-ARM-PLT-NEXT:     <thumb_caller@plt>
 // CHECK-ARM-PLT-NEXT:     16a0:             add     r12, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     16a4:             add     r12, r12, #0, #20
 // CHECK-ARM-PLT-NEXT:     16a8:             ldr     pc, [r12, #564]!

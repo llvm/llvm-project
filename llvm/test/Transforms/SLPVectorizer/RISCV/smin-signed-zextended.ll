@@ -9,11 +9,11 @@ define <4 x i32> @test(i16 %0, i16 %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i16> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[CONV15_I:%.*]] = sext i16 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, i32 [[CONV15_I]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP5]], <4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i32> [[TMP8]], <i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i32> [[TMP8]], splat (i32 65535)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP9]]
 ;
 entry:

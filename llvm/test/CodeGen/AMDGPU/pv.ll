@@ -92,11 +92,11 @@ main_body:
   %tmp97 = extractelement <4 x float> %tmp96, i32 3
   %tmp98 = fmul float %tmp15, %tmp97
   %tmp99 = fadd float %tmp98, %tmp83
-  %tmp100 = insertelement <4 x float> undef, float %tmp16, i32 0
+  %tmp100 = insertelement <4 x float> poison, float %tmp16, i32 0
   %tmp101 = insertelement <4 x float> %tmp100, float %tmp17, i32 1
   %tmp102 = insertelement <4 x float> %tmp101, float %tmp18, i32 2
   %tmp103 = insertelement <4 x float> %tmp102, float 0.000000e+00, i32 3
-  %tmp104 = insertelement <4 x float> undef, float %tmp16, i32 0
+  %tmp104 = insertelement <4 x float> poison, float %tmp16, i32 0
   %tmp105 = insertelement <4 x float> %tmp104, float %tmp17, i32 1
   %tmp106 = insertelement <4 x float> %tmp105, float %tmp18, i32 2
   %tmp107 = insertelement <4 x float> %tmp106, float 0.000000e+00, i32 3
@@ -132,11 +132,11 @@ main_body:
   %tmp129 = extractelement <4 x float> %tmp128, i32 1
   %tmp130 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 5)
   %tmp131 = extractelement <4 x float> %tmp130, i32 2
-  %tmp132 = insertelement <4 x float> undef, float %tmp111, i32 0
+  %tmp132 = insertelement <4 x float> poison, float %tmp111, i32 0
   %tmp133 = insertelement <4 x float> %tmp132, float %tmp112, i32 1
   %tmp134 = insertelement <4 x float> %tmp133, float %tmp113, i32 2
   %tmp135 = insertelement <4 x float> %tmp134, float 0.000000e+00, i32 3
-  %tmp136 = insertelement <4 x float> undef, float %tmp127, i32 0
+  %tmp136 = insertelement <4 x float> poison, float %tmp127, i32 0
   %tmp137 = insertelement <4 x float> %tmp136, float %tmp129, i32 1
   %tmp138 = insertelement <4 x float> %tmp137, float %tmp131, i32 2
   %tmp139 = insertelement <4 x float> %tmp138, float 0.000000e+00, i32 3
@@ -147,11 +147,11 @@ main_body:
   %tmp144 = extractelement <4 x float> %tmp143, i32 1
   %tmp145 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 7)
   %tmp146 = extractelement <4 x float> %tmp145, i32 2
-  %tmp147 = insertelement <4 x float> undef, float %tmp111, i32 0
+  %tmp147 = insertelement <4 x float> poison, float %tmp111, i32 0
   %tmp148 = insertelement <4 x float> %tmp147, float %tmp112, i32 1
   %tmp149 = insertelement <4 x float> %tmp148, float %tmp113, i32 2
   %tmp150 = insertelement <4 x float> %tmp149, float 0.000000e+00, i32 3
-  %tmp151 = insertelement <4 x float> undef, float %tmp142, i32 0
+  %tmp151 = insertelement <4 x float> poison, float %tmp142, i32 0
   %tmp152 = insertelement <4 x float> %tmp151, float %tmp144, i32 1
   %tmp153 = insertelement <4 x float> %tmp152, float %tmp146, i32 2
   %tmp154 = insertelement <4 x float> %tmp153, float 0.000000e+00, i32 3
@@ -211,12 +211,12 @@ main_body:
   %clamp.i4 = call float @llvm.minnum.f32(float %max.0.i3, float 1.000000e+00)
   %max.0.i1 = call float @llvm.maxnum.f32(float %tmp204, float 0.000000e+00)
   %clamp.i2 = call float @llvm.minnum.f32(float %max.0.i1, float 1.000000e+00)
-  %tmp205 = insertelement <4 x float> undef, float %tmp87, i32 0
+  %tmp205 = insertelement <4 x float> poison, float %tmp87, i32 0
   %tmp206 = insertelement <4 x float> %tmp205, float %tmp91, i32 1
   %tmp207 = insertelement <4 x float> %tmp206, float %tmp95, i32 2
   %tmp208 = insertelement <4 x float> %tmp207, float %tmp99, i32 3
   call void @llvm.r600.store.swizzle(<4 x float> %tmp208, i32 60, i32 1)
-  %tmp209 = insertelement <4 x float> undef, float %clamp.i6, i32 0
+  %tmp209 = insertelement <4 x float> poison, float %clamp.i6, i32 0
   %tmp210 = insertelement <4 x float> %tmp209, float %clamp.i4, i32 1
   %tmp211 = insertelement <4 x float> %tmp210, float %clamp.i2, i32 2
   %tmp212 = insertelement <4 x float> %tmp211, float %clamp.i8, i32 3

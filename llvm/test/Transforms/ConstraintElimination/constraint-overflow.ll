@@ -38,3 +38,39 @@ exit:
 }
 
 declare void @llvm.assume(i1)
+
+define i1 @negate_overflow_add_1(i64 %x) {
+; CHECK-LABEL: define i1 @negate_overflow_add_1(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], -9223372036854775807
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 0, [[SUB]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %sub = add nsw i64 %x, -9223372036854775807
+  %c = icmp slt i64 0, %sub
+  ret i1 %c
+}
+
+define i1 @pr140481(i32 %x) {
+; CHECK-LABEL: define i1 @pr140481(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 5001000
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[ADD]], -5001000
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i32 [[MUL1]], 5001000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[MUL2]], 0
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %cond = icmp slt i32 %x, 0
+  call void @llvm.assume(i1 %cond)
+  %add = add nsw i32 %x, 5001000
+  %mul1 = mul nsw i32 %add, -5001000
+  %mul2 = mul nsw i32 %mul1, 5001000
+  %cmp2 = icmp sgt i32 %mul2, 0
+  ret i1 %cmp2
+}

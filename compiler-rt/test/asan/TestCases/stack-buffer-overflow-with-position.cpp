@@ -13,6 +13,7 @@
 // RUN: not %run %t 63 2>&1 | FileCheck --check-prefix=CHECK-63 %s
 // RUN: not %run %t 73 2>&1 | FileCheck --check-prefix=CHECK-73 %s
 // RUN: not %run %t 74 2>&1 | FileCheck --check-prefix=CHECK-74 %s
+// XFAIL: msvc
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

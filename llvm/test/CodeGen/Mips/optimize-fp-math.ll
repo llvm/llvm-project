@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefix=32
-; RUN: llc -march=mips64el -mcpu=mips4 < %s | FileCheck %s -check-prefix=64
-; RUN: llc -march=mips64el -mcpu=mips64 < %s | FileCheck %s -check-prefix=64
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s -check-prefix=32
+; RUN: llc -mtriple=mips64el -mcpu=mips4 < %s | FileCheck %s -check-prefix=64
+; RUN: llc -mtriple=mips64el -mcpu=mips64 < %s | FileCheck %s -check-prefix=64
 
 ; 32-LABEL: test_sqrtf_float_:
 ; 32: sqrt.s $f[[R0:[0-9]+]], $f{{[0-9]+}}

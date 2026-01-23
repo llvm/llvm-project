@@ -1,10 +1,11 @@
 // RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+#include "defines.h"
 #include <stdio.h>
 
 struct IntHolder {
   explicit IntHolder(int *val = 0) : val_(val) { }
-  __attribute__((noinline)) ~IntHolder() {
+  ATTRIBUTE_NOINLINE ~IntHolder() {
     printf("Value: %d\n", *val_);  // BOOM
     // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
     // CHECK:  #0 0x{{.*}} in IntHolder::~IntHolder{{.*}}.cpp:[[@LINE-2]]

@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
@@ -27,12 +26,10 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <variant>
 
 using namespace llvm;
 
@@ -209,6 +206,9 @@ template <class ELFT> class ELFState {
   NameToIdxMap DynSymN2I;
   ELFYAML::Object &Doc;
 
+  std::vector<std::pair<Elf_Shdr *, ELFYAML::Section>>
+      SectionHeadersOverrideHelper;
+
   StringSet<> ExcludedSectionHeaders;
 
   uint64_t LocationCounter = 0;
@@ -229,6 +229,7 @@ template <class ELFT> class ELFState {
                           StringRef SecName, ELFYAML::Section *YAMLSec);
   void initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
                           ContiguousBlobAccumulator &CBA);
+  void overrideSectionHeaders(std::vector<Elf_Shdr> &SHeaders);
   void initSymtabSectionHeader(Elf_Shdr &SHeader, SymtabType STType,
                                ContiguousBlobAccumulator &CBA,
                                ELFYAML::Section *YAMLSec);
@@ -484,7 +485,11 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
-  Header.e_flags = Doc.Header.Flags;
+  if (Doc.Header.Flags)
+    Header.e_flags = *Doc.Header.Flags;
+  else
+    Header.e_flags = 0;
+
   Header.e_ehsize = sizeof(Elf_Ehdr);
 
   if (Doc.Header.EPhOff)
@@ -539,15 +544,11 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
 template <class ELFT>
 void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
-  DenseMap<StringRef, ELFYAML::Fill *> NameToFill;
   DenseMap<StringRef, size_t> NameToIndex;
   for (size_t I = 0, E = Doc.Chunks.size(); I != E; ++I) {
-    if (auto S = dyn_cast<ELFYAML::Fill>(Doc.Chunks[I].get()))
-      NameToFill[S->Name] = S;
     NameToIndex[Doc.Chunks[I]->Name] = I + 1;
   }
 
-  std::vector<ELFYAML::Section *> Sections = Doc.getSections();
   for (size_t I = 0, E = Doc.ProgramHeaders.size(); I != E; ++I) {
     ELFYAML::ProgramHeader &YamlPhdr = Doc.ProgramHeaders[I];
     Elf_Phdr Phdr;
@@ -852,7 +853,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       }
 
       LocationCounter += SHeader.sh_size;
-      overrideFields<ELFT>(Sec, SHeader);
+      SectionHeadersOverrideHelper.push_back({&SHeader, *Sec});
       continue;
     }
 
@@ -906,10 +907,15 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     }
 
     LocationCounter += SHeader.sh_size;
-
-    // Override section fields if requested.
-    overrideFields<ELFT>(Sec, SHeader);
+    SectionHeadersOverrideHelper.push_back({&SHeader, *Sec});
   }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::overrideSectionHeaders(std::vector<Elf_Shdr> &SHeaders) {
+  for (std::pair<Elf_Shdr *, ELFYAML::Section> &HeaderAndSec :
+       SectionHeadersOverrideHelper)
+    overrideFields<ELFT>(&HeaderAndSec.second, *HeaderAndSec.first);
 }
 
 template <class ELFT>
@@ -966,7 +972,7 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
       Symbol.st_shndx = *Sym.Index;
 
     Symbol.st_value = Sym.Value.value_or(yaml::Hex64(0));
-    Symbol.st_other = Sym.Other ? *Sym.Other : 0;
+    Symbol.st_other = Sym.Other.value_or(0);
     Symbol.st_size = Sym.Size.value_or(yaml::Hex64(0));
   }
 
@@ -1459,13 +1465,19 @@ void ELFState<ELFT>::writeSectionContent(
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 2)
+      if (E.Version > 5)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
       CBA.write(E.Version);
-      CBA.write(E.Feature);
-      SHeader.sh_size += 2;
+      SHeader.sh_size += 1;
+      if (E.Version < 5) {
+        CBA.write(static_cast<uint8_t>(E.Feature));
+        SHeader.sh_size += 1;
+      } else {
+        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
+        SHeader.sh_size += 2;
+      }
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     bool MultiBBRangeFeatureEnabled = false;
@@ -1490,6 +1502,8 @@ void ELFState<ELFT>::writeSectionContent(
     if (!E.BBRanges)
       continue;
     uint64_t TotalNumBlocks = 0;
+    bool EmitCallsiteEndOffsets =
+        FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
     for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
       CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
@@ -1500,15 +1514,30 @@ void ELFState<ELFT>::writeSectionContent(
           BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
       SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
       // Write all BBEntries in this BBRange.
-      if (!BBR.BBEntries)
+      if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
       for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
         SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
+        if (EmitCallsiteEndOffsets) {
+          size_t NumCallsiteEndOffsets =
+              BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
+          SHeader.sh_size += CBA.writeULEB128(NumCallsiteEndOffsets);
+          if (BBE.CallsiteEndOffsets) {
+            for (uint32_t Offset : *BBE.CallsiteEndOffsets)
+              SHeader.sh_size += CBA.writeULEB128(Offset);
+          }
+        }
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
+        if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
+          uint64_t Hash =
+              BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
+          CBA.write<uint64_t>(Hash, ELFT::Endianness);
+          SHeader.sh_size += 8;
+        }
       }
     }
     if (!PGOAnalyses)
@@ -1533,11 +1562,15 @@ void ELFState<ELFT>::writeSectionContent(
     for (const auto &PGOBBE : PGOBBEntries) {
       if (PGOBBE.BBFreq)
         SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
+      if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
+        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
       if (PGOBBE.Successors) {
         SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb] : *PGOBBE.Successors) {
+        for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
           SHeader.sh_size += CBA.writeULEB128(ID);
           SHeader.sh_size += CBA.writeULEB128(BrProb);
+          if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
+            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
         }
       }
     }
@@ -1655,7 +1688,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     VerDef.vd_flags = E.Flags.value_or(0);
     VerDef.vd_ndx = E.VersionNdx.value_or(0);
     VerDef.vd_hash = E.Hash.value_or(0);
-    VerDef.vd_aux = sizeof(Elf_Verdef);
+    VerDef.vd_aux = E.VDAux.value_or(sizeof(Elf_Verdef));
     VerDef.vd_cnt = E.VerNames.size();
     if (I == Section.Entries->size() - 1)
       VerDef.vd_next = 0;
@@ -1665,13 +1698,13 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     CBA.write((const char *)&VerDef, sizeof(Elf_Verdef));
 
     for (size_t J = 0; J < E.VerNames.size(); ++J, ++AuxCnt) {
-      Elf_Verdaux VernAux;
-      VernAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
+      Elf_Verdaux VerdAux;
+      VerdAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
       if (J == E.VerNames.size() - 1)
-        VernAux.vda_next = 0;
+        VerdAux.vda_next = 0;
       else
-        VernAux.vda_next = sizeof(Elf_Verdaux);
-      CBA.write((const char *)&VernAux, sizeof(Elf_Verdaux));
+        VerdAux.vda_next = sizeof(Elf_Verdaux);
+      CBA.write((const char *)&VerdAux, sizeof(Elf_Verdaux));
     }
   }
 
@@ -1799,8 +1832,30 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::NoteSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Notes)
+  if (!Section.Notes || Section.Notes->empty())
     return;
+
+  unsigned Align;
+  switch (Section.AddressAlign) {
+  case 0:
+  case 4:
+    Align = 4;
+    break;
+  case 8:
+    Align = 8;
+    break;
+  default:
+    reportError(Section.Name + ": invalid alignment for a note section: 0x" +
+                Twine::utohexstr(Section.AddressAlign));
+    return;
+  }
+
+  if (CBA.getOffset() != alignTo(CBA.getOffset(), Align)) {
+    reportError(Section.Name + ": invalid offset of a note section: 0x" +
+                Twine::utohexstr(CBA.getOffset()) + ", should be aligned to " +
+                Twine(Align));
+    return;
+  }
 
   uint64_t Offset = CBA.tell();
   for (const ELFYAML::NoteEntry &NE : *Section.Notes) {
@@ -1823,14 +1878,15 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     if (!NE.Name.empty()) {
       CBA.write(NE.Name.data(), NE.Name.size());
       CBA.write('\0');
-      CBA.padToAlignment(4);
     }
 
     // Write description and padding.
     if (NE.Desc.binary_size() != 0) {
+      CBA.padToAlignment(Align);
       CBA.writeAsBinary(NE.Desc);
-      CBA.padToAlignment(4);
     }
+
+    CBA.padToAlignment(Align);
   }
 
   SHeader.sh_size = CBA.tell() - Offset;
@@ -2073,6 +2129,11 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
 
   // Now we can decide segment offsets.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
+
+  // Override section fields, if requested. This needs to happen after program
+  // header layout happens, because otherwise the layout will use the new
+  // values.
+  State.overrideSectionHeaders(SHeaders);
 
   bool ReachedLimit = CBA.getOffset() > MaxSize;
   if (Error E = CBA.takeLimitError()) {

@@ -1,8 +1,8 @@
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s --check-prefixes=ALL,R6
-; RUN: llc -march=mips -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 < %s | FileCheck %s --check-prefixes=ALL,R6
+; RUN: llc -mtriple=mips -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic \
 ; RUN:     < %s | FileCheck %s --check-prefixes=ALL,R6
-; RUN: llc -march=mips -mcpu=mips32 < %s | FileCheck %s --check-prefixes=ALL,PRER6
-; RUN: llc -march=mips -mcpu=mips64 -target-abi=n64 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips32 < %s | FileCheck %s --check-prefixes=ALL,PRER6
+; RUN: llc -mtriple=mips -mcpu=mips64 -target-abi=n64 -relocation-model=pic \
 ; RUN:     < %s | FileCheck %s --check-prefixes=ALL,PRER6
 
 

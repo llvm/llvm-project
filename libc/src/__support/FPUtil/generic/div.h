@@ -11,6 +11,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
@@ -18,9 +19,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-namespace LIBC_NAMESPACE::fputil::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil::generic {
 
 template <typename OutType, typename InType>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
@@ -32,8 +35,9 @@ div(InType x, InType y) {
   using OutStorageType = typename OutFPBits::StorageType;
   using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
-  using DyadicFloat =
-      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::FRACTION_LEN))>;
+  using DyadicFloat = DyadicFloat<cpp::max(
+      static_cast<size_t>(16),
+      cpp::bit_ceil(static_cast<size_t>(InFPBits::SIG_LEN + 1)))>;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
@@ -47,19 +51,19 @@ div(InType x, InType y) {
         raise_except_if_required(FE_INVALID);
 
       if (x_bits.is_quiet_nan()) {
-        InStorageType x_payload = static_cast<InStorageType>(getpayload(x));
-        if ((x_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(x_bits.sign(),
-                                      static_cast<OutStorageType>(x_payload))
-              .get_val();
+        InStorageType x_payload = x_bits.get_mantissa();
+        x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(x_bits.sign(),
+                                    static_cast<OutStorageType>(x_payload))
+            .get_val();
       }
 
       if (y_bits.is_quiet_nan()) {
-        InStorageType y_payload = static_cast<InStorageType>(getpayload(y));
-        if ((y_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(y_bits.sign(),
-                                      static_cast<OutStorageType>(y_payload))
-              .get_val();
+        InStorageType y_payload = y_bits.get_mantissa();
+        y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(y_bits.sign(),
+                                    static_cast<OutStorageType>(y_payload))
+            .get_val();
       }
 
       return OutFPBits::quiet_nan().get_val();
@@ -76,7 +80,7 @@ div(InType x, InType y) {
     }
 
     if (y_bits.is_inf())
-      return OutFPBits::inf(result_sign).get_val();
+      return OutFPBits::zero(result_sign).get_val();
 
     if (y_bits.is_zero()) {
       if (x_bits.is_zero()) {
@@ -118,6 +122,7 @@ div(InType x, InType y) {
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 
-} // namespace LIBC_NAMESPACE::fputil::generic
+} // namespace fputil::generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H

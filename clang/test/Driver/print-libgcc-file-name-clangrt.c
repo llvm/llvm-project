@@ -63,3 +63,12 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-BAREMETAL-PER-TARGET %s
 // CHECK-CLANGRT-ARM-BAREMETAL-PER-TARGET: libclang_rt.builtins.a
+
+// RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name \
+// RUN:     --target=riscv32-unknown-elf \
+// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
+// RUN:    | FileCheck --check-prefix=CHECK-CLANGRT-RISCV-BAREMETAL %s
+// CHECK-CLANGRT-RISCV-BAREMETAL-NOT: baremetal{{/|\\}}libclang_rt.builtins-riscv32.a
+// CHECK-CLANGRT-RISCV-BAREMETAL: libclang_rt.builtins.a

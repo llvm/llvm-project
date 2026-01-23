@@ -30,7 +30,7 @@ def main(builtin_params={}):
     lit_config = lit.LitConfig.LitConfig(
         progname=os.path.basename(sys.argv[0]),
         path=opts.path,
-        quiet=opts.quiet,
+        diagnostic_level=opts.diagnostic_level,
         useValgrind=opts.useValgrind,
         valgrindLeakCheck=opts.valgrindLeakCheck,
         valgrindArgs=opts.valgrindArgs,
@@ -42,6 +42,8 @@ def main(builtin_params={}):
         config_prefix=opts.configPrefix,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
+        maxRetriesPerTest=opts.maxRetriesPerTest,
+        update_tests=opts.update_tests,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -88,6 +90,9 @@ def main(builtin_params={}):
         and not opts.filter_out.search(t.getFullName())
     ]
 
+    if opts.filterFailed:
+        selected_tests = [t for t in selected_tests if t.previous_failure]
+
     if not selected_tests:
         sys.stderr.write(
             "error: filter did not match any tests "
@@ -124,7 +129,8 @@ def main(builtin_params={}):
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    record_test_times(selected_tests, lit_config)
+    if not opts.skip_test_time_recording:
+        record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
         selected_tests, discovered_tests
@@ -136,6 +142,10 @@ def main(builtin_params={}):
     print_results(discovered_tests, elapsed, opts)
 
     tests_for_report = selected_tests if opts.shard else discovered_tests
+    if opts.report_failures_only:
+        # Only report tests that failed.
+        tests_for_report = [t for t in tests_for_report if t.isFailure()]
+
     for report in opts.reports:
         report.write_results(tests_for_report, elapsed)
 
@@ -234,6 +244,8 @@ def mark_xfail(selected_tests, opts):
             t.xfails += "*"
         if test_file in opts.xfail_not or test_full_name in opts.xfail_not:
             t.xfail_not = True
+        if opts.exclude_xfail:
+            t.exclude_xfail = True
 
 
 def mark_excluded(discovered_tests, selected_tests):
@@ -320,12 +332,13 @@ def print_results(tests, elapsed, opts):
             sorted(tests_by_code[code], key=lambda t: t.getFullName()),
             code,
             opts.shown_codes,
+            opts.printPathRelativeCWD,
         )
 
-    print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
+    print_summary(total_tests, tests_by_code, opts.terse_summary, elapsed)
 
 
-def print_group(tests, code, shown_codes):
+def print_group(tests, code, shown_codes, printPathRelativeCWD):
     if not tests:
         return
     if not code.isFailure and code not in shown_codes:
@@ -333,7 +346,7 @@ def print_group(tests, code, shown_codes):
     print("*" * 20)
     print("{} Tests ({}):".format(code.label, len(tests)))
     for test in tests:
-        print("  %s" % test.getFullName())
+        print("  %s" % test.getSummaryName(printPathRelativeCWD))
     sys.stdout.write("\n")
 
 

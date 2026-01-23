@@ -105,6 +105,6 @@ export void charlie() {
 }
 
 // CHECK: #pragma clang module import ".{{/|\\\\?}}h1.h"
-// CHECK: import .{{/|\\\\?}}h2.h
-// CHECK: import .{{/|\\\\?}}h3.h
+// CHECK: import ".{{/|\\\\?}}h2.h"
+// CHECK: import ".{{/|\\\\?}}h3.h"
 // CHECK-NOT: #pragma clang module import ".{{/|\\\\?}}h4.h"

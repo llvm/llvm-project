@@ -22,5 +22,5 @@ class CMOPInst<bits<3> imm3, string opcodestr>
 
 foreach n = [1, 3, 5, 7, 9, 11, 13, 15] in {
   let Predicates = [HasStdExtZcmop] in
-  def C_MOP # n : CMOPInst<!srl(n, 1), "c.mop." # n>, Sched<[]>;
+  def C_MOP_ # n : CMOPInst<!srl(n, 1), "c.mop." # n>, Sched<[]>;
 }

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
 ;
 ; Check that this testcase compiles successfully and that a new-value jump
 ; has been created.

@@ -101,9 +101,8 @@ public:
         elemental.getLoc(), builder, elemental, apply.getIndices());
 
     // remove the old elemental and all of the bookkeeping
-    rewriter.replaceAllUsesWith(apply.getResult(), yield.getElementValue());
+    rewriter.replaceOp(apply, {yield.getElementValue()});
     rewriter.eraseOp(yield);
-    rewriter.eraseOp(apply);
     rewriter.eraseOp(destroy);
     rewriter.eraseOp(elemental);
 
@@ -119,13 +118,13 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineElementalConversion>(context);
 
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+    if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR elemental inlining");

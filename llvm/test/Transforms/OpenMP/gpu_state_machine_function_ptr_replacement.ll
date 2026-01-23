@@ -30,9 +30,9 @@
 ; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__2_wrapper.ID
 
 
-; CHECK-DAG:   call void @__kmpc_parallel_51(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr %{{.*}}, i64 0)
-; CHECK-DAG:   call void @__kmpc_parallel_51(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper.ID, ptr %{{.*}}, i64 0)
-; CHECK-DAG:   call void @__kmpc_parallel_51(ptr @2, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr %{{.*}}, i64 0)
+; CHECK-DAG:   call void @__kmpc_parallel_60(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr %{{.*}}, i64 0, i32 0)
+; CHECK-DAG:   call void @__kmpc_parallel_60(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper.ID, ptr %{{.*}}, i64 0, i32 0)
+; CHECK-DAG:   call void @__kmpc_parallel_60(ptr @2, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr %{{.*}}, i64 0, i32 0)
 
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
@@ -44,7 +44,7 @@
 @2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @0 }, align 8
 @__omp_offloading_10301_87b2c_foo_l7_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
-define weak void @__omp_offloading_10301_87b2c_foo_l7() "kernel" {
+define weak ptx_kernel void @__omp_offloading_10301_87b2c_foo_l7() "kernel" {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -80,10 +80,10 @@ entry:
   store ptr %.bound_tid., ptr %.bound_tid..addr, align 8
   %0 = load ptr, ptr %.global_tid..addr, align 8
   %1 = load i32, ptr %0, align 4
-  call void @__kmpc_parallel_51(ptr @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr %captured_vars_addrs, i64 0)
+  call void @__kmpc_parallel_60(ptr @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr %captured_vars_addrs, i64 0, i32 0)
   call void @bar()
   call void @unknown()
-  call void @__kmpc_parallel_51(ptr @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper, ptr %captured_vars_addrs1, i64 0)
+  call void @__kmpc_parallel_60(ptr @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper, ptr %captured_vars_addrs1, i64 0, i32 0)
   ret void
 }
 
@@ -112,13 +112,13 @@ entry:
 
 declare void @__kmpc_get_shared_variables(ptr)
 
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 define hidden void @bar() {
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
   %0 = call i32 @__kmpc_global_thread_num(ptr @2)
-  call void @__kmpc_parallel_51(ptr @2, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr %captured_vars_addrs, i64 0)
+  call void @__kmpc_parallel_60(ptr @2, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr %captured_vars_addrs, i64 0, i32 0)
   ret void
 }
 
@@ -173,10 +173,8 @@ entry:
 }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3}
 
 !0 = !{i32 0, i32 66305, i32 555956, !"foo", i32 7, i32 0}
-!1 = !{ptr @__omp_offloading_10301_87b2c_foo_l7, !"kernel", i32 1}
 !2 = !{i32 7, !"openmp", i32 50}
 !3 = !{i32 7, !"openmp-device", i32 50}

@@ -17,6 +17,8 @@
 
 #include "hdr/math_macros.h"
 
+using LIBC_NAMESPACE::Sign;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
@@ -69,9 +71,10 @@ public:
 
   void test_subnormal_range(Func func) {
     constexpr StorageType COUNT = 10'001;
-    for (unsigned scale = 0; scale < 4; ++scale) {
-      StorageType max_value = MAX_SUBNORMAL << scale;
-      StorageType step = (max_value - MIN_SUBNORMAL) / COUNT;
+    constexpr unsigned SCALE = (sizeof(T) < 4) ? 1 : 4;
+    for (unsigned scale = 0; scale < SCALE; ++scale) {
+      StorageType max_value = static_cast<StorageType>(MAX_SUBNORMAL << scale);
+      StorageType step = (max_value - MIN_SUBNORMAL) / COUNT + 1;
       for (int signs = 0; signs < 4; ++signs) {
         for (StorageType v = MIN_SUBNORMAL, w = max_value;
              v <= max_value && w >= MIN_SUBNORMAL; v += step, w -= step) {

@@ -11,6 +11,7 @@ tablegen(LLVM PPCGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM PPCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM PPCGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM PPCGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM PPCGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM PPCGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM PPCGenExegesis.inc -gen-exegesis)
 tablegen(LLVM PPCGenRegisterBank.inc -gen-register-bank)
@@ -25,7 +26,6 @@ add_llvm_target(PowerPCCodeGen
   PPCBranchSelector.cpp
   PPCBranchCoalescing.cpp
   PPCCallingConv.cpp
-  PPCCCState.cpp
   PPCCTRLoops.cpp
   PPCCTRLoopsVerify.cpp
   PPCExpandAtomicPseudoInsts.cpp
@@ -41,20 +41,19 @@ add_llvm_target(PowerPCCodeGen
   PPCMachineFunctionInfo.cpp
   PPCMachineScheduler.cpp
   PPCMacroFusion.cpp
-  PPCMergeStringPool.cpp
   PPCMIPeephole.cpp
   PPCRegisterInfo.cpp
+  PPCSelectionDAGInfo.cpp
   PPCSubtarget.cpp
   PPCTargetMachine.cpp
   PPCTargetObjectFile.cpp
   PPCTargetTransformInfo.cpp
   PPCTOCRegDeps.cpp
   PPCTLSDynamicCall.cpp
-  PPCVSXCopy.cpp
+  PPCVSXWACCCopy.cpp
   PPCReduceCRLogicals.cpp
   PPCVSXFMAMutate.cpp
   PPCVSXSwapRemoval.cpp
-  PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
   PPCLowerMASSVEntries.cpp
   PPCGenScalarMASSEntries.cpp

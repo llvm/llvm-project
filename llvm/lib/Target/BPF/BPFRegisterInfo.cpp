@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFRegisterInfo.h"
-#include "BPF.h"
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -40,6 +39,17 @@ BPFRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SaveList;
 }
 
+const uint32_t *
+BPFRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                      CallingConv::ID CC) const {
+  switch (CC) {
+  default:
+    return CSR_RegMask;
+  case CallingConv::PreserveAll:
+    return CSR_PreserveAll_RegMask;
+  }
+}
+
 BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, BPF::W10); // [W|R]10 is read only frame pointer
@@ -59,14 +69,13 @@ static void WarnSize(int Offset, MachineFunction &MF, DebugLoc& DL,
         }
 
     const Function &F = MF.getFunction();
-    DiagnosticInfoUnsupported DiagStackSize(
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "Looks like the BPF stack limit is exceeded. "
         "Please move large on stack variables into BPF per-cpu array map. For "
         "non-kernel uses, the stack can be increased using -mllvm "
         "-bpf-stack-size.\n",
-        DL);
-    F.getContext().diagnose(DiagStackSize);
+        DL));
   }
 }
 

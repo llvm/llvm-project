@@ -13,11 +13,13 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <queue>
 
 #define DEBUG_TYPE "licm"
@@ -64,8 +66,9 @@ size_t mlir::moveLoopInvariantCode(
   size_t numMoved = 0;
 
   for (Region *region : regions) {
-    LLVM_DEBUG(llvm::dbgs() << "Original loop:\n"
-                            << *region->getParentOp() << "\n");
+    LDBG() << "Original loop:\n"
+           << OpWithFlags(region->getParentOp(),
+                          OpPrintingFlags().skipRegions());
 
     std::queue<Operation *> worklist;
     // Add top-level operations in the loop body to the worklist.
@@ -83,12 +86,14 @@ size_t mlir::moveLoopInvariantCode(
       if (op->getParentRegion() != region)
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Checking op: " << *op << "\n");
+      LDBG() << "Checking op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       if (!shouldMoveOutOfRegion(op, region) ||
           !canBeHoisted(op, definedOutside))
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op << "\n");
+      LDBG() << "Moving loop-invariant op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       moveOutOfRegion(op, region);
       ++numMoved;
 
@@ -109,9 +114,7 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
-      [&](Operation *op, Region *) {
-        return isMemoryEffectFree(op) && isSpeculatable(op);
-      },
+      [&](Operation *op, Region *) { return isPure(op); },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
 }
 
@@ -280,11 +283,11 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
       if (auto insertionOp =
               dyn_cast<SubsetInsertionOpInterface>(use.getOwner())) {
         // Current implementation expects that the insertionOp implement
-        // the destinationStyleOpInterface as well. Abort if that tha is not
-        // the case
-        if (!isa<DestinationStyleOpInterface>(use.getOwner())) {
+        // the DestinationStyleOpInterface and with pure tensor semantics
+        // as well. Abort if that is not the case.
+        auto dstOp = dyn_cast<DestinationStyleOpInterface>(use.getOwner());
+        if (!dstOp || !dstOp.hasPureTensorSemantics())
           return failure();
-        }
 
         // The value must be used as a destination. (In case of a source, the
         // entire tensor would be read, which would prevent any hoisting.)
@@ -322,7 +325,7 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(RewriterBase &rewriter,
                                                 LoopLikeOpInterface loopLike,
                                                 BlockArgument iterArg) {
   assert(iterArg.getOwner()->getParentOp() == loopLike && "invalid iter_arg");
-  auto it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
+  BlockArgument *it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
   int64_t iterArgIdx = std::distance(loopLike.getRegionIterArgs().begin(), it);
   MatchingSubsets subsets;
   if (failed(subsets.populateSubsetOpsAtIterArg(loopLike, iterArg)))

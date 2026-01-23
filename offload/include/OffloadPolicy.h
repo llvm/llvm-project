@@ -16,13 +16,13 @@
 
 #include "PluginManager.h"
 
+using namespace llvm::omp::target::debug;
+
 enum kmp_target_offload_kind_t {
   tgt_disabled = 0,
   tgt_default = 1,
   tgt_mandatory = 2
 };
-
-extern "C" int __kmpc_get_target_offload(void) __attribute__((weak));
 
 class OffloadPolicy {
 
@@ -37,19 +37,24 @@ class OffloadPolicy {
       return;
     default:
       if (PM.getNumDevices()) {
-        DP("Default TARGET OFFLOAD policy is now mandatory "
-           "(devices were found)\n");
+        ODBG(ODT_Init) << "Default TARGET OFFLOAD policy is now mandatory "
+                       << "(devices were found)";
         Kind = MANDATORY;
       } else {
-        DP("Default TARGET OFFLOAD policy is now disabled "
-           "(no devices were found)\n");
+        ODBG(ODT_Init) << "Default TARGET OFFLOAD policy is now disabled "
+                       << "(no devices were found)";
         Kind = DISABLED;
       }
       return;
-    };
+    }
   }
 
 public:
+  static bool isOffloadDisabled() {
+    return static_cast<kmp_target_offload_kind_t>(
+               __kmpc_get_target_offload()) == tgt_disabled;
+  }
+
   static const OffloadPolicy &get(PluginManager &PM) {
     static OffloadPolicy OP(PM);
     return OP;

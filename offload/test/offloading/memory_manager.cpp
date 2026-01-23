@@ -1,6 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
-
-// REQURIES: nvidiagpu
+// XFAIL: intelgpu
 
 #include <omp.h>
 

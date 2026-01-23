@@ -151,10 +151,10 @@ define i32 @bit_floor_shl_used_twice(i32 %x, ptr %p) {
 define <4 x i32> @bit_floor_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: @bit_floor_v4i32(
 ; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq <4 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 1)
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 1, 33) <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[LSHR]], i1 false)
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <4 x i32> <i32 32, i32 32, i32 32, i32 32>, [[CTLZ]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[SUB]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <4 x i32> splat (i32 32), [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <4 x i32> splat (i32 1), [[SUB]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[EQ0]], <4 x i32> zeroinitializer, <4 x i32> [[SHL]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;

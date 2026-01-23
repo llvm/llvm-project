@@ -73,19 +73,19 @@ private:
     TripleName = TheTriple.getTriple();
 
     // Create all the MC Objects.
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
+    MRI.reset(TheTarget->createMCRegInfo(TheTriple));
     if (!MRI)
       return createStringError(std::errc::invalid_argument,
                                "no register info for target %s",
                                TripleName.c_str());
 
     MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,
                                "no asm info for target %s", TripleName.c_str());
 
-    MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+    MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
     if (!MSTI)
       return createStringError(std::errc::invalid_argument,
                                "no subtarget info for target %s",
@@ -215,7 +215,7 @@ private:
       encodeULEB128(FileNameForm, Section.OS);
 
       encodeULEB128(dwarf::DW_LNCT_directory_index, Section.OS);
-      encodeULEB128(dwarf::DW_FORM_data1, Section.OS);
+      encodeULEB128(dwarf::DW_FORM_udata, Section.OS);
 
       if (HasChecksums) {
         encodeULEB128(dwarf::DW_LNCT_MD5, Section.OS);
@@ -242,7 +242,7 @@ private:
       // A null-terminated string containing the full or relative path name of a
       // source file.
       Section.emitString(FileNameForm, *FileNameStr);
-      Section.emitIntVal(File.DirIdx, 1);
+      encodeULEB128(File.DirIdx, Section.OS);
 
       if (HasChecksums) {
         assert((File.Checksum.size() == 16) &&
@@ -359,6 +359,7 @@ private:
         Section.emitIntVal(dwarf::DW_LNE_set_discriminator, 1);
         encodeULEB128(Discriminator, Section.OS);
       }
+      Discriminator = 0;
 
       if (Isa != Row.Isa) {
         Isa = Row.Isa;

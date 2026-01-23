@@ -1,5 +1,4 @@
 ; RUN: llc %s -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators %s -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v - | FileCheck %s
 ;
 ;    // Compile with -O1
 ;    typedef struct {

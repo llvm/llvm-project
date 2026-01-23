@@ -39,7 +39,6 @@ define <2 x i64> @fixed_vec_zero_constant() {
 ; CHECK-LABEL: fixed_vec_zero_constant:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fixed_vec_zero_constant:
@@ -54,7 +53,6 @@ define <2 x double> @fixed_vec_fp_zero_constant() {
 ; CHECK-LABEL: fixed_vec_fp_zero_constant:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fixed_vec_fp_zero_constant:

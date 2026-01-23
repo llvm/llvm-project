@@ -34,17 +34,17 @@ define double @caller() {
   ; MIR32-NEXT:   STXVW4X renamable $vsl0, $r1, killed renamable $r3 :: (store (s128), align 8)
   ; MIR32-NEXT:   renamable $r3 = LI 104
   ; MIR32-NEXT:   STXVW4X renamable $vsl0, $r1, killed renamable $r4 :: (store (s128), align 8)
-  ; MIR32-NEXT:   renamable $r4 = LI 88
   ; MIR32-NEXT:   STXVW4X renamable $vsl0, $r1, killed renamable $r3 :: (store (s128), align 8)
-  ; MIR32-NEXT:   STXVW4X renamable $vsl0, $r1, killed renamable $r4 :: (store (s128), align 8)
-  ; MIR32-NEXT:   renamable $r3 = LI 72
-  ; MIR32-NEXT:   renamable $r4 = LWZtoc %const.0, $r2 :: (load (s32) from got)
-  ; MIR32-NEXT:   STXVW4X killed renamable $vsl0, $r1, killed renamable $r3 :: (store (s128), align 8)
+  ; MIR32-NEXT:   renamable $r3 = LI 88
+  ; MIR32-NEXT:   renamable $r4 = LI 72
+  ; MIR32-NEXT:   STXVW4X renamable $vsl0, $r1, killed renamable $r3 :: (store (s128), align 8)
   ; MIR32-NEXT:   renamable $r3 = LI 48
-  ; MIR32-NEXT:   renamable $vsl0 = LXVD2X $zero, killed renamable $r4 :: (load (s128) from constant-pool)
+  ; MIR32-NEXT:   STXVW4X killed renamable $vsl0, $r1, killed renamable $r4 :: (store (s128), align 8)
   ; MIR32-NEXT:   renamable $r4 = LI 512
-  ; MIR32-NEXT:   STXVD2X killed renamable $vsl0, $r1, killed renamable $r3 :: (store (s128))
-  ; MIR32-NEXT:   STW killed renamable $r4, 152, $r1 :: (store (s32))
+  ; MIR32-NEXT:   STW killed renamable $r4, 152, $r1 :: (store (s32) into stack + 152, align 8, basealign 16)
+  ; MIR32-NEXT:   renamable $r4 = LWZtoc %const.0, $r2 :: (load (s32) from got)
+  ; MIR32-NEXT:   renamable $vsl0 = LXVD2X $zero, killed renamable $r4 :: (load (s128) from constant-pool)
+  ; MIR32-NEXT:   STXVD2X killed renamable $vsl0, $r1, killed renamable $r3 :: (store (s128) into stack + 48)
   ; MIR32-NEXT:   $f1 = XXLXORdpz
   ; MIR32-NEXT:   $f2 = XXLXORdpz
   ; MIR32-NEXT:   $v2 = XXLXORz
@@ -92,18 +92,18 @@ define double @caller() {
   ; MIR64-NEXT:   ADJCALLSTACKDOWN 224, 0, implicit-def dead $r1, implicit $r1
   ; MIR64-NEXT:   renamable $vsl0 = XXLXORz
   ; MIR64-NEXT:   renamable $x3 = LI8 160
-  ; MIR64-NEXT:   STXVW4X renamable $vsl0, $x1, killed renamable $x3 :: (store (s128), align 8)
+  ; MIR64-NEXT:   STXVW4X renamable $vsl0, $x1, killed renamable $x3 :: (store (s128))
   ; MIR64-NEXT:   renamable $x3 = LI8 144
-  ; MIR64-NEXT:   STXVW4X renamable $vsl0, $x1, killed renamable $x3 :: (store (s128), align 8)
+  ; MIR64-NEXT:   STXVW4X renamable $vsl0, $x1, killed renamable $x3 :: (store (s128))
   ; MIR64-NEXT:   renamable $x3 = LI8 128
-  ; MIR64-NEXT:   STXVW4X killed renamable $vsl0, $x1, killed renamable $x3 :: (store (s128), align 8)
-  ; MIR64-NEXT:   renamable $x3 = LDtocCPT %const.0, $x2 :: (load (s64) from got)
-  ; MIR64-NEXT:   renamable $vsl0 = LXVD2X $zero8, killed renamable $x3 :: (load (s128) from constant-pool)
-  ; MIR64-NEXT:   renamable $x3 = LI8 80
-  ; MIR64-NEXT:   STXVD2X killed renamable $vsl0, $x1, killed renamable $x3 :: (store (s128))
+  ; MIR64-NEXT:   STXVW4X killed renamable $vsl0, $x1, killed renamable $x3 :: (store (s128))
   ; MIR64-NEXT:   renamable $x3 = LI8 512
-  ; MIR64-NEXT:   STD killed renamable $x3, 184, $x1 :: (store (s64))
-  ; MIR64-NEXT:   STD killed renamable $x4, 176, $x1 :: (store (s64))
+  ; MIR64-NEXT:   STD killed renamable $x3, 184, $x1 :: (store (s64) into stack + 184, basealign 16)
+  ; MIR64-NEXT:   renamable $x3 = LI8 80
+  ; MIR64-NEXT:   STD killed renamable $x4, 176, $x1 :: (store (s64) into stack + 176, align 16)
+  ; MIR64-NEXT:   renamable $x4 = LDtocCPT %const.0, $x2 :: (load (s64) from got)
+  ; MIR64-NEXT:   renamable $vsl0 = LXVD2X $zero8, killed renamable $x4 :: (load (s128) from constant-pool)
+  ; MIR64-NEXT:   STXVD2X killed renamable $vsl0, $x1, killed renamable $x3 :: (store (s128) into stack + 80)
   ; MIR64-NEXT:   $f1 = XXLXORdpz
   ; MIR64-NEXT:   $f2 = XXLXORdpz
   ; MIR64-NEXT:   $v2 = XXLXORz

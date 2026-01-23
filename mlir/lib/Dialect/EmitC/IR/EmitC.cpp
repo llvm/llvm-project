@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 
@@ -49,13 +49,13 @@ void EmitCDialect::initialize() {
 Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  return builder.create<emitc::ConstantOp>(loc, type, value);
+  return emitc::ConstantOp::create(builder, loc, type, value);
 }
 
 /// Default callback for builders of ops carrying a region. Inserts a yield
 /// without arguments.
 void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
-  builder.create<emitc::YieldOp>(loc);
+  emitc::YieldOp::create(builder, loc);
 }
 
 bool mlir::emitc::isSupportedEmitCType(Type type) {
@@ -116,6 +116,8 @@ bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
+    case 16:
+      return llvm::isa<Float16Type, BFloat16Type>(type);
     case 32:
     case 64:
       return true;
@@ -129,6 +131,12 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
 bool mlir::emitc::isPointerWideType(Type type) {
   return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
       type);
+}
+
+bool mlir::emitc::isFundamentalType(Type type) {
+  return llvm::isa<IndexType>(type) || isPointerWideType(type) ||
+         isSupportedIntegerType(type) || isSupportedFloatType(type) ||
+         isa<emitc::PointerType>(type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -145,6 +153,8 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
            << "string attributes are not supported, use #emitc.opaque instead";
 
   Type resultType = op->getResult(0).getType();
+  if (auto lType = dyn_cast<LValueType>(resultType))
+    resultType = lType.getValueType();
   Type attrType = cast<TypedAttr>(value).getType();
 
   if (isPointerWideType(resultType) && attrType.isIndex())
@@ -156,6 +166,76 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
               "it's type ("
            << attrType << ") to match the op's result type (" << resultType
            << ")";
+
+  return success();
+}
+
+/// Parse a format string and return a list of its parts.
+/// A part is either a StringRef that has to be printed as-is, or
+/// a Placeholder which requires printing the next operand of the VerbatimOp.
+/// In the format string, all `{}` are replaced by Placeholders, except if the
+/// `{` is escaped by `{{` - then it doesn't start a placeholder.
+template <class ArgType>
+FailureOr<SmallVector<ReplacementItem>> parseFormatString(
+    StringRef toParse, ArgType fmtArgs,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = {}) {
+  SmallVector<ReplacementItem> items;
+
+  // If there are not operands, the format string is not interpreted.
+  if (fmtArgs.empty()) {
+    items.push_back(toParse);
+    return items;
+  }
+
+  while (!toParse.empty()) {
+    size_t idx = toParse.find('{');
+    if (idx == StringRef::npos) {
+      // No '{'
+      items.push_back(toParse);
+      break;
+    }
+    if (idx > 0) {
+      // Take all chars excluding the '{'.
+      items.push_back(toParse.take_front(idx));
+      toParse = toParse.drop_front(idx);
+      continue;
+    }
+    if (toParse.size() < 2) {
+      return emitError() << "expected '}' after unescaped '{' at end of string";
+    }
+    // toParse contains at least two characters and starts with `{`.
+    char nextChar = toParse[1];
+    if (nextChar == '{') {
+      // Double '{{' -> '{' (escaping).
+      items.push_back(toParse.take_front(1));
+      toParse = toParse.drop_front(2);
+      continue;
+    }
+    if (nextChar == '}') {
+      items.push_back(Placeholder{});
+      toParse = toParse.drop_front(2);
+      continue;
+    }
+
+    if (emitError) {
+      return emitError() << "expected '}' after unescaped '{'";
+    }
+    return failure();
+  }
+  return items;
+}
+
+//===----------------------------------------------------------------------===//
+// AddressOfOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AddressOfOp::verify() {
+  emitc::LValueType referenceType = getReference().getType();
+  emitc::PointerType resultType = getResult().getType();
+
+  if (referenceType.getValueType() != resultType.getPointee())
+    return emitOpError("requires result to be a pointer to the type "
+                       "referenced by operand");
 
   return success();
 }
@@ -196,9 +276,17 @@ LogicalResult ApplyOp::verify() {
   if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
     return emitOpError("applicable operator is illegal");
 
-  Operation *op = getOperand().getDefiningOp();
-  if (op && dyn_cast<ConstantOp>(op))
-    return emitOpError("cannot apply to constant");
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  if (applicableOperatorStr == "&") {
+    if (!llvm::isa<emitc::LValueType>(operandType))
+      return emitOpError("operand type must be an lvalue when applying `&`");
+    if (!llvm::isa<emitc::PointerType>(resultType))
+      return emitOpError("result type must be a pointer when applying `&`");
+  } else {
+    if (!llvm::isa<emitc::PointerType>(operandType))
+      return emitOpError("operand type must be a pointer when applying `*`");
+  }
 
   return success();
 }
@@ -210,20 +298,18 @@ LogicalResult ApplyOp::verify() {
 /// The assign op requires that the assigned value's type matches the
 /// assigned-to variable type.
 LogicalResult emitc::AssignOp::verify() {
-  Value variable = getVar();
-  Operation *variableDef = variable.getDefiningOp();
-  if (!variableDef ||
-      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
-    return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable or subscript";
+  TypedValue<emitc::LValueType> variable = getVar();
 
-  Value value = getValue();
-  if (variable.getType() != value.getType())
-    return emitOpError() << "requires value's type (" << value.getType()
-                         << ") to match variable's type (" << variable.getType()
-                         << ")";
-  if (isa<ArrayType>(variable.getType()))
-    return emitOpError() << "cannot assign to array type";
+  if (!variable.getDefiningOp())
+    return emitOpError() << "cannot assign to block argument";
+
+  Type valueType = getValue().getType();
+  Type variableType = variable.getType().getValueType();
+  if (variableType != valueType)
+    return emitOpError() << "requires value's type (" << valueType
+                         << ") to match variable's type (" << variableType
+                         << ")\n  variable: " << variable
+                         << "\n  value: " << getValue() << "\n";
   return success();
 }
 
@@ -233,6 +319,14 @@ LogicalResult emitc::AssignOp::verify() {
 
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
+
+  if (auto arrayType = dyn_cast<emitc::ArrayType>(input)) {
+    if (auto pointerType = dyn_cast<emitc::PointerType>(output)) {
+      return (arrayType.getElementType() == pointerType.getPointee()) &&
+             arrayType.getShape().size() == 1 && arrayType.getShape()[0] >= 1;
+    }
+    return false;
+  }
 
   return (
       (emitc::isIntegerIndexOrOpaqueType(input) ||
@@ -301,15 +395,73 @@ LogicalResult emitc::ConstantOp::verify() {
 OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
+// DereferenceOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DereferenceOp::verify() {
+  emitc::PointerType pointerType = getPointer().getType();
+
+  if (pointerType.getPointee() != getResult().getType().getValueType())
+    return emitOpError("requires result to be an lvalue of the type "
+                       "pointed to by operand");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ExpressionOp
 //===----------------------------------------------------------------------===//
+
+ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  if (parser.parseOperandList(operands))
+    return parser.emitError(parser.getCurrentLocation()) << "expected operands";
+  if (succeeded(parser.parseOptionalKeyword("noinline")))
+    result.addAttribute(ExpressionOp::getDoNotInlineAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+  Type type;
+  if (parser.parseColonType(type))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  auto fnType = llvm::dyn_cast<FunctionType>(type);
+  if (!fnType)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  if (parser.resolveOperands(operands, fnType.getInputs(),
+                             parser.getCurrentLocation(), result.operands))
+    return failure();
+  if (fnType.getNumResults() != 1)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected single return type");
+  result.addTypes(fnType.getResults());
+  Region *body = result.addRegion();
+  SmallVector<OpAsmParser::Argument> argsInfo;
+  for (auto [unresolvedOperand, operandType] :
+       llvm::zip(operands, fnType.getInputs())) {
+    OpAsmParser::Argument argInfo;
+    argInfo.ssaName = unresolvedOperand;
+    argInfo.type = operandType;
+    argsInfo.push_back(argInfo);
+  }
+  if (parser.parseRegion(*body, argsInfo, /*enableNameShadowing=*/true))
+    return failure();
+  return success();
+}
+
+void emitc::ExpressionOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printOperands(getDefs());
+  p << " : ";
+  p.printFunctionalType(getOperation());
+  p.shadowRegionArgs(getRegion(), getDefs());
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+}
 
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
-  Operation *rootOp = yieldedValue.getDefiningOp();
-  assert(rootOp && "Yielded value not defined within expression");
-  return rootOp;
+  return yieldedValue.getDefiningOp();
 }
 
 LogicalResult ExpressionOp::verify() {
@@ -327,18 +479,48 @@ LogicalResult ExpressionOp::verify() {
   if (!yieldResult)
     return emitOpError("must yield a value at termination");
 
+  Operation *rootOp = yieldResult.getDefiningOp();
+
+  if (!rootOp)
+    return emitOpError("yielded value has no defining op");
+
+  if (rootOp->getParentOp() != getOperation())
+    return emitOpError("yielded value not defined within expression");
+
   Type yieldType = yieldResult.getType();
 
   if (resultType != yieldType)
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!op.hasTrait<OpTrait::emitc::CExpression>())
+    auto expressionInterface = dyn_cast<emitc::CExpressionInterface>(op);
+    if (!expressionInterface)
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
-    if (!op.getResult(0).hasOneUse())
-      return emitOpError("requires exactly one use for each operation");
+    Value result = op.getResult(0);
+    if (result.use_empty())
+      return emitOpError("contains an unused operation");
+  }
+
+  // Make sure any operation with side effect is only reachable once from
+  // the root op, otherwise emission will be replicating side effects.
+  SmallPtrSet<Operation *, 16> visited;
+  SmallVector<Operation *> worklist;
+  worklist.push_back(rootOp);
+  while (!worklist.empty()) {
+    Operation *op = worklist.back();
+    worklist.pop_back();
+    if (visited.contains(op)) {
+      if (cast<CExpressionInterface>(op).hasSideEffects())
+        return emitOpError(
+            "requires exactly one use for operations with side effects");
+    }
+    visited.insert(op);
+    for (Value operand : op->getOperands())
+      if (Operation *def = operand.getDefiningOp()) {
+        worklist.push_back(def);
+      }
   }
 
   return success();
@@ -386,7 +568,6 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the optional initial iteration arguments.
   SmallVector<OpAsmParser::Argument, 4> regionArgs;
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   regionArgs.push_back(inductionVariable);
 
   // Parse optional type, else assume Index.
@@ -432,6 +613,10 @@ void ForOp::print(OpAsmPrinter &p) {
 LogicalResult ForOp::verifyRegions() {
   // Check that the body defines as single block argument for the induction
   // variable.
+  if (getBody()->getNumArguments() != 1)
+    return emitOpError("expected body to have a single block argument for the "
+                       "induction variable");
+
   if (getInductionVar().getType() != getLowerBound().getType())
     return emitOpError(
         "expected induction variable to be same type as bounds and step");
@@ -516,8 +701,8 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
-      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+  call_interface_impl::addArgAndResultAttrs(
+      builder, state, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
@@ -540,6 +725,10 @@ void FuncOp::print(OpAsmPrinter &p) {
 }
 
 LogicalResult FuncOp::verify() {
+  if (llvm::any_of(getArgumentTypes(), llvm::IsaPred<LValueType>)) {
+    return emitOpError("cannot have lvalue type as argument");
+  }
+
   if (getNumResults() > 1)
     return emitOpError("requires zero or exactly one result, but has ")
            << getNumResults();
@@ -682,14 +871,14 @@ void IfOp::print(OpAsmPrinter &p) {
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
+/// during the flow of control. `operands` is a set of optional attributes
+/// that correspond to a constant value for each operand, or null if that
+/// operand is not a constant.
 void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
@@ -698,9 +887,14 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(RegionSuccessor());
+    regions.push_back(RegionSuccessor::parent());
   else
     regions.push_back(RegionSuccessor(elseRegion));
+}
+
+ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
@@ -715,7 +909,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back();
+      regions.emplace_back(RegionSuccessor::parent());
   }
 }
 
@@ -796,9 +990,9 @@ LogicalResult SubOp::verify() {
                        "type if lhs is a pointer");
 
   if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
-      !isa<IntegerType, emitc::OpaqueType>(resultType))
-    return emitOpError("requires that the result is an integer or of opaque "
-                       "type if lhs and rhs are pointers");
+      !isa<IntegerType, emitc::PtrDiffTType, emitc::OpaqueType>(resultType))
+    return emitOpError("requires that the result is an integer, ptrdiff_t or "
+                       "of opaque type if lhs and rhs are pointers");
   return success();
 }
 
@@ -818,10 +1012,10 @@ LogicalResult emitc::YieldOp::verify() {
   Value result = getResult();
   Operation *containingOp = getOperation()->getParentOp();
 
-  if (result && containingOp->getNumResults() != 1)
+  if (!isa<DoOp>(containingOp) && result && containingOp->getNumResults() != 1)
     return emitOpError() << "yields a value not returned by parent";
 
-  if (!result && containingOp->getNumResults() != 0)
+  if (!isa<DoOp>(containingOp) && !result && containingOp->getNumResults() != 0)
     return emitOpError() << "does not yield a value to be returned by parent";
 
   return success();
@@ -851,9 +1045,10 @@ LogicalResult emitc::SubscriptOp::verify() {
     }
     // Check element type.
     Type elementType = arrayType.getElementType();
-    if (elementType != getType()) {
+    Type resultType = getType().getValueType();
+    if (elementType != resultType) {
       return emitOpError() << "on array operand requires element type ("
-                           << elementType << ") and result type (" << getType()
+                           << elementType << ") and result type (" << resultType
                            << ") to match";
     }
     return success();
@@ -877,9 +1072,10 @@ LogicalResult emitc::SubscriptOp::verify() {
     }
     // Check pointee type.
     Type pointeeType = pointerType.getPointee();
-    if (pointeeType != getType()) {
+    Type resultType = getType().getValueType();
+    if (pointeeType != resultType) {
       return emitOpError() << "on pointer operand requires pointee type ("
-                           << pointeeType << ") and result type (" << getType()
+                           << pointeeType << ") and result type (" << resultType
                            << ") to match";
     }
     return success();
@@ -888,6 +1084,35 @@ LogicalResult emitc::SubscriptOp::verify() {
   // The operand has opaque type, so we can't assume anything about the number
   // or types of index operands.
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// VerbatimOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult emitc::VerbatimOp::verify() {
+  auto errorCallback = [&]() -> InFlightDiagnostic {
+    return this->emitOpError();
+  };
+  FailureOr<SmallVector<ReplacementItem>> fmt =
+      ::parseFormatString(getValue(), getFmtArgs(), errorCallback);
+  if (failed(fmt))
+    return failure();
+
+  size_t numPlaceholders = llvm::count_if(*fmt, [](ReplacementItem &item) {
+    return std::holds_alternative<Placeholder>(item);
+  });
+
+  if (numPlaceholders != getFmtArgs().size()) {
+    return emitOpError()
+           << "requires operands for each placeholder in the format string";
+  }
+  return success();
+}
+
+FailureOr<SmallVector<ReplacementItem>> emitc::VerbatimOp::parseFormatString() {
+  // Error checking is done in verify.
+  return ::parseFormatString(getValue(), getFmtArgs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -930,7 +1155,9 @@ Type emitc::ArrayType::parse(AsmParser &parser) {
 
   // Check that array is formed from allowed types.
   if (!isValidElementType(elementType))
-    return parser.emitError(typeLoc, "invalid array element type"), Type();
+    return parser.emitError(typeLoc, "invalid array element type '")
+               << elementType << "'",
+           Type();
   if (parser.parseGreater())
     return Type();
   return parser.getChecked<ArrayType>(dimensions, elementType);
@@ -952,8 +1179,8 @@ LogicalResult emitc::ArrayType::verify(
     return emitError() << "shape must not be empty";
 
   for (int64_t dim : shape) {
-    if (dim <= 0)
-      return emitError() << "dimensions must have positive size";
+    if (dim < 0)
+      return emitError() << "dimensions must have non-negative size";
   }
 
   if (!elementType)
@@ -974,6 +1201,25 @@ emitc::ArrayType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 }
 
 //===----------------------------------------------------------------------===//
+// LValueType
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::emitc::LValueType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type value) {
+  // Check that the wrapped type is valid. This especially forbids nested
+  // lvalue types.
+  if (!isSupportedEmitCType(value))
+    return emitError()
+           << "!emitc.lvalue must wrap supported emitc type, but got " << value;
+
+  if (llvm::isa<emitc::ArrayType>(value))
+    return emitError() << "!emitc.lvalue cannot wrap !emitc.array type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
@@ -987,6 +1233,18 @@ LogicalResult mlir::emitc::OpaqueType::verify(
     return emitError() << "pointer not allowed as outer type with "
                           "!emitc.opaque, use !emitc.ptr instead";
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PointerType
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::emitc::PointerType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, Type value) {
+  if (llvm::isa<emitc::LValueType>(value))
+    return emitError() << "pointers to lvalues are not allowed";
+
   return success();
 }
 
@@ -1087,16 +1345,335 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << getName() << "' does not reference a valid emitc.global";
 
   Type resultType = getResult().getType();
-  if (global.getType() != resultType)
-    return emitOpError("result type ")
-           << resultType << " does not match type " << global.getType()
+  Type globalType = global.getType();
+
+  // global has array type
+  if (llvm::isa<ArrayType>(globalType)) {
+    if (globalType != resultType)
+      return emitOpError("on array type expects result type ")
+             << resultType << " to match type " << globalType
+             << " of the global @" << getName();
+    return success();
+  }
+
+  // global has non-array type
+  auto lvalueType = dyn_cast<LValueType>(resultType);
+  if (!lvalueType)
+    return emitOpError("on non-array type expects result type to be an "
+                       "lvalue type for the global @")
+           << getName();
+  if (lvalueType.getValueType() != globalType)
+    return emitOpError("on non-array type expects result inner type ")
+           << lvalueType.getValueType() << " to match type " << globalType
            << " of the global @" << getName();
   return success();
 }
 
 //===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+/// Parse the case regions and values.
+static ParseResult
+parseSwitchCases(OpAsmParser &parser, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions) {
+  SmallVector<int64_t> caseValues;
+  while (succeeded(parser.parseOptionalKeyword("case"))) {
+    int64_t value;
+    Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
+    if (parser.parseInteger(value) ||
+        parser.parseRegion(region, /*arguments=*/{}))
+      return failure();
+    caseValues.push_back(value);
+  }
+  cases = parser.getBuilder().getDenseI64ArrayAttr(caseValues);
+  return success();
+}
+
+/// Print the case regions and values.
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions) {
+  for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
+    p.printNewline();
+    p << "case " << value << ' ';
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+  }
+}
+
+static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
+                                  const Twine &name) {
+  auto yield = dyn_cast<emitc::YieldOp>(region.front().back());
+  if (!yield)
+    return op.emitOpError("expected region to end with emitc.yield, but got ")
+           << region.front().back().getName();
+
+  if (yield.getNumOperands() != 0) {
+    return (op.emitOpError("expected each region to return ")
+            << "0 values, but " << name << " returns "
+            << yield.getNumOperands())
+               .attachNote(yield.getLoc())
+           << "see yield operation here";
+  }
+
+  return success();
+}
+
+LogicalResult emitc::SwitchOp::verify() {
+  if (!isIntegerIndexOrOpaqueType(getArg().getType()))
+    return emitOpError("unsupported type ") << getArg().getType();
+
+  if (getCases().size() != getCaseRegions().size()) {
+    return emitOpError("has ")
+           << getCaseRegions().size() << " case regions but "
+           << getCases().size() << " case values";
+  }
+
+  DenseSet<int64_t> valueSet;
+  for (int64_t value : getCases())
+    if (!valueSet.insert(value).second)
+      return emitOpError("has duplicate case value: ") << value;
+
+  if (failed(verifyRegion(*this, getDefaultRegion(), "default region")))
+    return failure();
+
+  for (auto [idx, caseRegion] : llvm::enumerate(getCaseRegions()))
+    if (failed(verifyRegion(*this, caseRegion, "case region #" + Twine(idx))))
+      return failure();
+
+  return success();
+}
+
+unsigned emitc::SwitchOp::getNumCases() { return getCases().size(); }
+
+Block &emitc::SwitchOp::getDefaultBlock() { return getDefaultRegion().front(); }
+
+Block &emitc::SwitchOp::getCaseBlock(unsigned idx) {
+  assert(idx < getNumCases() && "case index out-of-bounds");
+  return getCaseRegions()[idx].front();
+}
+
+void SwitchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
+  llvm::append_range(successors, getRegions());
+}
+
+void SwitchOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &successors) {
+  FoldAdaptor adaptor(operands, *this);
+
+  // If a constant was not provided, all regions are possible successors.
+  auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
+  if (!arg) {
+    llvm::append_range(successors, getRegions());
+    return;
+  }
+
+  // Otherwise, try to find a case with a matching value. If not, the
+  // default region is the only successor.
+  for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
+    if (caseValue == arg.getInt()) {
+      successors.emplace_back(&caseRegion);
+      return;
+    }
+  }
+  successors.emplace_back(&getDefaultRegion());
+}
+
+void SwitchOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  auto operandValue = llvm::dyn_cast_or_null<IntegerAttr>(operands.front());
+  if (!operandValue) {
+    // All regions are invoked at most once.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
+  unsigned liveIndex = getNumRegions() - 1;
+  const auto *iteratorToInt = llvm::find(getCases(), operandValue.getInt());
+
+  liveIndex = iteratorToInt != getCases().end()
+                  ? std::distance(getCases().begin(), iteratorToInt)
+                  : liveIndex;
+
+  for (unsigned regIndex = 0, regNum = getNumRegions(); regIndex < regNum;
+       ++regIndex)
+    bounds.emplace_back(/*lb=*/0, /*ub=*/regIndex == liveIndex);
+}
+
+//===----------------------------------------------------------------------===//
+// FileOp
+//===----------------------------------------------------------------------===//
+void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
+  state.addRegion()->emplaceBlock();
+  state.attributes.push_back(
+      builder.getNamedAttr("id", builder.getStringAttr(id)));
+}
+
+//===----------------------------------------------------------------------===//
+// FieldOp
+//===----------------------------------------------------------------------===//
+
+static void printEmitCFieldOpTypeAndInitialValue(OpAsmPrinter &p, FieldOp op,
+                                                 TypeAttr type,
+                                                 Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForField(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCFieldOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                     Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForField(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
+LogicalResult FieldOp::verify() {
+  if (!isSupportedEmitCType(getType()))
+    return emitOpError("expected valid emitc type");
+
+  Operation *parentOp = getOperation()->getParentOp();
+  if (!parentOp || !isa<emitc::ClassOp>(parentOp))
+    return emitOpError("field must be nested within an emitc.class operation");
+
+  StringAttr symName = getSymNameAttr();
+  if (!symName || symName.getValue().empty())
+    return emitOpError("field must have a non-empty symbol name");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetFieldOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GetFieldOp::verify() {
+  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
+  if (!parentClassOp.getOperation())
+    return emitOpError(" must be nested within an emitc.class operation");
+
+  return success();
+}
+
+LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
+  FieldOp fieldOp =
+      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, fieldNameAttr);
+  if (!fieldOp)
+    return emitOpError("field '")
+           << fieldNameAttr << "' not found in the class";
+
+  Type getFieldResultType = getResult().getType();
+  Type fieldType = fieldOp.getType();
+
+  if (fieldType != getFieldResultType)
+    return emitOpError("result type ")
+           << getFieldResultType << " does not match field '" << fieldNameAttr
+           << "' type " << fieldType;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DoOp
+//===----------------------------------------------------------------------===//
+
+void DoOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
+  p << " while ";
+  p.printRegion(getConditionRegion());
+  p.printOptionalAttrDictWithKeyword(getOperation()->getAttrs());
+}
+
+LogicalResult emitc::DoOp::verify() {
+  Block &condBlock = getConditionRegion().front();
+
+  if (condBlock.getOperations().size() != 2)
+    return emitOpError(
+               "condition region must contain exactly two operations: "
+               "'emitc.expression' followed by 'emitc.yield', but found ")
+           << condBlock.getOperations().size() << " operations";
+
+  Operation &first = condBlock.front();
+  auto exprOp = dyn_cast<emitc::ExpressionOp>(first);
+  if (!exprOp)
+    return emitOpError("expected first op in condition region to be "
+                       "'emitc.expression', but got ")
+           << first.getName();
+
+  if (!exprOp.getResult().getType().isInteger(1))
+    return emitOpError("emitc.expression in condition region must return "
+                       "'i1', but returns ")
+           << exprOp.getResult().getType();
+
+  Operation &last = condBlock.back();
+  auto condYield = dyn_cast<emitc::YieldOp>(last);
+  if (!condYield)
+    return emitOpError("expected last op in condition region to be "
+                       "'emitc.yield', but got ")
+           << last.getName();
+
+  if (condYield.getNumOperands() != 1)
+    return emitOpError("expected condition region to return 1 value, but "
+                       "it returns ")
+           << condYield.getNumOperands() << " values";
+
+  if (condYield.getOperand(0) != exprOp.getResult())
+    return emitError("'emitc.yield' must return result of "
+                     "'emitc.expression' from this condition region");
+
+  Block &bodyBlock = getBodyRegion().front();
+  if (bodyBlock.mightHaveTerminator())
+    return emitOpError("body region must not contain terminator");
+
+  return success();
+}
+
+ParseResult DoOp::parse(OpAsmParser &parser, OperationState &result) {
+  Region *bodyRegion = result.addRegion();
+  Region *condRegion = result.addRegion();
+
+  if (parser.parseRegion(*bodyRegion) || parser.parseKeyword("while") ||
+      parser.parseRegion(*condRegion))
+    return failure();
+
+  if (bodyRegion->empty())
+    bodyRegion->emplaceBlock();
+
+  return parser.parseOptionalAttrDictWithKeyword(result.attributes);
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"

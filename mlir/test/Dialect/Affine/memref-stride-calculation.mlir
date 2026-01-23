@@ -51,9 +51,9 @@ func.func @f(%0: index) {
   %26 = memref.alloc(%0)[] : memref<?xf32, affine_map<(i)[M]->(i)>>
 // CHECK: MemRefType offset: 0 strides: 1
   %27 = memref.alloc()[%0] : memref<5xf32, affine_map<(i)[M]->(M)>>
-// CHECK: MemRefType memref<5xf32, affine_map<(d0)[s0] -> (s0)>> cannot be converted to strided form
+// CHECK: MemRefType offset: ? strides: 0
   %28 = memref.alloc()[%0] : memref<5xf32, affine_map<(i)[M]->(123)>>
-// CHECK: MemRefType memref<5xf32, affine_map<(d0)[s0] -> (123)>> cannot be converted to strided form
+// CHECK: MemRefType offset: 123 strides: 0
   %29 = memref.alloc()[%0] : memref<f32, affine_map<()[M]->(M)>>
 // CHECK: MemRefType offset: ? strides:
   %30 = memref.alloc()[%0] : memref<f32, affine_map<()[M]->(123)>>

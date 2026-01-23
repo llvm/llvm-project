@@ -98,7 +98,7 @@ frameInfo:
   stackSize:       8
   offsetAdjustment: 0
   maxAlignment:    4
-  restorePoint:    ''
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 4, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

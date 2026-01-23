@@ -1,9 +1,13 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
+template <class T> void clang_analyzer_dump(T);
 void clang_analyzer_eval(bool);
+void clang_analyzer_value(int);
 
 void usePointer(int * const *);
 void useReference(int * const &);
+
+template <typename... Ts> void opaque(Ts...);
 
 void testPointer() {
   int x;
@@ -164,4 +168,144 @@ void testMixedConstNonConstCalls() {
   s2.y = 1;
   useFirstNonConstSecondConst(&(s2.x), &(s2.y));
   clang_analyzer_eval(s2.y == 1); // expected-warning{{UNKNOWN}}
+}
+
+namespace std {
+class Opaque {
+public:
+  Opaque();
+  int nested_member;
+};
+} // namespace std
+
+struct StdWrappingOpaque {
+  std::Opaque o; // first member
+  int uninit;
+};
+struct StdWrappingOpaqueSwapped {
+  int uninit; // first member
+  std::Opaque o;
+};
+
+int testStdCtorDoesNotInvalidateParentObject() {
+  StdWrappingOpaque obj;
+  int x = obj.o.nested_member; // no-garbage: std::Opaque::ctor might initialized this
+  int y = obj.uninit; // FIXME: We should have a garbage read here. Read the details.
+  // As the first member ("obj.o") is invalidated, a conjured default binding is bound
+  // to the offset 0 within cluster "obj", and this masks every uninitialized fields
+  // that follows. We need a better store with extents to fix this.
+  return x + y;
+}
+
+int testStdCtorDoesNotInvalidateParentObjectSwapped() {
+  StdWrappingOpaqueSwapped obj;
+  int x = obj.o.nested_member; // no-garbage: std::Opaque::ctor might initialized this
+  int y = obj.uninit; // expected-warning {{Assigned value is uninitialized}}
+  return x + y;
+}
+
+class UserProvidedOpaque {
+public:
+  UserProvidedOpaque(); // might reinterpret_cast(this)
+  int nested_member;
+};
+
+struct WrappingUserProvidedOpaque {
+  UserProvidedOpaque o; // first member
+  int uninit;
+};
+struct WrappingUserProvidedOpaqueSwapped {
+  int uninit; // first member
+  UserProvidedOpaque o;
+};
+
+int testUserProvidedCtorInvalidatesParentObject() {
+  WrappingUserProvidedOpaque obj;
+  int x = obj.o.nested_member; // no-garbage: UserProvidedOpaque::ctor might initialized this
+  int y = obj.uninit; // no-garbage: UserProvidedOpaque::ctor might reinterpret_cast(this) and write to the "uninit" member.
+  return x + y;
+}
+
+int testUserProvidedCtorInvalidatesParentObjectSwapped() {
+  WrappingUserProvidedOpaqueSwapped obj;
+  int x = obj.o.nested_member; // no-garbage: same as above
+  int y = obj.uninit; // no-garbage: same as above
+  return x + y;
+}
+
+struct WrappingStdWrappingOpaqueOuterInits {
+  int first = 1;
+  std::Opaque second;
+  int third = 3;
+  WrappingStdWrappingOpaqueOuterInits() {
+    clang_analyzer_dump(first); // expected-warning {{1 S32b}}
+    clang_analyzer_dump(second.nested_member); // expected-warning {{derived_}}
+    clang_analyzer_dump(third); // expected-warning {{3 S32b}}
+  }
+};
+
+struct WrappingUserProvidedOpaqueOuterInits {
+  int first = 1; // Potentially overwritten by UserProvidedOpaque::ctor
+  UserProvidedOpaque second; // Invalidates the object so far.
+  int third = 3; // Happens after UserProvidedOpaque::ctor, thus preserved!
+  WrappingUserProvidedOpaqueOuterInits() {
+    clang_analyzer_dump(first); // expected-warning {{derived_}}
+    clang_analyzer_dump(second.nested_member); // expected-warning {{derived_}}
+    clang_analyzer_dump(third); // expected-warning {{3 S32b}}
+  }
+};
+
+extern "C++" {
+namespace std {
+inline namespace v1 {
+namespace custom_ranges {
+struct Fancy {
+struct iterator {
+struct Opaque {
+  Opaque();
+  int nested_member;
+}; // struct Opaque
+}; // struct iterator
+}; // struct Fancy
+} // namespace custom_ranges
+} // namespace v1
+} // namespace std
+} // extern "C++"
+
+struct StdWrappingFancyOpaque {
+  int uninit;
+  std::custom_ranges::Fancy::iterator::Opaque o;
+};
+
+int testNestedStdNamespacesAndRecords() {
+  StdWrappingFancyOpaque obj;
+  int x = obj.o.nested_member; // no-garbage: ctor
+  int y = obj.uninit; // expected-warning {{Assigned value is uninitialized}}
+  return x + y;
+}
+
+struct SpecialVector {
+  SpecialVector(const void *); // Takes a const pointer!
+  int size() const {
+    return Size; // no-warning: We should not warn "uninitialized Size" because the ctor might have initialized it.
+  }
+  int Size;
+};
+
+void selfPtrPassedAsConstPointerToOpaqueCtorCall() {
+  // We construct a "SpecialVector" that takes the address of itself
+  // (or to a subobject somewhere itself) by a const-pointer.
+  // Despite the var region "buf" is mentioned via a const argument, the opaque
+  // ctor call should still take precedent and invalidate the underlying object.
+  SpecialVector buf(&buf);
+  buf.size();
+}
+
+int aliasing_ptrs_via_mutable_and_const_ptrs() {
+  int x = 1;
+  opaque<const int*, int*>(&x, &x);
+  // expected-warning@+1 {{32s:1}} FIXME: We should not be sure it's 1.
+  clang_analyzer_value(x);
+  return 100 / (x - 1);
+  // expected-warning@-1 {{Division by zero}} FIXME: We shouldn't report this.
 }

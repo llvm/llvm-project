@@ -12,10 +12,14 @@ config.library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.ompd_library_dir = "@CMAKE_CURRENT_BINARY_DIR@/../src/"
 config.omp_header_directory = "@LIBOMP_BINARY_DIR@/src"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 
 config.ompt_plugin = "@OMPT_PLUGIN@"
 config.ompt_include_dir = "@LIBOMP_INCLUDE_DIR@"
 config.ompd_module = "@CMAKE_CURRENT_BINARY_DIR@/../gdb-plugin/python-module/ompd/"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

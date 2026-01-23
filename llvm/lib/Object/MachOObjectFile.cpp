@@ -134,7 +134,7 @@ static unsigned getCPUType(const MachOObjectFile &O) {
 }
 
 static unsigned getCPUSubType(const MachOObjectFile &O) {
-  return O.getHeader().cpusubtype;
+  return O.getHeader().cpusubtype & ~MachO::CPU_SUBTYPE_MASK;
 }
 
 static uint32_t
@@ -192,7 +192,8 @@ static Expected<MachOObjectFile::LoadCommandInfo>
 getLoadCommandInfo(const MachOObjectFile &Obj, const char *Ptr,
                    uint32_t LoadCommandIndex) {
   if (auto CmdOrErr = getStructOrErr<MachO::load_command>(Obj, Ptr)) {
-    if (CmdOrErr->cmdsize + Ptr > Obj.getData().end())
+    assert(Ptr <= Obj.getData().end() && "Start must be before end");
+    if (CmdOrErr->cmdsize > (uintptr_t)(Obj.getData().end() - Ptr))
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " extends past end of file");
     if (CmdOrErr->cmdsize < 8)
@@ -1270,7 +1271,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                                  size_t MachOFilesetEntryOffset)
     : ObjectFile(getMachOType(IsLittleEndian, Is64bits), Object),
       MachOFilesetEntryOffset(MachOFilesetEntryOffset) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   uint64_t SizeOfHeaders;
   uint32_t cputype;
   if (is64Bit()) {
@@ -1977,20 +1978,42 @@ uint64_t MachOObjectFile::getSectionSize(DataRefImpl Sec) const {
   return SectSize;
 }
 
-ArrayRef<uint8_t> MachOObjectFile::getSectionContents(uint32_t Offset,
+ArrayRef<uint8_t> MachOObjectFile::getSectionContents(uint64_t Offset,
                                                       uint64_t Size) const {
   return arrayRefFromStringRef(getData().substr(Offset, Size));
 }
 
 Expected<ArrayRef<uint8_t>>
 MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
-  uint32_t Offset;
+  uint64_t Offset;
   uint64_t Size;
 
   if (is64Bit()) {
     MachO::section_64 Sect = getSection64(Sec);
     Offset = Sect.offset;
     Size = Sect.size;
+    // Check for large mach-o files where the section contents might exceed
+    // 4GB. MachO::section_64 objects only have 32 bit file offsets to the
+    // section contents and can overflow in dSYM files. We can track this and
+    // adjust the section offset to be 64 bit safe. If sections overflow then
+    // section ordering is enforced. If sections are not ordered, then an error
+    // will be returned stopping invalid section data from being returned.
+    uint64_t PrevTrueOffset = 0;
+    uint64_t SectOffsetAdjust = 0;
+    for (uint32_t SectIdx = 0; SectIdx < Sec.d.a; ++SectIdx) {
+      MachO::section_64 CurrSect =
+          getStruct<MachO::section_64>(*this, Sections[SectIdx]);
+      uint64_t CurrTrueOffset = (uint64_t)CurrSect.offset + SectOffsetAdjust;
+      if ((SectOffsetAdjust > 0) && (PrevTrueOffset > CurrTrueOffset))
+        return malformedError("section data exceeds 4GB and section file "
+                              "offsets are not ordered");
+      const uint64_t EndSectFileOffset =
+          (uint64_t)CurrSect.offset + CurrSect.size;
+      if (EndSectFileOffset > UINT32_MAX)
+        SectOffsetAdjust += EndSectFileOffset & 0xFFFFFFFF00000000ull;
+      PrevTrueOffset = CurrTrueOffset;
+    }
+    Offset += SectOffsetAdjust;
   } else {
     MachO::section Sect = getSection(Sec);
     Offset = Sect.offset;
@@ -2099,7 +2122,7 @@ ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
   }
   auto &Segment = SegmentOrErr.get();
   return arrayRefFromStringRef(
-      Obj.getData().slice(Segment.fileoff, Segment.fileoff + Segment.filesize));
+      Obj.getData().substr(Segment.fileoff, Segment.filesize));
 }
 } // namespace
 
@@ -2341,7 +2364,7 @@ void MachOObjectFile::getRelocationTypeName(
         "ARM64_RELOC_PAGEOFF12",          "ARM64_RELOC_GOT_LOAD_PAGE21",
         "ARM64_RELOC_GOT_LOAD_PAGEOFF12", "ARM64_RELOC_POINTER_TO_GOT",
         "ARM64_RELOC_TLVP_LOAD_PAGE21",   "ARM64_RELOC_TLVP_LOAD_PAGEOFF12",
-        "ARM64_RELOC_ADDEND"
+        "ARM64_RELOC_ADDEND",             "ARM64_RELOC_AUTHENTICATED_POINTER"
       };
 
       if (RType >= std::size(Table))
@@ -2436,12 +2459,12 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
   a = Name.rfind('/');
   if (a == Name.npos || a == 0)
     goto guess_library;
-  Foo = Name.slice(a+1, Name.npos);
+  Foo = Name.substr(a + 1);
 
   // Look for a suffix starting with a '_'
   Idx = Foo.rfind('_');
   if (Idx != Foo.npos && Foo.size() >= 2) {
-    Suffix = Foo.slice(Idx, Foo.npos);
+    Suffix = Foo.substr(Idx);
     if (Suffix != "_debug" && Suffix != "_profile")
       Suffix = StringRef();
     else
@@ -2454,9 +2477,8 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     Idx = 0;
   else
     Idx = b+1;
-  F = Name.slice(Idx, Idx + Foo.size());
-  DotFramework = Name.slice(Idx + Foo.size(),
-                            Idx + Foo.size() + sizeof(".framework/")-1);
+  F = Name.substr(Idx, Foo.size());
+  DotFramework = Name.substr(Idx + Foo.size(), sizeof(".framework/") - 1);
   if (F == Foo && DotFramework == ".framework/") {
     isFramework = true;
     return Foo;
@@ -2468,7 +2490,7 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
   c =  Name.rfind('/', b);
   if (c == Name.npos || c == 0)
     goto guess_library;
-  V = Name.slice(c+1, Name.npos);
+  V = Name.substr(c + 1);
   if (!V.starts_with("Versions/"))
     goto guess_library;
   d =  Name.rfind('/', c);
@@ -2476,9 +2498,8 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     Idx = 0;
   else
     Idx = d+1;
-  F = Name.slice(Idx, Idx + Foo.size());
-  DotFramework = Name.slice(Idx + Foo.size(),
-                            Idx + Foo.size() + sizeof(".framework/")-1);
+  F = Name.substr(Idx, Foo.size());
+  DotFramework = Name.substr(Idx + Foo.size(), sizeof(".framework/") - 1);
   if (F == Foo && DotFramework == ".framework/") {
     isFramework = true;
     return Foo;
@@ -2489,13 +2510,13 @@ guess_library:
   a = Name.rfind('.');
   if (a == Name.npos || a == 0)
     return StringRef();
-  Dylib = Name.slice(a, Name.npos);
+  Dylib = Name.substr(a);
   if (Dylib != ".dylib")
     goto guess_qtx;
 
   // First pull off the version letter for the form Foo.A.dylib if any.
   if (a >= 3) {
-    Dot = Name.slice(a-2, a-1);
+    Dot = Name.substr(a - 2, 1);
     if (Dot == ".")
       a = a - 2;
   }
@@ -2520,14 +2541,14 @@ guess_library:
   // There are incorrect library names of the form:
   // libATS.A_profile.dylib so check for these.
   if (Lib.size() >= 3) {
-    Dot = Lib.slice(Lib.size()-2, Lib.size()-1);
+    Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
       Lib = Lib.slice(0, Lib.size()-2);
   }
   return Lib;
 
 guess_qtx:
-  Qtx = Name.slice(a, Name.npos);
+  Qtx = Name.substr(a);
   if (Qtx != ".qtx")
     return StringRef();
   b = Name.rfind('/', a);
@@ -2537,7 +2558,7 @@ guess_qtx:
     Lib = Name.slice(b+1, a);
   // There are library names of the form: QT.A.qtx so check for these.
   if (Lib.size() >= 3) {
-    Dot = Lib.slice(Lib.size()-2, Lib.size()-1);
+    Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
       Lib = Lib.slice(0, Lib.size()-2);
   }
@@ -2669,6 +2690,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
       return "Mach-O arm64 (ILP32)";
     case MachO::CPU_TYPE_POWERPC:
       return "Mach-O 32-bit ppc";
+    case MachO::CPU_TYPE_RISCV:
+      return "Mach-O 32-bit RISC-V";
     default:
       return "Mach-O 32-bit unknown";
     }
@@ -2702,6 +2725,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType)
     return Triple::ppc;
   case MachO::CPU_TYPE_POWERPC64:
     return Triple::ppc64;
+  case MachO::CPU_TYPE_RISCV:
+    return Triple::riscv32;
   default:
     return Triple::UnknownArch;
   }
@@ -2836,6 +2861,15 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "ppc64";
       return Triple("ppc64-apple-darwin");
+    default:
+      return Triple();
+    }
+  case MachO::CPU_TYPE_RISCV:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_RISCV_ALL:
+      if (ArchFlag)
+        *ArchFlag = "riscv32";
+      return Triple("riscv32-apple-macho");
     default:
       return Triple();
     }
@@ -3104,7 +3138,7 @@ void ExportEntry::pushNode(uint64_t offset) {
         }
       }
     }
-    if(ExportStart + ExportInfoSize != State.Current) {
+    if (ExportStart + ExportInfoSize < State.Current) {
       *E = malformedError(
           "inconsistent export info size: 0x" +
           Twine::utohexstr(ExportInfoSize) + " where actual size was: 0x" +
@@ -3116,7 +3150,7 @@ void ExportEntry::pushNode(uint64_t offset) {
   }
   State.ChildCount = *Children;
   if (State.ChildCount != 0 && Children + 1 >= Trie.end()) {
-    *E = malformedError("byte for count of childern in export trie data at "
+    *E = malformedError("byte for count of children in export trie data at "
                         "node: 0x" +
                         Twine::utohexstr(offset) +
                         " extends past end of trie data");
@@ -3158,7 +3192,7 @@ void ExportEntry::pushDownUntilBottom() {
     }
     for (const NodeState &node : nodes()) {
       if (node.Start == Trie.begin() + childNodeIndex){
-        *E = malformedError("loop in childern in export trie data at node: 0x" +
+        *E = malformedError("loop in children in export trie data at node: 0x" +
                             Twine::utohexstr(Top.Start - Trie.begin()) +
                             " back to node: 0x" +
                             Twine::utohexstr(childNodeIndex));
@@ -4908,12 +4942,12 @@ MachOObjectFile::getLinkOptHintsLoadCommand() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.rebase_off));
@@ -4922,12 +4956,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.bind_off));
@@ -4936,12 +4970,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.weak_bind_off));
@@ -4950,12 +4984,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.lazy_bind_off));
@@ -4964,12 +4998,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
@@ -5195,11 +5229,6 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
 
   if (ImportsEnd > Symbols)
     return malformedError("bad chained fixups: imports end " +
-                          Twine(ImportsEndOffset) + " extends past end " +
-                          Twine(DyldChainedFixups.datasize));
-
-  if (ImportsEnd > Symbols)
-    return malformedError("bad chained fixups: imports end " +
                           Twine(ImportsEndOffset) + " overlaps with symbols");
 
   // We use bit manipulation to extract data from the bitfields. This is correct
@@ -5255,12 +5284,12 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldExportsTrie() const {
   if (!DyldExportsTrieLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldExportsTrieOrError = getStructOrErr<MachO::linkedit_data_command>(
       *this, DyldExportsTrieLoadCmd);
   if (!DyldExportsTrieOrError)
-    return std::nullopt;
+    return {};
   MachO::linkedit_data_command DyldExportsTrie = DyldExportsTrieOrError.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldExportsTrie.dataoff));
@@ -5284,7 +5313,7 @@ SmallVector<uint64_t> MachOObjectFile::getFunctionStarts() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getUuid() const {
   if (!UuidLoadCmd)
-    return std::nullopt;
+    return {};
   // Returning a pointer is fine as uuid doesn't need endian swapping.
   const char *Ptr = UuidLoadCmd + offsetof(MachO::uuid_command, uuid);
   return ArrayRef(reinterpret_cast<const uint8_t *>(Ptr), 16);

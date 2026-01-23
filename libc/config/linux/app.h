@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_CONFIG_LINUX_APP_H
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
+#include "hdr/stdint_proxy.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
-#include <stdint.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Data structure to capture properties of the linux/ELF TLS image.
 struct TLSImage {
@@ -33,17 +33,6 @@ struct TLSImage {
   // The alignment of the TLS layout. It assumed that the alignment
   // value is a power of 2.
   uintptr_t align;
-};
-
-// Linux manpage on `proc(5)` says that the aux vector is an array of
-// unsigned long pairs.
-// (see: https://man7.org/linux/man-pages/man5/proc.5.html)
-using AuxEntryType = unsigned long;
-// Using the naming convention from `proc(5)`.
-// TODO: Would be nice to use the aux entry structure from elf.h when available.
-struct AuxEntry {
-  AuxEntryType id;
-  AuxEntryType value;
 };
 
 struct Args {
@@ -70,9 +59,6 @@ struct AppProperties {
 
   // Environment data.
   uintptr_t *env_ptr;
-
-  // Auxiliary vector data.
-  AuxEntry *auxv_ptr;
 };
 
 [[gnu::weak]] extern AppProperties app;
@@ -104,6 +90,6 @@ void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
 // Set the thread pointer for the current thread.
 bool set_thread_ptr(uintptr_t val);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_CONFIG_LINUX_APP_H

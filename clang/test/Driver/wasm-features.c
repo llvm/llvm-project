@@ -35,11 +35,17 @@
 // EXTENDED-CONST: "-target-feature" "+extended-const"
 // NO-EXTENDED-CONST: "-target-feature" "-extended-const"
 
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mhalf-precision 2>&1 | FileCheck %s -check-prefix=HALF-PRECISION
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-half-precision 2>&1 | FileCheck %s -check-prefix=NO-HALF-PRECISION
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mfp16 2>&1 | FileCheck %s -check-prefix=HALF-PRECISION
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-fp16 2>&1 | FileCheck %s -check-prefix=NO-HALF-PRECISION
 
-// HALF-PRECISION: "-target-feature" "+half-precision"
-// NO-HALF-PRECISION: "-target-feature" "-half-precision"
+// HALF-PRECISION: "-target-feature" "+fp16"
+// NO-HALF-PRECISION: "-target-feature" "-fp16"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mgc 2>&1 | FileCheck %s -check-prefix=GC
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-gc 2>&1 | FileCheck %s -check-prefix=NO-GC
+
+// GC: "-target-feature" "+gc"
+// NO-GC: "-target-feature" "-gc"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultimemory 2>&1 | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-multimemory 2>&1 | FileCheck %s -check-prefix=NO-MULTIMEMORY
@@ -94,3 +100,9 @@
 
 // TAIL-CALL: "-target-feature" "+tail-call"
 // NO-TAIL-CALL: "-target-feature" "-tail-call"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mwide-arithmetic 2>&1 | FileCheck %s -check-prefix=WIDE-ARITH
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-wide-arithmetic 2>&1 | FileCheck %s -check-prefix=NO-WIDE-ARITH
+
+// WIDE-ARITH: "-target-feature" "+wide-arithmetic"
+// NO-WIDE-ARITH: "-target-feature" "-wide-arithmetic"

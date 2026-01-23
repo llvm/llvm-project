@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that post-increment load instructions are being generated.
 ; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}++#4)

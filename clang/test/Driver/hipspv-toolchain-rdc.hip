@@ -41,7 +41,7 @@
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // Link device code, lower it with HIPSPV passes and emit SPIR-V binary.
-// CHECK: {{".*llvm-link.*"}} [[A_BC1]] [[B_BC1]] "-o" [[AB_LINK:".*bc"]]
+// CHECK: {{".*llvm-link.*"}} "-o" [[AB_LINK:".*bc"]] [[A_BC1]] [[B_BC1]]
 // CHECK: {{".*opt.*"}} [[AB_LINK]] "-load-pass-plugin"
 // CHECK-SAME: "{{.*}}/Inputs/hipspv/lib/libLLVMHipSpvPasses.so"
 // CHECK-SAME: "-o" [[AB_LOWER:".*bc"]]
@@ -53,8 +53,7 @@
 // CHECK-SAME: "-targets={{.*}},hip-spirv64----generic"
 // CHECK-SAME: "-input=/dev/null" "-input=[[AB_SPIRV]]"
 // CHECK-SAME: "-output=[[AB_FATBIN:.*hipfb]]"
-// CHECK: {{".*llvm-mc.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
-// CHECK-SAME: "--filetype=obj"
+// CHECK: {{".*clang.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 
 // Output the executable
 // CHECK: {{".*ld.*"}} {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]

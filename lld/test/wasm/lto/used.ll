@@ -5,7 +5,6 @@
 
 ; Verify that symbols references from regular objects are preserved by LTO
 
-target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare void @bar()
@@ -27,11 +26,11 @@ return:
 
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Segments:
-; CHECK-NEXT:       - SectionOffset:   7
+; CHECK-NEXT:       - SectionOffset:   8
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1024
+; CHECK-NEXT:           Value:           65536
 ; CHECK-NEXT:         Content:         '01000000'
 
 ; CHECK:       - Type:            CUSTOM

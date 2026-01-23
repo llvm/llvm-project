@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 using namespace llvm::LoongArch;
@@ -34,6 +35,18 @@ bool LoongArch::isValidArchName(StringRef Arch) {
   return false;
 }
 
+bool LoongArch::isValidFeatureName(StringRef Feature) {
+  if (Feature.starts_with("+") || Feature.starts_with("-"))
+    return false;
+  for (const auto &F : AllFeatures) {
+    StringRef CanonicalName =
+        F.Name.starts_with("+") ? F.Name.drop_front() : F.Name;
+    if (CanonicalName == Feature)
+      return true;
+  }
+  return false;
+}
+
 bool LoongArch::getArchFeatures(StringRef Arch,
                                 std::vector<StringRef> &Features) {
   for (const auto A : AllArchs) {
@@ -44,6 +57,30 @@ bool LoongArch::getArchFeatures(StringRef Arch,
       return true;
     }
   }
+
+  if (Arch == "la64v1.0" || Arch == "la64v1.1") {
+    Features.push_back("+64bit");
+    Features.push_back("+d");
+    Features.push_back("+lsx");
+    Features.push_back("+ual");
+    if (Arch == "la64v1.1") {
+      Features.push_back("+frecipe");
+      Features.push_back("+lam-bh");
+      Features.push_back("+lamcas");
+      Features.push_back("+ld-seq-sa");
+      Features.push_back("+div32");
+      Features.push_back("+scq");
+    }
+    return true;
+  }
+
+  if (Arch == "la32v1.0" || Arch == "la32rv1.0") {
+    Features.push_back("+32bit");
+    if (Arch == "la32v1.0")
+      Features.push_back("+32s");
+    return true;
+  }
+
   return false;
 }
 
@@ -55,6 +92,5 @@ void LoongArch::fillValidCPUList(SmallVectorImpl<StringRef> &Values) {
 }
 
 StringRef LoongArch::getDefaultArch(bool Is64Bit) {
-  // TODO: use a real 32-bit arch name.
-  return Is64Bit ? "loongarch64" : "";
+  return Is64Bit ? "loongarch64" : "loongarch32";
 }

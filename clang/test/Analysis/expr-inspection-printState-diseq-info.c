@@ -18,17 +18,17 @@ void test_disequality_info(int e0, int b0, int b1, int c0) {
  // CHECK-NEXT:     {
  // CHECK-NEXT:       "class": [ "(reg_$0<int e0>) - 2" ],
  // CHECK-NEXT:       "disequal_to": [
- // CHECK-NEXT:         [ "reg_$2<int b1>" ]]
+ // CHECK-NEXT:         [ "reg_$7<int b1>" ]]
  // CHECK-NEXT:     },
  // CHECK-NEXT:     {
- // CHECK-NEXT:       "class": [ "reg_$2<int b1>" ],
+ // CHECK-NEXT:       "class": [ "reg_$15<int c0>" ],
+ // CHECK-NEXT:       "disequal_to": [
+ // CHECK-NEXT:         [ "reg_$7<int b1>" ]]
+ // CHECK-NEXT:     },
+ // CHECK-NEXT:     {
+ // CHECK-NEXT:       "class": [ "reg_$7<int b1>" ],
  // CHECK-NEXT:       "disequal_to": [
  // CHECK-NEXT:         [ "(reg_$0<int e0>) - 2" ],
- // CHECK-NEXT:         [ "reg_$3<int c0>" ]]
- // CHECK-NEXT:     },
- // CHECK-NEXT:     {
- // CHECK-NEXT:       "class": [ "reg_$3<int c0>" ],
- // CHECK-NEXT:       "disequal_to": [
- // CHECK-NEXT:         [ "reg_$2<int b1>" ]]
+ // CHECK-NEXT:         [ "reg_$15<int c0>" ]]
  // CHECK-NEXT:     }
  // CHECK-NEXT:   ],

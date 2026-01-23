@@ -9,7 +9,6 @@
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/Support/DataExtractor.h"
-#include <algorithm>
 #include <inttypes.h>
 
 namespace llvm {

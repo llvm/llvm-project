@@ -2,7 +2,7 @@
 
 ; PR38283
 ; PR38737
-define void @f1() {
+define void @f1(i1 %arg) {
 for.cond1thread-pre-split.lr.ph.lr.ph:
   %tobool4 = icmp eq i16 undef, 0
   br label %for.cond1thread-pre-split
@@ -18,7 +18,7 @@ if.end:                                           ; preds = %for.body2
   br i1 %tobool4, label %if.end6, label %for.cond1thread-pre-split
 
 if.end6:                                          ; preds = %if.end
-  br i1 undef, label %for.body2, label %for.end
+  br i1 %arg, label %for.body2, label %for.end
 
 for.end:                                          ; preds = %if.end6, %for.body2
   ret void

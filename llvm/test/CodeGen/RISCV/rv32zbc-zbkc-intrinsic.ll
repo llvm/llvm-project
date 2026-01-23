@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBC-ZBKC
 
-declare i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
-
 define i32 @clmul32(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC-LABEL: clmul32:
 ; RV32ZBC-ZBKC:       # %bb.0:
@@ -14,8 +12,6 @@ define i32 @clmul32(i32 %a, i32 %b) nounwind {
   %tmp = call i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
   ret i32 %tmp
 }
-
-declare i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
 
 define i32 @clmul32h(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC-LABEL: clmul32h:

@@ -30,16 +30,14 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineDominanceFrontier, "machine-domfrontier",
                 "Machine Dominance Frontier Construction", true, true)
 
-MachineDominanceFrontier::MachineDominanceFrontier() : MachineFunctionPass(ID) {
-  initializeMachineDominanceFrontierPass(*PassRegistry::getPassRegistry());
-}
+MachineDominanceFrontier::MachineDominanceFrontier()
+    : MachineFunctionPass(ID) {}
 
 char &llvm::MachineDominanceFrontierID = MachineDominanceFrontier::ID;
 
 bool MachineDominanceFrontier::runOnMachineFunction(MachineFunction &) {
   releaseMemory();
-  Base.analyze(
-      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree().getBase());
+  Base.analyze(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
   return false;
 }
 

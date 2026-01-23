@@ -9,18 +9,15 @@
 #include "AddressPool.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include <utility>
 
 using namespace llvm;
 
 unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
   resetUsedFlag(true);
-  auto IterBool =
-      Pool.insert(std::make_pair(Sym, AddressPoolEntry(Pool.size(), TLS)));
+  auto IterBool = Pool.try_emplace(Sym, Pool.size(), TLS);
   return IterBool.first->second.Number;
 }
 

@@ -1,8 +1,9 @@
 ; REQUIRES: x86
-; RUN: llc -mtriple=i686-pc-windows-msvc -filetype=obj -o %T/lto-lazy-reference-quadruple.obj %S/Inputs/lto-lazy-reference-quadruple.ll
-; RUN: llvm-as -o %T/lto-lazy-reference-dummy.bc %S/Inputs/lto-lazy-reference-dummy.ll
+; RUN: mkdir -p %t.dir
+; RUN: llc -mtriple=i686-pc-windows-msvc -filetype=obj -o %t.dir/lto-lazy-reference-quadruple.obj %S/Inputs/lto-lazy-reference-quadruple.ll
+; RUN: llvm-as -o %t.dir/lto-lazy-reference-dummy.bc %S/Inputs/lto-lazy-reference-dummy.ll
 ; RUN: rm -f %t.lib
-; RUN: llvm-ar cru %t.lib %T/lto-lazy-reference-quadruple.obj %T/lto-lazy-reference-dummy.bc
+; RUN: llvm-ar cru %t.lib %t.dir/lto-lazy-reference-quadruple.obj %t.dir/lto-lazy-reference-dummy.bc
 ; RUN: llvm-as -o %t.obj %s
 ; RUN: lld-link /out:%t.exe /entry:main /subsystem:console %t.obj %t.lib
 

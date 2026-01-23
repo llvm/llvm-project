@@ -21,6 +21,23 @@
 
 using namespace llvm;
 
+ExpansionView::ExpansionView(const CounterMappingRegion &Region,
+                             std::unique_ptr<SourceCoverageView> View)
+    : Region(Region), View(std::move(View)) {}
+
+ExpansionView::ExpansionView(ExpansionView &&RHS)
+    : Region(std::move(RHS.Region)), View(std::move(RHS.View)) {}
+
+ExpansionView &ExpansionView::operator=(ExpansionView &&RHS) {
+  Region = std::move(RHS.Region);
+  View = std::move(RHS.View);
+  return *this;
+}
+
+InstantiationView::InstantiationView(StringRef FunctionName, unsigned Line,
+                                     std::unique_ptr<SourceCoverageView> View)
+    : FunctionName(FunctionName), Line(Line), View(std::move(View)) {}
+
 void CoveragePrinter::StreamDestructor::operator()(raw_ostream *OS) const {
   if (OS == &outs())
     return;
@@ -175,15 +192,13 @@ void SourceCoverageView::addExpansion(
 }
 
 void SourceCoverageView::addBranch(unsigned Line,
-                                   SmallVector<CountedRegion, 0> Regions,
-                                   std::unique_ptr<SourceCoverageView> View) {
-  BranchSubViews.emplace_back(Line, std::move(Regions), std::move(View));
+                                   SmallVector<CountedRegion, 0> Regions) {
+  BranchSubViews.emplace_back(Line, std::move(Regions));
 }
 
-void SourceCoverageView::addMCDCRecord(
-    unsigned Line, SmallVector<MCDCRecord, 0> Records,
-    std::unique_ptr<SourceCoverageView> View) {
-  MCDCSubViews.emplace_back(Line, std::move(Records), std::move(View));
+void SourceCoverageView::addMCDCRecord(unsigned Line,
+                                       SmallVector<MCDCRecord, 0> Records) {
+  MCDCSubViews.emplace_back(Line, std::move(Records));
 }
 
 void SourceCoverageView::addInstantiation(

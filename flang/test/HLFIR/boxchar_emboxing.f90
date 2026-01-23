@@ -2,7 +2,7 @@
 
 ! CHECK-LABEL:   func.func @_QPtest1(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.class<none> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest1Ex"} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest1Ex"} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
 ! CHECK:           fir.select_type %[[VAL_1]]#1 : !fir.class<none> [#fir.type_is<!fir.char<1,?>>, ^bb1, unit, ^bb2]
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#1 : (!fir.class<none>) -> !fir.ref<!fir.char<1,?>>
@@ -18,11 +18,11 @@
 ! CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QQclX4641494C) : !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX4641494C"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#1 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
 ! CHECK:           %[[VAL_14:.*]] = arith.constant false
 ! CHECK:           %[[VAL_15:.*]] = arith.constant false
-! CHECK:           %[[VAL_16:.*]] = fir.call @_FortranAStopStatementText(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatementText(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb3:
 ! CHECK:           return
@@ -44,7 +44,7 @@ end subroutine test1
 
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.class<!fir.array<10xnone>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest2Ex"} : (!fir.class<!fir.array<10xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10xnone>>, !fir.class<!fir.array<10xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest2Ex"} : (!fir.class<!fir.array<10xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10xnone>>, !fir.class<!fir.array<10xnone>>)
 ! CHECK:           fir.select_type %[[VAL_1]]#1 : !fir.class<!fir.array<10xnone>> [#fir.type_is<!fir.char<1,?>>, ^bb1, unit, ^bb2]
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.class<!fir.array<10xnone>>) -> !fir.box<!fir.array<10x!fir.char<1,?>>>
@@ -62,11 +62,11 @@ end subroutine test1
 ! CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QQclX4641494C) : !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]] typeparams %[[VAL_12]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX4641494C"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]]#1 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
 ! CHECK:           %[[VAL_16:.*]] = arith.constant false
 ! CHECK:           %[[VAL_17:.*]] = arith.constant false
-! CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAStopStatementText(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatementText(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb3:
 ! CHECK:           return

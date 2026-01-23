@@ -1,7 +1,7 @@
 # REQUIRES: sparc
 # RUN: llvm-mc -filetype=obj -triple=sparcv9 %s -o %t.o
 # RUN: ld.lld %t.o --defsym=a=0x0123456789ABCDEF --defsym=b=0x0123456789A --defsym=c=0x01234567 -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --no-print-imm-hex %t | FileCheck %s
 # RUN: llvm-objdump -s %t | FileCheck --check-prefix=HEX %s
 
 ## R_SPARC_HH22, R_SPARC_HM10

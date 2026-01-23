@@ -33,12 +33,12 @@ define void @fold_snprintf_pcnt_s() {
 ; BE-NEXT:    store i32 3, ptr getelementptr (i8, ptr @asiz, i64 16), align 4
 ; BE-NEXT:    [[PD3:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 24), align 8
 ; BE-NEXT:    store i16 12594, ptr [[PD3]], align 1
-; BE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[PD3]], i64 2
+; BE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds nuw i8, ptr [[PD3]], i64 2
 ; BE-NEXT:    store i8 0, ptr [[ENDPTR]], align 1
 ; BE-NEXT:    store i32 3, ptr getelementptr (i8, ptr @asiz, i64 12), align 4
 ; BE-NEXT:    [[PD2:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 16), align 8
 ; BE-NEXT:    store i8 49, ptr [[PD2]], align 1
-; BE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[PD2]], i64 1
+; BE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[PD2]], i64 1
 ; BE-NEXT:    store i8 0, ptr [[ENDPTR1]], align 1
 ; BE-NEXT:    store i32 3, ptr getelementptr (i8, ptr @asiz, i64 8), align 4
 ; BE-NEXT:    [[PD1:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 8), align 8
@@ -59,12 +59,12 @@ define void @fold_snprintf_pcnt_s() {
 ; LE-NEXT:    store i32 3, ptr getelementptr (i8, ptr @asiz, i64 16), align 4
 ; LE-NEXT:    [[PD3:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 24), align 8
 ; LE-NEXT:    store i16 12849, ptr [[PD3]], align 1
-; LE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[PD3]], i64 2
+; LE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds nuw i8, ptr [[PD3]], i64 2
 ; LE-NEXT:    store i8 0, ptr [[ENDPTR]], align 1
 ; LE-NEXT:    store i32 3, ptr getelementptr (i8, ptr @asiz, i64 12), align 4
 ; LE-NEXT:    [[PD2:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 16), align 8
 ; LE-NEXT:    store i8 49, ptr [[PD2]], align 1
-; LE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[PD2]], i64 1
+; LE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[PD2]], i64 1
 ; LE-NEXT:    store i8 0, ptr [[ENDPTR1]], align 1
 ; LE-NEXT:    store i32 3, ptr getelementptr (i8, ptr @asiz, i64 8), align 4
 ; LE-NEXT:    [[PD1:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 8), align 8

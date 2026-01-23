@@ -68,7 +68,8 @@ int test(void) {
   // CHECKEXT-NEXT: call void (i64, ...) @knr
 
   knr(ei23);
-  // CHECKEXT: load i23, ptr @ei23
+  // CHECKEXT: load i32, ptr @ei23
+  // CHECKEXT: trunc i32
   // CHECKEXT-NEXT: call void (i23, ...) @knr
 
   knr(ff);
@@ -83,7 +84,7 @@ int test(void) {
 #ifdef D128
   knr(i128);
   // CHECKEXT: load i128
-  // CHECKEXT: call{{.*}} void (i64, i64, ...) @knr
+  // CHECKEXT: call{{.*}} void (i128, ...) @knr
 #endif
 
   knr(u32, s32, u16, s16, u8, s8);

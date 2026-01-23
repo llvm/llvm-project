@@ -1,0 +1,52 @@
+// The undefined symbol should not cause link errors, and we should
+// obtain the expected coverage report.
+
+// Test the --coverage option.
+RUN: rm -rf %t0 && split-file %s %t0 && cd %t0
+RUN: %clang bar.c main.c undef.c --coverage -c
+RUN: ar -X32_64 -rv libfoo.a undef.o bar.o
+RUN: %clang main.o -L. -lfoo --coverage -o main.exe
+RUN: %run ./main.exe
+RUN: llvm-cov gcov -t main.gcda |  FileCheck --check-prefix=MAIN %s
+RUN: llvm-cov gcov -t bar.gcda |  FileCheck --check-prefix=BAR %s
+
+// Test the pgogen -fprofile-arcs -ftest-coverage option combination.
+RUN: rm -rf %t1 && split-file %s %t1 && cd %t1
+RUN: %clang_pgogen bar.c main.c undef.c -fprofile-arcs -ftest-coverage -c
+RUN: ar -X32_64 -rv libfoo.a undef.o bar.o
+RUN: %clang_pgogen main.o -L. -lfoo -fprofile-generate -fprofile-arcs -ftest-coverage -o main.exe
+RUN: %run ./main.exe
+RUN: llvm-cov gcov -t main.gcda |  FileCheck --check-prefix=MAIN %s
+RUN: llvm-cov gcov -t bar.gcda |  FileCheck --check-prefix=BAR %s
+
+// Test the pgogen -Wl,-bcdtors:mbr option combination.
+RUN: rm -rf %t2 && split-file %s %t2 && cd %t2
+RUN: %clang_pgogen bar.c main.c undef.c -fprofile-arcs -ftest-coverage -c
+RUN: ar -X32_64 -rv libfoo.a undef.o bar.o
+RUN: %clang_pgogen main.o -L. -lfoo -fprofile-generate -fprofile-arcs -ftest-coverage -Wl,-bcdtors:mbr -o main.exe
+RUN: %run ./main.exe
+RUN: llvm-cov gcov -t main.gcda |  FileCheck --check-prefix=MAIN %s
+RUN: llvm-cov gcov -t bar.gcda |  FileCheck --check-prefix=BAR %s
+
+MAIN:        1:    2:int main() {
+MAIN:        1:    3:  return bar();
+BAR:         1:    1:int bar() {
+BAR:         1:    2:  return 0;
+
+//--- main.c
+int bar();
+int main() {
+  return bar();
+}
+
+
+//--- bar.c
+int bar() {
+  return 0;
+}
+
+//--- undef.c
+void undef_func();
+void foo() {
+  undef_func();
+}

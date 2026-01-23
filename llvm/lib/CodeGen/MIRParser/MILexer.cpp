@@ -216,6 +216,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("exact", MIToken::kw_exact)
       .Case("nneg", MIToken::kw_nneg)
       .Case("disjoint", MIToken::kw_disjoint)
+      .Case("samesign", MIToken::kw_samesign)
+      .Case("inbounds", MIToken::kw_inbounds)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -238,6 +240,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("window_save", MIToken::kw_cfi_window_save)
       .Case("negate_ra_sign_state",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
+      .Case("negate_ra_sign_state_with_pc",
+            MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
@@ -262,10 +266,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
             MIToken::kw_inlineasm_br_indirect_target)
+      .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
@@ -277,6 +283,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("heap-alloc-marker", MIToken::kw_heap_alloc_marker)
       .Case("pcsections", MIToken::kw_pcsections)
       .Case("cfi-type", MIToken::kw_cfi_type)
+      .Case("deactivation-symbol", MIToken::kw_deactivation_symbol)
       .Case("bbsections", MIToken::kw_bbsections)
       .Case("bb_id", MIToken::kw_bb_id)
       .Case("unknown-size", MIToken::kw_unknown_size)
@@ -613,6 +620,7 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Case("!range", MIToken::md_range)
       .Case("!DIExpression", MIToken::md_diexpr)
       .Case("!DILocation", MIToken::md_dilocation)
+      .Case("!noalias.addrspace", MIToken::md_noalias_addrspace)
       .Default(MIToken::Error);
 }
 
@@ -723,7 +731,7 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
     return C.remaining();
   }
 
-  C = skipMachineOperandComment(C);
+  C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
     return R.remaining();

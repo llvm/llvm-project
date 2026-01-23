@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Class.h"
-#include "mlir/TableGen/Format.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 
@@ -159,6 +157,38 @@ void Method::writeDefTo(raw_indented_ostream &os, StringRef namePrefix) const {
   os << " {\n";
   methodBody.writeTo(os);
   os << "}\n\n";
+}
+
+bool Method::methodPropertiesAreCompatible(Properties properties) {
+  const bool isStatic = (properties & Method::Static);
+  const bool isConstructor = (properties & Method::Constructor);
+  // const bool isPrivate = (properties & Method::Private);
+  const bool isDeclaration = (properties & Method::Declaration);
+  const bool isInline = (properties & Method::Inline);
+  const bool isConstexprValue = (properties & Method::ConstexprValue);
+  const bool isConst = (properties & Method::Const);
+
+  // Note: assert to immediately fail and thus simplify debugging.
+  if (isStatic && isConstructor) {
+    assert(false && "constructor cannot be static");
+    return false;
+  }
+  if (isConstructor && isConst) { // albeit constexpr is fine
+    assert(false && "constructor cannot be const");
+    return false;
+  }
+  if (isDeclaration && isInline) {
+    assert(false &&
+           "declaration implies no definition and thus cannot be inline");
+    return false;
+  }
+  if (isDeclaration && isConstexprValue) {
+    assert(false &&
+           "declaration implies no definition and thus cannot be constexpr");
+    return false;
+  }
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

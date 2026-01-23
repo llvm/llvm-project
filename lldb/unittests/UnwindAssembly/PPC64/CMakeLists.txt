@@ -1,5 +1,8 @@
 add_lldb_unittest(PPC64InstEmulationTests
   TestPPC64InstEmulation.cpp
+  LINK_COMPONENTS
+    Support
+    ${LLVM_TARGETS_TO_BUILD}
   LINK_LIBS
     lldbCore
     lldbSymbol
@@ -8,6 +11,4 @@ add_lldb_unittest(PPC64InstEmulationTests
     lldbPluginDisassemblerLLVMC
     lldbPluginInstructionPPC64
     lldbPluginProcessUtility
-  LINK_COMPONENTS
-    Support
-    ${LLVM_TARGETS_TO_BUILD})
+  )

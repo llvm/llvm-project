@@ -352,7 +352,7 @@ will be deleted by :ref:`-instcombine <passes-instcombine>`.
 Note that an exit block is outside of a loop, so how can such a phi "close"
 the value inside the loop since it uses it outside of it ? First of all,
 for phi nodes, as
-`mentioned in the LangRef <https://llvm.org/docs/LangRef.html#id311>`_:
+`mentioned in the LangRef <https://llvm.org/docs/LangRef.html#phi-instruction>`_:
 "the use of each incoming value is deemed to occur on the edge from the
 corresponding predecessor block to the current block". Now, an
 edge to an exit block is considered outside of the loop because

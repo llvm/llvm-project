@@ -43,8 +43,8 @@ struct TestLinalgDecomposeOps
     RewritePatternSet decompositionPatterns(context);
     linalg::populateDecomposeLinalgOpsPattern(decompositionPatterns,
                                               removeDeadArgsAndResults);
-    if (failed(applyPatternsAndFoldGreedily(
-            getOperation(), std::move(decompositionPatterns)))) {
+    if (failed(applyPatternsGreedily(getOperation(),
+                                     std::move(decompositionPatterns)))) {
       return signalPassFailure();
     }
   }

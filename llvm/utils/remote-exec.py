@@ -130,11 +130,12 @@ def main():
                 ]
             )
         else:
-            # Copy only the files, which are specified in the command line.
-            # Copy them to remote host one by one.
+            # Copy only files which are specified in the command line and exist on
+            # the host. Copy them to the remote host one by one.
             for x in commandLine:
-                _, f = os.path.split(x)
-                subprocess.check_call(scp(args, x, pathOnRemote(f)))
+                if os.path.exists(x):
+                    _, f = os.path.split(x)
+                    subprocess.check_call(scp(args, x, pathOnRemote(f)))
 
         # Make sure all executables in the remote command line have 'execute'
         # permissions on the remote host. The host that compiled the test-executable
@@ -164,4 +165,13 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
+    rc = main()
+
+    # If the remote process died with a signal, this will be exposed by ssh as
+    # an exit code in this range. We may be running under `not --crash` which
+    # will expect us to also die with a signal, so send the signal to ourselves
+    # so that wait4() in `not` will detect the signal. 
+    if rc > 128 and rc < 160:
+        os.kill(os.getpid(), rc - 128)
+
+    exit(rc)

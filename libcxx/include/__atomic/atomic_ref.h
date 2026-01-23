@@ -19,15 +19,19 @@
 
 #include <__assert>
 #include <__atomic/atomic_sync.h>
+#include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/check_memory_order.h>
+#include <__atomic/floating_point_helper.h>
+#include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/byte.h>
+#include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -42,13 +46,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
+// These types are required to make __atomic_is_always_lock_free work across GCC and Clang.
+// The purpose of this trick is to make sure that we provide an object with the correct alignment
+// to __atomic_is_always_lock_free, since that answer depends on the alignment.
+template <size_t _Alignment>
+struct __alignment_checker_type {
+  alignas(_Alignment) char __data;
+};
+
+template <size_t _Alignment>
+struct __get_aligner_instance {
+  static constexpr __alignment_checker_type<_Alignment> __instance{};
+};
+
 template <class _Tp>
 struct __atomic_ref_base {
-protected:
-  _Tp* __ptr_;
-
-  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
-
 private:
   _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
     _Tp* __ptr = std::addressof(__val);
@@ -95,19 +107,25 @@ private:
 
   friend struct __atomic_waitable_traits<__atomic_ref_base<_Tp>>;
 
+  // require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to at least their size to be potentially
+  // used lock-free
+  static constexpr size_t __min_alignment = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
+
 public:
   using value_type = _Tp;
 
-  static constexpr size_t required_alignment = alignof(_Tp);
+  static constexpr size_t required_alignment = alignof(_Tp) > __min_alignment ? alignof(_Tp) : __min_alignment;
 
   // The __atomic_always_lock_free builtin takes into account the alignment of the pointer if provided,
   // so we create a fake pointer with a suitable alignment when querying it. Note that we are guaranteed
   // that the pointer is going to be aligned properly at runtime because that is a (checked) precondition
   // of atomic_ref's constructor.
   static constexpr bool is_always_lock_free =
-      __atomic_always_lock_free(sizeof(_Tp), reinterpret_cast<void*>(-required_alignment));
+      __atomic_always_lock_free(sizeof(_Tp), std::addressof(__get_aligner_instance<required_alignment>::__instance));
 
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return __atomic_is_lock_free(sizeof(_Tp), __ptr_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept {
+    return __atomic_is_lock_free(sizeof(_Tp), __ptr_);
+  }
 
   _LIBCPP_HIDE_FROM_ABI void store(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
@@ -122,7 +140,7 @@ public:
     return __desired;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __order = memory_order::seq_cst) const noexcept
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__order) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
@@ -205,10 +223,21 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__atomic_notify_one(*this); }
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* address() const noexcept { return __ptr_; }
+#  endif
+
+protected:
+  using _Aligned_Tp [[__gnu__::__aligned__(required_alignment), __gnu__::__nodebug__]] = _Tp;
+  _Aligned_Tp* __ptr_;
+
+  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
 };
 
 template <class _Tp>
 struct __atomic_waitable_traits<__atomic_ref_base<_Tp>> {
+  using __value_type _LIBCPP_NODEBUG = _Tp;
+
   static _LIBCPP_HIDE_FROM_ABI _Tp __atomic_load(const __atomic_ref_base<_Tp>& __a, memory_order __order) {
     return __a.load(__order);
   }
@@ -221,7 +250,7 @@ template <class _Tp>
 struct atomic_ref : public __atomic_ref_base<_Tp> {
   static_assert(is_trivially_copyable_v<_Tp>, "std::atomic_ref<T> requires that 'T' be a trivially copyable type");
 
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -239,7 +268,7 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
 template <class _Tp>
   requires(std::integral<_Tp> && !std::same_as<bool, _Tp>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   using difference_type = __base::value_type;
 
@@ -285,7 +314,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 template <class _Tp>
   requires std::floating_point<_Tp>
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   using difference_type = __base::value_type;
 
@@ -302,20 +331,28 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   atomic_ref& operator=(const atomic_ref&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    _Tp __old = this->load(memory_order_relaxed);
-    _Tp __new = __old + __arg;
-    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
-      __new = __old + __arg;
+    if constexpr (std::__has_rmw_builtin<_Tp>()) {
+      return __atomic_fetch_add(this->__ptr_, __arg, std::__to_gcc_order(__order));
+    } else {
+      _Tp __old = this->load(memory_order_relaxed);
+      _Tp __new = __old + __arg;
+      while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+        __new = __old + __arg;
+      }
+      return __old;
     }
-    return __old;
   }
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    _Tp __old = this->load(memory_order_relaxed);
-    _Tp __new = __old - __arg;
-    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
-      __new = __old - __arg;
+    if constexpr (std::__has_rmw_builtin<_Tp>()) {
+      return __atomic_fetch_sub(this->__ptr_, __arg, std::__to_gcc_order(__order));
+    } else {
+      _Tp __old = this->load(memory_order_relaxed);
+      _Tp __new = __old - __arg;
+      while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+        __new = __old - __arg;
+      }
+      return __old;
     }
-    return __old;
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
@@ -324,7 +361,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 
 template <class _Tp>
 struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
-  using __base = __atomic_ref_base<_Tp*>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp*>;
 
   using difference_type = ptrdiff_t;
 

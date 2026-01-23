@@ -61,7 +61,7 @@ entry:
 
 ; GCN: define amdgpu_kernel void @test_inliner(
 ; GCN-INL1:     %c1 = tail call coldcc float @foo(
-; GCN-INLDEF:   %cmp.i = fcmp ogt float %tmp2, 0.000000e+00
+; GCN-INLDEF:   %cmp.i = fcmp ogt float %{{.+}}, 0.000000e+00
 ; GCN-MAXBBDEF: %div.i{{[0-9]*}} = fdiv float 1.000000e+00, %c
 ; GCN-MAXBBDEF: %div.i{{[0-9]*}} = fdiv float 2.000000e+00, %tmp1.i
 ; GCN-MAXBB1:   call coldcc void @foo_private_ptr
@@ -162,7 +162,7 @@ entry:
   br label %bb.1
 
 bb.1:
-  store float 1.0, ptr undef
+  store float 1.0, ptr poison
   br label %bb.2
 
 bb.2:

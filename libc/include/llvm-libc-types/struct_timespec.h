@@ -9,12 +9,18 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H
 #define LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H
 
-#include "llvm-libc-types/time_t.h"
+#if defined(__APPLE__)
+// Darwin provides its own definition for struct timespec. Include it directly
+// to ensure type compatibility and avoid redefinition errors.
+#include <sys/_types/_timespec.h>
+#else
+#include "time_t.h"
 
 struct timespec {
   time_t tv_sec; /* Seconds.  */
   /* TODO: BIG_ENDIAN may require padding. */
   long tv_nsec; /* Nanoseconds.  */
 };
+#endif // __APPLE__
 
 #endif // LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H

@@ -1,6 +1,6 @@
 ; This test was return to make sure a hardware loop is not generated if a
 ; returning call is present in the basic block.
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: loop
 ; CHECK-NOT: endloop
 

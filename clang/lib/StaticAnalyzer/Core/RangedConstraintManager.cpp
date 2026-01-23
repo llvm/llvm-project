@@ -62,8 +62,8 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
 
         SymbolManager &SymMgr = getSymbolManager();
         QualType DiffTy = SymMgr.getContext().getPointerDiffType();
-        SymbolRef Subtraction =
-            SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), DiffTy);
+        SymbolRef Subtraction = SymMgr.acquire<SymSymExpr>(
+            SSE->getRHS(), BO_Sub, SSE->getLHS(), DiffTy);
 
         const llvm::APSInt &Zero = getBasicVals().getValue(0, DiffTy);
         Op = BinaryOperator::reverseComparisonOp(Op);
@@ -76,8 +76,8 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
         SymbolManager &SymMgr = getSymbolManager();
 
         QualType ExprType = SSE->getType();
-        SymbolRef CanonicalEquality =
-            SymMgr.getSymSymExpr(SSE->getLHS(), BO_EQ, SSE->getRHS(), ExprType);
+        SymbolRef CanonicalEquality = SymMgr.acquire<SymSymExpr>(
+            SSE->getLHS(), BO_EQ, SSE->getRHS(), ExprType);
 
         bool WasEqual = SSE->getOpcode() == BO_EQ;
         bool IsExpectedEqual = WasEqual == Assumption;

@@ -167,7 +167,7 @@ void t6(Foo somearg, ... ) {
 // it should behave the same
 void t6b(Foo somearg, ... ) {
   __builtin_va_list list;
-  __builtin_stdarg_start(list, somearg); // second argument to 'va_start' is not the last named parameter [-Wvarargs]
+  __builtin_stdarg_start(list, somearg); // second argument to 'va_start' is not the last non-variadic parameter [-Wvarargs]
 }
 
 void t7(int n, ...) {

@@ -1,0 +1,5 @@
+static_library("Telemetry") {
+  output_name = "LLVMTelemetry"
+  deps = [ "//llvm/lib/Support" ]
+  sources = [ "Telemetry.cpp" ]
+}

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-select-rank.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <optional>
 #include <set>
@@ -32,7 +32,7 @@ void SelectRankConstructChecker::Leave(
   const Symbol *saveSelSymbol{nullptr};
   if (const auto selExpr{GetExprFromSelector(selectRankStmtSel)}) {
     if (const Symbol * sel{evaluate::UnwrapWholeSymbolDataRef(*selExpr)}) {
-      if (!evaluate::IsAssumedRank(*sel)) { // C1150
+      if (!semantics::IsAssumedRank(*sel)) { // C1150
         context_.Say(parser::FindSourceLocation(selectRankStmtSel),
             "Selector '%s' is not an assumed-rank array variable"_err_en_US,
             sel->name().ToString());

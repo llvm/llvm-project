@@ -486,7 +486,7 @@ define i8 @shl_lshr_demand4(i8 %x) {
 
 define <2 x i6> @shl_lshr_demand5(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_lshr_demand5(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> <i8 37, i8 37>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> splat (i8 37), [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i8> [[TMP1]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
 ;
@@ -501,7 +501,7 @@ define <2 x i6> @shl_lshr_demand5(<2 x i8> %x) {
 define <2 x i6> @shl_lshr_demand5_undef_left(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_lshr_demand5_undef_left(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 undef, i8 -108>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i8> [[SHL]], <i8 2, i8 2>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i8> [[SHL]], splat (i8 2)
 ; CHECK-NEXT:    [[R:%.*]] = trunc nuw <2 x i8> [[LSHR]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
 ;
@@ -515,7 +515,7 @@ define <2 x i6> @shl_lshr_demand5_undef_left(<2 x i8> %x) {
 
 define <2 x i6> @shl_lshr_demand5_undef_right(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_lshr_demand5_undef_right(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 -108, i8 -108>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> splat (i8 -108), [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i8> [[SHL]], <i8 undef, i8 2>
 ; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i8> [[LSHR]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
@@ -530,7 +530,7 @@ define <2 x i6> @shl_lshr_demand5_undef_right(<2 x i8> %x) {
 
 define <2 x i6> @shl_lshr_demand5_nonuniform_vec_left(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_lshr_demand5_nonuniform_vec_left(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 -108, i8 -108>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> splat (i8 -108), [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i8> [[SHL]], <i8 1, i8 2>
 ; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i8> [[LSHR]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
@@ -649,8 +649,8 @@ define i8 @lshr_shl_demand4(i8 %x) {
 
 define <2 x i8> @lshr_shl_demand5(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> <i8 -76, i8 -76>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 108, i8 108>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> splat (i8 -76), [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], splat (i8 108)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
@@ -663,9 +663,9 @@ define <2 x i8> @lshr_shl_demand5(<2 x i8> %x) {
 
 define <2 x i8> @lshr_shl_demand5_undef_left(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_undef_left(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 45>, [[X:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> splat (i8 45), [[X:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 undef, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], splat (i8 108)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
@@ -679,8 +679,8 @@ define <2 x i8> @lshr_shl_demand5_undef_left(<2 x i8> %x) {
 define <2 x i8> @lshr_shl_demand5_undef_right(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_undef_right(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 undef, i8 45>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 2, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], splat (i8 2)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], splat (i8 108)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 undef, i8 45>, %x ; 0b0010_1101
@@ -693,9 +693,9 @@ define <2 x i8> @lshr_shl_demand5_undef_right(<2 x i8> %x) {
 
 define <2 x i8> @lshr_shl_demand5_nonuniform_vec_left(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_left(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 45>, [[X:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> splat (i8 45), [[X:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 1, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], splat (i8 108)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
@@ -709,7 +709,7 @@ define <2 x i8> @lshr_shl_demand5_nonuniform_vec_left(<2 x i8> %x) {
 define <2 x i8> @lshr_shl_demand5_nonuniform_vec_right(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_right(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> <i8 -76, i8 52>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 108, i8 108>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], splat (i8 108)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 45, i8 13>, %x ; 0b0010_1101. 0b0000_1101

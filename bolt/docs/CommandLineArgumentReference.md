@@ -88,7 +88,7 @@
 
 - `--comp-dir-override=<string>`
 
-  Overrides DW_AT_comp_dir, and provides an alterantive base location, which is
+  Overrides DW_AT_comp_dir, and provides an alternative base location, which is
   used with DW_AT_dwo_name to construct a path to *.dwo files.
 
 - `--create-debug-names-section`
@@ -113,10 +113,9 @@
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
-- `--deterministic-debuginfo`
+- `--debug-thread-count=<uint>`
 
-  Disables parallel execution of tasks that may produce nondeterministic debug
-  info
+  Specifies the number of threads to be used when processing DWO debug information.
 
 - `--dot-tooltip-code`
 
@@ -138,6 +137,12 @@
 
   Dump function CFGs to graphviz format after each stage;enable '-print-loops'
   for color-coded blocks
+
+- `--dump-dot-func=<func1,func2,func3...>`
+
+  Dump function CFGs to graphviz format for specified functions only;
+  takes function name patterns (regex supported). Note: C++ function names
+  must be passed using their mangled names
 
 - `--dump-linux-exceptions`
 
@@ -283,6 +288,12 @@
 
   List of functions to pad with amount of bytes
 
+- `--print-mappings`
+
+  Print mappings in the legend, between characters/blocks and text sections
+  (default false).
+
+
 - `--profile-format=<value>`
 
   Format to dump profile output in aggregation mode, default is fdata
@@ -364,16 +375,11 @@
 
 - `--use-old-text`
 
-  Re-use space in old .text if possible (relocation mode)
+  Reuse space in old .text if possible (relocation mode)
 
 - `-v <uint>`
 
   Set verbosity level for diagnostic output
-
-- `--write-dwp`
-
-  Output a single dwarf package file (dwp) instead of multiple non-relocatable
-  dwarf object files (dwo).
 
 ### BOLT optimization options:
 
@@ -493,9 +499,12 @@
   Automatically put hot code on 2MB page(s) (hugify) at runtime. No manual call
   to hugify is needed in the binary (which is what --hot-text relies on).
 
-- `--icf`
+- `--icf=<value>`
 
   Fold functions with identical code
+  - `all`:  Enable identical code folding
+  - `none`: Disable identical code folding (default)
+  - `safe`: Enable safe identical code folding
 
 - `--icp`
 
@@ -623,7 +632,7 @@
 
 - `--inline-memcpy`
 
-  Inline memcpy using 'rep movsb' instruction (X86-only)
+  Inline memcpy using optimized instruction sequences (X86: 'rep movsb', AArch64: width-optimized register operations)
 
 - `--inline-small-functions`
 
@@ -679,6 +688,10 @@
   Threshold (in percent) for selecting functions to process in lite mode. Higher
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
+
+- `--match-with-call-graph`
+
+  Match functions with call graph
 
 - `--memcpy1-spec=<func1,func2:cs1:cs2,func3:cs1,...>`
 
@@ -797,6 +810,15 @@
 - `--runtime-instrumentation-lib=<string>`
 
   Specify file name of the runtime instrumentation library
+
+- `--runtime-lib-init-hook=<value>`
+
+  Primary target for hooking runtime library initialization, used in
+  fallback order of availability in input binary (entry_point -> init
+   -> init_array) (default: entry_point)
+  - `entry_point`: use ELF Header Entry Point
+  - `init`: use ELF DT_INIT entry
+  - `init_array`: use ELF .init_array entry
 
 - `--sctc-mode=<value>`
 
@@ -918,15 +940,6 @@
 - `--x86-strip-redundant-address-size`
 
   Remove redundant Address-Size override prefix
-
-### BOLT options in relocation mode:
-
-- `--align-macro-fusion=<value>`
-
-  Fix instruction alignment for macro-fusion (x86 relocation mode)
-  - `none`: do not insert alignment no-ops for macro-fusion
-  - `hot`: only insert alignment no-ops on hot execution paths (default)
-  - `all`: always align instructions to allow macro-fusion
 
 ### BOLT instrumentation options:
 
