@@ -1878,8 +1878,8 @@ TEST(FindImplementations, Inheritance) {
       virtual void B$2^ar();
       void Concrete();  // No implementations for concrete methods.
     };
-    struct Child2 : Child1 {
-      void $3[[Foo]]() override;
+    struct $0[[Child2]] : Child1 {
+      void $1[[$3[[Foo]]]]() override;
       void $2[[Bar]]() override;
     };
     void FromReference() {
