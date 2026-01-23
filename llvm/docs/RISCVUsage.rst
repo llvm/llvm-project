@@ -621,9 +621,9 @@ Sanitizers
 
 * UBSan is not platform-specific, and should work out of the box.
 
-* ASan and TSan already have shadow mappings defined for RISC-V, and are likely to work.
+* ASan and TSan already have shadow mappings defined for Linux on RISC-V, and are likely to work.
 
-* HWASan may work on very new versions of LLVM (e.g., after https://github.com/llvm/llvm-project/pull/176616), though RISC-V Pointer Masking (also very new) is needed as well to make it run efficiently.
+* HWASan is also likely to work, though RISC-V Pointer Masking (also very new) is needed as well to make it run efficiently.
 
 * Memtag: N/A - there is currently no ratified RISC-V memory tagging spec.
 
