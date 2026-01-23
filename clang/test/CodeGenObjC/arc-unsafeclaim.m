@@ -1,5 +1,5 @@
 //   Make sure it works on x86-64.
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime=macosx-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=X86-ATTACHED-CALL
+// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime=macosx-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=NOTAIL-CALL
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime=macosx-10.11 -fobjc-arc -emit-llvm -O2 -disable-llvm-passes -o - %s | FileCheck %s -check-prefix=ATTACHED-CALL
 
@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin11 -fobjc-runtime=macosx-fragile-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED -check-prefix=CALL
 
 //   Make sure it works on ARM64.
-// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=X86-ATTACHED-CALL
+// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED -check-prefix=CALL
 
 //   Make sure it works on ARM.
 // RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED -check-prefix=CALL
@@ -36,17 +36,13 @@ void test_assign(void) {
 // CHECK-NEXT:           ret void
 
 // DISABLED-LABEL:     define{{.*}} void @test_assign()
-// DISABLED:             %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// DISABLED-MARKED-NEXT:  call void asm sideeffect "mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue", ""()
-// DISABLED:             call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
+// DISABLED:             [[T0:%.*]] = call ptr @makeA()
+// DISABLED-MARKED-NEXT: call void asm sideeffect
+// DISABLED-NEXT:        [[T2:%.*]] = {{.*}}call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[T0]])
 
 // ATTACHED-CALL-LABEL:      define{{.*}} void @test_assign()
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
-
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_assign()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
 void test_assign_assign(void) {
   __unsafe_unretained id x, y;
@@ -68,10 +64,6 @@ void test_assign_assign(void) {
 // ATTACHED-CALL-LABEL:      define{{.*}} void @test_assign_assign()
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
-
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_assign_assign()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
 void test_strong_assign_assign(void) {
   __strong id x;
@@ -99,10 +91,6 @@ void test_strong_assign_assign(void) {
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
 
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_strong_assign_assign()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-
 void test_assign_strong_assign(void) {
   __unsafe_unretained id x;
   __strong id y;
@@ -129,10 +117,6 @@ void test_assign_strong_assign(void) {
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
 
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_assign_strong_assign()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-
 void test_init(void) {
   __unsafe_unretained id x = makeA();
 }
@@ -149,10 +133,6 @@ void test_init(void) {
 // ATTACHED-CALL-LABEL:      define{{.*}} void @test_init()
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
-
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_init()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
 void test_init_assignment(void) {
   __unsafe_unretained id x;
@@ -174,10 +154,6 @@ void test_init_assignment(void) {
 // ATTACHED-CALL-LABEL:      define{{.*}} void @test_init_assignment()
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
-
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_init_assignment()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
 void test_strong_init_assignment(void) {
   __unsafe_unretained id x;
@@ -201,10 +177,6 @@ void test_strong_init_assignment(void) {
 // ATTACHED-CALL-LABEL:      define{{.*}} void @test_strong_init_assignment()
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
-
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_strong_init_assignment()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
 void test_init_strong_assignment(void) {
   __strong id x;
@@ -231,10 +203,6 @@ void test_init_strong_assignment(void) {
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
 
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_init_strong_assignment()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-
 void test_ignored(void) {
   makeA();
 }
@@ -249,10 +217,6 @@ void test_ignored(void) {
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
 
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_ignored()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-
 void test_cast_to_void(void) {
   (void) makeA();
 }
@@ -266,10 +230,6 @@ void test_cast_to_void(void) {
 // ATTACHED-CALL-LABEL:      define{{.*}} void @test_cast_to_void()
 // ATTACHED-CALL:              [[T0:%.*]] = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ],
 // ATTACHED-CALL:              call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
-
-// X86-ATTACHED-CALL-LABEL:   define{{.*}} void @test_cast_to_void()
-// X86-ATTACHED-CALL:  %call1 = call ptr @makeA() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-// X86-ATTACHED-CALL:  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
 
 // This is always at the end of the module.

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple armv7-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s -check-prefix=ARM64-ATTACHED
+// RUN: %clang_cc1 -triple arm64-apple-ios -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // use an autorelease marker on ARM64.
 
@@ -7,11 +7,6 @@ id test0(void) {
   extern id test0_helper(void);
   // CHECK:      [[T0:%.*]] = call [[CC:(arm_aapcscc )?]]ptr @test0_helper()
   // CHECK-NEXT: ret ptr [[T0]]
-  // ARM64-ATTACHED:      %call1 = call ptr @test0_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-  // ARM64-ATTACHED:      call void asm sideeffect "mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue", ""()
-  // ARM64-ATTACHED:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-  // ARM64-ATTACHED:      %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call1) #2
-  // ARM64-ATTACHED:      ret ptr %0
   return test0_helper();
 }
 
@@ -23,12 +18,6 @@ void test1(void) {
   // CHECK-NEXT: store ptr [[T1]],
   // CHECK-NEXT: call [[CC]]void @llvm.objc.storeStrong(
   // CHECK-NEXT: ret void
-  // ARM64-ATTACHED:      %call1 = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-  // ARM64-ATTACHED:      call void asm sideeffect "mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue", ""()
-  // ARM64-ATTACHED:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-  // ARM64-ATTACHED:      store ptr %call1,
-  // ARM64-ATTACHED:      call void @llvm.objc.storeStrong(
-  // ARM64-ATTACHED:      ret void
   id x = test1_helper();
 }
 
@@ -37,11 +26,6 @@ A *test2(void) {
   extern A *test2_helper(void);
   // CHECK:      [[T0:%.*]] = call [[CC]]ptr @test2_helper()
   // CHECK-NEXT: ret ptr [[T0]]
-  // ARM64-ATTACHED:      %call1 = call ptr @test2_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-  // ARM64-ATTACHED:      call void asm sideeffect "mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue", ""()
-  // ARM64-ATTACHED:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-  // ARM64-ATTACHED:      %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call1) #2
-  // ARM64-ATTACHED:      ret ptr %0
   return test2_helper();
 }
 
@@ -49,10 +33,5 @@ id test3(void) {
   extern A *test3_helper(void);
   // CHECK:      [[T0:%.*]] = call [[CC]]ptr @test3_helper()
   // CHECK-NEXT: ret ptr [[T0]]
-  // ARM64-ATTACHED:      %call1 = call ptr @test3_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-  // ARM64-ATTACHED:      call void asm sideeffect "mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue", ""()
-  // ARM64-ATTACHED:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
-  // ARM64-ATTACHED:      %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call1) #2
-  // ARM64-ATTACHED:      ret ptr %0
   return test3_helper();
 }
