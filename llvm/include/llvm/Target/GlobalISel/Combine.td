@@ -1934,11 +1934,15 @@ def add_shl_neg_frags : GICombinePatFrag<
     (pattern (G_CONSTANT $zero, 0),
              (G_SUB $neg_y, $zero, $y),
              (G_SHL $shl_neg, $neg_y, $n),
-             (G_ADD $dst, $x, $shl_neg)),
+             (G_ADD $dst, $x, $shl_neg),
+             [{ return MRI.hasOneNonDBGUse(${shl_neg}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${neg_y}.getReg()); }]),
     (pattern (G_CONSTANT $zero, 0),
              (G_SUB $neg_y, $zero, $y),
              (G_SHL $shl_neg, $neg_y, $n),
-             (G_ADD $dst, $shl_neg, $x))
+             (G_ADD $dst, $shl_neg, $x),
+             [{ return MRI.hasOneNonDBGUse(${shl_neg}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${neg_y}.getReg()); }])
   ]>;
 
 def add_shift : GICombineRule<
