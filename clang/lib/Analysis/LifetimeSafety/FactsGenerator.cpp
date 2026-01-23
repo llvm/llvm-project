@@ -633,7 +633,7 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
-    OriginList *List = FactMgr.getOriginMgr().getOrCreateList(MD);
+    OriginList *List = *FactMgr.getOriginMgr().getThisOrigins();
     const PlaceholderLoan *L =
         FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(MD);
     PlaceholderLoanFacts.push_back(

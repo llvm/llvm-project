@@ -59,13 +59,13 @@ private:
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
-  LifetimeSafetyReporter *Reporter;
+  LifetimeSafetySemaHelper *Reporter;
   ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
-                  AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
+                  AnalysisDeclContext &ADC, LifetimeSafetySemaHelper *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter), AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
@@ -190,7 +190,7 @@ public:
     return nullptr;
   }
 
-  static void suggestWithScopeForParmVar(LifetimeSafetyReporter *Reporter,
+  static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *Reporter,
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
                                          const Expr *EscapeExpr) {
@@ -203,10 +203,10 @@ public:
                                               EscapeExpr);
   }
 
-  static void suggestWithScopeForImplicitThis(LifetimeSafetyReporter *Reporter,
-                                              const CXXMethodDecl *MD,
-                                              SourceManager &SM,
-                                              const Expr *EscapeExpr) {
+  static void
+  suggestWithScopeForImplicitThis(LifetimeSafetySemaHelper *Reporter,
+                                  const CXXMethodDecl *MD, SourceManager &SM,
+                                  const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
       Reporter->suggestLifetimeboundToImplicitThis(
           SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
@@ -254,7 +254,7 @@ public:
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const LiveOriginsAnalysis &LO,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetyReporter *Reporter) {
+                        LifetimeSafetySemaHelper *Reporter) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
   LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter);
 }

@@ -28,7 +28,7 @@ namespace clang::lifetimes::internal {
 void runLifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                         const LiveOriginsAnalysis &LiveOrigins,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetyReporter *Reporter);
+                        LifetimeSafetySemaHelper *Reporter);
 
 } // namespace clang::lifetimes::internal
 

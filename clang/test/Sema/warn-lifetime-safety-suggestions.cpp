@@ -224,8 +224,7 @@ void test_getView_on_temporary() {
 }
 
 void test_get_on_temporary_copy() {
-  ReturnsSelf copy = ReturnsSelf().get();  
-                                                   
+  ReturnsSelf copy = ReturnsSelf().get();                                               
   (void)copy;                                     
 }
 

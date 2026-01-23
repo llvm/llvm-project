@@ -48,8 +48,8 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
 }
 #endif
 
-LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                                               LifetimeSafetyReporter *Reporter)
+LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(
+    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *Reporter)
     : AC(AC), Reporter(Reporter) {}
 
 void LifetimeSafetyAnalysis::run() {
@@ -103,7 +103,7 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetySemaHelper *Reporter,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
   internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
   Analysis.run();

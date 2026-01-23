@@ -2874,10 +2874,10 @@ public:
 
 namespace clang::lifetimes {
 namespace {
-class LifetimeSafetyReporterImpl : public LifetimeSafetyReporter {
+class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 
 public:
-  LifetimeSafetyReporterImpl(Sema &S) : S(S) {}
+  LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                           SourceLocation FreeLoc, Confidence C) override {
@@ -2960,7 +2960,7 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyTUAnalysis");
   CallGraph CG;
   CG.addToCallGraph(TU);
-  lifetimes::LifetimeSafetyReporterImpl Reporter(S);
+  lifetimes::LifetimeSafetySemaHelperImpl Reporter(S);
   for (auto *Node : llvm::post_order(&CG)) {
     const clang::FunctionDecl *CanonicalFD =
         dyn_cast_or_null<clang::FunctionDecl>(Node->getDecl());
@@ -3201,9 +3201,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
-      lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter, LSStats,
-                                           S.CollectStats);
+      lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
+                                           LSStats, S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.

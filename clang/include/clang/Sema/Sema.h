@@ -1257,9 +1257,9 @@ public:
                             bool ForceComplain = false,
                             bool (*IsPlausibleResult)(QualType) = nullptr);
 
-  // Adds inferred lifetime bound attribute for implicit this to its
+  // Adds implicit lifetime bound attribute for implicit this to its
   // TypeSourceInfo.
-  void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD);
+  void addLifetimeBoundToImplicitThis(CXXMethodDecl *MD);
 
   /// Figure out if an expression could be turned into a call.
   ///
