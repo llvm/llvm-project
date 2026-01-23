@@ -929,7 +929,7 @@ LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
   case LoongArch::XVSTELM_W:
   case LoongArch::XVSTELM_D:
     return BuildMI(MBB, MemI, DL, get(MemIOp))
-        .addReg(MemI.getOperand(0).getReg(), 0)
+        .addReg(MemI.getOperand(0).getReg())
         .addReg(AM.BaseReg)
         .addImm(AM.Displacement)
         .addImm(MemI.getOperand(3).getImm())
