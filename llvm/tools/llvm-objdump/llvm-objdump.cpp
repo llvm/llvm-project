@@ -2696,7 +2696,12 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
     // silent failures.
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
       unsigned AVRVersion = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
-      Features.AddFeature('+' + AVR::getFeatureSetForEFlag(AVRVersion));
+      std::string Version = AVR::getFeatureSetForEFlag(AVRVersion);
+      if (Version == "avr0")
+        reportWarning("unknown AVR EFlags value: " + toHex(AVRVersion) +
+                          ", defaulting to avr0",
+                      Obj->getFileName());
+      Features.AddFeature('+' + Version);
     }
   }
 
