@@ -968,7 +968,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  Header->splitAt(Header->getFirstNonPhi());
+  VPBasicBlock *HeaderSplit = Header->splitAt(Header->getFirstNonPhi());
 
   // Create the header mask, insert it in the header and branch on it.
   auto *IV =
@@ -994,6 +994,31 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   VPBasicBlock *LatchSplit =
       Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
   VPBlockUtils::connectBlocks(Header, LatchSplit);
+
+  // Insert phis for any values used outside of the predicated body.
+  auto NeedsPhi = [&Header, &Plan](VPUser *U) {
+    auto *UR = cast<VPRecipeBase>(U);
+    return UR->getParent() == Header ||
+           UR->getRegion() != Plan.getVectorLoopRegion();
+  };
+
+  VPTypeAnalysis TypeInfo(Plan);
+  Builder.setInsertPoint(LatchSplit, LatchSplit->begin());
+  for (VPBlockBase *VPB : vp_depth_first_shallow(HeaderSplit)) {
+    auto *VPBB = cast<VPBasicBlock>(VPB);
+    if (VPBB == LatchSplit)
+      continue;
+    for (VPRecipeBase &R : *VPBB) {
+      for (VPValue *V : R.definedValues()) {
+        if (!any_of(V->users(), NeedsPhi))
+          continue;
+        VPValue *Poison = Plan.getOrAddLiveIn(
+            PoisonValue::get(V->getUnderlyingValue()->getType()));
+        VPValue *Phi = Builder.createScalarPhi({V, Poison}, {});
+        V->replaceUsesWithIf(Phi, NeedsPhi);
+      }
+    }
+  }
 
   // Any extract of the last element must be updated to extract from the last
   // active lane of the header mask instead (i.e., the lane corresponding to the

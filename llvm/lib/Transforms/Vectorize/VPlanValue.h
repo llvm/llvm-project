@@ -158,6 +158,14 @@ public:
       VPValue *New,
       llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
 
+  inline void
+  replaceUsesWithIf(VPValue *New,
+                    llvm::function_ref<bool(VPUser *U)> ShouldReplace) {
+    return replaceUsesWithIf(New, [&ShouldReplace](VPUser &U, unsigned) {
+      return ShouldReplace(&U);
+    });
+  }
+
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
   VPRecipeBase *getDefiningRecipe();

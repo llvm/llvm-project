@@ -214,7 +214,13 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    if (all_equal(PhiR->incoming_values())) {
+    auto NotPoison = [&](VPValue *V) {
+      // Don't remove poison from phis from the original loop.
+      return PhiR->getUnderlyingValue() || !isa<VPIRValue>(V) ||
+             !isa<PoisonValue>(cast<VPIRValue>(V)->getValue());
+    };
+
+    if (all_equal(make_filter_range(PhiR->incoming_values(), NotPoison))) {
       PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
       PhiR->eraseFromParent();
       continue;
