@@ -1034,7 +1034,7 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
     // No metadata
     return BranchProbability::getUnknown();
   }
-  assert(NumSucc == Weights.size() && "Missing weights in branch_probability");
+  assert(NumSucc == Weights.size() && "Missing weights in branch_weights");
 
   uint64_t Total = 0;
   uint32_t Numerator = 0;
