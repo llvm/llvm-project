@@ -416,9 +416,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     }
   }
 
-  // erase the printf calls
-  for (auto *CI : Printfs)
+  // Erase the printf calls and replace all uses with 0, signaling success.
+  // Since OpenCL only specifies undefined behaviors and not success criteria,
+  // returning 0 sinalling success always is valid.
+  for (auto *CI : Printfs) {
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
     CI->eraseFromParent();
+  }
 
   Printfs.clear();
   return true;
