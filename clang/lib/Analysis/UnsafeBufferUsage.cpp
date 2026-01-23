@@ -2143,14 +2143,14 @@ public:
                       MatchResult &Result) {
     if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
       return false;
-    auto *CE = dyn_cast<CallExpr>(S);
-    if (!CE || !CE->getDirectCallee())
+    const auto *CE = dyn_cast<CallExpr>(S);
+    if (!CE)
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const auto *FD = CE->getDirectCallee();
     if (!FD)
       return false;
 
-    bool IsGlobalAndNotInAnyNamespace =
+    const bool IsGlobalAndNotInAnyNamespace =
         FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
 
     // A libc function must either be in the std:: namespace or a global
@@ -2161,11 +2161,10 @@ public:
     //  printf, atoi, we consider it safe:
     if (CE->getNumArgs() == 1 && isNullTermPointer(CE->getArg(0), Ctx))
       return false;
-    auto isSingleStringLiteralArg = false;
-    if (CE->getNumArgs() == 1) {
-      isSingleStringLiteralArg =
-          isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
-    }
+
+    const bool isSingleStringLiteralArg =
+        CE->getNumArgs() == 1 &&
+        isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
     if (!isSingleStringLiteralArg) {
       // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {

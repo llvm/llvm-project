@@ -1558,6 +1558,8 @@ struct RefMember {
   std::string& str_ref;
   std::string* str_ptr;
   std::string str;
+  std::string_view view;
+  std::string_view& view_ref;
   RefMember();
   ~RefMember();
 };
@@ -1568,4 +1570,8 @@ std::string_view refMemberReturnView3(RefMember a) { return a.str; } // expected
 std::string& refMemberReturnRef1(RefMember a) { return a.str_ref; }
 std::string& refMemberReturnRef2(RefMember a) { return *a.str_ptr; }
 std::string& refMemberReturnRef3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnView1(RefMember a) { return a.view; }
+std::string_view& refViewMemberReturnView2(RefMember a) { return a.view; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
+std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access

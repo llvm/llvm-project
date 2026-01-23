@@ -607,7 +607,7 @@ static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
 static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
 
 /// \returns number of operands of \p I, considering commutativity. Returns 2
-/// for commutative instrinsics.
+/// for commutative intrinsics.
 /// \param I The instruction to check for commutativity
 static unsigned getNumberOfPotentiallyCommutativeOps(Instruction *I) {
   if (isa<IntrinsicInst>(I) && isCommutative(I)) {
