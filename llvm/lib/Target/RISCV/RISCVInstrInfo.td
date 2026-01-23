@@ -66,6 +66,14 @@ def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
                                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                       SDNPVariadic]>;
 
+// LPAD aligned calls
+def riscv_lpad_call
+    : RVSDNode<"LPAD_CALL", SDT_RISCVCall,
+               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+def riscv_lpad_call_indirect
+    : RVSDNode<"LPAD_CALL_INDIRECT", SDT_RISCVCall,
+               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
 def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
@@ -1813,6 +1821,26 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+// PseudoCALLLpadAlign is used for calls to returns_twice functions (e.g.,
+// setjmp) when Zicfilp is enabled. RISCVAsmPrinter expands this to:
+// [.p2align 2] [.option exact] call <func> [.option noexact] lpad <label>
+// Size = 12: 8-byte call (auipc+jalr) + 4-byte lpad (auipc x0, label).
+// Note: The 2-byte alignment padding is not included in Size because it's
+// emitted separately via .p2align directive.
+let isCall = 1, Defs = [X1], Size = 12, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in def PseudoCALLLpadAlign
+    : Pseudo<(outs), (ins call_symbol:$func, uimm20_auipc:$lpad_label), []>,
+    Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+
+// PseudoCALLIndirectLpadAlign is the indirect call version.
+// RISCVAsmPrinter expands this to:
+// [.p2align 2] [.option exact] jalr ra, <rs1>, 0 [.option noexact] lpad <label>
+// Size = 8: 4-byte jalr + 4-byte lpad.
+let isCall = 1, Defs = [X1], Size = 8, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in def PseudoCALLIndirectLpadAlign
+    : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, uimm20_auipc:$lpad_label), []>,
+    Sched<[WriteJalr, ReadJalr]>;
 
 def : Pat<(riscv_sret_glue), (SRET)>;
 def : Pat<(riscv_mret_glue), (MRET)>;

@@ -24336,6 +24336,13 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
     NeedSWGuarded = true;
 
+  // Use special pseudo for returns_twice calls (e.g., setjmp) when Zicfilp
+  // CFI is enabled, to ensure LPAD is inserted after the call.
+  bool NeedLpadCall =
+      CLI.CB && CLI.CB->hasFnAttr(Attribute::ReturnsTwice) &&
+      Subtarget.hasStdExtZicfilp() &&
+      MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
     unsigned CallOpc =
@@ -24348,7 +24355,17 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL : RISCVISD::CALL;
+  unsigned CallOpc;
+  // FIXME: Large Code Model + Zicfilp: SW_GUARDED_CALL takes priority over
+  // LPAD_CALL for returns_twice calls, breaking LPAD alignment.
+  if (NeedSWGuarded)
+    CallOpc = RISCVISD::SW_GUARDED_CALL;
+  else if (NeedLpadCall && CLI.CB->isIndirectCall())
+    CallOpc = RISCVISD::LPAD_CALL_INDIRECT;
+  else if (NeedLpadCall)
+    CallOpc = RISCVISD::LPAD_CALL;
+  else
+    CallOpc = RISCVISD::CALL;
   Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());

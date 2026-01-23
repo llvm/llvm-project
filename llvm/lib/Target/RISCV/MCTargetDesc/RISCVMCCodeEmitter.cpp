@@ -68,6 +68,10 @@ public:
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
+  void expandFunctionCallLpad(const MCInst &MI, SmallVectorImpl<char> &CB,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
+
   void expandQCLongCondBrImm(const MCInst &MI, SmallVectorImpl<char> &CB,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI, unsigned Size) const;
@@ -192,6 +196,48 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   else
     // Emit JALR Ra, Ra, 0
     TmpInst = MCInstBuilder(RISCV::JALR).addReg(Ra).addReg(Ra).addImm(0);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+}
+
+// Expand to AUIPC+JALR+LPAD (direct) or JALR+LPAD (indirect).
+// Unlike expandFunctionCall, R_RISCV_RELAX is not added because linker
+// relaxation would break LPAD alignment.
+void RISCVMCCodeEmitter::expandFunctionCallLpad(
+    const MCInst &MI, SmallVectorImpl<char> &CB,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  bool IsIndirect = MI.getOpcode() == RISCV::PseudoCALLIndirectLpadAlign;
+  MCInst TmpInst;
+  uint32_t Binary;
+
+  if (!IsIndirect) {
+    MCOperand Func = MI.getOperand(0);
+    assert(Func.isExpr() && "Expected expression for call target");
+
+    TmpInst =
+        MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X1).addExpr(Func.getExpr());
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+
+    TmpInst = MCInstBuilder(RISCV::JALR)
+                  .addReg(RISCV::X1)
+                  .addReg(RISCV::X1)
+                  .addImm(0);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+  } else {
+    TmpInst = MCInstBuilder(RISCV::JALR)
+                  .addReg(RISCV::X1)
+                  .addReg(MI.getOperand(0).getReg())
+                  .addImm(0);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+  }
+
+  // LPAD is encoded as AUIPC X0, label.
+  TmpInst = MCInstBuilder(RISCV::AUIPC)
+                .addReg(RISCV::X0)
+                .addImm(MI.getOperand(1).getImm());
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
@@ -422,6 +468,14 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
   case RISCV::PseudoJump:
     expandFunctionCall(MI, CB, Fixups, STI);
     MCNumEmitted += 2;
+    return;
+  case RISCV::PseudoCALLLpadAlign:
+    expandFunctionCallLpad(MI, CB, Fixups, STI);
+    MCNumEmitted += 3; // AUIPC + JALR + LPAD
+    return;
+  case RISCV::PseudoCALLIndirectLpadAlign:
+    expandFunctionCallLpad(MI, CB, Fixups, STI);
+    MCNumEmitted += 2; // JALR + LPAD
     return;
   case RISCV::PseudoAddTPRel:
     expandAddTPRel(MI, CB, Fixups, STI);
