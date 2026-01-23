@@ -91,24 +91,30 @@ bool PlatformImpl::has(aspect Aspect) const {
 void PlatformImpl::iterateDevices(
     info::device_type DeviceType,
     std::function<void(DeviceImpl *)> callback) const {
-  // Early exit if host/custom/accelerator device is requested
+  // Early exit if host/custom/accelerator device is requested:
+  // - host device is deprecated and not required by the SYCL 2020
+  // specification.
+  // - accelerator is not supported by liboffload now.
+  // - custom accelerators are not supported by liboffload as well.
   if ((DeviceType == info::device_type::host) ||
       (DeviceType == info::device_type::custom) ||
       (DeviceType == info::device_type::accelerator))
     return;
 
   const auto &DeviceImpls = getRootDevices();
+  assert(!DeviceImpls.empty() &&
+         "Platform can't exist without at least one device.");
 
   // TODO: Need a way to get default device from liboffload.
   // As a temporal solution just return the first device for DeviceType ==
   // automatic.
+  if (DeviceType == info::device_type::automatic) {
+    callback(DeviceImpls[0].get());
+    return;
+  }
+
   bool KeepAll = DeviceType == info::device_type::all;
   for (auto &Impl : DeviceImpls) {
-    if (DeviceType == info::device_type::automatic) {
-      callback(Impl.get());
-      return;
-    }
-
     if (KeepAll || DeviceType == Impl->getDeviceType())
       callback(Impl.get());
   }

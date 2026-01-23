@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The "sycl-ls" utility lists all platforms & devices discovered by SYCL.
+// The "sycl-ls" utility lists all platforms and devices discovered by SYCL.
 //
 // There are two types of output:
 //   concise (default) and

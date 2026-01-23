@@ -38,7 +38,7 @@ using EnableIfDeviceSelectorIsInvocable = std::enable_if_t<
 
 /// Returns a SYCL device instance chosen by the device selector provided.
 ///
-/// \param DeviceSelector is SYCL 2020 Device Selector, a simple callable that
+/// \param DeviceSelector is SYCL 2020 device selector, a simple callable that
 /// takes a device and returns an int.
 /// \return device chosen by selector.
 _LIBSYCL_EXPORT device

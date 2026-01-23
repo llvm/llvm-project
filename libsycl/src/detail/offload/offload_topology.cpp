@@ -25,7 +25,6 @@ range_view<const ol_platform_handle_t> OffloadTopology::getPlatforms() const {
 range_view<ol_device_handle_t>
 OffloadTopology::getDevices(size_t PlatformId) const {
   if (PlatformId >= MDeviceRange.size()) {
-    assert(false && "Platform index exceeds number of platforms.");
     return {nullptr, 0};
   }
   return MDeviceRange[PlatformId];

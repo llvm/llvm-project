@@ -56,7 +56,7 @@ public:
 
   /// Constructs a SYCL device instance using the device
   /// identified by the provided device selector.
-  /// \param DeviceSelector is SYCL 2020 Device Selector, a simple callable that
+  /// \param DeviceSelector is SYCL 2020 device Selector, a simple callable that
   /// takes a device and returns an int.
   template <
       typename DeviceSelector,
@@ -151,8 +151,8 @@ public:
   /// does not support provided info::affinity_domain provided a
   /// feature_not_supported exception will be thrown.
   ///
-  /// \param AffinityDomain is one of the values described in Table 4.20 of SYCL
-  /// Spec.
+  /// \param AffinityDomain is one of the values described in Table 4.20 of the
+  /// SYCL 2020 specification.
   /// \return sub devices partitioned from this SYCL device by affinity domain
   /// based on the AffinityDomain parameter.
   template <info::partition_property prop>
@@ -161,8 +161,8 @@ public:
 
   /// Query available SYCL devices.
   ///
-  /// \param deviceType is one of the values described in A.3 of SYCL 2020
-  /// Specification.
+  /// \param deviceType is one of the values described in A.3 of the SYCL 2020
+  /// specification.
   /// \return all SYCL devices available in the system of the device type
   /// specified.
   static std::vector<device>
