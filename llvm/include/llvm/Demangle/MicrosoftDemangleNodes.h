@@ -74,12 +74,14 @@ enum class ReferenceKind : uint8_t { None, LValueRef, RValueRef };
 
 enum OutputFlags {
   OF_Default = 0,
-  OF_NoCallingConvention = 1,
-  OF_NoTagSpecifier = 2,
-  OF_NoAccessSpecifier = 4,
-  OF_NoMemberType = 8,
-  OF_NoReturnType = 16,
-  OF_NoVariableType = 32,
+  OF_NoCallingConvention = 1 << 0,
+  OF_NoTagSpecifier = 1 << 1,
+  OF_NoAccessSpecifier = 1 << 2,
+  OF_NoMemberType = 1 << 3,
+  OF_NoReturnType = 1 << 4,
+  OF_NoVariableType = 1 << 5,
+  OF_NoVoidParameter = 1 << 6,
+  OF_NoDecorativeRTTITypeDescriptor = 1 << 7,
 };
 
 // Types
@@ -748,8 +750,18 @@ struct DEMANGLE_ABI VariableSymbolNode : public SymbolNode {
     return N->kind() == NodeKind::VariableSymbol;
   }
 
+  virtual bool shouldOutputName(OutputFlags Flags) const { return true; }
+
   StorageClass SC = StorageClass::None;
   TypeNode *Type = nullptr;
+};
+
+struct DEMANGLE_ABI TypeSymbolNode : public VariableSymbolNode {
+  using VariableSymbolNode::VariableSymbolNode;
+
+  bool shouldOutputName(OutputFlags Flags) const override {
+    return !(Flags & OF_NoDecorativeRTTITypeDescriptor);
+  }
 };
 
 struct DEMANGLE_ABI FunctionSymbolNode : public SymbolNode {

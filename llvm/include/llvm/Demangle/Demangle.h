@@ -45,6 +45,14 @@ enum MSDemangleFlags {
   MSDF_NoReturnType = 1 << 3,
   MSDF_NoMemberType = 1 << 4,
   MSDF_NoVariableType = 1 << 5,
+  MSDF_NoTagSpecifier = 1 << 6,
+  /// Don't write "(void)" for functions that take no parameters.
+  MSDF_NoVoidParameter = 1 << 7,
+  /// Don't add decoration to RTTI type descriptors:
+  ///   struct MyStruct `RTTI Type Descriptor Name'
+  /// will instead output
+  ///   struct MyStruct
+  MSDF_NoDecorativeRTTITypeDescriptor = 1 << 8,
 };
 
 /// Demangles the Microsoft symbol pointed at by mangled_name and returns it.

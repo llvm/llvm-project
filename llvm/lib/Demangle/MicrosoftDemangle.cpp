@@ -409,12 +409,11 @@ static QualifiedNameNode *synthesizeQualifiedName(ArenaAllocator &Arena,
   return synthesizeQualifiedName(Arena, Id);
 }
 
-static VariableSymbolNode *synthesizeVariable(ArenaAllocator &Arena,
-                                              TypeNode *Type,
-                                              std::string_view VariableName) {
-  VariableSymbolNode *VSN = Arena.alloc<VariableSymbolNode>();
+static VariableSymbolNode *synthesizeType(ArenaAllocator &Arena, TypeNode *Type,
+                                          std::string_view Description) {
+  TypeSymbolNode *VSN = Arena.alloc<TypeSymbolNode>();
   VSN->Type = Type;
-  VSN->Name = synthesizeQualifiedName(Arena, VariableName);
+  VSN->Name = synthesizeQualifiedName(Arena, Description);
   return VSN;
 }
 
@@ -528,7 +527,7 @@ SymbolNode *Demangler::demangleSpecialIntrinsic(std::string_view &MangledName) {
       break;
     if (!MangledName.empty())
       break;
-    return synthesizeVariable(Arena, T, "`RTTI Type Descriptor'");
+    return synthesizeType(Arena, T, "`RTTI Type Descriptor'");
   }
   case SpecialIntrinsicKind::RttiBaseClassArray:
     return demangleUntypedVariable(Arena, MangledName,
@@ -873,7 +872,7 @@ SymbolNode *Demangler::demangleTypeinfoName(std::string_view &MangledName) {
     Error = true;
     return nullptr;
   }
-  return synthesizeVariable(Arena, T, "`RTTI Type Descriptor Name'");
+  return synthesizeType(Arena, T, "`RTTI Type Descriptor Name'");
 }
 
 // Parser entry point.
@@ -2542,6 +2541,12 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoMemberType);
   if (Flags & MSDF_NoVariableType)
     OF = OutputFlags(OF | OF_NoVariableType);
+  if (Flags & MSDF_NoTagSpecifier)
+    OF = OutputFlags(OF | OF_NoTagSpecifier);
+  if (Flags & MSDF_NoVoidParameter)
+    OF = OutputFlags(OF | OF_NoVoidParameter);
+  if (Flags & MSDF_NoDecorativeRTTITypeDescriptor)
+    OF = OutputFlags(OF | OF_NoDecorativeRTTITypeDescriptor);
 
   int InternalStatus = demangle_success;
   char *Buf;
