@@ -37,8 +37,8 @@ namespace math {
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
 
-// LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
-static constexpr void sincos(double x, double *sin_x, double *cos_x) {
+LIBC_INLINE static constexpr void sincos(double x, double *sin_x,
+                                         double *cos_x) {
   using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
