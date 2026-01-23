@@ -56,9 +56,29 @@ public:
 
 } // namespace
 
+namespace {
+
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+};
+
+} // namespace
+
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<X8664TargetCIRGenInfo>(cgt);
+}
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
 }
 
 ABIInfo::~ABIInfo() noexcept = default;

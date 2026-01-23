@@ -242,6 +242,10 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       return *theTargetCIRGenInfo;
     }
   }
+  case llvm::Triple::amdgcn: {
+    theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
+  }
   }
 }
 
