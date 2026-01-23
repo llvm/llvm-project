@@ -325,7 +325,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     A.renderAsInput(Args, CmdArgs);
   }
 
-  addHIPRuntimeLibArgs(TC, C, Args, CmdArgs);
+  TC.addOffloadRTLibs(C.getActiveOffloadKinds(), Args, CmdArgs);
 
   TC.addProfileRTLibs(Args, CmdArgs);
 
@@ -516,11 +516,16 @@ void MSVCToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
   SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
-void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,
-                                         ArgStringList &CmdArgs) const {
-  CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
-                                     RocmInstallation->getLibPath()),
-                  "amdhip64.lib"});
+void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  if (Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+    return;
+
+  if (ActiveKinds & Action::OFK_HIP) {
+    CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
+                                       RocmInstallation->getLibPath()),
+                    "amdhip64.lib"});
+  }
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
