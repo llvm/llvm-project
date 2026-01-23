@@ -420,7 +420,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   // Since OpenCL only specifies undefined behaviors and not success criteria,
   // returning 0 sinalling success always is valid.
   for (auto *CI : Printfs) {
-    CI->replaceAllUsesWith(ConstantInt::get(I32Ty, 0));
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
     CI->eraseFromParent();
   }
 
