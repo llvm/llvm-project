@@ -211,24 +211,20 @@ class DAPTestCaseBase(TestBase):
     def verify_stop_exception_info(
         self, expected_description: str, expected_text: Optional[str] = None
     ) -> None:
-        """Wait for the process we are debugging to stop, and verify the stop
-        reason is 'exception' and that the description matches
-        'expected_description'
-        """
+        """Wait for the debuggee to stop, and verify the stop reason is
+        'exception' with the description matching 'expected_description' and
+        text match 'expected_text', if specified."""
         stopped_events = self.dap_server.wait_for_stopped()
-        self.assertIsNotNone(stopped_events, "No stopped events detected")
         for stopped_event in stopped_events:
-            if (
-                "body" not in stopped_event
-                or stopped_event["body"]["reason"] != "exception"
-            ):
+            body = stopped_event["body"]
+            if body["reason"] != "exception":
                 continue
             self.assertIn(
                 "description",
-                stopped_event["body"],
+                body,
                 f"stopped event missing description {stopped_event}",
             )
-            description = stopped_event["body"]["description"]
+            description = body["description"]
             self.assertRegex(
                 description,
                 expected_description,
@@ -236,7 +232,7 @@ class DAPTestCaseBase(TestBase):
             )
             if expected_text:
                 self.assertRegex(
-                    stopped_event["body"]["text"],
+                    body["text"],
                     expected_text,
                     f"for stopped event {stopped_event!r}",
                 )

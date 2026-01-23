@@ -41,13 +41,13 @@ from typing import (
 # timeout by a factor of 10 if ASAN is enabled.
 DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
 
+
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
 # created by the DAP client are terminated correctly when the test ends.
 class SpawnHelperCallback(Protocol):
     def __call__(
         self, executable: str, args: List[str], extra_env: List[str], **kwargs
-    ) -> subprocess.Popen:
-        ...
+    ) -> subprocess.Popen: ...
 
 
 ## DAP type references
@@ -633,7 +633,7 @@ class DebugCommunication(object):
             self._recv_packet(predicate=predicate),
         )
 
-    def wait_for_stopped(self) -> Optional[List[Event]]:
+    def wait_for_stopped(self) -> List[Event]:
         stopped_events = []
         stopped_event = self.wait_for_event(filter=["stopped", "exited"])
         while stopped_event:
@@ -2063,9 +2063,7 @@ def main():
         level=(
             logging.DEBUG
             if opts.verbose > 1
-            else logging.INFO
-            if opts.verbose > 0
-            else logging.WARNING
+            else logging.INFO if opts.verbose > 0 else logging.WARNING
         ),
     )
 

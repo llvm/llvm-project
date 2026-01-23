@@ -19,7 +19,6 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Error.h"
@@ -40,9 +39,6 @@ struct UBSanReport {
   std::string filename;
   uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
   uint32_t line = LLDB_INVALID_LINE_NUMBER;
-  lldb::addr_t memory = LLDB_INVALID_ADDRESS;
-  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-  std::vector<lldb::user_id_t> trace;
 };
 
 // See `InstrumentationRuntimeMainThreadChecker::RetrieveReportData`.
@@ -51,8 +47,6 @@ struct MainThreadCheckerReport {
   std::string api_name;
   std::string class_name;
   std::string selector;
-  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-  std::vector<lldb::addr_t> trace;
 };
 
 // FIXME: Support TSan, ASan, BoundsSafety formatting.
@@ -67,8 +61,7 @@ static bool fromJSON(const json::Value &params, UBSanReport &report,
          O.mapOptional("summary", report.summary) &&
          O.mapOptional("filename", report.filename) &&
          O.mapOptional("col", report.column) &&
-         O.mapOptional("line", report.line) &&
-         O.mapOptional("memory_address", report.memory);
+         O.mapOptional("line", report.line);
 }
 
 static bool fromJSON(const json::Value &params, MainThreadCheckerReport &report,
@@ -89,15 +82,17 @@ static bool fromJSON(const json::Value &params, RuntimeInstrumentReport &report,
 
   if (instrumentation_class == "UndefinedBehaviorSanitizer") {
     UBSanReport inner_report;
-    if (fromJSON(params, inner_report, path))
-      report = inner_report;
-    return true;
+    bool success = fromJSON(params, inner_report, path);
+    if (success)
+      report = std::move(inner_report);
+    return success;
   }
   if (instrumentation_class == "MainThreadChecker") {
     MainThreadCheckerReport inner_report;
-    if (fromJSON(params, inner_report, path))
-      report = inner_report;
-    return true;
+    bool success = fromJSON(params, inner_report, path);
+    if (success)
+      report = std::move(inner_report);
+    return success;
   }
 
   // FIXME: Support additional runtime instruments with specific formatters.
