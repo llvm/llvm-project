@@ -19,7 +19,7 @@
 # RUN: llvm-objdump -d %t.noarchversion 2>&1 | FileCheck -DFILE=%t.noarchversion %s --check-prefixes=AVR0,NOARCHINFO
 
 ## If file's e_flags is invalid, default to "avr0".
-# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_ARCH_AVR1,EF_AVR_ARCH_AVR6 %s -o %t.invalid
+# RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR1, EF_AVR_ARCH_AVR6' %s -o %t.invalid
 # RUN: llvm-objdump -d %t.invalid 2>&1 | FileCheck -DFILE=%t.invalid %s --check-prefixes=AVR0,INVALIDARCHINFO
 
 # AVR1:         <_start>:
