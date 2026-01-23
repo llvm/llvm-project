@@ -623,7 +623,7 @@ Sanitizers
 
 * ASan and TSan already have shadow mappings defined for Linux on RISC-V, and are likely to work.
 
-* HWASan is also likely to work, though RISC-V Pointer Masking (also very new) is needed as well to make it run efficiently.
+* HWASan is also likely to work, though RISC-V Pointer Masking (very new) is needed as well to make it run efficiently.
 
 * Memtag: N/A - there is currently no ratified RISC-V memory tagging spec.
 
