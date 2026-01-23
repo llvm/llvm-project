@@ -14,7 +14,7 @@
 
 // When libc++ is built with ASAN instrumentation, we can't turn off the ASAN checks,
 // and that is diagnosed as an error.
-// UNSUPPORTED: libcpp-instrumented-with-asan
+// XFAIL: libcpp-instrumented-with-asan
 
 // std::basic_string::data is const util C++17
 // UNSUPPORTED: c++03, c++11, c++14
