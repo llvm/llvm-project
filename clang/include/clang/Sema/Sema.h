@@ -13472,7 +13472,7 @@ public:
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes);
+      TemplateArgumentListInfo &Out);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -14887,16 +14887,6 @@ public:
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction,
       const ConceptReference *TopLevelConceptId = nullptr,
       Expr **ConvertedExpr = nullptr);
-
-  /// \brief Check whether the given non-dependent constraint expression is
-  /// satisfied. Returns false and updates Satisfaction with the satisfaction
-  /// verdict if successful, emits a diagnostic and returns true if an error
-  /// occurred and satisfaction could not be determined.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool
-  CheckConstraintSatisfaction(const ConceptSpecializationExpr *ConstraintExpr,
-                              ConstraintSatisfaction &Satisfaction);
 
   /// Check whether the given function decl's trailing requires clause is
   /// satisfied, if any. Returns false and updates Satisfaction with the

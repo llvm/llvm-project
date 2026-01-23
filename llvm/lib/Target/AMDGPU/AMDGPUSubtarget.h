@@ -180,9 +180,7 @@ public:
   /// Returns the target minimum/maximum number of waves per EU. This is based
   /// on the minimum/maximum number of \p RequestedWavesPerEU and further
   /// limited by the maximum achievable occupancy derived from the range of \p
-  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup. A minimum
-  /// requested waves/EU value of 0 indicates an intent to not restrict the
-  /// minimum target occupancy.
+  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup.
   std::pair<unsigned, unsigned>
   getEffectiveWavesPerEU(std::pair<unsigned, unsigned> RequestedWavesPerEU,
                          std::pair<unsigned, unsigned> FlatWorkGroupSizes,
