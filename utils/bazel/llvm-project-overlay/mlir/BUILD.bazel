@@ -7647,7 +7647,7 @@ cc_library(
         "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Tensor/Extensions/ShardingExtensions.h",
+        "include/mlir/Dialect/Tensor/IR/ShardingInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/IR/Tensor.h",
         "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
     ],
@@ -13997,15 +13997,9 @@ cc_library(
     srcs = glob(
         [
             "lib/Dialect/Bufferization/Transforms/*.cpp",
-            "lib/Dialect/Bufferization/Extensions/*.cpp",
         ],
     ),
-    hdrs = glob(
-        [
-            "include/mlir/Dialect/Bufferization/Transforms/*.h",
-            "include/mlir/Dialect/Bufferization/Extensions/*.h",
-        ]
-    ),
+    hdrs = glob(["include/mlir/Dialect/Bufferization/Transforms/*.h"]),
     includes = ["include"],
     deps = [
         ":AllocationOpInterface",
@@ -14025,7 +14019,6 @@ cc_library(
         ":MemRefUtils",
         ":Pass",
         ":SCFDialect",
-        "ShardingInterface",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
         ":TensorDialect",
