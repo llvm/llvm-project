@@ -10820,25 +10820,25 @@ def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 
-def warn_lifetime_safety_intra_tu_suggestion
+def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_cross_tu_suggestion
+def warn_lifetime_safety_cross_tu_param_suggestion
     : Warning<"parameter in cross-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_this_intra_tu_suggestion
+def warn_lifetime_safety_intra_tu_this_suggestion
     : Warning<"implicit this in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_this_cross_tu_suggestion
+def warn_lifetime_safety_cross_tu_this_suggestion
     : Warning<"implicit this in cross-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyCrossTUSuggestions>,

@@ -56,17 +56,18 @@ public:
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 
-  // Suggests lifetime bound annotations for function paramters
-  virtual void suggestAnnotation(SuggestionScope Scope,
-                                 const ParmVarDecl *ParmToAnnotate,
-                                 const Expr *EscapeExpr) {}
+  // Suggests lifetime bound annotations for function paramters.
+  virtual void SuggestLifetimeboundToParmVar(SuggestionScope Scope,
+                                             const ParmVarDecl *ParmToAnnotate,
+                                             const Expr *EscapeExpr) {}
 
-  // Suggests lifetime bound annotations for implicit this
-  virtual void suggestAnnotation(SuggestionScope Scope, const CXXMethodDecl *MD,
-                                 const Expr *EscapeExpr) {}
+  // Suggests lifetime bound annotations for implicit this.
+  virtual void SuggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+                                                  const CXXMethodDecl *MD,
+                                                  const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
-  // TypeSourceInfo
+  // TypeSourceInfo.
   virtual void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) {}
 };
 

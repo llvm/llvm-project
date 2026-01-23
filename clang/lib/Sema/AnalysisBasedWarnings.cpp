@@ -2903,16 +2903,16 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
-  void suggestAnnotation(SuggestionScope Scope,
-                         const ParmVarDecl *ParmToAnnotate,
-                         const Expr *EscapeExpr) override {
+  void SuggestLifetimeboundToParmVar(SuggestionScope Scope,
+                                     const ParmVarDecl *ParmToAnnotate,
+                                     const Expr *EscapeExpr) override {
     unsigned DiagID;
     switch (Scope) {
     case SuggestionScope::CrossTU:
-      DiagID = diag::warn_lifetime_safety_cross_tu_suggestion;
+      DiagID = diag::warn_lifetime_safety_cross_tu_param_suggestion;
       break;
     case SuggestionScope::IntraTU:
-      DiagID = diag::warn_lifetime_safety_intra_tu_suggestion;
+      DiagID = diag::warn_lifetime_safety_intra_tu_param_suggestion;
       break;
     }
 
@@ -2929,11 +2929,12 @@ public:
         << EscapeExpr->getSourceRange();
   }
 
-  void suggestAnnotation(SuggestionScope Scope, const CXXMethodDecl *MD,
-                         const Expr *EscapeExpr) override {
+  void SuggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+                                          const CXXMethodDecl *MD,
+                                          const Expr *EscapeExpr) override {
     unsigned DiagID = (Scope == SuggestionScope::CrossTU)
-                          ? diag::warn_lifetime_safety_this_cross_tu_suggestion
-                          : diag::warn_lifetime_safety_this_intra_tu_suggestion;
+                          ? diag::warn_lifetime_safety_cross_tu_this_suggestion
+                          : diag::warn_lifetime_safety_intra_tu_this_suggestion;
 
     SourceLocation InsertionPoint;
     InsertionPoint = Lexer::getLocForEndOfToken(

@@ -190,28 +190,41 @@ public:
     return nullptr;
   }
 
+  static void SuggestWithScopeForParmVar(LifetimeSafetyReporter *Reporter,
+                                         const ParmVarDecl *PVD,
+                                         SourceManager &SM,
+                                         const Expr *EscapeExpr) {
+    if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
+      Reporter->SuggestLifetimeboundToParmVar(
+          SuggestionScope::CrossTU,
+          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), EscapeExpr);
+    else
+      Reporter->SuggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
+                                              EscapeExpr);
+  }
+
+  static void SuggestWithScopeForImplicitThis(LifetimeSafetyReporter *Reporter,
+                                              const CXXMethodDecl *MD,
+                                              SourceManager &SM,
+                                              const Expr *EscapeExpr) {
+    if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
+      Reporter->SuggestLifetimeboundToImplicitThis(
+          SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
+          EscapeExpr);
+    else
+      Reporter->SuggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU, MD,
+                                                   EscapeExpr);
+  }
+
   void suggestAnnotations() {
     if (!Reporter)
       return;
     SourceManager &SM = AST.getSourceManager();
     for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
-      if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
-        if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
-          Reporter->suggestAnnotation(
-              SuggestionScope::CrossTU,
-              CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
-              EscapeExpr);
-        else
-          Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD,
-                                      EscapeExpr);
-      } else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
-        if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
-          Reporter->suggestAnnotation(SuggestionScope::CrossTU,
-                                      cast<CXXMethodDecl>(CrossTUDecl),
-                                      EscapeExpr);
-        else
-          Reporter->suggestAnnotation(SuggestionScope::IntraTU, MD, EscapeExpr);
-      }
+      if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
+        SuggestWithScopeForParmVar(Reporter, PVD, SM, EscapeExpr);
+      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>())
+        SuggestWithScopeForImplicitThis(Reporter, MD, SM, EscapeExpr);
     }
   }
 
