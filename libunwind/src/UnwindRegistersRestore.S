@@ -672,7 +672,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x8, x9,  [x0, #0x040]
   ldp    x10,x11, [x0, #0x050]
   ldp    x12,x13, [x0, #0x060]
-  ldp    x14,x15, [x0, #0x070]
+  // x14 and x15 are used as scratch registers in this function
+  // and will be restored later.
   // x16 and x17 were clobbered by the call into the unwinder, so no point in
   // restoring them.
   ldp    x18,x19, [x0, #0x090]
@@ -683,42 +684,179 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x28,x29, [x0, #0x0E0]
 
 #if defined(__ARM_FP) && __ARM_FP != 0
-  ldp    d0, d1,  [x0, #0x110]
-  ldp    d2, d3,  [x0, #0x120]
-  ldp    d4, d5,  [x0, #0x130]
-  ldp    d6, d7,  [x0, #0x140]
-  ldp    d8, d9,  [x0, #0x150]
-  ldp    d10,d11, [x0, #0x160]
-  ldp    d12,d13, [x0, #0x170]
-  ldp    d14,d15, [x0, #0x180]
-  ldp    d16,d17, [x0, #0x190]
-  ldp    d18,d19, [x0, #0x1A0]
-  ldp    d20,d21, [x0, #0x1B0]
-  ldp    d22,d23, [x0, #0x1C0]
-  ldp    d24,d25, [x0, #0x1D0]
-  ldp    d26,d27, [x0, #0x1E0]
-  ldp    d28,d29, [x0, #0x1F0]
-  ldr    d30,     [x0, #0x200]
-  ldr    d31,     [x0, #0x208]
+  ldp    d0, d1,  [x0, #0x120]
+  ldp    d2, d3,  [x0, #0x130]
+  ldp    d4, d5,  [x0, #0x140]
+  ldp    d6, d7,  [x0, #0x150]
+  ldp    d8, d9,  [x0, #0x160]
+  ldp    d10,d11, [x0, #0x170]
+  ldp    d12,d13, [x0, #0x180]
+  ldp    d14,d15, [x0, #0x190]
+  ldp    d16,d17, [x0, #0x1A0]
+  ldp    d18,d19, [x0, #0x1B0]
+  ldp    d20,d21, [x0, #0x1C0]
+  ldp    d22,d23, [x0, #0x1D0]
+  ldp    d24,d25, [x0, #0x1E0]
+  ldp    d26,d27, [x0, #0x1F0]
+  ldr    d28,     [x0, #0x200]
+  ldr    d29,     [x0, #0x208]
+  ldr    d30,     [x0, #0x210]
+  ldr    d31,     [x0, #0x218]
 #endif
+
+  // The lr value stored in __pc might be signed with IA/IB key, &__pc address
+  // as a modifier and an optional second modifier. If the lr value is signed,
+  // re-sign that with the corresponding key and initial signing scheme using
+  // __sp as a modifier and potentially involving a second modifier
+  // (as described by '__ra_signing_scheme.__flags & 2').
+
+  ldr    x14,     [x0, #0x0F8]  // x14 = __sp
+  ldr    x15,     [x0, #0x118]  // x15 = __ra_signing_scheme.__second_modifier
+  ldr    x1,      [x0, #0x108]  // x1 = __ra_signing_scheme.__flags
+  ldr    x16,      [x0, #0x110]  // x16 = __ra_signing_scheme.__flags_pac
+
+  // Check if PAuth feature is available. See also
+  // RUN_IF_PAUTH_FEATURE_PRESENT in Registers.hpp
+  mrs  x17, ID_AA64ISAR1_EL1
+  lsr  x17, x17, #24
+  ands x17, x17, #255
+  cbnz x17, .Lcheck_pac
+  mrs  x17, ID_AA64ISAR2_EL1
+  lsr  x17, x17, #8
+  ands x17, x17, #15
+  cbnz x17, .Lcheck_pac
+  b .Lno_pauth
+  .Lcheck_pac:
+
+  // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY in Registers.hpp.
+  .arch armv8.3-a
+  .arch_extension pauth
+  add   x17, x0, #0x108
+  pacga x17, x1, x17
+  cmp   x17, x16
+  b.eq  .Lpacga_success
+  brk   #0xc474
+  .Lpacga_success:
+  .Lno_pauth:
+
+  // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI
+  // in Registers.hpp.
+#if __has_feature(ptrauth_returns)
+  cmp   x1, #5
+  b.eq  .Lpauthabi_success
+  brk   #0xc474
+  .Lpauthabi_success:
+#endif
+
+  add    x16, x0, #0x100        // x16 = &__pc
+  ldr    x17,     [x0, #0x100]  // x17 = __pc
+
+  // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
+  cmp   x1, #0
+  b.ne  .Lswitch_1716_1
+  b     .Lswitch_1716_end
+
+  .Lswitch_1716_1:
+  cmp   x1, #1
+  b.ne  .Lswitch_1716_3
+  hint 0xc     // autia1716
+  mov x16, x14
+  hint 0x8     // pacia1716
+  b     .Lswitch_1716_end
+
+  .Lswitch_1716_3:
+  cmp   x1, #3
+  b.ne  .Lswitch_1716_5
+  hint 0x27    // pacm
+  hint 0xc     // autia1716
+  mov x16, x14
+  hint 0x27    // pacm
+  hint 0x8     // pacia1716
+  b     .Lswitch_1716_end
+
+  .Lswitch_1716_5:
+  cmp   x1, #5
+  b.ne  .Lswitch_1716_7
+  hint 0xe     // autib1716
+  mov x16, x14
+  hint 0xa     // pacib1716
+  b     .Lswitch_1716_end
+
+  .Lswitch_1716_7:
+  cmp   x1, #7
+  b.ne  .Lswitch_1716_unexpected
+  hint 0x27    // pacm
+  hint 0xe     // autib1716
+  mov x16, x14
+  hint 0x27    // pacm
+  hint 0xa     // pacib1716
+  b     .Lswitch_1716_end
+
+  .Lswitch_1716_unexpected:
+  brk   #0xc474
+
+  .Lswitch_1716_end:
+
+  mov    lr, x17                // assign final lr value
+  ldp    x14,x15, [x0, #0x070]  // restore x14,x15
+  ldr    x16,     [x0, #0x110]  // second modifier for auti{a|b}sp with PACM
+
   // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
 
-  ldr    x16,     [x0, #0x0F8]  // load sp into scratch
-  ldr    lr,      [x0, #0x100]  // restore pc into lr
+  ldr    x17,     [x0, #0x0F8]  // load sp into scratch
 
-#if __has_feature(ptrauth_calls)
-  // The LR is signed with its address inside the register state.  Time
-  // to resign to be a regular ROP protected signed pointer
-  add    x1, x0, #0x100
-  autib  lr, x1
-  pacib  lr, x16  // signed the scratch register for sp
-#endif
+  // Integrity of the signing scheme stored in x1 was checked above and no
+  // manipulations on x1 were performed since then, so skip this check.
+
+  // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
+  cmp   x1, #0
+  b.ne  .Lswitch_lrsp_1
+  b     .Lswitch_lrsp_end
+
+  .Lswitch_lrsp_1:
+  cmp   x1, #1
+  b.ne  .Lswitch_lrsp_3
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x1d                   // autiasp
+  ret    x30
+
+  .Lswitch_lrsp_3:
+  cmp   x1, #3
+  b.ne  .Lswitch_lrsp_5
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x27                   // pacm
+  hint   0x1d                   // autiasp
+  ret    x30
+
+  .Lswitch_lrsp_5:
+  cmp   x1, #5
+  b.ne  .Lswitch_lrsp_7
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x1f                   // autibsp
+  ret    x30
+
+  .Lswitch_lrsp_7:
+  cmp   x1, #7
+  b.ne  .Lswitch_lrsp_unexpected
 
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
-  mov    sp,x16                 // restore sp
+  mov    sp,x17                 // restore sp
+  hint   0x27                   // pacm
+  hint   0x1f                   // autibsp
+  ret    x30
+
+  .Lswitch_lrsp_unexpected:
+  brk   #0xc474
+
+.Lswitch_lrsp_end:
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
   // If GCS is enabled we need to push the address we're returning to onto the
   // GCS stack. We can't just return using br, as there won't be a BTI landing
@@ -729,12 +867,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   gcspushm x30
 Lnogcs:
 #endif
-
-#if __has_feature(ptrauth_calls)
-  retab
-#else
   ret    x30                    // jump to pc
-#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 

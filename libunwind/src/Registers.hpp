@@ -1846,6 +1846,87 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
 }
 #endif
 
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+
+#define STRING_IMPL(x) #x
+#define STRING(x) STRING_IMPL(x)
+
+// TODO: comment about windows
+#ifdef __APPLE__
+#define LOCAL_LABEL_PREFIX "L"
+#else
+#define LOCAL_LABEL_PREFIX ".L"
+#endif
+
+#define RUN_IF_PAUTH_FEATURE_PRESENT(scratchReg, code)                \
+  "mrs  " #scratchReg ", ID_AA64ISAR1_EL1"                     "\n\t" \
+  "lsr  " #scratchReg ", " #scratchReg ", #24"                 "\n\t" \
+  "ands " #scratchReg ", " #scratchReg ", #255"                "\n\t" \
+  "cbnz " #scratchReg ", " LOCAL_LABEL_PREFIX "check_pac_code%=_" STRING(__LINE__) "\n\t" \
+  "mrs  " #scratchReg ", ID_AA64ISAR2_EL1"                     "\n\t" \
+  "lsr  " #scratchReg ", " #scratchReg ", #8"                  "\n\t" \
+  "ands " #scratchReg ", " #scratchReg ", #15"                 "\n\t" \
+  "cbnz " #scratchReg ", " LOCAL_LABEL_PREFIX "check_pac_code%=_" STRING(__LINE__) "\n\t" \
+  "b " LOCAL_LABEL_PREFIX "check_pac_end%=_" STRING(__LINE__)                      "\n\t" \
+  LOCAL_LABEL_PREFIX "check_pac_code%=_" STRING(__LINE__) ":"                   "\n\t" \
+  code                                                         "\n\t" \
+  LOCAL_LABEL_PREFIX "check_pac_end%=_" STRING(__LINE__) ":"                    "\n\t"
+
+// The '0xc470 + KeyID' trap code is used by LLVM codegen to abort execution
+// on auth failure w/o FPAC. Mimic this behavior assuming GA key ID is 4.
+#define PACGA_TRAP "brk #0xc474\n\t"
+
+#define CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY(schemeReg, schemePacReg, \
+                                             modifierReg, scratchReg) \
+  RUN_IF_PAUTH_FEATURE_PRESENT(                                       \
+    scratchReg,                                                       \
+    ".arch armv8.3-a"                                          "\n\t" \
+    ".arch_extension pauth"                                    "\n\t" \
+    "pacga " #modifierReg ", " #schemeReg ", " #modifierReg    "\n\t" \
+    "cmp " #modifierReg ", " #schemePacReg                     "\n\t" \
+    "b.eq  " LOCAL_LABEL_PREFIX "check_integrity_success_%=_" STRING(__LINE__)     "\n\t" \
+    PACGA_TRAP                                                 "\n\t" \
+    LOCAL_LABEL_PREFIX "check_integrity_success_%=_" STRING(__LINE__) ":"       "\n\t" \
+  )
+
+#define CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(schemeReg)         \
+  "cmp   " #schemeReg ", 5"                                           "\n\t" \
+  "b.eq  " LOCAL_LABEL_PREFIX "check_integrity_for_pauthabi_success_%=_" STRING(__LINE__) "\n\t" \
+  PACGA_TRAP                                                          "\n\t" \
+  LOCAL_LABEL_PREFIX "check_integrity_for_pauthabi_success_%=_" STRING(__LINE__) ":"   "\n\t" \
+
+#define SIGNING_SCHEME_FLAGS_SWITCH(schemeReg, codeIf0, codeIf1, \
+                                    codeIf3, codeIf5, codeIf7)   \
+  "cmp " #schemeReg ", #0"                        "\n\t"         \
+  "b.ne " LOCAL_LABEL_PREFIX "switch_1_%=_"   STRING(__LINE__)        "\n\t"         \
+  codeIf0                                         "\n\t"         \
+  "b    " LOCAL_LABEL_PREFIX "switch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  LOCAL_LABEL_PREFIX "switch_1_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #1"                        "\n\t"         \
+  "b.ne " LOCAL_LABEL_PREFIX "switch_3_%=_" STRING(__LINE__)          "\n\t"         \
+  codeIf1                                         "\n\t"         \
+  "b    " LOCAL_LABEL_PREFIX "switch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  LOCAL_LABEL_PREFIX "switch_3_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #3"                        "\n\t"         \
+  "b.ne " LOCAL_LABEL_PREFIX "switch_5_%=_"   STRING(__LINE__)        "\n\t"         \
+  codeIf3                                         "\n\t"         \
+  "b    " LOCAL_LABEL_PREFIX "switch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  LOCAL_LABEL_PREFIX "switch_5_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #5"                        "\n\t"         \
+  "b.ne " LOCAL_LABEL_PREFIX "switch_7_%=_"   STRING(__LINE__)        "\n\t"         \
+  codeIf5                                         "\n\t"         \
+  "b    " LOCAL_LABEL_PREFIX "switch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  LOCAL_LABEL_PREFIX "switch_7_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #7"                        "\n\t"         \
+  "b.ne " LOCAL_LABEL_PREFIX "switch_unexpected%=_" STRING(__LINE__)  "\n\t"         \
+  codeIf7                                         "\n\t"         \
+  "b    " LOCAL_LABEL_PREFIX "switch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  LOCAL_LABEL_PREFIX "switch_unexpected%=_" STRING(__LINE__) ":"   "\n\t"         \
+  PACGA_TRAP                                      "\n\t"         \
+  LOCAL_LABEL_PREFIX "switch_end_%=_" STRING(__LINE__) ":"         "\n\t"
+
+#endif
+
 class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
   Registers_arm64() = default;
@@ -1889,49 +1970,303 @@ public:
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
-  uint64_t  getIP() const {
+
+  uint64_t getIP() const {
     uint64_t value = _registers.__pc;
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
     // Note the value of the PC was signed to its address in the register state
     // but everyone else expects it to be sign by the SP, so convert on return.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              getSP());
-#endif
-    return value;
-  }
-  void      setIP(uint64_t value) {
+    register uint64_t x17 __asm("x17") = value;
+    register uint64_t x16 __asm("x16") =
+        reinterpret_cast<uint64_t>(&_registers.__pc);
+    register uint64_t x15 __asm("x15") =
+        _registers.__ra_signing_scheme.__second_modifier;
+    register uint64_t x14 __asm("x14") = _registers.__sp;
+    register uint64_t x13 __asm("x13") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+    register uint64_t x12 __asm("x12") = _registers.__ra_signing_scheme.__flags;
+    register uint64_t x11 __asm("x11") =
+        _registers.__ra_signing_scheme.__flags_pac;
+
+    asm(CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY(
+            /*schemeReg=*/x12, /*schemePacReg=*/x11,
+            /*modifierReg=*/x13, /*scratchReg=*/x10)
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(/*schemeReg=*/x12)
+#endif
+        SIGNING_SCHEME_FLAGS_SWITCH(
+            /*schemeReg=*/x12,
+            /*codeIf0=*/"",
+            /*codeIf1=*/"hint 0xc    \n\t"  // autia1716
+                        "mov x16, x14\n\t"
+                        "hint 0x8    \n\t", // pacia1716
+            /*codeIf3=*/"hint 0x27   \n\t"  // pacm
+                        "hint 0xc    \n\t"  // autia1716
+                        "mov x16, x14\n\t"
+                        "hint 0x27   \n\t"  // pacm
+                        "hint 0x8    \n\t", // pacia1716
+            /*codeIf5=*/"hint 0xe    \n\t"  // autib1716
+                        "mov x16, x14\n\t"
+                        "hint 0xa    \n\t", // pacib1716
+            /*codeIf7=*/"hint 0x27   \n\t"  // pacm
+                        "hint 0xe    \n\t"  // autib1716
+                        "mov x16, x14\n\t"
+                        "hint 0x27   \n\t"  // pacm
+                        "hint 0xa    \n\t"  // pacib1716
+        )
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(x14), "r"(x13), "r"(x12), "r"(x11)
+    );
+    return x17;
+#else
+    if (_registers.__ra_signing_scheme.__flags != 0)
+      abortCrossRASigningSchemeing();
+    return value;
+#endif
+  }
+
+  void      setIP(uint64_t value) {
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
     // Note the value which was set should have been signed with the SP.
     // We then resign with the slot we are being stored in to so that both SP
     // and LR can't be spoofed at the same time.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)value,
-                                              ptrauth_key_return_address,
-                                              getSP(),
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc);
+    register uint64_t x17 __asm("x17") = value;
+    register uint64_t x16 __asm("x16") = _registers.__sp;
+    register uint64_t x15 __asm("x15") =
+        _registers.__ra_signing_scheme.__second_modifier;
+    register uint64_t x14 __asm("x14") =
+        reinterpret_cast<uint64_t>(&_registers.__pc);
+    register uint64_t x13 __asm("x13") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+    register uint64_t x12 __asm("x12") = _registers.__ra_signing_scheme.__flags;
+    register uint64_t x11 __asm("x11") =
+        _registers.__ra_signing_scheme.__flags_pac;
+
+    asm(CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY(
+            /*schemeReg=*/x12, /*schemePacReg=*/x11, /*modifierReg=*/x13,
+            /*scratchReg=*/x10)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+        CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(/*schemeReg=*/x12)
 #endif
+        SIGNING_SCHEME_FLAGS_SWITCH(
+            /*schemeReg=*/x12,
+            /*codeIf0=*/"",
+            /*codeIf1=*/"hint 0xc    \n\t"  // autia1716
+                        "mov x16, x14\n\t"
+                        "hint 0x8    \n\t", // pacia1716
+            /*codeIf3=*/"hint 0x27   \n\t"  // pacm
+                        "hint 0xc    \n\t"  // autia1716
+                        "mov x16, x14\n\t"
+                        "hint 0x27   \n\t"  // pacm
+                        "hint 0x8    \n\t", // pacia1716
+            /*codeIf5=*/"hint 0xe    \n\t"  // autib1716
+                        "mov x16, x14\n\t"
+                        "hint 0xa    \n\t", // pacib1716
+            /*codeIf7=*/"hint 0x27   \n\t"  // pacm
+                        "hint 0xe    \n\t"  // autib1716
+                        "mov x16, x14\n\t"
+                        "hint 0x27   \n\t"  // pacm
+                        "hint 0xa    \n\t"  // pacib1716
+        )
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(x14), "r"(x13), "r"(x12), "r"(x11)
+    );
+    _registers.__pc = x17;
+#else
+    if (_registers.__ra_signing_scheme.__flags != 0)
+      abortCrossRASigningSchemeing();
     _registers.__pc = value;
+#endif
   }
+
   uint64_t getFP() const { return _registers.__fp; }
   void setFP(uint64_t value) { _registers.__fp = value; }
 
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  // NOTE: For full-fledged PAuth ABIs like Apple's arm64e and Linux's
+  // pauthtest link_reg_t is __ptrauth-qualified. So, LR is re-signed with
+  // link_reg_t signing scheme after it is authenticated with this function.
+  // When just pac-ret is used, link_reg_t is not __ptrauth-qualified and LR
+  // remains unsigned after authentication.
+  // TODO: avoid exposing unsigned LR in absence of full-fledged PAuth ABI.
   void
   loadAndAuthenticateLinkRegister(reg_t inplaceAuthedLinkRegister,
                                   link_reg_t *referenceAuthedLinkRegister) {
-    // If we are in an arm64/arm64e frame, then the PC should have been signed
-    // with the SP
-    *referenceAuthedLinkRegister =
-      (uint64_t)ptrauth_auth_data((void *)inplaceAuthedLinkRegister,
-                                  ptrauth_key_return_address,
-                                  _registers.__sp);
-  }
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+    register reg_t x17 __asm("x17") = inplaceAuthedLinkRegister;
+    register reg_t x16 __asm("x16") = _registers.__sp;
+    register uint64_t x15 __asm("x15") =
+        _registers.__ra_signing_scheme.__second_modifier;
+    register uint64_t x13 __asm("x13") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+    register uint64_t x12 __asm("x12") = _registers.__ra_signing_scheme.__flags;
+    register uint64_t x11 __asm("x11") =
+        _registers.__ra_signing_scheme.__flags_pac;
+
+    asm(CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY(
+            /*schemeReg=*/x12, /*schemePacReg=*/x11, /*modifierReg=*/x13,
+            /*scratchReg=*/x10)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+        CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(/*schemeReg=*/x12)
 #endif
+        SIGNING_SCHEME_FLAGS_SWITCH(
+            /*schemeReg=*/x12,
+            /*codeIf0=*/"",
+            /*codeIf1=*/"hint 0xc \n\t", // autia1716
+            /*codeIf3=*/"hint 0x27\n\t"  // pacm
+                        "hint 0xc \n\t", // autia1716
+            /*codeIf5=*/"hint 0xe \n\t", // autib1716
+            /*codeIf7=*/"hint 0x27\n\t"  // pacm
+                        "hint 0xe \n\t"  // autib1716
+        )
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(x13), "r"(x12), "r"(x11)
+    );
+    *referenceAuthedLinkRegister = x17;
+#else
+    if (_registers.__ra_signing_scheme.__flags != 0)
+      abortCrossRASigningSchemeing();
+    *referenceAuthedLinkRegister = inplaceAuthedLinkRegister;
+#endif
+  }
+
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  void setRASigningScheme(uint64_t raSignState,
+                                   bool isRASigningSchemeedWithBKey,
+                                   uint64_t secondModifier) {
+    register uint64_t x16 __asm("x16") =
+        raSignState + (isRASigningSchemeedWithBKey ? 4 : 0);
+    register uint64_t x17 __asm("x17") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+    register uint64_t x15 __asm("x15") = secondModifier;
+
+    asm(
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+        CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(/*schemeReg=*/x16)
+#endif
+        SIGNING_SCHEME_FLAGS_SWITCH(
+            /*schemeReg=*/x16,
+            /*codeIf0=*/"cbnz  x15, " LOCAL_LABEL_PREFIX "setscheme_unexpected%=\n\t",
+            /*codeIf1=*/"cbnz  x15, " LOCAL_LABEL_PREFIX "setscheme_unexpected%=\n\t",
+            /*codeIf3=*/"cbz   x15, " LOCAL_LABEL_PREFIX "setscheme_unexpected%=\n\t",
+            /*codeIf5=*/"cbnz  x15, " LOCAL_LABEL_PREFIX "setscheme_unexpected%=\n\t",
+            /*codeIf7=*/"cbz   x15, " LOCAL_LABEL_PREFIX "setscheme_unexpected%=\n\t"
+            )
+        "b " LOCAL_LABEL_PREFIX "setscheme_ok%=       \n\t"
+        LOCAL_LABEL_PREFIX "setscheme_unexpected%=:\n\t"
+        PACGA_TRAP               "\n\t"
+        LOCAL_LABEL_PREFIX "setscheme_ok%=:        \n\t"
+        "str x16, [x17, #0]       \n\t"
+        RUN_IF_PAUTH_FEATURE_PRESENT(
+            /*scratchReg=*/x14,
+            ".arch armv8.3-a      \n\t"
+            ".arch_extension pauth\n\t"
+            "pacga x16, x16, x17  \n\t"
+            "str   x16, [x17, #8] \n\t"
+            )
+        "str   x15, [x17, #16]\n\t"
+        :
+        : "r"(x17), "r"(x16), "r"(x15)
+        );
+  }
+#endif // defined(_LIBUNWIND_IS_NATIVE_ONLY)
 
 private:
+#if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  void abortCrossRASigningSchemeing() const {
+    // We should never go here since non-null RA signed state is either set
+    // by architecture-specific __unw_getcontext or by stepWithDwarf which
+    // already contains a corresponding check and should have already
+    // emitted the UNW_ECROSSRASIGNING error.
+    _LIBUNWIND_ABORT("UNW_ECROSSRASIGNING");
+  }
+#else
+  void setZeroSigningScheme() {
+    register uint64_t x17 __asm("x17") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+
+    asm(// Ensure that second modifier is zero
+        "ldr x16, [x17, #16]    \n\t"
+        "cbz x16, " LOCAL_LABEL_PREFIX "setzero_ok%=\n\t"
+        PACGA_TRAP             "\n\t"
+        LOCAL_LABEL_PREFIX "setzero_ok%=:        \n\t"
+        // Assign zero to signing scheme flags field
+        "str xzr, [x17, #0]     \n\t"
+        // Compute PAC for signing scheme flags field
+        RUN_IF_PAUTH_FEATURE_PRESENT(
+            /*scratchReg=*/x14,
+            ".arch armv8.3-a      \n\t"
+            ".arch_extension pauth\n\t"
+            "pacga x16, xzr, x17  \n\t"
+            "str   x16, [x17, #8] \n\t"
+        )
+        :
+        : "r"(x17)
+    );
+  }
+
+  void recomputeSigningSchemeFlagsPAC(const uint8_t *oldModifier) {
+    register uint64_t x17 __asm("x17") =
+        reinterpret_cast<uint64_t>(oldModifier);
+    register uint64_t x16 __asm("x16") = _registers.__ra_signing_scheme.__flags;
+    register uint64_t x15 __asm("x15") =
+        _registers.__ra_signing_scheme.__flags_pac;
+    register uint64_t x14 __asm("x14") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+    asm(CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY(
+            /*schemeReg=*/x16, /*schemePacReg=*/x15,
+            /*modifierReg=*/x17, /*scratchReg=*/x13)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+        CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(/*schemeReg=*/x16)
+#endif
+        RUN_IF_PAUTH_FEATURE_PRESENT(
+            /*scratchReg=*/x13,
+            ".arch armv8.3-a      \n\t"
+            ".arch_extension pauth\n\t"
+            "pacga x16, x16, x14  \n\t"
+            "str   x16, [x14, #8] \n\t"
+        )
+        :
+        : "r"(x17), "r"(x16), "r"(x15), "r"(x14)
+    );
+  }
+
+  // Is PAuth is available, returns signing scheme flags value with embedded
+  // PAC computed with GA key and SP modifier. The PAC computed by PACGA only
+  // occupies most-significant 32 bits of 64-bit value, which are not
+  // overlapping with bits occupied by valid flags values.
+  // If PAuth is not available, just returns signing scheme flags.
+  uint64_t getRASigningSchemeFlags() const {
+    register uint64_t x17 __asm("x17") =
+        reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
+    register uint64_t x16 __asm("x16") = _registers.__ra_signing_scheme.__flags;
+    register uint64_t x15 __asm("x15") =
+        _registers.__ra_signing_scheme.__flags_pac;
+    register uint64_t x14 __asm("x14") = _registers.__sp;
+
+    // TODO: reuse code from CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY macro.
+    asm(
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+        CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(/*schemeReg=*/x16)
+#endif
+        RUN_IF_PAUTH_FEATURE_PRESENT(
+            /*scratchReg=*/x13,
+            ".arch armv8.3-a                \n\t"
+            ".arch_extension pauth          \n\t"
+            "pacga x17, x16, x17            \n\t"
+            "cmp   x17, x15                 \n\t"
+            "b.eq  " LOCAL_LABEL_PREFIX "get_ra_scheme_success%=\n\t"
+            PACGA_TRAP                     "\n\t"
+            LOCAL_LABEL_PREFIX "get_ra_scheme_success%=:     \n\t"
+            "pacga x14, x16, x14            \n\t"
+            "orr   x16, x14, x16            \n\t"
+        )
+        : "+r"(x16)
+        : "r"(x17), "r"(x15), "r"(x14));
+    return x16;
+  }
+#endif // !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+
   uint64_t lazyGetVG() const;
 
   void zaDisable() const {
@@ -1957,7 +2292,25 @@ private:
     uint64_t __lr = 0;            // Link register x30
     uint64_t __sp = 0;            // Stack pointer x31
     uint64_t __pc = 0;            // Program counter
-    uint64_t __ra_sign_state = 0; // RA sign state register
+    struct RASigningScheme {
+      // Bitmask for RA signing parameters:
+      // - bit 0: is RA signed;
+      // - bit 1: is RA signed with second modifier;
+      // - bit 2: is RA signed with B key.
+      // Valid values: 0, 1, 3, 5, 7. Note that it does not directly
+      // correspond to any physical or Dwarf registers.
+      uint64_t __flags = 0;
+
+      // Pointer authentication code for the `__flags` value computed with GA
+      // key (if `pacga` instruction is available) and address diversity. It is
+      // crucial to check integrity of `__flags` since the signing scheme is
+      // defined at runtime and attacker can substitute both the pointer and the
+      // signing scheme.
+      uint64_t __flags_pac = 0;
+
+      // Additional modifier used for RA signing with FEAT_PAuth_LR.
+      uint64_t __second_modifier = 0;
+    } __ra_signing_scheme;
   };
 
   struct Misc {
@@ -1983,14 +2336,13 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   static_assert((check_fit<Registers_arm64, unw_context_t>::does_fit),
                 "arm64 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
-  static_assert(sizeof(GPRs) == 0x110,
-                "expected VFP registers to be at offset 272");
+  static_assert(sizeof(GPRs) == 0x120,
+                "expected VFP registers to be at offset 288");
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
   _misc_registers.__vg = 0;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   // We have to do some pointer authentication fixups after this copy,
   // and as part of that we need to load the source pc without
   // authenticating so that we maintain the signature for the resigning
@@ -1998,8 +2350,11 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   uint64_t pcRegister = 0;
   memmove(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
           sizeof(pcRegister));
-  setIP(pcRegister);
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  recomputeSigningSchemeFlagsPAC((const uint8_t *)registers +
+                                 offsetof(GPRs, __ra_signing_scheme.__flags));
 #endif
+  setIP(pcRegister);
 }
 
 inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
@@ -2009,6 +2364,10 @@ inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
 inline Registers_arm64 &
 Registers_arm64::operator=(const Registers_arm64 &other) {
   memmove(static_cast<void *>(this), &other, sizeof(*this));
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  recomputeSigningSchemeFlagsPAC(
+      (const uint8_t *)&other._registers.__ra_signing_scheme.__flags);
+#endif
   // We perform this step to ensure that we correctly authenticate and re-sign
   // the pc after the bitwise copy.
   setIP(other.getIP());
@@ -2020,12 +2379,20 @@ inline bool Registers_arm64::validRegister(int regNum) const {
     return true;
   if (regNum == UNW_REG_SP)
     return true;
+  // UNW_AARCH64_RA_SIGN_STATE is a Dwarf pseudo-register and is not stored in
+  // the context struct.
+  if (regNum == UNW_AARCH64_RA_SIGN_STATE)
+    return false;
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER)
+    return true;
+  if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS)
+    return true;
+#endif
   if (regNum < 0)
     return false;
   if (regNum > 95)
     return false;
-  if (regNum == UNW_AARCH64_RA_SIGN_STATE)
-    return true;
   if (regNum == UNW_AARCH64_VG)
     return true;
   if ((regNum > 32) && (regNum < 64))
@@ -2052,8 +2419,12 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
     return getIP();
   if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     return _registers.__sp;
-  if (regNum == UNW_AARCH64_RA_SIGN_STATE)
-    return _registers.__ra_sign_state;
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER)
+    return _registers.__ra_signing_scheme.__second_modifier;
+  if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS)
+    return getRASigningSchemeFlags();
+#endif
   if (regNum == UNW_AARCH64_FP)
     return getFP();
   if (regNum == UNW_AARCH64_LR)
@@ -2070,8 +2441,21 @@ inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
     setIP(value);
   else if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     _registers.__sp = value;
-  else if (regNum == UNW_AARCH64_RA_SIGN_STATE)
-    _registers.__ra_sign_state = value;
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  else if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER ||
+           regNum == UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS)
+    _LIBUNWIND_ABORT("Cannot change signing scheme for PAuth-enabled ABI");
+#else
+  else if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER) {
+    assert(value == 0 && "Expect value 0 when called from __unw_set_reg");
+    _registers.__ra_signing_scheme.__second_modifier = 0;
+  } else if (regNum == UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS) {
+    assert(value == 0 && "Expect value 0 when called from __unw_set_reg");
+    setZeroSigningScheme();
+  }
+#endif
+#endif
   else if (regNum == UNW_AARCH64_FP)
     setFP(value);
   else if (regNum == UNW_AARCH64_LR)
@@ -2254,6 +2638,18 @@ inline v128 Registers_arm64::getVectorRegister(int) const {
 inline void Registers_arm64::setVectorRegister(int, v128) {
   _LIBUNWIND_ABORT("no arm64 vector register support yet");
 }
+
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+#undef SIGNING_SCHEME_FLAGS_SWITCH
+#undef CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI
+#undef CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY
+#undef PACGA_TRAP
+#undef RUN_IF_PAUTH_FEATURE_PRESENT
+#undef LOCAL_LABEL_PREFIX
+#undef STRING
+#undef STRING_IMPL
+#endif
+
 #endif // _LIBUNWIND_TARGET_AARCH64
 
 #if defined(_LIBUNWIND_TARGET_ARM)

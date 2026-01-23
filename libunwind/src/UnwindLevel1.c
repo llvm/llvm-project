@@ -615,15 +615,110 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_word_t result;
   __unw_get_reg(cursor, UNW_REG_IP, &result);
 
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-  // If we are in an arm64e frame, then the PC should have been signed with the
-  // sp
+#if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
+    defined(_LIBUNWIND_IS_NATIVE_ONLY) &&                                      \
+    !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
+#ifdef __APPLE__
+#define LOCAL_LABEL_PREFIX "L"
+#else
+#define LOCAL_LABEL_PREFIX ".L"
+#endif
   {
+    unw_word_t raSigningSchemeFlagsWithPAC;
+    __unw_get_reg(cursor, UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS,
+                  &raSigningSchemeFlagsWithPAC);
+    unw_word_t raSigningSchemeFlags =
+        raSigningSchemeFlagsWithPAC & 0x00000000ffffffffull;
+    unw_word_t raSigningSchemeFlagsPAC =
+        raSigningSchemeFlagsWithPAC & 0xffffffff00000000ull;
+
     unw_word_t sp;
     __unw_get_reg(cursor, UNW_REG_SP, &sp);
-    result = (unw_word_t)ptrauth_auth_data((void *)result,
-                                           ptrauth_key_return_address, sp);
+
+    unw_word_t raSigningSchemeSecondModifier;
+    __unw_get_reg(cursor, UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER,
+                  &raSigningSchemeSecondModifier);
+
+    register uint64_t x17 __asm("x17") = result;
+    register uint64_t x16 __asm("x16") = sp;
+    register uint64_t x15 __asm("x15") = raSigningSchemeSecondModifier;
+    register uint64_t x14 __asm("x14") = raSigningSchemeFlags;
+    register uint64_t x13 __asm("x13") = raSigningSchemeFlagsPAC;
+
+    // TODO: make similar code from Registers.hpp reusable and adopt it here.
+    __asm__(
+        // Check if PAuth feature is available. See also
+        // RUN_IF_PAUTH_FEATURE_PRESENT in Registers.hpp
+        "mrs  x12, ID_AA64ISAR1_EL1 \n\t"
+        "lsr  x12, x12, #24         \n\t"
+        "ands x12, x12, #255        \n\t"
+        "cbnz x12, " LOCAL_LABEL_PREFIX "check_pac_%=   \n\t"
+        "mrs  x12, ID_AA64ISAR2_EL1 \n\t"
+        "lsr  x12, x12, #8          \n\t"
+        "ands x12, x12, #15         \n\t"
+        "cbnz x12, " LOCAL_LABEL_PREFIX "check_pac_%=   \n\t"
+        "b " LOCAL_LABEL_PREFIX "no_pauth_%=            \n\t"
+        LOCAL_LABEL_PREFIX "check_pac_%=:            \n\t"
+
+        // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY in Registers.hpp.
+        ".arch armv8.3-a         \n\t"
+        ".arch_extension pauth   \n\t"
+        "pacga x12, x14, x16     \n\t"
+        "cmp   x12, x13          \n\t"
+        "b.eq  " LOCAL_LABEL_PREFIX "pacga_success_%=\n\t"
+        "brk   #0xc474           \n\t"
+        LOCAL_LABEL_PREFIX "pacga_success_%=:     \n\t"
+        LOCAL_LABEL_PREFIX "no_pauth_%=:          \n\t"
+
+        // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI
+        // in Registers.hpp.
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+        "cmp   x14, 5               \n\t"
+        "b.eq  " LOCAL_LABEL_PREFIX "pauthabi_success_%=\n\t"
+        "brk   #0xc474              \n\t"
+        LOCAL_LABEL_PREFIX "pauthabi_success_%=:     \n\t"
+#endif
+
+        // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
+        "cmp   x14, #0        \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_1_%=  \n\t"
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
+
+        LOCAL_LABEL_PREFIX "switch_1_%=:       \n\t"
+        "cmp   x14, #1        \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_3_%=  \n\t"
+        "hint 0xc             \n\t" // autia1716
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
+
+        LOCAL_LABEL_PREFIX "switch_3_%=:       \n\t"
+        "cmp   x14, #3        \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_5_%=  \n\t"
+        "hint 0x27            \n\t" // pacm
+        "hint 0xc             \n\t" // autia1716
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
+
+        LOCAL_LABEL_PREFIX "switch_5_%=:       \n\t"
+        "cmp   x14, #5        \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_7_%=  \n\t"
+        "hint 0xe             \n\t" // autib1716
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
+
+        LOCAL_LABEL_PREFIX "switch_7_%=:       \n\t"
+        "cmp   x14, #7        \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_unexpected_%=\n\t"
+        "hint 0x27            \n\t" // pacm
+        "hint 0xe             \n\t" // autib1716
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
+
+        LOCAL_LABEL_PREFIX "switch_unexpected_%=:\n\t"
+        "brk   #0xc474          \n\t"
+
+        LOCAL_LABEL_PREFIX "switch_end_%=:\n\t"
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(x14), "r"(x13));
+    result = x17;
   }
+#undef LOCAL_LABEL_PREFIX
 #endif
 
   _LIBUNWIND_TRACE_API("_Unwind_GetIP(context=%p) => 0x%" PRIxPTR,
