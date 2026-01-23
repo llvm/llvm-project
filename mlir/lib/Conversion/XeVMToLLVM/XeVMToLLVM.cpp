@@ -290,7 +290,7 @@ static LLVM::CallOp createDeviceFunctionCall(
     ArrayRef<Type> argTypes, ArrayRef<Value> args,
     mlir::ArrayRef<std::pair<unsigned, mlir::StringRef>> paramAttrs,
     LLVMFuncAttributeOptions funcAttributeOptions, Operation *op) {
-  auto moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
+  auto *moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
   assert(moduleOp && "Expecting module");
   Location loc = op->getLoc();
 

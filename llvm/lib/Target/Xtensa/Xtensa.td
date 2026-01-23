@@ -44,6 +44,8 @@ include "XtensaCallingConv.td"
 
 include "XtensaInstrInfo.td"
 
+defm : RemapAllTargetPseudoPointerOperands<AR>;
+
 def XtensaInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

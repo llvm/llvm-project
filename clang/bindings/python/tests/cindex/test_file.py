@@ -1,9 +1,7 @@
 import os
 
-from clang.cindex import Config, File, Index, TranslationUnit
+from clang.cindex import File, Index, TranslationUnit
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
 

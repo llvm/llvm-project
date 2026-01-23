@@ -17,7 +17,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>       
 // CHECK: gpu.return
 // CHECK: }
-// CHECK: fir.global external @_QPdynshared__shared_mem {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
+// CHECK: fir.global external @_QPdynshared__shared_mem__ {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
 
 // -----
 
@@ -43,15 +43,20 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: gpu.func @_QPshared_static()
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 {bindc_name = "a", uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>      
-// CHECK: cuf.shared_memory[%c4{{.*}} : i32] i32 {bindc_name = "b", uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory[%c8{{.*}} : i32] i32 {bindc_name = "c", uniq_name = "_QFshared_staticEc"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory[%c12{{.*}} : i32] i32 {bindc_name = "d", uniq_name = "_QFshared_staticEd"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory[%c16{{.*}} : i32] i64 {bindc_name = "e", uniq_name = "_QFshared_staticEe"} -> !fir.ref<i64>
-// CHECK: cuf.shared_memory[%c24{{.*}} : i32] f32 {bindc_name = "r", uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "a", isStatic, uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>      
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "b", isStatic, uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "c", isStatic, uniq_name = "_QFshared_staticEc"} -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "d", isStatic, uniq_name = "_QFshared_staticEd"} -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i64 align 8 {bindc_name = "e", isStatic, uniq_name = "_QFshared_staticEe"} -> !fir.ref<i64>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] f32 align 4 {bindc_name = "r", isStatic, uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
 // CHECK: gpu.return
 // CHECK: }
-// CHECK: fir.global internal @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<28xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__a(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__b(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__c(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__d(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__e(dense<0> : vector<8xi8>) {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<8xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__r(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
 // CHECK: }
 // CHECK: }
 
@@ -159,4 +164,4 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf64>, %{{.*}} : index {bindc_name = "dmasks", uniq_name = "_QMmtestsFtestanyEdmasks"} -> !fir.ref<!fir.array<?xf64>>
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index {bindc_name = "smasks", uniq_name = "_QMmtestsFtestanyEsmasks"} -> !fir.ref<!fir.array<?xf32>>
 
-// CHECK: fir.global external @_QMmtestsPtestany__shared_mem {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
+// CHECK: fir.global external @_QMmtestsPtestany__shared_mem__ {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>

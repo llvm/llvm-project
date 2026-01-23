@@ -296,7 +296,7 @@ public:
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     FPMathOperator *FPBinOp, VPIRValue *Start,
                                      VPValue *Current, VPValue *Step,
                                      const Twine &Name = "") {
     return tryInsertInstruction(
@@ -319,6 +319,17 @@ public:
         ResultTy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits()
             ? Instruction::Trunc
             : Instruction::ZExt;
+    return createScalarCast(CastOp, Op, ResultTy, DL);
+  }
+
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
+                                   DebugLoc DL) {
+    if (ResultTy == SrcTy)
+      return Op;
+    Instruction::CastOps CastOp =
+        ResultTy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits()
+            ? Instruction::Trunc
+            : Instruction::SExt;
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
@@ -566,7 +577,7 @@ public:
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.
   VectorizationFactor
-  selectEpilogueVectorizationFactor(const ElementCount MaxVF, unsigned IC);
+  selectEpilogueVectorizationFactor(const ElementCount MainLoopVF, unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
@@ -620,14 +631,13 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  // Adjust the recipes for reductions. For in-loop reductions the chain of
-  // instructions leading from the loop exit instr to the phi need to be
-  // converted to reductions, with one operand being vector and the other being
-  // the scalar reduction chain. For other reductions, a select is introduced
-  // between the phi and users outside the vector region when folding the tail.
-  void adjustRecipesForReductions(VPlanPtr &Plan,
-                                  VPRecipeBuilder &RecipeBuilder,
-                                  ElementCount MinVF);
+  /// Add recipes to compute the final reduction result (ComputeFindIVResult,
+  /// ComputeAnyOfResult, ComputeReductionResult depending on the reduction) in
+  /// the middle block. Selects are introduced for reductions between the phi
+  /// and users outside the vector region when folding the tail.
+  void addReductionResultComputation(VPlanPtr &Plan,
+                                     VPRecipeBuilder &RecipeBuilder,
+                                     ElementCount MinVF);
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

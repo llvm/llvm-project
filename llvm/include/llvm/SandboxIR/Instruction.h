@@ -1901,8 +1901,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    ConstT *getCaseValue() const;
-    BlockT *getCaseSuccessor() const;
+    LLVM_ABI_FOR_TEST ConstT *getCaseValue() const;
+    LLVM_ABI_FOR_TEST BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();

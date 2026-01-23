@@ -72,6 +72,26 @@ def testBlockCreation():
 
         assert len(successor_block.successors) == 0
 
+        # Same checks but using structural pattern matching.
+        match entry_block:
+            case Block(
+                predecessors=[],
+                successors=[
+                    Block(
+                        predecessors=[matched_entry_block],
+                        successors=[
+                            Block(predecessors=[matched_middle_block], successors=[]),
+                        ],
+                    ),
+                ],
+            ) if (
+                entry_block == matched_entry_block
+                and middle_block == matched_middle_block
+            ):
+                assert True
+            case _:
+                assert False
+
 
 # CHECK-LABEL: TEST: testBlockCreationArgLocs
 @run

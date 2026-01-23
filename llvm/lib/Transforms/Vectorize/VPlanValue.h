@@ -20,65 +20,50 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 // Forward declarations.
 class raw_ostream;
+class Type;
 class Value;
 class VPDef;
 struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPInterleaveBase;
 class VPPhiAccessors;
 struct VPRegionValue;
 class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
-/// coming from the input IR and instructions which VPlan will generate if
-/// executed.
+/// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInterleaveBase;
   friend class VPlan;
-  friend class VPExpressionRecipe;
   friend struct VPRegionValue;
+  friend struct VPIRValue;
+  friend struct VPSymbolicValue;
+  friend class VPRecipeValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
 
-protected:
   /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
-  /// Pointer to the VPDef that defines this VPValue, or VPRegionBlock for
-  /// VPRegionValue. If it is nullptr, the VPValue is not defined by any recipe
-  /// or region in VPlan, i.e. is a live-in.
-  union {
-    VPDef *Def;
-    VPRegionBlock *DefiningRegion;
-  };
-
-  VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
-
-  /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
-  /// Create a VPValue for a \p Def which is a subclass of VPValue.
-  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
-  /// Create a VPValue for a \p Def which defines multiple values.
-  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
+  VPValue(const unsigned char SC, Value *UV = nullptr)
+      : SubclassID(SC), UnderlyingVal(UV) {}
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -91,12 +76,15 @@ public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() const { return UnderlyingVal; }
 
+  /// Return the underlying IR value for a VPIRValue.
+  Value *getLiveInIRValue() const;
+
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPValueSC, /// A generic VPValue, like live-in values or defined by a recipe
-               /// that defines multiple values.
-    VPVRecipeSC,     /// A VPValue sub-class that is a VPRecipeBase.
+    VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
+    VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
+    VPVRecipeValueSC, /// A VPValue defined by a recipe.
     VPRegionValueSC, /// A VPValue sub-class that is defined by a region, like
                      /// the canonical IV of a loop region.
   };
@@ -104,7 +92,9 @@ public:
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
-  virtual ~VPValue();
+  virtual ~VPValue() {
+    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+  }
 
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
@@ -186,20 +176,6 @@ public:
            (SubclassID == VPValueSC && getDefiningRecipe());
   }
 
-  /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
-  bool isLiveIn() const {
-    return SubclassID == VPValueSC && !getDefiningRecipe();
-  }
-
-  /// Returns the underlying IR value, if this VPValue is defined outside the
-  /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
-  /// inside a VPlan.
-  Value *getLiveInIRValue() const {
-    assert(isLiveIn() &&
-           "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
-    return getUnderlyingValue();
-  }
-
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
@@ -212,6 +188,8 @@ public:
 
 /// VPValues defined by a VPRegionBlock, like the canonical IV.
 struct VPRegionValue : public VPValue {
+  VPRegionBlock *DefiningRegion;
+
   VPRegionValue(VPRegionBlock *Region) : VPValue(VPValue::VPRegionValueSC) {
     DefiningRegion = Region;
   }
@@ -231,6 +209,73 @@ typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
 LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
                                           const VPRecipeBase &R);
+
+/// A VPValue representing a live-in from the input IR or a constant. It wraps
+/// an underlying IR Value.
+struct VPIRValue : public VPValue {
+  VPIRValue(Value *UV) : VPValue(VPVIRValueSC, UV) {
+    assert(UV && "VPIRValue requires an underlying IR value");
+  }
+
+  /// Returns the underlying IR value.
+  Value *getValue() const { return getUnderlyingValue(); }
+
+  /// Returns the type of the underlying IR value.
+  Type *getType() const;
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVIRValueSC;
+  }
+};
+
+/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying constant.
+struct VPConstantInt : public VPIRValue {
+  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+
+  static bool classof(const VPValue *V) {
+    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+  }
+
+  bool isOne() const { return getAPInt().isOne(); }
+
+  bool isZero() const { return getAPInt().isZero(); }
+
+  const APInt &getAPInt() const {
+    return cast<ConstantInt>(getValue())->getValue();
+  }
+
+  unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
+
+  uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
+};
+
+/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
+/// VFxUF.
+struct VPSymbolicValue : public VPValue {
+  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr) {}
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVSymbolicSC;
+  }
+};
+
+/// A VPValue defined by a recipe that produces one or more values.
+class VPRecipeValue : public VPValue {
+  friend class VPValue;
+  friend class VPDef;
+  /// Pointer to the VPDef that defines this VPValue.
+  VPDef *Def;
+
+public:
+  LLVM_ABI_FOR_TEST VPRecipeValue(VPDef *Def, Value *UV = nullptr);
+
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVRecipeValueSC;
+  }
+};
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -339,15 +384,16 @@ public:
 /// from VPDef before VPValue.
 class VPDef {
   friend class VPValue;
+  friend class VPRecipeValue;
 
   /// Subclass identifier (for isa/dyn_cast).
   const unsigned char SubclassID;
 
   /// The VPValues defined by this VPDef.
-  TinyPtrVector<VPValue *> DefinedValues;
+  TinyPtrVector<VPRecipeValue *> DefinedValues;
 
   /// Add \p V as a defined value by this VPDef.
-  void addDefinedValue(VPValue *V) {
+  void addDefinedValue(VPRecipeValue *V) {
     assert(V->Def == this &&
            "can only add VPValue already linked with this VPDef");
     DefinedValues.push_back(V);
@@ -355,7 +401,7 @@ class VPDef {
 
   /// Remove \p V from the values defined by this VPDef. \p V must be a defined
   /// value of this VPDef.
-  void removeDefinedValue(VPValue *V) {
+  void removeDefinedValue(VPRecipeValue *V) {
     assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
@@ -379,7 +425,6 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
@@ -394,7 +439,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
@@ -419,12 +463,11 @@ public:
   VPDef(const unsigned char SC) : SubclassID(SC) {}
 
   virtual ~VPDef() {
-    for (VPValue *D : make_early_inc_range(DefinedValues)) {
+    for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->Def == this &&
              "all defined VPValues should point to the containing VPDef");
       assert(D->getNumUsers() == 0 &&
              "all defined VPValues should have no more users");
-      D->Def = nullptr;
       delete D;
     }
   }
@@ -453,9 +496,9 @@ public:
   }
 
   /// Returns an ArrayRef of the values defined by the VPDef.
-  ArrayRef<VPValue *> definedValues() { return DefinedValues; }
+  ArrayRef<VPRecipeValue *> definedValues() { return DefinedValues; }
   /// Returns an ArrayRef of the values defined by the VPDef.
-  ArrayRef<VPValue *> definedValues() const { return DefinedValues; }
+  ArrayRef<VPRecipeValue *> definedValues() const { return DefinedValues; }
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }

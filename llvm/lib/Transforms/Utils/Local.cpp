@@ -2961,6 +2961,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
         break;
+      case LLVMContext::MD_nofpclass:
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+          K->setMetadata(Kind, MDNode::getMostGenericNoFPClass(JMD, KMD));
+        break;
       case LLVMContext::MD_fpmath:
         if (!AAOnly)
           K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
@@ -3148,6 +3152,14 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
 
     case LLVMContext::MD_range:
       copyRangeMetadata(DL, Source, N, Dest);
+      break;
+
+    case LLVMContext::MD_nofpclass:
+      // This only applies if the floating-point type interpretation. This
+      // should handle degenerate cases like casting between a scalar and single
+      // element vector.
+      if (NewType->getScalarType() == Source.getType()->getScalarType())
+        Dest.setMetadata(ID, N);
       break;
     }
   }
@@ -3883,6 +3895,12 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // instructions.
   if (Op->isSwiftError())
     return false;
+
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(Op))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
 
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())

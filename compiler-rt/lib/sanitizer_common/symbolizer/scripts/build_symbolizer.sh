@@ -83,7 +83,9 @@ if [[ ! -d ${ZLIB_BUILD} ]]; then
 fi
 
 cd ${ZLIB_BUILD}
-AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
+AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype -fuse-ld=lld" RANLIB=/bin/true ./configure --static
+# TODO: remove this. this is for debugging buildbot problems
+cat configure.log
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.
@@ -107,7 +109,6 @@ if [[ ! -f ${LIBCXX_BUILD}/build.ninja ]]; then
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
-    -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
     -DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" \

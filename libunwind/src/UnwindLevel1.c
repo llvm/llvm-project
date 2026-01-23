@@ -200,7 +200,6 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   }
   return _URC_NO_REASON;
 }
-extern int __unw_step_stage2(unw_cursor_t *);
 
 #if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit gcspop instructions to be used.

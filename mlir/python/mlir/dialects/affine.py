@@ -198,7 +198,7 @@ class AffineIfOp(AffineIfOp):
         results = []
         results.extend(results_)
 
-        super().__init__(results, cond_operands, cond)
+        super().__init__(results, cond_operands, cond, loc=loc, ip=ip)
         self.regions[0].blocks.append(*[])
         if has_else:
             self.regions[1].blocks.append(*[])

@@ -15,5 +15,5 @@ because it cannot generally be enforced to be safe in the language and so
 relies on programmer discipline to get it right.
 
 This rule is part of the `Type safety (Type.8)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-varargs>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-varargs>`_
 profile from the C++ Core Guidelines.

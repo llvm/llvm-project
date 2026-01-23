@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK
 
-declare <2 x i1> @llvm.vp.sub.v2i1(<2 x i1>, <2 x i1>, <2 x i1>, i32)
-
 define <2 x i1> @vsub_vv_v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v2i1:
 ; CHECK:       # %bb.0:
@@ -15,8 +13,6 @@ define <2 x i1> @vsub_vv_v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 zeroex
   %v = call <2 x i1> @llvm.vp.sub.v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 %evl)
   ret <2 x i1> %v
 }
-
-declare <4 x i1> @llvm.vp.sub.v4i1(<4 x i1>, <4 x i1>, <4 x i1>, i32)
 
 define <4 x i1> @vsub_vv_v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v4i1:
@@ -28,8 +24,6 @@ define <4 x i1> @vsub_vv_v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 zeroex
   ret <4 x i1> %v
 }
 
-declare <8 x i1> @llvm.vp.sub.v8i1(<8 x i1>, <8 x i1>, <8 x i1>, i32)
-
 define <8 x i1> @vsub_vv_v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v8i1:
 ; CHECK:       # %bb.0:
@@ -39,8 +33,6 @@ define <8 x i1> @vsub_vv_v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 zeroex
   %v = call <8 x i1> @llvm.vp.sub.v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
-
-declare <16 x i1> @llvm.vp.sub.v16i1(<16 x i1>, <16 x i1>, <16 x i1>, i32)
 
 define <16 x i1> @vsub_vv_v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v16i1:
@@ -52,8 +44,6 @@ define <16 x i1> @vsub_vv_v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 z
   ret <16 x i1> %v
 }
 
-declare <32 x i1> @llvm.vp.sub.v32i1(<32 x i1>, <32 x i1>, <32 x i1>, i32)
-
 define <32 x i1> @vsub_vv_v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v32i1:
 ; CHECK:       # %bb.0:
@@ -63,8 +53,6 @@ define <32 x i1> @vsub_vv_v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 z
   %v = call <32 x i1> @llvm.vp.sub.v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 %evl)
   ret <32 x i1> %v
 }
-
-declare <64 x i1> @llvm.vp.sub.v64i1(<64 x i1>, <64 x i1>, <64 x i1>, i32)
 
 define <64 x i1> @vsub_vv_v64i1(<64 x i1> %va, <64 x i1> %b, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v64i1:

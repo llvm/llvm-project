@@ -282,5 +282,21 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
     return dlwrap::SYM_USE##_Trait::get()(x0, x1, x2, x3, x4, x5, x6, x7, x8,  \
                                           x9, x10);                            \
   }
+#define DLWRAP_INSTANTIATE_12(SYM_DEF, SYM_USE, T)                             \
+  T::ReturnType SYM_DEF(typename T::template arg<0>::type x0,                  \
+                        typename T::template arg<1>::type x1,                  \
+                        typename T::template arg<2>::type x2,                  \
+                        typename T::template arg<3>::type x3,                  \
+                        typename T::template arg<4>::type x4,                  \
+                        typename T::template arg<5>::type x5,                  \
+                        typename T::template arg<6>::type x6,                  \
+                        typename T::template arg<7>::type x7,                  \
+                        typename T::template arg<8>::type x8,                  \
+                        typename T::template arg<9>::type x9,                  \
+                        typename T::template arg<10>::type x10,                \
+                        typename T::template arg<11>::type x11) {              \
+    return dlwrap::SYM_USE##_Trait::get()(x0, x1, x2, x3, x4, x5, x6, x7, x8,  \
+                                          x9, x10, x11);                       \
+  }
 
 #endif // OMPTARGET_SHARED_DLWRAP_H

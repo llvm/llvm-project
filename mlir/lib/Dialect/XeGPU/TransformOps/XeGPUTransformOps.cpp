@@ -528,7 +528,8 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
                               newDescOp.getResult(),
                               getPrefetchOffsets(initForOp.getInductionVar()),
-                              readCacheHint, readCacheHint, readCacheHint);
+                              readCacheHint, readCacheHint, readCacheHint,
+                              /*layout=*/nullptr);
 
   // Insert prefetch op in main loop.
   // Calculate prefetch offset after the init prefetches have been issued.
@@ -539,7 +540,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
                               newDescOp.getResult(),
                               getPrefetchOffsets(prefetchOffset), readCacheHint,
-                              readCacheHint, readCacheHint);
+                              readCacheHint, readCacheHint, /*layout=*/nullptr);
 
   // Unroll the init loop.
   if (failed(loopUnrollFull(initForOp)))

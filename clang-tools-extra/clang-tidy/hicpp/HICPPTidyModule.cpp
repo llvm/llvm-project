@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
@@ -43,6 +42,7 @@
 
 namespace clang::tidy {
 namespace hicpp {
+namespace {
 
 class HICPPModule : public ClangTidyModule {
 public:
@@ -110,6 +110,8 @@ public:
         "hicpp-vararg");
   }
 };
+
+} // namespace
 
 // Register the HICPPModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<HICPPModule>

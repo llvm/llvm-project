@@ -26,8 +26,6 @@
 
 ; These intrinsics require half to be a legal type.
 
-declare iXLen @llvm.lrint.iXLen.f16(half)
-
 define iXLen @lrint_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: lrint_f16:
 ; RV32IZFH:       # %bb.0:
@@ -71,9 +69,6 @@ define iXLen @lrint_f16(half %a) nounwind {
   %1 = call iXLen @llvm.lrint.iXLen.f16(half %a)
   ret iXLen %1
 }
-
-declare i32 @llvm.lround.i32.f16(half)
-declare i64 @llvm.lround.i64.f16(half)
 
 define iXLen @lround_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: lround_f16:

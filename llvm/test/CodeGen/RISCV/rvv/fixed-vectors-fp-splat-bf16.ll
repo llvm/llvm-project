@@ -23,7 +23,7 @@ define <8 x bfloat> @splat_v8bf16(ptr %x, bfloat %y) {
 ;
 ; ZVFBFA-LABEL: splat_v8bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
 ; ZVFBFA-NEXT:    ret
   %a = insertelement <8 x bfloat> poison, bfloat %y, i32 0
@@ -48,7 +48,7 @@ define <16 x bfloat> @splat_16bf16(ptr %x, bfloat %y) {
 ;
 ; ZVFBFA-LABEL: splat_16bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
 ; ZVFBFA-NEXT:    ret
   %a = insertelement <16 x bfloat> poison, bfloat %y, i32 0
@@ -75,7 +75,8 @@ define <64 x bfloat> @splat_64bf16(ptr %x, bfloat %y) {
 ;
 ; ZVFBFA-LABEL: splat_64bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m8, ta, ma
+; ZVFBFA-NEXT:    li a0, 64
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m8, ta, ma
 ; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
 ; ZVFBFA-NEXT:    ret
   %a = insertelement <64 x bfloat> poison, bfloat %y, i32 0
@@ -98,7 +99,7 @@ define <8 x bfloat> @splat_zero_v8bf16(ptr %x) {
 ;
 ; ZVFBFA-LABEL: splat_zero_v8bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFA-NEXT:    vmv.v.i v8, 0
 ; ZVFBFA-NEXT:    ret
   ret <8 x bfloat> splat (bfloat 0.0)
@@ -119,7 +120,7 @@ define <16 x bfloat> @splat_zero_16bf16(ptr %x) {
 ;
 ; ZVFBFA-LABEL: splat_zero_16bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFA-NEXT:    vmv.v.i v8, 0
 ; ZVFBFA-NEXT:    ret
   ret <16 x bfloat> splat (bfloat 0.0)
@@ -143,7 +144,7 @@ define <8 x bfloat> @splat_negzero_v8bf16(ptr %x) {
 ; ZVFBFA-LABEL: splat_negzero_v8bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    lui a0, 1048568
-; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFA-NEXT:    vmv.v.x v8, a0
 ; ZVFBFA-NEXT:    ret
   ret <8 x bfloat> splat (bfloat -0.0)
@@ -167,7 +168,7 @@ define <16 x bfloat> @splat_negzero_16bf16(ptr %x) {
 ; ZVFBFA-LABEL: splat_negzero_16bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    lui a0, 1048568
-; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFA-NEXT:    vmv.v.x v8, a0
 ; ZVFBFA-NEXT:    ret
   ret <16 x bfloat> splat (bfloat -0.0)

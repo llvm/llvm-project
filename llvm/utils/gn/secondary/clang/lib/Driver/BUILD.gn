@@ -29,6 +29,8 @@ static_library("Driver") {
   sources = [
     "Action.cpp",
     "Compilation.cpp",
+    "CreateASTUnitFromArgs.cpp",
+    "CreateInvocationFromArgs.cpp",
     "Distro.cpp",
     "Driver.cpp",
     "Job.cpp",
@@ -76,6 +78,7 @@ static_library("Driver") {
     "ToolChains/Hexagon.cpp",
     "ToolChains/Hurd.cpp",
     "ToolChains/InterfaceStubs.cpp",
+    "ToolChains/LFILinux.cpp",
     "ToolChains/Linux.cpp",
     "ToolChains/MSP430.cpp",
     "ToolChains/MSVC.cpp",

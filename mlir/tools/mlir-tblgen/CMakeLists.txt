@@ -12,6 +12,7 @@ add_tablegen(mlir-tblgen MLIR
   AttrOrTypeFormatGen.cpp
   BytecodeDialectGen.cpp
   DialectGen.cpp
+  DialectInterfacesGen.cpp
   DirectiveCommonGen.cpp
   EnumsGen.cpp
   EnumPythonBindingGen.cpp

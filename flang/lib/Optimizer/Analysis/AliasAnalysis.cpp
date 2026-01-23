@@ -21,11 +21,17 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
 
 #define DEBUG_TYPE "fir-alias-analysis"
+
+llvm::cl::opt<bool> supportCrayPointers(
+    "unsafe-cray-pointers",
+    llvm::cl::desc("Support Cray POINTERs that ALIAS with non-TARGET data"),
+    llvm::cl::init(false));
 
 // Inspect for value-scoped Allocate effects and determine whether
 // 'candidate' is a new allocation. Returns SourceKind::Allocate if a
@@ -60,6 +66,10 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
     attrs.set(fir::AliasAnalysis::Attribute::Pointer);
   if (var.isIntentIn())
     attrs.set(fir::AliasAnalysis::Attribute::IntentIn);
+  if (var.isCrayPointer())
+    attrs.set(fir::AliasAnalysis::Attribute::CrayPointer);
+  if (var.isCrayPointee())
+    attrs.set(fir::AliasAnalysis::Attribute::CrayPointee);
 
   return attrs;
 }
@@ -136,6 +146,18 @@ bool AliasAnalysis::Source::isTarget() const {
 
 bool AliasAnalysis::Source::isPointer() const {
   return attributes.test(Attribute::Pointer);
+}
+
+bool AliasAnalysis::Source::isCrayPointee() const {
+  return attributes.test(Attribute::CrayPointee);
+}
+
+bool AliasAnalysis::Source::isCrayPointer() const {
+  return attributes.test(Attribute::CrayPointer);
+}
+
+bool AliasAnalysis::Source::isCrayPointerOrPointee() const {
+  return isCrayPointer() || isCrayPointee();
 }
 
 bool AliasAnalysis::Source::isDummyArgument() const {
@@ -222,6 +244,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
       rhsSrc.kind >= SourceKind::Indirect) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
     return AliasResult::MayAlias;
+  }
+
+  // Cray pointers/pointees can alias with anything via LOC.
+  if (supportCrayPointers) {
+    if (lhsSrc.isCrayPointerOrPointee() || rhsSrc.isCrayPointerOrPointee()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  aliasing because of Cray pointer/pointee\n");
+      return AliasResult::MayAlias;
+    }
   }
 
   if (lhsSrc.kind == rhsSrc.kind) {
@@ -318,6 +349,12 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // of non-data is included below.
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
       src1->isData() && src2->isData()) {
+    // Two distinct TARGET globals may not alias.
+    if (!src1->isPointer() && !src2->isPointer() &&
+        src1->kind == SourceKind::Global && src2->kind == SourceKind::Global &&
+        src1->origin.u != src2->origin.u) {
+      return AliasResult::NoAlias;
+    }
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
     return AliasResult::MayAlias;
   }
@@ -431,7 +468,8 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
   fir::AliasAnalysis aliasAnalysis;
-  fir::AliasAnalysis::Source varSrc = aliasAnalysis.getSource(var);
+  fir::AliasAnalysis::Source varSrc =
+      aliasAnalysis.getSource(var, /*getLastInstantiationPoint=*/true);
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -461,6 +499,7 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // At that stage, it has been ruled out that local (including the saved ones)
   // and dummy cannot be indirectly accessed in the call.
   if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate &&
+      varSrc.kind != fir::AliasAnalysis::SourceKind::Argument &&
       !varSrc.isDummyArgument()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Global ||
         !isSavedLocal(varSrc))
@@ -486,19 +525,36 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
 /// flow analysis to come 2) Allocate and Free effects are considered
 /// modifying
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
-  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!interface) {
-    if (auto call = llvm::dyn_cast<fir::CallOp>(op))
-      return getCallModRef(call, location);
-    return ModRefResult::getModAndRef();
-  }
+  if (auto call = llvm::dyn_cast<fir::CallOp>(op))
+    return getCallModRef(call, location);
 
   // Build a ModRefResult by merging the behavior of the effects of this
   // operation.
+  ModRefResult result = ModRefResult::getNoModRef();
+  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
+    for (mlir::Region &region : op->getRegions()) {
+      result = result.merge(getModRef(region, location));
+      if (result.isModAndRef())
+        break;
+    }
+
+    // In MLIR, RecursiveMemoryEffects can be combined with
+    // MemoryEffectOpInterface to describe extra effects on top of the
+    // effects of the nested operations.  However, the presence of
+    // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
+    // implies the operation has no other memory effects than the one of its
+    // nested operations.
+    if (!interface)
+      return result;
+  }
+
+  if (!interface || result.isModAndRef())
+    return ModRefResult::getModAndRef();
+
   SmallVector<MemoryEffects::EffectInstance> effects;
   interface.getEffects(effects);
 
-  ModRefResult result = ModRefResult::getNoModRef();
   for (const MemoryEffects::EffectInstance &effect : effects) {
 
     // Check for an alias between the effect and our memory location.
@@ -526,22 +582,6 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
                                       mlir::Value location) {
   ModRefResult result = ModRefResult::getNoModRef();
   for (mlir::Operation &op : region.getOps()) {
-    if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
-      for (mlir::Region &subRegion : op.getRegions()) {
-        result = result.merge(getModRef(subRegion, location));
-        // Fast return is already mod and ref.
-        if (result.isModAndRef())
-          return result;
-      }
-      // In MLIR, RecursiveMemoryEffects can be combined with
-      // MemoryEffectOpInterface to describe extra effects on top of the
-      // effects of the nested operations.  However, the presence of
-      // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
-      // implies the operation has no other memory effects than the one of its
-      // nested operations.
-      if (!mlir::isa<mlir::MemoryEffectOpInterface>(op))
-        continue;
-    }
     result = result.merge(getModRef(&op, location));
     if (result.isModAndRef())
       return result;
@@ -636,6 +676,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             approximateSource |= boxSrc.approximateSource;
             isCapturedInInternalProcedure |=
                 boxSrc.isCapturedInInternalProcedure;
+
+            if (getLastInstantiationPoint) {
+              if (!instantiationPoint)
+                instantiationPoint = boxSrc.origin.instantiationPoint;
+            } else {
+              instantiationPoint = boxSrc.origin.instantiationPoint;
+            }
 
             global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
             if (global) {

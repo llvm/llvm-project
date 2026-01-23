@@ -315,8 +315,8 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
   if (len == 0 || string == nullptr || *string == 0) {
     return;
   } else if (len > 0) {
-    std::string buffer(string, len);
-    ref().AppendMessage(buffer.c_str());
+    const llvm::StringRef buffer(string, static_cast<size_t>(len));
+    ref().AppendMessage(buffer);
   } else
     ref().AppendMessage(string);
 }

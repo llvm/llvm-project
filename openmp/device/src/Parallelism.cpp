@@ -141,9 +141,10 @@ extern "C" {
 }
 
 [[clang::always_inline]] void
-__kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
+__kmpc_parallel_60(IdentTy *ident, int32_t, int32_t if_expr,
                    int32_t num_threads, int proc_bind, void *fn,
-                   void *wrapper_fn, void **args, int64_t nargs) {
+                   void *wrapper_fn, void **args, int64_t nargs,
+                   int32_t nt_strict) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
   // Assert the parallelism level is zero if disabled by the user.
@@ -168,7 +169,7 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   if (mapping::isSPMDMode()) {
     // This was moved to its own routine so it could be called directly
     // in certain situations to avoid resource consumption of unused
-    // logic in parallel_51.
+    // logic in parallel_60.
     __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs);
 
     return;

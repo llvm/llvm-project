@@ -540,43 +540,6 @@ void EhFrameSection::finalizeContents() {
   this->size = off;
 }
 
-// Returns data for .eh_frame_hdr. .eh_frame_hdr is a binary search table
-// to get an FDE from an address to which FDE is applied. This function
-// returns a list of such pairs.
-SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
-  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
-  SmallVector<FdeData, 0> ret;
-
-  uint64_t va = getPartition(ctx).ehFrameHdr->getVA();
-  for (CieRecord *rec : cieRecords) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    for (EhSectionPiece *fde : rec->fdes) {
-      uint64_t pc = getFdePc(buf, fde->outputOff, enc);
-      uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va)) {
-        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
-                 << Twine::utohexstr(pc - va);
-        continue;
-      }
-      ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
-    }
-  }
-
-  // Sort the FDE list by their PC and uniqueify. Usually there is only
-  // one FDE for a PC (i.e. function), but if ICF merges two functions
-  // into one, there can be more than one FDEs pointing to the address.
-  auto less = [](const FdeData &a, const FdeData &b) {
-    return a.pcRel < b.pcRel;
-  };
-  llvm::stable_sort(ret, less);
-  auto eq = [](const FdeData &a, const FdeData &b) {
-    return a.pcRel == b.pcRel;
-  };
-  ret.erase(llvm::unique(ret, eq), ret.end());
-
-  return ret;
-}
-
 static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
   switch (size) {
   case DW_EH_PE_udata2:
@@ -630,14 +593,79 @@ void EhFrameSection::writeTo(uint8_t *buf) {
     }
   }
 
-  // Apply relocations. .eh_frame section contents are not contiguous
-  // in the output buffer, but relocateAlloc() still works because
-  // getOffset() takes care of discontiguous section pieces.
+  // Apply relocations to .eh_frame entries. This includes CIE personality
+  // pointers, FDE initial_location fields, and LSDA pointers.
   for (EhInputSection *s : sections)
     ctx.target->relocateEh(*s, buf);
 
-  if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
-    getPartition(ctx).ehFrameHdr->write();
+  EhFrameHeader *hdr = getPartition(ctx).ehFrameHdr.get();
+  if (!hdr || !hdr->getParent())
+    return;
+
+  // Write the .eh_frame_hdr section, which contains a binary search table of
+  // pointers to FDEs. This must be written after .eh_frame relocation since
+  // the content depends on relocated initial_location fields in FDEs.
+  using FdeData = EhFrameSection::FdeData;
+  SmallVector<FdeData, 0> fdes;
+  uint64_t va = hdr->getVA();
+  for (CieRecord *rec : cieRecords) {
+    uint8_t enc = getFdeEncoding(rec->cie);
+    for (EhSectionPiece *fde : rec->fdes) {
+      uint64_t pc = getFdePc(buf, fde->outputOff, enc);
+      uint64_t fdeVA = getParent()->addr + fde->outputOff;
+      if (!isInt<32>(pc - va)) {
+        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
+                 << Twine::utohexstr(pc - va);
+        continue;
+      }
+      fdes.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
+    }
+  }
+
+  // Sort the FDE list by their PC and uniqueify. Usually there is only
+  // one FDE for a PC (i.e. function), but if ICF merges two functions
+  // into one, there can be more than one FDEs pointing to the address.
+  llvm::stable_sort(fdes, [](const FdeData &a, const FdeData &b) {
+    return a.pcRel < b.pcRel;
+  });
+  fdes.erase(
+      llvm::unique(fdes, [](auto &a, auto &b) { return a.pcRel == b.pcRel; }),
+      fdes.end());
+
+  // Write header.
+  uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
+  hdrBuf[0] = 1;                                  // version
+  hdrBuf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;   // eh_frame_ptr_enc
+  hdrBuf[2] = DW_EH_PE_udata4;                    // fde_count_enc
+  hdrBuf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4; // table_enc
+  write32(ctx, hdrBuf + 4,
+          getParent()->addr - hdr->getVA() - 4); // eh_frame_ptr
+  write32(ctx, hdrBuf + 8, fdes.size());         // fde_count
+  hdrBuf += 12;
+
+  // Write binary search table. Each entry describes the starting PC and the FDE
+  // address.
+  for (FdeData &fde : fdes) {
+    write32(ctx, hdrBuf, fde.pcRel);
+    write32(ctx, hdrBuf + 4, fde.fdeVARel);
+    hdrBuf += 8;
+  }
+}
+
+EhFrameHeader::EhFrameHeader(Ctx &ctx)
+    : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
+
+void EhFrameHeader::writeTo(uint8_t *buf) {
+  // The section content is written during EhFrameSection::writeTo.
+}
+
+size_t EhFrameHeader::getSize() const {
+  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
+  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
+}
+
+bool EhFrameHeader::isNeeded() const {
+  return isLive() && getPartition(ctx).ehFrame->isNeeded();
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -646,7 +674,6 @@ GotSection::GotSection(Ctx &ctx)
   numEntries = ctx.target->gotHeaderEntriesNum;
 }
 
-void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().gotIdx = numEntries++;
@@ -916,7 +943,7 @@ void MipsGotSection::build() {
   // using 32-bit value at the end of 16-bit entries.
   for (FileGot &got : gots) {
     got.relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-      return got.global.count(p.first);
+      return got.global.contains(p.first);
     });
     set_union(got.local16, got.local32);
     got.local32.clear();
@@ -978,7 +1005,7 @@ void MipsGotSection::build() {
   // by subtracting "global" entries in the primary GOT.
   primGot = &gots.front();
   primGot->relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-    return primGot->global.count(p.first);
+    return primGot->global.contains(p.first);
   });
 
   // Calculate indexes for each GOT entry.
@@ -1033,8 +1060,8 @@ void MipsGotSection::build() {
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset, true, *s, 0, R_ABS});
+        ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+            ctx.target->tlsGotRel, *this, offset, *s, ctx.target->symbolicRel);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1128,6 +1155,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   // if we had to do this.
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
+  ctx.target->relocateAlloc(*this, buf);
   for (const FileGot &g : gots) {
     auto write = [&](size_t i, const Symbol *s, int64_t a) {
       uint64_t va = a;
@@ -1157,9 +1185,10 @@ void MipsGotSection::writeTo(uint8_t *buf) {
         write(p.second, p.first, 0);
     for (const std::pair<Symbol *, size_t> &p : g.relocs)
       write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first,
-            p.first->isPreemptible || ctx.arg.shared ? 0 : -0x7000);
+    for (const std::pair<Symbol *, size_t> &p : g.tls) {
+      if (!p.first->isPreemptible && !ctx.arg.shared)
+        write(p.second, p.first, -0x7000);
+    }
     for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
       if (p.first == nullptr && !ctx.arg.shared)
         write(p.second, nullptr, 1);
@@ -1680,6 +1709,9 @@ void RelocationBaseSection::partitionRels() {
 }
 
 void RelocationBaseSection::finalizeContents() {
+  mergeRels();
+  // Compute DT_RELACOUNT to be used by part.dynamic.
+  partitionRels();
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
@@ -1768,6 +1800,8 @@ void RelrBaseSection::mergeRels() {
     llvm::append_range(relocs, v);
   relocsVec.clear();
 }
+
+void RelrBaseSection::finalizeContents() { mergeRels(); }
 
 template <class ELFT>
 AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(
@@ -3657,51 +3691,6 @@ void GdbIndexSection::writeTo(uint8_t *buf) {
 }
 
 bool GdbIndexSection::isNeeded() const { return !chunks.empty(); }
-
-EhFrameHeader::EhFrameHeader(Ctx &ctx)
-    : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
-
-void EhFrameHeader::writeTo(uint8_t *buf) {
-  // Unlike most sections, the EhFrameHeader section is written while writing
-  // another section, namely EhFrameSection, which calls the write() function
-  // below from its writeTo() function. This is necessary because the contents
-  // of EhFrameHeader depend on the relocated contents of EhFrameSection and we
-  // don't know which order the sections will be written in.
-}
-
-// .eh_frame_hdr contains a binary search table of pointers to FDEs.
-// Each entry of the search table consists of two values,
-// the starting PC from where FDEs covers, and the FDE's address.
-// It is sorted by PC.
-void EhFrameHeader::write() {
-  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
-  using FdeData = EhFrameSection::FdeData;
-  SmallVector<FdeData, 0> fdes = getPartition(ctx).ehFrame->getFdeData();
-
-  buf[0] = 1;
-  buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
-  buf[2] = DW_EH_PE_udata4;
-  buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
-  write32(ctx, buf + 4,
-          getPartition(ctx).ehFrame->getParent()->addr - this->getVA() - 4);
-  write32(ctx, buf + 8, fdes.size());
-  buf += 12;
-
-  for (FdeData &fde : fdes) {
-    write32(ctx, buf, fde.pcRel);
-    write32(ctx, buf + 4, fde.fdeVARel);
-    buf += 8;
-  }
-}
-
-size_t EhFrameHeader::getSize() const {
-  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
-}
-
-bool EhFrameHeader::isNeeded() const {
-  return isLive() && getPartition(ctx).ehFrame->isNeeded();
-}
 
 VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)
     : SyntheticSection(ctx, ".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC,

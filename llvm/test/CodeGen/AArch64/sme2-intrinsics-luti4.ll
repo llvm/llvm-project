@@ -6,8 +6,6 @@ target triple = "aarch64-linux"
 define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>}  @test_luti4_zt_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1) #0 {
 ; CHECK-LABEL: test_luti4_zt_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    luti4 { z0.b - z3.b }, zt0, { z0, z1 }
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.luti4.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1)
@@ -19,13 +17,11 @@ define void @test_multiple_luti4_zt_i8(ptr %ptrA, ptr %ptrB, <vscale x 16 x i8> 
 ; CHECK-LABEL: test_multiple_luti4_zt_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr zt0, [x0]
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    luti4 { z4.b - z7.b }, zt0, { z0, z1 }
-; CHECK-NEXT:    // fake_use: $z4 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z4
 ; CHECK-NEXT:    ldr zt0, [x1]
 ; CHECK-NEXT:    luti4 { z0.b - z3.b }, zt0, { z0, z1 }
-; CHECK-NEXT:    // fake_use: $z0 $z0_z1_z2_z3
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    ret
   tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr %ptrA)
   %res1 = call {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.luti4.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1)
