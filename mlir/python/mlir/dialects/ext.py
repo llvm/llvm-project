@@ -40,6 +40,10 @@ class ConstraintLoweringContext:
         self._cache: Dict[str, ir.Value] = {}
 
     def lower(self, type_) -> ir.Value:
+        """
+        Lower a type hint (e.g. `Any`, `IntegerType[32]`, `IntegerAttr | StringAttr`) into IRDL ops.
+        """
+
         if type(type_) is TypeVar:
             if type_.__name__ in self._cache:
                 return self._cache[type_.__name__]
@@ -58,6 +62,7 @@ class ConstraintLoweringContext:
         elif isinstance(type_, TypeVar):
             return self.lower(type_)
         elif origin and issubclass(origin, ir.Type):
+            # `origin.get` is to construct an instance of MLIR type/attribute.
             t = origin.get(*get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
@@ -71,42 +76,66 @@ class ConstraintLoweringContext:
         raise TypeError(f"unsupported type in constraints: {type_}")
 
 
-# A function to infer ir.Type from type annotation.
-# Returns a callable that returns the inferred ir.Type,
-# or None if the type cannot be inferred.
-# We use callables so that MLIR contexts are not required
-# while calling this function.
 def infer_type(type_) -> Optional[Callable[[], ir.Type]]:
+    """
+    A function to infer ir.Type from type annotation.
+    Returns a callable that returns the inferred ir.Type,
+    or None if the type cannot be inferred.
+    We use callables so that MLIR contexts are not required
+    while calling this function.
+    """
+
     origin = get_origin(type_)
     if origin and issubclass(origin, ir.Type):
+        # `origin.get` is to construct an instance of MLIR type/attribute.
         return lambda: origin.get(*get_args(type_))
     elif isinstance(type_, TypeVar):
         return infer_type(type_.__bound__)
     return None
 
 
+@dataclass
 class FieldDef:
-    """Base class for kinds of fields that can occur in an `Operation`'s definition.""" 
-    pass
+    """
+    Base class for kinds of fields that can occur in an `Operation`'s definition.
+    """
+
+    name: str
+    constraint: Any
+    variadicity: Variadicity
+
+    @staticmethod
+    def from_type_hint(name, type_) -> "FieldDef":
+        variadicity = Variadicity.single
+        if inner := match_optional(type_):
+            variadicity = Variadicity.optional
+            type_ = inner
+        elif get_origin(type_) is Sequence:
+            variadicity = Variadicity.variadic
+            type_ = get_args(type_)[0]
+
+        origin = get_origin(type_)
+        if origin is ir.OpResult:
+            return ResultDef(name, get_args(type_)[0], variadicity)
+        elif origin is ir.Value:
+            return OperandDef(name, get_args(type_)[0], variadicity)
+        elif issubclass(origin or type_, ir.Attribute):
+            return AttributeDef(name, type_, variadicity)
+        raise TypeError(f"unsupported type in operation definition: {type_}")
 
 
 @dataclass
 class OperandDef(FieldDef):
-    constraint: Any
-    variadicity: Variadicity
+    pass
 
 
 @dataclass
 class ResultDef(FieldDef):
-    constraint: Any
-    variadicity: Variadicity
+    pass
 
 
 @dataclass
 class AttributeDef(FieldDef):
-    constraint: Any
-    variadicity: Variadicity
-
     def __post_init__(self):
         if self.variadicity != Variadicity.single:
             raise ValueError("optional attribute is not supported in IRDL")
@@ -146,39 +175,34 @@ def match_optional(type_):
 
 
 class Operation(ir.OpView):
-    @staticmethod
-    def convert_type_to_field_def(type_) -> FieldDef:
-        variadicity = Variadicity.single
-        if inner := match_optional(type_):
-            variadicity = Variadicity.optional
-            type_ = inner
-        elif get_origin(type_) is Sequence:
-            variadicity = Variadicity.variadic
-            type_ = get_args(type_)[0]
+    """
+    Base class of Python-defined operation.
 
-        origin = get_origin(type_)
-        if origin is ir.OpResult:
-            return ResultDef(get_args(type_)[0], variadicity)
-        elif origin is ir.Value:
-            return OperandDef(get_args(type_)[0], variadicity)
-        elif issubclass(origin or type_, ir.Attribute):
-            return AttributeDef(type_, variadicity)
-        raise TypeError(f"unsupported type in operation definition: {type_}")
+    NOTE: Usually you don't need to use it directly.
+    Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
+    """
 
     @classmethod
     def __init_subclass__(cls, *, name: str = None, **kwargs):
+        """
+        This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
+        - generate the method to emit IRDL operations,
+        - generate `__init__` method as an operation builder function,
+        - generate operand, result and attribute accessors
+        """
+
         super().__init_subclass__(**kwargs)
 
         fields = []
-        cls._fields = fields
 
         for base in cls.__bases__:
             if hasattr(base, "_fields"):
                 fields.extend(base._fields)
         for key, value in cls.__annotations__.items():
-            field = Operation.convert_type_to_field_def(value)
-            setattr(field, "name", key)
+            field = FieldDef.from_type_hint(key, value)
             fields.append(field)
+
+        cls._fields = fields
 
         # for subclasses without "name" parameter,
         # just treat them as normal classes
@@ -201,7 +225,7 @@ class Operation(ir.OpView):
 
     @staticmethod
     def _variadicity_to_segment(variadicity: Variadicity) -> int:
-        return { Variadicity.variadic: -1, Variadicity.optional: 0 }.get(variadicity, 1)
+        return {Variadicity.variadic: -1, Variadicity.optional: 0}.get(variadicity, 1)
 
     @staticmethod
     def _generate_segments(
@@ -372,6 +396,10 @@ class Operation(ir.OpView):
 
 
 class Dialect(ir.Dialect):
+    """
+    Base class of a Python-defined dialect.
+    """
+
     @classmethod
     def __init_subclass__(cls, name: str, **kwargs):
         cls.name = name
@@ -400,7 +428,7 @@ class Dialect(ir.Dialect):
 
     @classmethod
     def load(cls) -> None:
-        if hasattr(cls, "mlir_module"):
+        if hasattr(cls, "_mlir_module"):
             raise RuntimeError(f"Dialect {cls.name} is already loaded.")
 
         mlir_module = cls._emit_module()
@@ -416,4 +444,4 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             _cext.register_operation(cls)(op)
 
-        cls.mlir_module = mlir_module
+        cls._mlir_module = mlir_module

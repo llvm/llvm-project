@@ -44,7 +44,7 @@ def testMyInt():
     # CHECK: }
     with Context(), Location.unknown():
         MyInt.load()
-        print(MyInt.mlir_module)
+        print(MyInt._mlir_module)
 
         # CHECK: ['constant', 'add']
         print([i._op_name for i in MyInt.operations])
@@ -210,7 +210,7 @@ def testExtDialect():
     # CHECK: }
     with Context(), Location.unknown():
         Test.load()
-        print(Test.mlir_module)
+        print(Test._mlir_module)
 
         # CHECK: (self, /, a, b, c, d, x, y, *, loc=None, ip=None)
         print(ConstraintOp.__init__.__signature__)
@@ -323,3 +323,18 @@ def testExtDialect():
         print(len(v5.a), len(v5.b))
         # CHECK: 1 2
         print(len(v6.a), len(v6.b))
+
+        # cases to violate constraits
+        module = Module.create()
+        with InsertionPoint(module.body):
+            try:
+                c1 = ConstraintOp(ione, ione, fone, ione, iattr)
+            except TypeError as e:
+                # CHECK: missing a required argument: 'y'
+                print(e)
+
+            try:
+                c2 = ConstraintOp(ione, ione, fone, ione, iattr, fattr, ione)
+            except TypeError as e:
+                # CHECK：too many positional arguments
+                print(e)
