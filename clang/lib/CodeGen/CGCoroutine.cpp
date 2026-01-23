@@ -781,13 +781,11 @@ struct GetReturnObjectManager {
           // Create an active flag (initialize to true) for conditional
           // cleanup. We are not necessarily in a conditional branch here so
           // use a simple temp alloca instead of createCleanupActiveFlag().
-          auto ActiveFlag = CGF.CreateTempAlloca(Builder.getInt1Ty(),
-                                                CharUnits::One(),
-                                                "direct.gro.active");
+          auto ActiveFlag = CGF.CreateTempAlloca(
+              Builder.getInt1Ty(), CharUnits::One(), "direct.gro.active");
           Builder.CreateStore(Builder.getTrue(), ActiveFlag);
-          CGF.pushDestroyAndDeferDeactivation(
-              DtorKind, CGF.ReturnValue,
-              S.getReturnValue()->getType());
+          CGF.pushDestroyAndDeferDeactivation(DtorKind, CGF.ReturnValue,
+                                              S.getReturnValue()->getType());
           CGF.initFullExprCleanupWithFlag(ActiveFlag);
           DirectGroActiveFlag = ActiveFlag;
         }
