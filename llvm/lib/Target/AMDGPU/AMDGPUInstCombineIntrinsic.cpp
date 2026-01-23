@@ -555,7 +555,7 @@ static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
 
 // Return true for sequences of instructions that effectively assign
 // each lane to its thread ID
-bool isThreadID(Value *V) {
+bool isThreadID(const GCNSubtarget *ST, Value *V) {
   // Case 1:
   //   wave32: mbcnt_lo(-1, 0)
   //   wave64: mbcnt_hi(-1, mbcnt_lo(-1, 0))
@@ -565,10 +565,10 @@ bool isThreadID(Value *V) {
   auto W64Pred = m_Intrinsic<Intrinsic::amdgcn_mbcnt_hi>(
       m_ConstantInt(HiMask), m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(
                                  m_ConstantInt(LoMask), m_ConstantInt(Input)));
-  if (match(V, W32Pred) && LoMask->getSExtValue() == -1 &&
+  if (ST->isWave32() && match(V, W32Pred) && LoMask->getSExtValue() == -1 &&
       Input->getZExtValue() == 0)
     return true;
-  if (match(V, W64Pred) && HiMask->getSExtValue() == -1 &&
+  if (ST->isWave64() && match(V, W64Pred) && HiMask->getSExtValue() == -1 &&
       LoMask->getSExtValue() == -1 && Input->getZExtValue() == 0)
     return true;
 
@@ -583,18 +583,24 @@ bool isThreadID(Value *V) {
 
 // Attempt to capture situations where the index argument matches
 // a DPP pattern, and convert to a DPP-based mov
-std::optional<Instruction *> tryWaveShuffleDPP(InstCombiner &IC,
-                                               IntrinsicInst &II) {
+std::optional<Instruction *>
+tryWaveShuffleDPP(const GCNSubtarget *ST, InstCombiner &IC, IntrinsicInst &II) {
   Value *Val = II.getArgOperand(0);
   Value *Idx = II.getArgOperand(1);
   auto &B = IC.Builder;
 
-  // DPP16 Row Share 0: Idx = Tid & Mask where (Mask & 0x1F) = 0x10
+  // DPP16 Row Share 0: Idx = Tid & Mask
+  //   wave32 requires Mask & 0x1F = 0x10
+  //   wave64 requires Mask & 0x3F = 0x30
   Value *Tid;
   ConstantInt *Mask;
   auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
-  if (match(Idx, RowShare0Pred) && isThreadID(Tid) &&
-      (Mask->getZExtValue() & 0x1F) == 0x10) {
+  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
+    if (ST->isWave32() && (Mask->getZExtValue() & 0x1F) != 0x10)
+      return std::nullopt;
+    if (ST->isWave64() && (Mask->getZExtValue() & 0x3F) != 0x30)
+      return std::nullopt;
+
     CallInst *UpdateDPP = B.CreateIntrinsic(
         Intrinsic::amdgcn_update_dpp, Val->getType(),
         {B.getInt32(0), Val, B.getInt32(AMDGPU::DPP::ROW_SHR0), B.getInt32(0xF),
@@ -604,17 +610,23 @@ std::optional<Instruction *> tryWaveShuffleDPP(InstCombiner &IC,
     return IC.replaceInstUsesWith(II, UpdateDPP);
   }
 
-  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | Row where (Mask &
-  // 0x1F) = 0x10
-  ConstantInt *Row;
+  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
+  //   wave32 requires Mask & 0x1F = 0x10
+  //   wave64 requires Mask & 0x3F = 0x30
+  ConstantInt *RowIdx;
   auto RowSharePred =
-      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(Row));
-  if (match(Idx, RowSharePred) && isThreadID(Tid) &&
-      (Mask->getZExtValue() & 0x1F) == 0x10 && Row->getZExtValue() < 15) {
+      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
+  if (match(Idx, RowSharePred) && isThreadID(ST, Tid) &&
+      RowIdx->getZExtValue() < 15 && RowIdx->getZExtValue() > 0) {
+    if (ST->isWave32() && (Mask->getZExtValue() & 0x1F) != 0x10)
+      return std::nullopt;
+    if (ST->isWave64() && (Mask->getZExtValue() & 0x3F) != 0x30)
+      return std::nullopt;
+
     CallInst *UpdateDPP = B.CreateIntrinsic(
         Intrinsic::amdgcn_update_dpp, Val->getType(),
         {B.getInt32(0), Val,
-         B.getInt32(AMDGPU::DPP::ROW_SHR0 | Row->getZExtValue()),
+         B.getInt32(AMDGPU::DPP::ROW_SHR0 | RowIdx->getZExtValue()),
          B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
     UpdateDPP->takeName(&II);
     UpdateDPP->copyMetadata(II);
@@ -622,9 +634,9 @@ std::optional<Instruction *> tryWaveShuffleDPP(InstCombiner &IC,
   }
 
   // DPP16 Row Share 15: Idx = Tid | 0xF
-  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt(Row));
-  if (match(Idx, RowShare15Pred) && isThreadID(Tid) &&
-      Row->getZExtValue() == 15) {
+  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt(RowIdx));
+  if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid) &&
+      RowIdx->getZExtValue() == 15) {
     CallInst *UpdateDPP = B.CreateIntrinsic(
         Intrinsic::amdgcn_update_dpp, Val->getType(),
         {B.getInt32(0), Val, B.getInt32(AMDGPU::DPP::ROW_SHR_LAST),
@@ -1848,7 +1860,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!ST->hasDPP())
       return std::nullopt;
 
-    return tryWaveShuffleDPP(IC, II);
+    return tryWaveShuffleDPP(ST, IC, II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
