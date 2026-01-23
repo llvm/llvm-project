@@ -71,11 +71,11 @@ func.func private @target_features() attributes {
   "target_features" = #llvm.target_features<["+sme", "+sve"]>
 }
 
-
 // CHECK-LABEL: llvm.func @empty_res_attrs()
 func.func @empty_res_attrs() attributes {res_attrs = []} {
   return
 }
+
 // -----
 
 // CHECK-LABEL: llvm.func @private_callee
