@@ -414,6 +414,7 @@ add_entrypoint_object(
     ../sincos.h
   DEPENDS
     libc.src.__support.math.sincos
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
