@@ -10601,6 +10601,7 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
   switch (FromValue.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
   case APValue::Int:
   case APValue::Float:
   case APValue::FixedPoint:

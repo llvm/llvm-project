@@ -8129,6 +8129,7 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
 
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
     llvm_unreachable("Unexpected APValue kind.");
   case APValue::LValue:
   case APValue::MemberPointer:

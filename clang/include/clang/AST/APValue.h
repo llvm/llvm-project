@@ -129,6 +129,15 @@ public:
     None,
     /// This object has an indeterminate value (C++ [basic.indet]).
     Indeterminate,
+
+    /// [defns.erroneous]:
+    /// Erroneous behavior is always the consequence of incorrectprogram code.
+    /// Implementations are allowed, but not required, to diagnose it
+    /// ([intro.compliance.general]). Evaluation of a constant expression
+    /// ([expr.const]) never exhibits behavior specified as erroneous in [intro]
+    /// through [cpp].
+    /// Reading it has erroneous behavior but the value is well-defined.
+    Erroneous,
     Int,
     Float,
     FixedPoint,
@@ -435,11 +444,17 @@ public:
     return Result;
   }
 
+  static APValue ErroneousValue() {
+    APValue Result;
+    Result.Kind = Erroneous;
+    return Result;
+  }
+
   APValue &operator=(const APValue &RHS);
   APValue &operator=(APValue &&RHS);
 
   ~APValue() {
-    if (Kind != None && Kind != Indeterminate)
+    if (Kind != None && Kind != Indeterminate && Kind != Erroneous)
       DestroyDataAndMakeUninit();
   }
 
@@ -462,6 +477,7 @@ public:
 
   bool isAbsent() const { return Kind == None; }
   bool isIndeterminate() const { return Kind == Indeterminate; }
+  bool isErroneous() const { return Kind == Erroneous; }
   bool hasValue() const { return Kind != None && Kind != Indeterminate; }
 
   bool isInt() const { return Kind == Int; }

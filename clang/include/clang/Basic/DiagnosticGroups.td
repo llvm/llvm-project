@@ -982,6 +982,7 @@ def Uninitialized  : DiagGroup<"uninitialized", [UninitializedSometimes,
                                                  UninitializedStaticSelfInit,
                                                  UninitializedConstReference,
                                                  UninitializedConstPointer]>;
+def ErroneousBehavior : DiagGroup<"erroneous-behavior">;
 def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 // #pragma optimize is often used to avoid to work around MSVC codegen bugs or
 // to disable inlining. It's not completely clear what alternative to suggest
