@@ -9,7 +9,6 @@
 
 target triple = "amdgcn-amd-amdhsa"
 
-; Function Attrs: convergent nocallback nofree nounwind willreturn
 declare void @llvm.amdgcn.s.barrier() #0
 
 define amdgpu_kernel void @_test_revertScheduling(i32 %lda, ptr addrspace(1) %infoA.coerce, i32 %add.ptr13.idx, ptr addrspace(3) %add.ptr10, i32 %i0, i1 %cmp59.not, ptr addrspace(3) %arrayidx53, ptr addrspace(3) %arrayidx75.3.6, <2 x float> %f1, float %f2, <2 x float> %f3, <14 x float> %f4) {
@@ -179,10 +178,8 @@ if.end82:                                         ; preds = %for.body71.preheade
   ret void
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #1
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y() #1
 
 attributes #0 = { convergent nocallback nofree nounwind willreturn }
