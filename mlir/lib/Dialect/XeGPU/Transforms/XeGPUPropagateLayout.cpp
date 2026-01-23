@@ -982,9 +982,9 @@ void LayoutInfoPropagation::visitStoreNdOp(
       storeLayout =
           LayoutInfo(xegpu::LayoutAttr::get(dataTy.getContext(), instData));
     else if (layoutKind == LayoutKind::Lane)
-      storeLayout = getSIMTLayoutInfoBlockIO(
-          store.getValueType(), uArch,
-          uArchInstruction->getPackedFormatBitSize());
+      storeLayout =
+          getSIMTLayoutInfoBlockIO(store.getValueType(), uArch,
+                                   uArchInstruction->getPackedFormatBitSize());
     else { // LayoutKind::Subgroup
       auto sgSize = uArch->getSubgroupSize();
       auto numSgOrErr = getNumSg(store, sgSize);
@@ -1281,10 +1281,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     VectorType payloadTy = llvm::cast<VectorType>(operand.getType());
     assert(payloadTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
-    const int subgroupSize = uArch->getSubgroupSize();
-    int instLaneVec =
-        std::min(static_cast<int>(payloadTy.getShape().back()), 16);
-    SmallVector<int> instData = {subgroupSize, instLaneVec};
+    SmallVector<int> instData = {1, uArch->getSubgroupSize()};
     if (layoutKind == LayoutKind::InstData)
       layout = LayoutInfo(
           xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
