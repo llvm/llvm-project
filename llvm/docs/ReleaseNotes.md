@@ -132,6 +132,10 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
+
 Changes to the OCaml bindings
 -----------------------------
 
