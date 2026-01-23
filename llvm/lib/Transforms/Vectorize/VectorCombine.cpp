@@ -2579,6 +2579,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   SmallVector<int> NewMask0(OldMask);
   TargetTransformInfo::ShuffleKind SK0 = TargetTransformInfo::SK_PermuteTwoSrc;
+  TTI::OperandValueInfo Op0Info = TTI.commonOperandInfo(X, Z);
   if (X == Z) {
     llvm::for_each(NewMask0, ConvertToUnary);
     SK0 = TargetTransformInfo::SK_PermuteSingleSrc;
@@ -2587,6 +2588,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   SmallVector<int> NewMask1(OldMask);
   TargetTransformInfo::ShuffleKind SK1 = TargetTransformInfo::SK_PermuteTwoSrc;
+  TTI::OperandValueInfo Op1Info = TTI.commonOperandInfo(Y, W);
   if (Y == W) {
     llvm::for_each(NewMask1, ConvertToUnary);
     SK1 = TargetTransformInfo::SK_PermuteSingleSrc;
@@ -2642,11 +2644,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
                                   CostKind, 0, nullptr, {Y, W});
 
   if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
-    NewCost +=
-        TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy, CostKind);
+    NewCost += TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy,
+                                          CostKind, Op0Info, Op1Info);
   } else {
-    NewCost += TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy,
-                                      ShuffleDstTy, PredLHS, CostKind);
+    NewCost +=
+        TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
+                               PredLHS, CostKind, Op0Info, Op1Info);
   }
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
