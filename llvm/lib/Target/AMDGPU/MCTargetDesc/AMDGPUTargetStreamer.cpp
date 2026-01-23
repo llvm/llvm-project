@@ -515,7 +515,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << '\n';
   }
 
-  if (AMDGPU::isGFX1250Plus(STI))
+  if (isGFX1250Plus(STI))
     PrintField(KD.compute_pgm_rsrc3,
                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,

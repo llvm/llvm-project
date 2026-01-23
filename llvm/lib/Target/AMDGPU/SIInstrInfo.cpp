@@ -11204,7 +11204,7 @@ bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
   if (!isWMMA(MI) && !isSWMMAC(MI))
     return false;
 
-  if (AMDGPU::isGFX1250Plus(ST))
+  if (ST.hasGFX1250Insts())
     return AMDGPU::getWMMAIsXDL(MI.getOpcode());
 
   return true;
