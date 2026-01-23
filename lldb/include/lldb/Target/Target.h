@@ -539,6 +539,12 @@ private:
   /// used for symbol/function lookup before any other context (except for
   /// the module corresponding to the current frame).
   SymbolContextList m_preferred_lookup_contexts;
+
+  /// If true, evaluates the expression without taking into account the
+  /// CV-qualifiers of the scope. E.g., this would permit calling a
+  /// non-const C++ method when stopped in a const-method (which would be
+  /// disallowed by C++ language rules).
+  bool m_ignore_context_qualifierss = false;
 };
 
 // Target

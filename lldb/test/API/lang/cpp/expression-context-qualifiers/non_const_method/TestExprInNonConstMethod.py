@@ -36,6 +36,10 @@ class TestCase(TestBase):
             ],
         )
 
+        options = lldb.SBExpressionOptions()
+        options.SetIgnoreContextQualifiers()
+        self.expect_expr("x = 6.0; x", options=options, result_value="6")
+
         lldbutil.continue_to_source_breakpoint(
             self,
             process,
