@@ -47,6 +47,20 @@ define dso_local i32 @entry() !dbg !14 {
   ret i32 0, !dbg !19
 }
 
+; bar_a will be fully inlined into bar_b.
+define available_externally dso_local void @bar_a() !dbg !20 {
+  ret void
+}
+
+define dso_local i32 @bar_b() !dbg !21 {
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID5:]], i64 1, i32 0, i64 -1), !dbg ![[#DL4:]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID4:]], i64 1, i32 0, i64 -1), !dbg ![[#DL5:]]
+; CHECK-ASM: .pseudoprobe [[#GUID5:]] 1 0 0 bar_b
+; CHECK-ASM: .pseudoprobe [[#GUID4:]] 1 0 0 @ [[#GUID5]]:2 bar_b
+  call void @bar_a(), !dbg !22
+  ret i32 0
+}
+
 
 ; CHECK-IL: ![[#SCOPE1:]] = distinct !DISubprogram(name: "foo2"
 ; CHECK-IL: ![[#SCOPE2:]] = distinct !DISubprogram(name: "foo"
@@ -61,6 +75,12 @@ define dso_local i32 @entry() !dbg !14 {
 ; CHECK-IL: ![[#BL2]] = !DILexicalBlockFile(scope: ![[#SCOPE3]], file: !1, discriminator: 455082007)
 ; CHECK-IL: ![[#DL3]] = !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL3:]])
 ; CHECK-IL: ![[#INL3]] = distinct !DILocation(line: 7, column: 3,  scope: ![[#BL1]], inlinedAt: ![[#INL2]])
+; CHECK-IL: ![[#SCOPE4:]] = distinct !DISubprogram(name: "bar_b"
+; CHECK-IL: ![[#DL4]] = !DILocation(line: 3, column: 3, scope: ![[#SCOPE4]])
+; CHECK-IL: ![[#DL5]] = !DILocation(line: 0, scope: ![[#SCOPE5:]], inlinedAt: ![[#INL4:]])
+; CHECK-IL: ![[#SCOPE5]] = distinct !DISubprogram(name: "bar_a"
+; CHECK-IL: ![[#INL4]] = distinct !DILocation(line: 3, column: 3, scope: ![[#BL3:]])
+; CHECK-IL: ![[#BL3]] = !DILexicalBlockFile(scope: ![[#SCOPE4]], file: !1, discriminator: 455082007)
 
 
 ; Check the generation of .pseudo_probe_desc section
@@ -79,27 +99,41 @@ define dso_local i32 @entry() !dbg !14 {
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH3:]]
 ; CHECK-ASM-ELF-NEXT: .byte	5
 ; CHECK-ASM-ELF-NEXT: .ascii "entry"
-; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
+; CHECK-ASM-ELF-NEXT:	.section	.pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_bar_a,comdat
+; CHECK-ASM-ELF-NEXT:	.quad	[[#GUID4]]
+; CHECK-ASM-ELF-NEXT:	.quad	[[#HASH4:]]
+; CHECK-ASM-ELF-NEXT:	.byte	5
+; CHECK-ASM-ELF-NEXT:	.ascii	"bar_a"
+; CHECK-ASM-ELF-NEXT:	.section	.pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_bar_b,comdat
+; CHECK-ASM-ELF-NEXT:	.quad	[[#GUID5]]
+; CHECK-ASM-ELF-NEXT:	.quad	[[#HASH5:]]
+; CHECK-ASM-COFF:      .section .pseudo_probe_desc,"drD",associative,foo2
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID1]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH1:]]
 ; CHECK-ASM-COFF-NEXT: .byte	4
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo2"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",associative,foo
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_entry
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_entry
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_entry:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",associative,entry
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID3]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH3:]]
 ; CHECK-ASM-COFF-NEXT: .byte	5
 ; CHECK-ASM-COFF-NEXT: .ascii	"entry"
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_bar_a
+; CHECK-ASM-COFF-NEXT: .globl	.pseudo_probe_desc_bar_a
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_bar_a:
+; CHECK-ASM-COFF-NEXT: .quad	[[#GUID4]]
+; CHECK-ASM-COFF-NEXT: .quad	[[#HASH4:]]
+; CHECK-ASM-COFF-NEXT: .byte	5
+; CHECK-ASM-COFF-NEXT: .ascii	"bar_a"
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",associative,bar_b
+; CHECK-ASM-COFF-NEXT: .quad	[[#GUID5]]
+; CHECK-ASM-COFF-NEXT: .quad	[[#HASH5:]]
+; CHECK-ASM-COFF-NEXT: .byte	5
+; CHECK-ASM-COFF-NEXT: .ascii	"bar_b"
 
 ; CHECK-OBJ: .pseudo_probe_desc
 ; CHECK-OBJ: .pseudo_probe
@@ -126,3 +160,6 @@ define dso_local i32 @entry() !dbg !14 {
 !17 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !18 = !DILocation(line: 11, column: 3, scope: !14)
 !19 = !DILocation(line: 12, column: 3, scope: !14)
+!20 = distinct !DISubprogram(name: "bar_a", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+!21 = distinct !DISubprogram(name: "bar_b", scope: !1, file: !1, line: 10, type: !15, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+!22 = !DILocation(line: 3, column: 3, scope: !21)

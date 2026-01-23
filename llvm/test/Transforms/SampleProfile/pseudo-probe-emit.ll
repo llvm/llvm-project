@@ -111,16 +111,12 @@ entry:
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH2:]]
 ; CHECK-ASM-ELF-NEXT: .byte 4
 ; CHECK-ASM-ELF-NEXT: .ascii	"foo2"
-; CHECK-ASM-COFF: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo:
+; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",associative,foo
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
+; CHECK-ASM-COFF-NEXT: .section .pseudo_probe_desc,"drD",associative,foo2
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
 ; CHECK-ASM-COFF-NEXT: .byte	4
@@ -170,21 +166,21 @@ entry:
 ; CHECK-SEC-COFF-NEXT:      Name: .text
 ; CHECK-SEC-COFF:           Number: 6
 ; CHECK-SEC-COFF-NEXT:      Name: .text
-; CHECK-SEC-COFF:           Number: 7
-; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
-; CHECK-SEC-COFF:           Characteristics [
-; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
-; CHECK-SEC-COFF:           Number: 8
-; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
-; CHECK-SEC-COFF:           Characteristics [
-; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
 ; CHECK-SEC-COFF:           Number: 9
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
+; CHECK-SEC-COFF:           Characteristics [
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
+; CHECK-SEC-COFF:           Number: 10
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
+; CHECK-SEC-COFF:           Characteristics [
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
+; CHECK-SEC-COFF:           Number: 11
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
 ; CHECK-SEC-COFF:           Characteristics [
 ; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
@@ -223,16 +219,16 @@ entry:
 ; CHECK-SEC-COFF:           Name: foo3
 ; CHECK-SEC-COFF:           Section: .text (6)
 ; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo
-; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (7)
-; CHECK-SEC-COFF:           StorageClass: Static
-; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo2
-; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (8)
-; CHECK-SEC-COFF:           StorageClass: Static
-; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo3
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (9)
+; CHECK-SEC-COFF:           StorageClass: Static
+; CHECK-SEC-COFF:         }
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc
+; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (10)
+; CHECK-SEC-COFF:           StorageClass: Static
+; CHECK-SEC-COFF:         }
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc
+; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (11)
 ; CHECK-SEC-COFF:           StorageClass: Static
 ; CHECK-SEC-COFF:         }
 ; Section symbols
