@@ -37,8 +37,8 @@ static llvm::cl::opt<IndexFileFormat> Format(
     llvm::cl::values(
         clEnumValN(IndexFileFormat::YAML, "yaml", "human-readable YAML format"),
         clEnumValN(IndexFileFormat::RIFF, "binary", "binary RIFF format"),
-        clEnumValN(IndexFileFormat::BACKGROUND, "background",
-                   "background index format for language servers")),
+        clEnumValN(IndexFileFormat::SHARDED, "sharded",
+                   "Sharded index format for language servers")),
     llvm::cl::init(IndexFileFormat::RIFF));
 
 static llvm::cl::list<std::string> QueryDriverGlobs{
@@ -54,7 +54,7 @@ static llvm::cl::list<std::string> QueryDriverGlobs{
 static llvm::cl::opt<std::string> ProjectRoot{
     "project-root",
     llvm::cl::desc(
-        "Path to the project root for --format=background. "
+        "Path to the project root for --format=sharded. "
         "Determines where to store index shards. Shards are stored in "
         "<project-root>/.cache/clangd/index/. "
         "Defaults to current directory if not specified."),
@@ -136,10 +136,10 @@ private:
   RelationSlab::Builder Relations;
 };
 
-// Action factory that writes per-file shards (for background index format).
-class BackgroundIndexActionFactory : public tooling::FrontendActionFactory {
+// Action factory that writes per-file shards (for sharded index format).
+class ShardedIndexActionFactory : public tooling::FrontendActionFactory {
 public:
-  BackgroundIndexActionFactory(BackgroundIndexStorage &Storage)
+  ShardedIndexActionFactory(BackgroundIndexStorage &Storage)
       : Storage(Storage), Symbols(std::make_unique<SymbolSlab::Builder>()),
         Refs(std::make_unique<RefSlab::Builder>()),
         Relations(std::make_unique<RelationSlab::Builder>()) {}
@@ -265,9 +265,9 @@ int main(int argc, const char **argv) {
 
   $ clangd-indexer File1.cpp File2.cpp ... FileN.cpp > clangd.dex
 
-  Example usage for background index format (writes shards to disk):
+  Example usage for sharded index format (writes shards to disk):
 
-  $ clangd-indexer --format=background --executor=all-TUs build/
+  $ clangd-indexer --format=sharded --executor=all-TUs build/
 
   This writes index shards to .cache/clangd/index/ in the current directory.
   Use --project-root to specify a different location for the shards.
@@ -298,8 +298,8 @@ int main(int argc, const char **argv) {
         return Cmd.CommandLine;
       });
 
-  // Handle background index format separately - writes per-file shards.
-  if (clang::clangd::Format == clang::clangd::IndexFileFormat::BACKGROUND) {
+  // Handle sharded index format separately - writes per-file shards.
+  if (clang::clangd::Format == clang::clangd::IndexFileFormat::SHARDED) {
     // Default to current directory if --project-root not specified.
     std::string Root = clang::clangd::ProjectRoot;
     if (Root.empty()) {
@@ -323,7 +323,7 @@ int main(int argc, const char **argv) {
     clang::clangd::BackgroundIndexStorage *Storage = IndexStorageFactory(Root);
 
     auto Err = Executor->get()->execute(
-        std::make_unique<clang::clangd::BackgroundIndexActionFactory>(*Storage),
+        std::make_unique<clang::clangd::ShardedIndexActionFactory>(*Storage),
         std::move(Adjuster));
     if (Err) {
       clang::clangd::elog("{0}", std::move(Err));
