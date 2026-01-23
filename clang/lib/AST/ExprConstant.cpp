@@ -1973,10 +1973,12 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 
 /// Produce a string describing the given constexpr call.
 void CallStackFrame::describe(raw_ostream &Out) const {
-  unsigned ArgIndex = 0;
-  bool IsMemberCall =
-      isa<CXXMethodDecl>(Callee) && !isa<CXXConstructorDecl>(Callee) &&
-      cast<CXXMethodDecl>(Callee)->isImplicitObjectMemberFunction();
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
 
   if (!IsMemberCall)
     Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
@@ -2012,20 +2014,17 @@ void CallStackFrame::describe(raw_ostream &Out) const {
 
   Out << '(';
 
-  for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
-       E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
-    if (ArgIndex > (unsigned)IsMemberCall)
-      Out << ", ";
+  llvm::ListSeparator Comma;
+  for (unsigned ArgIndex = ExplicitInstanceParam, N = Callee->getNumParams();
+       ArgIndex != N; ++ArgIndex) {
+    Out << Comma;
 
-    const ParmVarDecl *Param = *I;
-    APValue *V = Info.getParamSlot(Arguments, Param);
+    const ParmVarDecl *Param = Callee->getParamDecl(ArgIndex);
+    const APValue *V = Info.getParamSlot(Arguments, Param);
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
     else
       Out << "<...>";
-
-    if (ArgIndex == 0 && IsMemberCall)
-      Out << "->" << *Callee << '(';
   }
 
   Out << ')';
