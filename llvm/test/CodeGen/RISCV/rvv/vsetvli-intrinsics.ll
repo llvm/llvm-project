@@ -10,9 +10,6 @@
 ; RUN:   -riscv-v-vector-bits-max=128 -verify-machineinstrs \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,VLEN128
 
-declare iXLen @llvm.riscv.vsetvli.iXLen(iXLen, iXLen, iXLen)
-declare iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen, iXLen)
-
 define iXLen @test_vsetvli_e8m1(iXLen %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e8m1:
 ; CHECK:       # %bb.0:
@@ -101,8 +98,6 @@ define void @test_vsetvlimax_e32m2_nouse() nounwind {
   call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 2, iXLen 1)
   ret void
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32>, ptr, iXLen)
 
 ; Check that we remove the redundant vsetvli when followed by another operation
 define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, ptr %ptr) nounwind {

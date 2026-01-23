@@ -13,6 +13,12 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_ANALYSIS
+#define MODULE_ANALYSIS(NAME, CREATE_PASS)
+#endif
+MODULE_ANALYSIS("amdgpu-argument-usage", AMDGPUArgumentUsageAnalysis())
+#undef MODULE_ANALYSIS
+
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif

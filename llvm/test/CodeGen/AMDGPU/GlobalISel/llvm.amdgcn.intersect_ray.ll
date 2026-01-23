@@ -202,7 +202,7 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GFX1013-NEXT:    ; implicit-def: $vgpr11
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10
 ; GFX1013-NEXT:    ; implicit-def: $vgpr13_vgpr14
-; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1013-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1013-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1013-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX1013-NEXT:  ; %bb.2:
@@ -318,7 +318,7 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX1013-NEXT:    ; implicit-def: $vgpr9
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1013-NEXT:    ; implicit-def: $vgpr11_vgpr12
-; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1013-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1013-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1013-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX1013-NEXT:  ; %bb.2:
@@ -433,7 +433,7 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GFX1013-NEXT:    ; implicit-def: $vgpr12
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX1013-NEXT:    ; implicit-def: $vgpr14_vgpr15
-; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1013-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1013-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1013-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX1013-NEXT:  ; %bb.2:
@@ -551,7 +551,7 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX1013-NEXT:    ; implicit-def: $vgpr10
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
 ; GFX1013-NEXT:    ; implicit-def: $vgpr12_vgpr13
-; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1013-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1013-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1013-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX1013-NEXT:  ; %bb.2:

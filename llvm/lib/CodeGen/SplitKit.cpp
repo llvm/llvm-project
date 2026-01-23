@@ -448,7 +448,7 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
     const MachineInstr *DefMI = LIS.getInstructionFromIndex(Def);
     assert(DefMI != nullptr);
     LaneBitmask LM;
-    for (const MachineOperand &DefOp : DefMI->all_defs()) {
+    for (const MachineOperand &DefOp : DefMI->defs()) {
       Register R = DefOp.getReg();
       if (R != LI.reg())
         continue;
@@ -526,11 +526,15 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
     MachineBasicBlock::iterator InsertBefore, unsigned SubIdx,
     LiveInterval &DestLI, bool Late, SlotIndex Def, const MCInstrDesc &Desc) {
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+  MachineInstr *CopyMI =
+      BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+          .addReg(ToReg,
+                  RegState::Define | getUndefRegState(FirstCopy) |
+                      getInternalReadRegState(!FirstCopy),
+                  SubIdx)
+          .addReg(FromReg, {}, SubIdx);
 
+  CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
@@ -550,6 +554,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     // The full vreg is copied.
     MachineInstr *CopyMI =
         BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    CopyMI->setFlag(MachineInstr::LRSplit);
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 

@@ -287,8 +287,10 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 }
 
 void SymbolFilePDB::InitializeObject() {
-  lldb::addr_t obj_load_address =
-      m_objfile_sp->GetBaseAddress().GetFileAddress();
+  lldb::addr_t obj_load_address = m_objfile_sp->GetModule()
+                                      ->GetObjectFile()
+                                      ->GetBaseAddress()
+                                      .GetFileAddress();
   lldbassert(obj_load_address && obj_load_address != LLDB_INVALID_ADDRESS);
   m_session_up->setLoadAddress(obj_load_address);
   if (!m_global_scope_up)
@@ -1479,7 +1481,8 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   if (!results)
     return;
 
-  auto section_list = m_objfile_sp->GetSectionList();
+  auto section_list =
+      m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
     return;
 

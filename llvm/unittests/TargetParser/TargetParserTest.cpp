@@ -1120,6 +1120,10 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("cortex-x3", "armv9-a"),
                       AArch64CPUTestParams("cortex-x4", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-x925", "armv9.2-a"),
+                      AArch64CPUTestParams("c1-nano", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-premium", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1144,6 +1148,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m5", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1156,6 +1161,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("ampere1", "armv8.6-a"),
                       AArch64CPUTestParams("ampere1a", "armv8.6-a"),
                       AArch64CPUTestParams("ampere1b", "armv8.7-a"),
+                      AArch64CPUTestParams("ampere1c", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-512tvb", "armv8.4-a"),
                       AArch64CPUTestParams("thunderx2t99", "armv8.1-a"),
                       AArch64CPUTestParams("thunderx3t110", "armv8.3-a"),
@@ -1260,11 +1266,12 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
                       AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
                                                  "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 91;
+static constexpr unsigned NumAArch64CPUArchs = 98;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -2199,6 +2206,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},
+
+        // mtetc -> mte
+        {AArch64::ARMV9_7A, {"nomemtag", "mtetc"}, {"mte"}, {}},
+
+        // mops-go -> mops, mte
+        {AArch64::ARMV9_7A,
+         {"nomops", "nomemtag", "mops-go"},
+         {"mops", "mte"},
+         {}},
 
         // predres -> predres2
         {AArch64::ARMV8A,

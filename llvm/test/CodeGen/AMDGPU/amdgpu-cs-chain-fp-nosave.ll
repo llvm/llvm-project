@@ -18,9 +18,9 @@ define amdgpu_cs_chain void @test_alloca() {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s0, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s0, 0x200
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX12-NEXT:    s_endpgm
@@ -54,13 +54,13 @@ define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) {
 ; GFX12-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_and_b32 s0, s0, -16
 ; GFX12-NEXT:    s_mov_b32 s1, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 5
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s1, s0
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -96,19 +96,19 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, -16, v0
 ; GFX12-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readlane_b32 s3, v1, s2
 ; GFX12-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12-NEXT:    s_max_u32 s0, s0, s3
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 s1, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_lshl_add_u32 v1, s0, 5, s1
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s1
 ; GFX12-NEXT:    v_readfirstlane_b32 s32, v1
@@ -151,21 +151,21 @@ define amdgpu_cs_chain void @test_alloca_and_call() {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, foo@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, foo@gotpcrel32@hi+24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s2, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s2, 0x200
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s2
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -203,24 +203,24 @@ define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX12-NEXT:    s_add_co_u32 s2, s2, foo@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, foo@gotpcrel32@hi+24
 ; GFX12-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
 ; GFX12-NEXT:    s_and_b32 s0, s0, -16
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s1, s32
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 5
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s1, s0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -263,22 +263,22 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, -16, v0
 ; GFX12-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readlane_b32 s3, v1, s2
 ; GFX12-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12-NEXT:    s_max_u32 s0, s0, s3
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX12-NEXT:    s_add_co_u32 s2, s2, foo@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, foo@gotpcrel32@hi+24
 ; GFX12-NEXT:    s_mov_b32 s1, s32
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
@@ -286,7 +286,7 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s1
 ; GFX12-NEXT:    v_readfirstlane_b32 s32, v1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -334,18 +334,18 @@ define amdgpu_cs_chain void @test_call_and_alloca() {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, foo@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, foo@gotpcrel32@hi+24
 ; GFX12-NEXT:    s_mov_b32 s32, 16
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s4, 0x200
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s4
@@ -385,23 +385,23 @@ define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX12-NEXT:    s_add_co_u32 s2, s2, foo@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, foo@gotpcrel32@hi+24
 ; GFX12-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
 ; GFX12-NEXT:    s_and_b32 s0, s0, -16
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s4, s32
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 5
 ; GFX12-NEXT:    v_mov_b32_e32 v40, 0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s4, s0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX12-NEXT:    scratch_store_b32 off, v40, s4
 ; GFX12-NEXT:    s_endpgm
@@ -445,22 +445,22 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_mov_b32 s32, 16
 ; GFX12-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX12-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX12-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12-NEXT:    s_max_u32 s0, s0, s3
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX12-NEXT:    s_add_co_u32 s2, s2, foo@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, foo@gotpcrel32@hi+24
 ; GFX12-NEXT:    s_mov_b32 s4, s32
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
@@ -468,7 +468,7 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX12-NEXT:    scratch_store_b32 off, v40, s4
 ; GFX12-NEXT:    s_endpgm

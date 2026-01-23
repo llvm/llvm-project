@@ -219,8 +219,6 @@ define i64 @inverted_masked_merge_i64(i64 %x, i64 %y, i64 %z) nounwind {
   ret i64 %not
 }
 
-declare i32 @llvm.fshl.i32(i32, i32, i32)
-
 define signext i32 @rol_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: rol_i32:
 ; RV64I:       # %bb.0:
@@ -278,8 +276,6 @@ define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
   ret i32 %1
 }
 
-declare i64 @llvm.fshl.i64(i64, i64, i64)
-
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: rol_i64:
 ; RV64I:       # %bb.0:
@@ -296,8 +292,6 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %b)
   ret i64 %or
 }
-
-declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define signext i32 @ror_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: ror_i32:
@@ -355,8 +349,6 @@ define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
   %1 = tail call i32 @llvm.fshr.i32(i32 -2, i32 -2, i32 %a)
   ret i32 %1
 }
-
-declare i64 @llvm.fshr.i64(i64, i64, i64)
 
 define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: ror_i64:

@@ -33,32 +33,22 @@ using namespace llvm::opt;
 #define NULL_FILE "/dev/null"
 #endif
 
-void AMDGCN::Linker::constructLlvmLinkCommand(Compilation &C,
-                                         const JobAction &JA,
-                                         const InputInfoList &Inputs,
-                                         const InputInfo &Output,
-                                         const llvm::opt::ArgList &Args) const {
-  // Construct llvm-link command.
-  // The output from llvm-link is a bitcode file.
-  ArgStringList LlvmLinkArgs;
+void AMDGCN::Linker::constructLLVMLinkCommand(
+    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
+    const InputInfo &Output, const llvm::opt::ArgList &Args) const {
 
-  assert(!Inputs.empty() && "Must have at least one input.");
+  ArgStringList LinkerInputs;
 
-  LlvmLinkArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
-    LlvmLinkArgs.push_back(Input.getFilename());
+    LinkerInputs.push_back(Input.getFilename());
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
   auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LlvmLinkArgs, "amdgcn",
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
                              TargetID, /*IsBitCodeSDL=*/true);
-
-  const char *LlvmLink =
-    Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LlvmLinkArgs, Inputs,
-                                         Output));
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
+                                  Args);
 }
 
 void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
@@ -159,10 +149,9 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
 // For SPIR-V the inputs for the job are device AMDGCN SPIR-V flavoured bitcode
 // and the output is either a compiled SPIR-V binary or bitcode (-emit-llvm). It
-// calls llvm-link and then the llvm-spirv translator. Once the SPIR-V BE will
-// be promoted from experimental, we will switch to using that. TODO: consider
-// if we want to run any targeted optimisations over IR here, over generic
-// SPIR-V.
+// calls llvm-link and then the llvm-spirv translator or the SPIR-V BE.
+// TODO: consider if we want to run any targeted optimisations over IR here,
+// over generic SPIR-V.
 void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
@@ -173,17 +162,41 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
   InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
+  bool UseSPIRVBackend =
+      Args.hasFlag(options::OPT_use_spirv_backend,
+                   options::OPT_no_use_spirv_backend, /*Default=*/false);
 
-  // Emit SPIR-V binary.
-  llvm::opt::ArgStringList TrArgs{
-      "--spirv-max-version=1.6",
-      "--spirv-ext=+all",
-      "--spirv-allow-unknown-intrinsics",
-      "--spirv-lower-const-expr",
-      "--spirv-preserve-auxdata",
-      "--spirv-debug-info-version=nonsemantic-shader-200"};
-  SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile, TrArgs);
+  constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
+
+  if (UseSPIRVBackend) {
+    // This code handles the case in the new driver when --offload-device-only
+    // is unset and clang-linker-wrapper forwards the bitcode that must be
+    // compiled to SPIR-V.
+
+    llvm::opt::ArgStringList CmdArgs;
+    const char *Triple =
+        C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
+
+    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-disable-llvm-optzns",
+                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
+
+    const Driver &Driver = getToolChain().getDriver();
+    const char *Exec = Driver.getClangProgramPath();
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, LinkedBCFile,
+        Output, Driver.getPrependArg()));
+  } else {
+    // Emit SPIR-V binary using the translator
+    llvm::opt::ArgStringList TrArgs{
+        "--spirv-max-version=1.6",
+        "--spirv-ext=+all",
+        "--spirv-allow-unknown-intrinsics",
+        "--spirv-lower-const-expr",
+        "--spirv-preserve-auxdata",
+        "--spirv-debug-info-version=nonsemantic-shader-200"};
+    SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile,
+                                     TrArgs);
+  }
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
@@ -205,7 +218,7 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                           Args, *this);
 
   if (JA.getType() == types::TY_LLVM_BC)
-    return constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+    return constructLLVMLinkCommand(C, JA, Inputs, Output, Args);
 
   if (getToolChain().getEffectiveTriple().isSPIRV())
     return constructLinkAndEmitSpirvCommand(C, JA, Inputs, Output, Args);

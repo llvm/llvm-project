@@ -164,8 +164,7 @@ void OpenMPCounterVisitor::Post(const OmpOrderingModifier::Value &c) {
       "modifier=" + std::string{OmpOrderingModifier::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpTaskDependenceType::Value &c) {
-  clauseDetails +=
-      "type=" + std::string{OmpTaskDependenceType::EnumToString(c)} + ";";
+  clauseDetails += "type=" + std::string{common::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpMapType::Value &c) {
   clauseDetails += "type=" + std::string{OmpMapType::EnumToString(c)} + ";";

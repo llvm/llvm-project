@@ -113,6 +113,9 @@ void outputRaw(const char *Buffer) { printf("%s", Buffer); }
 
 void setAbortMessage(UNUSED const char *Message) {}
 
+// Trusty doesn't support a full linux system, so don't implement this yet.
+u64 getResidentPages(UNUSED uptr BaseAddress, UNUSED uptr Size) { return 0; }
+
 } // namespace scudo
 
 #endif // SCUDO_TRUSTY

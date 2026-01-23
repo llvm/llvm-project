@@ -261,7 +261,8 @@ R
 
 **RFC**
   Request for Comment. An email sent to a project mailing list in order to
-  solicit feedback on a proposed change.
+  solicit feedback on a proposed change. See also: the :doc:`RFC process <RFCProcess>`
+  documentation.
 
 .. _roots:
 .. _stack roots:

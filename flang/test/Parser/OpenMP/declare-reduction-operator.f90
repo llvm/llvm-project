@@ -11,7 +11,7 @@ subroutine reduce_1 ( n, tts )
     real(8) :: x
     real(8) :: y
   end type
- 
+
   integer :: n
   type(tt) :: tts(n)
   type(tt2) :: tts2(n)
@@ -73,10 +73,10 @@ subroutine reduce_1 ( n, tts )
 !PARSE-TREE: | | | | | ComponentSpec
 !PARSE-TREE: | | | | | | ComponentDataSource -> Expr = '0_4'
 !PARSE-TREE: | | | | | | | LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
   !$omp declare reduction(+ : tt :  omp_out = tt(omp_out%x - omp_in%x , omp_out%y - omp_in%y)) initializer(omp_priv = tt(0,0))
 
-  
+
 !CHECK: !$OMP DECLARE REDUCTION(+:tt2: omp_out = tt2(omp_out%x - omp_in%x , omp_out%y &
 !CHECK: !$OMP&- omp_in%y)) INITIALIZER(omp_priv = tt2(0,0))
 
@@ -134,9 +134,9 @@ subroutine reduce_1 ( n, tts )
 !PARSE-TREE: | | | | | ComponentSpec
 !PARSE-TREE: | | | | | | ComponentDataSource -> Expr = '0_4'
 !PARSE-TREE: | | | | | | | LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
   !$omp declare reduction(+ :tt2 :  omp_out = tt2(omp_out%x - omp_in%x , omp_out%y - omp_in%y)) initializer(omp_priv = tt2(0,0))
-  
+
   type(tt) :: diffp = tt( 0, 0 )
   type(tt2) :: diffp2 = tt2( 0, 0 )
   integer :: i

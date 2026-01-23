@@ -46,6 +46,7 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
   case PPC::fixup_ppc_br24_notoc:
   case PPC::fixup_ppc_brcond14:
   case PPC::fixup_ppc_pcrel34:
+  case PPC::fixup_ppc_pcrel32:
     PCRel = true;
   }
   Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));

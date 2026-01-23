@@ -34,11 +34,12 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
     """
     old_enabled = _globals.loc_tracebacks_enabled()
     old_limit = _globals.loc_tracebacks_frame_limit()
+    max_depth = old_limit if max_depth is None else max_depth
     try:
         _globals.set_loc_tracebacks_frame_limit(max_depth)
         if not old_enabled:
             _globals.set_loc_tracebacks_enabled(True)
-            yield
+        yield
     finally:
         if not old_enabled:
             _globals.set_loc_tracebacks_enabled(False)

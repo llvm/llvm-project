@@ -186,13 +186,13 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI,
   for (int OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx; --OpIdx)
     MI.removeOperand(OpIdx);
 
-  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
+  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN_CHAIN));
 }
 
 void SILateBranchLowering::earlyTerm(MachineInstr &MI,
                                      MachineBasicBlock *EarlyExitBlock) {
   MachineBasicBlock &MBB = *MI.getParent();
-  const DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
 
   auto BranchMI = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0))
                       .addMBB(EarlyExitBlock);

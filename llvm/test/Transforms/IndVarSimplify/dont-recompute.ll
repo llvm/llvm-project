@@ -211,7 +211,7 @@ define void @test6(i32 %m, ptr %p) nounwind uwtable {
 ; CHECK-NEXT:    [[ADD]] = add i32 [[A_05]], [[M:%.*]]
 ; CHECK-NEXT:    [[SOFT_USE:%.*]] = add i32 [[ADD]], 123
 ; CHECK-NEXT:    [[PIDX:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[ADD]]
-; CHECK-NEXT:    store i32 [[SOFT_USE]], ptr [[PIDX]]
+; CHECK-NEXT:    store i32 [[SOFT_USE]], ptr [[PIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]

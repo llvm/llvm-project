@@ -230,7 +230,7 @@ void VETargetLowering::initSPUActions() {
   // VE doesn't have following floating point operations.
   for (MVT VT : MVT::fp_valuetypes()) {
     setOperationAction(ISD::FNEG, VT, Expand);
-    setOperationAction(ISD::FREM, VT, Expand);
+    setOperationAction(ISD::FREM, VT, LibCall);
   }
 
   // VE doesn't have fdiv of f128.
@@ -915,10 +915,10 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget->getRegisterInfo());
 }
 
-EVT VETargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
-                                         EVT VT) const {
+EVT VETargetLowering::getSetCCResultType(const DataLayout &,
+                                         LLVMContext &Context, EVT VT) const {
   if (VT.isVector())
-    return VT.changeVectorElementType(MVT::i1);
+    return VT.changeVectorElementType(Context, MVT::i1);
   return MVT::i32;
 }
 
@@ -1093,7 +1093,7 @@ SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
 }
 
 TargetLowering::AtomicExpansionKind
-VETargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+VETargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // We have TS1AM implementation for i8/i16/i32/i64, so use it.
   if (AI->getOperation() == AtomicRMWInst::Xchg) {
     return AtomicExpansionKind::None;

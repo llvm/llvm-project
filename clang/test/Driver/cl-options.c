@@ -746,6 +746,7 @@
 // RUN:     -fsystem-module \
 // RUN:     -fmodule-map-file=foo \
 // RUN:     -fmodule-file=foo \
+// RUN:     -fmodules-disable-diagnostic-validation \
 // RUN:     -fmodules-ignore-macro=foo \
 // RUN:     -fmodules-strict-decluse \
 // RUN:     -fmodules-decluse \

@@ -490,99 +490,85 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
   if (!exe_ctx) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return value_sp;
-  } else {
-    Target *target = exe_ctx->GetTargetPtr();
-    Process *process = exe_ctx->GetProcessPtr();
-    if (target && process) { // FIXME: this check is redundant.
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
-        VariableList variable_list;
+  }
 
-        switch (value_type) {
-        case eValueTypeVariableGlobal:      // global variable
-        case eValueTypeVariableStatic:      // static variable
-        case eValueTypeVariableArgument:    // function argument variables
-        case eValueTypeVariableLocal:       // function local variables
-        case eValueTypeVariableThreadLocal: // thread local variables
-        {
-          SymbolContext sc(frame->GetSymbolContext(eSymbolContextBlock));
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return value_sp;
 
-          const bool can_create = true;
-          const bool get_parent_variables = true;
-          const bool stop_if_block_is_inlined_function = true;
+  VariableList variable_list;
 
-          if (sc.block)
-            sc.block->AppendVariables(
-                can_create, get_parent_variables,
-                stop_if_block_is_inlined_function,
-                [frame](Variable *v) { return v->IsInScope(frame); },
-                &variable_list);
-          if (value_type == eValueTypeVariableGlobal 
-              || value_type == eValueTypeVariableStatic) {
-            const bool get_file_globals = true;
-            VariableList *frame_vars = frame->GetVariableList(get_file_globals,
-                                                              nullptr);
-            if (frame_vars)
-              frame_vars->AppendVariablesIfUnique(variable_list);
-          }
-          ConstString const_name(name);
-          VariableSP variable_sp(
-              variable_list.FindVariable(const_name, value_type));
-          if (variable_sp) {
-            value_sp = frame->GetValueObjectForFrameVariable(variable_sp,
-                                                             eNoDynamicValues);
-            sb_value.SetSP(value_sp, use_dynamic);
-          }
-        } break;
+  switch (value_type) {
+  case eValueTypeVariableGlobal:        // global variable
+  case eValueTypeVariableStatic:        // static variable
+  case eValueTypeVariableArgument:      // function argument variables
+  case eValueTypeVariableLocal:         // function local variables
+  case eValueTypeVariableThreadLocal: { // thread local variables
+    SymbolContext sc(frame->GetSymbolContext(eSymbolContextBlock));
 
-        case eValueTypeRegister: // stack frame register value
-        {
-          RegisterContextSP reg_ctx(frame->GetRegisterContext());
-          if (reg_ctx) {
-            if (const RegisterInfo *reg_info =
-                    reg_ctx->GetRegisterInfoByName(name)) {
-              value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
-              sb_value.SetSP(value_sp);
-            }
-          }
-        } break;
+    const bool can_create = true;
+    const bool get_parent_variables = true;
+    const bool stop_if_block_is_inlined_function = true;
 
-        case eValueTypeRegisterSet: // A collection of stack frame register
-                                    // values
-        {
-          RegisterContextSP reg_ctx(frame->GetRegisterContext());
-          if (reg_ctx) {
-            const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
-            for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
-              const RegisterSet *reg_set = reg_ctx->GetRegisterSet(set_idx);
-              if (reg_set &&
-                  (llvm::StringRef(reg_set->name).equals_insensitive(name) ||
-                   llvm::StringRef(reg_set->short_name)
-                       .equals_insensitive(name))) {
-                value_sp =
-                    ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx);
-                sb_value.SetSP(value_sp);
-                break;
-              }
-            }
-          }
-        } break;
+    if (sc.block)
+      sc.block->AppendVariables(
+          can_create, get_parent_variables, stop_if_block_is_inlined_function,
+          [frame](Variable *v) { return v->IsInScope(frame); }, &variable_list);
+    if (value_type == eValueTypeVariableGlobal ||
+        value_type == eValueTypeVariableStatic) {
+      const bool get_file_globals = true;
+      VariableList *frame_vars =
+          frame->GetVariableList(get_file_globals, nullptr);
+      if (frame_vars)
+        frame_vars->AppendVariablesIfUnique(variable_list);
+    }
+    ConstString const_name(name);
+    VariableSP variable_sp(variable_list.FindVariable(const_name, value_type));
+    if (variable_sp) {
+      value_sp =
+          frame->GetValueObjectForFrameVariable(variable_sp, eNoDynamicValues);
+      sb_value.SetSP(value_sp, use_dynamic);
+    }
+  } break;
 
-        case eValueTypeConstResult: // constant result variables
-        {
-          ConstString const_name(name);
-          ExpressionVariableSP expr_var_sp(
-              target->GetPersistentVariable(const_name));
-          if (expr_var_sp) {
-            value_sp = expr_var_sp->GetValueObject();
-            sb_value.SetSP(value_sp, use_dynamic);
-          }
-        } break;
+  case eValueTypeRegister: { // stack frame register value
+    if (RegisterContextSP reg_ctx = frame->GetRegisterContext()) {
+      if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name)) {
+        value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
+        sb_value.SetSP(value_sp);
+      }
+    }
+  } break;
 
-        default:
+  case eValueTypeRegisterSet: { // A collection of stack frame register
+                                // values
+    if (RegisterContextSP reg_ctx = frame->GetRegisterContext()) {
+      const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+      for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
+        const RegisterSet *reg_set = reg_ctx->GetRegisterSet(set_idx);
+        if (reg_set &&
+            (llvm::StringRef(reg_set->name).equals_insensitive(name) ||
+             llvm::StringRef(reg_set->short_name).equals_insensitive(name))) {
+          value_sp = ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx);
+          sb_value.SetSP(value_sp);
           break;
         }
       }
     }
+  } break;
+
+  case eValueTypeConstResult: { // constant result variables
+    ConstString const_name(name);
+    Target *target = exe_ctx->GetTargetPtr();
+    ExpressionVariableSP expr_var_sp(target->GetPersistentVariable(const_name));
+    if (expr_var_sp) {
+      value_sp = expr_var_sp->GetValueObject();
+      sb_value.SetSP(value_sp, use_dynamic);
+    }
+  } break;
+
+  default:
+    break;
   }
 
   return sb_value;
@@ -698,138 +684,168 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
   return GetVariables(options);
 }
 
+/// Returns true if the variable is in any of the requested scopes.
+static bool IsInRequestedScope(bool statics, bool arguments, bool locals,
+                               Variable &var) {
+  switch (var.GetScope()) {
+  case eValueTypeVariableGlobal:
+  case eValueTypeVariableStatic:
+  case eValueTypeVariableThreadLocal:
+    return statics;
+
+  case eValueTypeVariableArgument:
+    return arguments;
+
+  case eValueTypeVariableLocal:
+    return locals;
+
+  default:
+    break;
+  }
+  return false;
+}
+
+enum WasInterrupted { Yes, No };
+
+/// Populates `value_list` with the variables from `frame` according to
+/// `options`. This method checks whether the Debugger received an interrupt
+/// before processing every variable, returning `WasInterrupted::yes` in that
+/// case.
+static std::pair<WasInterrupted, Status> FetchVariablesUnlessInterrupted(
+    const lldb::SBVariablesOptions &options, StackFrame &frame,
+    SBValueList &value_list, Debugger &dbg,
+    std::function<SBValue(ValueObjectSP, bool)> to_sbvalue) {
+  const bool statics = options.GetIncludeStatics();
+  const bool arguments = options.GetIncludeArguments();
+  const bool locals = options.GetIncludeLocals();
+  const bool in_scope_only = options.GetInScopeOnly();
+  const bool include_runtime_support_values =
+      options.GetIncludeRuntimeSupportValues();
+  const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
+
+  Status var_error;
+  VariableList *variable_list = frame.GetVariableList(true, &var_error);
+
+  std::set<VariableSP> variable_set;
+
+  if (!variable_list)
+    return {WasInterrupted::No, std::move(var_error)};
+  const size_t num_variables = variable_list->GetSize();
+  size_t num_produced = 0;
+  for (const VariableSP &variable_sp : *variable_list) {
+    if (!variable_sp ||
+        !IsInRequestedScope(statics, arguments, locals, *variable_sp))
+      continue;
+
+    if (INTERRUPT_REQUESTED(
+            dbg,
+            "Interrupted getting frame variables with {0} of {1} "
+            "produced.",
+            num_produced, num_variables))
+      return {WasInterrupted::Yes, std::move(var_error)};
+
+    // Only add variables once so we don't end up with duplicates
+    if (variable_set.insert(variable_sp).second == false)
+      continue;
+    if (in_scope_only && !variable_sp->IsInScope(&frame))
+      continue;
+
+    ValueObjectSP valobj_sp(
+        frame.GetValueObjectForFrameVariable(variable_sp, eNoDynamicValues));
+
+    if (!include_runtime_support_values && valobj_sp != nullptr &&
+        valobj_sp->IsRuntimeSupportValue())
+      continue;
+
+    value_list.Append(to_sbvalue(valobj_sp, use_dynamic));
+  }
+  num_produced++;
+
+  return {WasInterrupted::No, std::move(var_error)};
+}
+
+/// Populates `value_list` with recognized arguments of `frame` according to
+/// `options`.
+static llvm::SmallVector<ValueObjectSP>
+FetchRecognizedArguments(const SBVariablesOptions &options, StackFrame &frame,
+                         SBTarget target) {
+  if (!options.GetIncludeRecognizedArguments(target))
+    return {};
+  RecognizedStackFrameSP recognized_frame = frame.GetRecognizedFrame();
+  if (!recognized_frame)
+    return {};
+
+  ValueObjectListSP recognized_arg_list =
+      recognized_frame->GetRecognizedArguments();
+  if (!recognized_arg_list)
+    return {};
+
+  return llvm::to_vector(recognized_arg_list->GetObjects());
+}
+
 SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
   LLDB_INSTRUMENT_VA(this, options);
 
-  SBValueList value_list;
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValueList();
-  } else {
-    const bool statics = options.GetIncludeStatics();
-    const bool arguments = options.GetIncludeArguments();
-    const bool recognized_arguments =
-        options.GetIncludeRecognizedArguments(SBTarget(exe_ctx->GetTargetSP()));
-    const bool locals = options.GetIncludeLocals();
-    const bool in_scope_only = options.GetInScopeOnly();
-    const bool include_runtime_support_values =
-        options.GetIncludeRuntimeSupportValues();
-    const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
-
-    std::set<VariableSP> variable_set;
-    Process *process = exe_ctx->GetProcessPtr();
-    if (process) { // FIXME: this check is redundant.
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
-        Debugger &dbg = process->GetTarget().GetDebugger();
-        VariableList *variable_list = nullptr;
-        Status var_error;
-        variable_list = frame->GetVariableList(true, &var_error);
-        if (var_error.Fail())
-          value_list.SetError(std::move(var_error));
-        if (variable_list) {
-          const size_t num_variables = variable_list->GetSize();
-          if (num_variables) {
-            size_t num_produced = 0;
-            for (const VariableSP &variable_sp : *variable_list) {
-              if (INTERRUPT_REQUESTED(dbg, 
-                    "Interrupted getting frame variables with {0} of {1} "
-                    "produced.", num_produced, num_variables))
-                return {};
-
-              if (variable_sp) {
-                bool add_variable = false;
-                switch (variable_sp->GetScope()) {
-                case eValueTypeVariableGlobal:
-                case eValueTypeVariableStatic:
-                case eValueTypeVariableThreadLocal:
-                  add_variable = statics;
-                  break;
-
-                case eValueTypeVariableArgument:
-                  add_variable = arguments;
-                  break;
-
-                case eValueTypeVariableLocal:
-                  add_variable = locals;
-                  break;
-
-                default:
-                  break;
-                }
-                if (add_variable) {
-                  // Only add variables once so we don't end up with duplicates
-                  if (variable_set.find(variable_sp) == variable_set.end())
-                    variable_set.insert(variable_sp);
-                  else
-                    continue;
-
-                  if (in_scope_only && !variable_sp->IsInScope(frame))
-                    continue;
-
-                  ValueObjectSP valobj_sp(frame->GetValueObjectForFrameVariable(
-                      variable_sp, eNoDynamicValues));
-
-                  if (!include_runtime_support_values && valobj_sp != nullptr &&
-                      valobj_sp->IsRuntimeSupportValue())
-                    continue;
-
-                  SBValue value_sb;
-                  value_sb.SetSP(valobj_sp, use_dynamic);
-                  value_list.Append(value_sb);
-                }
-              }
-            }
-            num_produced++;
-          }
-        }
-        if (recognized_arguments) {
-          auto recognized_frame = frame->GetRecognizedFrame();
-          if (recognized_frame) {
-            ValueObjectListSP recognized_arg_list =
-                recognized_frame->GetRecognizedArguments();
-            if (recognized_arg_list) {
-              for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
-                SBValue value_sb;
-                value_sb.SetSP(rec_value_sp, use_dynamic);
-                value_list.Append(value_sb);
-              }
-            }
-          }
-        }
-      }
-    }
   }
 
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return SBValueList();
+
+  auto valobj_to_sbvalue = [](ValueObjectSP valobj, bool use_dynamic) {
+    SBValue value_sb;
+    value_sb.SetSP(valobj, use_dynamic);
+    return value_sb;
+  };
+  SBValueList value_list;
+  std::pair<WasInterrupted, Status> fetch_result =
+      FetchVariablesUnlessInterrupted(options, *frame, value_list,
+                                      exe_ctx->GetTargetPtr()->GetDebugger(),
+                                      valobj_to_sbvalue);
+  if (fetch_result.second.Fail())
+    value_list.SetError(std::move(fetch_result.second));
+
+  if (fetch_result.first == WasInterrupted::Yes)
+    return value_list;
+
+  const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
+  llvm::SmallVector<ValueObjectSP> args = FetchRecognizedArguments(
+      options, *frame, SBTarget(exe_ctx->GetTargetSP()));
+  for (ValueObjectSP arg : args) {
+    SBValue value_sb;
+    value_sb.SetSP(arg, use_dynamic);
+    value_list.Append(value_sb);
+  }
   return value_list;
 }
 
 SBValueList SBFrame::GetRegisters() {
   LLDB_INSTRUMENT_VA(this);
 
-  SBValueList value_list;
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValueList();
-  } else {
-    Target *target = exe_ctx->GetTargetPtr();
-    Process *process = exe_ctx->GetProcessPtr();
-    if (target && process) { // FIXME: this check is redundant.
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
-        RegisterContextSP reg_ctx(frame->GetRegisterContext());
-        if (reg_ctx) {
-          const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
-          for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
-            value_list.Append(
-                ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx));
-          }
-        }
-      }
-    }
   }
+
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return SBValueList();
+
+  RegisterContextSP reg_ctx(frame->GetRegisterContext());
+  if (!reg_ctx)
+    return SBValueList();
+
+  SBValueList value_list;
+  const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+  for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx)
+    value_list.Append(ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx));
 
   return value_list;
 }
@@ -837,29 +853,29 @@ SBValueList SBFrame::GetRegisters() {
 SBValue SBFrame::FindRegister(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  SBValue result;
   ValueObjectSP value_sp;
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValue();
-  } else {
-    Target *target = exe_ctx->GetTargetPtr();
-    Process *process = exe_ctx->GetProcessPtr();
-    if (target && process) { // FIXME: this check is redundant.
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
-        RegisterContextSP reg_ctx(frame->GetRegisterContext());
-        if (reg_ctx) {
-          if (const RegisterInfo *reg_info =
-                  reg_ctx->GetRegisterInfoByName(name)) {
-            value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
-            result.SetSP(value_sp);
-          }
-        }
-      }
-    }
   }
+
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return SBValue();
+
+  RegisterContextSP reg_ctx(frame->GetRegisterContext());
+  if (!reg_ctx)
+    return SBValue();
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  if (!reg_info)
+    return SBValue();
+
+  SBValue result;
+  value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
+  result.SetSP(value_sp);
 
   return result;
 }
@@ -1000,58 +1016,55 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
                                           const SBExpressionOptions &options) {
   LLDB_INSTRUMENT_VA(this, expr, options);
 
-  Log *expr_log = GetLog(LLDBLog::Expressions);
-
-  SBValue expr_result;
+  auto LogResult = [](SBValue expr_result) {
+    Log *expr_log = GetLog(LLDBLog::Expressions);
+    if (expr_result.GetError().Success())
+      LLDB_LOGF(expr_log,
+                "** [SBFrame::EvaluateExpression] Expression result is "
+                "%s, summary %s **",
+                expr_result.GetValue(), expr_result.GetSummary());
+    else
+      LLDB_LOGF(
+          expr_log,
+          "** [SBFrame::EvaluateExpression] Expression evaluation failed: "
+          "%s **",
+          expr_result.GetError().GetCString());
+  };
 
   if (expr == nullptr || expr[0] == '\0') {
-    return expr_result;
+    return SBValue();
   }
-
-  ValueObjectSP expr_value_sp;
 
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
-    expr_result = CreateProcessIsRunningExprEvalError();
-  } else {
-    Target *target = exe_ctx->GetTargetPtr();
-    Process *process = exe_ctx->GetProcessPtr();
-    if (target && process) { // FIXME: this check is redundant.
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
-        std::unique_ptr<llvm::PrettyStackTraceFormat> stack_trace;
-        if (target->GetDisplayExpressionsInCrashlogs()) {
-          StreamString frame_description;
-          frame->DumpUsingSettingsFormat(&frame_description);
-          stack_trace = std::make_unique<llvm::PrettyStackTraceFormat>(
-              "SBFrame::EvaluateExpression (expr = \"%s\", fetch_dynamic_value "
-              "= %u) %s",
-              expr, options.GetFetchDynamicValue(),
-              frame_description.GetData());
-        }
-
-        target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
-        expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
-      }
-    } else {
-      Status error;
-      error = Status::FromErrorString("sbframe object is not valid.");
-      expr_value_sp = ValueObjectConstResult::Create(nullptr, std::move(error));
-      expr_result.SetSP(expr_value_sp, false);
-    }
+    SBValue error_result = CreateProcessIsRunningExprEvalError();
+    LogResult(error_result);
+    return error_result;
   }
 
-  if (expr_result.GetError().Success())
-    LLDB_LOGF(expr_log,
-              "** [SBFrame::EvaluateExpression] Expression result is "
-              "%s, summary %s **",
-              expr_result.GetValue(), expr_result.GetSummary());
-  else
-    LLDB_LOGF(expr_log,
-              "** [SBFrame::EvaluateExpression] Expression evaluation failed: "
-              "%s **",
-              expr_result.GetError().GetCString());
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return SBValue();
+
+  std::unique_ptr<llvm::PrettyStackTraceFormat> stack_trace;
+  Target *target = exe_ctx->GetTargetPtr();
+  if (target->GetDisplayExpressionsInCrashlogs()) {
+    StreamString frame_description;
+    frame->DumpUsingSettingsFormat(&frame_description);
+    stack_trace = std::make_unique<llvm::PrettyStackTraceFormat>(
+        "SBFrame::EvaluateExpression (expr = \"%s\", fetch_dynamic_value "
+        "= %u) %s",
+        expr, options.GetFetchDynamicValue(), frame_description.GetData());
+  }
+
+  ValueObjectSP expr_value_sp;
+  target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
+
+  SBValue expr_result;
+  expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
+  LogResult(expr_result);
 
   return expr_result;
 }

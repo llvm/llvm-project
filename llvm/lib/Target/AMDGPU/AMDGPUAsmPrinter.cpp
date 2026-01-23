@@ -323,7 +323,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
                          "' is already defined");
 
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     Align Alignment = GV->getAlign().value_or(Align(4));
 
     emitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());
@@ -534,9 +534,9 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   MCSectionELF *MaxGPRSection =
       OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
   OutStreamer->switchSection(MaxGPRSection);
-  getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
-                                              RI.getMaxAGPRSymbol(OutContext),
-                                              RI.getMaxSGPRSymbol(OutContext));
+  getTargetStreamer()->EmitMCResourceMaximums(
+      RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
+      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNamedBarrierSymbol(OutContext));
   OutStreamer->popSection();
 
   for (Function &F : M.functions())
@@ -1255,8 +1255,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.UserSGPR = MFI->getNumUserSGPRs();
   // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
-  ProgInfo.TrapHandlerEnable =
-      STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled();
+  ProgInfo.TrapHandlerEnable = STM.isAmdHsaOS() ? 0 : STM.hasTrapHandler();
   ProgInfo.TGIdXEnable = MFI->hasWorkGroupIDX();
   ProgInfo.TGIdYEnable = MFI->hasWorkGroupIDY();
   ProgInfo.TGIdZEnable = MFI->hasWorkGroupIDZ();

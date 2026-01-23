@@ -9,11 +9,10 @@ int f19(void) {
   return ({ 3;;4; });
 }
 
-// CIR: cir.func dso_local @f19() -> !s32i
+// CIR: cir.func {{.*}} @f19() -> !s32i
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[TMP:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
 // CIR:   cir.scope {
-// CIR:     %[[C3:.+]] = cir.const #cir.int<3> : !s32i
 // CIR:     %[[C4:.+]] = cir.const #cir.int<4> : !s32i
 // CIR:     cir.store {{.*}} %[[C4]], %[[TMP]] : !s32i, !cir.ptr<!s32i>
 // CIR:   }
@@ -47,7 +46,7 @@ void f20(void) {
   return ({ 3;;4;; });
 }
 
-// CIR-LABEL: cir.func dso_local @f20() {{[^-]*}}
+// CIR-LABEL: cir.func {{.*}} @f20() {{[^-]*}}
 // CIR: cir.return {{[^%]*}}
 
 // LLVM-LABEL: define{{.*}} void @f20
@@ -61,7 +60,7 @@ int nested(void) {
   }
 }
 
-// CIR: cir.func dso_local @nested() -> !s32i
+// CIR: cir.func {{.*}} @nested() -> !s32i
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[TMP_OUTER:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
 // CIR:   cir.scope {
@@ -164,7 +163,7 @@ void empty() {
   return ({;;;;});
 }
 
-// CIR: cir.func no_proto dso_local @empty()
+// CIR: cir.func {{.*}} @empty()
 // CIR-NEXT:   cir.return
 
 // LLVM: define dso_local void @empty()
@@ -177,7 +176,7 @@ void empty() {
 
 void empty2() { ({ }); }
 
-// CIR: @empty2
+// CIR: cir.func {{.*}} @empty2
 // CIR-NEXT: cir.return
 
 // LLVM: @empty2()
@@ -191,7 +190,7 @@ void empty2() { ({ }); }
 
 // Yields an out-of-scope scalar.
 void test2() { ({int x = 3; x; }); }
-// CIR: @test2
+// CIR: cir.func {{.*}} @test2
 // CIR: %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
 // CIR:   %[[VAR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
@@ -226,7 +225,7 @@ void test2() { ({int x = 3; x; }); }
 // Yields an aggregate.
 struct S { int x; };
 int test3() { return ({ struct S s = {1}; s; }).x; }
-// CIR: cir.func no_proto dso_local @test3() -> !s32i
+// CIR: cir.func {{.*}} @test3() -> !s32i
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
@@ -277,6 +276,6 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 
 // Expression is wrapped in an expression attribute (just ensure it does not crash).
 void test4(int x) { ({[[gsl::suppress("foo")]] x;}); }
-// CIR: @test4
+// CIR: cir.func {{.*}} @test4
 // LLVM: @test4
 // OGCG: @test4
