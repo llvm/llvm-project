@@ -229,10 +229,8 @@ struct CallOpInterface
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
 
-    // TODO Avoid recomputing the symbol tables every time.
-    SymbolTableCollection symbolTable;
-
-    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
+    // Reuse the cached symbol tables from the bufferization state.
+    FuncOp funcOp = getCalledFunction(callOp, state.getSymbolTables());
     assert(funcOp && "expected CallOp to a FuncOp");
 
     // If the callee was already bufferized, we can directly take the type from

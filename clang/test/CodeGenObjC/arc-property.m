@@ -104,9 +104,9 @@ void test3(Test3 *t) {
   return test3_helper();
 }
 // CHECK:    define internal ptr @"\01-[Test3 copyMachine]"(
-// CHECK:      %call1 = call ptr @test3_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK:      ret ptr %call1
+// CHECK:      [[T0:%.*]] = call ptr @test3_helper()
+// CHECK-NEXT: [[T1:%.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[T0]])
+// CHECK-NEXT: ret ptr [[T1]]
 - (void) setCopyMachine: (id) x {}
 @end
 

@@ -854,7 +854,7 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
           if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
               CI && !CI->isZero())
             BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                Constant::getNullValue(RK.IRArgValue->getType())));
+                Constant::getNullValue(RK.WasOn->getType())));
           break;
 
         default:
