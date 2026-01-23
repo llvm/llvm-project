@@ -116,7 +116,9 @@ protected:
                      MaybeAlign PointeeAlign = std::nullopt,
                      StringRef Name = "", StringRef TypeName = "",
                      StringRef BaseTypeName = "", StringRef ActAccQual = "",
-                     StringRef AccQual = "", StringRef TypeQual = "");
+                     StringRef AccQual = "", StringRef TypeQual = "",
+                     unsigned OriginalArgIndex = ~0U,
+                     uint64_t OriginalArgOffset = 0);
 
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
