@@ -7650,6 +7650,32 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
+void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
+  assert((isa<FunctionDecl>(NewD) || isa<VarDecl>(NewD)) &&
+         "NewD is not a function or variable");
+
+  if (PendingExportedNames.empty())
+    return;
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
+    if (getLangOpts().CPlusPlus && !FD->isExternC())
+      return;
+  }
+  IdentifierInfo *IdentName = NewD->getIdentifier();
+  if (IdentName == nullptr)
+    return;
+  auto PendingName = PendingExportedNames.find(IdentName);
+  if (PendingName != PendingExportedNames.end()) {
+    auto &Label = PendingName->second;
+    if (!Label.Used) {
+      Label.Used = true;
+      if (NewD->hasExternalFormalLinkage())
+        mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);
+      else
+        Diag(Label.NameLoc, diag::warn_pragma_not_applied) << "export" << NewD;
+    }
+  }
+}
+
 // Checks if VD is declared at global scope or with C language linkage.
 static bool isMainVar(DeclarationName Name, VarDecl *VD) {
   return Name.getAsIdentifierInfo() &&
@@ -8364,6 +8390,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
+  ProcessPragmaExport(NewVD);
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
@@ -11010,6 +11037,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   ProcessPragmaWeak(S, NewFD);
+  ProcessPragmaExport(NewFD);
   checkAttributesAfterMerging(*this, *NewFD);
 
   AddKnownFunctionAttributes(NewFD);
@@ -14122,7 +14150,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // C99 6.7.8p4: All the expressions in an initializer for an object that has
     // static storage duration shall be constant expressions or string literals.
     } else if (VDecl->getStorageClass() == SC_Static) {
-      CheckForConstantInitializer(Init);
+      // Avoid evaluating the initializer twice for constexpr variables. It will
+      // be evaluated later.
+      if (!VDecl->isConstexpr())
+        CheckForConstantInitializer(Init);
 
       // C89 is stricter than C99 for aggregate initializers.
       // C89 6.5.7p3: All the expressions [...] in an initializer list

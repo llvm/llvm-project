@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import Feature, compilerMacros
+from libcxx.test.dsl import Feature, compilerMacros, programSucceeds
 
 features = []
 
@@ -73,5 +73,24 @@ for macro, feature in inverted_macros.items():
             name=feature,
             when=lambda cfg, m=macro: m in compilerMacros(cfg)
             and compilerMacros(cfg)[m] == "0",
+        )
+    )
+
+for mode in ("none", "fast", "extensive", "debug"):
+    check_program = f"""
+        #include <stddef.h> // any header to get the definitions
+        int main(int, char**) {{
+        #if defined(_LIBCPP_VERSION) && \\
+                defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()}
+            return 0;
+        #else
+            return 1;
+        #endif
+        }}
+    """
+    features.append(
+        Feature(
+            name=f"libcpp-hardening-mode={mode}",
+            when=lambda cfg, prog=check_program: programSucceeds(cfg, prog)
         )
     )

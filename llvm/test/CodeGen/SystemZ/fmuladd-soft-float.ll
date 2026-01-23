@@ -11,24 +11,28 @@ define half @fmuladd_intrinsic_f16(half %a, half %b, half %c) #0 {
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r15, -40
 ; SOFT-FLOAT-NEXT:    aghi %r15, -160
 ; SOFT-FLOAT-NEXT:    .cfi_def_cfa_offset 320
-; SOFT-FLOAT-NEXT:    # kill: def $r4l killed $r4l def $r4d
-; SOFT-FLOAT-NEXT:    llghr %r0, %r4
-; SOFT-FLOAT-NEXT:    lr %r13, %r3
-; SOFT-FLOAT-NEXT:    lr %r12, %r2
-; SOFT-FLOAT-NEXT:    lgr %r2, %r0
+; SOFT-FLOAT-NEXT:    # kill: def $r2l killed $r2l def $r2d
+; SOFT-FLOAT-NEXT:    llghr %r2, %r2
+; SOFT-FLOAT-NEXT:    lr %r13, %r4
+; SOFT-FLOAT-NEXT:    lr %r12, %r3
 ; SOFT-FLOAT-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; SOFT-FLOAT-NEXT:    llghr %r0, %r12
 ; SOFT-FLOAT-NEXT:    lgr %r12, %r2
+; SOFT-FLOAT-NEXT:    lgr %r2, %r0
+; SOFT-FLOAT-NEXT:    brasl %r14, __extendhfsf2@PLT
+; SOFT-FLOAT-NEXT:    lgr %r3, %r2
+; SOFT-FLOAT-NEXT:    lgr %r2, %r12
+; SOFT-FLOAT-NEXT:    brasl %r14, __mulsf3@PLT
+; SOFT-FLOAT-NEXT:    brasl %r14, __truncsfhf2@PLT
+; SOFT-FLOAT-NEXT:    llghr %r0, %r13
+; SOFT-FLOAT-NEXT:    lgr %r13, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r0
 ; SOFT-FLOAT-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; SOFT-FLOAT-NEXT:    llghr %r0, %r13
 ; SOFT-FLOAT-NEXT:    lgr %r13, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r0
 ; SOFT-FLOAT-NEXT:    brasl %r14, __extendhfsf2@PLT
-; SOFT-FLOAT-NEXT:    lgr %r3, %r2
-; SOFT-FLOAT-NEXT:    lgr %r2, %r13
-; SOFT-FLOAT-NEXT:    brasl %r14, __mulsf3@PLT
-; SOFT-FLOAT-NEXT:    lgr %r3, %r12
+; SOFT-FLOAT-NEXT:    lgr %r3, %r13
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; SOFT-FLOAT-NEXT:    # kill: def $r2l killed $r2l killed $r2d

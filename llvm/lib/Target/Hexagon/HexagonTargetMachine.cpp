@@ -47,6 +47,9 @@ static cl::opt<bool>
     DisableHardwareLoops("disable-hexagon-hwloops", cl::Hidden,
                          cl::desc("Disable Hardware Loops for Hexagon target"));
 
+static cl::opt<bool> EnableMCR("hexagon-mcr", cl::Hidden, cl::init(true),
+                               cl::desc("Enable the machine combiner pass"));
+
 static cl::opt<bool>
     DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
                     cl::desc("Disable Hexagon Addressing Mode Optimization"));
@@ -269,11 +272,13 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonLoopIdiomRecognitionPass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonVectorLoopCarriedReusePass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
 
@@ -309,6 +314,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -391,6 +397,13 @@ bool HexagonPassConfig::addInstSelector() {
   }
 
   return false;
+}
+
+bool HexagonPassConfig::addILPOpts() {
+  if (EnableMCR)
+    addPass(&MachineCombinerID);
+
+  return true;
 }
 
 void HexagonPassConfig::addPreRegAlloc() {

@@ -2,9 +2,11 @@
 // RUN:            -verify %s
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wno-gcc-compat\
 // RUN:            -verify %s -x objective-c++
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call -Wno-gcc-compat\
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -Wunsafe-buffer-usage-in-format-attr-call -Wno-gcc-compat \
 // RUN:            -verify %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call -Wno-gcc-compat\
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -Wunsafe-buffer-usage-in-format-attr-call -Wno-gcc-compat \
 // RUN:            -verify %s -DTEST_STD_NS
 
 typedef struct {} FILE;
@@ -295,17 +297,21 @@ struct FormatAttrTestMember2 {
 void test_format_attr(char * Str, std::string StdStr) {
   myprintf("hello", Str);
   myprintf("hello %s", StdStr.c_str());
-  myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
+  myprintf("hello %s", Str);  // expected-warning{{formatting function 'myprintf' is unsafe}} \
 			         expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  extern int errno;
+  extern char *strerror(int errnum);
+  myprintf("errno: %s", strerror(errno));
 
   myprintf_2("hello", 0, Str);
   myprintf_2("hello %s", 0, StdStr.c_str());
-  myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
+  myprintf_2("hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_2' is unsafe}} \
 			              expected-note{{string argument is not guaranteed to be null-terminated}}
 
   myprintf_3("irrelevant", "hello", 0, Str);
   myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
-  myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
+  myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_3' is unsafe}} \
 			               expected-note{{string argument is not guaranteed to be null-terminated}}
   myscanf("hello %s");
   myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
@@ -321,30 +327,30 @@ void test_format_attr(char * Str, std::string StdStr) {
 
   Obj.myprintf("hello", Str);
   Obj.myprintf("hello %s", StdStr.c_str());
-  Obj.myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
+  Obj.myprintf("hello %s", Str);  // expected-warning{{formatting function 'myprintf' is unsafe}} \
 			         expected-note{{string argument is not guaranteed to be null-terminated}}
 
   Obj.myprintf_2("hello", 0, Str);
   Obj.myprintf_2("hello %s", 0, StdStr.c_str());
-  Obj.myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
+  Obj.myprintf_2("hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_2' is unsafe}} \
 			              expected-note{{string argument is not guaranteed to be null-terminated}}
 
   Obj.myprintf_3("irrelevant", "hello", 0, Str);
   Obj.myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
-  Obj.myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
+  Obj.myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_3' is unsafe}} \
 			               expected-note{{string argument is not guaranteed to be null-terminated}}
 
   Obj.myscanf("hello %s");
-  Obj.myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
+  Obj.myscanf("hello %s", Str); // expected-warning{{formatting function 'myscanf' is unsafe}}
 
-  Obj.myscanf("hello %d", &X); // expected-warning{{function 'myscanf' is unsafe}}
+  Obj.myscanf("hello %d", &X); // expected-warning{{formatting function 'myscanf' is unsafe}}
 
-  Obj.myprintf_default("irrelevant"); // expected-warning{{function 'myprintf_default' is unsafe}}
+  Obj.myprintf_default("irrelevant"); // expected-warning{{formatting function 'myprintf_default' is unsafe}}
   // expected-note@*{{string argument is not guaranteed to be null-terminated}}
 
   Obj("hello", Str);
   Obj("hello %s", StdStr.c_str());
-  Obj("hello %s", Str);  // expected-warning{{function 'operator()' is unsafe}} \
+  Obj("hello %s", Str);  // expected-warning{{formatting function 'operator()' is unsafe}} \
     		            expected-note{{string argument is not guaranteed to be null-terminated}}
   Obj["hello"];
   Obj["hello %s"];
@@ -353,7 +359,7 @@ void test_format_attr(char * Str, std::string StdStr) {
 
   Obj2("hello", Str);
   Obj2("hello %s", StdStr.c_str());
-  Obj2("hello %s", Str);  // expected-warning{{function 'operator()' is unsafe}} \
+  Obj2("hello %s", Str);  // expected-warning{{formatting function 'operator()' is unsafe}} \
 			 expected-note{{string argument is not guaranteed to be null-terminated}}
 }
 
@@ -363,9 +369,9 @@ void myprintf_arg_idx_oob(const char *) __attribute__((__format__ (__printf__, 1
 
 void test_format_attr_invalid_arg_idx(char * Str, std::string StdStr) {
   myprintf_arg_idx_oob("hello");
-  myprintf_arg_idx_oob(Str); // expected-warning{{function 'myprintf_arg_idx_oob' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  myprintf_arg_idx_oob(Str); // expected-warning{{formatting function 'myprintf_arg_idx_oob' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   myprintf_arg_idx_oob(StdStr.c_str());
   myprintf("hello");
-  myprintf(Str); // expected-warning{{function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  myprintf(Str); // expected-warning{{formatting function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   myprintf(StdStr.c_str());
 }
