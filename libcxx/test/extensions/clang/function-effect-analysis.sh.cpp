@@ -27,15 +27,36 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -Werror=function-effects
 
-// RUN: %{build}
-// RUN: %{build} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE
-// RUN: %{build} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE
-// RUN: %{build} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
-// RUN: %{build} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+// RUN: %{verify}
+// RUN: %{verify} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE
+// RUN: %{verify} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE
+// RUN: %{verify} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+// RUN: %{verify} -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 
-#include <__assert>
+#include <cstddef>
+#include <span>
 
-void f(bool condition) noexcept [[clang::nonblocking]] { _LIBCPP_ASSERT(condition, "message"); }
-void g(bool condition) noexcept [[clang::nonallocating]] { _LIBCPP_ASSERT(condition, "message"); }
+// Using _LIBCPP_ASSERT directly
+void f(bool condition) noexcept [[clang::nonblocking]] {
+  _LIBCPP_ASSERT(condition, "message"); // nothing
+}
+void g(bool condition) noexcept [[clang::nonallocating]] {
+  _LIBCPP_ASSERT(condition, "message"); // nothing
+}
 
-int main(int, char**) { return 0; }
+// Sanity check with an actual std::span
+void f(std::span<int> span, std::size_t index) noexcept [[clang::nonblocking]] {
+  (void)span[index]; // nothing
+}
+void g(std::span<int> span, std::size_t index) noexcept [[clang::nonallocating]] {
+  (void)span[index]; // nothing
+}
+
+// Test the test: ensure that a diagnostic would be emitted normally
+void __potentially_blocking();
+void f() noexcept [[clang::nonblocking]] {
+  __potentially_blocking(); // expected-error {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
+}
+void g() noexcept [[clang::nonallocating]] {
+  __potentially_blocking(); // expected-error {{function with 'nonallocating' attribute must not call non-'nonallocating' function}}
+}

@@ -24,7 +24,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // This function should never be called directly from the code -- it should only be called through the
 // `_LIBCPP_LOG_HARDENING_FAILURE` macro.
-[[__gnu__::__cold__]] _LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) noexcept;
+//
+// Furthermore, note that we pretend that this is a non-blocking and non-allocating function per Clang's
+// function effect attributes. We do that because this function is only called once a function's preconditions
+// are violated, at which point function effect analysis can no longer provide any meaningful guarantees
+// (e.g., cannot guarantee the caller is non-blocking, regardless of function effect attributes). Failure
+// to mark this function with these attributes would render it (and anything calling it, such as span::operator[])
+// unusable from a [[nonblocking]] function.
+[[__gnu__::__cold__]] _LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) noexcept
+    [[_Clang::__nonblocking__]] [[_Clang::__nonallocating__]];
 
 // _LIBCPP_LOG_HARDENING_FAILURE(message)
 //
