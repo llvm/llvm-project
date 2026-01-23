@@ -1120,7 +1120,6 @@ add_header_library(
   HDRS
     sinpif.h
   DEPENDS
-
     libc.src.__support.FPUtil.FEnvImpl
     libc.src.__support.FPUtil.FPBits
     libc.src.__support.FPUtil.PolyEval
