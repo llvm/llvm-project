@@ -1,0 +1,97 @@
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+
+// CHECK: vmovrsb zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xa5,0x7f,0x48,0x6f,0xb4,0xf5,0x00,0x00,0x00,0x10]
+          vmovrsb zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vmovrsb zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+// CHECK: encoding: [0x62,0xc5,0x7f,0x4f,0x6f,0xb4,0x80,0x23,0x01,0x00,0x00]
+          vmovrsb zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+
+// CHECK: vmovrsb zmm22, zmmword ptr [rip]
+// CHECK: encoding: [0x62,0xe5,0x7f,0x48,0x6f,0x35,0x00,0x00,0x00,0x00]
+          vmovrsb zmm22, zmmword ptr [rip]
+
+// CHECK: vmovrsb zmm22, zmmword ptr [2*rbp - 2048]
+// CHECK: encoding: [0x62,0xe5,0x7f,0x48,0x6f,0x34,0x6d,0x00,0xf8,0xff,0xff]
+          vmovrsb zmm22, zmmword ptr [2*rbp - 2048]
+
+// CHECK: vmovrsb zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+// CHECK: encoding: [0x62,0xe5,0x7f,0xcf,0x6f,0x71,0x7f]
+          vmovrsb zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+
+// CHECK: vmovrsb zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+// CHECK: encoding: [0x62,0xe5,0x7f,0xcf,0x6f,0x72,0x80]
+          vmovrsb zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+
+// CHECK: vmovrsd zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xa5,0x7e,0x48,0x6f,0xb4,0xf5,0x00,0x00,0x00,0x10]
+          vmovrsd zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vmovrsd zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+// CHECK: encoding: [0x62,0xc5,0x7e,0x4f,0x6f,0xb4,0x80,0x23,0x01,0x00,0x00]
+          vmovrsd zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+
+// CHECK: vmovrsd zmm22, zmmword ptr [rip]
+// CHECK: encoding: [0x62,0xe5,0x7e,0x48,0x6f,0x35,0x00,0x00,0x00,0x00]
+          vmovrsd zmm22, zmmword ptr [rip]
+
+// CHECK: vmovrsd zmm22, zmmword ptr [2*rbp - 2048]
+// CHECK: encoding: [0x62,0xe5,0x7e,0x48,0x6f,0x34,0x6d,0x00,0xf8,0xff,0xff]
+          vmovrsd zmm22, zmmword ptr [2*rbp - 2048]
+
+// CHECK: vmovrsd zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+// CHECK: encoding: [0x62,0xe5,0x7e,0xcf,0x6f,0x71,0x7f]
+          vmovrsd zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+
+// CHECK: vmovrsd zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+// CHECK: encoding: [0x62,0xe5,0x7e,0xcf,0x6f,0x72,0x80]
+          vmovrsd zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+
+// CHECK: vmovrsq zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xa5,0xfe,0x48,0x6f,0xb4,0xf5,0x00,0x00,0x00,0x10]
+          vmovrsq zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vmovrsq zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+// CHECK: encoding: [0x62,0xc5,0xfe,0x4f,0x6f,0xb4,0x80,0x23,0x01,0x00,0x00]
+          vmovrsq zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+
+// CHECK: vmovrsq zmm22, zmmword ptr [rip]
+// CHECK: encoding: [0x62,0xe5,0xfe,0x48,0x6f,0x35,0x00,0x00,0x00,0x00]
+          vmovrsq zmm22, zmmword ptr [rip]
+
+// CHECK: vmovrsq zmm22, zmmword ptr [2*rbp - 2048]
+// CHECK: encoding: [0x62,0xe5,0xfe,0x48,0x6f,0x34,0x6d,0x00,0xf8,0xff,0xff]
+          vmovrsq zmm22, zmmword ptr [2*rbp - 2048]
+
+// CHECK: vmovrsq zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+// CHECK: encoding: [0x62,0xe5,0xfe,0xcf,0x6f,0x71,0x7f]
+          vmovrsq zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+
+// CHECK: vmovrsq zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+// CHECK: encoding: [0x62,0xe5,0xfe,0xcf,0x6f,0x72,0x80]
+          vmovrsq zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+
+// CHECK: vmovrsw zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xa5,0xff,0x48,0x6f,0xb4,0xf5,0x00,0x00,0x00,0x10]
+          vmovrsw zmm22, zmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vmovrsw zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+// CHECK: encoding: [0x62,0xc5,0xff,0x4f,0x6f,0xb4,0x80,0x23,0x01,0x00,0x00]
+          vmovrsw zmm22 {k7}, zmmword ptr [r8 + 4*rax + 291]
+
+// CHECK: vmovrsw zmm22, zmmword ptr [rip]
+// CHECK: encoding: [0x62,0xe5,0xff,0x48,0x6f,0x35,0x00,0x00,0x00,0x00]
+          vmovrsw zmm22, zmmword ptr [rip]
+
+// CHECK: vmovrsw zmm22, zmmword ptr [2*rbp - 2048]
+// CHECK: encoding: [0x62,0xe5,0xff,0x48,0x6f,0x34,0x6d,0x00,0xf8,0xff,0xff]
+          vmovrsw zmm22, zmmword ptr [2*rbp - 2048]
+
+// CHECK: vmovrsw zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+// CHECK: encoding: [0x62,0xe5,0xff,0xcf,0x6f,0x71,0x7f]
+          vmovrsw zmm22 {k7} {z}, zmmword ptr [rcx + 8128]
+
+// CHECK: vmovrsw zmm22 {k7} {z}, zmmword ptr [rdx - 8192]
+// CHECK: encoding: [0x62,0xe5,0xff,0xcf,0x6f,0x72,0x80]
+          vmovrsw zmm22 {k7} {z}, zmmword ptr [rdx - 8192]

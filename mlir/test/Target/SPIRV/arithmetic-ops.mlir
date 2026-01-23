@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, BFloat16DotProductKHR], [SPV_KHR_bfloat16]> {
   spirv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
     // CHECK: {{%.*}}= spirv.FMul {{%.*}}, {{%.*}} : f32
     %0 = spirv.FMul %arg0, %arg1 : f32
@@ -84,6 +89,11 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.func @vector_times_scalar(%arg0 : vector<4xf32>, %arg1 : f32) "None" {
     // CHECK: {{%.*}} = spirv.VectorTimesScalar {{%.*}}, {{%.*}} : (vector<4xf32>, f32) -> vector<4xf32>
     %0 = spirv.VectorTimesScalar %arg0, %arg1 : (vector<4xf32>, f32) -> vector<4xf32>
+    spirv.Return
+  }
+  spirv.func @dot_bf16(%arg0: vector<4xbf16>, %arg1: vector<4xbf16>) "None" {
+    // CHECK: spirv.Dot %{{.+}}, %{{.+}} : vector<4xbf16> -> bf16
+    %0 = spirv.Dot %arg0, %arg1 : vector<4xbf16> -> bf16
     spirv.Return
   }
 }

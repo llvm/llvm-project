@@ -16,7 +16,7 @@
 ; CHECK: [openmp-opt] Basic block @kernel if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.else is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.end is executed by a single thread.
-define void @kernel(ptr %dyn) "kernel" {
+define ptx_kernel void @kernel(ptr %dyn) "kernel" {
   %call = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment, ptr %dyn)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
@@ -116,7 +116,6 @@ attributes #0 = { cold noinline }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
-!nvvm.annotations = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "single_threaded_execution.c", directory: "/tmp/single_threaded_execution.c")
@@ -125,7 +124,6 @@ attributes #0 = { cold noinline }
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
-!7 = !{ptr @kernel, !"kernel", i32 1}
 !8 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 8, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !9 = distinct !DISubprogram(name: "cold", scope: !1, file: !1, line: 8, type: !10, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !2)

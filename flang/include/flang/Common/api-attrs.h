@@ -133,6 +133,18 @@
 #undef RT_DEVICE_COMPILATION
 #endif
 
+/*
+ * Recurrence in the call graph prevents computing minimal stack size
+ * required for a kernel execution. This macro can be used to disable
+ * some F18 runtime functionality that is implemented using recurrent
+ * function calls or to use alternative implementation.
+ */
+#if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define RT_DEVICE_AVOID_RECURSION 1
+#else
+#undef RT_DEVICE_AVOID_RECURSION
+#endif
+
 #if defined(__CUDACC__)
 #define RT_DIAG_PUSH _Pragma("nv_diagnostic push")
 #define RT_DIAG_POP _Pragma("nv_diagnostic pop")
@@ -143,5 +155,55 @@
 #define RT_DIAG_POP
 #define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 #endif /* !defined(__CUDACC__) */
+
+/*
+ * RT_DEVICE_NOINLINE may be used for non-performance critical
+ * functions that should not be inlined to minimize the amount
+ * of code that needs to be processed by the device compiler's
+ * optimizer.
+ */
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+#if __has_attribute(noinline)
+#define RT_NOINLINE_ATTR __attribute__((noinline))
+#else
+#define RT_NOINLINE_ATTR
+#endif
+#if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define RT_DEVICE_NOINLINE RT_NOINLINE_ATTR
+#define RT_DEVICE_NOINLINE_HOST_INLINE
+#else
+#define RT_DEVICE_NOINLINE
+#define RT_DEVICE_NOINLINE_HOST_INLINE inline
+#endif
+
+/* RT_OPTNONE_ATTR allows disabling optimizations per function. */
+#if __has_attribute(optimize)
+/* GCC style. */
+#define RT_OPTNONE_ATTR __attribute__((optimize("O0")))
+#elif __has_attribute(optnone)
+/* Clang style. */
+#define RT_OPTNONE_ATTR __attribute__((optnone))
+#else
+#define RT_OPTNONE_ATTR
+#endif
+
+/* Detect system endianness if it was not explicitly set. */
+#if !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN)
+
+/* We always assume Windows is little endian, otherwise use the GCC compatible
+ * flags. */
+#if defined(_MSC_VER) || defined(_WIN32)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define FLANG_BIG_ENDIAN 1
+#else
+#error "Unknown or unsupported endianness."
+#endif
+
+#endif /* !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN) */
 
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

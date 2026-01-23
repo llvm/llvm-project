@@ -13,78 +13,107 @@
 #include "mlir-c/Dialect/Transform/Interpreter.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
+#include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
-#include <pybind11/detail/common.h>
-#include <pybind11/pybind11.h>
+namespace nb = nanobind;
 
-namespace py = pybind11;
-
-namespace {
-struct PyMlirTransformOptions {
-  PyMlirTransformOptions() { options = mlirTransformOptionsCreate(); };
-  PyMlirTransformOptions(PyMlirTransformOptions &&other) {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace transform_interpreter {
+struct PyTransformOptions {
+  PyTransformOptions() { options = mlirTransformOptionsCreate(); };
+  PyTransformOptions(PyTransformOptions &&other) {
     options = other.options;
     other.options.ptr = nullptr;
   }
-  PyMlirTransformOptions(const PyMlirTransformOptions &) = delete;
+  PyTransformOptions(const PyTransformOptions &) = delete;
 
-  ~PyMlirTransformOptions() { mlirTransformOptionsDestroy(options); }
+  ~PyTransformOptions() { mlirTransformOptionsDestroy(options); }
 
   MlirTransformOptions options;
 };
-} // namespace
+} // namespace transform_interpreter
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
-static void populateTransformInterpreterSubmodule(py::module &m) {
-  py::class_<PyMlirTransformOptions>(m, "TransformOptions", py::module_local())
-      .def(py::init())
-      .def_property(
+static void populateTransformInterpreterSubmodule(nb::module_ &m) {
+  using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
+  using namespace transform_interpreter;
+  nb::class_<PyTransformOptions>(m, "TransformOptions")
+      .def(nb::init<>())
+      .def_prop_rw(
           "expensive_checks",
-          [](const PyMlirTransformOptions &self) {
+          [](const PyTransformOptions &self) {
             return mlirTransformOptionsGetExpensiveChecksEnabled(self.options);
           },
-          [](PyMlirTransformOptions &self, bool value) {
+          [](PyTransformOptions &self, bool value) {
             mlirTransformOptionsEnableExpensiveChecks(self.options, value);
           })
-      .def_property(
+      .def_prop_rw(
           "enforce_single_top_level_transform_op",
-          [](const PyMlirTransformOptions &self) {
+          [](const PyTransformOptions &self) {
             return mlirTransformOptionsGetEnforceSingleTopLevelTransformOp(
                 self.options);
           },
-          [](PyMlirTransformOptions &self, bool value) {
+          [](PyTransformOptions &self, bool value) {
             mlirTransformOptionsEnforceSingleTopLevelTransformOp(self.options,
                                                                  value);
           });
 
   m.def(
       "apply_named_sequence",
-      [](MlirOperation payloadRoot, MlirOperation transformRoot,
-         MlirOperation transformModule, const PyMlirTransformOptions &options) {
+      [](PyOperationBase &payloadRoot, PyOperationBase &transformRoot,
+         PyOperationBase &transformModule, const PyTransformOptions &options) {
         mlir::python::CollectDiagnosticsToStringScope scope(
-            mlirOperationGetContext(transformRoot));
-
-        // Calling back into Python to invalidate everything under the payload
-        // root. This is awkward, but we don't have access to PyMlirContext
-        // object here otherwise.
-        py::object obj = py::cast(payloadRoot);
-        obj.attr("context").attr("_clear_live_operations_inside")(payloadRoot);
-
+            mlirOperationGetContext(transformRoot.getOperation()));
         MlirLogicalResult result = mlirTransformApplyNamedSequence(
-            payloadRoot, transformRoot, transformModule, options.options);
-        if (mlirLogicalResultIsSuccess(result))
+            payloadRoot.getOperation(), transformRoot.getOperation(),
+            transformModule.getOperation(), options.options);
+        if (mlirLogicalResultIsSuccess(result)) {
+          // Even in cases of success, we might have diagnostics to report:
+          std::string msg;
+          if ((msg = scope.takeMessage()).size() > 0) {
+            fprintf(stderr,
+                    "Diagnostic generated while applying "
+                    "transform.named_sequence:\n%s",
+                    msg.data());
+          }
           return;
+        }
 
-        throw py::value_error(
-            "Failed to apply named transform sequence.\nDiagnostic message " +
-            scope.takeMessage());
+        throw nb::value_error(
+            ("Failed to apply named transform sequence.\nDiagnostic message " +
+             scope.takeMessage())
+                .c_str());
       },
-      py::arg("payload_root"), py::arg("transform_root"),
-      py::arg("transform_module"),
-      py::arg("transform_options") = PyMlirTransformOptions());
+      nb::arg("payload_root"), nb::arg("transform_root"),
+      nb::arg("transform_module"),
+      nb::arg("transform_options") = PyTransformOptions());
+
+  m.def(
+      "copy_symbols_and_merge_into",
+      [](PyOperationBase &target, PyOperationBase &other) {
+        mlir::python::CollectDiagnosticsToStringScope scope(
+            mlirOperationGetContext(target.getOperation()));
+
+        MlirLogicalResult result = mlirMergeSymbolsIntoFromClone(
+            target.getOperation(), other.getOperation());
+        if (mlirLogicalResultIsFailure(result)) {
+          throw nb::value_error(
+              ("Failed to merge symbols.\nDiagnostic message " +
+               scope.takeMessage())
+                  .c_str());
+        }
+      },
+      nb::arg("target"), nb::arg("other"));
 }
 
-PYBIND11_MODULE(_mlirTransformInterpreter, m) {
+NB_MODULE(_mlirTransformInterpreter, m) {
   m.doc() = "MLIR Transform dialect interpreter functionality.";
   populateTransformInterpreterSubmodule(m);
 }

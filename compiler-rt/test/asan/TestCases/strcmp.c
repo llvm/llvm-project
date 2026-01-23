@@ -14,6 +14,8 @@ int main(int argc, char **argv) {
   assert(strcmp(s1 - 1, s2));
 
   // CHECK: {{.*ERROR: AddressSanitizer: stack-buffer-underflow on address}}
-  // CHECK: READ of size 1
+  // Very rarely `s1[-1]` happens to be '1', resulting in `strcmp` needing to
+  // check 2 bytes before failing, rather than 1 - this should still pass
+  // CHECK: READ of size {{[12]}}
   return 0;
 }

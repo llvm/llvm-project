@@ -255,8 +255,8 @@ define void @gather_qps(<8 x i64> %ind, <8 x float> %src, ptr %base, ptr %stbuf)
 ; CHECK-LABEL: gather_qps:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    kxnorw %k0, %k0, %k2
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k2
 ; CHECK-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm1 {%k2}
 ; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vscatterqps %ymm1, (%rsi,%zmm0,4) {%k1}
@@ -265,30 +265,6 @@ define void @gather_qps(<8 x i64> %ind, <8 x float> %src, ptr %base, ptr %stbuf)
   %x = call <8 x float> @llvm.x86.avx512.gather.qps.512 (<8 x float> %src, ptr %base, <8 x i64>%ind, i8 -1, i32 4)
   %ind2 = add <8 x i64> %ind, <i64 0, i64 1, i64 2, i64 3, i64 0, i64 1, i64 2, i64 3>
   call void @llvm.x86.avx512.scatter.qps.512 (ptr %stbuf, i8 -1, <8 x i64>%ind2, <8 x float> %x, i32 4)
-  ret void
-}
-
-declare  void @llvm.x86.avx512.gatherpf.qps.512(i8, <8 x i64>, ptr , i32, i32);
-declare  void @llvm.x86.avx512.scatterpf.qps.512(i8, <8 x i64>, ptr , i32, i32);
-define void @prefetch(<8 x i64> %ind, ptr %base) {
-; CHECK-LABEL: prefetch:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherpf0qps (%rdi,%zmm0,4) {%k1}
-; CHECK-NEXT:    kxorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherpf1qps (%rdi,%zmm0,4) {%k1}
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vscatterpf0qps (%rdi,%zmm0,2) {%k1}
-; CHECK-NEXT:    movb $120, %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vscatterpf1qps (%rdi,%zmm0,2) {%k1}
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-  call void @llvm.x86.avx512.gatherpf.qps.512(i8 -1, <8 x i64> %ind, ptr %base, i32 4, i32 3)
-  call void @llvm.x86.avx512.gatherpf.qps.512(i8 0, <8 x i64> %ind, ptr %base, i32 4, i32 2)
-  call void @llvm.x86.avx512.scatterpf.qps.512(i8 1, <8 x i64> %ind, ptr %base, i32 2, i32 3)
-  call void @llvm.x86.avx512.scatterpf.qps.512(i8 120, <8 x i64> %ind, ptr %base, i32 2, i32 2)
   ret void
 }
 
@@ -544,7 +520,7 @@ define <8 x float>@test_int_x86_avx512_gather3siv8_sf(<8 x float> %x0, ptr %x1, 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,2), %ymm2 {%k1}
 ; CHECK-NEXT:    vaddps %ymm2, %ymm0, %ymm0
@@ -796,7 +772,7 @@ define void@test_int_x86_avx512_scattersiv8_sf(ptr %x0, i8 %x1, <8 x i32> %x2, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vscatterdps %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vscatterdps %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -812,7 +788,7 @@ define void@test_int_x86_avx512_scattersiv8_si(ptr %x0, i8 %x1, <8 x i32> %x2, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -824,9 +800,9 @@ define void@test_int_x86_avx512_scattersiv8_si(ptr %x0, i8 %x1, <8 x i32> %x2, <
 define void @scatter_mask_test(ptr %x0, <8 x i32> %x2, <8 x i32> %x3) {
 ; CHECK-LABEL: scatter_mask_test:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxorw %k0, %k0, %k1
+; CHECK-NEXT:    kxorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    kmovd %eax, %k1

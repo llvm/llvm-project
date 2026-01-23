@@ -47,7 +47,7 @@
 // CHECK: Branch (103:9): [True: 9, False: 1]
 
 // CHECK: switches()
-// CHECK: Branch (113:3): [True: 1, False: 0]
+// CHECK: Branch (113:3): [True: 1, Folded]
 // CHECK: Branch (117:63): [True: 15, False: 0]
 // CHECK: Branch (119:5): [True: 1, False: 14]
 // CHECK: Branch (120:11): [True: 0, False: 1]
@@ -57,7 +57,7 @@
 // CHECK: Branch (126:11): [True: 3, False: 0]
 // CHECK: Branch (128:5): [True: 4, False: 11]
 // CHECK: Branch (129:11): [True: 4, False: 0]
-// CHECK: Branch (131:7): [True: 4, False: 0]
+// CHECK: Branch (131:7): [True: 4, Folded]
 // CHECK: Branch (132:13): [True: 4, False: 0]
 // CHECK: Branch (136:5): [True: 5, False: 10]
 // CHECK: Branch (137:11): [True: 1, False: 4]
@@ -114,13 +114,13 @@
 
 
 
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
+// REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
 // REPORT-NEXT: simple_loops                      8       0 100.00%         9       0 100.00%         6       0 100.00%
 // REPORT-NEXT: conditionals                     24       0 100.00%        15       0 100.00%        16       2  87.50%
 // REPORT-NEXT: early_exits                      20       4  80.00%        25       2  92.00%        16       6  62.50%
 // REPORT-NEXT: jumps                            39      12  69.23%        48       2  95.83%        26       9  65.38%
-// REPORT-NEXT: switches                         28       5  82.14%        38       4  89.47%        30       9  70.00%
+// REPORT-NEXT: switches                         28       5  82.14%        38       4  89.47%        28       7  75.00%
 // REPORT-NEXT: big_switch                       25       1  96.00%        32       0 100.00%        30       6  80.00%
 // REPORT-NEXT: boolean_operators                16       0 100.00%        13       0 100.00%        22       2  90.91%
 // REPORT-NEXT: boolop_loops                     19       0 100.00%        14       0 100.00%        16       2  87.50%
@@ -129,12 +129,12 @@
 // REPORT-NEXT: main                              1       0 100.00%        16       0 100.00%         0       0   0.00%
 // REPORT-NEXT: c-general.c:static_func           4       0 100.00%         4       0 100.00%         2       0 100.00%
 // REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                           197      24  87.82%       234       8  96.58%       174      38  78.16%
+// REPORT-NEXT: TOTAL                           197      24  87.82%       234       8  96.58%       172      36  79.07%
 
 // Test file-level report.
 // RUN: llvm-profdata merge %S/Inputs/branch-c-general.proftext -o %t.profdata
 // RUN: llvm-cov report %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s -check-prefix=FILEREPORT
-// FILEREPORT: TOTAL{{.*}}174                38    78.16%
+// FILEREPORT: TOTAL{{.*}}172                36    79.07%
 
 // Test color True/False output.
 // RUN: llvm-cov show --use-color --show-branches=count %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s -check-prefix=USECOLOR
@@ -161,6 +161,10 @@
 // HTML-INDEX: <td class='column-entry-yellow'>
 // HTML-INDEX: 87.82% (173/197)
 // HTML-INDEX: <td class='column-entry-red'>
-// HTML-INDEX: 78.16% (136/174)
+// HTML-INDEX: 79.07% (136/172)
 // HTML-INDEX: <tr class='light-row-bold'>
 // HTML-INDEX: Totals
+
+// RUN: yaml2obj %S/Inputs/branch-c-general-single.yaml -o %t.o
+// RUN: llvm-profdata merge %S/Inputs/branch-c-general-single.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %S/Inputs/branch-c-general.c -D#C=1

@@ -1,0 +1,20 @@
+{
+  /* Symbols to be exported are selected based on mangled names rather than   */
+  /* the demangled names provided by the `extern "C++"` matcher because it is */
+  /* easy to express "export everything defined in the sycl namespace" using  */
+  /* the former. Matching demangled names is more complicated in the presence */
+  /* of examples like:                                                        */
+  /*   "vtable for sycl::foo"                  (should be exported)           */
+  /*   "vtable for std::__internal<sycl::foo>" (should not be exported)       */
+
+  global:
+    /* Export everything from sycl namespace */
+    _ZNK4sycl*;  /* function */
+    _ZN4sycl*;   /* function */
+    _ZTIN4sycl*; /* typeinfo */
+    _ZTSN4sycl*; /* typeinfo name */
+    _ZTVN4sycl*; /* vtable */
+
+  local:
+    *;
+};

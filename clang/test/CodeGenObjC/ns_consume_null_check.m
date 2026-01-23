@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-dispatch-method=mixed -fobjc-runtime-has-weak -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -emit-llvm -fobjc-arc -fobjc-dispatch-method=mixed -fobjc-runtime-has-weak -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 
 @interface NSObject
 - (id) new;
@@ -55,9 +55,9 @@ void test1(void) {
 // CHECK-NEXT: [[CALL:%.*]] = invoke <2 x float>
 // CHECK-NEXT:   to label [[INVOKE_CONT:%.*]] unwind label {{%.*}}
 // CHECK: store <2 x float> [[CALL]], ptr [[COERCE:%.*]],
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 0
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0
 // CHECK-NEXT: [[REALCALL:%.*]] = load float, ptr [[T0]]
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 1
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
 // CHECK-NEXT: [[IMAGCALL:%.*]] = load float, ptr [[T0]]
 // CHECK-NEXT: br label [[CONT:%.*]]{{$}}
 //   Null path.
@@ -66,8 +66,8 @@ void test1(void) {
 //   Join point.
 // CHECK:      [[REAL:%.*]] = phi float [ [[REALCALL]], [[INVOKE_CONT]] ], [ 0.000000e+00, [[FORNULL]] ]
 // CHECK-NEXT: [[IMAG:%.*]] = phi float [ [[IMAGCALL]], [[INVOKE_CONT]] ], [ 0.000000e+00, [[FORNULL]] ]
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds { float, float }, ptr [[RESULT]], i32 0, i32 0
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds { float, float }, ptr [[RESULT]], i32 0, i32 1
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RESULT]], i32 0, i32 0
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RESULT]], i32 0, i32 1
 // CHECK-NEXT: store float [[REAL]], ptr [[T0]]
 // CHECK-NEXT: store float [[IMAG]], ptr [[T1]]
 //   Epilogue.
@@ -83,10 +83,10 @@ void test2(id a) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test2(
-// CHECK: %[[CALL:.*]] = call ptr @objc_msgSend
-// CHECK-NEXT: %[[V6:.*]] = {{.*}}call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
+// CHECK: %call1 = call ptr @objc_msgSend(ptr noundef %0, ptr noundef %4, ptr noundef %2) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
-// CHECK: phi ptr [ %[[V6]], %{{.*}} ], [ null, %{{.*}} ]
+// CHECK: phi ptr [ %call1, %{{.*}} ], [ null, %{{.*}} ]
 
 void test3(id a) {
   @try {
@@ -96,9 +96,9 @@ void test3(id a) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test3(
-// CHECK: %[[CALL:.*]] = invoke ptr @objc_msgSend
-// CHECK: %[[V6:.*]] = {{.*}}call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
+// CHECK: %call1 = invoke ptr @objc_msgSend(ptr noundef %0, ptr noundef %4, ptr noundef %2) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
 
-// CHECK: phi ptr [ %[[V6]], %{{.*}} ], [ null, %{{.*}} ]
+// CHECK: phi ptr [ %call1, %{{.*}} ], [ null, %{{.*}} ]
 
 // CHECK: attributes [[NUW]] = { nounwind }

@@ -146,7 +146,7 @@ WithCopyConstructor2::WithCopyConstructor2(const WithCopyConstructor2& other)
 {}
 // No warning in copy constructor about T since IgnoreBaseInCopyConstructors=1
 // CHECK-MESSAGES: :[[@LINE-3]]:10: warning: initializer for member 'a' is redundant
-// CHECK-FIXES: {{^}}  : T() {{$}}
+// CHECK-FIXES: : T()
 // CHECK-NEXT: {}
 
 // Initializer not written
@@ -302,3 +302,19 @@ struct D7 {
 
 D7<int> d7i;
 D7<S> d7s;
+
+struct SS {
+  SS() = default;
+  SS(S s) : s(s) {}
+
+  S s;
+};
+
+struct D8 {
+  SS ss = S();
+};
+
+struct D9 {
+  D9() : ss(S()) {}
+  SS ss;
+};

@@ -16,17 +16,19 @@
 #include "GISel/PPCRegisterBankInfo.h"
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include <cstdlib>
 
 using namespace llvm;
@@ -36,11 +38,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
-
-static cl::opt<bool>
-    UseSubRegLiveness("ppc-track-subreg-liveness",
-                      cl::desc("Enable subregister liveness tracking for PPC"),
-                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
@@ -55,21 +52,25 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &TuneCPU, const std::string &FS,
-                           const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
-      IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
-              TargetTriple.getArch() == Triple::ppc64le),
-      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+PPCSubtarget::PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
+                           StringRef FS, const PPCTargetMachine &TM)
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TM(TM),
+      FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<PPCSelectionDAGInfo>();
+
   CallLoweringInfo.reset(new PPCCallLowering(*getTargetLowering()));
   Legalizer.reset(new PPCLegalizerInfo(*this));
   auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
 
-  InstSelector.reset(createPPCInstructionSelector(
-      *static_cast<const PPCTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createPPCInstructionSelector(TM, *this, *RBI));
+}
+
+PPCSubtarget::~PPCSubtarget() = default;
+
+const SelectionDAGTargetInfo *PPCSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 void PPCSubtarget::initializeEnvironment() {
@@ -83,13 +84,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
-    // If cross-compiling with -march=ppc64le without -mcpu
-    if (TargetTriple.getArch() == Triple::ppc64le)
-      CPUName = "ppc64le";
-    else if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+    if (getTargetTriple().getSubArch() == Triple::PPCSubArch_spe)
       CPUName = "e500";
     else
-      CPUName = "generic";
+      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(getTargetTriple()));
   }
 
   // Determine the CPU to schedule for.
@@ -106,7 +104,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
 
-  if (TargetTriple.isPPC32SecurePlt())
+  if (getTargetTriple().isPPC32SecurePlt())
     IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
@@ -124,23 +122,28 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
 
-  if (HasAIXSmallLocalExecTLS) {
-    if (!TargetTriple.isOSAIX() || !IsPPC64)
-      report_fatal_error(
-          "The aix-small-local-exec-tls attribute is only supported on AIX in "
-          "64-bit mode.\n",
-          false);
-    // The aix-small-local-exec-tls attribute should only be used with
+  if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
+    if (!getTargetTriple().isOSAIX() || !IsPPC64)
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute is "
+                         "only supported on AIX in "
+                         "64-bit mode.\n",
+                         false);
+    // The aix-small-local-[exec|dynamic]-tls attribute should only be used with
     // -data-sections, as having data sections turned off with this option
-    // is not ideal for performance. Moreover, the small-local-exec-tls region
-    // is a limited resource, and should not be used for variables that may
-    // be replaced.
+    // is not ideal for performance. Moreover, the
+    // small-local-[exec|dynamic]-tls region is a limited resource, and should
+    // not be used for variables that may be replaced.
     if (!TM.getDataSections())
-      report_fatal_error(
-          "The aix-small-local-exec-tls attribute can only be specified with "
-          "-data-sections.\n",
-          false);
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute can "
+                         "only be specified with "
+                         "-data-sections.\n",
+                         false);
   }
+
+  if (HasAIXShLibTLSModelOpt && (!getTargetTriple().isOSAIX() || !IsPPC64))
+    report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
+                       "is only supported on AIX in 64-bit mode.\n",
+                       false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
@@ -165,7 +168,7 @@ void PPCSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
 }
 
 void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                       unsigned NumRegionInstrs) const {
+                                       const SchedRegion &Region) const {
   // The GenericScheduler that we use defaults to scheduling bottom up only.
   // We want to schedule from both the top and the bottom and so we set
   // OnlyBottomUp to false.
@@ -181,9 +184,7 @@ bool PPCSubtarget::useAA() const {
   return true;
 }
 
-bool PPCSubtarget::enableSubRegLiveness() const {
-  return UseSubRegLiveness;
-}
+bool PPCSubtarget::enableSubRegLiveness() const { return true; }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   if (isAIXABI()) {
@@ -244,7 +245,6 @@ CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
 }
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }
-bool PPCSubtarget::isPPC64() const { return TM.isPPC64(); }
 
 bool PPCSubtarget::isUsingPCRelativeCalls() const {
   return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&

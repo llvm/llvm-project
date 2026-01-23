@@ -58,10 +58,8 @@ struct Base {
 };
 
 struct Derived final : Base {
-  virtual ~Derived() = defaul; // #default
+  virtual ~Derived() = defaul; // expected-error {{use of undeclared identifier 'defaul'}}
 } do_not_crash;
-// expected-error@#default {{initializer on function does not look like a pure-specifier}}
-// expected-error@#default {{use of undeclared identifier 'defaul'}}
 }
 
 namespace VirtualFriend {

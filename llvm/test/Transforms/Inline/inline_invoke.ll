@@ -19,7 +19,7 @@ declare void @use(i32) nounwind
 
 declare void @opaque()
 
-declare i32 @llvm.eh.typeid.for(ptr) nounwind
+declare i32 @llvm.eh.typeid.for.p0(ptr) nounwind
 
 declare i32 @__gxx_personality_v0(...)
 
@@ -74,7 +74,7 @@ lpad:                                             ; preds = %entry
             catch ptr @_ZTIi
   %eh.exc = extractvalue { ptr, i32 } %exn, 0
   %eh.selector = extractvalue { ptr, i32 } %exn, 1
-  %0 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) nounwind
+  %0 = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) nounwind
   %1 = icmp eq i32 %eh.selector, %0
   br i1 %1, label %catch, label %eh.resume
 
@@ -109,7 +109,7 @@ eh.resume:
 ; CHECK-NEXT: phi { ptr, i32 } [
 ; CHECK-NEXT: extractvalue { ptr, i32 }
 ; CHECK-NEXT: extractvalue { ptr, i32 }
-; CHECK-NEXT: call i32 @llvm.eh.typeid.for(
+; CHECK-NEXT: call i32 @llvm.eh.typeid.for.p0(
 
 
 ;; Test 1 - Correctly handle phis in outer landing pads.
@@ -133,7 +133,7 @@ lpad:
             catch ptr @_ZTIi
   %eh.exc = extractvalue { ptr, i32 } %exn, 0
   %eh.selector = extractvalue { ptr, i32 } %exn, 1
-  %0 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) nounwind
+  %0 = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) nounwind
   %1 = icmp eq i32 %eh.selector, %0
   br i1 %1, label %catch, label %eh.resume
 
@@ -194,8 +194,8 @@ eh.resume:
 ; CHECK:      ret void
 
 ; CHECK:    [[LPAD]]:
-; CHECK-NEXT: [[X:%.*]] = phi i32 [ 0, %entry ], [ 0, {{%.*}} ], [ 1, %cont ], [ 1, {{%.*}} ]
-; CHECK-NEXT: [[Y:%.*]] = phi i32 [ 1, %entry ], [ 1, {{%.*}} ], [ 4, %cont ], [ 4, {{%.*}} ]
+; CHECK-NEXT: [[X:%.*]] = phi i32 [ 0, {{%.*}} ], [ 1, {{%.*}} ], [ 0, %entry ], [ 1, %cont ]
+; CHECK-NEXT: [[Y:%.*]] = phi i32 [ 1, {{%.*}} ], [ 4, {{%.*}} ], [ 1, %entry ], [ 4, %cont ]
 ; CHECK-NEXT: [[LPADVAL:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:   catch ptr @_ZTIi
 ; CHECK-NEXT: br label %[[LPAD_JOIN2]]
@@ -212,7 +212,7 @@ eh.resume:
 ; CHECK-NEXT: [[EXNJ1:%.*]] = phi { ptr, i32 } [ [[EXNJ2]], %[[LPAD_JOIN2]] ], [ [[LPADVAL1]], %[[RESUME1]] ]
 ; CHECK-NEXT: extractvalue { ptr, i32 } [[EXNJ1]], 0
 ; CHECK-NEXT: [[SELJ1:%.*]] = extractvalue { ptr, i32 } [[EXNJ1]], 1
-; CHECK-NEXT: [[T:%.*]] = call i32 @llvm.eh.typeid.for(
+; CHECK-NEXT: [[T:%.*]] = call i32 @llvm.eh.typeid.for.p0(
 ; CHECK-NEXT: icmp eq i32 [[SELJ1]], [[T]]
 
 ; CHECK:      call void @use(i32 [[XJ1]])

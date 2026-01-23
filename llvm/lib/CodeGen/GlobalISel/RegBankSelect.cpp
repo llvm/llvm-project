@@ -39,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -62,15 +63,15 @@ char RegBankSelect::ID = 0;
 INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,
                       "Assign register bank of generic virtual registers",
                       false, false);
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 
-RegBankSelect::RegBankSelect(char &PassID, Mode RunningMode)
-    : MachineFunctionPass(PassID), OptMode(RunningMode) {
+RegBankSelect::RegBankSelect(Mode RunningMode)
+    : MachineFunctionPass(ID), OptMode(RunningMode) {
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)
@@ -83,10 +84,9 @@ void RegBankSelect::init(MachineFunction &MF) {
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  TPC = &getAnalysis<TargetPassConfig>();
   if (OptMode != Mode::Fast) {
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-    MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   } else {
     MBFI = nullptr;
     MBPI = nullptr;
@@ -99,8 +99,8 @@ void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   if (OptMode != Mode::Fast) {
     // We could preserve the information from these two analysis but
     // the APIs do not allow to do so yet.
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineBranchProbabilityInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   }
   AU.addRequired<TargetPassConfig>();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -308,7 +308,8 @@ const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
         RepairPts.emplace_back(std::move(RepairPt));
     }
   }
-  if (!BestMapping && !TPC->isGlobalISelAbortEnabled()) {
+  if (!BestMapping && MI.getMF()->getTarget().Options.GlobalISelAbort !=
+                          GlobalISelAbortMode::Enable) {
     // If none of the mapping worked that means they are all impossible.
     // Thus, pick the first one and set an impossible repairing point.
     // It will trigger the failed isel mode.
@@ -420,7 +421,8 @@ void RegBankSelect::tryAvoidingSplit(
       // If the next terminator uses Reg, this means we have
       // to split right after MI and thus we need a way to ask
       // which outgoing edges are affected.
-      assert(!Next->readsRegister(Reg) && "Need to split between terminators");
+      assert(!Next->readsRegister(Reg, /*TRI=*/nullptr) &&
+             "Need to split between terminators");
     // We will split all the edges and repair there.
   } else {
     // This is a virtual register defined by a terminator.
@@ -707,7 +709,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
         continue;
 
       if (!assignInstr(MI)) {
-        reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+        reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
         return false;
       }
@@ -721,7 +723,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
 #ifndef NDEBUG
   if (!DisableGISelLegalityCheck) {
     if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
-      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+      reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                          "instruction is not legal", *MI);
       return false;
     }
@@ -732,8 +734,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
 
 bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
@@ -918,19 +919,19 @@ bool RegBankSelect::InstrInsertPoint::isSplit() const {
 uint64_t RegBankSelect::InstrInsertPoint::frequency(const Pass &P) const {
   // Even if we need to split, because we insert between terminators,
   // this split has actually the same frequency as the instruction.
-  const MachineBlockFrequencyInfo *MBFI =
-      P.getAnalysisIfAvailable<MachineBlockFrequencyInfo>();
-  if (!MBFI)
+  const auto *MBFIWrapper =
+      P.getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
+  if (!MBFIWrapper)
     return 1;
-  return MBFI->getBlockFreq(Instr.getParent()).getFrequency();
+  return MBFIWrapper->getMBFI().getBlockFreq(Instr.getParent()).getFrequency();
 }
 
 uint64_t RegBankSelect::MBBInsertPoint::frequency(const Pass &P) const {
-  const MachineBlockFrequencyInfo *MBFI =
-      P.getAnalysisIfAvailable<MachineBlockFrequencyInfo>();
-  if (!MBFI)
+  const auto *MBFIWrapper =
+      P.getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
+  if (!MBFIWrapper)
     return 1;
-  return MBFI->getBlockFreq(&MBB).getFrequency();
+  return MBFIWrapper->getMBFI().getBlockFreq(&MBB).getFrequency();
 }
 
 void RegBankSelect::EdgeInsertPoint::materialize() {
@@ -947,15 +948,18 @@ void RegBankSelect::EdgeInsertPoint::materialize() {
 }
 
 uint64_t RegBankSelect::EdgeInsertPoint::frequency(const Pass &P) const {
-  const MachineBlockFrequencyInfo *MBFI =
-      P.getAnalysisIfAvailable<MachineBlockFrequencyInfo>();
-  if (!MBFI)
+  const auto *MBFIWrapper =
+      P.getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
+  if (!MBFIWrapper)
     return 1;
+  const auto *MBFI = &MBFIWrapper->getMBFI();
   if (WasMaterialized)
     return MBFI->getBlockFreq(DstOrSplit).getFrequency();
 
+  auto *MBPIWrapper =
+      P.getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
   const MachineBranchProbabilityInfo *MBPI =
-      P.getAnalysisIfAvailable<MachineBranchProbabilityInfo>();
+      MBPIWrapper ? &MBPIWrapper->getMBPI() : nullptr;
   if (!MBPI)
     return 1;
   // The basic block will be on the edge.

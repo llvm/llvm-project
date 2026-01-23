@@ -27,6 +27,7 @@ static_library("Clang") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/MCJIT",
 
@@ -46,7 +47,6 @@ static_library("Clang") {
     "ClangASTImporter.cpp",
     "ClangASTMetadata.cpp",
     "ClangASTSource.cpp",
-    "ClangDeclVendor.cpp",
     "ClangExpressionDeclMap.cpp",
     "ClangExpressionHelper.cpp",
     "ClangExpressionParser.cpp",

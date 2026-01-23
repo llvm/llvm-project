@@ -13,16 +13,13 @@
 namespace mlir {
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTVECTORTOARMSME
+#define GEN_PASS_DECL_CONVERTVECTORTOARMSMEPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to lower Vector ops to ArmSME ops that map to LLVM
 /// intrinsics.
 void populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                     MLIRContext &ctx);
-
-/// Create a pass to lower operations from the vector dialect to Arm SME.
-std::unique_ptr<Pass> createConvertVectorToArmSMEPass();
 
 } // namespace mlir
 

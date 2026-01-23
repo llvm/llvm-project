@@ -91,13 +91,11 @@ QueryRef QueryParser::endQuery(QueryRef queryRef) {
   llvm::StringRef extra = line;
   llvm::StringRef extraTrimmed = extra.ltrim(" \t\v\f\r");
 
-  if ((!extraTrimmed.empty() && extraTrimmed[0] == '\n') ||
-      (extraTrimmed.size() >= 2 && extraTrimmed[0] == '\r' &&
-       extraTrimmed[1] == '\n'))
+  if (extraTrimmed.starts_with('\n') || extraTrimmed.starts_with("\r\n"))
     queryRef->remainingContent = extra;
   else {
     llvm::StringRef trailingWord = lexWord();
-    if (!trailingWord.empty() && trailingWord.front() == '#') {
+    if (trailingWord.starts_with('#')) {
       line = line.drop_until([](char c) { return c == '\n'; });
       line = line.drop_while([](char c) { return c == '\n'; });
       return endQuery(queryRef);
@@ -125,7 +123,7 @@ makeInvalidQueryFromDiagnostics(const matcher::internal::Diagnostics &diag) {
   std::string errStr;
   llvm::raw_string_ostream os(errStr);
   diag.print(os);
-  return new InvalidQuery(os.str());
+  return new InvalidQuery(errStr);
 }
 } // namespace
 
@@ -183,8 +181,8 @@ QueryRef QueryParser::doParse() {
     if (!matcher) {
       return makeInvalidQueryFromDiagnostics(diag);
     }
-    auto actualSource = origMatcherSource.slice(0, origMatcherSource.size() -
-                                                       matcherSource.size());
+    auto actualSource = origMatcherSource.substr(0, origMatcherSource.size() -
+                                                        matcherSource.size());
     QueryRef query = new MatchQuery(actualSource, *matcher);
     query->remainingContent = matcherSource;
     return query;

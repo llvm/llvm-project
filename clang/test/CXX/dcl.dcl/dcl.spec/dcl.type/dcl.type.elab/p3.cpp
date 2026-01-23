@@ -38,7 +38,7 @@ template <> struct B<A> {
 
 void b1(struct B<float>);
 void b2(class B<float>);
-void b3(union B<float>); // expected-error {{use of 'B<float>' with tag type that does not match previous declaration}}
+void b3(union B<float>); // expected-error {{use of 'union B<float>' with tag type that does not match previous declaration}}
 //void b4(enum B<float>); // this just doesn't parse; you can't template an enum directly
 
 void c1(struct B<float>::Member);

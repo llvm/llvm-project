@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/Support/DataExtractor.h"
-#include <algorithm>
+#include "llvm/Support/InterleavedRange.h"
 #include <inttypes.h>
 
 using namespace llvm;
@@ -21,14 +22,7 @@ using namespace gsym;
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const InlineInfo &II) {
   if (!II.isValid())
     return OS;
-  bool First = true;
-  for (auto Range : II.Ranges) {
-    if (First)
-      First = false;
-    else
-      OS << ' ';
-    OS << Range;
-  }
+  OS << interleaved(II.Ranges, " ");
   OS << " Name = " << HEX32(II.Name) << ", CallFile = " << II.CallFile
      << ", CallLine = " << II.CallFile << '\n';
   for (const auto &Child : II.Children)

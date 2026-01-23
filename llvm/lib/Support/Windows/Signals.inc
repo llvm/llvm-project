@@ -9,13 +9,13 @@
 // This file provides the Win32 specific implementation of the Signals class.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-#include <algorithm>
 #include <io.h>
 #include <signal.h>
 #include <stdio.h>
@@ -47,64 +47,6 @@
 // back on at the end of the file.
 #pragma GCC diagnostic ignored "-Wformat"
 #pragma GCC diagnostic ignored "-Wformat-extra-args"
-
-#if !defined(__MINGW64_VERSION_MAJOR)
-// MinGW.org does not have updated support for the 64-bit versions of the
-// DebugHlp APIs. So we will have to load them manually. The structures and
-// method signatures were pulled from DbgHelp.h in the Windows Platform SDK,
-// and adjusted for brevity.
-typedef struct _IMAGEHLP_LINE64 {
-  DWORD SizeOfStruct;
-  PVOID Key;
-  DWORD LineNumber;
-  PCHAR FileName;
-  DWORD64 Address;
-} IMAGEHLP_LINE64, *PIMAGEHLP_LINE64;
-
-typedef struct _IMAGEHLP_SYMBOL64 {
-  DWORD SizeOfStruct;
-  DWORD64 Address;
-  DWORD Size;
-  DWORD Flags;
-  DWORD MaxNameLength;
-  CHAR Name[1];
-} IMAGEHLP_SYMBOL64, *PIMAGEHLP_SYMBOL64;
-
-typedef struct _tagADDRESS64 {
-  DWORD64 Offset;
-  WORD Segment;
-  ADDRESS_MODE Mode;
-} ADDRESS64, *LPADDRESS64;
-
-typedef struct _KDHELP64 {
-  DWORD64 Thread;
-  DWORD ThCallbackStack;
-  DWORD ThCallbackBStore;
-  DWORD NextCallback;
-  DWORD FramePointer;
-  DWORD64 KiCallUserMode;
-  DWORD64 KeUserCallbackDispatcher;
-  DWORD64 SystemRangeStart;
-  DWORD64 KiUserExceptionDispatcher;
-  DWORD64 StackBase;
-  DWORD64 StackLimit;
-  DWORD64 Reserved[5];
-} KDHELP64, *PKDHELP64;
-
-typedef struct _tagSTACKFRAME64 {
-  ADDRESS64 AddrPC;
-  ADDRESS64 AddrReturn;
-  ADDRESS64 AddrFrame;
-  ADDRESS64 AddrStack;
-  ADDRESS64 AddrBStore;
-  PVOID FuncTableEntry;
-  DWORD64 Params[4];
-  BOOL Far;
-  BOOL Virtual;
-  DWORD64 Reserved[3];
-  KDHELP64 KdHelp;
-} STACKFRAME64, *LPSTACKFRAME64;
-#endif // !defined(__MINGW64_VERSION_MAJOR)
 #endif // __MINGW32__
 
 typedef BOOL(__stdcall *PREAD_PROCESS_MEMORY_ROUTINE64)(
@@ -168,25 +110,30 @@ static bool isDebugHelpInitialized() {
 }
 
 static bool load64BitDebugHelp(void) {
-  HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
+  HMODULE hLib =
+      ::LoadLibraryExA("Dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
   if (hLib) {
-    fMiniDumpWriteDump =
-        (fpMiniDumpWriteDump)::GetProcAddress(hLib, "MiniDumpWriteDump");
-    fStackWalk64 = (fpStackWalk64)::GetProcAddress(hLib, "StackWalk64");
-    fSymGetModuleBase64 =
-        (fpSymGetModuleBase64)::GetProcAddress(hLib, "SymGetModuleBase64");
-    fSymGetSymFromAddr64 =
-        (fpSymGetSymFromAddr64)::GetProcAddress(hLib, "SymGetSymFromAddr64");
-    fSymGetLineFromAddr64 =
-        (fpSymGetLineFromAddr64)::GetProcAddress(hLib, "SymGetLineFromAddr64");
-    fSymGetModuleInfo64 =
-        (fpSymGetModuleInfo64)::GetProcAddress(hLib, "SymGetModuleInfo64");
-    fSymFunctionTableAccess64 = (fpSymFunctionTableAccess64)::GetProcAddress(
-        hLib, "SymFunctionTableAccess64");
-    fSymSetOptions = (fpSymSetOptions)::GetProcAddress(hLib, "SymSetOptions");
-    fSymInitialize = (fpSymInitialize)::GetProcAddress(hLib, "SymInitialize");
-    fEnumerateLoadedModules = (fpEnumerateLoadedModules)::GetProcAddress(
-        hLib, "EnumerateLoadedModules64");
+    fMiniDumpWriteDump = (fpMiniDumpWriteDump)(void *)::GetProcAddress(
+        hLib, "MiniDumpWriteDump");
+    fStackWalk64 = (fpStackWalk64)(void *)::GetProcAddress(hLib, "StackWalk64");
+    fSymGetModuleBase64 = (fpSymGetModuleBase64)(void *)::GetProcAddress(
+        hLib, "SymGetModuleBase64");
+    fSymGetSymFromAddr64 = (fpSymGetSymFromAddr64)(void *)::GetProcAddress(
+        hLib, "SymGetSymFromAddr64");
+    fSymGetLineFromAddr64 = (fpSymGetLineFromAddr64)(void *)::GetProcAddress(
+        hLib, "SymGetLineFromAddr64");
+    fSymGetModuleInfo64 = (fpSymGetModuleInfo64)(void *)::GetProcAddress(
+        hLib, "SymGetModuleInfo64");
+    fSymFunctionTableAccess64 =
+        (fpSymFunctionTableAccess64)(void *)::GetProcAddress(
+            hLib, "SymFunctionTableAccess64");
+    fSymSetOptions =
+        (fpSymSetOptions)(void *)::GetProcAddress(hLib, "SymSetOptions");
+    fSymInitialize =
+        (fpSymInitialize)(void *)::GetProcAddress(hLib, "SymInitialize");
+    fEnumerateLoadedModules =
+        (fpEnumerateLoadedModules)(void *)::GetProcAddress(
+            hLib, "EnumerateLoadedModules64");
   }
   return isDebugHelpInitialized();
 }
@@ -406,8 +353,8 @@ namespace llvm {
 /// Emulates hitting "retry" from an "abort, retry, ignore" CRT debug report
 /// dialog. "retry" raises an exception which ultimately triggers our stack
 /// dumper.
-static LLVM_ATTRIBUTE_UNUSED int
-AvoidMessageBoxHook(int ReportType, char *Message, int *Return) {
+[[maybe_unused]] static int AvoidMessageBoxHook(int ReportType, char *Message,
+                                                int *Return) {
   // Set *Return to the retry code for the return value of _CrtDbgReport:
   // http://msdn.microsoft.com/en-us/library/8hyw4sy7(v=vs.71).aspx
   // This may also trigger just-in-time debugging via DebugBreak().
@@ -473,8 +420,13 @@ bool sys::RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) {
     return true;
   }
 
-  if (FilesToRemove == NULL)
+  if (FilesToRemove == NULL) {
     FilesToRemove = new std::vector<std::string>;
+    std::atexit([]() {
+      delete FilesToRemove;
+      FilesToRemove = NULL;
+    });
+  }
 
   FilesToRemove->push_back(std::string(Filename));
 
@@ -531,10 +483,8 @@ void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
 }
 } // namespace llvm
 
-#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
-// Provide a prototype for RtlCaptureContext, mingw32 from mingw.org is
-// missing it but mingw-w64 has it.
-extern "C" VOID WINAPI RtlCaptureContext(PCONTEXT ContextRecord);
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#error DebugLoc origin-tracking currently unimplemented for Windows.
 #endif
 
 static void LocalPrintStackTrace(raw_ostream &OS, PCONTEXT C) {
@@ -630,6 +580,9 @@ static void Cleanup(bool ExecuteSignalHandlers) {
 }
 
 void llvm::sys::RunInterruptHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   // The interrupt handler may be called from an interrupt, but it may also be
   // called manually (such as the case of report_fatal_error with no registered
   // error handler). We must ensure that the critical section is properly
@@ -830,6 +783,9 @@ WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
 }
 
 void sys::CleanupOnSignal(uintptr_t Context) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   LPEXCEPTION_POINTERS EP = (LPEXCEPTION_POINTERS)Context;
   // Broken pipe is not a crash.
   //

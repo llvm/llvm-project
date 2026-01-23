@@ -7,26 +7,30 @@
 //===----------------------------------------------------------------------===//
 
 def FeatureFP64 : SubtargetFeature<"fp64",
-  "FP64",
+  "HasFP64",
   "true",
   "Enable double precision operations"
 >;
 
 def FeatureFMA : SubtargetFeature<"fmaf",
-  "FMA",
+  "HasFMA",
   "true",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
 
-class SubtargetFeatureLocalMemorySize <int Value> : SubtargetFeature<
-  "localmemorysize"#Value,
-  "LocalMemorySize",
+// Addressable local memory size is the maximum number of bytes of LDS that can
+// be allocated to a single workgroup.
+class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
+  "addressablelocalmemorysize"#Value,
+  "AddressableLocalMemorySize",
   !cast<string>(Value),
   "The size of local memory in bytes"
 >;
 
-def FeatureLocalMemorySize32768 : SubtargetFeatureLocalMemorySize<32768>;
-def FeatureLocalMemorySize65536 : SubtargetFeatureLocalMemorySize<65536>;
+def FeatureAddressableLocalMemorySize32768 : SubtargetFeatureAddressableLocalMemorySize<32768>;
+def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMemorySize<65536>;
+def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
+def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
 class SubtargetFeatureWavefrontSize <int ValueLog2> : SubtargetFeature<
   "wavefrontsize"#!shl(1, ValueLog2),

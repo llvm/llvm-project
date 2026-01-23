@@ -130,31 +130,31 @@ define <4 x i32> @mul_v4i32_1_2_4_8(<4 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: mul_v4i32_1_2_4_8:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,4,8]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [2,u,8,u]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE4-LABEL: mul_v4i32_1_2_4_8:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,4,8]
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: mul_v4i32_1_2_4_8:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [2,u,8,u]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4-LABEL: mul_v4i32_1_2_4_8:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8]
 ; X64-SSE4-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v4i32_1_2_4_8:
@@ -190,12 +190,12 @@ define <4 x i32> @mul_v4i32_1_2_4_8_optsize(<4 x i32> %a0) nounwind optsize {
 ;
 ; X86-SSE4-LABEL: mul_v4i32_1_2_4_8_optsize:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,4,8]
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: mul_v4i32_1_2_4_8_optsize:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8]
 ; X64-SSE4-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v4i32_1_2_4_8_optsize:
@@ -219,12 +219,12 @@ define <4 x i32> @mul_v4i32_1_2_4_8_optsize(<4 x i32> %a0) nounwind optsize {
 define <8 x i16> @mul_v8i16_1_2_4_8_16_32_64_128(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,4,8,16,32,64,128]
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
@@ -234,12 +234,12 @@ define <8 x i16> @mul_v8i16_1_2_4_8_16_32_64_128(<8 x i16> %a0) nounwind {
 ;
 ; X64-AVX2-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128]
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <8 x i16> %a0, <i16 1, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128>
   ret <8 x i16> %1
@@ -250,7 +250,7 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,2,4,8,1,2,4,8]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,u,2,u,4,u,8,u,1,u,2,u,4,u,8,u]
 ; SSE2-NEXT:    pmullw %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm3, %xmm1
@@ -260,19 +260,25 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
-; SSE4-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE4-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE4-NEXT:    pmovsxbw {{.*#+}} xmm2 = [1,2,4,8,1,2,4,8]
-; SSE4-NEXT:    pmullw %xmm2, %xmm0
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; SSE4-NEXT:    pand %xmm3, %xmm0
-; SSE4-NEXT:    pmullw %xmm2, %xmm1
-; SSE4-NEXT:    pand %xmm3, %xmm1
-; SSE4-NEXT:    packuswb %xmm0, %xmm1
-; SSE4-NEXT:    movdqa %xmm1, %xmm0
-; SSE4-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    movdqa %xmm0, %xmm1
+; X86-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [0,2,0,8,0,2,0,8,0,2,0,8,0,2,0,8]
+; X86-SSE4-NEXT:    psllw $8, %xmm1
+; X86-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,4,8,1,2,4,8,1,2,4,8,1,2,4,8]
+; X86-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    por %xmm1, %xmm0
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    movdqa %xmm0, %xmm1
+; X64-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,2,0,8,0,2,0,8,0,2,0,8,0,2,0,8]
+; X64-SSE4-NEXT:    psllw $8, %xmm1
+; X64-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,1,2,4,8,1,2,4,8,1,2,4,8]
+; X64-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    por %xmm1, %xmm0
+; X64-SSE4-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X64-XOP:       # %bb.0:
@@ -282,7 +288,7 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; X64-AVX2-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,1,2,4,8,1,2,4,8,1,2,4,8]
 ; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -329,22 +335,11 @@ define <4 x i32> @mul_v4i32_17(<4 x i32> %a0) nounwind {
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; X64-XOP-LABEL: mul_v4i32_17:
-; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpslld $4, %xmm0, %xmm1
-; X64-XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; X64-XOP-NEXT:    retq
-;
-; X64-AVX2-LABEL: mul_v4i32_17:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [17,17,17,17]
-; X64-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: mul_v4i32_17:
-; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-AVX-LABEL: mul_v4i32_17:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpslld $4, %xmm0, %xmm1
+; X64-AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
   ret <4 x i32> %1
 }
@@ -465,13 +460,14 @@ define <8 x i32> @mul_v8i32_17(<8 x i32> %a0) nounwind {
 ;
 ; X64-AVX2-LABEL: mul_v8i32_17:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [17,17,17,17,17,17,17,17]
-; X64-AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpslld $4, %ymm0, %ymm1
+; X64-AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: mul_v8i32_17:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpslld $4, %ymm0, %ymm1
+; X64-AVX512DQ-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <8 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
   ret <8 x i32> %1
@@ -590,24 +586,13 @@ define <4 x i32> @mul_v4i32_neg33(<4 x i32> %a0) nounwind {
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; X64-XOP-LABEL: mul_v4i32_neg33:
-; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpslld $5, %xmm0, %xmm1
-; X64-XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; X64-XOP-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-XOP-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; X64-XOP-NEXT:    retq
-;
-; X64-AVX2-LABEL: mul_v4i32_neg33:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967263,4294967263,4294967263,4294967263]
-; X64-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: mul_v4i32_neg33:
-; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-AVX-LABEL: mul_v4i32_neg33:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpslld $5, %xmm0, %xmm1
+; X64-AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; X64-AVX-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 -33, i32 -33, i32 -33, i32 -33>
   ret <4 x i32> %1
 }
@@ -762,13 +747,18 @@ define <8 x i32> @mul_v8i32_neg33(<8 x i32> %a0) nounwind {
 ;
 ; X64-AVX2-LABEL: mul_v8i32_neg33:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4294967263,4294967263,4294967263,4294967263,4294967263,4294967263,4294967263,4294967263]
-; X64-AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpslld $5, %ymm0, %ymm1
+; X64-AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: mul_v8i32_neg33:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpslld $5, %ymm0, %ymm1
+; X64-AVX512DQ-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-AVX512DQ-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <8 x i32> %a0, <i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33>
   ret <8 x i32> %1
@@ -820,6 +810,69 @@ define <16 x i16> @mul_v16i16_neg9(<16 x i16> %a0) nounwind {
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <16 x i16> %a0, <i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9>
   ret <16 x i16> %1
+}
+
+; PR47422 - check mul-shl-add sequence expands to adds.
+define <16 x i16> @madd_v16i16_3(<16 x i16> %a0, <16 x i16> %a1) nounwind {
+; X86-SSE-LABEL: madd_v16i16_3:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %ebp
+; X86-SSE-NEXT:    movl %esp, %ebp
+; X86-SSE-NEXT:    andl $-16, %esp
+; X86-SSE-NEXT:    subl $16, %esp
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
+; X86-SSE-NEXT:    paddw %xmm3, %xmm3
+; X86-SSE-NEXT:    paddw %xmm3, %xmm1
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm3
+; X86-SSE-NEXT:    paddw %xmm3, %xmm3
+; X86-SSE-NEXT:    paddw %xmm2, %xmm0
+; X86-SSE-NEXT:    paddw %xmm3, %xmm0
+; X86-SSE-NEXT:    paddw 8(%ebp), %xmm1
+; X86-SSE-NEXT:    movl %ebp, %esp
+; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: madd_v16i16_3:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movdqa %xmm1, %xmm4
+; X64-SSE-NEXT:    paddw %xmm4, %xmm4
+; X64-SSE-NEXT:    movdqa %xmm0, %xmm5
+; X64-SSE-NEXT:    paddw %xmm5, %xmm5
+; X64-SSE-NEXT:    paddw %xmm2, %xmm0
+; X64-SSE-NEXT:    paddw %xmm5, %xmm0
+; X64-SSE-NEXT:    paddw %xmm3, %xmm1
+; X64-SSE-NEXT:    paddw %xmm4, %xmm1
+; X64-SSE-NEXT:    retq
+;
+; X64-XOP-LABEL: madd_v16i16_3:
+; X64-XOP:       # %bb.0:
+; X64-XOP-NEXT:    vpaddw %xmm0, %xmm0, %xmm2
+; X64-XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; X64-XOP-NEXT:    vpaddw %xmm3, %xmm3, %xmm4
+; X64-XOP-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; X64-XOP-NEXT:    vpaddw %xmm5, %xmm3, %xmm3
+; X64-XOP-NEXT:    vpaddw %xmm3, %xmm4, %xmm3
+; X64-XOP-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; X64-XOP-NEXT:    vpaddw %xmm0, %xmm2, %xmm0
+; X64-XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; X64-XOP-NEXT:    retq
+;
+; X64-AVX2-LABEL: madd_v16i16_3:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm2
+; X64-AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512DQ-LABEL: madd_v16i16_3:
+; X64-AVX512DQ:       # %bb.0:
+; X64-AVX512DQ-NEXT:    vpaddw %ymm0, %ymm0, %ymm2
+; X64-AVX512DQ-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    retq
+  %mul = mul <16 x i16> %a0, splat (i16 3)
+  %add = add <16 x i16> %mul, %a1
+  ret <16 x i16> %add
 }
 
 define <32 x i8> @mul_v32i8_neg5(<32 x i8> %a0) nounwind {
@@ -936,7 +989,7 @@ define <2 x i64> @mul_v2i64_17_65(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_17_65:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [17,65]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 17, i64 65>
   ret <2 x i64> %1
@@ -946,36 +999,36 @@ define <4 x i32> @mul_v4i32_5_17_33_65(<4 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: mul_v4i32_5_17_33_65:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [5,17,33,65]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [17,u,65,u]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE4-LABEL: mul_v4i32_5_17_33_65:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [5,17,33,65]
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: mul_v4i32_5_17_33_65:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [5,17,33,65]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [17,u,65,u]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4-LABEL: mul_v4i32_5_17_33_65:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [5,17,33,65]
 ; X64-SSE4-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v4i32_5_17_33_65:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [5,17,33,65]
 ; X64-AVX-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 5, i32 17, i32 33, i32 65>
   ret <4 x i32> %1
@@ -984,17 +1037,17 @@ define <4 x i32> @mul_v4i32_5_17_33_65(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_2_3_9_17_33_65_129_257(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_2_3_9_17_33_65_129_257:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [2,3,9,17,33,65,129,257]
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_2_3_9_17_33_65_129_257:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,3,9,17,33,65,129,257]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v8i16_2_3_9_17_33_65_129_257:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,3,9,17,33,65,129,257]
 ; X64-AVX-NEXT:    retq
   %1 = mul <8 x i16> %a0, <i16 2, i16 3, i16 9, i16 17, i16 33, i16 65, i16 129, i16 257>
   ret <8 x i16> %1
@@ -1005,67 +1058,59 @@ define <16 x i8> @mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3(<16 x i8> 
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X86-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [3,u,9,u,17,u,33,u,65,u,129,u,2,u,3,u]
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm1
 ; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X86-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [2,u,3,u,9,u,17,u,33,u,65,u,129,u,2,u]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE4-LABEL: mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; X86-SSE4-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X86-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE4-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; X86-SSE4-NEXT:    pand %xmm2, %xmm0
-; X86-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE4-NEXT:    pand %xmm2, %xmm1
-; X86-SSE4-NEXT:    packuswb %xmm0, %xmm1
-; X86-SSE4-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE4-NEXT:    movdqa %xmm0, %xmm1
+; X86-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [0,3,0,17,0,65,0,2,0,9,0,33,0,129,0,3]
+; X86-SSE4-NEXT:    psllw $8, %xmm1
+; X86-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [2,3,9,17,33,65,129,2,3,9,17,33,65,129,2,3]
+; X86-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    por %xmm1, %xmm0
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X64-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X64-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [3,u,9,u,17,u,33,u,65,u,129,u,2,u,3,u]
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm1
 ; X64-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X64-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,u,3,u,9,u,17,u,33,u,65,u,129,u,2,u]
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X64-SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4-LABEL: mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; X64-SSE4-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X64-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE4-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; X64-SSE4-NEXT:    pand %xmm2, %xmm0
-; X64-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-SSE4-NEXT:    pand %xmm2, %xmm1
-; X64-SSE4-NEXT:    packuswb %xmm0, %xmm1
-; X64-SSE4-NEXT:    movdqa %xmm1, %xmm0
+; X64-SSE4-NEXT:    movdqa %xmm0, %xmm1
+; X64-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,3,0,17,0,65,0,2,0,9,0,33,0,129,0,3]
+; X64-SSE4-NEXT:    psllw $8, %xmm1
+; X64-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,3,9,17,33,65,129,2,3,9,17,33,65,129,2,3]
+; X64-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    por %xmm1, %xmm0
 ; X64-SSE4-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3:
 ; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X64-XOP-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; X64-XOP-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; X64-XOP-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],xmm1[0,2,4,6,8,10,12,14]
+; X64-XOP-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [0,3,0,17,0,65,0,2,0,9,0,33,0,129,0,3]
+; X64-XOP-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,3,9,17,33,65,129,2,3,9,17,33,65,129,2,3]
+; X64-XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2],xmm1[2],xmm0[4],xmm1[4],xmm0[6],xmm1[6],xmm0[8],xmm1[8],xmm0[10],xmm1[10],xmm0[12],xmm1[12],xmm0[14],xmm1[14]
 ; X64-XOP-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [2,3,9,17,33,65,129,2,3,9,17,33,65,129,2,3]
 ; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -1075,7 +1120,7 @@ define <16 x i8> @mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3(<16 x i8> 
 ; X64-AVX512DQ-LABEL: mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3:
 ; X64-AVX512DQ:       # %bb.0:
 ; X64-AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; X64-AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [2,3,9,17,33,65,129,2,3,9,17,33,65,129,2,3]
 ; X64-AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; X64-AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
 ; X64-AVX512DQ-NEXT:    vzeroupper
@@ -1115,22 +1160,11 @@ define <4 x i32> @mul_v4i32_7(<4 x i32> %a0) nounwind {
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; X64-XOP-LABEL: mul_v4i32_7:
-; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpslld $3, %xmm0, %xmm1
-; X64-XOP-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; X64-XOP-NEXT:    retq
-;
-; X64-AVX2-LABEL: mul_v4i32_7:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; X64-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: mul_v4i32_7:
-; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-AVX-LABEL: mul_v4i32_7:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpslld $3, %xmm0, %xmm1
+; X64-AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; X64-AVX-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 7, i32 7, i32 7, i32 7>
   ret <4 x i32> %1
 }
@@ -1224,22 +1258,11 @@ define <4 x i32> @mul_v4i32_neg63(<4 x i32> %a0) nounwind {
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; X64-XOP-LABEL: mul_v4i32_neg63:
-; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpslld $6, %xmm0, %xmm1
-; X64-XOP-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; X64-XOP-NEXT:    retq
-;
-; X64-AVX2-LABEL: mul_v4i32_neg63:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967233,4294967233,4294967233,4294967233]
-; X64-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: mul_v4i32_neg63:
-; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-AVX-LABEL: mul_v4i32_neg63:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpslld $6, %xmm0, %xmm1
+; X64-AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 -63, i32 -63, i32 -63, i32 -63>
   ret <4 x i32> %1
 }
@@ -1361,7 +1384,7 @@ define <2 x i64> @mul_v2i64_15_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_15_63:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [15,63]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 15, i64 63>
   ret <2 x i64> %1
@@ -1404,7 +1427,7 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE2-NEXT:    psrlq $32, %xmm3
 ; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4294967295,4294967295]
 ; X64-SSE2-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE2-NEXT:    psllq $32, %xmm0
 ; X64-SSE2-NEXT:    paddq %xmm2, %xmm0
@@ -1418,7 +1441,7 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ; X64-SSE4-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE4-NEXT:    psrlq $32, %xmm3
 ; X64-SSE4-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4294967295,4294967295]
 ; X64-SSE4-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE4-NEXT:    psllq $32, %xmm0
 ; X64-SSE4-NEXT:    paddq %xmm2, %xmm0
@@ -1430,7 +1453,7 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4294967295,4294967295]
 ; X64-XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1442,7 +1465,7 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4294967295,4294967295]
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1450,7 +1473,7 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_15_63:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [18446744073709551601,18446744073709551553]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 -15, i64 -63>
   ret <2 x i64> %1
@@ -1493,7 +1516,7 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE2-NEXT:    psrlq $32, %xmm3
 ; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4294967295,4294967295]
 ; X64-SSE2-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE2-NEXT:    psllq $32, %xmm0
 ; X64-SSE2-NEXT:    paddq %xmm2, %xmm0
@@ -1507,7 +1530,7 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ; X64-SSE4-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE4-NEXT:    psrlq $32, %xmm3
 ; X64-SSE4-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4294967295,4294967295]
 ; X64-SSE4-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE4-NEXT:    psllq $32, %xmm0
 ; X64-SSE4-NEXT:    paddq %xmm2, %xmm0
@@ -1519,7 +1542,7 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4294967295,4294967295]
 ; X64-XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1531,7 +1554,7 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4294967295,4294967295]
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1539,31 +1562,25 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_17_65:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [18446744073709551599,18446744073709551551]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 -17, i64 -65>
   ret <2 x i64> %1
 }
 
 define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
-; X86-SSE2-LABEL: mul_v2i64_0_1:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    xorpd %xmm1, %xmm1
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-SSE2-NEXT:    retl
+; SSE2-LABEL: mul_v2i64_0_1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: mul_v2i64_0_1:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    xorps %xmm1, %xmm1
-; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE4-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE4-NEXT:    ret{{[l|q]}}
-;
-; X64-SSE2-LABEL: mul_v2i64_0_1:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    xorps %xmm1, %xmm1
-; X64-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; X64-SSE2-NEXT:    movaps %xmm1, %xmm0
-; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v2i64_0_1:
 ; X64-AVX:       # %bb.0:
@@ -1583,7 +1600,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; X86-SSE2-NEXT:    psrlq $32, %xmm3
 ; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,0,0,0,u,u,u,u,255,255,255,255,u,u,u,u]
 ; X86-SSE2-NEXT:    paddq %xmm3, %xmm0
 ; X86-SSE2-NEXT:    psllq $32, %xmm0
 ; X86-SSE2-NEXT:    paddq %xmm2, %xmm0
@@ -1597,7 +1614,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X86-SSE4-NEXT:    movdqa %xmm0, %xmm3
 ; X86-SSE4-NEXT:    psrlq $32, %xmm3
 ; X86-SSE4-NEXT:    pmuludq %xmm1, %xmm3
-; X86-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,0,0,0,u,u,u,u,255,255,255,255,u,u,u,u]
 ; X86-SSE4-NEXT:    paddq %xmm3, %xmm0
 ; X86-SSE4-NEXT:    psllq $32, %xmm0
 ; X86-SSE4-NEXT:    paddq %xmm2, %xmm0
@@ -1611,7 +1628,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE2-NEXT:    psrlq $32, %xmm3
 ; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-SSE2-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE2-NEXT:    psllq $32, %xmm0
 ; X64-SSE2-NEXT:    paddq %xmm2, %xmm0
@@ -1625,7 +1642,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X64-SSE4-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE4-NEXT:    psrlq $32, %xmm3
 ; X64-SSE4-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-SSE4-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE4-NEXT:    psllq $32, %xmm0
 ; X64-SSE4-NEXT:    paddq %xmm2, %xmm0
@@ -1637,7 +1654,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1649,7 +1666,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1657,7 +1674,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_0_1:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 0, i64 -1>
   ret <2 x i64> %1
@@ -1672,7 +1689,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; X86-SSE2-NEXT:    psrlq $32, %xmm3
 ; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,0,0,0,u,u,u,u,255,255,255,255,u,u,u,u]
 ; X86-SSE2-NEXT:    paddq %xmm3, %xmm0
 ; X86-SSE2-NEXT:    psllq $32, %xmm0
 ; X86-SSE2-NEXT:    paddq %xmm2, %xmm0
@@ -1686,7 +1703,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X86-SSE4-NEXT:    movdqa %xmm0, %xmm3
 ; X86-SSE4-NEXT:    psrlq $32, %xmm3
 ; X86-SSE4-NEXT:    pmuludq %xmm1, %xmm3
-; X86-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,0,0,0,u,u,u,u,255,255,255,255,u,u,u,u]
 ; X86-SSE4-NEXT:    paddq %xmm3, %xmm0
 ; X86-SSE4-NEXT:    psllq $32, %xmm0
 ; X86-SSE4-NEXT:    paddq %xmm2, %xmm0
@@ -1700,7 +1717,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE2-NEXT:    psrlq $32, %xmm3
 ; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-SSE2-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE2-NEXT:    psllq $32, %xmm0
 ; X64-SSE2-NEXT:    paddq %xmm2, %xmm0
@@ -1714,7 +1731,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X64-SSE4-NEXT:    movdqa %xmm0, %xmm3
 ; X64-SSE4-NEXT:    psrlq $32, %xmm3
 ; X64-SSE4-NEXT:    pmuludq %xmm1, %xmm3
-; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-SSE4-NEXT:    paddq %xmm3, %xmm0
 ; X64-SSE4-NEXT:    psllq $32, %xmm0
 ; X64-SSE4-NEXT:    paddq %xmm2, %xmm0
@@ -1726,7 +1743,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-XOP-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1738,7 +1755,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0]
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
@@ -1746,7 +1763,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_15_neg_63:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [15,18446744073709551553]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 15, i64 -63>
   ret <2 x i64> %1
@@ -1756,36 +1773,36 @@ define <4 x i32> @mul_v4i32_0_15_31_7(<4 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: mul_v4i32_0_15_31_7:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,15,31,7]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [15,u,7,u]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE4-LABEL: mul_v4i32_0_15_31_7:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,15,31,7]
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: mul_v4i32_0_15_31_7:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,15,31,7]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [15,u,7,u]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4-LABEL: mul_v4i32_0_15_31_7:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,15,31,7]
 ; X64-SSE4-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v4i32_0_15_31_7:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,15,31,7]
 ; X64-AVX-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 0, i32 15, i32 31, i32 7>
   ret <4 x i32> %1
@@ -1794,17 +1811,17 @@ define <4 x i32> @mul_v4i32_0_15_31_7(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_0_1_7_15_31_63_127_255(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_0_1_7_15_31_63_127_255:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,1,7,15,31,63,127,255]
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_0_1_7_15_31_63_127_255:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,7,15,31,63,127,255]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v8i16_0_1_7_15_31_63_127_255:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,7,15,31,63,127,255]
 ; X64-AVX-NEXT:    retq
   %1 = mul <8 x i16> %a0, <i16 0, i16 1, i16 7, i16 15, i16 31, i16 63, i16 127, i16 255>
   ret <8 x i16> %1
@@ -1815,7 +1832,7 @@ define <16 x i8> @mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127(<16 x i8> 
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,3,7,15,31,63,127]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,u,1,u,3,u,7,u,15,u,31,u,63,u,127,u]
 ; SSE2-NEXT:    pmullw %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm3, %xmm1
@@ -1825,34 +1842,37 @@ define <16 x i8> @mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127(<16 x i8> 
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
-; SSE4-LABEL: mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE4-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE4-NEXT:    pmovsxbw {{.*#+}} xmm2 = [0,1,3,7,15,31,63,127]
-; SSE4-NEXT:    pmullw %xmm2, %xmm0
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; SSE4-NEXT:    pand %xmm3, %xmm0
-; SSE4-NEXT:    pmullw %xmm2, %xmm1
-; SSE4-NEXT:    pand %xmm3, %xmm1
-; SSE4-NEXT:    packuswb %xmm0, %xmm1
-; SSE4-NEXT:    movdqa %xmm1, %xmm0
-; SSE4-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    movdqa %xmm0, %xmm1
+; X86-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [0,1,0,7,0,31,0,127,0,1,0,7,0,31,0,127]
+; X86-SSE4-NEXT:    psllw $8, %xmm1
+; X86-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,1,3,7,15,31,63,127,0,1,3,7,15,31,63,127]
+; X86-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    por %xmm1, %xmm0
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    movdqa %xmm0, %xmm1
+; X64-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,1,0,7,0,31,0,127,0,1,0,7,0,31,0,127]
+; X64-SSE4-NEXT:    psllw $8, %xmm1
+; X64-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,3,7,15,31,63,127,0,1,3,7,15,31,63,127]
+; X64-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE4-NEXT:    por %xmm1, %xmm0
+; X64-SSE4-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127:
 ; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X64-XOP-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,1,3,7,15,31,63,127]
-; X64-XOP-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; X64-XOP-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; X64-XOP-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
-; X64-XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],xmm1[0,2,4,6,8,10,12,14]
+; X64-XOP-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [0,1,0,7,0,31,0,127,0,1,0,7,0,31,0,127]
+; X64-XOP-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,3,7,15,31,63,127,0,1,3,7,15,31,63,127]
+; X64-XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2],xmm1[2],xmm0[4],xmm1[4],xmm0[6],xmm1[6],xmm0[8],xmm1[8],xmm0[10],xmm1[10],xmm0[12],xmm1[12],xmm0[14],xmm1[14]
 ; X64-XOP-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,3,7,15,31,63,127,0,1,3,7,15,31,63,127]
 ; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -1862,7 +1882,7 @@ define <16 x i8> @mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127(<16 x i8> 
 ; X64-AVX512DQ-LABEL: mul_v16i8_0_1_3_7_15_31_63_127_0_1_3_7_15_31_63_127:
 ; X64-AVX512DQ:       # %bb.0:
 ; X64-AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; X64-AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,3,7,15,31,63,127,0,1,3,7,15,31,63,127]
 ; X64-AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; X64-AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
 ; X64-AVX512DQ-NEXT:    vzeroupper
@@ -1927,7 +1947,7 @@ define <2 x i64> @mul_v2i64_68_132(<2 x i64> %x) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_68_132:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [68,132]
 ; X64-AVX512DQ-NEXT:    retq
   %mul = mul <2 x i64> %x, <i64 68, i64 132>
   ret <2 x i64> %mul
@@ -1989,7 +2009,7 @@ define <2 x i64> @mul_v2i64_60_120(<2 x i64> %x) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_60_120:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [60,124]
 ; X64-AVX512DQ-NEXT:    retq
   %mul = mul <2 x i64> %x, <i64 60, i64 124>
   ret <2 x i64> %mul

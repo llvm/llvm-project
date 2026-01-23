@@ -12,7 +12,7 @@
 
 // template <ErrorCodeEnum E> error_code& operator=(E e);
 
-// Regression test for https://github.com/llvm/llvm-project/issues/57614
+// Regression test for https://llvm.org/PR57614
 
 int make_error_code; // It's important that this comes before <system_error>
 
@@ -26,10 +26,8 @@ namespace User {
   std::error_code make_error_code(Err) { return std::error_code(42, std::generic_category()); }
 }
 
-namespace std {
-  template <>
-  struct is_error_code_enum<User::Err> : true_type {};
-}
+template <>
+struct std::is_error_code_enum<User::Err> : true_type {};
 
 int main(int, char**) {
   std::error_code e;

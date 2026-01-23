@@ -137,10 +137,10 @@ body: |
   bb.0:
     ; Test that trunc(trunc) is combined to a single trunc
     ; CHECK-LABEL: name: trunc_trunc
-    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[TRUNC]](s32)
-    %0:_(s64) = G_IMPLICIT_DEF
+    %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s48) = G_TRUNC %0
     %2:_(s32) = G_TRUNC %1
     $vgpr0 = COPY %2

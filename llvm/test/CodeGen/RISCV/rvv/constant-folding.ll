@@ -21,9 +21,7 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
-  %v41 = insertelement <2 x i32> poison, i32 16, i32 0
-  %v42 = shufflevector <2 x i32> %v41, <2 x i32> poison, <2 x i32> zeroinitializer
-  %v43 = lshr <2 x i32> %x, %v42
+  %v43 = lshr <2 x i32> %x, splat (i32 16)
   %v44 = trunc <2 x i32> %v43 to <2 x i16>
   %v45 =  insertelement <2 x i32> poison, i32 -32768, i32 0
   %v46 = shufflevector <2 x i32> %v45, <2 x i32> poison, <2 x i32> zeroinitializer
@@ -40,9 +38,7 @@ define <vscale x 2 x i16> @scalable(<vscale x 2 x i32> %x) {
 ; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vand.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %v41 = insertelement <vscale x 2 x i32> poison, i32 16, i32 0
-  %v42 = shufflevector <vscale x 2 x i32> %v41, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %v43 = lshr <vscale x 2 x i32> %x, %v42
+  %v43 = lshr <vscale x 2 x i32> %x, splat (i32 16)
   %v44 = trunc <vscale x 2 x i32> %v43 to <vscale x 2 x i16>
   %v45 =  insertelement <vscale x 2 x i32> poison, i32 -32768, i32 0
   %v46 = shufflevector <vscale x 2 x i32> %v45, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer

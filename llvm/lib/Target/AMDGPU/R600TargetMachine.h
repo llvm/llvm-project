@@ -38,6 +38,12 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt,
+                             PassInstrumentationCallbacks *PIC) override;
+
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
@@ -47,6 +53,8 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
 };
 
 } // end namespace llvm

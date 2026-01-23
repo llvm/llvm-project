@@ -33,6 +33,10 @@ together.
 
 Some important things to think about w.r.t. canonicalization patterns:
 
+*   The goal of canonicalization is to make subsequent analyses and
+    optimizations more effective. Therefore, performance improvements are not
+    necessary for canonicalization.
+
 *   Pass pipelines should not rely on the canonicalizer pass for correctness.
     They should work correctly with all instances of the canonicalization pass
     removed.
@@ -50,6 +54,56 @@ Some important things to think about w.r.t. canonicalization patterns:
 
 *   It is always good to eliminate operations entirely when possible, e.g. by
     folding known identities (like "x + 0 = x").
+
+*   Patterns with expensive running time (i.e. have O(n) complexity) or
+    complicated cost models don't belong to canonicalization: since the
+    algorithm is executed iteratively until fixed-point we want patterns that
+    execute quickly (in particular their matching phase).
+
+*   Canonicalize shouldn't lose the semantic of original operation: the original
+    information should always be recoverable from the transformed IR.
+
+## What is the Canonical Form?
+
+There is no formally defined canonical form in MLIR. The de-facto canonical
+form keeps evolving, as canonicalization patterns and folders are getting
+added / removed / modified by the community.
+
+The canonicalizer pass is used in many projects but does not offer fine-grained
+control over individual patterns or foldings, making changes to the canonical
+form potentially contentious. Whether a transformation belongs in the canonical
+form must be decided on a case-by-case basis, but common community-agreed
+canonicalizations include:
+
+* Identity / no-op elimination. E.g., folding `arith.addi(%x, %c0)` to `%x` or
+  erasing `memref.copy(%x, %x)`.
+* Scalar constant folding. E.g., folding `arith.addi(%c1, %c2)` to `%c3`.
+* Folding inverse ops. E.g., folding `arith.xori(arith.xori(%x, %a), %a)` to
+  `%x`.
+* Unused/redundant value elimination. E.g., removing unused loop-carried
+  variables of an `scf.for` op or removing redundant `scf.if` results (when
+  both branches yield the same value).
+* Trivial control flow simplications. E.g., inlining the "then" body of an
+  `scf.if %true` op and erasing the `scf.if` op.
+* Folding chained metadata / shape ops of the same type. E.g., replacing
+  `linalg.transpose(linalg.transpose(%x))` with a single `linalg.transpose(%x)`.
+* Dynamic to static type refinement such as folding constant sizes into
+  shaped types. E.g., rewriting `%v = tensor.empty(%c5) : tensor<?xf32>` as
+  `%0 = tensor.empty() : tensor<5xf32>` and
+  `%v = tensor.cast %0 : tensor<5xf32> to tensor<?xf32>`.
+* Cast propagation / folding such as pushing casts through operations or
+  folding them away if it introduces more static type information. E.g.,
+  rewriting `tensor.insert_slice(%src, tensor.cast(%dst))` (where the cast
+  converts from `tensor<5xf32>` to `tensor<?xf32>`) as
+  `tensor.cast(tensor.insert_slice(%src, %dst))`.
+
+
+Note: Some canonicalizations do not apply when they would lead to IR size
+explosion. (E.g., when they would produce "large" tensor/vector attributes.)
+
+Note: Some dialects define multiple IR forms, sometimes depending on the
+follow-up transformation ([example](https://mlir.llvm.org/docs/Rationale/RationaleLinalgDialect/#interchangeability-of-formsa-nameformsa)).
+These forms are unrelated to MLIR's canonicalization mechanism.
 
 ## Globally Applied Rules
 
@@ -189,7 +243,7 @@ each of the operands, returning the corresponding constant attribute. These
 operands are those that implement the `ConstantLike` trait. If any of the
 operands are non-constant, a null `Attribute` value is provided instead. For
 example, if MyOp provides three operands [`a`, `b`, `c`], but only `b` is
-constant then `adaptor` will return Attribute() for `getA()` and `getC()`, 
+constant then `adaptor` will return Attribute() for `getA()` and `getC()`,
 and b-value for `getB()`.
 
 Also above, is the use of `OpFoldResult`. This class represents the possible
@@ -238,3 +292,8 @@ Operation *MyDialect::materializeConstant(OpBuilder &builder, Attribute value,
   ...
 }
 ```
+
+### When to use the `fold` method vs `RewriterPattern`s for canonicalizations
+
+A canonicalization should always be implemented as a `fold` method if it can
+be, otherwise it should be implemented as a `RewritePattern`.

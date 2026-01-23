@@ -85,7 +85,9 @@ void func7(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+6]]:2 = #0
 }                  // CHECK-NEXT: File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:10 = (#0 - #1)
                    // CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:10 = (#0 - #1)
                    // CHECK-NEXT: File 1, [[@LINE-9]]:14 -> [[@LINE-9]]:18 = #0
-                   // CHECK-NEXT: File 2, [[@LINE-10]]:14 -> [[@LINE-10]]:15 = (#0 - #1)
+                   // CHECK-NEXT: File 1, [[@LINE-10]]:14 -> [[@LINE-10]]:17 = #1
+                   // CHECK-NEXT: File 2, [[@LINE-11]]:14 -> [[@LINE-11]]:17 = (#0 - #1)
+                   // CHECK-NEXT: File 2, [[@LINE-12]]:14 -> [[@LINE-12]]:15 = (#0 - #1)
 
 int main(int argc, const char *argv[]) {
   func();

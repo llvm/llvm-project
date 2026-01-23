@@ -8,8 +8,8 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;
@@ -62,9 +62,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   /// A non-owning pointer to slice_array.__vp_.
@@ -73,9 +71,9 @@ private:
   size_t m_size = 0;
   /// slice_array.__stride_.
   size_t m_stride = 0;
-  /// The type of slize_array's template argument T.
+  /// The type of slice_array's template argument T.
   CompilerType m_element_type;
-  /// The sizeof slize_array's template argument T.
+  /// The sizeof slice_array's template argument T.
   uint32_t m_element_size = 0;
 };
 
@@ -125,7 +123,8 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
     return ChildCacheState::eRefetch;
 
   m_element_type = type.GetTypeTemplateArgument(0);
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr))
+  if (std::optional<uint64_t> size =
+          llvm::expectedToOptional(m_element_type.GetByteSize(nullptr)))
     m_element_size = *size;
 
   if (m_element_size == 0)
@@ -145,16 +144,18 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
   return ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return std::numeric_limits<size_t>::max();
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return *optional_idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -o - -emit-llvm | FileCheck %s
-// XFAIL: target={{(aarch64|arm64).*}}, target=x86_64-pc-windows-msvc, target=x86_64-{{(pc|w64)}}-windows-gnu
+// XFAIL: target={{(aarch64|arm64).*}}, target=x86_64-pc-windows-msvc, target=x86_64-{{(pc|w64)}}-windows-gnu, target=x86_64-pc-windows-cygnus
 
 // PR1513
 

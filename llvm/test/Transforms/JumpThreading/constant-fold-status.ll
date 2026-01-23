@@ -8,7 +8,8 @@
 ; status check that is hidden under EXPENSIVE_CHECKS.
 
 ; CHECK-LABEL: entry:
-; CHECK-NEXT: br i1 icmp eq (i32 ptrtoint (ptr @a to i32), i32 0), label %overflow, label %cont
+; CHECK-NEXT: %.not = icmp eq i32 ptrtoint (ptr @a to i32), 0
+; CHECK-NEXT: br i1 %.not, label %overflow, label %cont
 
 @a = internal global i16 0
 

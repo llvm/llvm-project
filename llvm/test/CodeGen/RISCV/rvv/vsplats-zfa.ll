@@ -11,9 +11,7 @@ define <vscale x 8 x half> @vsplat_f16_0p625() {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> poison, half 0.625, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x half> %splat
+  ret <vscale x 8 x half> splat (half 0.625)
 }
 
 define <vscale x 8 x float> @vsplat_f32_0p75() {
@@ -23,9 +21,7 @@ define <vscale x 8 x float> @vsplat_f32_0p75() {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> poison, float 0.75, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x float> %splat
+  ret <vscale x 8 x float> splat (float 0.75)
 }
 
 define <vscale x 8 x double> @vsplat_f64_neg1() {
@@ -35,7 +31,97 @@ define <vscale x 8 x double> @vsplat_f64_neg1() {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> poison, double -1.0, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x double> %splat
+  ret <vscale x 8 x double> splat (double -1.0)
+}
+
+define <vscale x 4 x float> @vfnmsac(<vscale x 4 x float> %va, <vscale x 4 x float> %vb) {
+; CHECK-LABEL: vfnmsac:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfnmsac.vf v8, fa5, v10
+; CHECK-NEXT:    ret
+  %vd = tail call <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> %vb, <vscale x 4 x float> splat (float -2.000000e+00), <vscale x 4 x float> %va)
+  ret <vscale x 4 x float> %vd
+}
+
+define <vscale x 4 x float> @vfnmsub(<vscale x 4 x float> %va, <vscale x 4 x float> %vb) {
+; CHECK-LABEL: vfnmsub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfnmsub.vf v8, fa5, v10
+; CHECK-NEXT:    ret
+  %vd = tail call <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> splat (float -2.000000e+00), <vscale x 4 x float> %va, <vscale x 4 x float> %vb)
+  ret <vscale x 4 x float> %vd
+}
+
+define <vscale x 8 x float> @vfnmacc(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) {
+; CHECK-LABEL: vfnmacc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfnmacc.vf v8, fa5, v12
+; CHECK-NEXT:    ret
+  %neg = fneg <vscale x 8 x float> %va
+  %vd = call <vscale x 8 x float> @llvm.fma.v8f32(<vscale x 8 x float> %vb, <vscale x 8 x float> splat (float -2.000000e+00), <vscale x 8 x float> %neg)
+  ret <vscale x 8 x float> %vd
+}
+
+define <vscale x 8 x float> @vfnmadd(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) {
+; CHECK-LABEL: vfnmadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfnmadd.vf v8, fa5, v12
+; CHECK-NEXT:    ret
+  %neg = fneg <vscale x 8 x float> %vb
+  %vd = call <vscale x 8 x float> @llvm.fma.v8f32(<vscale x 8 x float> %va, <vscale x 8 x float> splat (float -2.000000e+00), <vscale x 8 x float> %neg)
+  ret <vscale x 8 x float> %vd
+}
+
+define <vscale x 8 x float> @vfadd_vf_neg(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfadd_vf_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfsub.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fadd <vscale x 8 x float> %va, splat (float -2.000000e+00)
+  ret <vscale x 8 x float> %vd
+}
+
+
+define <vscale x 8 x float> @vfsub_vf_neg(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfsub_vf_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fsub <vscale x 8 x float> %va, splat (float -2.000000e+00)
+  ret <vscale x 8 x float> %vd
+}
+
+
+define <vscale x 8 x float> @vfsub_vf(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfsub_vf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfsub.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fsub <vscale x 8 x float> %va, splat (float 2.000000e+00)
+  ret <vscale x 8 x float> %vd
+}
+
+define <vscale x 8 x float> @vfadd_vf(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfadd_vf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fadd <vscale x 8 x float> %va, splat (float 2.000000e+00)
+  ret <vscale x 8 x float> %vd
 }

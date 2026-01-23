@@ -54,81 +54,6 @@
 /* LLVM name for the native target MCA init function, if available */
 #cmakedefine LLVM_NATIVE_TARGETMCA LLVMInitialize${LLVM_NATIVE_ARCH}TargetMCA
 
-/* Define if the AArch64 target is built in */
-#cmakedefine01 LLVM_HAS_AARCH64_TARGET
-
-/* Define if the AMDGPU target is built in */
-#cmakedefine01 LLVM_HAS_AMDGPU_TARGET
-
-/* Define if the ARC target is built in */
-#cmakedefine01 LLVM_HAS_ARC_TARGET
-
-/* Define if the ARM target is built in */
-#cmakedefine01 LLVM_HAS_ARM_TARGET
-
-/* Define if the AVR target is built in */
-#cmakedefine01 LLVM_HAS_AVR_TARGET
-
-/* Define if the BPF target is built in */
-#cmakedefine01 LLVM_HAS_BPF_TARGET
-
-/* Define if the CSKY target is built in */
-#cmakedefine01 LLVM_HAS_CSKY_TARGET
-
-/* Define if the DirectX target is built in */
-#cmakedefine01 LLVM_HAS_DIRECTX_TARGET
-
-/* Define if the Hexagon target is built in */
-#cmakedefine01 LLVM_HAS_HEXAGON_TARGET
-
-/* Define if the Lanai target is built in */
-#cmakedefine01 LLVM_HAS_LANAI_TARGET
-
-/* Define if the LoongArch target is built in */
-#cmakedefine01 LLVM_HAS_LOONGARCH_TARGET
-
-/* Define if the M68k target is built in */
-#cmakedefine01 LLVM_HAS_M68K_TARGET
-
-/* Define if the Mips target is built in */
-#cmakedefine01 LLVM_HAS_MIPS_TARGET
-
-/* Define if the MSP430 target is built in */
-#cmakedefine01 LLVM_HAS_MSP430_TARGET
-
-/* Define if the NVPTX target is built in */
-#cmakedefine01 LLVM_HAS_NVPTX_TARGET
-
-/* Define if the PowerPC target is built in */
-#cmakedefine01 LLVM_HAS_POWERPC_TARGET
-
-/* Define if the RISCV target is built in */
-#cmakedefine01 LLVM_HAS_RISCV_TARGET
-
-/* Define if the Sparc target is built in */
-#cmakedefine01 LLVM_HAS_SPARC_TARGET
-
-/* Define if the SPIRV target is built in */
-#cmakedefine01 LLVM_HAS_SPIRV_TARGET
-
-/* Define if the SystemZ target is built in */
-#cmakedefine01 LLVM_HAS_SYSTEMZ_TARGET
-
-/* Define if the VE target is built in */
-#cmakedefine01 LLVM_HAS_VE_TARGET
-
-/* Define if the WebAssembly target is built in */
-#cmakedefine01 LLVM_HAS_WEBASSEMBLY_TARGET
-
-/* Define if the X86 target is built in */
-#cmakedefine01 LLVM_HAS_X86_TARGET
-
-/* Define if the XCore target is built in */
-#cmakedefine01 LLVM_HAS_XCORE_TARGET
-
-/* Define if the Xtensa target is built in */
-#cmakedefine01 LLVM_HAS_XTENSA_TARGET
-
 /* Define if this is Unixish platform */
 #cmakedefine LLVM_ON_UNIX ${LLVM_ON_UNIX}
 
@@ -176,6 +101,9 @@
 /* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 
+/* Define if we want to check profile consistency in lit tests */
+#cmakedefine LLVM_ENABLE_PROFCHECK
+
 /* Define to 1 if you have the <sysexits.h> header file. */
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
@@ -185,6 +113,12 @@
 /* Define if building LLVM with BUILD_SHARED_LIBS */
 #cmakedefine LLVM_BUILD_SHARED_LIBS
 
+/* Define if exporting LLVM public interface for shared library */
+#cmakedefine LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS
+
+/* Define if exporting LLVM-C public interface for shared library */
+#cmakedefine LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS
+
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 #cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}
 
@@ -192,10 +126,30 @@
  * in non assert builds */
 #cmakedefine01 LLVM_UNREACHABLE_OPTIMIZE
 
+/* Define if building LLVM with LLVM_ENABLE_IO_SANDBOX */
+#cmakedefine01 LLVM_ENABLE_IO_SANDBOX
+
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #cmakedefine01 LLVM_ENABLE_DIA_SDK
 
 /* Define if plugins enabled */
 #cmakedefine LLVM_ENABLE_PLUGINS
+
+/* Define if logf128 is available */
+#cmakedefine LLVM_HAS_LOGF128
+
+/* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
+#cmakedefine01 LLVM_ENABLE_TELEMETRY
+
+/* Define to 1 to enable expensive checks for debug location coverage checking,
+   and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+
+/* Define to 1 to enable expensive tracking of the origin of debug location
+   coverage bugs, and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+
+/* Define to 1 to enable LLVM OnDisk Content Addressable Storage */
+#cmakedefine01 LLVM_ENABLE_ONDISK_CAS
 
 #endif

@@ -35,6 +35,8 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=arm
     #elif defined(__arm__) || defined(_M_ARM) || defined(_ARM)
       #error ARCHITECTURE=arm
+    #elif defined(__ARM64_ARCH_8_32__)
+      #error ARCHITECTURE=aarch64_32
     #elif defined(__aarch64__) || defined(_M_ARM64)
       #error ARCHITECTURE=aarch64
     #elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
@@ -57,6 +59,10 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=s390x
     #elif defined(__wasm32__)
       #error ARCHITECTURE=wasm32
+    #elif defined(__sparcv9)
+      #error ARCHITECTURE=sparcv9
+    #elif defined(__sparc)
+      #error ARCHITECTURE=sparc
     #else
       #error ARCHITECTURE=UnknownArchitecture
     #endif

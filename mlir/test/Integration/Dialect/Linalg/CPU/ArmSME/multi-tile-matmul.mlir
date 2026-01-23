@@ -1,11 +1,12 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule  \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
-// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
+// RUN:   -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
+// RUN:   -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib,%mlir_arm_runner_utils | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib,%native_mlir_arm_runner_utils | \
 // RUN: FileCheck %s
 
 /// This is very similar to the SME matmul.mlir test, except that it uses a tile
@@ -28,7 +29,7 @@ func.func @main() {
   %c128 = arith.constant 128 : i32
   func.call @setArmSVLBits(%c128) : (i32) -> ()
 
-  %c0 = arith.constant 0 : i32
+  %c0 = arith.constant 0.0 : f32
   %c7 = arith.constant 7 : index
 
   %A = arith.constant dense<[
@@ -49,7 +50,7 @@ func.func @main() {
   %B_dyn = tensor.cast %B : tensor<13x7xf32> to tensor<?x?xf32>
 
   %C_init = bufferization.alloc_tensor(%c7, %c7) : tensor<?x?xf32>
-  %C = linalg.fill ins(%c0 : i32) outs(%C_init : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %C = linalg.fill ins(%c0 : f32) outs(%C_init : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   // CHECK: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [7, 7] strides = [7, 1] data =
   // CHECK: [32955, 33514, 34073, 34632, 35191, 35750, 36309]
@@ -72,7 +73,7 @@ module attributes {transform.with_named_sequence} {
     // Step 1: Tile for size [8] x [8] (unrolled by 4), which corresponds to
     // (2 x SVLs) x (2 x SVLs), where SVLs is the number of 32-bit elements in a
     // vector of SVL bits. This uses all four 32-bit SME virtual tiles.
-    %tiled_linalg_op, %loop_i, %loop_j, %loop_k = transform.structured.tile_using_for %matmul[[8], [8], 4]
+    %tiled_linalg_op, %loop_i, %loop_j, %loop_k = transform.structured.tile_using_for %matmul tile_sizes [[8], [8], 4]
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // Step 2: Vectorize.

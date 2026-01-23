@@ -13,7 +13,6 @@
 #include "clang/Basic/Linkage.h"
 #include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/FrontendRecords.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Mangler.h"
@@ -205,10 +204,10 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
   const StringRef InterfaceName = InterfaceD->getName();
 
-  std::pair<ObjCCategoryRecord *, FrontendAttrs *> Category =
-      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D,
-                                 *Access);
-  recordObjCInstanceVariables(D->getASTContext(), Category.first, InterfaceName,
+  ObjCCategoryRecord *CategoryRecord =
+      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D, *Access)
+          .first;
+  recordObjCInstanceVariables(D->getASTContext(), CategoryRecord, InterfaceName,
                               D->ivars());
   return true;
 }
@@ -218,7 +217,7 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  // Skip variables in records. They are handled seperately for C++.
+  // Skip variables in records. They are handled separately for C++.
   if (D->getDeclContext()->isRecord())
     return true;
 
@@ -425,7 +424,7 @@ std::string
 InstallAPIVisitor::getMangledCXXRTTIName(const CXXRecordDecl *D) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
-  MC->mangleCXXRTTIName(QualType(D->getTypeForDecl(), 0), NameStream);
+  MC->mangleCXXRTTIName(MC->getASTContext().getCanonicalTagType(D), NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -433,7 +432,7 @@ InstallAPIVisitor::getMangledCXXRTTIName(const CXXRecordDecl *D) const {
 std::string InstallAPIVisitor::getMangledCXXRTTI(const CXXRecordDecl *D) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
-  MC->mangleCXXRTTI(QualType(D->getTypeForDecl(), 0), NameStream);
+  MC->mangleCXXRTTI(MC->getASTContext().getCanonicalTagType(D), NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -447,16 +446,16 @@ InstallAPIVisitor::getMangledCXXVTableName(const CXXRecordDecl *D) const {
   return getBackendMangledName(Name);
 }
 
-std::string
-InstallAPIVisitor::getMangledCXXThunk(const GlobalDecl &D,
-                                      const ThunkInfo &Thunk) const {
+std::string InstallAPIVisitor::getMangledCXXThunk(
+    const GlobalDecl &D, const ThunkInfo &Thunk, bool ElideOverrideInfo) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
   const auto *Method = cast<CXXMethodDecl>(D.getDecl());
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(Method))
-    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk.This, NameStream);
+    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk, ElideOverrideInfo,
+                           NameStream);
   else
-    MC->mangleThunk(Method, Thunk, NameStream);
+    MC->mangleThunk(Method, Thunk, ElideOverrideInfo, NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -500,7 +499,8 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
             return;
 
           for (const auto &Thunk : *Thunks) {
-            const std::string Name = getMangledCXXThunk(GD, Thunk);
+            const std::string Name =
+                getMangledCXXThunk(GD, Thunk, /*ElideOverrideInfo=*/true);
             auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
                                                  GlobalRecord::Kind::Function,
                                                  Avail, GD.getDecl(), Access);
@@ -543,7 +543,7 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
   }
 
   for (const auto &It : D->bases()) {
-    const CXXRecordDecl *Base =
+    const auto *Base =
         cast<CXXRecordDecl>(It.getType()->castAs<RecordType>()->getDecl());
     const auto BaseAccess = getAccessForDecl(Base);
     if (!BaseAccess)

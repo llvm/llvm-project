@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -machine-sink-split < %s
+; RUN: llc -mtriple=hexagon -machine-sink-split < %s
 ; REQUIRES: asserts
 ; MachineSink should not sink an MI which is used in a non-phi instruction
 ; in an MBB with multiple predecessors.

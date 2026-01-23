@@ -6,22 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
-#include "mlir/Transforms/Passes.h"
-#include "mlir/Transforms/RegionUtils.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_LOOPCOALESCING
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -39,9 +35,9 @@ struct LoopCoalescingPass
     func::FuncOp func = getOperation();
     func.walk<WalkOrder::PreOrder>([](Operation *op) {
       if (auto scfForOp = dyn_cast<scf::ForOp>(op))
-        (void)coalescePerfectlyNestedLoops(scfForOp);
+        (void)coalescePerfectlyNestedSCFForLoops(scfForOp);
       else if (auto affineForOp = dyn_cast<AffineForOp>(op))
-        (void)coalescePerfectlyNestedLoops(affineForOp);
+        (void)coalescePerfectlyNestedAffineLoops(affineForOp);
     });
   }
 };

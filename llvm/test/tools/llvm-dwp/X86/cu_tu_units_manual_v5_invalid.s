@@ -5,7 +5,7 @@
 # RUN:         -split-dwarf-file=%t.dwo -dwarf-version=5
 # RUN: llvm-dwp %t.dwo -o %t.dwp
 # RUN: llvm-dwarfdump -debug-info -debug-cu-index -debug-tu-index \
-# RUN:                -manaully-generate-unit-index %t.dwp 2>&1 | FileCheck %s
+# RUN:                -manually-generate-unit-index %t.dwp 2>&1 | FileCheck %s
 
 ## Note: In order to check whether the type unit index is generated
 ## there is no need to add the missing DIEs for the structure type of the type unit.

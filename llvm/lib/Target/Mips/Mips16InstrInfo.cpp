@@ -22,11 +22,8 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
@@ -40,11 +37,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mips16-instrinfo"
 
 Mips16InstrInfo::Mips16InstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, Mips::Bimm16) {}
-
-const MipsRegisterInfo &Mips16InstrInfo::getRegisterInfo() const {
-  return RI;
-}
+    : MipsInstrInfo(STI, RI, Mips::Bimm16), RI(STI) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
@@ -68,8 +61,9 @@ Register Mips16InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
 
   if (Mips::CPU16RegsRegClass.contains(DestReg) &&
@@ -107,8 +101,8 @@ void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       Register SrcReg, bool isKill, int FI,
                                       const TargetRegisterClass *RC,
-                                      const TargetRegisterInfo *TRI,
-                                      int64_t Offset) const {
+                                      int64_t Offset,
+                                      MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOStore);
@@ -125,8 +119,8 @@ void Mips16InstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        Register DestReg, int FI,
                                        const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI,
-                                       int64_t Offset) const {
+                                       int64_t Offset,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);
@@ -183,7 +177,7 @@ unsigned Mips16InstrInfo::getOppositeBranchOpc(unsigned Opc) const {
 
 static void addSaveRestoreRegs(MachineInstrBuilder &MIB,
                                ArrayRef<CalleeSavedInfo> CSI,
-                               unsigned Flags = 0) {
+                               RegState Flags = {}) {
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in
@@ -408,9 +402,9 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
       }
       if (SecondRegSaved)
         copyPhysReg(MBB, II, DL, SecondRegSavedTo, SecondRegSaved, true);
+    } else {
+      Available.reset(SpReg);
     }
-   else
-     Available.reset(SpReg);
     copyPhysReg(MBB, II, DL, SpReg, Mips::SP, false);
     BuildMI(MBB, II, DL, get(Mips::AdduRxRyRz16), Reg)
         .addReg(SpReg, RegState::Kill)

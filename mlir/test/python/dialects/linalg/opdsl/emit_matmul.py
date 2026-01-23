@@ -63,8 +63,8 @@ with Context() as ctx, Location.unknown():
             RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32)
         )
         def test_matmul_mono(lhs, rhs):
-            init_result = tensor.EmptyOp([4, 8], f32)
-            return matmul_mono(lhs, rhs, outs=[init_result.result])
+            init_result = tensor.empty([4, 8], f32)
+            return matmul_mono(lhs, rhs, outs=[init_result])
 
         # CHECK-LABEL: @test_i8i8i32_matmul
         # CHECK:      ^{{.*}}(%[[A_ARG:.+]]: i8, %[[B_ARG:.+]]: i8, %[[C_ARG:.+]]: i32)

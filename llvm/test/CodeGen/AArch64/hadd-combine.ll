@@ -903,6 +903,136 @@ define <8 x i16> @shadd_fixedwidth_v8i16(<8 x i16> %a0, <8 x i16> %a1)  {
   ret <8 x i16> %res
 }
 
+define <8 x i16> @shadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: shadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+define <8 x i16> @srhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: srhadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+define <8 x i16> @uhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: uhadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+define <8 x i16> @urhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: urhadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+; Remove unnecessary sign_extend_inreg after shadd
+define <2 x i32> @shadd_signbits_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) {
+; CHECK-LABEL: shadd_signbits_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #17
+; CHECK-NEXT:    shadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %x0 = ashr <2 x i32> %a0, <i32 17, i32 17>
+  %x1 = ashr <2 x i32> %a1, <i32 17, i32 17>
+  %m = and <2 x i32> %x0, %x1
+  %s = xor <2 x i32> %x0, %x1
+  %x = ashr <2 x i32> %s, <i32 1, i32 1>
+  %avg = add <2 x i32> %m, %x
+  %avg1 = shl <2 x i32> %avg, <i32 17, i32 17>
+  %avg2 = ashr <2 x i32> %avg1, <i32 17, i32 17>
+  store <2 x i32> %avg, ptr %p2 ; extra use
+  ret <2 x i32> %avg2
+}
+
+; Remove unnecessary sign_extend_inreg after srhadd
+define <2 x i32> @srhadd_signbits_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) {
+; CHECK-LABEL: srhadd_signbits_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #17
+; CHECK-NEXT:    srhadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %x0 = ashr <2 x i32> %a0, <i32 17, i32 17>
+  %x1 = ashr <2 x i32> %a1, <i32 17, i32 17>
+  %m = or <2 x i32> %x0, %x1
+  %s = xor <2 x i32> %x0, %x1
+  %x = ashr <2 x i32> %s, <i32 1, i32 1>
+  %avg = sub <2 x i32> %m, %x
+  %avg1 = shl <2 x i32> %avg, <i32 17, i32 17>
+  %avg2 = ashr <2 x i32> %avg1, <i32 17, i32 17>
+  store <2 x i32> %avg, ptr %p2 ; extra use
+  ret <2 x i32> %avg2
+}
+
+; negative test - not enough signbits to remove sign_extend_inreg after srhadd
+define <2 x i32> @srhadd_signbits_v2i32_negative(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) {
+; CHECK-LABEL: srhadd_signbits_v2i32_negative:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #17
+; CHECK-NEXT:    srhadd v1.2s, v0.2s, v1.2s
+; CHECK-NEXT:    shl v0.2s, v1.2s, #22
+; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #22
+; CHECK-NEXT:    ret
+  %x0 = ashr <2 x i32> %a0, <i32 17, i32 17>
+  %x1 = ashr <2 x i32> %a1, <i32 17, i32 17>
+  %m = or <2 x i32> %x0, %x1
+  %s = xor <2 x i32> %x0, %x1
+  %x = ashr <2 x i32> %s, <i32 1, i32 1>
+  %avg = sub <2 x i32> %m, %x
+  %avg1 = shl <2 x i32> %avg, <i32 22, i32 22>
+  %avg2 = ashr <2 x i32> %avg1, <i32 22, i32 22>
+  store <2 x i32> %avg, ptr %p2 ; extra use
+  ret <2 x i32> %avg2
+}
+
+define <8 x i8> @dontcrashonnvcasts() {
+; CHECK-LABEL: dontcrashonnvcasts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2s, #128, lsl #24
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    fneg d0, d0
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %vrhadd_v.i = tail call <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8> <i8 0, i8 0, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 0>, <8 x i8> zeroinitializer)
+  %shuffle.i = shufflevector <8 x i8> %vrhadd_v.i, <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison>, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  ret <8 x i8> %shuffle.i
+}
+
 declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)
 declare <4 x i16> @llvm.aarch64.neon.shadd.v4i16(<4 x i16>, <4 x i16>)
 declare <2 x i32> @llvm.aarch64.neon.shadd.v2i32(<2 x i32>, <2 x i32>)

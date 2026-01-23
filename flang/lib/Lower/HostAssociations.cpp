@@ -163,9 +163,9 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
-    builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
+    fir::StoreOp::create(builder, args.loc, castBox, args.addrInTuple);
   }
 
   static void getFromTuple(const GetFromTuple &args,
@@ -182,10 +182,10 @@ class CapturedProcedure : public CapturedSymbols<CapturedProcedure> {
 public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
+    mlir::Type funTy = Fortran::lower::getDummyProcedureType(sym, converter);
     if (Fortran::semantics::IsPointer(sym))
-      TODO(converter.getCurrentLocation(),
-           "capture procedure pointer in internal procedure");
-    return Fortran::lower::getDummyProcedureType(sym, converter);
+      return fir::ReferenceType::get(funTy);
+    return funTy;
   }
 
   static void instantiateHostTuple(const InstantiateHostTuple &args,
@@ -194,9 +194,9 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
-    builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
+    fir::StoreOp::create(builder, args.loc, castBox, args.addrInTuple);
   }
 
   static void getFromTuple(const GetFromTuple &args,
@@ -219,7 +219,7 @@ public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
     fir::KindTy kind =
-        converter.genType(sym).cast<fir::CharacterType>().getFKind();
+        mlir::cast<fir::CharacterType>(converter.genType(sym)).getFKind();
     return fir::BoxCharType::get(&converter.getMLIRContext(), kind);
   }
 
@@ -231,7 +231,7 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Value boxchar = fir::factory::CharacterExprHelper(builder, args.loc)
                               .createEmbox(*charBox);
-    builder.create<fir::StoreOp>(args.loc, boxchar, args.addrInTuple);
+    fir::StoreOp::create(builder, args.loc, boxchar, args.addrInTuple);
   }
 
   static void getFromTuple(const GetFromTuple &args,
@@ -265,24 +265,24 @@ public:
     mlir::Location loc = args.loc;
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     if (Fortran::semantics::IsOptional(sym)) {
       auto isPresent =
-          builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), castBox);
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), castBox);
       builder.genIfThenElse(loc, isPresent)
           .genThen([&]() {
-            builder.create<fir::StoreOp>(loc, castBox, args.addrInTuple);
+            fir::StoreOp::create(builder, loc, castBox, args.addrInTuple);
           })
           .genElse([&]() {
             mlir::Value null = fir::factory::createUnallocatedBox(
                 builder, loc, typeInTuple,
                 /*nonDeferredParams=*/mlir::ValueRange{});
-            builder.create<fir::StoreOp>(loc, null, args.addrInTuple);
+            fir::StoreOp::create(builder, loc, null, args.addrInTuple);
           })
           .end();
     } else {
-      builder.create<fir::StoreOp>(loc, castBox, args.addrInTuple);
+      fir::StoreOp::create(builder, loc, castBox, args.addrInTuple);
     }
   }
   static void getFromTuple(const GetFromTuple &args,
@@ -293,15 +293,15 @@ public:
     mlir::Location loc = args.loc;
     mlir::Value box = args.valueInTuple;
     if (Fortran::semantics::IsOptional(sym)) {
-      auto boxTy = box.getType().cast<fir::BaseBoxType>();
+      auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
       auto eleTy = boxTy.getEleTy();
       if (!fir::isa_ref_type(eleTy))
         eleTy = builder.getRefType(eleTy);
-      auto addr = builder.create<fir::BoxAddrOp>(loc, eleTy, box);
+      auto addr = fir::BoxAddrOp::create(builder, loc, eleTy, box);
       mlir::Value isPresent = builder.genIsNotNullAddr(loc, addr);
-      auto absentBox = builder.create<fir::AbsentOp>(loc, boxTy);
-      box =
-          builder.create<mlir::arith::SelectOp>(loc, isPresent, box, absentBox);
+      auto absentBox = fir::AbsentOp::create(builder, loc, boxTy);
+      box = mlir::arith::SelectOp::create(builder, loc, isPresent, box,
+                                          absentBox);
     }
     bindCapturedSymbol(sym, box, converter, args.symMap);
   }
@@ -329,9 +329,9 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
-    builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
+    fir::StoreOp::create(builder, args.loc, castBox, args.addrInTuple);
   }
   static void getFromTuple(const GetFromTuple &args,
                            Fortran::lower::AbstractConverter &converter,
@@ -366,7 +366,8 @@ public:
   }
 };
 
-/// Class defining how arrays are captured inside internal procedures.
+/// Class defining how arrays, including assumed-ranks, are captured inside
+/// internal procedures.
 /// Array are captured via a `fir.box<fir.array<T>>` descriptor that belongs to
 /// the host tuple. This allows capturing lower bounds, which can be done by
 /// providing a ShapeShiftOp argument to the EmboxOp.
@@ -381,8 +382,8 @@ public:
                             const Fortran::semantics::Symbol &sym) {
     mlir::Type type = converter.genType(sym);
     bool isPolymorphic = Fortran::semantics::IsPolymorphic(sym);
-    assert((type.isa<fir::SequenceType>() ||
-            (isPolymorphic && type.isa<fir::ClassType>())) &&
+    assert((mlir::isa<fir::SequenceType>(type) ||
+            (isPolymorphic && mlir::isa<fir::ClassType>(type))) &&
            "must be a sequence type");
     if (isPolymorphic)
       return type;
@@ -403,21 +404,21 @@ public:
       // done on present optional. For absent optionals, simply create a
       // disassociated pointer (it is illegal to inquire about lower bounds or
       // lengths of optional according to 15.5.2.12 3 (9) and 10.1.11 2 (7)b).
-      auto isPresent = builder.create<fir::IsPresentOp>(
-          loc, builder.getI1Type(), fir::getBase(args.hostValue));
+      auto isPresent = fir::IsPresentOp::create(
+          builder, loc, builder.getI1Type(), fir::getBase(args.hostValue));
       builder.genIfThenElse(loc, isPresent)
           .genThen([&]() {
             fir::factory::associateMutableBox(builder, loc, boxInTuple,
                                               args.hostValue,
-                                              /*lbounds=*/std::nullopt);
+                                              /*lbounds=*/{});
           })
           .genElse([&]() {
             fir::factory::disassociateMutableBox(builder, loc, boxInTuple);
           })
           .end();
     } else {
-      fir::factory::associateMutableBox(
-          builder, loc, boxInTuple, args.hostValue, /*lbounds=*/std::nullopt);
+      fir::factory::associateMutableBox(builder, loc, boxInTuple,
+                                        args.hostValue, /*lbounds=*/{});
     }
   }
 
@@ -430,7 +431,7 @@ public:
     mlir::Value box = args.valueInTuple;
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> lbounds;
-    if (!ba.lboundIsAllOnes()) {
+    if (!ba.lboundIsAllOnes() && !Fortran::semantics::IsAssumedRank(sym)) {
       if (ba.isStaticArray()) {
         for (std::int64_t lb : ba.staticLBound())
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
@@ -440,15 +441,15 @@ public:
         const unsigned rank = sym.Rank();
         for (unsigned dim = 0; dim < rank; ++dim) {
           mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
-          auto dims = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                     box, dimVal);
+          auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                             box, dimVal);
           lbounds.emplace_back(dims.getResult(0));
         }
       }
     }
 
     if (canReadCapturedBoxValue(converter, sym)) {
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/{});
       bindCapturedSymbol(sym,
                          fir::factory::readBoxValue(builder, loc, boxValue),
                          converter, args.symMap);
@@ -459,17 +460,17 @@ public:
       // (absent boxes are null descriptor addresses, not descriptors containing
       // a null base address).
       if (Fortran::semantics::IsOptional(sym)) {
-        auto boxTy = box.getType().cast<fir::BaseBoxType>();
+        auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
         auto eleTy = boxTy.getEleTy();
         if (!fir::isa_ref_type(eleTy))
           eleTy = builder.getRefType(eleTy);
-        auto addr = builder.create<fir::BoxAddrOp>(loc, eleTy, box);
+        auto addr = fir::BoxAddrOp::create(builder, loc, eleTy, box);
         mlir::Value isPresent = builder.genIsNotNullAddr(loc, addr);
-        auto absentBox = builder.create<fir::AbsentOp>(loc, boxTy);
-        box = builder.create<mlir::arith::SelectOp>(loc, isPresent, box,
-                                                    absentBox);
+        auto absentBox = fir::AbsentOp::create(builder, loc, boxTy);
+        box = mlir::arith::SelectOp::create(builder, loc, isPresent, box,
+                                            absentBox);
       }
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/{});
       bindCapturedSymbol(sym, boxValue, converter, args.symMap);
     }
   }
@@ -488,7 +489,8 @@ private:
     const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
-           !isDerivedWithLenParameters(sym);
+           !isDerivedWithLenParameters(sym) &&
+           !Fortran::semantics::IsAssumedRank(sym);
   }
 };
 } // namespace
@@ -514,7 +516,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsAllocatableOrPointer(sym) ||
       sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
-  if (ba.isArray())
+  if (ba.isArray()) // include assumed-ranks.
     return CapturedArrays::visit(visitor, converter, sym, ba);
   if (Fortran::semantics::IsPolymorphic(sym))
     return CapturedPolymorphicScalar::visit(visitor, converter, sym, ba);
@@ -527,7 +529,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
 // `t` should be the result of getArgumentType, which has a type of
 // `!fir.ref<tuple<...>>`.
 static mlir::TupleType unwrapTupleTy(mlir::Type t) {
-  return fir::dyn_cast_ptrEleTy(t).cast<mlir::TupleType>();
+  return mlir::cast<mlir::TupleType>(fir::dyn_cast_ptrEleTy(t));
 }
 
 static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -535,10 +537,10 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value offset) {
   // fir.ref<fir.ref> and fir.ptr<fir.ref> are forbidden. Use
   // fir.llvm_ptr if needed.
-  auto ty = varTy.isa<fir::ReferenceType>()
+  auto ty = mlir::isa<fir::ReferenceType>(varTy)
                 ? mlir::Type(fir::LLVMPointerType::get(varTy))
                 : mlir::Type(builder.getRefType(varTy));
-  return builder.create<fir::CoordinateOp>(loc, ty, tupleArg, offset);
+  return fir::CoordinateOp::create(builder, loc, ty, tupleArg, offset);
 }
 
 void Fortran::lower::HostAssociations::addSymbolsToBind(
@@ -570,7 +572,7 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
   mlir::TupleType tupTy = unwrapTupleTy(getArgumentType(converter));
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
-  auto hostTuple = builder.create<fir::AllocaOp>(loc, tupTy);
+  auto hostTuple = fir::AllocaOp::create(builder, loc, tupTy);
   mlir::IntegerType offTy = builder.getIntegerType(32);
 
   // Walk the list of tupleSymbols and update the pointers in the tuple.
@@ -637,7 +639,7 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
     mlir::Value off = builder.createIntegerConstant(loc, offTy, s.index());
     mlir::Type varTy = tupTy.getType(s.index());
     mlir::Value eleOff = genTupleCoor(builder, loc, varTy, tupleArg, off);
-    mlir::Value valueInTuple = builder.create<fir::LoadOp>(loc, eleOff);
+    mlir::Value valueInTuple = fir::LoadOp::create(builder, loc, eleOff);
     GetFromTuple getFromTuple{symMap, valueInTuple, loc};
     walkCaptureCategories(getFromTuple, converter, *s.value());
   }

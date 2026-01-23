@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/ConvertEBCDIC.h"
@@ -39,8 +38,8 @@ template <typename ValueType> struct BinaryBeImpl {
 template <typename ValueType>
 raw_ostream &operator<<(raw_ostream &OS, const BinaryBeImpl<ValueType> &BBE) {
   char Buffer[sizeof(BBE.Value)];
-  support::endian::write<ValueType, llvm::endianness::big, support::unaligned>(
-      Buffer, BBE.Value);
+  support::endian::write<ValueType, support::unaligned>(Buffer, BBE.Value,
+                                                        llvm::endianness::big);
   OS.write(Buffer, sizeof(BBE.Value));
   return OS;
 }
@@ -72,7 +71,7 @@ public:
     SetBufferSize(GOFF::PayloadLength);
   }
 
-  ~GOFFOstream() { finalize(); }
+  ~GOFFOstream() override { finalize(); }
 
   void makeNewRecord(GOFF::RecordType Type, size_t Size) {
     fillRecord();
@@ -237,11 +236,9 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
   if (ModPropLen) {
     GW << binaryBe(ModPropLen) << zeros(6);
     if (ModPropLen >= 2)
-      GW << binaryBe(FileHdr.InternalCCSID ? *FileHdr.InternalCCSID : 0);
+      GW << binaryBe(FileHdr.InternalCCSID.value_or(0));
     if (ModPropLen >= 3)
-      GW << binaryBe(FileHdr.TargetSoftwareEnvironment
-                         ? *FileHdr.TargetSoftwareEnvironment
-                         : 0);
+      GW << binaryBe(FileHdr.TargetSoftwareEnvironment.value_or(0));
   }
 }
 

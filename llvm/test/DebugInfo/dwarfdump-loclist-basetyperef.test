@@ -1,0 +1,37 @@
+# REQUIRES: x86-registered-target
+
+
+# This test checks whether llvm-dwarfdump correctly handles base type
+# references when dumping the .debug_loclists section.
+
+# When dumping the .debug_loclists section, the corresponding compile unit
+# for a base type reference is not known and therefore it cannot be resolved.
+
+# prettyPrintBaseTypeRef must handle this case by printing only reduced
+# information without crashing.
+
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64 -o %t
+# RUN: llvm-dwarfdump %t --debug-loclists | FileCheck %s
+
+# CHECK: 0x0000000c:
+# CHECK-NEXT: <default>: DW_OP_regval_type XMM0 <base_type ref: 0x2a>, DW_OP_stack_value
+
+
+	.section	.debug_loclists,"",@progbits
+	.long	.Ldebug_loc1-.Ldebug_loc0   # Length
+.Ldebug_loc0:
+	.value	0x5                         # Version
+	.byte	0x8                         # Address size
+	.byte	0                           # Segmen selector size
+	.long	0                           # Offset entry count
+
+	.byte	0x5                         # DW_LLE_default_location
+	.uleb128 0x4                        # Loc expr size
+	.byte	0xa5                        # DW_OP_regval_type
+	.uleb128 0x11                       #   XMM0
+	.uleb128 0x2a                       #   <base_type ref: 0x2a>
+	.byte	0x9f                        # DW_OP_stack_value
+
+	.byte	0                           # DW_LLE_end_of_list
+.Ldebug_loc1:

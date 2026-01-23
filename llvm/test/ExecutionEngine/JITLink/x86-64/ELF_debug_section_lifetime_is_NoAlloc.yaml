@@ -1,6 +1,7 @@
 # REQUIRES: asserts
 # RUN: yaml2obj -o %t.o %s
-# RUN: llvm-jitlink -debug-only=jitlink -noexec %t.o 2>&1 | FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec %t.o 2>&1 \
+# RUN:              | FileCheck %s
 #
 # Check that debug sections get NoAlloc lifetimes.
 #

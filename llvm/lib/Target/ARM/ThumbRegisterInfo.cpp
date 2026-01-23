@@ -15,20 +15,18 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -37,12 +35,13 @@ extern cl::opt<bool> ReuseFrameIndexVals;
 
 using namespace llvm;
 
-ThumbRegisterInfo::ThumbRegisterInfo() = default;
+ThumbRegisterInfo::ThumbRegisterInfo(const ARMSubtarget &STI)
+    : IsThumb1Only(STI.isThumb1Only()) {}
 
 const TargetRegisterClass *
 ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                               const MachineFunction &MF) const {
-  if (!MF.getSubtarget<ARMSubtarget>().isThumb1Only())
+  if (!IsThumb1Only)
     return ARMBaseRegisterInfo::getLargestLegalSuperClass(RC, MF);
 
   if (ARM::tGPRRegClass.hasSubClassEq(RC))
@@ -51,10 +50,9 @@ ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-ThumbRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
-  if (!MF.getSubtarget<ARMSubtarget>().isThumb1Only())
-    return ARMBaseRegisterInfo::getPointerRegClass(MF, Kind);
+ThumbRegisterInfo::getPointerRegClass(unsigned Kind) const {
+  if (!IsThumb1Only)
+    return ARMBaseRegisterInfo::getPointerRegClass(Kind);
   return &ARM::tGPRRegClass;
 }
 
@@ -68,8 +66,8 @@ static void emitThumb1LoadConstPool(MachineBasicBlock &MBB,
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   MachineConstantPool *ConstantPool = MF.getConstantPool();
-  const Constant *C = ConstantInt::get(
-          Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Val);
+  const Constant *C = ConstantInt::getSigned(
+      Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Val);
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::tLDRpci))
@@ -87,8 +85,8 @@ static void emitThumb2LoadConstPool(MachineBasicBlock &MBB,
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineConstantPool *ConstantPool = MF.getConstantPool();
-  const Constant *C = ConstantInt::get(
-           Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Val);
+  const Constant *C = ConstantInt::getSigned(
+      Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Val);
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::t2LDRpci))
@@ -107,7 +105,7 @@ void ThumbRegisterInfo::emitLoadConstPool(
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   if (STI.isThumb1Only()) {
-    assert((isARMLowRegister(DestReg) || DestReg.isVirtual()) &&
+    assert((DestReg.isVirtual() || isARMLowRegister(DestReg)) &&
            "Thumb1 does not have ldr to high register");
     return emitThumb1LoadConstPool(MBB, MBBI, dl, DestReg, SubIdx, Val, Pred,
                                    PredReg, MIFlags);
@@ -141,7 +139,7 @@ static void emitThumbRegPlusImmInReg(
     return;
   }
 
-  bool isHigh = !isARMLowRegister(DestReg) ||
+  bool isHigh = DestReg.isVirtual() || !isARMLowRegister(DestReg) ||
                 (BaseReg != 0 && !isARMLowRegister(BaseReg));
   bool isSub = false;
   // Subtract doesn't have high register version. Load the negative value
@@ -155,7 +153,7 @@ static void emitThumbRegPlusImmInReg(
   Register LdReg = DestReg;
   if (DestReg == ARM::SP)
     assert(BaseReg == ARM::SP && "Unexpected!");
-  if (!isARMLowRegister(DestReg) && !DestReg.isVirtual())
+  if (!DestReg.isVirtual() && !isARMLowRegister(DestReg))
     LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
   if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {

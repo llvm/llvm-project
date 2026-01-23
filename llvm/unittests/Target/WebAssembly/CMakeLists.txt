@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   Core
+  Instrumentation
   MC
   MIRParser
   TargetParser
@@ -18,5 +19,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_target_unittest(WebAssemblyTests
   WebAssemblyExceptionInfoTest.cpp
   )
-
-set_property(TARGET WebAssemblyTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

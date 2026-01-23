@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop \
-; RUN: -polly-allow-differing-element-types \
-; RUN:   -polly-codegen -S    < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<import-jscop;codegen>' -polly-allow-differing-element-types -S < %s | FileCheck %s
 ;
 ;    // Check that accessing one array with different types works.
 ;    void multiple_types(char *Short, char *Float, char *Double) {

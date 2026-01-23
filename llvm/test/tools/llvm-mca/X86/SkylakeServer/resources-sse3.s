@@ -79,7 +79,7 @@ mwait
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     6.67   6.67   5.00   5.00    -     24.67  4.00    -
+# CHECK-NEXT:  -      -     8.00   8.00   5.00   5.00    -     22.00  4.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -87,14 +87,14 @@ mwait
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     addsubps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     addsubps	(%rax), %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     2.33    -      -     haddpd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     2.33    -      -     haddpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     2.33    -      -     haddps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     2.33    -      -     haddps	(%rax), %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     2.33    -      -     hsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     2.33    -      -     hsubpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     2.33    -      -     hsubps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     2.33    -      -     hsubps	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     2.00    -      -     haddpd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     2.00    -      -     haddpd	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     2.00    -      -     haddps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     2.00    -      -     haddps	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     2.00    -      -     hsubpd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     2.00    -      -     hsubpd	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     2.00    -      -     hsubps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     2.00    -      -     hsubps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     lddqu	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     monitor
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     movddup	%xmm0, %xmm2

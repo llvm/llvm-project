@@ -20,7 +20,7 @@ define i8 @double(i32 %A) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 -128)
 ; CHECK-NEXT:    [[CONV71:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 127)
-; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[CONV71]] to i8
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc nsw i32 [[CONV71]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
 entry:
@@ -51,7 +51,7 @@ define i8 @original(i32 %A, i32 %B) {
 ; CHECK-LABEL: @original(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 -128)
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
-; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[SPEC_SELECT_I]] to i8
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc nsw i32 [[SPEC_SELECT_I]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
   %cmp4.i = icmp slt i32 127, %A
@@ -68,7 +68,7 @@ define i8 @original_logical(i32 %A, i32 %B) {
 ; CHECK-LABEL: @original_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 -128)
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
-; CHECK-NEXT:    [[CONV7:%.*]] = trunc i32 [[SPEC_SELECT_I]] to i8
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc nsw i32 [[SPEC_SELECT_I]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV7]]
 ;
   %cmp4.i = icmp slt i32 127, %A

@@ -16,22 +16,9 @@ if(NOT LLVM_LIBC_FULL_BUILD)
                       "GPU.")
 endif()
 
-# Identify the program used to package multiple images into a single binary.
-get_filename_component(compiler_path ${CMAKE_CXX_COMPILER} DIRECTORY)
-find_program(LIBC_CLANG_OFFLOAD_PACKAGER
-             NAMES clang-offload-packager NO_DEFAULT_PATH
-             PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
-  message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
-                      "build")
-endif()
-
-# Identify llvm-link program so we can merge the output IR into a single blob.
-find_program(LIBC_LLVM_LINK
-             NAMES llvm-link NO_DEFAULT_PATH
-             PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-if(NOT LIBC_LLVM_LINK)
-  message(FATAL_ERROR "Cannot find 'llvm-link' for the GPU build")
+# Set the required flags globally so standard CMake utilities can compile.
+if(LIBC_TARGET_TRIPLE)
+  set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
@@ -48,35 +35,21 @@ endif()
 
 set(LIBC_GPU_TEST_ARCHITECTURE "" CACHE STRING "Architecture for the GPU tests")
 if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  # Identify any locally installed NVIDIA GPUs on the system using 'nvptx-arch'.
-  find_program(LIBC_AMDGPU_ARCH
-               NAMES amdgpu-arch NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(LIBC_AMDGPU_ARCH)
-    execute_process(COMMAND ${LIBC_AMDGPU_ARCH}
-                    OUTPUT_VARIABLE arch_tool_output
-                    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(arch_tool_output MATCHES "^gfx[0-9]+")
-      set(PLATFORM_HAS_GPU TRUE)
-    endif()
-  endif()
+  check_cxx_compiler_flag(-mcpu=native PLATFORM_HAS_GPU)
 elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  # Identify any locally installed NVIDIA GPUs on the system using 'nvptx-arch'.
-  find_program(LIBC_NVPTX_ARCH
-               NAMES nvptx-arch NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(LIBC_NVPTX_ARCH)
-    execute_process(COMMAND ${LIBC_NVPTX_ARCH}
-                    OUTPUT_VARIABLE arch_tool_output
-                    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(arch_tool_output MATCHES "^sm_[0-9]+")
-      set(PLATFORM_HAS_GPU TRUE)
-    endif()
-  endif()
+  check_cxx_compiler_flag(-march=native PLATFORM_HAS_GPU)
 endif()
 
 set(gpu_test_architecture "")
-if(LIBC_GPU_TEST_ARCHITECTURE)
+if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
+   AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(LIBC_GPU_TESTS_DISABLED TRUE)
+  message(STATUS "AMDGPU backend is not available, tests will not be built")
+elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_NVPTX
+       AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(LIBC_GPU_TESTS_DISABLED TRUE)
+  message(STATUS "NVPTX backend is not available, tests will not be built")
+elseif(LIBC_GPU_TEST_ARCHITECTURE)
   set(LIBC_GPU_TESTS_DISABLED FALSE)
   set(gpu_test_architecture ${LIBC_GPU_TEST_ARCHITECTURE})
   message(STATUS "Using user-specified GPU architecture for testing: "
@@ -121,12 +94,10 @@ if(NOT TARGET libc.utils.gpu.loader AND gpu_loader_executable)
   )
 endif()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  # The AMDGPU environment uses different code objects to encode the ABI for
-  # kernel calls and intrinsic functions. We want to specify this manually to
-  # conform to whatever the test suite was built to handle.
-  set(LIBC_GPU_CODE_OBJECT_VERSION 5)
-endif()
+# The AMDGPU environment uses different code objects to encode the ABI for
+# kernel calls and intrinsic functions. We want to expose this to conform to
+# whatever the test suite was built to handle.
+set(LIBC_GPU_CODE_OBJECT_VERSION "6" CACHE STRING "AMDGPU Code object ABI to use")
 
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   # FIXME: This is a hack required to keep the CUDA package from trying to find

@@ -20,7 +20,7 @@ bb:
 define internal ptr @func35(ptr addrspace(1) nocapture %this) align 2 {
 bb:
 ; CHECK-LABEL: @func35(
-; CHECK: %[[V3:.+]] = tail call i32 @func10(ptr addrspace(1) nocapture %{{.*}})
+; CHECK: %[[V3:.+]] = tail call i32 @func10(ptr addrspace(1) captures(none) %{{.*}})
 ; CHECK: %{{.*}} = inttoptr i32 %[[V3]] to ptr
   %tmp = getelementptr inbounds %.qux.2585, ptr addrspace(1) %this, i32 0, i32 2
   %tmp1 = load ptr, ptr addrspace(1) %tmp, align 4

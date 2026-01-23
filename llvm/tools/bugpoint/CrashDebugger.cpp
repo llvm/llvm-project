@@ -36,43 +36,48 @@
 #include <set>
 using namespace llvm;
 
-namespace {
-cl::opt<bool> KeepMain("keep-main",
-                       cl::desc("Force function reduction to keep main"),
-                       cl::init(false));
-cl::opt<bool> NoGlobalRM("disable-global-remove",
-                         cl::desc("Do not remove global variables"),
-                         cl::init(false));
+static cl::opt<bool> KeepMain("keep-main",
+                              cl::desc("Force function reduction to keep main"),
+                              cl::init(false));
+static cl::opt<bool> NoGlobalRM("disable-global-remove",
+                                cl::desc("Do not remove global variables"),
+                                cl::init(false));
 
-cl::opt<bool> NoAttributeRM("disable-attribute-remove",
-                         cl::desc("Do not remove function attributes"),
-                         cl::init(false));
+static cl::opt<bool>
+    NoAttributeRM("disable-attribute-remove",
+                  cl::desc("Do not remove function attributes"),
+                  cl::init(false));
 
-cl::opt<bool> ReplaceFuncsWithNull(
+static cl::opt<bool> ReplaceFuncsWithNull(
     "replace-funcs-with-null",
     cl::desc("When stubbing functions, replace all uses will null"),
     cl::init(false));
-cl::opt<bool> DontReducePassList("disable-pass-list-reduction",
-                                 cl::desc("Skip pass list reduction steps"),
-                                 cl::init(false));
 
-cl::opt<bool> NoNamedMDRM("disable-namedmd-remove",
-                          cl::desc("Do not remove global named metadata"),
-                          cl::init(false));
-cl::opt<bool> NoStripDebugInfo("disable-strip-debuginfo",
-                               cl::desc("Do not strip debug info metadata"),
-                               cl::init(false));
-cl::opt<bool> NoStripDebugTypeInfo("disable-strip-debug-types",
-                               cl::desc("Do not strip debug type info metadata"),
-                               cl::init(false));
-cl::opt<bool> VerboseErrors("verbose-errors",
-                            cl::desc("Print the output of crashing program"),
-                            cl::init(false));
-}
+static cl::opt<bool>
+    DontReducePassList("disable-pass-list-reduction",
+                       cl::desc("Skip pass list reduction steps"),
+                       cl::init(false));
+
+static cl::opt<bool>
+    NoNamedMDRM("disable-namedmd-remove",
+                cl::desc("Do not remove global named metadata"),
+                cl::init(false));
+static cl::opt<bool>
+    NoStripDebugInfo("disable-strip-debuginfo",
+                     cl::desc("Do not strip debug info metadata"),
+                     cl::init(false));
+static cl::opt<bool>
+    NoStripDebugTypeInfo("disable-strip-debug-types",
+                         cl::desc("Do not strip debug type info metadata"),
+                         cl::init(false));
+static cl::opt<bool>
+    VerboseErrors("verbose-errors",
+                  cl::desc("Print the output of crashing program"),
+                  cl::init(false));
 
 static bool isValidModule(std::unique_ptr<Module> &M,
                           bool ExitOnFailure = true) {
-  if (!llvm::verifyModule(*M.get(), &llvm::errs()))
+  if (!llvm::verifyModule(*M, &llvm::errs()))
     return true;
 
   if (ExitOnFailure) {
@@ -83,6 +88,8 @@ static bool isValidModule(std::unique_ptr<Module> &M,
 }
 
 namespace llvm {
+// Note this class needs to be in llvm namespace since its declared as a friend
+// of BugDriver.
 class ReducePassList : public ListReducer<std::string> {
   BugDriver &BD;
 
@@ -95,7 +102,7 @@ public:
   Expected<TestResult> doTest(std::vector<std::string> &Removed,
                               std::vector<std::string> &Kept) override;
 };
-}
+} // namespace llvm
 
 Expected<ReducePassList::TestResult>
 ReducePassList::doTest(std::vector<std::string> &Prefix,
@@ -156,7 +163,7 @@ public:
 
   bool TestGlobalVariables(std::vector<GlobalVariable *> &GVs);
 };
-}
+} // namespace
 
 bool ReduceCrashingGlobalInitializers::TestGlobalVariables(
     std::vector<GlobalVariable *> &GVs) {
@@ -167,21 +174,21 @@ bool ReduceCrashingGlobalInitializers::TestGlobalVariables(
   // Convert list to set for fast lookup...
   std::set<GlobalVariable *> GVSet;
 
-  for (unsigned i = 0, e = GVs.size(); i != e; ++i) {
-    GlobalVariable *CMGV = cast<GlobalVariable>(VMap[GVs[i]]);
+  for (GlobalVariable *GV : GVs) {
+    GlobalVariable *CMGV = cast<GlobalVariable>(VMap[GV]);
     assert(CMGV && "Global Variable not in module?!");
     GVSet.insert(CMGV);
   }
 
   outs() << "Checking for crash with only these global variables: ";
-  PrintGlobalVariableList(GVs);
+  printGlobalVariableList(GVs);
   outs() << ": ";
 
   // Loop over and delete any global variables which we aren't supposed to be
   // playing with...
   for (GlobalVariable &I : M->globals())
     if (I.hasInitializer() && !GVSet.count(&I)) {
-      DeleteGlobalInitializer(&I);
+      deleteGlobalInitializer(&I);
       I.setLinkage(GlobalValue::ExternalLinkage);
       I.setComdat(nullptr);
     }
@@ -223,7 +230,7 @@ public:
 
   bool TestFuncs(std::vector<Function *> &Prefix);
 };
-}
+} // namespace
 
 static void RemoveFunctionReferences(Module *M, const char *Name) {
   auto *UsedVar = M->getGlobalVariable(Name, true);
@@ -245,7 +252,7 @@ static void RemoveFunctionReferences(Module *M, const char *Name) {
   auto *NewValElemTy = OldUsedVal->getType()->getElementType();
   auto *NewValTy = ArrayType::get(NewValElemTy, Used.size());
   auto *NewUsedVal = ConstantArray::get(NewValTy, Used);
-  UsedVar->mutateType(NewUsedVal->getType()->getPointerTo());
+  UsedVar->mutateType(PointerType::getUnqual(M->getContext()));
   UsedVar->setInitializer(NewUsedVal);
 }
 
@@ -260,23 +267,23 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
 
   // Convert list to set for fast lookup...
   std::set<Function *> Functions;
-  for (unsigned i = 0, e = Funcs.size(); i != e; ++i) {
-    Function *CMF = cast<Function>(VMap[Funcs[i]]);
+  for (Function *Func : Funcs) {
+    Function *CMF = cast<Function>(VMap[Func]);
     assert(CMF && "Function not in module?!");
-    assert(CMF->getFunctionType() == Funcs[i]->getFunctionType() && "wrong ty");
-    assert(CMF->getName() == Funcs[i]->getName() && "wrong name");
+    assert(CMF->getFunctionType() == Func->getFunctionType() && "wrong ty");
+    assert(CMF->getName() == Func->getName() && "wrong name");
     Functions.insert(CMF);
   }
 
   outs() << "Checking for crash with only these functions: ";
-  PrintFunctionList(Funcs);
+  printFunctionList(Funcs);
   outs() << ": ";
   if (!ReplaceFuncsWithNull) {
     // Loop over and delete any functions which we aren't supposed to be playing
     // with...
     for (Function &I : *M)
       if (!I.isDeclaration() && !Functions.count(&I))
-        DeleteFunctionBody(&I);
+        deleteFunctionBody(&I);
   } else {
     std::vector<GlobalValue *> ToRemove;
     // First, remove aliases to functions we're about to purge.
@@ -356,7 +363,7 @@ public:
 
   bool TestFuncAttrs(std::vector<Attribute> &Attrs);
 };
-}
+} // namespace
 
 bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
     std::vector<Attribute> &Attrs) {
@@ -390,20 +397,17 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
 
     // Pass along the set of attributes that caused the crash.
     Attrs.clear();
-    for (Attribute A : NewAttrs.getFnAttrs()) {
-      Attrs.push_back(A);
-    }
+    llvm::append_range(Attrs, NewAttrs.getFnAttrs());
     return true;
   }
   return false;
 }
 
-namespace {
 /// Simplify the CFG without completely destroying it.
 /// This is not well defined, but basically comes down to "try to eliminate
 /// unreachable blocks and constant fold terminators without deciding that
 /// certain undefined behavior cuts off the program at the legs".
-void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
+static void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
   if (F.empty())
     return;
 
@@ -417,9 +421,8 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
   // undefined behavior into unreachables, but bugpoint was the thing that
   // generated the undefined behavior, and we don't want it to kill the entire
   // program.
-  SmallPtrSet<BasicBlock *, 16> Visited;
-  for (auto *BB : depth_first(&F.getEntryBlock()))
-    Visited.insert(BB);
+  SmallPtrSet<BasicBlock *, 16> Visited(llvm::from_range,
+                                        depth_first(&F.getEntryBlock()));
 
   SmallVector<BasicBlock *, 16> Unreachable;
   for (auto &BB : F)
@@ -438,6 +441,8 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
   for (auto *BB : Unreachable)
     BB->eraseFromParent();
 }
+
+namespace {
 /// ReduceCrashingBlocks reducer - This works by setting the terminators of
 /// all terminators except the specified basic blocks to a 'ret' instruction,
 /// then running the simplifycfg pass.  This has the effect of chopping up
@@ -462,7 +467,7 @@ public:
 
   bool TestBlocks(std::vector<const BasicBlock *> &Prefix);
 };
-}
+} // namespace
 
 bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   // Clone the program to try hacking it apart...
@@ -471,8 +476,8 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
 
   // Convert list to set for fast lookup...
   SmallPtrSet<BasicBlock *, 8> Blocks;
-  for (unsigned i = 0, e = BBs.size(); i != e; ++i)
-    Blocks.insert(cast<BasicBlock>(VMap[BBs[i]]));
+  for (const BasicBlock *BB : BBs)
+    Blocks.insert(cast<BasicBlock>(VMap[BB]));
 
   outs() << "Checking for crash with only these blocks:";
   unsigned NumPrint = Blocks.size();
@@ -574,7 +579,7 @@ public:
 
   bool TestBlocks(std::vector<const BasicBlock *> &Prefix);
 };
-}
+} // namespace
 
 bool ReduceCrashingConditionals::TestBlocks(
     std::vector<const BasicBlock *> &BBs) {
@@ -673,7 +678,7 @@ public:
 
   bool TestBlocks(std::vector<const BasicBlock *> &Prefix);
 };
-}
+} // namespace
 
 bool ReduceSimplifyCFG::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   // Clone the program to try hacking it apart...
@@ -758,7 +763,7 @@ public:
 
   bool TestInsts(std::vector<const Instruction *> &Prefix);
 };
-}
+} // namespace
 
 bool ReduceCrashingInstructions::TestInsts(
     std::vector<const Instruction *> &Insts) {
@@ -768,9 +773,9 @@ bool ReduceCrashingInstructions::TestInsts(
 
   // Convert list to set for fast lookup...
   SmallPtrSet<Instruction *, 32> Instructions;
-  for (unsigned i = 0, e = Insts.size(); i != e; ++i) {
-    assert(!Insts[i]->isTerminator());
-    Instructions.insert(cast<Instruction>(VMap[Insts[i]]));
+  for (const Instruction *Inst : Insts) {
+    assert(!Inst->isTerminator());
+    Instructions.insert(cast<Instruction>(VMap[Inst]));
   }
 
   outs() << "Checking for crash with only " << Instructions.size();
@@ -779,9 +784,9 @@ bool ReduceCrashingInstructions::TestInsts(
   else
     outs() << " instructions: ";
 
-  for (Module::iterator MI = M->begin(), ME = M->end(); MI != ME; ++MI)
-    for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE; ++FI)
-      for (Instruction &Inst : llvm::make_early_inc_range(*FI)) {
+  for (Function &F : *M)
+    for (BasicBlock &BB : F)
+      for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
         if (!Instructions.count(&Inst) && !Inst.isTerminator() &&
             !Inst.isEHPad() && !Inst.getType()->isTokenTy() &&
             !Inst.isSwiftError()) {
@@ -801,8 +806,7 @@ bool ReduceCrashingInstructions::TestInsts(
     // Make sure to use instruction pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     Insts.clear();
-    for (Instruction *Inst : Instructions)
-      Insts.push_back(Inst);
+    llvm::append_range(Insts, Instructions);
     return true;
   }
   // It didn't crash, try something else.
@@ -871,8 +875,7 @@ bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
     // Make sure to use instruction pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     Insts.clear();
-    for (Instruction *I : Instructions)
-      Insts.push_back(I);
+    llvm::append_range(Insts, Instructions);
     return true;
   }
   // It didn't crash, try something else.
@@ -901,7 +904,7 @@ public:
 
   bool TestNamedMDs(std::vector<std::string> &NamedMDs);
 };
-}
+} // namespace
 
 bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
 
@@ -917,9 +920,7 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
   outs() << ": ";
 
   // Make a StringMap for faster lookup
-  StringSet<> Names;
-  for (const std::string &Name : NamedMDs)
-    Names.insert(Name);
+  StringSet<> Names(llvm::from_range, NamedMDs);
 
   // First collect all the metadata to delete in a vector, then
   // delete them all at once to avoid invalidating the iterator
@@ -966,15 +967,12 @@ public:
 
   bool TestNamedMDOps(std::vector<const MDNode *> &NamedMDOps);
 };
-}
+} // namespace
 
 bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     std::vector<const MDNode *> &NamedMDOps) {
   // Convert list to set for fast lookup...
-  SmallPtrSet<const MDNode *, 32> OldMDNodeOps;
-  for (unsigned i = 0, e = NamedMDOps.size(); i != e; ++i) {
-    OldMDNodeOps.insert(NamedMDOps[i]);
-  }
+  SmallPtrSet<const MDNode *, 32> OldMDNodeOps(llvm::from_range, NamedMDOps);
 
   outs() << "Checking for crash with only " << OldMDNodeOps.size();
   if (OldMDNodeOps.size() == 1)
@@ -1028,7 +1026,7 @@ static Error ReduceGlobalInitializers(BugDriver &BD, BugTester TestFn) {
 
   for (GlobalVariable &GV : M->globals()) {
     if (GV.hasInitializer()) {
-      DeleteGlobalInitializer(&GV);
+      deleteGlobalInitializer(&GV);
       GV.setLinkage(GlobalValue::ExternalLinkage);
       GV.setComdat(nullptr);
       DeletedInit = true;
@@ -1066,7 +1064,7 @@ static Error ReduceGlobalInitializers(BugDriver &BD, BugTester TestFn) {
       return E;
 
     if (GVs.size() < OldSize)
-      BD.EmitProgressBitcode(BD.getProgram(), "reduced-global-variables");
+      BD.emitProgressBitcode(BD.getProgram(), "reduced-global-variables");
   }
   return Error::success();
 }
@@ -1115,9 +1113,8 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
                                 E = BD.getProgram().end();
          FI != E; ++FI)
       if (!FI->isDeclaration())
-        for (Function::const_iterator BI = FI->begin(), E = FI->end(); BI != E;
-             ++BI)
-          for (BasicBlock::const_iterator I = BI->begin(), E = --BI->end();
+        for (const BasicBlock &BI : *FI)
+          for (BasicBlock::const_iterator I = BI.begin(), E = --BI.end();
                I != E; ++I, ++CurInstructionNum) {
             if (InstructionsToSkipBeforeDeleting) {
               --InstructionsToSkipBeforeDeleting;
@@ -1166,7 +1163,7 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
       return E;
   }
 
-  BD.EmitProgressBitcode(BD.getProgram(), "reduced-instructions");
+  BD.emitProgressBitcode(BD.getProgram(), "reduced-instructions");
   return Error::success();
 }
 
@@ -1197,7 +1194,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       return E;
 
     if (Functions.size() < OldSize)
-      BD.EmitProgressBitcode(BD.getProgram(), "reduced-function");
+      BD.emitProgressBitcode(BD.getProgram(), "reduced-function");
   }
 
   if (!NoAttributeRM) {
@@ -1217,8 +1214,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
         assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
-        for (Attribute A : Fn->getAttributes().getFnAttrs())
-          Attrs.push_back(A);
+        llvm::append_range(Attrs, Fn->getAttributes().getFnAttrs());
 
         OldSize += Attrs.size();
         Expected<bool> Result =
@@ -1230,7 +1226,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       }
 
       if (OldSize < NewSize)
-        BD.EmitProgressBitcode(BD.getProgram(), "reduced-function-attributes");
+        BD.emitProgressBitcode(BD.getProgram(), "reduced-function-attributes");
     }
   }
 
@@ -1250,7 +1246,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
     if (Error E = Result.takeError())
       return E;
     if (Blocks.size() < OldSize)
-      BD.EmitProgressBitcode(BD.getProgram(), "reduced-conditionals");
+      BD.emitProgressBitcode(BD.getProgram(), "reduced-conditionals");
   }
 
   // Attempt to delete entire basic blocks at a time to speed up
@@ -1268,7 +1264,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
     if (Error E = Result.takeError())
       return E;
     if (Blocks.size() < OldSize)
-      BD.EmitProgressBitcode(BD.getProgram(), "reduced-blocks");
+      BD.emitProgressBitcode(BD.getProgram(), "reduced-blocks");
   }
 
   if (!DisableSimplifyCFG && !BugpointIsInterrupted) {
@@ -1281,7 +1277,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
     if (Error E = Result.takeError())
       return E;
     if (Blocks.size() < OldSize)
-      BD.EmitProgressBitcode(BD.getProgram(), "reduced-simplifycfg");
+      BD.emitProgressBitcode(BD.getProgram(), "reduced-simplifycfg");
   }
 
   // Attempt to delete instructions using bisection. This should help out nasty
@@ -1325,14 +1321,13 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       // contribute to the crash, bisect the operands of the remaining ones
       std::vector<const MDNode *> NamedMDOps;
       for (auto &NamedMD : BD.getProgram().named_metadata())
-        for (auto *op : NamedMD.operands())
-          NamedMDOps.push_back(op);
+        llvm::append_range(NamedMDOps, NamedMD.operands());
       Expected<bool> Result =
           ReduceCrashingNamedMDOps(BD, TestFn).reduceList(NamedMDOps);
       if (Error E = Result.takeError())
         return E;
     }
-    BD.EmitProgressBitcode(BD.getProgram(), "reduced-named-md");
+    BD.emitProgressBitcode(BD.getProgram(), "reduced-named-md");
   }
 
   // Try to clean up the testcase by running funcresolve and globaldce...
@@ -1347,7 +1342,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
           std::move(M)); // Yup, it does, keep the reduced version...
   }
 
-  BD.EmitProgressBitcode(BD.getProgram(), "reduced-simplified");
+  BD.emitProgressBitcode(BD.getProgram(), "reduced-simplified");
 
   return Error::success();
 }
@@ -1374,7 +1369,7 @@ Error BugDriver::debugOptimizerCrash(const std::string &ID) {
          << (PassesToRun.size() == 1 ? ": " : "es: ")
          << getPassesString(PassesToRun) << '\n';
 
-  EmitProgressBitcode(*Program, ID);
+  emitProgressBitcode(*Program, ID);
 
   auto Res = DebugACrash(*this, TestForOptimizerCrash);
   if (Res || DontReducePassList)
@@ -1389,7 +1384,7 @@ Error BugDriver::debugOptimizerCrash(const std::string &ID) {
          << (PassesToRun.size() == 1 ? ": " : "es: ")
          << getPassesString(PassesToRun) << '\n';
 
-  EmitProgressBitcode(getProgram(), "reduced-simplified");
+  emitProgressBitcode(getProgram(), "reduced-simplified");
   return Res;
 }
 

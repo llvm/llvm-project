@@ -13,7 +13,6 @@
 #include "Symbols.h"
 #include "Target.h"
 
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/ObjCARC.h"
 
 using namespace lld;
 using namespace lld::macho;
@@ -44,13 +42,13 @@ static lto::Config createConfig() {
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe;
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
+  for (StringRef pluginFn : config->passPlugins)
+    c.PassPlugins.push_back(std::string(pluginFn));
+  c.OptPipeline = std::string(config->ltoNewPmPasses);
   c.CodeModel = getCodeModelFromCMModel();
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.DiagHandler = diagnosticHandler;
-  c.PreCodeGenPassesHook = [](legacy::PassManager &pm) {
-    pm.add(createObjCARCContractPass());
-  };
 
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
@@ -60,11 +58,22 @@ static lto::Config createConfig() {
   c.CSIRProfile = std::string(config->csProfilePath);
   c.RunCSIRInstr = config->csProfileGenerate;
   c.PGOWarnMismatch = config->pgoWarnMismatch;
+  c.DisableVerify = config->disableVerify;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath=*/true));
+
+  if (config->emitLLVM) {
+    llvm::StringRef outputFile = config->outputFile;
+    c.PreCodeGenModuleHook = [outputFile](size_t task, const Module &m) {
+      if (std::unique_ptr<raw_fd_ostream> os = openLTOOutputFile(outputFile))
+        WriteBitcodeToFile(m, *os, false);
+      return false;
+    };
+  }
+
   return c;
 }
 
@@ -90,6 +99,7 @@ BitcodeCompiler::BitcodeCompiler() {
   auto onIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
   if (config->thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(config->thinLTOJobs),
         std::string(config->thinLTOPrefixReplaceOld),
         std::string(config->thinLTOPrefixReplaceNew),
         std::string(config->thinLTOPrefixReplaceNativeObject),

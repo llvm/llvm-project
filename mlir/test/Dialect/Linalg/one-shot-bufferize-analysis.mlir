@@ -1,43 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
 
-// CHECK-LABEL: @elementwise_no_conflict
-func.func @elementwise_no_conflict(%a: tensor<5xf32>,
-                                   %b: tensor<5xf32>) -> tensor<5xf32> {
-  // CHECK: linalg.elemwise_binary
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "true"], fun = #linalg.binary_fn<add>}
-  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<add>}
-      ins(%a, %b : tensor<5xf32>, tensor<5xf32>)
-      outs(%a : tensor<5xf32>) -> tensor<5xf32>
-  return %0 : tensor<5xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @elementwise_no_conflict_2
-func.func @elementwise_no_conflict_2(%a: tensor<5xf32>) -> tensor<5xf32> {
-  // CHECK: linalg.elemwise_binary
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "true"], fun = #linalg.binary_fn<add>}
-  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<add>}
-      ins(%a, %a : tensor<5xf32>, tensor<5xf32>)
-      outs(%a : tensor<5xf32>) -> tensor<5xf32>
-  return %0 : tensor<5xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @elementwise_no_conflict_3
-func.func @elementwise_no_conflict_3(%a: tensor<5xf32>) -> tensor<5xf32> {
-  %c0f = arith.constant 1.0 : f32
-  // CHECK: linalg.elemwise_binary
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none", "true"], fun = #linalg.binary_fn<add>}
-  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<add>}
-      ins(%a, %c0f : tensor<5xf32>, f32)
-      outs(%a : tensor<5xf32>) -> tensor<5xf32>
-  return %0 : tensor<5xf32>
-}
-
-// -----
-
 func.func @not_elementwise(%a: tensor<5x6xf32>) -> tensor<5x6xf32> {
   %cst = arith.constant 5.0 : f32
   // CHECK: tensor.extract_slice
@@ -106,4 +68,32 @@ func.func @elementwise_no_conflict_4(%arg0: tensor<8x32x32x32xf32>, %arg1: tenso
     }
   }
   return %r : tensor<8x32x32x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @elementwise_access_regression(
+//       CHECK:   linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+//       CHECK:   linalg.map
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "true", "true"]}
+//       CHECK:   linalg.map
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "true", "true"]}
+func.func private @f(%arg: tensor<32x1xf32>) -> ()
+func.func @elementwise_access_regression(%arg0: i32, %arg2: tensor<32x1xf32>, %arg3: tensor<32x1xf32>) {
+      %cst_0 = arith.constant 0.000000e+00 : f32
+      %c0_i32 = arith.constant 0 : i32
+      %c1_i32 = arith.constant 1 : i32
+      %0 = tensor.empty() : tensor<32x1xf32>
+
+      // This op must bufferize out-of-place so that the filled tensor is not
+      // overwritten by the ops inside of the loop.
+      %1 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<32x1xf32>) -> tensor<32x1xf32>
+
+      scf.for %arg1 = %c0_i32 to %arg0 step %c1_i32 : i32 {
+        %2 = linalg.map { arith.subf } ins(%1, %arg2 : tensor<32x1xf32>, tensor<32x1xf32>) outs(%0 : tensor<32x1xf32>)
+        %3 = tensor.empty() : tensor<32x1xf32>
+        %4 = linalg.map { arith.subf } ins(%2, %arg3 : tensor<32x1xf32>, tensor<32x1xf32>) outs(%3 : tensor<32x1xf32>)
+        func.call @f(%4) : (tensor<32x1xf32>) -> ()
+      }
+      return
 }

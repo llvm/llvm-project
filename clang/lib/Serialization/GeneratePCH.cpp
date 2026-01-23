@@ -12,26 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaConsumer.h"
-#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 
 using namespace clang;
 
 PCHGenerator::PCHGenerator(
-    const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-    StringRef OutputFile, StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+    Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
+    StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+    const CodeGenOptions &CodeGenOpts,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
     bool GeneratingReducedBMI)
-    : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
-      SemaPtr(nullptr), Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
-      Writer(Stream, this->Buffer->Data, ModuleCache, Extensions,
+    : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
+      Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
+      Writer(Stream, this->Buffer->Data, ModCache, CodeGenOpts, Extensions,
              IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors),
       ShouldCacheASTInMemory(ShouldCacheASTInMemory) {
@@ -56,6 +57,17 @@ Module *PCHGenerator::getEmittingModule(ASTContext &) {
   return M;
 }
 
+DiagnosticsEngine &PCHGenerator::getDiagnostics() const {
+  return PP.getDiagnostics();
+}
+
+void PCHGenerator::InitializeSema(Sema &S) {
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesSerializeOnlyPreprocessor)
+    Subject = &S;
+}
+
 void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   // Don't create a PCH if there were fatal failures during module loading.
   if (PP.getModuleLoader().HadFatalFailure)
@@ -72,9 +84,7 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   if (AllowASTWithErrors)
     PP.getDiagnostics().getClient()->clear();
 
-  // Emit the PCH file to the Buffer.
-  assert(SemaPtr && "No Sema?");
-  Buffer->Signature = Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot,
+  Buffer->Signature = Writer.WriteAST(Subject, OutputFile, Module, isysroot,
                                       ShouldCacheASTInMemory);
 
   Buffer->IsComplete = true;
@@ -88,25 +98,30 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
 }
 
-ReducedBMIGenerator::ReducedBMIGenerator(const Preprocessor &PP,
-                                         InMemoryModuleCache &ModuleCache,
-                                         StringRef OutputFile)
-    : PCHGenerator(
-          PP, ModuleCache, OutputFile, llvm::StringRef(),
-          std::make_shared<PCHBuffer>(),
-          /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
-          /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
-          /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
-          /*GeneratingReducedBMI=*/true) {}
+void PCHGenerator::anchor() {}
 
-Module *ReducedBMIGenerator::getEmittingModule(ASTContext &Ctx) {
+CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
+                                             ModuleCache &ModCache,
+                                             StringRef OutputFile,
+                                             const CodeGenOptions &CodeGenOpts,
+                                             bool GeneratingReducedBMI,
+                                             bool AllowASTWithErrors)
+    : PCHGenerator(
+          PP, ModCache, OutputFile, llvm::StringRef(),
+          std::make_shared<PCHBuffer>(), CodeGenOpts,
+          /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
+          AllowASTWithErrors, /*IncludeTimestamps=*/false,
+          /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
+          GeneratingReducedBMI) {}
+
+Module *CXX20ModulesGenerator::getEmittingModule(ASTContext &Ctx) {
   Module *M = Ctx.getCurrentNamedModule();
-  assert(M->isNamedModuleUnit() &&
-         "ReducedBMIGenerator should only be used with C++20 Named modules.");
+  assert(M && M->isNamedModuleUnit() &&
+         "CXX20ModulesGenerator should only be used with C++20 Named modules.");
   return M;
 }
 
-void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   PCHGenerator::HandleTranslationUnit(Ctx);
 
   if (!isComplete())
@@ -123,3 +138,7 @@ void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   *OS << getBufferPtr()->Data;
   OS->flush();
 }
+
+void CXX20ModulesGenerator::anchor() {}
+
+void ReducedBMIGenerator::anchor() {}

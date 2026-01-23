@@ -11,7 +11,7 @@
 
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
 class ConversionTarget;
@@ -19,6 +19,7 @@ class LLVMTypeConverter;
 class MLIRContext;
 class Operation;
 class RewritePatternSet;
+class AnalysisManager;
 
 /// Base class for dialect interfaces providing translation to LLVM IR.
 /// Dialects that can be translated should provide an implementation of this
@@ -51,6 +52,18 @@ void populateConversionTargetFromOperation(Operation *op,
                                            LLVMTypeConverter &typeConverter,
                                            RewritePatternSet &patterns);
 
+/// Helper function for populating LLVM conversion patterns. If `op` implements
+/// the `ConvertToLLVMOpInterface` interface, then the LLVM conversion pattern
+/// attributes provided by the interface will be used to configure the
+/// conversion target, type converter, and the pattern set.
+void populateOpConvertToLLVMConversionPatterns(Operation *op,
+                                               ConversionTarget &target,
+                                               LLVMTypeConverter &typeConverter,
+                                               RewritePatternSet &patterns);
 } // namespace mlir
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.h.inc"
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.h.inc"
 
 #endif // MLIR_CONVERSION_CONVERTTOLLVM_TOLLVMINTERFACE_H

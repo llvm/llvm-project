@@ -17,7 +17,8 @@ land.lhs.true:                                    ; preds = %entry
   br i1 undef, label %return, label %if.end4
 
 if.end:                                           ; preds = %entry
-  br i1 icmp ne (ptr @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_, ptr null), label %if.end4, label %return
+  %cmp = icmp ne ptr @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_, null
+  br i1 %cmp, label %if.end4, label %return
 
 if.end4:                                          ; preds = %if.end, %land.lhs.true
   %call5 = tail call ptr @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(ptr nonnull @_ZN11__sanitizer16BackgroundThreadEPv, ptr null) #7
@@ -33,5 +34,5 @@ declare ptr @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(ptr, ptr) local_u
 
 declare hidden void @_ZN11__sanitizer16BackgroundThreadEPv(ptr nocapture readnone) #5
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx" "use-soft-float"="false" }
 attributes #7 = { nobuiltin nounwind }

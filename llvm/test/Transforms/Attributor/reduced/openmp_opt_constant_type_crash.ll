@@ -114,8 +114,9 @@ cond.end:                                         ; preds = %cond.true, %entry
 ;
 ; CHECK: Function Attrs: norecurse nosync nounwind memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EE3setIJLm0ELm0EEJiEEEbjjRKNS0_13ViewDimensionIJXspT_EEEENS0_5ALL_tEDpT0_.internalized
-; CHECK-SAME: (ptr nocapture writeonly [[THIS:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr writeonly captures(none) [[THIS:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[THIS]] to ptr addrspace(5)
 ; CHECK-NEXT:    ret i1 false
 ;
 ;

@@ -19,9 +19,11 @@
 //
 //   Returns: REQUIRED-SPAN-SIZE(extents(), strides_).
 
-#include <mdspan>
+#include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <mdspan>
 
 #include "test_macros.h"
 

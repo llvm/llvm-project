@@ -12,18 +12,21 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
+
+DebugImporter::DebugImporter(ModuleOp mlirModule,
+                             bool dropDICompositeTypeElements)
+    : cache([&](llvm::DINode *node) { return createRecSelf(node); }),
+      context(mlirModule.getContext()), mlirModule(mlirModule),
+      dropDICompositeTypeElements(dropDICompositeTypeElements) {}
 
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   llvm::DISubprogram *subprogram = func->getSubprogram();
@@ -31,11 +34,9 @@ Location DebugImporter::translateFuncLocation(llvm::Function *func) {
     return UnknownLoc::get(context);
 
   // Add a fused location to link the subprogram information.
-  StringAttr funcName = StringAttr::get(context, subprogram->getName());
   StringAttr fileName = StringAttr::get(context, subprogram->getFilename());
   return FusedLocWith<DISubprogramAttr>::get(
-      {NameLoc::get(funcName),
-       FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
+      {FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
       translate(subprogram), context);
 }
 
@@ -51,18 +52,29 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
+  std::optional<DINameTableKind> nameTableKind = symbolizeDINameTableKind(
+      static_cast<
+          std::underlying_type_t<llvm::DICompileUnit::DebugNameTableKind>>(
+          node->getNameTableKind()));
   return DICompileUnitAttr::get(
-      context, getOrCreateDistinctID(node), node->getSourceLanguage(),
+      context, getOrCreateDistinctID(node),
+      node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value());
+      node->isOptimized(), emissionKind.value(), nameTableKind.value(),
+      getStringAttrOrNull(node->getRawSplitDebugFilename()));
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   std::optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
   SmallVector<DINodeAttr> elements;
-  for (llvm::DINode *element : node->getElements()) {
-    assert(element && "expected a non-null element type");
-    elements.push_back(translate(element));
+
+  // A vector always requires an element.
+  bool isVectorType = flags && bitEnumContainsAll(*flags, DIFlags::Vector);
+  if (isVectorType || !dropDICompositeTypeElements) {
+    for (llvm::DINode *element : node->getElements()) {
+      assert(element && "expected a non-null element type");
+      elements.push_back(translate(element));
+    }
   }
   // Drop the elements parameter if any of the elements are invalid.
   if (llvm::is_contained(elements, nullptr))
@@ -73,11 +85,13 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   if (node->getTag() == llvm::dwarf::DW_TAG_array_type && !baseType)
     return nullptr;
   return DICompositeTypeAttr::get(
-      context, node->getTag(), /*recId=*/{},
-      getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
-      node->getLine(), translate(node->getScope()), baseType,
-      flags.value_or(DIFlags::Zero), node->getSizeInBits(),
-      node->getAlignInBits(), elements);
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      translate(node->getFile()), node->getLine(), translate(node->getScope()),
+      baseType, flags.value_or(DIFlags::Zero), node->getSizeInBits(),
+      node->getAlignInBits(), translateExpression(node->getDataLocationExp()),
+      translateExpression(node->getRankExp()),
+      translateExpression(node->getAllocatedExp()),
+      translateExpression(node->getAssociatedExp()), elements);
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
@@ -90,7 +104,16 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
+}
+
+DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
+  return DIStringTypeAttr::get(
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      node->getSizeInBits(), node->getAlignInBits(),
+      translate(node->getStringLength()),
+      translateExpression(node->getStringLengthExp()),
+      translateExpression(node->getStringLocationExp()), node->getEncoding());
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -151,7 +174,12 @@ DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
   return DILocalVariableAttr::get(
       context, scope, getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), node->getArg(),
-      node->getAlignInBits(), translate(node->getType()));
+      node->getAlignInBits(), translate(node->getType()),
+      symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero));
+}
+
+DIVariableAttr DebugImporter::translateImpl(llvm::DIVariable *node) {
+  return cast<DIVariableAttr>(translate(static_cast<llvm::DINode *>(node)));
 }
 
 DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {
@@ -174,11 +202,26 @@ DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
                               node->getExportSymbols());
 }
 
+DIImportedEntityAttr
+DebugImporter::translateImpl(llvm::DIImportedEntity *node) {
+  SmallVector<DINodeAttr> elements;
+  for (llvm::DINode *element : node->getElements()) {
+    assert(element && "expected a non-null element type");
+    elements.push_back(translate(element));
+  }
+
+  return DIImportedEntityAttr::get(
+      context, node->getTag(), translate(node->getScope()),
+      translate(node->getEntity()), translate(node->getFile()), node->getLine(),
+      getStringAttrOrNull(node->getRawName()), elements);
+}
+
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   // Only definitions require a distinct identifier.
   mlir::DistinctAttr id;
   if (node->isDistinct())
     id = getOrCreateDistinctID(node);
+
   // Return nullptr if the scope or type is invalid.
   DIScopeAttr scope = translate(node->getScope());
   if (node->getScope() && !scope)
@@ -189,29 +232,105 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
+
+  // Convert the retained nodes but drop all of them if one of them is invalid.
+  SmallVector<DINodeAttr> retainedNodes;
+  for (llvm::DINode *retainedNode : node->getRetainedNodes())
+    retainedNodes.push_back(translate(retainedNode));
+  if (llvm::is_contained(retainedNodes, nullptr))
+    retainedNodes.clear();
+
+  SmallVector<DINodeAttr> annotations;
+  // We currently only support `string` values for annotations on the MLIR side.
+  // Theoretically we could support other primitives, but LLVM is not using
+  // other types in practice.
+  if (llvm::DINodeArray rawAnns = node->getAnnotations(); rawAnns) {
+    for (size_t i = 0, e = rawAnns->getNumOperands(); i < e; ++i) {
+      const llvm::MDTuple *tuple = cast<llvm::MDTuple>(rawAnns->getOperand(i));
+      if (tuple->getNumOperands() != 2)
+        continue;
+      const llvm::MDString *name = cast<llvm::MDString>(tuple->getOperand(0));
+      const llvm::MDString *value =
+          dyn_cast<llvm::MDString>(tuple->getOperand(1));
+      if (name && value) {
+        annotations.push_back(DIAnnotationAttr::get(
+            context, StringAttr::get(context, name->getString()),
+            StringAttr::get(context, value->getString())));
+      }
+    }
+  }
+
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
-                               node->getScopeLine(), *subprogramFlags, type);
+                               node->getScopeLine(), *subprogramFlags, type,
+                               retainedNodes, annotations);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
-  auto getIntegerAttrOrNull = [&](llvm::DISubrange::BoundType data) {
-    if (auto *constInt = llvm::dyn_cast_or_null<llvm::ConstantInt *>(data))
+  auto getAttrOrNull = [&](llvm::DISubrange::BoundType data) -> Attribute {
+    if (data.isNull())
+      return nullptr;
+    if (auto *constInt = dyn_cast<llvm::ConstantInt *>(data))
       return IntegerAttr::get(IntegerType::get(context, 64),
                               constInt->getSExtValue());
-    return IntegerAttr();
+    if (auto *expr = dyn_cast<llvm::DIExpression *>(data))
+      return translateExpression(expr);
+    if (auto *var = dyn_cast<llvm::DIVariable *>(data)) {
+      if (auto *local = dyn_cast<llvm::DILocalVariable>(var))
+        return translate(local);
+      if (auto *global = dyn_cast<llvm::DIGlobalVariable>(var))
+        return translate(global);
+      return nullptr;
+    }
+    return nullptr;
   };
-  IntegerAttr count = getIntegerAttrOrNull(node->getCount());
-  IntegerAttr upperBound = getIntegerAttrOrNull(node->getUpperBound());
+  Attribute count = getAttrOrNull(node->getCount());
+  Attribute upperBound = getAttrOrNull(node->getUpperBound());
   // Either count or the upper bound needs to be present. Otherwise, the
   // metadata is invalid. The conversion might fail due to unsupported DI nodes.
   if (!count && !upperBound)
     return {};
-  return DISubrangeAttr::get(
-      context, count, getIntegerAttrOrNull(node->getLowerBound()), upperBound,
-      getIntegerAttrOrNull(node->getStride()));
+  return DISubrangeAttr::get(context, count,
+                             getAttrOrNull(node->getLowerBound()), upperBound,
+                             getAttrOrNull(node->getStride()));
+}
+
+DICommonBlockAttr DebugImporter::translateImpl(llvm::DICommonBlock *node) {
+  return DICommonBlockAttr::get(context, translate(node->getScope()),
+                                translate(node->getDecl()),
+                                getStringAttrOrNull(node->getRawName()),
+                                translate(node->getFile()), node->getLineNo());
+}
+
+DIGenericSubrangeAttr
+DebugImporter::translateImpl(llvm::DIGenericSubrange *node) {
+  auto getAttrOrNull =
+      [&](llvm::DIGenericSubrange::BoundType data) -> Attribute {
+    if (data.isNull())
+      return nullptr;
+    if (auto *expr = dyn_cast<llvm::DIExpression *>(data))
+      return translateExpression(expr);
+    if (auto *var = dyn_cast<llvm::DIVariable *>(data)) {
+      if (auto *local = dyn_cast<llvm::DILocalVariable>(var))
+        return translate(local);
+      if (auto *global = dyn_cast<llvm::DIGlobalVariable>(var))
+        return translate(global);
+      return nullptr;
+    }
+    return nullptr;
+  };
+  Attribute count = getAttrOrNull(node->getCount());
+  Attribute upperBound = getAttrOrNull(node->getUpperBound());
+  Attribute lowerBound = getAttrOrNull(node->getLowerBound());
+  Attribute stride = getAttrOrNull(node->getStride());
+  // Either count or the upper bound needs to be present. Otherwise, the
+  // metadata is invalid.
+  if (!count && !upperBound)
+    return {};
+  return DIGenericSubrangeAttr::get(context, count, lowerBound, upperBound,
+                                    stride);
 }
 
 DISubroutineTypeAttr
@@ -243,49 +362,15 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     return nullptr;
 
   // Check for a cached instance.
-  if (DINodeAttr attr = nodeToAttr.lookup(node))
-    return attr;
-
-  // If the node type is capable of being recursive, check if it's seen before.
-  auto recSelfCtor = getRecSelfConstructor(node);
-  if (recSelfCtor) {
-    // If a cyclic dependency is detected since the same node is being traversed
-    // twice, emit a recursive self type, and mark the duplicate node on the
-    // translationStack so it can emit a recursive decl type.
-    auto [iter, inserted] = translationStack.try_emplace(node, nullptr);
-    if (!inserted) {
-      // The original node may have already been assigned a recursive ID from
-      // a different self-reference. Use that if possible.
-      DistinctAttr recId = iter->second;
-      if (!recId) {
-        recId = DistinctAttr::create(UnitAttr::get(context));
-        iter->second = recId;
-      }
-      unboundRecursiveSelfRefs.back().insert(recId);
-      return cast<DINodeAttr>(recSelfCtor(recId));
-    }
-  }
-
-  unboundRecursiveSelfRefs.emplace_back();
-
-  auto guard = llvm::make_scope_exit([&]() {
-    if (recSelfCtor)
-      translationStack.pop_back();
-
-    // Copy unboundRecursiveSelfRefs down to the previous level.
-    if (unboundRecursiveSelfRefs.size() == 1)
-      assert(unboundRecursiveSelfRefs.back().empty() &&
-             "internal error: unbound recursive self reference at top level.");
-    else
-      unboundRecursiveSelfRefs[unboundRecursiveSelfRefs.size() - 2].insert(
-          unboundRecursiveSelfRefs.back().begin(),
-          unboundRecursiveSelfRefs.back().end());
-    unboundRecursiveSelfRefs.pop_back();
-  });
+  auto cacheEntry = cache.lookupOrInit(node);
+  if (std::optional<DINodeAttr> result = cacheEntry.get())
+    return *result;
 
   // Convert the debug metadata if possible.
   auto translateNode = [this](llvm::DINode *node) -> DINodeAttr {
     if (auto *casted = dyn_cast<llvm::DIBasicType>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DICommonBlock>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DICompileUnit>(node))
       return translateImpl(casted);
@@ -293,9 +378,13 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIDerivedType>(node))
       return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIStringType>(node))
+      return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIGlobalVariable>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIImportedEntity>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILabel>(node))
       return translateImpl(casted);
@@ -313,27 +402,56 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DISubrange>(node))
       return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIGenericSubrange>(node))
+      return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DISubroutineType>(node))
       return translateImpl(casted);
     return nullptr;
   };
   if (DINodeAttr attr = translateNode(node)) {
-    // If this node was marked as recursive, set its recId.
-    if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(attr)) {
-      if (DistinctAttr recId = translationStack.lookup(node)) {
-        attr = cast<DINodeAttr>(recType.withRecId(recId));
-        // Remove the unbound recursive ID from the set of unbound self
-        // references in the translation stack.
-        unboundRecursiveSelfRefs.back().erase(recId);
-      }
+    // If this node was repeated, lookup its recursive ID and assign it to the
+    // base result.
+    if (cacheEntry.wasRepeated()) {
+      DistinctAttr recId = nodeToRecId.lookup(node);
+      auto recType = cast<DIRecursiveTypeAttrInterface>(attr);
+      attr = cast<DINodeAttr>(recType.withRecId(recId));
     }
-
-    // Only cache fully self-contained nodes.
-    if (unboundRecursiveSelfRefs.back().empty())
-      nodeToAttr.try_emplace(node, attr);
+    cacheEntry.resolve(attr);
     return attr;
   }
+  cacheEntry.resolve(nullptr);
   return nullptr;
+}
+
+/// Get the `getRecSelf` constructor for the translated type of `node` if its
+/// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
+static function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+getRecSelfConstructor(llvm::DINode *node) {
+  using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
+  return TypeSwitch<llvm::DINode *, CtorType>(node)
+      .Case([&](llvm::DICompositeType *) {
+        return CtorType(DICompositeTypeAttr::getRecSelf);
+      })
+      .Case([&](llvm::DISubprogram *) {
+        return CtorType(DISubprogramAttr::getRecSelf);
+      })
+      .Default(CtorType());
+}
+
+std::optional<DINodeAttr> DebugImporter::createRecSelf(llvm::DINode *node) {
+  auto recSelfCtor = getRecSelfConstructor(node);
+  if (!recSelfCtor)
+    return std::nullopt;
+
+  // The original node may have already been assigned a recursive ID from
+  // a different self-reference. Use that if possible.
+  DistinctAttr recId = nodeToRecId.lookup(node);
+  if (!recId) {
+    recId = DistinctAttr::create(UnitAttr::get(context));
+    nodeToRecId[node] = recId;
+  }
+  DIRecursiveTypeAttrInterface recSelf = recSelfCtor(recId);
+  return cast<DINodeAttr>(recSelf);
 }
 
 //===----------------------------------------------------------------------===//
@@ -361,6 +479,9 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
 }
 
 DIExpressionAttr DebugImporter::translateExpression(llvm::DIExpression *node) {
+  if (!node)
+    return nullptr;
+
   SmallVector<DIExpressionElemAttr> ops;
 
   // Begin processing the operations.
@@ -393,14 +514,4 @@ DistinctAttr DebugImporter::getOrCreateDistinctID(llvm::DINode *node) {
   if (!id)
     id = DistinctAttr::create(UnitAttr::get(context));
   return id;
-}
-
-function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
-DebugImporter::getRecSelfConstructor(llvm::DINode *node) {
-  using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
-  return TypeSwitch<llvm::DINode *, CtorType>(node)
-      .Case([&](llvm::DICompositeType *concreteNode) {
-        return CtorType(DICompositeTypeAttr::getRecSelf);
-      })
-      .Default(CtorType());
 }

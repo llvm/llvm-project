@@ -18,15 +18,14 @@
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/Options.h"
 
 #include "clang/Sema/Lookup.h"
 #include "llvm/IR/Module.h"
@@ -46,7 +45,7 @@ NamespaceDecl *LookupNamespace(Sema &S, llvm::StringRef Name,
                                const DeclContext *Within = nullptr);
 
 NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
-                       const DeclContext *Within);
+                       const DeclContext *Within = nullptr);
 
 std::string GetFullTypeName(ASTContext &Ctx, QualType QT);
 } // namespace clang

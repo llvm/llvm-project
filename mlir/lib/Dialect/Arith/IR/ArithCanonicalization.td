@@ -24,10 +24,10 @@ def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
 // Multiply two integer attributes and create a new one with the result.
 def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
-// TODO: Canonicalizations currently doesn't take into account integer overflow
-// flags and always reset them to default (wraparound) which is safe but can
-// inhibit later optimizations. Individual patterns must be reviewed for
-// better handling of overflow flags.
+// Merge overflow flags from 2 ops, selecting the most conservative combination.
+def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
+
+// Default overflow flag (all wraparounds allowed).
 defvar DefOverflow = ConstantEnumCase<Arith_IntegerOverflowAttr, "none">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
@@ -45,7 +45,7 @@ def AddIAddConstant :
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // addi(subi(x, c0), c1) -> addi(x, c1 - c0)
 def AddISubConstantRHS :
@@ -53,7 +53,7 @@ def AddISubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // addi(subi(c0, x), c1) -> subi(c0 + c1, x)
 def AddISubConstantLHS :
@@ -61,7 +61,7 @@ def AddISubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 def IsScalarOrSplatNegativeOne :
     Constraint<And<[
@@ -73,7 +73,7 @@ def AddIMulNegativeOneRhs :
     Pat<(Arith_AddIOp
            $x,
            (Arith_MulIOp $y, (ConstantLikeMatcher AnyAttr:$c0), $ovf1), $ovf2),
-        (Arith_SubIOp $x, $y, DefOverflow),
+        (Arith_SubIOp $x, $y, DefOverflow), // TODO: overflow flags
         [(IsScalarOrSplatNegativeOne $c0)]>;
 
 // addi(muli(x, -1), y) -> subi(y, x)
@@ -81,7 +81,7 @@ def AddIMulNegativeOneLhs :
     Pat<(Arith_AddIOp
            (Arith_MulIOp $x, (ConstantLikeMatcher AnyAttr:$c0), $ovf1),
            $y, $ovf2),
-        (Arith_SubIOp $y, $x, DefOverflow),
+        (Arith_SubIOp $y, $x, DefOverflow), // TODO: overflow flags
         [(IsScalarOrSplatNegativeOne $c0)]>;
 
 // muli(muli(x, c0), c1) -> muli(x, c0 * c1)
@@ -90,7 +90,9 @@ def MulIMulIConstant :
           (Arith_MulIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)),
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2)),
+             [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
+              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
 
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp
@@ -113,7 +115,7 @@ def SubIRHSAddConstant :
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c0, $c1)),
-            DefOverflow)>;
+            DefOverflow)>; // TODO: overflow flags
 
 // subi(c1, addi(x, c0)) -> subi(c1 - c0, x)
 def SubILHSAddConstant :
@@ -121,7 +123,7 @@ def SubILHSAddConstant :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)), $x,
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // subi(subi(x, c0), c1) -> subi(x, c0 + c1)
 def SubIRHSSubConstantRHS :
@@ -129,7 +131,7 @@ def SubIRHSSubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // subi(subi(c0, x), c1) -> subi(c0 - c1, x)
 def SubIRHSSubConstantLHS :
@@ -137,7 +139,7 @@ def SubIRHSSubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c0, $c1)), $x,
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // subi(c1, subi(x, c0)) -> subi(c0 + c1, x)
 def SubILHSSubConstantRHS :
@@ -145,7 +147,7 @@ def SubILHSSubConstantRHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // subi(c1, subi(c0, x)) -> addi(x, c1 - c0)
 def SubILHSSubConstantLHS :
@@ -153,12 +155,13 @@ def SubILHSSubConstantLHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            DefOverflow)>;
+            (MergeOverflow $ovf1, $ovf2))>;
 
 // subi(subi(a, b), a) -> subi(0, b)
 def SubISubILHSRHSLHS :
     Pat<(Arith_SubIOp:$res (Arith_SubIOp $x, $y, $ovf1), $x, $ovf2),
-        (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y, DefOverflow)>;
+        (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y,
+            (MergeOverflow $ovf1, $ovf2))>;
 
 //===----------------------------------------------------------------------===//
 // MulSIExtendedOp
@@ -175,6 +178,7 @@ def MulSIExtendedToMulI :
 def IsScalarOrSplatOne :
     Constraint<And<[
       CPred<"succeeded(getIntOrSplatIntValue($0))">,
+      CPred<"getIntOrSplatIntValue($0)->isStrictlyPositive()">,
       CPred<"*getIntOrSplatIntValue($0) == 1">]>>;
 
 // mulsi_extended(x, 1) -> [x, extsi(cmpi slt, x, 0)]
@@ -269,7 +273,7 @@ def RedundantSelectFalse :
     Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
         (SelectOp $pred, $a, $c)>;
 
-// select(pred, false, true) => not(pred) 
+// select(pred, false, true) => not(pred)
 def SelectI1ToNot :
     Pat<(SelectOp $pred,
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
@@ -309,9 +313,9 @@ def IndexCastUIOfExtUI :
 // BitcastOp
 //===----------------------------------------------------------------------===//
 
-// bitcast(bitcast(x)) -> x
+// bitcast(type1, bitcast(type2, x)) -> bitcast(type1, x)
 def BitcastOfBitcast :
-    Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (replaceWithValue $x)>;
+    Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (Arith_BitcastOp $x)>;
 
 //===----------------------------------------------------------------------===//
 // ExtSIOp
@@ -357,10 +361,6 @@ def OrOfExtSI :
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-def ValuesWithSameType :
-    Constraint<
-      CPred<"llvm::all_equal({$0.getType(), $1.getType(), $2.getType()})">>;
-
 def ValueWiderThan :
     Constraint<And<[
       CPred<"getScalarOrElementWidth($0) > getScalarOrElementWidth($1)">,
@@ -374,14 +374,14 @@ def TruncationMatchesShiftAmount :
 
 // trunci(extsi(x)) -> extsi(x), when only the sign-extension bits are truncated
 def TruncIExtSIToExtSI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x), $overflow),
         (Arith_ExtSIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
 
 // trunci(extui(x)) -> extui(x), when only the zero-extension bits are truncated
 def TruncIExtUIToExtUI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x), $overflow),
         (Arith_ExtUIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
@@ -389,31 +389,25 @@ def TruncIExtUIToExtUI :
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
 def TruncIShrSIToTrunciShrUI :
     Pat<(Arith_TruncIOp:$tr
-          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0))),
-        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)))),
+          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0), $exact), $overflow),
+        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)), $exact), $overflow),
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
 
-// trunci(shrui(mul(sext(x), sext(y)), c)) -> mulsi_extended(x, y)
-def TruncIShrUIMulIToMulSIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtSIOp $x), (Arith_ExtSIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
-        (Arith_MulSIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+//===----------------------------------------------------------------------===//
+// TruncFOp
+//===----------------------------------------------------------------------===//
 
-// trunci(shrui(mul(zext(x), zext(y)), c)) -> mului_extended(x, y)
-def TruncIShrUIMulIToMulUIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtUIOp $x), (Arith_ExtUIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
-        (Arith_MulUIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+// truncf(sitofp(x)) -> sitofp(x) if default rounding mode.
+def TruncFSIToFPToSIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_SIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+// truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
+def TruncFUIToFPToUIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_UIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp

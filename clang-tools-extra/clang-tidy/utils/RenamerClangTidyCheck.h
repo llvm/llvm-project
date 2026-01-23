@@ -1,4 +1,4 @@
-//===--- RenamerClangTidyCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_RENAMERCLANGTIDYCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_RENAMERCLANGTIDYCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_RENAMERCLANGTIDYCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_RENAMERCLANGTIDYCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
@@ -28,7 +28,7 @@ namespace tidy {
 class RenamerClangTidyCheck : public ClangTidyCheck {
 public:
   RenamerClangTidyCheck(StringRef CheckName, ClangTidyContext *Context);
-  ~RenamerClangTidyCheck();
+  ~RenamerClangTidyCheck() override;
 
   /// Derived classes should not implement any matching logic themselves; this
   /// class will do the matching and call the derived class'
@@ -108,20 +108,15 @@ public:
       llvm::DenseMap<NamingCheckId, NamingCheckFailure>;
 
   /// Check Macros for style violations.
-  void checkMacro(const SourceManager &SourceMgr, const Token &MacroNameTok,
-                  const MacroInfo *MI);
+  void checkMacro(const Token &MacroNameTok, const MacroInfo *MI,
+                  const SourceManager &SourceMgr);
 
   /// Add a usage of a macro if it already has a violation.
-  void expandMacro(const Token &MacroNameTok, const MacroInfo *MI);
+  void expandMacro(const Token &MacroNameTok, const MacroInfo *MI,
+                   const SourceManager &SourceMgr);
 
-  void addUsage(const RenamerClangTidyCheck::NamingCheckId &Decl,
-                SourceRange Range, const SourceManager *SourceMgr = nullptr);
-
-  /// Convenience method when the usage to be added is a NamedDecl.
   void addUsage(const NamedDecl *Decl, SourceRange Range,
-                const SourceManager *SourceMgr = nullptr);
-
-  void checkNamedDecl(const NamedDecl *Decl, const SourceManager &SourceMgr);
+                const SourceManager &SourceMgr);
 
 protected:
   /// Overridden by derived classes, returns information about if and how a Decl
@@ -157,6 +152,14 @@ protected:
                                const NamingCheckFailure &Failure) const = 0;
 
 private:
+  // Manage additions to the Failure/usage map
+  //
+  // return the result of NamingCheckFailures::try_emplace() if the usage was
+  // accepted.
+  std::pair<NamingCheckFailureMap::iterator, bool>
+  addUsage(const RenamerClangTidyCheck::NamingCheckId &FailureId,
+           SourceRange UsageRange, const SourceManager &SourceMgr);
+
   NamingCheckFailureMap NamingCheckFailures;
   const bool AggressiveDependentMemberLookup;
 };
@@ -164,4 +167,4 @@ private:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_RENAMERCLANGTIDYCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_RENAMERCLANGTIDYCHECK_H

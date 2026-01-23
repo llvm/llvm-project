@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #define ASSERT_STREQ_LEN(actual_written, actual_str, expected_str)             \
@@ -14,47 +18,47 @@
   EXPECT_STREQ(actual_str, expected_str);
 
 template <typename InputT>
-class StrfromTest : public LIBC_NAMESPACE::testing::Test {
+class StrfromTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
-  static const bool is_single_prec =
+  static constexpr bool is_single_prec =
       LIBC_NAMESPACE::cpp::is_same<InputT, float>::value;
-  static const bool is_double_prec =
+  static constexpr bool is_double_prec =
       LIBC_NAMESPACE::cpp::is_same<InputT, double>::value;
 
   using FunctionT = int (*)(char *, size_t, const char *, InputT fp);
 
 public:
   void floatDecimalFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatDecimalSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatDecimalDoublePrec(func);
     else
       floatDecimalLongDoublePrec(func);
   }
 
   void floatHexExpFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatHexExpSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatHexExpDoublePrec(func);
     else
       floatHexExpLongDoublePrec(func);
   }
 
   void floatDecimalExpFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatDecimalExpSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatDecimalExpDoublePrec(func);
     else
       floatDecimalExpLongDoublePrec(func);
   }
 
   void floatDecimalAutoFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatDecimalAutoSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatDecimalAutoDoublePrec(func);
     else
       floatDecimalAutoLongDoublePrec(func);
@@ -71,8 +75,18 @@ public:
     written =
         func(buff, 37,
              "%A simple string with one conversion, should overwrite.", 1.0);
-    ASSERT_STREQ_LEN(written, buff, is_long_double ? "0X8P-3" : "0X1P+0");
-
+    if (is_long_double) {
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+      ASSERT_STREQ_LEN(written, buff, "0X8P-3");
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+      ASSERT_STREQ_LEN(written, buff, "0X1P+0");
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+      ASSERT_STREQ_LEN(written, buff, "0X1P+0");
+#endif
+    } else {
+      // not long double
+      ASSERT_STREQ_LEN(written, buff, "0X1P+0");
+    }
     written = func(buff, 74,
                    "A simple string with one conversion in %A "
                    "between, writes string as it is",
@@ -84,7 +98,7 @@ public:
     written = func(buff, 36, "A simple string with one conversion", 1.0);
     ASSERT_STREQ_LEN(written, buff, "A simple string with one conversion");
 
-    written = func(buff, 20, "%1f", 1234567890.0);
+    written = func(buff, 20, "%1f", static_cast<InputT>(1234567890.0));
     ASSERT_STREQ_LEN(written, buff, "%1f");
   }
 
@@ -92,30 +106,37 @@ public:
     char buff[20];
     int written;
 
-    written = func(buff, 5, "%f", 1234567890.0);
+    written = func(buff, 5, "%f", static_cast<InputT>(1234567890.0));
     EXPECT_EQ(written, 17);
     ASSERT_STREQ(buff, "1234");
 
-    written = func(buff, 5, "%.5f", 1.05);
+    written = func(buff, 5, "%.5f", static_cast<InputT>(1.05));
     EXPECT_EQ(written, 7);
     ASSERT_STREQ(buff, "1.05");
 
-    written = func(buff, 0, "%g", 1.0);
+    written = func(buff, 0, "%g", static_cast<InputT>(1.0));
     EXPECT_EQ(written, 1);
     ASSERT_STREQ(buff, "1.05"); // Make sure that buff has not changed
+  }
+
+  void infNanValues(FunctionT func) {
+    if constexpr (is_double_prec)
+      doublePrecInfNan(func);
+    else if constexpr (!is_single_prec)
+      longDoublePrecInfNan(func);
   }
 
   void floatDecimalSinglePrec(FunctionT func) {
     char buff[70];
     int written;
 
-    written = func(buff, 16, "%f", 1.0);
+    written = func(buff, 16, "%f", 1.0f);
     ASSERT_STREQ_LEN(written, buff, "1.000000");
 
-    written = func(buff, 20, "%f", 1234567890.0);
+    written = func(buff, 20, "%f", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1234567936.000000");
 
-    written = func(buff, 67, "%.3f", 1.0);
+    written = func(buff, 67, "%.3f", 1.0f);
     ASSERT_STREQ_LEN(written, buff, "1.000");
   }
 
@@ -138,6 +159,9 @@ public:
     written = func(buff, 99, "%f", 1.5);
     ASSERT_STREQ_LEN(written, buff, "1.500000");
 
+// Dyadic float is only accurate to ~50 digits, so skip this 300 digit test.
+// TODO: Create way to test just the first ~50 digits of a number.
+#ifndef LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
     written = func(buff, 499, "%f", 1e300);
     ASSERT_STREQ_LEN(written, buff,
                      "100000000000000005250476025520442024870446858110815915491"
@@ -149,6 +173,7 @@ public:
                      "111903896764088007465274278014249457925878882005684283811"
                      "566947219638686"
                      "5459400540160.000000");
+#endif // DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
 
     written = func(buff, 99, "%f", 0.1);
     ASSERT_STREQ_LEN(written, buff, "0.100000");
@@ -200,14 +225,14 @@ public:
     char buff[25];
     int written;
 
-    written = func(buff, 0, "%a", 1234567890.0);
+    written = func(buff, 0, "%a", 1234567890.0f);
     EXPECT_EQ(written, 14);
 
-    written = func(buff, 20, "%a", 1234567890.0);
+    written = func(buff, 20, "%a", 1234567890.0f);
     EXPECT_EQ(written, 14);
     ASSERT_STREQ(buff, "0x1.26580cp+30");
 
-    written = func(buff, 20, "%A", 1234567890.0);
+    written = func(buff, 20, "%A", 1234567890.0f);
     EXPECT_EQ(written, 14);
     ASSERT_STREQ(buff, "0X1.26580CP+30");
   }
@@ -292,10 +317,10 @@ public:
     char buff[25];
     int written;
 
-    written = func(buff, 20, "%.9e", 1234567890.0);
+    written = func(buff, 20, "%.9e", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.234567936e+09");
 
-    written = func(buff, 20, "%.9E", 1234567890.0);
+    written = func(buff, 20, "%.9E", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.234567936E+09");
   }
 
@@ -335,9 +360,11 @@ public:
     ASSERT_STREQ_LEN(written, buff, "1.0e+01");
   }
 
-  void floatDecimalExpLongDoublePrec(FunctionT func) {
-    char buff[100];
-    int written;
+  void floatDecimalExpLongDoublePrec([[maybe_unused]] FunctionT func) {
+    // Mark as maybe_unused to silence unused variable
+    // warning when long double is not 80-bit
+    [[maybe_unused]] char buff[100];
+    [[maybe_unused]] int written;
 
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     written = func(buff, 90, "%.9e", 1000000000500000000.1L);
@@ -355,10 +382,10 @@ public:
     char buff[25];
     int written;
 
-    written = func(buff, 20, "%.9g", 1234567890.0);
+    written = func(buff, 20, "%.9g", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.23456794e+09");
 
-    written = func(buff, 20, "%.9G", 1234567890.0);
+    written = func(buff, 20, "%.9G", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.23456794E+09");
   }
 
@@ -398,9 +425,11 @@ public:
     ASSERT_STREQ_LEN(written, buff, "1.2340000000000000814e-10");
   }
 
-  void floatDecimalAutoLongDoublePrec(FunctionT func) {
-    char buff[100];
-    int written;
+  void floatDecimalAutoLongDoublePrec([[maybe_unused]] FunctionT func) {
+    // Mark as maybe_unused to silence unused variable
+    // warning when long double is not 80-bit
+    [[maybe_unused]] char buff[100];
+    [[maybe_unused]] int written;
 
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     written = func(buff, 99, "%g", 0xf.fffffffffffffffp+16380L);
@@ -412,6 +441,61 @@ public:
     written = func(buff, 99, "%g", 9.99999999999e-100L);
     ASSERT_STREQ_LEN(written, buff, "1e-99");
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+  }
+
+  void doublePrecInfNan(FunctionT func) {
+    char buff[15];
+    int written;
+
+    double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
+    double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
+
+    written = func(buff, 10, "%f", inf);
+    ASSERT_STREQ_LEN(written, buff, "inf");
+
+    written = func(buff, 10, "%A", -inf);
+    ASSERT_STREQ_LEN(written, buff, "-INF");
+
+    written = func(buff, 10, "%f", nan);
+    ASSERT_STREQ_LEN(written, buff, "nan");
+
+    written = func(buff, 10, "%A", -nan);
+    ASSERT_STREQ_LEN(written, buff, "-NAN");
+  }
+
+  void longDoublePrecInfNan(FunctionT func) {
+    char buff[15];
+    int written;
+
+    long double ld_inf =
+        LIBC_NAMESPACE::fputil::FPBits<long double>::inf().get_val();
+    long double ld_nan =
+        LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan().get_val();
+
+    written = func(buff, 10, "%f", ld_inf);
+    ASSERT_STREQ_LEN(written, buff, "inf");
+
+    written = func(buff, 10, "%A", -ld_inf);
+    ASSERT_STREQ_LEN(written, buff, "-INF");
+
+    written = func(buff, 10, "%f", ld_nan);
+    ASSERT_STREQ_LEN(written, buff, "nan");
+
+    written = func(buff, 10, "%A", -ld_nan);
+    ASSERT_STREQ_LEN(written, buff, "-NAN");
+  }
+
+  // https://github.com/llvm/llvm-project/issues/166795
+  void charsWrittenOverflow(FunctionT func) {
+#ifndef LIBC_TARGET_ARCH_IS_RISCV32
+    char buff[100];
+    // Trigger an overflow in the return value of strfrom by writing more than
+    // INT_MAX bytes.
+    int result = func(buff, sizeof(buff), "%.2147483647f", 1.0f);
+
+    EXPECT_LT(result, 0);
+    ASSERT_ERRNO_FAILURE();
+#endif
   }
 };
 
@@ -432,4 +516,8 @@ public:
   }                                                                            \
   TEST_F(LlvmLibc##name##Test, InsufficientBufferSize) {                       \
     insufficentBufsize(func);                                                  \
+  }                                                                            \
+  TEST_F(LlvmLibc##name##Test, InfAndNanValues) { infNanValues(func); }        \
+  TEST_F(LlvmLibc##name##Test, CharsWrittenOverflow) {                         \
+    charsWrittenOverflow(func);                                                \
   }

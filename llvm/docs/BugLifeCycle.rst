@@ -16,7 +16,7 @@ consistency helps reporters, developers and others to gain a better
 understanding of what a particular bug state actually means and what to expect
 might happen next.
 
-At the same time, we aim to not over-specify the life cycle of bugs in
+At the same time, we aim not to over-specify the life cycle of bugs in
 `the LLVM Bug Tracking System <https://github.com/llvm/llvm-project/issues>`_,
 as the overall goal is to make it easier to work with and understand the bug
 reports.
@@ -39,7 +39,7 @@ use, needs to be maintained. See the following for details:
 Reporting bugs
 ==============
 
-See :doc:`HowToSubmitABug` on further details on how to submit good bug reports.
+See :doc:`HowToSubmitABug` for further details on how to submit good bug reports.
 
 You can apply `labels <https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels>`_
 to the bug to provide extra information to make the bug easier to discover, such
@@ -50,9 +50,9 @@ as a label for the part of the project the bug pertains to.
 Triaging bugs
 =============
 
-Open bugs that have not been marked with the ``confirmed`` label are bugs that
+Open bugs that have not been marked with the ``confirmed`` label
 still need to be triaged. When triage is complete, the ``confirmed`` label
-should be added along with any other labels that help to classify the report,
+should be added along with any other labels that help classify the report,
 unless the issue is being :ref:`closed<Closing>`.
 
 The goal of triaging a bug is to make sure a newly reported bug ends up in a
@@ -124,13 +124,13 @@ Examples of reasons for resolving are:
     ``duplicate`` label with a comment pointing to the issue it duplicates.
 
   * If there is a sound reason for not fixing the issue (difficulty, ABI, open
-    research questions, etc), add the ``wontfix`` label and a comment explaining
+    research questions, etc.), add the ``wontfix`` label and a comment explaining
     why no changes are expected.
 
   * If there is a specific and plausible reason to think that a given bug is
     otherwise inapplicable or obsolete. One example is an open bug that doesn't
     contain enough information to clearly understand the problem being reported
-    (e.g. not reproducible). It is fine to close such a bug, adding with the
+    (e.g., not reproducible). It is fine to close such a bug, adding the
     ``worksforme`` label and leaving a comment to encourage the reporter to
     reopen the bug with more information if it's still reproducible for them.
 
@@ -140,7 +140,7 @@ Examples of reasons for resolving are:
 Maintenance of metadata
 =======================
 
-Project member with write access to the project can create new labels, but we
+Project members with write access to the project can create new labels, but we
 discourage adding ad hoc labels because we want to control the proliferation of
 labels and avoid single-use labels. If you would like a new label added, please
 open an issue asking to create an issue label and add the ``infrastructure``

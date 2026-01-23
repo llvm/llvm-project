@@ -18,8 +18,8 @@ transform.sequence failures(propagate) {
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
-  // expected-error@below {{expects pack_paddings to contain booleans (0/1), found [1, 7]}}
-  transform.structured.pad %arg0 {pack_paddings=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  // expected-error@below {{expects nofold_flags to contain booleans (0/1), found [1, 7]}}
+  transform.structured.pad %arg0 {nofold_flags=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -70,4 +70,33 @@ transform.sequence failures(propagate) {
       matmul_inner_dims_order = [0, 1, 2]
     : (!transform.any_op) -> !transform.op<"linalg.generic">
 
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.param.constant 2 : i64 -> !transform.param<i64>
+  // expected-error@+1 {{custom op 'transform.structured.vectorize' number of operands and types do not match: got 1 operands and 2 types}}
+  transform.structured.vectorize %arg0 vector_sizes [%0, 2] : !transform.any_op, !transform.param<i64>, !transform.param<i64>
+
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.param.constant 2 : i64 -> !transform.param<i64>
+  // expected-error@below {{expected ']' in dynamic index list}}
+  // expected-error@below {{custom op 'transform.structured.vectorize' expected SSA value or integer}}
+  transform.structured.vectorize %arg0 vector_sizes [%0 : !transform.param<i64>, 2] : !transform.any_op, !transform.param<i64>
+
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected '('}}
+  %res = transform.structured.generalize %arg0 : !transform.any_op -> !transform.any_op 
 }

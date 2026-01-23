@@ -77,8 +77,8 @@ static MapInfo gatherMapInfo() {
           // Only emit the prevailing definition of a symbol. Also, don't emit
           // the symbol if it is part of a cstring section (we use the literal
           // value instead, similar to ld64)
-          if (d->isec && d->getFile() == file &&
-              !isa<CStringInputSection>(d->isec)) {
+          if (d->isec() && d->getFile() == file &&
+              !isa<CStringInputSection>(d->isec())) {
             isReferencedFile = true;
             if (!d->isLive())
               info.deadSymbols.push_back(d);
@@ -116,9 +116,7 @@ static MapInfo gatherMapInfo() {
   // cstrings are not stored in sorted order in their OutputSections, so we sort
   // them here.
   for (auto &liveCStrings : info.liveCStringsForSection)
-    parallelSort(liveCStrings.second, [](const auto &p1, const auto &p2) {
-      return p1.first < p2.first;
-    });
+    parallelSort(liveCStrings.second, llvm::less_first());
   return info;
 }
 
@@ -153,6 +151,12 @@ static void printNonLazyPointerSection(raw_fd_ostream &os,
     os << format("0x%08llX\t0x%08zX\t[  0] non-lazy-pointer-to-local: %s\n",
                  osec->addr + sym->gotIndex * target->wordSize,
                  target->wordSize, sym->getName().str().data());
+}
+
+static uint64_t getSymSizeForMap(Defined *sym) {
+  if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
+    return 0;
+  return sym->size;
 }
 
 void macho::writeMapFile() {
@@ -197,14 +201,32 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
-  // Shared function to print an array of symbols.
-  auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr) {
-    for (const ConcatInputSection *isec : arr) {
-      for (Defined *sym : isec->symbols) {
-        if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
-          os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                       sym->size, readerToFileOrdinal[sym->getFile()],
-                       sym->getName().str().data());
+  // Helper lambda that prints all symbols from one ConcatInputSection.
+  auto printOne = [&](const ConcatInputSection *isec) {
+    for (Defined *sym : isec->symbols) {
+      if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0)) {
+        os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                     getSymSizeForMap(sym),
+                     readerToFileOrdinal.lookup(sym->getFile()),
+                     sym->getName().str().data());
+      }
+    }
+  };
+  // Shared function to print one or two arrays of ConcatInputSection in
+  // ascending outSecOff order. The second array is optional; if provided, we
+  // interleave the printing in sorted order without allocating a merged temp
+  // array.
+  auto printIsecArrSyms = [&](ArrayRef<ConcatInputSection *> arr1,
+                              ArrayRef<ConcatInputSection *> arr2 = {}) {
+    // Print both arrays in sorted order, interleaving as necessary.
+    while (!arr1.empty() || !arr2.empty()) {
+      if (!arr1.empty() && (arr2.empty() || arr1.front()->outSecOff <=
+                                                arr2.front()->outSecOff)) {
+        printOne(arr1.front());
+        arr1 = arr1.drop_front();
+      } else if (!arr2.empty()) {
+        printOne(arr2.front());
+        arr2 = arr2.drop_front();
       }
     }
   };
@@ -213,9 +235,11 @@ void macho::writeMapFile() {
   os << "# Address\tSize    \tFile  Name\n";
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
-      if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
+      if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
+        printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
+      } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
-      } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
+      } else if (is_contained(in.cStringSections, osec)) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this
                                // is a sentinel value
@@ -255,7 +279,7 @@ void macho::writeMapFile() {
     os << "#        \tSize    \tFile  Name\n";
     for (Defined *sym : info.deadSymbols) {
       assert(!sym->isLive());
-      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", sym->size,
+      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", getSymSizeForMap(sym),
                    readerToFileOrdinal[sym->getFile()],
                    sym->getName().str().data());
     }

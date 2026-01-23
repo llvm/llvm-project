@@ -10,13 +10,13 @@ class NonCopyable {
       ++x;
       return [*this] {  //expected-error{{call to deleted}} expected-warning{{reference to local}}
          return ++x; //expected-error{{read-only}}
-      }; 
+      };
     };
-    const auto &M3 = [*this] () mutable -> auto&& { //expected-error{{call to deleted}} 
+    const auto &M3 = [*this] () mutable -> auto&& { //expected-error{{call to deleted}}
       ++x;
       return [this] {  // expected-warning{{reference to local}}
          return x;
-      }; 
+      };
     };
-  }  
+  }
 };

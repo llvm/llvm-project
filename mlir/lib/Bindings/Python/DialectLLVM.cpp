@@ -6,109 +6,214 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <string>
+
 #include "mlir-c/Dialect/LLVM.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
-#include <string>
+#include "mlir-c/Target/LLVMIR.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
+#include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
+
+using namespace nanobind::literals;
 using namespace llvm;
 using namespace mlir;
-using namespace mlir::python;
-using namespace mlir::python::adaptors;
+using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectLLVMSubmodule(const pybind11::module &m) {
-  auto llvmStructType =
-      mlir_type_subclass(m, "StructType", mlirTypeIsALLVMStructType);
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace llvm {
+//===--------------------------------------------------------------------===//
+// StructType
+//===--------------------------------------------------------------------===//
 
-  llvmStructType.def_classmethod(
-      "get_literal",
-      [](py::object cls, const std::vector<MlirType> &elements, bool packed,
-         MlirLocation loc) {
-        CollectDiagnosticsToStringScope scope(mlirLocationGetContext(loc));
+struct StructType : PyConcreteType<StructType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsALLVMStructType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLLVMStructTypeGetTypeID;
+  static constexpr const char *pyClassName = "StructType";
+  static inline const MlirStringRef name = mlirLLVMStructTypeGetName();
+  using Base::Base;
 
-        MlirType type = mlirLLVMStructTypeLiteralGetChecked(
-            loc, elements.size(), elements.data(), packed);
-        if (mlirTypeIsNull(type)) {
-          throw py::value_error(scope.takeMessage());
-        }
-        return cls(type);
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get_literal",
+        [](const std::vector<PyType> &elements, bool packed,
+           DefaultingPyLocation loc, DefaultingPyMlirContext context) {
+          python::CollectDiagnosticsToStringScope scope(
+              mlirLocationGetContext(loc));
+          std::vector<MlirType> elements_(elements.size());
+          std::copy(elements.begin(), elements.end(), elements_.begin());
+
+          MlirType type = mlirLLVMStructTypeLiteralGetChecked(
+              loc, elements.size(), elements_.data(), packed);
+          if (mlirTypeIsNull(type)) {
+            throw nb::value_error(scope.takeMessage().c_str());
+          }
+          return StructType(context->getRef(), type);
+        },
+        "elements"_a, nb::kw_only(), "packed"_a = false, "loc"_a = nb::none(),
+        "context"_a = nb::none());
+
+    c.def_static(
+        "get_literal_unchecked",
+        [](const std::vector<PyType> &elements, bool packed,
+           DefaultingPyMlirContext context) {
+          python::CollectDiagnosticsToStringScope scope(context.get()->get());
+
+          std::vector<MlirType> elements_(elements.size());
+          std::copy(elements.begin(), elements.end(), elements_.begin());
+
+          MlirType type = mlirLLVMStructTypeLiteralGet(
+              context.get()->get(), elements.size(), elements_.data(), packed);
+          if (mlirTypeIsNull(type)) {
+            throw nb::value_error(scope.takeMessage().c_str());
+          }
+          return StructType(context->getRef(), type);
+        },
+        "elements"_a, nb::kw_only(), "packed"_a = false,
+        "context"_a = nb::none());
+
+    c.def_static(
+        "get_identified",
+        [](const std::string &name, DefaultingPyMlirContext context) {
+          return StructType(context->getRef(),
+                            mlirLLVMStructTypeIdentifiedGet(
+                                context.get()->get(),
+                                mlirStringRefCreate(name.data(), name.size())));
+        },
+        "name"_a, nb::kw_only(), "context"_a = nb::none());
+
+    c.def_static(
+        "get_opaque",
+        [](const std::string &name, DefaultingPyMlirContext context) {
+          return StructType(context->getRef(),
+                            mlirLLVMStructTypeOpaqueGet(
+                                context.get()->get(),
+                                mlirStringRefCreate(name.data(), name.size())));
+        },
+        "name"_a, "context"_a = nb::none());
+
+    c.def(
+        "set_body",
+        [](const StructType &self, const std::vector<PyType> &elements,
+           bool packed) {
+          std::vector<MlirType> elements_(elements.size());
+          std::copy(elements.begin(), elements.end(), elements_.begin());
+          MlirLogicalResult result = mlirLLVMStructTypeSetBody(
+              self, elements.size(), elements_.data(), packed);
+          if (!mlirLogicalResultIsSuccess(result)) {
+            throw nb::value_error(
+                "Struct body already set to different content.");
+          }
+        },
+        "elements"_a, nb::kw_only(), "packed"_a = false);
+
+    c.def_static(
+        "new_identified",
+        [](const std::string &name, const std::vector<PyType> &elements,
+           bool packed, DefaultingPyMlirContext context) {
+          std::vector<MlirType> elements_(elements.size());
+          std::copy(elements.begin(), elements.end(), elements_.begin());
+          return StructType(context->getRef(),
+                            mlirLLVMStructTypeIdentifiedNewGet(
+                                context.get()->get(),
+                                mlirStringRefCreate(name.data(), name.length()),
+                                elements.size(), elements_.data(), packed));
+        },
+        "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
+        "context"_a = nb::none());
+
+    c.def_prop_ro(
+        "name", [](const StructType &type) -> std::optional<std::string> {
+          if (mlirLLVMStructTypeIsLiteral(type))
+            return std::nullopt;
+
+          MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
+          return StringRef(stringRef.data, stringRef.length).str();
+        });
+
+    c.def_prop_ro("body", [](const StructType &type) -> nb::object {
+      // Don't crash in absence of a body.
+      if (mlirLLVMStructTypeIsOpaque(type))
+        return nb::none();
+
+      nb::list body;
+      for (intptr_t i = 0, e = mlirLLVMStructTypeGetNumElementTypes(type);
+           i < e; ++i) {
+        body.append(mlirLLVMStructTypeGetElementType(type, i));
+      }
+      return body;
+    });
+
+    c.def_prop_ro("packed", [](const StructType &type) {
+      return mlirLLVMStructTypeIsPacked(type);
+    });
+
+    c.def_prop_ro("opaque", [](const StructType &type) {
+      return mlirLLVMStructTypeIsOpaque(type);
+    });
+  }
+};
+
+//===--------------------------------------------------------------------===//
+// PointerType
+//===--------------------------------------------------------------------===//
+
+struct PointerType : PyConcreteType<PointerType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsALLVMPointerType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLLVMPointerTypeGetTypeID;
+  static constexpr const char *pyClassName = "PointerType";
+  static inline const MlirStringRef name = mlirLLVMPointerTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](std::optional<unsigned> addressSpace,
+           DefaultingPyMlirContext context) {
+          python::CollectDiagnosticsToStringScope scope(context.get()->get());
+          MlirType type = mlirLLVMPointerTypeGet(
+              context.get()->get(),
+              addressSpace.has_value() ? *addressSpace : 0);
+          if (mlirTypeIsNull(type)) {
+            throw nb::value_error(scope.takeMessage().c_str());
+          }
+          return PointerType(context->getRef(), type);
+        },
+        "address_space"_a = nb::none(), nb::kw_only(),
+        "context"_a = nb::none());
+    c.def_prop_ro("address_space", [](const PointerType &type) {
+      return mlirLLVMPointerTypeGetAddressSpace(type);
+    });
+  }
+};
+
+static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
+  StructType::bind(m);
+  PointerType::bind(m);
+
+  m.def(
+      "translate_module_to_llvmir",
+      [](const PyOperation &module) {
+        return mlirTranslateModuleToLLVMIRToString(module);
       },
-      py::arg("cls"), py::arg("elements"), py::kw_only(),
-      py::arg("packed") = false, py::arg("loc") = py::none());
-
-  llvmStructType.def_classmethod(
-      "get_identified",
-      [](py::object cls, const std::string &name, MlirContext context) {
-        return cls(mlirLLVMStructTypeIdentifiedGet(
-            context, mlirStringRefCreate(name.data(), name.size())));
-      },
-      py::arg("cls"), py::arg("name"), py::kw_only(),
-      py::arg("context") = py::none());
-
-  llvmStructType.def_classmethod(
-      "get_opaque",
-      [](py::object cls, const std::string &name, MlirContext context) {
-        return cls(mlirLLVMStructTypeOpaqueGet(
-            context, mlirStringRefCreate(name.data(), name.size())));
-      },
-      py::arg("cls"), py::arg("name"), py::arg("context") = py::none());
-
-  llvmStructType.def(
-      "set_body",
-      [](MlirType self, const std::vector<MlirType> &elements, bool packed) {
-        MlirLogicalResult result = mlirLLVMStructTypeSetBody(
-            self, elements.size(), elements.data(), packed);
-        if (!mlirLogicalResultIsSuccess(result)) {
-          throw py::value_error(
-              "Struct body already set to different content.");
-        }
-      },
-      py::arg("elements"), py::kw_only(), py::arg("packed") = false);
-
-  llvmStructType.def_classmethod(
-      "new_identified",
-      [](py::object cls, const std::string &name,
-         const std::vector<MlirType> &elements, bool packed, MlirContext ctx) {
-        return cls(mlirLLVMStructTypeIdentifiedNewGet(
-            ctx, mlirStringRefCreate(name.data(), name.length()),
-            elements.size(), elements.data(), packed));
-      },
-      py::arg("cls"), py::arg("name"), py::arg("elements"), py::kw_only(),
-      py::arg("packed") = false, py::arg("context") = py::none());
-
-  llvmStructType.def_property_readonly(
-      "name", [](MlirType type) -> std::optional<std::string> {
-        if (mlirLLVMStructTypeIsLiteral(type))
-          return std::nullopt;
-
-        MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
-        return StringRef(stringRef.data, stringRef.length).str();
-      });
-
-  llvmStructType.def_property_readonly("body", [](MlirType type) -> py::object {
-    // Don't crash in absence of a body.
-    if (mlirLLVMStructTypeIsOpaque(type))
-      return py::none();
-
-    py::list body;
-    for (intptr_t i = 0, e = mlirLLVMStructTypeGetNumElementTypes(type); i < e;
-         ++i) {
-      body.append(mlirLLVMStructTypeGetElementType(type, i));
-    }
-    return body;
-  });
-
-  llvmStructType.def_property_readonly(
-      "packed", [](MlirType type) { return mlirLLVMStructTypeIsPacked(type); });
-
-  llvmStructType.def_property_readonly(
-      "opaque", [](MlirType type) { return mlirLLVMStructTypeIsOpaque(type); });
+      "module"_a, nb::rv_policy::take_ownership);
 }
+} // namespace llvm
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
-PYBIND11_MODULE(_mlirDialectsLLVM, m) {
+NB_MODULE(_mlirDialectsLLVM, m) {
   m.doc() = "MLIR LLVM Dialect";
 
-  populateDialectLLVMSubmodule(m);
+  mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::llvm::populateDialectLLVMSubmodule(
+      m);
 }

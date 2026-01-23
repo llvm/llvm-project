@@ -11,9 +11,10 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Return the first N hex digits of an integer as a string in upper case.
 template <typename T>
@@ -32,6 +33,6 @@ int_to_hex(T value, size_t length = sizeof(T) * 2) {
   return "0x" + s;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_UNITTEST_STRINGUTILS_H

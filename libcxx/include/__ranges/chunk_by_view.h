@@ -59,7 +59,7 @@ class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS chunk_by_view : public view_interface
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   // We cache the result of begin() to allow providing an amortized O(1).
-  using _Cache = __non_propagating_cache<iterator_t<_View>>;
+  using _Cache _LIBCPP_NODEBUG = __non_propagating_cache<iterator_t<_View>>;
   _Cache __cached_begin_;
 
   class __iterator;
@@ -100,17 +100,17 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit chunk_by_view(_View __base, _Pred __pred)
       : __base_(std::move(__base)), __pred_(in_place, std::move(__pred)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
     // Note: this duplicates a check in `optional` but provides a better error message.
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a chunk_by_view that does not have a valid predicate.");
@@ -122,7 +122,7 @@ public:
     return {*this, std::move(__first), *__cached_begin_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>) {
       return __iterator{*this, ranges::end(__base_), ranges::end(__base_)};
     } else {
@@ -155,7 +155,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
     // If the iterator is at end, this would return an empty range which can be checked by the calling code and doesn't
     // necessarily lead to a bad access.
     _LIBCPP_ASSERT_PEDANTIC(__current_ != __next_, "Trying to dereference past-the-end chunk_by_view iterator.");
@@ -205,7 +205,7 @@ namespace views {
 namespace __chunk_by {
 struct __fn {
   template <class _Range, class _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pred&& __pred) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pred&& __pred) const
       noexcept(noexcept(/**/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))))
           -> decltype(/*--*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))) {
     return /*-------------*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred));
@@ -213,9 +213,9 @@ struct __fn {
 
   template <class _Pred>
     requires constructible_from<decay_t<_Pred>, _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pred>(__pred)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pred>(__pred)));
   }
 };
 } // namespace __chunk_by

@@ -21,6 +21,8 @@ namespace llvm::omp {
 //===----------------------------------------------------------------------===//
 // - top<Directive>Set: The directive appears alone or as the first in a
 //   compound construct.
+// - bottom<Directive>Set: The directive appears alone or as the last in a
+//   compound construct.
 // - all<Directive>Set: All standalone or compound uses of the directive.
 
 static const OmpDirectiveSet topDistributeSet{
@@ -32,14 +34,14 @@ static const OmpDirectiveSet topDistributeSet{
 
 static const OmpDirectiveSet allDistributeSet{
     OmpDirectiveSet{
-        llvm::omp::OMPD_target_teams_distribute,
-        llvm::omp::OMPD_target_teams_distribute_parallel_do,
-        llvm::omp::OMPD_target_teams_distribute_parallel_do_simd,
-        llvm::omp::OMPD_target_teams_distribute_simd,
-        llvm::omp::OMPD_teams_distribute,
-        llvm::omp::OMPD_teams_distribute_parallel_do,
-        llvm::omp::OMPD_teams_distribute_parallel_do_simd,
-        llvm::omp::OMPD_teams_distribute_simd,
+        Directive::OMPD_target_teams_distribute,
+        Directive::OMPD_target_teams_distribute_parallel_do,
+        Directive::OMPD_target_teams_distribute_parallel_do_simd,
+        Directive::OMPD_target_teams_distribute_simd,
+        Directive::OMPD_teams_distribute,
+        Directive::OMPD_teams_distribute_parallel_do,
+        Directive::OMPD_teams_distribute_parallel_do_simd,
+        Directive::OMPD_teams_distribute_simd,
     } | topDistributeSet,
 };
 
@@ -63,10 +65,24 @@ static const OmpDirectiveSet allDoSet{
     } | topDoSet,
 };
 
+static const OmpDirectiveSet topLoopSet{
+    Directive::OMPD_loop,
+};
+
+static const OmpDirectiveSet allLoopSet{
+    OmpDirectiveSet{
+        Directive::OMPD_parallel_loop,
+        Directive::OMPD_target_parallel_loop,
+        Directive::OMPD_target_teams_loop,
+        Directive::OMPD_teams_loop,
+    } | topLoopSet,
+};
+
 static const OmpDirectiveSet topParallelSet{
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_do,
     Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_parallel_loop,
     Directive::OMPD_parallel_masked_taskloop,
     Directive::OMPD_parallel_masked_taskloop_simd,
     Directive::OMPD_parallel_master_taskloop,
@@ -82,6 +98,7 @@ static const OmpDirectiveSet allParallelSet{
         Directive::OMPD_target_parallel,
         Directive::OMPD_target_parallel_do,
         Directive::OMPD_target_parallel_do_simd,
+        Directive::OMPD_target_parallel_loop,
         Directive::OMPD_target_teams_distribute_parallel_do,
         Directive::OMPD_target_teams_distribute_parallel_do_simd,
         Directive::OMPD_teams_distribute_parallel_do,
@@ -118,12 +135,15 @@ static const OmpDirectiveSet topTargetSet{
     Directive::OMPD_target_parallel,
     Directive::OMPD_target_parallel_do,
     Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_parallel_loop,
     Directive::OMPD_target_simd,
     Directive::OMPD_target_teams,
     Directive::OMPD_target_teams_distribute,
     Directive::OMPD_target_teams_distribute_parallel_do,
     Directive::OMPD_target_teams_distribute_parallel_do_simd,
     Directive::OMPD_target_teams_distribute_simd,
+    Directive::OMPD_target_teams_loop,
+    Directive::OMPD_target_teams_workdistribute,
 };
 
 static const OmpDirectiveSet allTargetSet{topTargetSet};
@@ -152,15 +172,24 @@ static const OmpDirectiveSet topTeamsSet{
     Directive::OMPD_teams_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
+    Directive::OMPD_teams_loop,
+    Directive::OMPD_teams_workdistribute,
+};
+
+static const OmpDirectiveSet bottomTeamsSet{
+    Directive::OMPD_target_teams,
+    Directive::OMPD_teams,
 };
 
 static const OmpDirectiveSet allTeamsSet{
     OmpDirectiveSet{
-        llvm::omp::OMPD_target_teams,
-        llvm::omp::OMPD_target_teams_distribute,
-        llvm::omp::OMPD_target_teams_distribute_parallel_do,
-        llvm::omp::OMPD_target_teams_distribute_parallel_do_simd,
-        llvm::omp::OMPD_target_teams_distribute_simd,
+        Directive::OMPD_target_teams,
+        Directive::OMPD_target_teams_distribute,
+        Directive::OMPD_target_teams_distribute_parallel_do,
+        Directive::OMPD_target_teams_distribute_parallel_do_simd,
+        Directive::OMPD_target_teams_distribute_simd,
+        Directive::OMPD_target_teams_loop,
+        Directive::OMPD_target_teams_workdistribute,
     } | topTeamsSet,
 };
 
@@ -178,11 +207,23 @@ static const OmpDirectiveSet allDistributeSimdSet{
 static const OmpDirectiveSet allDoSimdSet{allDoSet & allSimdSet};
 static const OmpDirectiveSet allTaskloopSimdSet{allTaskloopSet & allSimdSet};
 
+static const OmpDirectiveSet compositeConstructSet{
+    Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_distribute_simd,
+    Directive::OMPD_do_simd,
+    Directive::OMPD_taskloop_simd,
+};
+
 static const OmpDirectiveSet blockConstructSet{
+    Directive::OMPD_masked,
     Directive::OMPD_master,
     Directive::OMPD_ordered,
     Directive::OMPD_parallel,
+    Directive::OMPD_parallel_masked,
+    Directive::OMPD_parallel_master,
     Directive::OMPD_parallel_workshare,
+    Directive::OMPD_scope,
     Directive::OMPD_single,
     Directive::OMPD_target,
     Directive::OMPD_target_data,
@@ -192,6 +233,9 @@ static const OmpDirectiveSet blockConstructSet{
     Directive::OMPD_taskgroup,
     Directive::OMPD_teams,
     Directive::OMPD_workshare,
+    Directive::OMPD_target_teams_workdistribute,
+    Directive::OMPD_teams_workdistribute,
+    Directive::OMPD_workdistribute,
 };
 
 static const OmpDirectiveSet loopConstructSet{
@@ -201,32 +245,45 @@ static const OmpDirectiveSet loopConstructSet{
     Directive::OMPD_distribute_simd,
     Directive::OMPD_do,
     Directive::OMPD_do_simd,
+    Directive::OMPD_loop,
     Directive::OMPD_masked_taskloop,
     Directive::OMPD_masked_taskloop_simd,
     Directive::OMPD_master_taskloop,
     Directive::OMPD_master_taskloop_simd,
     Directive::OMPD_parallel_do,
     Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_parallel_loop,
     Directive::OMPD_parallel_masked_taskloop,
     Directive::OMPD_parallel_masked_taskloop_simd,
     Directive::OMPD_parallel_master_taskloop,
     Directive::OMPD_parallel_master_taskloop_simd,
     Directive::OMPD_simd,
+    Directive::OMPD_target_loop,
     Directive::OMPD_target_parallel_do,
     Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_parallel_loop,
     Directive::OMPD_target_simd,
     Directive::OMPD_target_teams_distribute,
     Directive::OMPD_target_teams_distribute_parallel_do,
     Directive::OMPD_target_teams_distribute_parallel_do_simd,
     Directive::OMPD_target_teams_distribute_simd,
+    Directive::OMPD_target_teams_loop,
     Directive::OMPD_taskloop,
     Directive::OMPD_taskloop_simd,
     Directive::OMPD_teams_distribute,
     Directive::OMPD_teams_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
+    Directive::OMPD_teams_loop,
+    Directive::OMPD_fuse,
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
+};
+
+static const OmpDirectiveSet loopTransformationSet{
+    Directive::OMPD_tile,
+    Directive::OMPD_unroll,
+    Directive::OMPD_fuse,
 };
 
 static const OmpDirectiveSet nonPartialVarSet{
@@ -247,10 +304,17 @@ static const OmpDirectiveSet workShareSet{
         Directive::OMPD_workshare,
         Directive::OMPD_parallel_workshare,
         Directive::OMPD_parallel_sections,
+        Directive::OMPD_scope,
         Directive::OMPD_sections,
         Directive::OMPD_single,
     } | allDoSet,
 };
+
+//===----------------------------------------------------------------------===//
+// Directive sets for parent directives that do allow/not allow a construct
+//===----------------------------------------------------------------------===//
+
+static const OmpDirectiveSet scanParentAllowedSet{allDoSet | allSimdSet};
 
 //===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives
@@ -325,10 +389,12 @@ static const OmpDirectiveSet nestedReduceWorkshareAllowedSet{
 };
 
 static const OmpDirectiveSet nestedTeamsAllowedSet{
+    Directive::OMPD_workdistribute,
     Directive::OMPD_distribute,
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_distribute_simd,
+    Directive::OMPD_loop,
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_do,
     Directive::OMPD_parallel_do_simd,
@@ -349,6 +415,22 @@ static const OmpDirectiveSet nestedWorkshareErrSet{
         Directive::OMPD_taskloop,
     } | workShareSet,
 };
+
+//===----------------------------------------------------------------------===//
+// Misc directive sets
+//===----------------------------------------------------------------------===//
+
+// Simple standalone directives than can be erased by -fopenmp-simd.
+static const OmpDirectiveSet simpleStandaloneNonSimdOnlySet{
+    Directive::OMPD_taskyield,
+    Directive::OMPD_barrier,
+    Directive::OMPD_ordered,
+    Directive::OMPD_target_enter_data,
+    Directive::OMPD_target_exit_data,
+    Directive::OMPD_target_update,
+    Directive::OMPD_taskwait,
+};
+
 } // namespace llvm::omp
 
 #endif // FORTRAN_SEMANTICS_OPENMP_DIRECTIVE_SETS_H_

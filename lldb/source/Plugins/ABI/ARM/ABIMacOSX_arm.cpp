@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -27,6 +26,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -36,12 +36,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 static const RegisterInfo g_register_infos[] = {
-    //  NAME       ALT       SZ OFF ENCODING         FORMAT          EH_FRAME
-    //  DWARF               GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE
-    //  ========== =======   == === =============    ============
-    //  ======================= =================== ===========================
-    //  ======================= ======================
     {"r0",
      nullptr,
      4,
@@ -1453,7 +1447,8 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (compiler_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+      std::optional<uint64_t> bit_size =
+          llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
       if (!bit_size)
         return false;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed))
@@ -1559,7 +1554,8 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info = reg_ctx->GetRegisterInfoByName("r0", 0);
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_width)
       return return_valobj_sp;
 
@@ -1580,7 +1576,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
               reg_ctx->GetRegisterInfoByName("r3", 0);
           if (r1_reg_info && r2_reg_info && r3_reg_info) {
             std::optional<uint64_t> byte_size =
-                compiler_type.GetByteSize(&thread);
+                llvm::expectedToOptional(compiler_type.GetByteSize(&thread));
             if (!byte_size)
               return return_valobj_sp;
             ProcessSP process_sp(thread.GetProcess());
@@ -1686,20 +1682,19 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                            lldb::ValueObjectSP &new_value_sp) {
   Status error;
   if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
+    error = Status::FromErrorString("Empty value object for return value.");
     return error;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    error.SetErrorString("Null clang type for return value.");
+    error = Status::FromErrorString("Null clang type for return value.");
     return error;
   }
 
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -1711,7 +1706,7 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
           data_error.AsCString());
       return error;
@@ -1767,75 +1762,67 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         }
       }
     } else {
-      error.SetErrorString("We don't support returning longer than 64 bit "
-                           "integer values at present.");
+      error = Status::FromErrorString(
+          "We don't support returning longer than 64 bit "
+          "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "We don't support returning complex values at present");
     else
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "We don't support returning float values at present");
   }
 
   if (!set_it_simple)
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "We only support setting simple integer return types at present.");
 
   return error;
 }
 
-bool ABIMacOSX_arm::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABIMacOSX_arm::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = dwarf_lr;
   uint32_t sp_reg_num = dwarf_sp;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // The previous PC is in the LR
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-  unwind_plan.AppendRow(row);
+  // The previous PC is in the LR, all other registers are the same.
+  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("arm at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("arm at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABIMacOSX_arm::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABIMacOSX_arm::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num =
       dwarf_r7; // apple uses r7 for all frames. Normal arm uses r11
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 4;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("arm-apple-ios default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("arm-apple-ios default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // cf. "ARMv6 Function Calling Conventions"

@@ -9,6 +9,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h" // ldexp
 #include "src/__support/FPUtil/generic/FMod.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -18,7 +19,7 @@
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T, bool InverseMultiplication>
-class LlvmLibcFModTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcFModTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using U = typename FPBits::StorageType;
@@ -47,13 +48,13 @@ public:
     int max2 = 3 + FPBits::MAX_BIASED_EXPONENT / 2;
     for (T by : TEST_BASES) {
       for (int iy = min2; iy < max2; iy++) {
-        T y = by * LIBC_NAMESPACE::fputil::ldexp(2.0, iy);
+        T y = by * LIBC_NAMESPACE::fputil::ldexp(T(2.0), iy);
         FPBits y_bits(y);
         if (y_bits.is_zero() || !y_bits.is_finite())
           continue;
         for (T bx : TEST_BASES) {
           for (int ix = min2; ix < max2; ix++) {
-            T x = bx * LIBC_NAMESPACE::fputil::ldexp(2.0, ix);
+            T x = bx * LIBC_NAMESPACE::fputil::ldexp(T(2.0), ix);
             if (!FPBits(x).is_finite())
               continue;
             T result = FMod::eval(x, y);

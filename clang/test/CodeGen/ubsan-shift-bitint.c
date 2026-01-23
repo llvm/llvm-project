@@ -5,15 +5,17 @@
 
 // CHECK-LABEL: define{{.*}} i32 @test_left_variable
 int test_left_variable(unsigned _BitInt(5) b, unsigned _BitInt(2) e) {
-  // CHECK: [[E_REG:%.+]] = load [[E_SIZE:i2]]
-  // CHECK: icmp ule [[E_SIZE]] [[E_REG]], -1
+  // CHECK: load i8
+  // CHECK: [[E_REG:%.+]] = trunc i8 {{.*}} to [[E_SIZE:i2]]
+  // CHECK: icmp ule [[E_SIZE]] [[E_REG]], -1,
   return b << e;
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_right_variable
 int test_right_variable(unsigned _BitInt(2) b, unsigned _BitInt(3) e) {
-  // CHECK: [[E_REG:%.+]] = load [[E_SIZE:i3]]
-  // CHECK: icmp ule [[E_SIZE]] [[E_REG]], 1
+  // CHECK: load i8
+  // CHECK: [[E_REG:%.+]] = trunc i8 {{.*}} to [[E_SIZE:i3]]
+  // CHECK: icmp ule [[E_SIZE]] [[E_REG]], 1,
   return b >> e;
 }
 
@@ -34,3 +36,34 @@ int test_right_literal(unsigned _BitInt(2) b) {
   // CHECK: br i1 false, label %cont, label %handler.shift_out_of_bounds
   return b >> 4uwb;
 }
+
+// CHECK-LABEL: define{{.*}} i32 @test_signed_left_variable
+int test_signed_left_variable(unsigned _BitInt(15) b, _BitInt(2) e) {
+  // CHECK: load i8
+  // CHECK: [[E_REG:%.+]] = trunc i8 {{.*}} to [[E_SIZE:i2]]
+  // CHECK: icmp ule [[E_SIZE]] [[E_REG]], 1,
+  return b << e;
+}
+
+// CHECK-LABEL: define{{.*}} i32 @test_signed_right_variable
+int test_signed_right_variable(unsigned _BitInt(32) b, _BitInt(4) e) {
+  // CHECK: load i8
+  // CHECK: [[E_REG:%.+]] = trunc i8 {{.*}} to [[E_SIZE:i4]]
+  // CHECK: icmp ule [[E_SIZE]] [[E_REG]], 7,
+  return b >> e;
+}
+
+// CHECK-LABEL: define{{.*}} i32 @test_signed_left_literal
+int test_signed_left_literal(unsigned _BitInt(16) b) {
+  // CHECK-NOT: br i1 true, label %cont, label %handler.shift_out_of_bounds
+  // CHECK: br i1 false, label %cont, label %handler.shift_out_of_bounds
+  return b << (_BitInt(4))-2wb;
+}
+
+// CHECK-LABEL: define{{.*}} i32 @test_signed_right_literal
+int test_signed_right_literal(unsigned _BitInt(16) b) {
+  // CHECK-NOT: br i1 true, label %cont, label %handler.shift_out_of_bounds
+  // CHECK: br i1 false, label %cont, label %handler.shift_out_of_bounds
+  return b >> (_BitInt(4))-8wb;
+}
+

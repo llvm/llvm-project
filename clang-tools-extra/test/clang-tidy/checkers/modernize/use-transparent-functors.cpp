@@ -75,18 +75,18 @@ int main() {
   using std::less;
   std::set<int, std::less<int>> s;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: prefer transparent functors 'less<>' [modernize-use-transparent-functors]
-  // CHECK-FIXES: {{^}}  std::set<int, std::less<>> s;{{$}}
+  // CHECK-FIXES: std::set<int, std::less<>> s;
   set<int, std::less<int>> s2;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: prefer transparent functors
-  // CHECK-FIXES: {{^}}  set<int, std::less<>> s2;{{$}}
+  // CHECK-FIXES: set<int, std::less<>> s2;
   set<int, less<int>> s3;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: prefer transparent functors
-  // CHECK-FIXES: {{^}}  set<int, less<>> s3;{{$}}
+  // CHECK-FIXES: set<int, less<>> s3;
   std::set<int, std::less<>> s4;
   std::set<char *, std::less<std::string>> s5;
   std::set<set<int, less<int>>, std::less<>> s6;
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: prefer transparent functors
-  // CHECK-FIXES: {{^}}  std::set<set<int, less<>>, std::less<>> s6;{{$}}
+  // CHECK-FIXES: std::set<set<int, less<>>, std::less<>> s6;
   std::iterator begin, end;
   sort(begin, end, std::less<int>());
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: prefer transparent functors
@@ -96,7 +96,7 @@ int main() {
   std::find_if(begin, end, std::logical_not<>());
   using my_set = std::set<int, std::less<int>>;
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: prefer transparent functors
-  // CHECK-FIXES: {{^}}  using my_set = std::set<int, std::less<>>;{{$}}
+  // CHECK-FIXES: using my_set = std::set<int, std::less<>>;
   using my_set2 = std::set<char*, std::less<std::string>>;
   using my_less = std::less<std::string>;
   find_if(begin, end, my_less());

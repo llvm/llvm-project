@@ -9,20 +9,24 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
-#include <fenv.h>
-#include <stdio.h>
+#include "hdr/fenv_macros.h"
+#include "hdr/math_macros.h"
+
+using LIBC_NAMESPACE::Sign;
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename T>
-class RIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class RIntTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef T (*RIntFunc)(T);
 

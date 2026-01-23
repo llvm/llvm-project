@@ -21,7 +21,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -77,55 +76,6 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
 //===----------------------------------------------------------------------===//
 // Language Keyword Implementation
 //===----------------------------------------------------------------------===//
-
-// Constants for TokenKinds.def
-namespace {
-
-  enum TokenKey : unsigned {
-    KEYC99        = 0x1,
-    KEYCXX        = 0x2,
-    KEYCXX11      = 0x4,
-    KEYGNU        = 0x8,
-    KEYMS         = 0x10,
-    BOOLSUPPORT   = 0x20,
-    KEYALTIVEC    = 0x40,
-    KEYNOCXX      = 0x80,
-    KEYBORLAND    = 0x100,
-    KEYOPENCLC    = 0x200,
-    KEYC23        = 0x400,
-    KEYNOMS18     = 0x800,
-    KEYNOOPENCL   = 0x1000,
-    WCHARSUPPORT  = 0x2000,
-    HALFSUPPORT   = 0x4000,
-    CHAR8SUPPORT  = 0x8000,
-    KEYOBJC       = 0x10000,
-    KEYZVECTOR    = 0x20000,
-    KEYCOROUTINES = 0x40000,
-    KEYMODULES    = 0x80000,
-    KEYCXX20      = 0x100000,
-    KEYOPENCLCXX  = 0x200000,
-    KEYMSCOMPAT   = 0x400000,
-    KEYSYCL       = 0x800000,
-    KEYCUDA       = 0x1000000,
-    KEYHLSL       = 0x2000000,
-    KEYFIXEDPOINT = 0x4000000,
-    KEYMAX        = KEYFIXEDPOINT, // The maximum key
-    KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-    KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
-             ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
-  };
-
-  /// How a keyword is treated in the selected standard. This enum is ordered
-  /// intentionally so that the value that 'wins' is the most 'permissive'.
-  enum KeywordStatus {
-    KS_Unknown,     // Not yet calculated. Used when figuring out the status.
-    KS_Disabled,    // Disabled
-    KS_Future,      // Is a keyword in future standard
-    KS_Extension,   // Is an extension
-    KS_Enabled,     // Enabled
-  };
-
-} // namespace
 
 // This works on a single TokenKey flag and checks the LangOpts to get the
 // KeywordStatus based exclusively on this flag, so that it can be merged in
@@ -199,6 +149,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.isSYCL() ? KS_Enabled : KS_Unknown;
   case KEYCUDA:
     return LangOpts.CUDA ? KS_Enabled : KS_Unknown;
+  case KEYZOS:
+    return LangOpts.ZOSExt ? KS_Enabled : KS_Unknown;
   case KEYHLSL:
     return LangOpts.HLSL ? KS_Enabled : KS_Unknown;
   case KEYNOCXX:
@@ -206,21 +158,20 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     // reasons as well.
     return LangOpts.CPlusPlus ? KS_Unknown : KS_Enabled;
   case KEYNOOPENCL:
-    // The disable behavior for this is handled in getKeywordStatus.
-    return KS_Unknown;
   case KEYNOMS18:
+  case KEYNOZOS:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
   case KEYFIXEDPOINT:
     return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
+  case KEYDEFERTS:
+    return LangOpts.DeferTS ? KS_Enabled : KS_Disabled;
   default:
     llvm_unreachable("Unknown KeywordStatus flag");
   }
 }
 
-/// Translates flags as specified in TokenKinds.def into keyword status
-/// in the given language standard.
-static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
+KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
                                       unsigned Flags) {
   // KEYALL means always enabled, so special case this one.
   if (Flags == KEYALL) return KS_Enabled;
@@ -230,7 +181,8 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
     return KS_Disabled;
-
+  if (LangOpts.ZOSExt && (Flags & KEYNOZOS))
+    return KS_Disabled;
   KeywordStatus CurStatus = KS_Unknown;
 
   while (Flags != 0) {
@@ -246,6 +198,18 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   return CurStatus;
 }
 
+static bool IsKeywordInCpp(unsigned Flags) {
+  return (Flags & (KEYCXX | KEYCXX11 | KEYCXX20 | BOOLSUPPORT | WCHARSUPPORT |
+                   CHAR8SUPPORT)) != 0;
+}
+
+static void MarkIdentifierAsKeywordInCpp(IdentifierTable &Table,
+                                         StringRef Name) {
+  IdentifierInfo &II = Table.get(Name, tok::identifier);
+  II.setIsKeywordInCPlusPlus();
+  II.setHandleIdentifierCase();
+}
+
 /// AddKeyword - This method is used to associate a token ID with specific
 /// identifiers because they are language keywords.  This causes the lexer to
 /// automatically map matching identifiers to specialized token codes.
@@ -254,8 +218,18 @@ static void AddKeyword(StringRef Keyword,
                        const LangOptions &LangOpts, IdentifierTable &Table) {
   KeywordStatus AddResult = getKeywordStatus(LangOpts, Flags);
 
-  // Don't add this keyword if disabled in this language.
-  if (AddResult == KS_Disabled) return;
+  // Don't add this keyword if disabled in this language and isn't otherwise
+  // special.
+  if (AddResult == KS_Disabled) {
+    // We do not consider any identifiers to be C++ keywords when in
+    // Objective-C because @ effectively introduces a custom grammar where C++
+    // keywords can be used (and similar for selectors). We could enable this
+    // for Objective-C, but it would require more logic to ensure we do not
+    // issue compatibility diagnostics in these cases.
+    if (!LangOpts.ObjC && IsKeywordInCpp(Flags))
+      MarkIdentifierAsKeywordInCpp(Table, Keyword);
+    return;
+  }
 
   IdentifierInfo &Info =
       Table.get(Keyword, AddResult == KS_Future ? tok::identifier : TokenCode);
@@ -300,9 +274,11 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define ALIAS(NAME, TOK, FLAGS) \
   AddKeyword(StringRef(NAME), tok::kw_ ## TOK,  \
              FLAGS, LangOpts, *this);
-#define CXX_KEYWORD_OPERATOR(NAME, ALIAS) \
-  if (LangOpts.CXXOperatorNames)          \
-    AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);
+#define CXX_KEYWORD_OPERATOR(NAME, ALIAS)                                      \
+  if (LangOpts.CXXOperatorNames)                                               \
+    AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);                \
+  else                                                                         \
+    MarkIdentifierAsKeywordInCpp(*this, StringRef(#NAME));
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
@@ -322,8 +298,11 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.IEEE128)
     AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
 
-  // Add the 'import' contextual keyword.
-  get("import").setModulesImport(true);
+  // Add the 'import' and 'module' contextual keywords.
+  get("import").setKeywordImport(true);
+  get("module").setModuleKeyword(true);
+  get("__preprocessed_import").setKeywordImport(true);
+  get("__preprocessed_module").setModuleKeyword(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the
@@ -402,6 +381,9 @@ ReservedLiteralSuffixIdStatus
 IdentifierInfo::isReservedLiteralSuffixId() const {
   StringRef Name = getName();
 
+  // Note: the diag::warn_deprecated_literal_operator_id diagnostic depends on
+  // this being the first check we do, so if this order changes, we have to fix
+  // that as well.
   if (Name[0] != '_')
     return ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore;
 
@@ -425,8 +407,8 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // collisions (if there were, the switch below would complain about duplicate
   // case values).  Note that this depends on 'if' being null terminated.
 
-#define HASH(LEN, FIRST, THIRD) \
-  (LEN << 5) + (((FIRST-'a') + (THIRD-'a')) & 31)
+#define HASH(LEN, FIRST, THIRD)                                                \
+  (LEN << 6) + (((FIRST - 'a') - (THIRD - 'a')) & 63)
 #define CASE(LEN, FIRST, THIRD, NAME) \
   case HASH(LEN, FIRST, THIRD): \
     return memcmp(Name, #NAME, LEN) ? tok::pp_not_keyword : tok::pp_ ## NAME
@@ -434,6 +416,13 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   unsigned Len = getLength();
   if (Len < 2) return tok::pp_not_keyword;
   const char *Name = getNameStart();
+
+  if (Name[0] == '_' && isImportKeyword())
+    return tok::pp___preprocessed_import;
+  if (Name[0] == '_' && isModuleKeyword())
+    return tok::pp___preprocessed_module;
+
+  // clang-format off
   switch (HASH(Len, Name[0], Name[2])) {
   default: return tok::pp_not_keyword;
   CASE( 2, 'i', '\0', if);
@@ -441,6 +430,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 4, 'e', 's', else);
   CASE( 4, 'l', 'n', line);
   CASE( 4, 's', 'c', sccs);
+  CASE( 5, 'e', 'b', embed);
   CASE( 5, 'e', 'd', endif);
   CASE( 5, 'e', 'r', error);
   CASE( 5, 'i', 'e', ident);
@@ -451,6 +441,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 6, 'd', 'f', define);
   CASE( 6, 'i', 'n', ifndef);
   CASE( 6, 'i', 'p', import);
+  CASE( 6, 'm', 'd', module);
   CASE( 6, 'p', 'a', pragma);
 
   CASE( 7, 'd', 'f', defined);
@@ -470,6 +461,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
 #undef CASE
 #undef HASH
   }
+  // clang-format on
 }
 
 //===----------------------------------------------------------------------===//
@@ -541,7 +533,8 @@ unsigned Selector::getNumArgs() const {
   return SI->getNumArgs();
 }
 
-IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
+const IdentifierInfo *
+Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
   if (getIdentifierInfoFlag() < MultiArg) {
     assert(argIndex == 0 && "illegal keyword index");
     return getAsIdentifierInfo();
@@ -553,7 +546,7 @@ IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
 }
 
 StringRef Selector::getNameForSlot(unsigned int argIndex) const {
-  IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
+  const IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
   return II ? II->getName() : StringRef();
 }
 
@@ -574,7 +567,7 @@ std::string Selector::getAsString() const {
     return "<null selector>";
 
   if (getIdentifierInfoFlag() < MultiArg) {
-    IdentifierInfo *II = getAsIdentifierInfo();
+    const IdentifierInfo *II = getAsIdentifierInfo();
 
     if (getNumArgs() == 0) {
       assert(II && "If the number of arguments is 0 then II is guaranteed to "
@@ -608,7 +601,7 @@ static bool startsWithWord(StringRef name, StringRef word) {
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OMF_None;
 
   StringRef name = first->getName();
@@ -655,7 +648,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
 }
 
 ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OIT_None;
 
   StringRef name = first->getName();
@@ -683,7 +676,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
 }
 
 ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return SFF_None;
 
   StringRef name = first->getName();
@@ -750,7 +743,8 @@ size_t SelectorTable::getTotalMemory() const {
   return SelTabImpl.Allocator.getTotalMemory();
 }
 
-Selector SelectorTable::getSelector(unsigned nKeys, IdentifierInfo **IIV) {
+Selector SelectorTable::getSelector(unsigned nKeys,
+                                    const IdentifierInfo **IIV) {
   if (nKeys < 2)
     return Selector(IIV[0], nKeys);
 

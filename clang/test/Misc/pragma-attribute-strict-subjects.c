@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-pragma-clang-attribute -verify %s
-// RUN: not %clang_cc1 -fsyntax-only -ast-dump -ast-dump-filter test %s | FileCheck %s
+// RUN: not %clang_cc1 -ast-dump -ast-dump-filter test %s | FileCheck %s
 
 // Check for contradictions in rules for attribute without a strict subject set:
 
@@ -51,7 +51,7 @@ struct testRecoverStrictnessStruct { };
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, record(unless(is_union)), variable, enum))
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
 
 int testRecoverExtraVar = 0;
 // CHECK-LABEL: VarDecl{{.*}} testRecoverExtraVar
@@ -188,7 +188,7 @@ struct testSubset7Struct { };
 
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(record(unless(is_union)), function, variable, enum, enum_constant))
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum_constant', and 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum_constant', and 'enum'}}
 
 int testSubsetRecoverVar;
 // CHECK-LABEL: VarDecl{{.*}} testSubsetRecoverVar
@@ -205,7 +205,7 @@ struct testSubsetRecoverStruct { };
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = enum)
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
 
 int testSubsetNoVar;
 // CHECK-LABEL: VarDecl{{.*}} testSubsetNoVar

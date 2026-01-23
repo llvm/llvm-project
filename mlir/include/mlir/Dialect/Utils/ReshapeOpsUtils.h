@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 #define MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -57,12 +58,12 @@ getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation);
 
 /// Wraps a list of reassociations in an ArrayAttr.
 ArrayAttr
-getReassociationIndicesAttribute(OpBuilder &b,
+getReassociationIndicesAttribute(Builder &b,
                                  ArrayRef<ReassociationIndices> reassociation);
 
 /// Convert Array<Array<AffineExpr>> to Array<Array<int64_t>>.
 SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
-    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs);
+    ArrayRef<ReassociationExprs> reassociationExprs);
 
 /// Return the reassociations maps to use to reshape given the source type and
 /// the target type when possible. Return std::nullopt when this computation
@@ -85,21 +86,49 @@ bool isReassociationValid(ArrayRef<AffineMap> reassociation,
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
-
+  // Fold identity reshape.
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
-
-  // Fold producer-consumer reshape ops where the operand type of the
-  // producer is same as the return type of the consumer.
-  auto reshapeSrcOp =
-      reshapeOp.getSrc().template getDefiningOp<InverseReshapeOpTy>();
-  if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
-    return reshapeSrcOp.getSrc();
 
   // Reshape of a constant can be replaced with a new constant.
   if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front()))
     return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
 
+  // Fold if the producer reshape source has the same shape with at most 1
+  // dynamic dimension.
+  auto reshapeSrcOp =
+      reshapeOp.getSrc().template getDefiningOp<InverseReshapeOpTy>();
+  if (!reshapeSrcOp)
+    return nullptr;
+  auto srcType = reshapeSrcOp.getSrcType();
+  auto resultType = reshapeOp.getResultType();
+  if (srcType != resultType)
+    return nullptr;
+
+  if (llvm::count_if(srcType.getShape(), ShapedType::isDynamic) < 2) {
+    return reshapeSrcOp.getSrc();
+  }
+
+  // Fold producer-consumer reshape ops when they are perfect inverses of each
+  // other:
+  //   1) Reassociation indices are equivalent.
+  //   2) Boundary types are equivalent.
+  //   3) No reassociations have more than 1 dynamic dimension, and reassociated
+  //      shapes are equal for each reassociation.
+  auto reassociations = reshapeOp.getReassociationIndices();
+  if (reassociations != reshapeSrcOp.getReassociationIndices())
+    return nullptr;
+  // If the reshapes are expanding and then collapsing, the ops can be folded
+  // despite multiple dynamic dimensions.
+  if (srcType.getRank() < reshapeSrcOp.getResultType().getRank())
+    return reshapeSrcOp.getSrc();
+  if (llvm::all_of(reassociations, [&](auto reInd) {
+        ArrayRef<int64_t> srcSlice =
+            srcType.getShape().slice(reInd.front(), reInd.size());
+        return llvm::count_if(srcSlice, ShapedType::isDynamic) < 2;
+      })) {
+    return reshapeSrcOp.getSrc();
+  }
   return nullptr;
 }
 
@@ -140,14 +169,11 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
       op.getReassociationIndices(), isExpansion);
 }
 
-/// Verify that shapes of the reshaped types using following rules
-/// 1) if a dimension in the collapsed type is static, then the corresponding
-///    dimensions in the expanded shape should be
+/// Verify that shapes of the reshaped types using following rule:
+/// if a dimension in the collapsed type is static, then the corresponding
+/// dimensions in the expanded shape should be
 ///    a) static
 ///    b) the product should be same as the collaped shape.
-/// 2) if a dimension in the collaped type is dynamic, one and only one of the
-///    corresponding dimensions in the expanded type should be dynamic. This
-///    rule is only needed with reshape operations that are expanding.
 LogicalResult reshapeLikeShapesAreCompatible(
     function_ref<LogicalResult(const Twine &)> emitError,
     ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
@@ -156,9 +182,11 @@ LogicalResult reshapeLikeShapesAreCompatible(
 /// Returns true iff the type is a MemRefType and has a non-identity layout.
 bool hasNonIdentityLayout(Type type);
 
+enum class ReshapeOpKind { kExpand, kCollapse };
+
 /// Pattern to collapse producer/consumer reshape ops that are both collapsing
 /// dimensions or are both expanding dimensions.
-template <typename ReshapeOpTy>
+template <typename ReshapeOpTy, ReshapeOpKind opKind>
 struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
   using OpRewritePattern<ReshapeOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ReshapeOpTy reshapeOp,
@@ -181,8 +209,18 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
                                     rewriter.getContext());
     if (!reassociationIndices)
       return failure();
-    rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-        reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices);
+
+    if constexpr (opKind == ReshapeOpKind::kExpand) {
+      SmallVector<OpFoldResult> outputShape(
+          getMixedValues(reshapeOp.getStaticOutputShape(),
+                         reshapeOp.getOutputShape(), rewriter));
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices,
+          outputShape);
+    } else {
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices);
+    }
     return success();
   }
 };
@@ -215,7 +253,8 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
 //
 /// When `rank(srcType) < rank(resultType)`, then we just swap `reassociation_1`
 /// `reassociation_2` and produce `expand_shape`.
-template <typename CollapseOpTy, typename ExpandOpTy, typename CastOpTy>
+template <typename CollapseOpTy, typename ExpandOpTy, typename CastOpTy,
+          typename DimOpTy, typename TensorTy>
 struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
   using OpRewritePattern<CollapseOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(CollapseOpTy collapseOp,
@@ -267,8 +306,43 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
           collapseOp, resultType, expandOp.getSrc(), composedReassociation);
     } else if (srcRank < resultRank) {
+      // Compute the dynamic output shape for the new expand_shape op.
+      Location loc = collapseOp.getLoc();
+      SmallVector<OpFoldResult> origOutputShape =
+          expandOp.getMixedOutputShape();
+      SmallVector<OpFoldResult> newOutputShape;
+      for (const ReassociationIndices &indices :
+           collapseOp.getReassociationIndices()) {
+        int64_t numStaticElems = 1;
+        SmallVector<Value> dynamicSizes;
+        for (int64_t idx : indices) {
+          OpFoldResult size = origOutputShape[idx];
+          if (std::optional<int64_t> maybeCst = getConstantIntValue(size)) {
+            numStaticElems *= maybeCst.value();
+            continue;
+          }
+          dynamicSizes.push_back(cast<Value>(size));
+        }
+        if (dynamicSizes.empty()) {
+          newOutputShape.push_back(rewriter.getIndexAttr(numStaticElems));
+          continue;
+        }
+
+        // There is at least one dynamic size, so we can initialize `result` to
+        // the first dynamic size.
+        Value result = dynamicSizes[0];
+        for (Value v : llvm::drop_begin(dynamicSizes))
+          result = arith::MulIOp::create(rewriter, loc, result, v);
+        if (numStaticElems != 1) {
+          result = arith::MulIOp::create(
+              rewriter, loc, result,
+              arith::ConstantIndexOp::create(rewriter, loc, numStaticElems));
+        }
+        newOutputShape.push_back(result);
+      }
       rewriter.replaceOpWithNewOp<ExpandOpTy>(
-          collapseOp, resultType, expandOp.getSrc(), composedReassociation);
+          collapseOp, resultType, expandOp.getSrc(), composedReassociation,
+          newOutputShape);
     } else {
       // Collapses/expansions that do not change the rank are not allowed. Use
       // a cast instead.
@@ -281,7 +355,7 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
   }
 };
 
-template <typename ExpandOpTy, typename CollapseOpTy>
+template <typename ExpandOpTy, typename CollapseOpTy, typename CastOpTy>
 struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
   using OpRewritePattern<ExpandOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ExpandOpTy expandOp,
@@ -295,12 +369,18 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
 
     if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
-        hasNonIdentityLayout(collapseOp.getResult().getType()))
+        hasNonIdentityLayout(collapseOp.getResult().getType())) {
+      if (CastOpTy::areCastCompatible(srcType, resultType)) {
+        rewriter.replaceOpWithNewOp<CastOpTy>(expandOp, resultType,
+                                              collapseOp.getSrc());
+        return success();
+      }
       return failure();
+    }
 
     int64_t srcRank = srcType.getRank();
     int64_t resultRank = resultType.getRank();
-    if (srcType == resultType)
+    if (srcRank == resultRank)
       return failure();
 
     auto srcReassociation = collapseOp.getReassociationIndices();
@@ -322,8 +402,11 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     if (!composedReassociation)
       return failure();
 
+    SmallVector<OpFoldResult> outputShape(getMixedValues(
+        expandOp.getStaticOutputShape(), expandOp.getOutputShape(), rewriter));
     rewriter.replaceOpWithNewOp<ExpandOpTy>(
-        expandOp, resultType, collapseOp.getSrc(), *composedReassociation);
+        expandOp, resultType, collapseOp.getSrc(), *composedReassociation,
+        outputShape);
     return success();
   }
 
@@ -346,11 +429,18 @@ private:
       auto resultSubShape =
           resultShape.slice(resultIndices.front(), resultIndices.size());
 
+      if (llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2 &&
+          llvm::count_if(resultSubShape, ShapedType::isDynamic) >= 2)
+        return std::nullopt;
+
       if (srcSubShape.size() == resultSubShape.size()) {
-        if (srcSubShape == resultSubShape)
-          composedReassociation.push_back(srcIndices);
-        else
+        if (srcSubShape != resultSubShape)
           return std::nullopt;
+
+        for (auto index : llvm::seq<int64_t>(0, srcSubShape.size())) {
+          composedReassociation.emplace_back(1, srcIndices.front() + index);
+        }
+        continue;
       }
 
       // Find reassociation to collapse `srcSubShape` into `resultSubShape`.
@@ -360,11 +450,11 @@ private:
         return std::nullopt;
 
       // Remap the subshape indices back to the original srcShape.
-      for (auto &subshape_indices : *subShapeReassociation) {
-        ReassociationIndices shape_indices;
-        for (int64_t index : subshape_indices)
-          shape_indices.push_back(srcIndices.front() + index);
-        composedReassociation.push_back(shape_indices);
+      for (auto &subshapeIndices : *subShapeReassociation) {
+        ReassociationIndices shapeIndices;
+        for (int64_t index : subshapeIndices)
+          shapeIndices.push_back(srcIndices.front() + index);
+        composedReassociation.push_back(shapeIndices);
       }
     }
     return {std::move(composedReassociation)};
@@ -406,7 +496,7 @@ getLinearizedDimensions(ArrayRef<ReassociationIndices> reassociationIndices);
 ///    %4 = tensor.extract_slice %0 [%3#0, %3#1, %3#2, 0] [1, 1, 1, 10] [1, 1, 1, 1] :
 ///          tensor<3x7x11x10xf32> to tensor<1x1x1x10xf32>
 ///
-///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] : 
+///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] :
 ///          tensor<1x1x1x10xf32> into tensor<1x10xf32>
 ///    %6 = tensor.insert_slice %5 into %arg0 [%iv, 0] [1, 10] [1, 1] :
 ///          tensor<1x10xf32> into tensor<10x10xf32>
@@ -523,6 +613,13 @@ struct PackingMetadata {
 // repeated N^2 counts).
 PackingMetadata computePackingMetadata(int64_t packedRank,
                                        ArrayRef<int64_t> innerDimPos);
+
+/// Try to remove a tensor operation if it would only reshape a constant.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape. When an optional cst attribute is passed, it is reshaped only if the
+/// splat value matches the value in the attribute.
+OpFoldResult reshapeConstantSource(DenseElementsAttr source, TensorType result,
+                                   std::optional<Attribute> cst = std::nullopt);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

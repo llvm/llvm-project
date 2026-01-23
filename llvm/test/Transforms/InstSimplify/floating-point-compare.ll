@@ -205,7 +205,7 @@ define i1 @one_with_self(double %arg) {
 ; and between uge and olt, to give reasonble coverage
 ; without combinatorial explosion.
 
-define i1 @orderedLessZeroTree(float,float,float,float) {
+define i1 @orderedLessZeroTree(float noundef, float noundef, float noundef, float noundef) {
 ; CHECK-LABEL: @orderedLessZeroTree(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -220,7 +220,7 @@ define i1 @orderedLessZeroTree(float,float,float,float) {
   ret i1 %uge
 }
 
-define i1 @orderedLessZero_fdiv(float %x) {
+define i1 @orderedLessZero_fdiv(float noundef %x) {
 ; CHECK-LABEL: @orderedLessZero_fdiv(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -260,7 +260,7 @@ define i1 @orderedLessZeroExp2Trunc(double) {
   ret i1 %olt
 }
 
-define i1 @orderedLessZeroPowi(double,double) {
+define i1 @orderedLessZeroPowi(double noundef, double noundef) {
 ; CHECK-LABEL: @orderedLessZeroPowi(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -285,7 +285,7 @@ define i1 @UIToFP_is_nan_or_positive_or_zero(i32 %x) {
 
 define <2 x i1> @UIToFP_is_nan_or_positive_or_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @UIToFP_is_nan_or_positive_or_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %a = uitofp <2 x i32> %x to <2 x float>
   %r = fcmp uge <2 x float> %a, zeroinitializer
@@ -303,7 +303,7 @@ define i1 @UIToFP_is_positive_or_zero(i32 %x) {
 
 define <2 x i1> @UIToFP_is_positive_or_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @UIToFP_is_positive_or_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %a = uitofp <2 x i32> %x to <2 x float>
   %r = fcmp oge <2 x float> %a, zeroinitializer
@@ -321,7 +321,7 @@ define i1 @UIToFP_nnan_is_positive_or_zero(i32 %x) {
 
 define <2 x i1> @UIToFP_nnan_is_positive_or_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @UIToFP_nnan_is_positive_or_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %a = uitofp <2 x i32> %x to <2 x float>
   %r = fcmp nnan oge <2 x float> %a, zeroinitializer
@@ -395,7 +395,7 @@ define i1 @fabs_is_nan_or_positive_or_zero(double %x) {
 
 define <2 x i1> @fabs_is_nan_or_positive_or_zero_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_is_nan_or_positive_or_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %fabs = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
   %cmp = fcmp uge <2 x double> %fabs, zeroinitializer
@@ -413,7 +413,7 @@ define i1 @fabs_nnan_is_positive_or_zero(double %x) {
 
 define <2 x i1> @fabs_nnan_is_positive_or_zero_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_nnan_is_positive_or_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %fabs = tail call nnan <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
   %cmp = fcmp oge <2 x double> %fabs, zeroinitializer
@@ -459,7 +459,7 @@ define i1 @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(double %x) {
 
 define <2 x i1> @fabs_fcmp-nnan_is_positive_or_zero_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_fcmp-nnan_is_positive_or_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %fabs = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
   %cmp = fcmp nnan oge <2 x double> %fabs, zeroinitializer
@@ -547,30 +547,30 @@ define <2 x i1> @fabs_is_not_negative_anyzero(<2 x float> %V) {
   ret <2 x i1> %cmp
 }
 
-define <3 x i1> @fabs_is_not_negative_negzero_undef(<3 x float> %V) {
-; CHECK-LABEL: @fabs_is_not_negative_negzero_undef(
+define <3 x i1> @fabs_is_not_negative_negzero_poison(<3 x float> %V) {
+; CHECK-LABEL: @fabs_is_not_negative_negzero_poison(
 ; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %abs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %V)
-  %cmp = fcmp olt <3 x float> %abs, <float -0.0, float -0.0, float undef>
+  %cmp = fcmp olt <3 x float> %abs, <float -0.0, float -0.0, float poison>
   ret <3 x i1> %cmp
 }
 
-define <3 x i1> @fabs_is_not_negative_poszero_undef(<3 x float> %V) {
-; CHECK-LABEL: @fabs_is_not_negative_poszero_undef(
+define <3 x i1> @fabs_is_not_negative_poszero_poison(<3 x float> %V) {
+; CHECK-LABEL: @fabs_is_not_negative_poszero_poison(
 ; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %abs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %V)
-  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float 0.0, float undef>
+  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float 0.0, float poison>
   ret <3 x i1> %cmp
 }
 
-define <3 x i1> @fabs_is_not_negative_anyzero_undef(<3 x float> %V) {
-; CHECK-LABEL: @fabs_is_not_negative_anyzero_undef(
+define <3 x i1> @fabs_is_not_negative_anyzero_poison(<3 x float> %V) {
+; CHECK-LABEL: @fabs_is_not_negative_anyzero_poison(
 ; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %abs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %V)
-  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float -0.0, float undef>
+  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float -0.0, float poison>
   ret <3 x i1> %cmp
 }
 
@@ -668,6 +668,38 @@ define i1 @assume_nonnan_x2_ord(float %x, float %y) {
   call void @llvm.assume(i1 %ord.x)
   %ord.y = fcmp ord float %y, 0.0
   call void @llvm.assume(i1 %ord.y)
+  %cmp = fcmp ord float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_x2_uno(float %x, float %y) {
+; CHECK-LABEL: @assume_nan_x2_uno(
+; CHECK-NEXT:    [[UNO_X:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
+; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
+; CHECK-NEXT:    ret i1 true
+;
+  %uno.x = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno.x)
+  %uno.y = fcmp uno float %y, 0.0
+  call void @llvm.assume(i1 %uno.y)
+  %cmp = fcmp uno float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_x2_ord(float %x, float %y) {
+; CHECK-LABEL: @assume_nan_x2_ord(
+; CHECK-NEXT:    [[UNO_X:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
+; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
+; CHECK-NEXT:    ret i1 false
+;
+  %uno.x = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno.x)
+  %uno.y = fcmp uno float %y, 0.0
+  call void @llvm.assume(i1 %uno.y)
   %cmp = fcmp ord float %x, %y
   ret i1 %cmp
 }
@@ -794,7 +826,7 @@ define <2 x i1> @minnum_uge_small_min_constant(<2 x float> %x) {
 
 define <2 x i1> @minnum_olt_small_min_constant(<2 x float> %x) {
 ; CHECK-LABEL: @minnum_olt_small_min_constant(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %min = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0.5, float 0.5>)
   %cmp = fcmp olt <2 x float> %min, <float 1.0, float 1.0>
@@ -967,7 +999,7 @@ define <2 x i1> @maxnum_ule_large_max_constant(<2 x float> %x) {
 
 define <2 x i1> @maxnum_ogt_large_max_constant(<2 x float> %x) {
 ; CHECK-LABEL: @maxnum_ogt_large_max_constant(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %max = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 1.5, float 1.5>)
   %cmp = fcmp ogt <2 x float> %max, <float 1.0, float 1.0>
@@ -1275,7 +1307,7 @@ define i1 @assumed_positive_une_with_negative_constant(float %a) {
 
 define <2 x i1> @known_positive_uge_with_negative_constant_splat_vec(<2 x float> %a) {
 ; CHECK-LABEL: @known_positive_uge_with_negative_constant_splat_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %call = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
   %cmp = fcmp uge <2 x float> %call, <float -4.0, float -4.0>
@@ -1293,7 +1325,7 @@ define i1 @known_positive_oeq_with_negative_constant(half %a) {
 
 define <2 x i1> @known_positive_une_with_negative_constant_splat_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @known_positive_une_with_negative_constant_splat_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %call = uitofp <2 x i32> %a to <2 x half>
   %cmp = fcmp une <2 x half> %call, <half -6.0, half -6.0>
@@ -1335,19 +1367,19 @@ define <2 x i1> @orderedCompareWithNaNVector(<2 x double> %A) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @orderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
-; CHECK-LABEL: @orderedCompareWithNaNVector_undef_elt(
+define <2 x i1> @orderedCompareWithNaNVector_poison_elt(<2 x double> %A) {
+; CHECK-LABEL: @orderedCompareWithNaNVector_poison_elt(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %cmp = fcmp olt <2 x double> %A, <double 0xFFFFFFFFFFFFFFFF, double undef>
+  %cmp = fcmp olt <2 x double> %A, <double 0xFFFFFFFFFFFFFFFF, double poison>
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @unorderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
-; CHECK-LABEL: @unorderedCompareWithNaNVector_undef_elt(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+define <2 x i1> @unorderedCompareWithNaNVector_poison_elt(<2 x double> %A) {
+; CHECK-LABEL: @unorderedCompareWithNaNVector_poison_elt(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
-  %cmp = fcmp ult <2 x double> %A, <double undef, double 0xFFFFFFFFFFFFFFFF>
+  %cmp = fcmp ult <2 x double> %A, <double poison, double 0xFFFFFFFFFFFFFFFF>
   ret <2 x i1> %cmp
 }
 
@@ -1454,7 +1486,7 @@ define i1 @is_finite_or_nan(i1 %c, double %x) {
 
 define <2 x i1> @is_finite_or_nan_commute(<2 x i8> %x) {
 ; CHECK-LABEL: @is_finite_or_nan_commute(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
   %r = fcmp une <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
@@ -1501,7 +1533,7 @@ define i1 @is_finite_assume(i1 %c, double %x) {
 
 define <2 x i1> @is_finite_commute(<2 x i8> %x) {
 ; CHECK-LABEL: @is_finite_commute(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
   %r = fcmp one <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
@@ -1581,7 +1613,7 @@ entry:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_ieee(float %arg, float %arg1) {
+define float @fast_square_must_be_positive_ieee(float noundef %arg, float noundef %arg1) {
 ; CHECK-LABEL: @fast_square_must_be_positive_ieee(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1599,7 +1631,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_ieee_nnan(float %arg, float %arg1) {
+define float @fast_square_must_be_positive_ieee_nnan(float noundef %arg, float noundef %arg1) {
 ; CHECK-LABEL: @fast_square_must_be_positive_ieee_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1617,7 +1649,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_daz(float %arg, float %arg1) #0 {
+define float @fast_square_must_be_positive_daz(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @fast_square_must_be_positive_daz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1635,7 +1667,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_daz_nnan(float %arg, float %arg1) #0 {
+define float @fast_square_must_be_positive_daz_nnan(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @fast_square_must_be_positive_daz_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1653,7 +1685,7 @@ bb:
 }
 
 ; Make the compare to negative constant is folded out
-define float @must_be_olt_negative_constant_daz(float %arg, float %arg1) #0 {
+define float @must_be_olt_negative_constant_daz(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @must_be_olt_negative_constant_daz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1671,7 +1703,7 @@ bb:
 }
 
 ; Make the compare to negative constant is folded out
-define float @must_be_olt_negative_constant_daz_nnan(float %arg, float %arg1) #0 {
+define float @must_be_olt_negative_constant_daz_nnan(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @must_be_olt_negative_constant_daz_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]

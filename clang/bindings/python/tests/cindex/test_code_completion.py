@@ -1,14 +1,7 @@
-import os
-from clang.cindex import Config
-
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
-
-from clang.cindex import TranslationUnit
+from clang.cindex import AvailabilityKind, CompletionString, TranslationUnit
 
 import unittest
-from .util import skip_if_no_fspath
-from .util import str_to_path
+from pathlib import Path
 
 
 class TestCodeCompletion(unittest.TestCase):
@@ -53,15 +46,14 @@ void f() {
         expected = [
             "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
             "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: None",
+            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
-    @skip_if_no_fspath
     def test_code_complete_pathlike(self):
         files = [
             (
-                str_to_path("fake.c"),
+                Path("fake.c"),
                 """
 /// Aaa.
 int test1;
@@ -77,14 +69,14 @@ void f() {
         ]
 
         tu = TranslationUnit.from_source(
-            str_to_path("fake.c"),
+            Path("fake.c"),
             ["-std=c99"],
             unsaved_files=files,
             options=TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION,
         )
 
         cr = tu.codeComplete(
-            str_to_path("fake.c"),
+            Path("fake.c"),
             9,
             1,
             unsaved_files=files,
@@ -94,7 +86,7 @@ void f() {
         expected = [
             "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
             "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: None",
+            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -128,19 +120,57 @@ void f(P x, Q y) {
         cr = tu.codeComplete("fake.cpp", 12, 5, unsaved_files=files)
 
         expected = [
-            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
-            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
-            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: None",
-            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
-            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
+            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
         cr = tu.codeComplete("fake.cpp", 13, 5, unsaved_files=files)
         expected = [
-            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: None",
-            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: None",
-            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: None",
-            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: None",
+            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: ",
+            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
+            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: ",
+            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
+
+    def test_availability_kind_compat_(self):
+        numKinds = len(CompletionString.AvailabilityKindCompat)
+
+        # Compare with regular kind
+        for compatKind in CompletionString.AvailabilityKindCompat:
+            commonKind = AvailabilityKind.from_id(compatKind.value)
+            nextKindId = (compatKind.value + 1) % numKinds
+            commonKindUnequal = AvailabilityKind.from_id(nextKindId)
+            self.assertEqual(commonKind, compatKind)
+            self.assertEqual(compatKind, commonKind)
+            self.assertNotEqual(commonKindUnequal, compatKind)
+            self.assertNotEqual(compatKind, commonKindUnequal)
+
+        # Compare two compat kinds
+        for compatKind in CompletionString.AvailabilityKindCompat:
+            compatKind2 = CompletionString.AvailabilityKindCompat.from_id(
+                compatKind.value
+            )
+            nextKindId = (compatKind.value + 1) % numKinds
+            compatKind2Unequal = CompletionString.AvailabilityKindCompat.from_id(
+                nextKindId
+            )
+            self.assertEqual(compatKind, compatKind2)
+            self.assertEqual(compatKind2, compatKind)
+            self.assertNotEqual(compatKind2Unequal, compatKind)
+            self.assertNotEqual(compatKind, compatKind2Unequal)
+
+    def test_compat_str(self):
+        kindStringMap = {
+            0: "Available",
+            1: "Deprecated",
+            2: "NotAvailable",
+            3: "NotAccessible",
+        }
+        for id, string in kindStringMap.items():
+            kind = CompletionString.AvailabilityKindCompat.from_id(id)
+            self.assertEqual(str(kind), string)

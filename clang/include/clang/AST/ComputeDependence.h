@@ -15,7 +15,7 @@
 
 #include "clang/AST/DependenceFlags.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "clang/Basic/LLVM.h"
 
 namespace clang {
 
@@ -28,6 +28,7 @@ class ParenExpr;
 class UnaryOperator;
 class UnaryExprOrTypeTraitExpr;
 class ArraySubscriptExpr;
+class MatrixSingleSubscriptExpr;
 class MatrixSubscriptExpr;
 class CompoundLiteralExpr;
 class ImplicitCastExpr;
@@ -94,7 +95,7 @@ class DesignatedInitExpr;
 class ParenListExpr;
 class PseudoObjectExpr;
 class AtomicExpr;
-class OMPArraySectionExpr;
+class ArraySectionExpr;
 class OMPArrayShapingExpr;
 class OMPIteratorExpr;
 class ObjCArrayLiteral;
@@ -107,6 +108,7 @@ class ObjCSubscriptRefExpr;
 class ObjCIsaExpr;
 class ObjCIndirectCopyRestoreExpr;
 class ObjCMessageExpr;
+class OpenACCAsteriskSizeExpr;
 
 // The following functions are called from constructors of `Expr`, so they
 // should not access anything beyond basic
@@ -116,6 +118,7 @@ ExprDependence computeDependence(ParenExpr *E);
 ExprDependence computeDependence(UnaryOperator *E, const ASTContext &Ctx);
 ExprDependence computeDependence(UnaryExprOrTypeTraitExpr *E);
 ExprDependence computeDependence(ArraySubscriptExpr *E);
+ExprDependence computeDependence(MatrixSingleSubscriptExpr *E);
 ExprDependence computeDependence(MatrixSubscriptExpr *E);
 ExprDependence computeDependence(CompoundLiteralExpr *E);
 ExprDependence computeDependence(ImplicitCastExpr *E);
@@ -132,7 +135,8 @@ ExprDependence computeDependence(ArrayInitLoopExpr *E);
 ExprDependence computeDependence(ImplicitValueInitExpr *E);
 ExprDependence computeDependence(InitListExpr *E);
 ExprDependence computeDependence(ExtVectorElementExpr *E);
-ExprDependence computeDependence(BlockExpr *E);
+ExprDependence computeDependence(BlockExpr *E,
+                                 bool ContainsUnexpandedParameterPack);
 ExprDependence computeDependence(AsTypeExpr *E);
 ExprDependence computeDependence(DeclRefExpr *E, const ASTContext &Ctx);
 ExprDependence computeDependence(RecoveryExpr *E);
@@ -178,7 +182,7 @@ ExprDependence computeDependence(ConceptSpecializationExpr *E,
 
 ExprDependence computeDependence(SYCLUniqueStableNameExpr *E);
 ExprDependence computeDependence(PredefinedExpr *E);
-ExprDependence computeDependence(CallExpr *E, llvm::ArrayRef<Expr *> PreArgs);
+ExprDependence computeDependence(CallExpr *E, ArrayRef<Expr *> PreArgs);
 ExprDependence computeDependence(OffsetOfExpr *E);
 ExprDependence computeDependence(MemberExpr *E);
 ExprDependence computeDependence(ShuffleVectorExpr *E);
@@ -189,7 +193,7 @@ ExprDependence computeDependence(ParenListExpr *E);
 ExprDependence computeDependence(PseudoObjectExpr *E);
 ExprDependence computeDependence(AtomicExpr *E);
 
-ExprDependence computeDependence(OMPArraySectionExpr *E);
+ExprDependence computeDependence(ArraySectionExpr *E);
 ExprDependence computeDependence(OMPArrayShapingExpr *E);
 ExprDependence computeDependence(OMPIteratorExpr *E);
 
@@ -203,6 +207,7 @@ ExprDependence computeDependence(ObjCSubscriptRefExpr *E);
 ExprDependence computeDependence(ObjCIsaExpr *E);
 ExprDependence computeDependence(ObjCIndirectCopyRestoreExpr *E);
 ExprDependence computeDependence(ObjCMessageExpr *E);
+ExprDependence computeDependence(OpenACCAsteriskSizeExpr *E);
 
 } // namespace clang
 #endif

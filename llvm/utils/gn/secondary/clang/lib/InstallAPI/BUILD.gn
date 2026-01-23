@@ -8,10 +8,13 @@ static_library("InstallAPI") {
     "//llvm/lib/TextAPI",
   ]
   sources = [
+    "DiagnosticBuilderWrappers.cpp",
+    "DirectoryScanner.cpp",
     "DylibVerifier.cpp",
     "FileList.cpp",
     "Frontend.cpp",
     "HeaderFile.cpp",
+    "Library.cpp",
     "Visitor.cpp",
   ]
 }

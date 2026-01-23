@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_FIND_IF_H
 
 #include <__config>
+#include <__memory/valid_range.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,8 +20,10 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Predicate>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find_if(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
+  std::__assume_valid_range(__first, __last);
+
   for (; __first != __last; ++__first)
     if (__pred(*__first))
       break;

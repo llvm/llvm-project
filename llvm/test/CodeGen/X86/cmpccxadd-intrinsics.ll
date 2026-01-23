@@ -112,13 +112,13 @@ define dso_local i32 @test_cmplxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
 ; CHECK-LABEL: test_cmplxadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; CHECK-NEXT:    cmpnbxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe3,0x07]
+; CHECK-NEXT:    cmpaexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe3,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; EGPR-LABEL: test_cmplxadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; EGPR-NEXT:    cmpnbxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe3,0x07]
+; EGPR-NEXT:    cmpaexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe3,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i32 @llvm.x86.cmpccxadd32(ptr %__A, i32 %__B, i32 %__C, i32 3)
@@ -129,95 +129,95 @@ define dso_local i64 @test_cmplxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
 ; CHECK-LABEL: test_cmplxadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; CHECK-NEXT:    cmpnbxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe3,0x07]
+; CHECK-NEXT:    cmpaexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe3,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; EGPR-LABEL: test_cmplxadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; EGPR-NEXT:    cmpnbxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe3,0x07]
+; EGPR-NEXT:    cmpaexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe3,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i64 @llvm.x86.cmpccxadd64(ptr %__A, i64 %__B, i64 %__C, i32 3)
   ret i64 %0
 }
 
-define dso_local i32 @test_cmpnbexadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
-; CHECK-LABEL: test_cmpnbexadd32:
+define dso_local i32 @test_cmpaxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
+; CHECK-LABEL: test_cmpaxadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; CHECK-NEXT:    cmpzxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe4,0x07]
+; CHECK-NEXT:    cmpexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe4,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnbexadd32:
+; EGPR-LABEL: test_cmpaxadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; EGPR-NEXT:    cmpzxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe4,0x07]
+; EGPR-NEXT:    cmpexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe4,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i32 @llvm.x86.cmpccxadd32(ptr %__A, i32 %__B, i32 %__C, i32 4)
   ret i32 %0
 }
 
-define dso_local i64 @test_cmpnbexadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
-; CHECK-LABEL: test_cmpnbexadd64:
+define dso_local i64 @test_cmpaxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
+; CHECK-LABEL: test_cmpaxadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; CHECK-NEXT:    cmpzxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe4,0x07]
+; CHECK-NEXT:    cmpexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe4,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnbexadd64:
+; EGPR-LABEL: test_cmpaxadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; EGPR-NEXT:    cmpzxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe4,0x07]
+; EGPR-NEXT:    cmpexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe4,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i64 @llvm.x86.cmpccxadd64(ptr %__A, i64 %__B, i64 %__C, i32 4)
   ret i64 %0
 }
 
-define dso_local i32 @test_cmpnbxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
-; CHECK-LABEL: test_cmpnbxadd32:
+define dso_local i32 @test_cmpaexadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
+; CHECK-LABEL: test_cmpaexadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; CHECK-NEXT:    cmpnzxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe5,0x07]
+; CHECK-NEXT:    cmpnexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe5,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnbxadd32:
+; EGPR-LABEL: test_cmpaexadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; EGPR-NEXT:    cmpnzxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe5,0x07]
+; EGPR-NEXT:    cmpnexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe5,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i32 @llvm.x86.cmpccxadd32(ptr %__A, i32 %__B, i32 %__C, i32 5)
   ret i32 %0
 }
 
-define dso_local i64 @test_cmpnbxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
-; CHECK-LABEL: test_cmpnbxadd64:
+define dso_local i64 @test_cmpaexadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
+; CHECK-LABEL: test_cmpaexadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; CHECK-NEXT:    cmpnzxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe5,0x07]
+; CHECK-NEXT:    cmpnexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe5,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnbxadd64:
+; EGPR-LABEL: test_cmpaexadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; EGPR-NEXT:    cmpnzxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe5,0x07]
+; EGPR-NEXT:    cmpnexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe5,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i64 @llvm.x86.cmpccxadd64(ptr %__A, i64 %__B, i64 %__C, i32 5)
   ret i64 %0
 }
 
-define dso_local i32 @test_cmpnlexadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
-; CHECK-LABEL: test_cmpnlexadd32:
+define dso_local i32 @test_cmpgxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
+; CHECK-LABEL: test_cmpgxadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; CHECK-NEXT:    cmpbexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe6,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnlexadd32:
+; EGPR-LABEL: test_cmpgxadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    cmpbexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe6,0x07]
@@ -227,14 +227,14 @@ entry:
   ret i32 %0
 }
 
-define dso_local i64 @test_cmpnlexadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
-; CHECK-LABEL: test_cmpnlexadd64:
+define dso_local i64 @test_cmpgxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
+; CHECK-LABEL: test_cmpgxadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; CHECK-NEXT:    cmpbexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe6,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnlexadd64:
+; EGPR-LABEL: test_cmpgxadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    cmpbexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe6,0x07]
@@ -244,34 +244,34 @@ entry:
   ret i64 %0
 }
 
-define dso_local i32 @test_cmpnlxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
-; CHECK-LABEL: test_cmpnlxadd32:
+define dso_local i32 @test_cmpgexadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
+; CHECK-LABEL: test_cmpgexadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; CHECK-NEXT:    cmpnbexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe7,0x07]
+; CHECK-NEXT:    cmpaxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xe7,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnlxadd32:
+; EGPR-LABEL: test_cmpgexadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; EGPR-NEXT:    cmpnbexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe7,0x07]
+; EGPR-NEXT:    cmpaxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xe7,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i32 @llvm.x86.cmpccxadd32(ptr %__A, i32 %__B, i32 %__C, i32 7)
   ret i32 %0
 }
 
-define dso_local i64 @test_cmpnlxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
-; CHECK-LABEL: test_cmpnlxadd64:
+define dso_local i64 @test_cmpgexadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
+; CHECK-LABEL: test_cmpgexadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; CHECK-NEXT:    cmpnbexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe7,0x07]
+; CHECK-NEXT:    cmpaxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xe7,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnlxadd64:
+; EGPR-LABEL: test_cmpgexadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; EGPR-NEXT:    cmpnbexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe7,0x07]
+; EGPR-NEXT:    cmpaxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xe7,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i64 @llvm.x86.cmpccxadd64(ptr %__A, i64 %__B, i64 %__C, i32 7)
@@ -380,14 +380,14 @@ entry:
   ret i64 %0
 }
 
-define dso_local i32 @test_cmpnzxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
-; CHECK-LABEL: test_cmpnzxadd32:
+define dso_local i32 @test_cmpnexadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
+; CHECK-LABEL: test_cmpnexadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; CHECK-NEXT:    cmpnpxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xeb,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnzxadd32:
+; EGPR-LABEL: test_cmpnexadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    cmpnpxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xeb,0x07]
@@ -397,14 +397,14 @@ entry:
   ret i32 %0
 }
 
-define dso_local i64 @test_cmpnzxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
-; CHECK-LABEL: test_cmpnzxadd64:
+define dso_local i64 @test_cmpnexadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
+; CHECK-LABEL: test_cmpnexadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; CHECK-NEXT:    cmpnpxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xeb,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpnzxadd64:
+; EGPR-LABEL: test_cmpnexadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    cmpnpxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xeb,0x07]
@@ -452,13 +452,13 @@ define dso_local i32 @test_cmppxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
 ; CHECK-LABEL: test_cmppxadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; CHECK-NEXT:    cmpnlxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xed,0x07]
+; CHECK-NEXT:    cmpgexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xed,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; EGPR-LABEL: test_cmppxadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; EGPR-NEXT:    cmpnlxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xed,0x07]
+; EGPR-NEXT:    cmpgexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xed,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i32 @llvm.x86.cmpccxadd32(ptr %__A, i32 %__B, i32 %__C, i32 13)
@@ -469,13 +469,13 @@ define dso_local i64 @test_cmppxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
 ; CHECK-LABEL: test_cmppxadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; CHECK-NEXT:    cmpnlxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xed,0x07]
+; CHECK-NEXT:    cmpgexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xed,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; EGPR-LABEL: test_cmppxadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; EGPR-NEXT:    cmpnlxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xed,0x07]
+; EGPR-NEXT:    cmpgexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xed,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i64 @llvm.x86.cmpccxadd64(ptr %__A, i64 %__B, i64 %__C, i32 13)
@@ -516,34 +516,34 @@ entry:
   ret i64 %0
 }
 
-define dso_local i32 @test_cmpzxadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
-; CHECK-LABEL: test_cmpzxadd32:
+define dso_local i32 @test_cmpexadd32(ptr %__A, i32 %__B, i32 %__C) nounwind {
+; CHECK-LABEL: test_cmpexadd32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; CHECK-NEXT:    cmpnlexadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xef,0x07]
+; CHECK-NEXT:    cmpgxadd %edx, %eax, (%rdi) # encoding: [0xc4,0xe2,0x69,0xef,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpzxadd32:
+; EGPR-LABEL: test_cmpexadd32:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; EGPR-NEXT:    cmpnlexadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xef,0x07]
+; EGPR-NEXT:    cmpgxadd %edx, %eax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x69,0xef,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i32 @llvm.x86.cmpccxadd32(ptr %__A, i32 %__B, i32 %__C, i32 15)
   ret i32 %0
 }
 
-define dso_local i64 @test_cmpzxadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
-; CHECK-LABEL: test_cmpzxadd64:
+define dso_local i64 @test_cmpexadd64(ptr %__A, i64 %__B, i64 %__C) nounwind {
+; CHECK-LABEL: test_cmpexadd64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; CHECK-NEXT:    cmpnlexadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xef,0x07]
+; CHECK-NEXT:    cmpgxadd %rdx, %rax, (%rdi) # encoding: [0xc4,0xe2,0xe9,0xef,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
-; EGPR-LABEL: test_cmpzxadd64:
+; EGPR-LABEL: test_cmpexadd64:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; EGPR-NEXT:    cmpnlexadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xef,0x07]
+; EGPR-NEXT:    cmpgxadd %rdx, %rax, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe9,0xef,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call i64 @llvm.x86.cmpccxadd64(ptr %__A, i64 %__B, i64 %__C, i32 15)

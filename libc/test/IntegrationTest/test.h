@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 #define LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 
+#include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
-#include "src/__support/OSUtil/quick_exit.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #define __AS_STRING(val) #val
 #define __CHECK_TRUE(file, line, val, should_exit)                             \
@@ -18,7 +19,7 @@
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be true, but is false\n");             \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::quick_exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 #define __CHECK_FALSE(file, line, val, should_exit)                            \
@@ -26,7 +27,7 @@
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be false, but is true\n");             \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::quick_exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 #define __CHECK_EQ(file, line, val1, val2, should_exit)                        \
@@ -34,7 +35,7 @@
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val1 "' to be equal to '" #val2 "'\n");          \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::quick_exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 #define __CHECK_NE(file, line, val1, val2, should_exit)                        \
@@ -42,7 +43,7 @@
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val1 "' to not be equal to '" #val2 "'\n");      \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::quick_exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -68,12 +69,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Errno checks.
 
-#define ASSERT_ERRNO_EQ(VAL)                                                   \
-  ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_SUCCESS()                                                 \
-  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_FAILURE()                                                 \
-  ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+#define ASSERT_ERRNO_EQ(VAL)
+#define ASSERT_ERRNO_SUCCESS()
+#define ASSERT_ERRNO_FAILURE()
+#else
+#define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, static_cast<int>(errno))
+#define ASSERT_ERRNO_SUCCESS() ASSERT_EQ(0, static_cast<int>(errno))
+#define ASSERT_ERRNO_FAILURE() ASSERT_NE(0, static_cast<int>(errno))
+#endif
 
 // Integration tests are compiled with -ffreestanding which stops treating
 // the main function as a non-overloadable special function. Hence, we use a

@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.InvalidatedIterator -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=false %s -verify
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.InvalidatedIterator -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++23 -analyzer-checker=core,cplusplus,alpha.cplusplus.InvalidatedIterator -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -130,6 +131,14 @@ struct cont_with_ptr_iterator {
   T* erase(T*);
 };
 
+void invalidated_access_via_end_iterator_after_push_back() {
+  cont_with_ptr_iterator<int> C;
+  C.push_back(1);
+  auto i = C.end();
+  C.push_back(2);
+  auto j = i[-1]; // expected-warning{{Invalidated iterator accessed}}
+}
+
 void invalidated_dereference_end_ptr_iterator(cont_with_ptr_iterator<int> &C) {
   auto i = C.begin();
   C.erase(i);
@@ -197,3 +206,25 @@ void invalidated_subscript_end_ptr_iterator(cont_with_ptr_iterator<int> &C) {
   C.erase(i);
   (void) i[1]; // expected-warning{{Invalidated iterator accessed}}
 }
+
+#if __cplusplus >= 202302L
+namespace GH116372 {
+  class ExplicitThis {
+    int f = 0;
+  public:
+    ExplicitThis();
+    ExplicitThis(ExplicitThis& other);
+  
+    ExplicitThis& operator=(this ExplicitThis& self, ExplicitThis const& other) { // no crash
+      self.f = other.f;
+      return self;
+    }
+  
+    ~ExplicitThis();
+  };
+  
+  void func(ExplicitThis& obj1) {
+      obj1 = obj1;
+  }
+}
+#endif

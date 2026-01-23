@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_FORK_H
 #define LLVM_LIBC_SRC_UNISTD_FORK_H
 
-#include <unistd.h>
+#include "hdr/types/pid_t.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 pid_t fork();
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_FORK_H

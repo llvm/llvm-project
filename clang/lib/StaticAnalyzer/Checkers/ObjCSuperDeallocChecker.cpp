@@ -26,15 +26,15 @@ namespace {
 class ObjCSuperDeallocChecker
     : public Checker<check::PostObjCMessage, check::PreObjCMessage,
                      check::PreCall, check::Location> {
-  mutable IdentifierInfo *IIdealloc = nullptr;
-  mutable IdentifierInfo *IINSObject = nullptr;
+  mutable const IdentifierInfo *IIdealloc = nullptr;
+  mutable const IdentifierInfo *IINSObject = nullptr;
   mutable Selector SELdealloc;
 
   const BugType DoubleSuperDeallocBugType{
       this, "[super dealloc] should not be called more than once",
       categories::CoreFoundationObjectiveC};
 
-  void initIdentifierInfoAndSelectors(ASTContext &Ctx) const;
+  void initIdentifierInfoAndSelectors(const ASTContext &Ctx) const;
 
   bool isSuperDeallocMessage(const ObjCMethodCall &M) const;
 
@@ -164,7 +164,7 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   if (IvarRegion) {
     OS << "Use of instance variable '" << *IvarRegion->getDecl() <<
           "' after 'self' has been deallocated";
-    Desc = OS.str();
+    Desc = Buf;
   }
 
   reportUseAfterDealloc(BaseSym, Desc, S, C);
@@ -214,8 +214,8 @@ void ObjCSuperDeallocChecker::diagnoseCallArguments(const CallEvent &CE,
   }
 }
 
-void
-ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(ASTContext &Ctx) const {
+void ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(
+    const ASTContext &Ctx) const {
   if (IIdealloc)
     return;
 
@@ -230,7 +230,7 @@ ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
   if (M.getOriginExpr()->getReceiverKind() != ObjCMessageExpr::SuperInstance)
     return false;
 
-  ASTContext &Ctx = M.getState()->getStateManager().getContext();
+  const ASTContext &Ctx = M.getASTContext();
   initIdentifierInfoAndSelectors(Ctx);
 
   return M.getSelector() == SELdealloc;

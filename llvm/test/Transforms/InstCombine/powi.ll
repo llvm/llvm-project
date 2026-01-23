@@ -401,6 +401,121 @@ define double @fdiv_pow_powi_negative_variable(double %x, i32 %y) {
   ret double %div
 }
 
+; powi(X,C1)/ (X * Z) --> powi(X,C1 - 1)/ Z
+define double @fdiv_fmul_powi(double %a, double %z) {
+; CHECK-LABEL: @fdiv_fmul_powi(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan double @llvm.powi.f64.i32(double [[A:%.*]], i32 4)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call reassoc double @llvm.powi.f64.i32(double %a, i32 5)
+  %square = fmul reassoc double %z, %a
+  %div = fdiv reassoc nnan double %pow, %square
+  ret double %div
+}
+
+; powi(X, 5)/ (X * X) --> powi(X, 4)/ X -> powi(X, 3)
+define double @fdiv_fmul_powi_2(double %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_2(
+; CHECK-NEXT:    [[DIV:%.*]] = call reassoc nnan double @llvm.powi.f64.i32(double [[A:%.*]], i32 3)
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call reassoc double @llvm.powi.f64.i32(double %a, i32 5)
+  %square = fmul reassoc double %a, %a
+  %div = fdiv reassoc nnan double %pow, %square
+  ret double %div
+}
+
+define <2 x float> @fdiv_fmul_powi_vector(<2 x float> %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_vector(
+; CHECK-NEXT:    [[DIV:%.*]] = call reassoc nnan <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[A:%.*]], i32 3)
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %pow = call reassoc <2 x float> @llvm.powi.v2f32.i32(<2 x float> %a, i32 5)
+  %square = fmul reassoc <2 x float> %a, %a
+  %div = fdiv reassoc nnan <2 x float> %pow, %square
+  ret <2 x float> %div
+}
+
+; Negative test
+define double @fdiv_fmul_powi_missing_reassoc1(double %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_missing_reassoc1(
+; CHECK-NEXT:    [[POW:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[A:%.*]], i32 5)
+; CHECK-NEXT:    [[SQUARE:%.*]] = fmul reassoc double [[A]], [[A]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan double [[POW]], [[SQUARE]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call reassoc double @llvm.powi.f64.i32(double %a, i32 5)
+  %square = fmul reassoc double %a, %a
+  %div = fdiv nnan double %pow, %square
+  ret double %div
+}
+
+define double @fdiv_fmul_powi_missing_reassoc2(double %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_missing_reassoc2(
+; CHECK-NEXT:    [[POW:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[A:%.*]], i32 5)
+; CHECK-NEXT:    [[SQUARE:%.*]] = fmul double [[A]], [[A]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[POW]], [[SQUARE]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call reassoc double @llvm.powi.f64.i32(double %a, i32 5)
+  %square = fmul double %a, %a
+  %div = fdiv reassoc nnan double %pow, %square
+  ret double %div
+}
+
+define double @fdiv_fmul_powi_missing_reassoc3(double %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_missing_reassoc3(
+; CHECK-NEXT:    [[POW:%.*]] = call double @llvm.powi.f64.i32(double [[A:%.*]], i32 5)
+; CHECK-NEXT:    [[SQUARE:%.*]] = fmul reassoc double [[A]], [[A]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[POW]], [[SQUARE]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call double @llvm.powi.f64.i32(double %a, i32 5)
+  %square = fmul reassoc double %a, %a
+  %div = fdiv reassoc nnan double %pow, %square
+  ret double %div
+}
+
+define double @fdiv_fmul_powi_missing_nnan(double %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_missing_nnan(
+; CHECK-NEXT:    [[POW:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[A:%.*]], i32 5)
+; CHECK-NEXT:    [[SQUARE:%.*]] = fmul reassoc double [[A]], [[A]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double [[POW]], [[SQUARE]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call reassoc double @llvm.powi.f64.i32(double %a, i32 5)
+  %square = fmul reassoc double %a, %a
+  %div = fdiv reassoc double %pow, %square
+  ret double %div
+}
+
+define double @fdiv_fmul_powi_negative_wrap(double noundef %x) {
+; CHECK-LABEL: @fdiv_fmul_powi_negative_wrap(
+; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 -2147483648)
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 -2147483648) ; INT_MIN
+  %mul = fmul reassoc double %p1, %x
+  ret double %mul
+}
+
+define double @fdiv_fmul_powi_multi_use(double %a) {
+; CHECK-LABEL: @fdiv_fmul_powi_multi_use(
+; CHECK-NEXT:    [[POW:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[A:%.*]], i32 5)
+; CHECK-NEXT:    tail call void @use(double [[POW]])
+; CHECK-NEXT:    [[SQUARE:%.*]] = fmul reassoc double [[A]], [[A]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[POW]], [[SQUARE]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %pow = call reassoc double @llvm.powi.f64.i32(double %a, i32 5)
+  tail call void @use(double %pow)
+  %square = fmul reassoc double %a, %a
+  %div = fdiv reassoc nnan double %pow, %square
+  ret double %div
+}
+
 ; powi(X, Y) * X --> powi(X, Y+1)
 define double @powi_fmul_powi_x(double noundef %x) {
 ; CHECK-LABEL: @powi_fmul_powi_x(
@@ -448,4 +563,30 @@ define double @powi_fmul_powi_x_overflow(double noundef %x) {
   %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 2147483647) ; INT_MAX
   %mul = fmul reassoc double %p1, %x
   ret double %mul
+}
+
+define <3 x float> @powi_unary_shuffle_ops(<3 x float> %x, i32 %power) {
+; CHECK-LABEL: @powi_unary_shuffle_ops(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> [[X:%.*]], i32 [[POWER:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %sx = shufflevector <3 x float> %x, <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %r = call <3 x float> @llvm.powi(<3 x float> %sx, i32 %power)
+  ret <3 x float> %r
+}
+
+; Negative test - multiple uses
+
+define <3 x float> @powi_unary_shuffle_ops_use(<3 x float> %x, i32 %power, ptr %p) {
+; CHECK-LABEL: @powi_unary_shuffle_ops_use(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x float> [[X:%.*]], <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    store <3 x float> [[SX]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> [[SX]], i32 [[POWER:%.*]])
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %sx = shufflevector <3 x float> %x, <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  store <3 x float> %sx, ptr %p
+  %r = call <3 x float> @llvm.powi(<3 x float> %sx, i32 %power)
+  ret <3 x float> %r
 }

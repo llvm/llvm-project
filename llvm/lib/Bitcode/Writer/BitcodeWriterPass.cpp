@@ -18,21 +18,13 @@
 #include "llvm/Pass.h"
 using namespace llvm;
 
-extern bool WriteNewDbgInfoFormatToBitcode;
-
 PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
-  bool ConvertToOldDbgFormatForWrite =
-      M.IsNewDbgInfoFormat && !WriteNewDbgInfoFormatToBitcode;
-  if (ConvertToOldDbgFormatForWrite)
-    M.convertFromNewDbgValues();
+  M.removeDebugIntrinsicDeclarations();
 
   const ModuleSummaryIndex *Index =
       EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
                        : nullptr;
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
-
-  if (ConvertToOldDbgFormatForWrite)
-    M.convertToNewDbgValues();
 
   return PreservedAnalyses::all();
 }
@@ -57,16 +49,11 @@ namespace {
     StringRef getPassName() const override { return "Bitcode Writer"; }
 
     bool runOnModule(Module &M) override {
-      bool ConvertToOldDbgFormatForWrite =
-          M.IsNewDbgInfoFormat && !WriteNewDbgInfoFormatToBitcode;
-      if (ConvertToOldDbgFormatForWrite)
-        M.convertFromNewDbgValues();
+      M.removeDebugIntrinsicDeclarations();
 
       WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, /*Index=*/nullptr,
                          /*EmitModuleHash=*/false);
 
-      if (ConvertToOldDbgFormatForWrite)
-        M.convertToNewDbgValues();
       return false;
     }
     void getAnalysisUsage(AnalysisUsage &AU) const override {

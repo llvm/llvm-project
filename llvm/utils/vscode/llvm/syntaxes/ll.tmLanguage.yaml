@@ -34,7 +34,8 @@ patterns:
     captures:
       1:
         name: storage.type.llvm
-  - match: "\\badd\\b|\
+  - match: "(?<=\\s|^)#dbg_(assign|declare|label|value)\\b|\
+            \\badd\\b|\
             \\baddrspacecast\\b|\
             \\balloca\\b|\
             \\band\\b|\
@@ -257,6 +258,7 @@ patterns:
             \\breturns_twice\\b|\
             \\bsafestack\\b|\
             \\bsanitize_address\\b|\
+            \\bsanitize_alloc_token\\b|\
             \\bsanitize_hwaddress\\b|\
             \\bsanitize_memory\\b|\
             \\bsanitize_memtag\\b|\

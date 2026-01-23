@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump --no-print-imm-hex -dr - | FileCheck --check-prefix=CHECK-INST %s
 
 foo:
-
   cpi r16, 241
   cpi r29, 190
   cpi r22, 172
@@ -17,7 +15,6 @@ foo:
 ; CHECK: cpi r27, 92                   ; encoding: [0xbc,0x35]
 
 ; CHECK: cpi r21, ear                  ; encoding: [0x50'A',0x30]
-; CHECK:                               ;   fixup A - offset: 0, value: ear, kind: fixup_ldi
 
 ; CHECK-INST: cpi r16, 241
 ; CHECK-INST: cpi r29, 190

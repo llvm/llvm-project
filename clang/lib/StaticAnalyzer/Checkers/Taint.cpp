@@ -12,6 +12,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include <optional>
 
@@ -206,6 +207,14 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     return getTaintedSymbolsImpl(State, Sym, Kind, returnFirstOnly);
   if (const MemRegion *Reg = V.getAsRegion())
     return getTaintedSymbolsImpl(State, Reg, Kind, returnFirstOnly);
+
+  if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
+    StoreManager &StoreMgr = State->getStateManager().getStoreManager();
+    if (auto DefaultVal = StoreMgr.getDefaultBinding(*LCV)) {
+      return getTaintedSymbolsImpl(State, *DefaultVal, Kind, returnFirstOnly);
+    }
+  }
+
   return {};
 }
 
@@ -216,21 +225,17 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
   std::vector<SymbolRef> TaintedSymbols;
   if (!Reg)
     return TaintedSymbols;
-  // Element region (array element) is tainted if either the base or the offset
-  // are tainted.
+
+  // Element region (array element) is tainted if the offset is tainted.
   if (const ElementRegion *ER = dyn_cast<ElementRegion>(Reg)) {
     std::vector<SymbolRef> TaintedIndex =
         getTaintedSymbolsImpl(State, ER->getIndex(), K, returnFirstOnly);
     llvm::append_range(TaintedSymbols, TaintedIndex);
     if (returnFirstOnly && !TaintedSymbols.empty())
       return TaintedSymbols; // return early if needed
-    std::vector<SymbolRef> TaintedSuperRegion =
-        getTaintedSymbolsImpl(State, ER->getSuperRegion(), K, returnFirstOnly);
-    llvm::append_range(TaintedSymbols, TaintedSuperRegion);
-    if (returnFirstOnly && !TaintedSymbols.empty())
-      return TaintedSymbols; // return early if needed
   }
 
+  // Symbolic region is tainted if the corresponding symbol is tainted.
   if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(Reg)) {
     std::vector<SymbolRef> TaintedRegions =
         getTaintedSymbolsImpl(State, SR->getSymbol(), K, returnFirstOnly);
@@ -239,6 +244,8 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
       return TaintedSymbols; // return early if needed
   }
 
+  // Any subregion (including Element and Symbolic regions) is tainted if its
+  // super-region is tainted.
   if (const SubRegion *ER = dyn_cast<SubRegion>(Reg)) {
     std::vector<SymbolRef> TaintedSubRegions =
         getTaintedSymbolsImpl(State, ER->getSuperRegion(), K, returnFirstOnly);
@@ -257,6 +264,12 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
   std::vector<SymbolRef> TaintedSymbols;
   if (!Sym)
     return TaintedSymbols;
+
+  // HACK:https://discourse.llvm.org/t/rfc-make-istainted-and-complex-symbols-friends/79570
+  if (const auto &Opts = State->getAnalysisManager().getAnalyzerOptions();
+      Sym->computeComplexity() > Opts.MaxTaintedSymbolComplexity) {
+    return {};
+  }
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
   for (SymbolRef SubSym : Sym->symbols()) {

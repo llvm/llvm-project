@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -41,20 +41,48 @@ struct TestDataLayoutQuery
       uint64_t alignment = layout.getTypeABIAlignment(op.getType());
       uint64_t preferred = layout.getTypePreferredAlignment(op.getType());
       uint64_t index = layout.getTypeIndexBitwidth(op.getType()).value_or(0);
+      Attribute endianness = layout.getEndianness();
+      Attribute defaultMemorySpace = layout.getDefaultMemorySpace();
       Attribute allocaMemorySpace = layout.getAllocaMemorySpace();
+      Attribute manglingMode = layout.getManglingMode();
       Attribute programMemorySpace = layout.getProgramMemorySpace();
       Attribute globalMemorySpace = layout.getGlobalMemorySpace();
       uint64_t stackAlignment = layout.getStackAlignment();
+      Attribute functionPointerAlignment = layout.getFunctionPointerAlignment();
+      Attribute legalIntWidths = layout.getLegalIntWidths();
+
+      auto convertTypeSizeToAttr = [&](llvm::TypeSize typeSize) -> Attribute {
+        if (!typeSize.isScalable())
+          return builder.getIndexAttr(typeSize);
+
+        return builder.getDictionaryAttr({
+            builder.getNamedAttr("scalable", builder.getUnitAttr()),
+            builder.getNamedAttr(
+                "minimal_size",
+                builder.getIndexAttr(typeSize.getKnownMinValue())),
+        });
+      };
+
       op->setAttrs(
-          {builder.getNamedAttr("size", builder.getIndexAttr(size)),
-           builder.getNamedAttr("bitsize", builder.getIndexAttr(bitsize)),
+          {builder.getNamedAttr("size", convertTypeSizeToAttr(size)),
+           builder.getNamedAttr("bitsize", convertTypeSizeToAttr(bitsize)),
            builder.getNamedAttr("alignment", builder.getIndexAttr(alignment)),
            builder.getNamedAttr("preferred", builder.getIndexAttr(preferred)),
            builder.getNamedAttr("index", builder.getIndexAttr(index)),
+           builder.getNamedAttr("endianness", endianness == Attribute()
+                                                  ? builder.getStringAttr("")
+                                                  : endianness),
+           builder.getNamedAttr("default_memory_space",
+                                defaultMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : defaultMemorySpace),
            builder.getNamedAttr("alloca_memory_space",
                                 allocaMemorySpace == Attribute()
                                     ? builder.getUI32IntegerAttr(0)
                                     : allocaMemorySpace),
+           builder.getNamedAttr("mangling_mode", manglingMode == Attribute()
+                                                     ? builder.getStringAttr("")
+                                                     : manglingMode),
            builder.getNamedAttr("program_memory_space",
                                 programMemorySpace == Attribute()
                                     ? builder.getUI32IntegerAttr(0)
@@ -64,7 +92,20 @@ struct TestDataLayoutQuery
                                     ? builder.getUI32IntegerAttr(0)
                                     : globalMemorySpace),
            builder.getNamedAttr("stack_alignment",
-                                builder.getIndexAttr(stackAlignment))});
+                                builder.getIndexAttr(stackAlignment)),
+           builder.getNamedAttr("function_pointer_alignment",
+                                functionPointerAlignment == Attribute()
+                                    ? FunctionPointerAlignmentAttr::get(
+                                          builder.getContext(), 0,
+                                          /*function_dependent=*/false)
+                                    : functionPointerAlignment),
+           builder.getNamedAttr("legal_int_widths",
+                                legalIntWidths == Attribute()
+                                    ? builder.getDenseI32ArrayAttr({})
+                                    : legalIntWidths)
+
+          });
+
     });
   }
 };

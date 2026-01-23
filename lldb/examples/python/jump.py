@@ -38,7 +38,7 @@ def parse_linespec(linespec, frame, result):
             )
 
     if not matched:
-        mo = re.match("^\+([0-9]+)$", linespec)
+        mo = re.match(r"^\+([0-9]+)$", linespec)
         if mo is not None:
             matched = True
             # print "Matched +<count>"
@@ -54,7 +54,7 @@ def parse_linespec(linespec, frame, result):
             )
 
     if not matched:
-        mo = re.match("^\-([0-9]+)$", linespec)
+        mo = re.match(r"^\-([0-9]+)$", linespec)
         if mo is not None:
             matched = True
             # print "Matched -<count>"
@@ -79,7 +79,7 @@ def parse_linespec(linespec, frame, result):
             breakpoint = target.BreakpointCreateByLocation(file_name, line_number)
 
     if not matched:
-        mo = re.match("\*((0x)?([0-9a-f]+))$", linespec)
+        mo = re.match(r"\*((0x)?([0-9a-f]+))$", linespec)
         if mo is not None:
             matched = True
             # print "Matched <address-expression>"

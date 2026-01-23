@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
@@ -65,7 +66,7 @@ static void printRanLibHelp(StringRef ToolName) {
          << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
-         << "  -v --version          - Display the version of this program\n"
+         << "  -V --version          - Display the version of this program\n"
          << "  -D                    - Use zero for timestamps and uids/gids "
             "(default)\n"
          << "  -U                    - Use actual timestamps and uids/gids\n"
@@ -130,7 +131,7 @@ MODIFIERS:
          << "USAGE: " + ToolName +
                 " [options] [-]<operation>[modifiers] [relpos] "
                 "[count] <archive> [files]\n"
-         << "       " + ToolName + " -M [<mri-script]\n\n";
+         << "       " + ToolName + " -M [< mri-script]\n\n";
 
   outs() << ArOptions;
 }
@@ -1439,7 +1440,7 @@ static int ranlib_main(int argc, char **argv) {
         } else if (arg.front() == 'h') {
           printHelpMessage();
           return 0;
-        } else if (arg.front() == 'v') {
+        } else if (arg.front() == 'V') {
           cl::PrintVersionMessage();
           return 0;
         } else if (arg.front() == 'X') {

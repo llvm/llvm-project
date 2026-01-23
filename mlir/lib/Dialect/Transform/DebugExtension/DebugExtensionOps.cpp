@@ -8,9 +8,8 @@
 
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h"
 
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/IR/OpImplementation.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -18,27 +17,25 @@ using namespace mlir;
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.cpp.inc"
 
 DiagnosedSilenceableFailure
-transform::DebugEmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
-                                      transform::TransformResults &results,
-                                      transform::TransformState &state) {
-  if (getAt().getType().isa<TransformHandleTypeInterface>()) {
+transform::EmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
+                                 transform::TransformResults &results,
+                                 transform::TransformState &state) {
+  if (isa<TransformHandleTypeInterface>(getAt().getType())) {
     auto payload = state.getPayloadOps(getAt());
     for (Operation *op : payload)
       op->emitRemark() << getMessage();
     return DiagnosedSilenceableFailure::success();
   }
 
-  assert(
-      getAt().getType().isa<transform::TransformValueHandleTypeInterface>() &&
-      "unhandled kind of transform type");
+  assert(isa<transform::TransformValueHandleTypeInterface>(getAt().getType()) &&
+         "unhandled kind of transform type");
 
   auto describeValue = [](Diagnostic &os, Value value) {
     os << "value handle points to ";
     if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
       os << "a block argument #" << arg.getArgNumber() << " in block #"
-         << std::distance(arg.getOwner()->getParent()->begin(),
-                          arg.getOwner()->getIterator())
-         << " in region #" << arg.getOwner()->getParent()->getRegionNumber();
+         << arg.getOwner()->computeBlockNumber() << " in region #"
+         << arg.getOwner()->getParent()->getRegionNumber();
     } else {
       os << "an op result #" << llvm::cast<OpResult>(value).getResultNumber();
     }
@@ -52,19 +49,20 @@ transform::DebugEmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure transform::DebugEmitParamAsRemarkOp::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
+DiagnosedSilenceableFailure
+transform::EmitParamAsRemarkOp::apply(transform::TransformRewriter &rewriter,
+                                      transform::TransformResults &results,
+                                      transform::TransformState &state) {
   std::string str;
   llvm::raw_string_ostream os(str);
   if (getMessage())
     os << *getMessage() << " ";
-  llvm::interleaveComma(state.getParams(getParam()), os);
+  os << llvm::interleaved(state.getParams(getParam()));
   if (!getAnchor()) {
-    emitRemark() << os.str();
+    emitRemark() << str;
     return DiagnosedSilenceableFailure::success();
   }
   for (Operation *payload : state.getPayloadOps(getAnchor()))
-    ::mlir::emitRemark(payload->getLoc()) << os.str();
+    ::mlir::emitRemark(payload->getLoc()) << str;
   return DiagnosedSilenceableFailure::success();
 }

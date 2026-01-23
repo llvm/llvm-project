@@ -107,7 +107,7 @@ class ObjCDynamicValueTestCase(TestBase):
         self.expect(
             "frame var -d run-target myObserver->_source",
             "frame var finds its way into a child member",
-            patterns=["\(SourceDerived \*\)"],
+            patterns=[r"\(SourceDerived \*\)"],
         )
 
         # check that our ObjC GetISA() does a good job at hiding KVO swizzled

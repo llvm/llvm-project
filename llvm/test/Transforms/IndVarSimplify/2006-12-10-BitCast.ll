@@ -4,7 +4,7 @@ target triple = "i686-apple-darwin8"
 	%struct.vorbis_dsp_state = type { i32, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, ptr }
 	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 
-define void @_ve_envelope_search() {
+define void @_ve_envelope_search(i1 %arg) {
 entry:
 	br i1 false, label %cond_true27, label %bb137
 
@@ -20,7 +20,7 @@ cond_next182.i:		; preds = %cond_next182.i, %cond_true52
 	%tmp194.i53 = bitcast i32 %decay.i.0 to float		; <float> [#uses=1]
 	%tmp195.i = fsub float %tmp194.i53, 8.000000e+00		; <float> [#uses=1]
 	%tmp195.i.upgrd.1 = bitcast float %tmp195.i to i32		; <i32> [#uses=1]
-	br i1 undef, label %cond_next182.i, label %bb418.i.preheader
+	br i1 %arg, label %cond_next182.i, label %bb418.i.preheader
 
 bb418.i.preheader:		; preds = %cond_next182.i
 	ret void

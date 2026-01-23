@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Low complexity assumption: {  : false }
 ;
@@ -35,7 +34,7 @@ for.body104.lr.ph:                                ; preds = %entry
   br label %for.body104
 
 for.body104:                                      ; preds = %while.end146, %for.body104.lr.ph
-  %indvars.iv = phi i64 [ %6, %for.body104.lr.ph ], [ undef, %while.end146 ]
+  %indvars.iv = phi i64 [ %6, %for.body104.lr.ph ], [ poison, %while.end146 ]
   %7 = sub nsw i64 %indvars.iv, %idx.ext62
   %cmp107 = icmp slt i64 %7, -1
   %.op = xor i64 %7, -1

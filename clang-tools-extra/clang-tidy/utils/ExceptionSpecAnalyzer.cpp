@@ -1,4 +1,4 @@
-//===--- ExceptionSpecAnalyzer.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,18 +9,20 @@
 #include "ExceptionSpecAnalyzer.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 
 namespace clang::tidy::utils {
 
 ExceptionSpecAnalyzer::State
 ExceptionSpecAnalyzer::analyze(const FunctionDecl *FuncDecl) {
-  // Check if the function has already been analyzed and reuse that result.
-  const auto CacheEntry = FunctionCache.find(FuncDecl);
-  if (CacheEntry == FunctionCache.end()) {
-    ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
-
-    // Cache the result of the analysis.
-    FunctionCache.try_emplace(FuncDecl, State);
+  // Check if function exist in cache or add temporary value to cache to protect
+  // against endless recursion.
+  const auto [CacheEntry, NotFound] =
+      FunctionCache.try_emplace(FuncDecl, State::NotThrowing);
+  if (NotFound) {
+    const ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
+    // Update result with calculated value
+    FunctionCache[FuncDecl] = State;
     return State;
   }
 
@@ -65,9 +67,7 @@ ExceptionSpecAnalyzer::analyzeBase(const CXXBaseSpecifier &Base,
   if (!RecType)
     return State::Unknown;
 
-  const auto *BaseClass = cast<CXXRecordDecl>(RecType->getDecl());
-
-  return analyzeRecord(BaseClass, Kind);
+  return analyzeRecord(RecType->getAsCXXRecordDecl(), Kind);
 }
 
 ExceptionSpecAnalyzer::State
@@ -87,20 +87,20 @@ ExceptionSpecAnalyzer::analyzeRecord(const CXXRecordDecl *RecordDecl,
         return analyze(MethodDecl);
 
   for (const auto &BaseSpec : RecordDecl->bases()) {
-    State Result = analyzeBase(BaseSpec, Kind);
+    const State Result = analyzeBase(BaseSpec, Kind);
     if (Result == State::Throwing || Result == State::Unknown)
       return Result;
   }
 
   for (const auto &BaseSpec : RecordDecl->vbases()) {
-    State Result = analyzeBase(BaseSpec, Kind);
+    const State Result = analyzeBase(BaseSpec, Kind);
     if (Result == State::Throwing || Result == State::Unknown)
       return Result;
   }
 
   for (const auto *FDecl : RecordDecl->fields())
-    if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitfield()) {
-      State Result = analyzeFieldDecl(FDecl, Kind);
+    if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitField()) {
+      const State Result = analyzeFieldDecl(FDecl, Kind);
       if (Result == State::Throwing || Result == State::Unknown)
         return Result;
     }

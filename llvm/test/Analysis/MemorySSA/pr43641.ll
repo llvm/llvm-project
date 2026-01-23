@@ -1,10 +1,10 @@
-; RUN: opt -passes=simple-loop-unswitch -enable-nontrivial-unswitch -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes="loop-mssa(simple-loop-unswitch)" -enable-nontrivial-unswitch -verify-memoryssa -S < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @c
-define dso_local void @c(i32 signext %d) local_unnamed_addr {
+define dso_local void @c(i32 signext %d, i1 %arg) local_unnamed_addr {
 entry:
-  br i1 undef, label %while.end, label %while.body.lr.ph
+  br i1 %arg, label %while.end, label %while.body.lr.ph
 
 while.body.lr.ph:                                 ; preds = %entry
   %tobool1 = icmp ne i32 %d, 0

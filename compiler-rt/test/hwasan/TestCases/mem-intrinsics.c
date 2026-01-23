@@ -21,6 +21,7 @@ int main() {
   memcpy(Q, P, 32);
 #endif
   write(STDOUT_FILENO, "recovered\n", 10);
+  fflush(stdout);
   // WRITE: ERROR: HWAddressSanitizer: tag-mismatch on address
   // WRITE: WRITE of size 32 at {{.*}} tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
   // WRITE: Invalid access starting at offset 16

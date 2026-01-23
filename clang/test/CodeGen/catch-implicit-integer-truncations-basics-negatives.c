@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fsanitize-recover=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK
 
-// CHECK-DAG: @[[LINE_100_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 100, i32 10 }, {{.*}}, {{.*}}, i8 1 }
-// CHECK-DAG: @[[LINE_200_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 200, i32 10 }, {{.*}}, {{.*}}, i8 1 }
-// CHECK-DAG: @[[LINE_300_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 300, i32 10 }, {{.*}}, {{.*}}, i8 2 }
-// CHECK-DAG: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, {{.*}}, {{.*}}, i8 2 }
+// CHECK-DAG: @[[LINE_100_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 100, i32 10 }, {{.*}}, {{.*}}, i8 1, i32 0 }
+// CHECK-DAG: @[[LINE_200_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 200, i32 10 }, {{.*}}, {{.*}}, i8 1, i32 0 }
+// CHECK-DAG: @[[LINE_300_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 300, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
 
 //----------------------------------------------------------------------------//
 // Unsigned case.

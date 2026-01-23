@@ -7,17 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIX.h"
-#include "Arch/PPC.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 
+#include <set>
+
 using AIX = clang::driver::toolchains::AIX;
+using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
@@ -166,8 +168,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
        Args.hasArg(options::OPT_coverage))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
-  if (Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_mxcoff_build_id_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mxcoff_build_id_EQ)) {
     StringRef BuildId = A->getValue();
     if (BuildId[0] != '0' || BuildId[1] != 'x' ||
         BuildId.find_if_not(llvm::isHexDigit, 2) != StringRef::npos)
@@ -228,22 +229,38 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // '-bnocdtors' that '-Wl' might forward.
   CmdArgs.push_back("-bcdtors:all:0:s");
 
+  if (Args.hasArg(options::OPT_rpath)) {
+    for (const auto &bopt : Args.getAllArgValues(options::OPT_b))
+      // Check -b opts prefix for "libpath:" or exact match for "nolibpath"
+      if (!bopt.rfind("libpath:", 0) || bopt == "nolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options) << "-rpath" << "-b" + bopt;
+
+    for (const auto &wlopt : Args.getAllArgValues(options::OPT_Wl_COMMA))
+      // Check -Wl, opts prefix for "-blibpath:" or exact match for
+      // "-bnolibpath"
+      if (!wlopt.rfind("-blibpath:", 0) || wlopt == "-bnolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options) << "-rpath" << "-Wl," + wlopt;
+
+    for (const auto &xopt : Args.getAllArgValues(options::OPT_Xlinker))
+      // Check -Xlinker opts prefix for "-blibpath:" or exact match for
+      // "-bnolibpath"
+      if (!xopt.rfind("-blibpath:", 0) || xopt == "-bnolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options)
+            << "-rpath" << "-Xlinker " + xopt;
+
+    std::string BlibPathStr = "";
+    for (const auto &dir : Args.getAllArgValues(options::OPT_rpath))
+      BlibPathStr += dir + ":";
+    BlibPathStr += "/usr/lib:/lib";
+    CmdArgs.push_back(Args.MakeArgString(Twine("-blibpath:") + BlibPathStr));
+  }
+
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
 
@@ -328,9 +345,10 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (D.IsFlangMode()) {
-    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+  if (D.IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
     CmdArgs.push_back("-lpthread");
   }
@@ -360,6 +378,28 @@ AIX::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
   return "/";
 }
 
+void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  // Add OpenMP include paths if -fopenmp is specified.
+  if (DriverArgs.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                         options::OPT_fno_openmp, false)) {
+    SmallString<128> PathOpenMP;
+    switch (getDriver().getOpenMPRuntime(DriverArgs)) {
+    case Driver::OMPRT_OMP:
+      PathOpenMP = GetHeaderSysroot(DriverArgs);
+      llvm::sys::path::append(PathOpenMP, "opt/IBM/openxlCSDK", "include",
+                              "openmp");
+      addSystemInclude(DriverArgs, CC1Args, PathOpenMP.str());
+      break;
+    case Driver::OMPRT_IOMP5:
+    case Driver::OMPRT_GOMP:
+    case Driver::OMPRT_Unknown:
+      // Unknown / unsupported include paths.
+      break;
+    }
+  }
+}
+
 void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args) const {
   // Return if -nostdinc is specified as a driver option.
@@ -377,6 +417,11 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     // Add the Clang builtin headers (<resource>/include)
     addSystemInclude(DriverArgs, CC1Args, path::parent_path(P.str()));
   }
+
+  // Add the include directory containing omp.h. This needs to be before
+  // adding the system include directory because other compilers put their
+  // omp.h in /usr/include.
+  AddOpenMPIncludeArgs(DriverArgs, CC1Args);
 
   // Return if -nostdlibinc is specified as a driver option.
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
@@ -450,14 +495,6 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
       return false;
   }();
 
-  // Currently only supported for small code model.
-  if (TOCDataGloballyinEffect &&
-      (Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("large") ||
-       Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("medium"))) {
-    D.Diag(clang::diag::warn_drv_unsupported_tocdata);
-    return;
-  }
-
   enum TOCDataSetting {
     AddressInTOC = 0, // Address of the symbol stored in the TOC.
     DataInTOC = 1     // Symbol defined in the TOC.
@@ -471,7 +508,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
   // the global setting of tocdata in TOCDataGloballyinEffect.
   // Those that have the opposite setting to TOCDataGloballyinEffect, are added
   // to ExplicitlySpecifiedGlobals.
-  llvm::StringSet<> ExplicitlySpecifiedGlobals;
+  std::set<llvm::StringRef> ExplicitlySpecifiedGlobals;
   for (const auto Arg :
        Args.filtered(options::OPT_mtocdata_EQ, options::OPT_mno_tocdata_EQ)) {
     TOCDataSetting ArgTocDataSetting =
@@ -486,7 +523,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         ExplicitlySpecifiedGlobals.erase(Val);
   }
 
-  auto buildExceptionList = [](const llvm::StringSet<> &ExplicitValues,
+  auto buildExceptionList = [](const std::set<llvm::StringRef> &ExplicitValues,
                                const char *OptionSpelling) {
     std::string Option(OptionSpelling);
     bool IsFirst = true;
@@ -495,7 +532,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         Option += ",";
 
       IsFirst = false;
-      Option += E.first();
+      Option += E.str();
     }
     return Option;
   };
@@ -527,9 +564,18 @@ void AIX::addClangTargetOptions(
                   options::OPT_mtocdata))
     addTocDataOptions(Args, CC1Args, getDriver());
 
+  if (Args.hasArg(options::OPT_msave_reg_params))
+    CC1Args.push_back("-msave-reg-params");
+
   if (Args.hasFlag(options::OPT_fxl_pragma_pack,
                    options::OPT_fno_xl_pragma_pack, true))
     CC1Args.push_back("-fxl-pragma-pack");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!Args.getLastArgNoClaim(options::OPT_fsized_deallocation,
+                              options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,

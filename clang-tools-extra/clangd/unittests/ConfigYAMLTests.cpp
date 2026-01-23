@@ -66,7 +66,6 @@ Index:
 Diagnostics:
   ClangTidy:
     CheckOptions:
-      IgnoreMacros: true
       example-check.ExampleOption: 0
   UnusedIncludes: Strict
   )yaml";
@@ -83,8 +82,7 @@ Diagnostics:
   ASSERT_TRUE(Results[2].Index.Background);
   EXPECT_EQ("Skip", **Results[2].Index.Background);
   EXPECT_THAT(Results[3].Diagnostics.ClangTidy.CheckOptions,
-              ElementsAre(PairVal("IgnoreMacros", "true"),
-                          PairVal("example-check.ExampleOption", "0")));
+              ElementsAre(PairVal("example-check.ExampleOption", "0")));
   EXPECT_TRUE(Results[3].Diagnostics.UnusedIncludes);
   EXPECT_EQ("Strict", **Results[3].Diagnostics.UnusedIncludes);
 }
@@ -217,17 +215,46 @@ Completion:
   EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(std::nullopt));
 }
 
-TEST(ParseYAML, ShowAKA) {
+TEST(ParseYAML, CodePatterns) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+    Completion:
+      CodePatterns: None
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.CodePatterns, llvm::ValueIs(val("None")));
+}
+
+TEST(ParseYAML, MacroFilter) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+    Completion:
+      MacroFilter: FuzzyMatch
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.MacroFilter,
+              llvm::ValueIs(val("FuzzyMatch")));
+}
+
+TEST(ParseYAML, Hover) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 Hover:
   ShowAKA: True
+  MacroContentsLimit: 4096
   )yaml");
   auto Results =
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].Hover.ShowAKA, llvm::ValueIs(val(true)));
+  EXPECT_THAT(Results[0].Hover.MacroContentsLimit, llvm::ValueIs(val(4096U)));
 }
 
 TEST(ParseYAML, InlayHints) {
@@ -278,17 +305,38 @@ Diagnostics:
               ElementsAre(val("foo"), val("bar")));
 }
 
+TEST(ParseYAML, IncludesAnalyzeAngledIncludes) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Diagnostics:
+  Includes:
+    AnalyzeAngledIncludes: true
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Diagnostics.Includes.AnalyzeAngledIncludes,
+              llvm::ValueIs(val(true)));
+}
+
 TEST(ParseYAML, Style) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 Style:
-  FullyQualifiedNamespaces: [foo, bar])yaml");
+  FullyQualifiedNamespaces: [foo, bar]
+  AngledHeaders: ["foo", "bar"]
+  QuotedHeaders: ["baz", "baar"])yaml");
   auto Results =
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].Style.FullyQualifiedNamespaces,
               ElementsAre(val("foo"), val("bar")));
+  EXPECT_THAT(Results[0].Style.AngledHeaders,
+              ElementsAre(val("foo"), val("bar")));
+  EXPECT_THAT(Results[0].Style.QuotedHeaders,
+              ElementsAre(val("baz"), val("baar")));
 }
 } // namespace
 } // namespace config

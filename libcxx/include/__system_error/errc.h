@@ -112,6 +112,11 @@ enum class errc
 // macros. So GCC does not need the pushing and popping.
 //
 // TODO Remove this when the deprecated constants are removed.
+//
+// Note based on the post-review comments in
+// https://github.com/llvm/llvm-project/pull/80542 libc++ no longer deprecates
+// the macros. Since C libraries may start to deprecate these POSIX macros the
+// deprecation warning avoidance is kept.
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  define _LIBCPP_SUPPRESS_DEPRECATED_ERRC_PUSH _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #  define _LIBCPP_SUPPRESS_DEPRECATED_ERRC_POP _LIBCPP_SUPPRESS_DEPRECATED_POP
@@ -128,7 +133,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // enum class errc
 //
 // LWG3869 deprecates the UNIX STREAMS macros and enum values.
-// This makes the code clumbersome:
+// This makes the code cumbersome:
 // - the enum value is deprecated and should show a diagnostic,
 // - the macro is deprecated and should _not_ show a diagnostic in this
 //   context, and

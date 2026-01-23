@@ -85,8 +85,8 @@ untouched:
   };
 
 
-Known limitations
-^^^^^^^^^^^^^^^^^
+Limitations
+-----------
 
 A situation where the generated code can be wrong is when the object referenced
 is modified before the assignment in the init-list through a "hidden" reference.

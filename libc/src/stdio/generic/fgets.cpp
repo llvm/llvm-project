@@ -9,11 +9,12 @@
 #include "src/stdio/fgets.h"
 #include "src/__support/File/file.h"
 
-#include "src/errno/libc_errno.h"
+#include "hdr/types/FILE.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdio.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -43,7 +44,7 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   bool has_eof = stream->iseof_unlocked();
   stream->unlock();
 
-  // If the requested read size makes no sense, an error occured, or no bytes
+  // If the requested read size makes no sense, an error occurred, or no bytes
   // were read due to an EOF, then return nullptr and don't write the null byte.
   if (has_error || (i == 0 && has_eof))
     return nullptr;
@@ -52,4 +53,4 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   return str;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

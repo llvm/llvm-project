@@ -6,7 +6,7 @@
 ; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-types-debug-names-helper.s \
 ; RUN: -split-dwarf-file=helper.dwo -o helper.o
 ; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 ; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo.dwo > log.txt
 ; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo.dwo >> log.txt
 ; RUN: llvm-dwarfdump --debug-info --debug-names main.exe.bolt >> log.txt
@@ -18,19 +18,19 @@
 ; BOLT: type_signature = [[TYPE1:0x[0-9a-f]*]]
 ; BOLT: Compile Unit
 ; BOLT: type_signature = [[TYPE2:0x[0-9a-f]*]]
-; BOLT: type_signature = [[TYPE3:0x[0-9a-f]*]]
+; BOLT: type_signature = [[TYPE1]]
 ; BOLT: Compile Unit
 ; BOLT: [[OFFSET:0x[0-9a-f]*]]: Compile Unit
 ; BOLT: [[OFFSET1:0x[0-9a-f]*]]: Compile Unit
 
 ; BOLT:       Name Index @ 0x0 {
 ; BOLT-NEXT:   Header {
-; BOLT-NEXT:     Length: 0x17E
+; BOLT-NEXT:     Length: 0x176
 ; BOLT-NEXT:     Format: DWARF32
 ; BOLT-NEXT:     Version: 5
 ; BOLT-NEXT:     CU count: 2
 ; BOLT-NEXT:     Local TU count: 0
-; BOLT-NEXT:     Foreign TU count: 4
+; BOLT-NEXT:     Foreign TU count: 3
 ; BOLT-NEXT:     Bucket count: 9
 ; BOLT-NEXT:     Name count: 9
 ; BOLT-NEXT:     Abbreviations table size: 0x37
@@ -44,7 +44,6 @@
 ; BOLT-NEXT:     ForeignTU[0]: [[TYPE]]
 ; BOLT-NEXT:     ForeignTU[1]: [[TYPE1]]
 ; BOLT-NEXT:     ForeignTU[2]: [[TYPE2]]
-; BOLT-NEXT:     ForeignTU[3]: [[TYPE3]]
 ; BOLT-NEXT:   ]
 ; BOLT-NEXT: Abbreviations [
 ; BOLT-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
@@ -173,7 +172,7 @@
 ; BOLT-NEXT:       Entry @ {{.+}} {
 ; BOLT-NEXT:         Abbrev: [[ABBREV]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
-; BOLT-NEXT:         DW_IDX_type_unit: 0x03
+; BOLT-NEXT:         DW_IDX_type_unit: 0x01
 ; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000021
 ; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
@@ -237,7 +236,7 @@
 ; BOLT-NEXT:       Entry @ {{.+}} {
 ; BOLT-NEXT:         Abbrev: 0x5
 ; BOLT-NEXT:         Tag: DW_TAG_base_type
-; BOLT-NEXT:         DW_IDX_type_unit: 0x03
+; BOLT-NEXT:         DW_IDX_type_unit: 0x01
 ; BOLT-NEXT:         DW_IDX_compile_unit: 0x01
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000048
 ; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>

@@ -17,7 +17,7 @@ declare ptr @memchr(ptr, i32, i32)
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 6), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
   %dst = call ptr @memchr(ptr @hello, i32 119, i32 14)
@@ -37,7 +37,7 @@ define void @test2() {
 
 define void @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
   %dst = call ptr @memchr(ptr @hello, i32 0, i32 14)
@@ -58,7 +58,7 @@ define void @test4(i32 %chr) {
 
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
   %dst = call ptr @memchr(ptr @hello, i32 65280, i32 14)
@@ -68,7 +68,7 @@ define void @test5() {
 
 define void @test6() {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 6), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Overflow, but we still find the right thing.
@@ -90,7 +90,7 @@ define void @test7() {
 
 define void @test8() {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hellonull, i32 0, i32 6), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hellonull, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
   %dst = call ptr @memchr(ptr @hellonull, i32 119, i32 14)
@@ -100,7 +100,7 @@ define void @test8() {
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hellonull, i32 0, i32 6), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hellonull, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
   %str = getelementptr [14 x i8], ptr @hellonull, i32 0, i32 2
@@ -124,7 +124,7 @@ define i1 @test11(i32 %C) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 255
-; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp ult i16 [[TMP2]], 16
+; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp samesign ult i16 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9217
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0

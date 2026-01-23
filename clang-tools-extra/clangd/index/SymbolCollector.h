@@ -159,9 +159,16 @@ public:
   void finish() override;
 
 private:
+  // If D is an instantiation of a likely forwarding function, return the
+  // constructors it invokes so that we can record indirect references
+  // to those as well.
+  SmallVector<const CXXConstructorDecl *, 1>
+  findIndirectConstructors(const Decl *D);
+
   const Symbol *addDeclaration(const NamedDecl &, SymbolID,
                                bool IsMainFileSymbol);
-  void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
+  void addDefinition(const NamedDecl &, const Symbol &DeclSymbol,
+                     bool SkipDocCheck);
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
@@ -208,6 +215,7 @@ private:
     SourceLocation Loc;
     FileID FID;
     index::SymbolRoleSet Roles;
+    index::SymbolKind Kind;
     const Decl *Container;
     bool Spelled;
   };
@@ -228,6 +236,9 @@ private:
   std::unique_ptr<HeaderFileURICache> HeaderFileURIs;
   llvm::DenseMap<const Decl *, SymbolID> DeclToIDCache;
   llvm::DenseMap<const MacroInfo *, SymbolID> MacroToIDCache;
+  llvm::DenseMap<const FunctionDecl *,
+                 SmallVector<const CXXConstructorDecl *, 1>>
+      ForwardingToConstructorCache;
 };
 
 } // namespace clangd

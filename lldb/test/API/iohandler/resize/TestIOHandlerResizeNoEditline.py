@@ -6,7 +6,10 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @no_debug_info_test
-    @skipIfWindows
+    @skipIf(
+        hostoslist=["windows"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/120021",
+    )
     def test_resize_no_editline(self):
         """Tests terminal resizing if the editline isn't used."""
         dbg = lldb.SBDebugger.Create(False)
@@ -18,3 +21,4 @@ class TestCase(TestBase):
         dbg.RunCommandInterpreter(True, True, opts, 0, False, False)
         # Try resizing the terminal which shouldn't crash.
         dbg.SetTerminalWidth(47)
+        dbg.GetInputFile().Close()

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;    void jacobi1d(long T, long N, float *A, float *B) {
 ;      long t, i, j;

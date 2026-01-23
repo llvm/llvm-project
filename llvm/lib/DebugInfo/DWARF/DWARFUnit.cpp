@@ -19,12 +19,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -98,8 +98,12 @@ void DWARFUnitVector::addUnitsImpl(
         if (!IndexEntry)
           IndexEntry = Index.getFromOffset(Header.getOffset());
       }
-      if (IndexEntry && !Header.applyIndexEntry(IndexEntry))
-        return nullptr;
+      if (IndexEntry) {
+        if (Error ApplicationErr = Header.applyIndexEntry(IndexEntry)) {
+          Context.getWarningHandler()(std::move(ApplicationErr));
+          return nullptr;
+        }
+      }
       std::unique_ptr<DWARFUnit> U;
       if (Header.isTypeUnit())
         U = std::make_unique<DWARFTypeUnit>(Context, InfoSection, Header, DA,
@@ -157,17 +161,24 @@ DWARFUnit *DWARFUnitVector::getUnitForOffset(uint64_t Offset) const {
   return nullptr;
 }
 
-DWARFUnit *
-DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
-  const auto *CUOff = E.getContribution(DW_SECT_INFO);
+DWARFUnit *DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E,
+                                                 DWARFSectionKind Sec,
+                                                 const DWARFSection *Section) {
+  const auto *CUOff = E.getContribution(Sec);
   if (!CUOff)
     return nullptr;
 
   uint64_t Offset = CUOff->getOffset();
-  auto end = begin() + getNumInfoUnits();
+  auto begin = this->begin();
+  auto end = begin + getNumInfoUnits();
+
+  if (Sec == DW_SECT_EXT_TYPES) {
+    begin = end;
+    end = this->end();
+  }
 
   auto *CU =
-      std::upper_bound(begin(), end, CUOff->getOffset(),
+      std::upper_bound(begin, end, CUOff->getOffset(),
                        [](uint64_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
                          return LHS < RHS->getNextUnitOffset();
                        });
@@ -177,13 +188,14 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
   if (!Parser)
     return nullptr;
 
-  auto U = Parser(Offset, DW_SECT_INFO, nullptr, &E);
+  auto U = Parser(Offset, Sec, Section, &E);
   if (!U)
     return nullptr;
 
   auto *NewCU = U.get();
   this->insert(CU, std::move(U));
-  ++NumInfoUnits;
+  if (Sec == DW_SECT_INFO)
+    ++NumInfoUnits;
   return NewCU;
 }
 
@@ -334,21 +346,40 @@ Error DWARFUnitHeader::extract(DWARFContext &Context,
   return Error::success();
 }
 
-bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
+Error DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
   assert(Entry);
   assert(!IndexEntry);
   IndexEntry = Entry;
   if (AbbrOffset)
-    return false;
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             " has a non-zero abbreviation offset",
+                             Offset);
+
   auto *UnitContrib = IndexEntry->getContribution();
-  if (!UnitContrib ||
-      UnitContrib->getLength() != (getLength() + getUnitLengthFieldByteSize()))
-    return false;
+  if (!UnitContrib)
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             " has no contribution index",
+                             Offset);
+
+  uint64_t IndexLength = getLength() + getUnitLengthFieldByteSize();
+  if (UnitContrib->getLength() != IndexLength)
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             " has an inconsistent index (expected: %" PRIu64
+                             ", actual: %" PRIu64 ")",
+                             Offset, UnitContrib->getLength(), IndexLength);
+
   auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
   if (!AbbrEntry)
-    return false;
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             " missing abbreviation column",
+                             Offset);
+
   AbbrOffset = AbbrEntry->getOffset();
-  return true;
+  return Error::success();
 }
 
 Error DWARFUnit::extractRangeList(uint64_t RangeListOffset,
@@ -473,8 +504,7 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  if ((CUDieOnly && !DieArray.empty()) ||
-      DieArray.size() > 1)
+  if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
     return Error::success(); // Already parsed.
 
   bool HasCUDie = !DieArray.empty();
@@ -1157,9 +1187,15 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
       return std::nullopt;
-    Offset += Header.getFormat() == dwarf::DwarfFormat::DWARF32 ? 8 : 16;
+    // FYI: The .debug_str_offsets.dwo section may use DWARF64 even when the
+    // rest of the file uses DWARF32, so respect whichever encoding the
+    // header/length uses.
+    uint64_t Length = 0;
+    DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
+    std::tie(Length, Format) = DA.getInitialLength(&Offset);
+    Offset += 4; // Skip the DWARF version uint16_t and the uint16_t padding.
     // Look for a valid contribution at the given offset.
-    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
+    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Format, Offset);
     if (!DescOrError)
       return DescOrError.takeError();
     return *DescOrError;

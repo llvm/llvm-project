@@ -1993,7 +1993,6 @@ define double @test63(<2 x double> %a) {
 ; CHECK-LE-LABEL: test63:
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    xxswapd vs1, v2
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
   %v = extractelement <2 x double> %a, i32 0
   ret double %v
@@ -2006,13 +2005,11 @@ define double @test64(<2 x double> %a) {
 ; CHECK-LABEL: test64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxswapd vs1, v2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test64:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    xxswapd vs1, v2
-; CHECK-REG-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test64:
@@ -2386,7 +2383,9 @@ define <2 x double> @test70(<2 x i8> %a) {
 define <2 x i32> @test80(i32 %v) {
 ; CHECK-LABEL: test80:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stw r3, -16(r1)
+; CHECK-NEXT:    sldi r3, r3, 32
+; CHECK-NEXT:    std r3, -16(r1)
+; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
@@ -2398,7 +2397,9 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-REG-LABEL: test80:
 ; CHECK-REG:       # %bb.0:
-; CHECK-REG-NEXT:    stw r3, -16(r1)
+; CHECK-REG-NEXT:    sldi r3, r3, 32
+; CHECK-REG-NEXT:    std r3, -16(r1)
+; CHECK-REG-NEXT:    std r3, -8(r1)
 ; CHECK-REG-NEXT:    addi r3, r1, -16
 ; CHECK-REG-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-REG-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
@@ -2410,8 +2411,12 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-FISL-LABEL: test80:
 ; CHECK-FISL:       # %bb.0:
-; CHECK-FISL-NEXT:    # kill: def $r3 killed $r3 killed $x3
-; CHECK-FISL-NEXT:    stw r3, -16(r1)
+; CHECK-FISL-NEXT:    mr r4, r3
+; CHECK-FISL-NEXT:    # implicit-def: $x3
+; CHECK-FISL-NEXT:    mr r3, r4
+; CHECK-FISL-NEXT:    sldi r3, r3, 32
+; CHECK-FISL-NEXT:    std r3, -8(r1)
+; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-FISL-NEXT:    xxspltw v2, vs0, 0

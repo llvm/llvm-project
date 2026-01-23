@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple=armv7-linux-gnueabi -filetype=obj < %s | llvm-objdump -t - | FileCheck %s
+@ RUN: llvm-mc -triple=armv7-linux-gnueabi -filetype=obj < %s | llvm-objdump -t - | FileCheck %s --match-full-lines
 
         .text
         add r0, r0, r0
@@ -42,10 +42,10 @@
 @   + .starts_thumb to have $t at 0
 @   + .starts_data to have $d at 0
 
-@ CHECK:      00000000 l .text 00000000 $a.0
-@ CHECK-NEXT: 00000000 l .wibble 00000000 $a.1
-@ CHECK-NEXT: 00000000 l .starts_thumb 00000000 $t.2
-@ CHECK-NEXT: 00000008 l .text 00000000 $t.3
-@ CHECK-NEXT: 0000000a l .text 00000000 $d.4
+@ CHECK:      00000000 l .text 00000000 $a
+@ CHECK-NEXT: 00000000 l .wibble 00000000 $a
+@ CHECK-NEXT: 00000000 l .starts_thumb 00000000 $t
+@ CHECK-NEXT: 00000008 l .text 00000000 $t
+@ CHECK-NEXT: 0000000a l .text 00000000 $d
 @ CHECK-NOT: ${{[adt]}}
 

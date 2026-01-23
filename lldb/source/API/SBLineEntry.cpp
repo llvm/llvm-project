@@ -67,6 +67,21 @@ SBAddress SBLineEntry::GetEndAddress() const {
   return sb_address;
 }
 
+SBAddress SBLineEntry::GetSameLineContiguousAddressRangeEnd(
+    bool include_inlined_functions) const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBAddress sb_address;
+  if (m_opaque_up) {
+    AddressRange line_range = m_opaque_up->GetSameLineContiguousAddressRange(
+        include_inlined_functions);
+
+    sb_address.SetAddress(line_range.GetBaseAddress());
+    sb_address.OffsetAddress(line_range.GetByteSize());
+  }
+  return sb_address;
+}
+
 bool SBLineEntry::IsValid() const {
   LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
@@ -117,12 +132,14 @@ void SBLineEntry::SetLine(uint32_t line) {
   LLDB_INSTRUMENT_VA(this, line);
 
   ref().line = line;
+  if (!ref().range.IsValid())
+    ref().synthetic = true;
 }
 
 void SBLineEntry::SetColumn(uint32_t column) {
   LLDB_INSTRUMENT_VA(this, column);
 
-  ref().line = column;
+  ref().column = column;
 }
 
 bool SBLineEntry::operator==(const SBLineEntry &rhs) const {

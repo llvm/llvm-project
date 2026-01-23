@@ -1,6 +1,16 @@
 add_custom_target(libc-cpp-utils-tests)
 
 add_libc_test(
+  algorithm_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    algorithm_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+  )
+
+add_libc_test(
   array_test
   SUITE
     libc-cpp-utils-tests
@@ -17,9 +27,10 @@ add_libc_test(
   SRCS
     bit_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.big_int
     libc.src.__support.CPP.bit
     libc.src.__support.macros.properties.types
-    libc.src.__support.uint
 )
 
 add_libc_test(
@@ -59,9 +70,19 @@ add_libc_test(
   SRCS
     limits_test.cpp
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.CPP.limits
     libc.src.__support.macros.properties.types
-    libc.src.__support.uint
+)
+
+add_libc_test(
+  mutex_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    mutex_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.mutex
 )
 
 add_libc_test(
@@ -110,6 +131,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  tuple_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    tuple_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.tuple
+)
+
+add_libc_test(
   span_test
   SUITE
     libc-cpp-utils-tests
@@ -139,3 +170,15 @@ add_libc_test(
   DEPENDS
   libc.src.__support.CPP.type_traits
 )
+
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_libc_test(
+    simd_test
+    SUITE
+      libc-cpp-utils-tests
+    SRCS
+      simd_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.simd
+  )
+endif()

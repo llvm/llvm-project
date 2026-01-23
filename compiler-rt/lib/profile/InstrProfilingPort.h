@@ -54,7 +54,7 @@
 #endif
 
 #define COMPILER_RT_MAX_HOSTLEN 128
-#ifdef __ORBIS__
+#if defined(__ORBIS__) || defined(__wasi__)
 #define COMPILER_RT_GETHOSTNAME(Name, Len) ((void)(Name), (void)(Len), (-1))
 #else
 #define COMPILER_RT_GETHOSTNAME(Name, Len) lprofGetHostName(Name, Len)
@@ -111,15 +111,23 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-static inline size_t getpagesize() {
+static inline size_t getpagesize(void) {
   SYSTEM_INFO S;
   GetNativeSystemInfo(&S);
   return S.dwPageSize;
 }
 #else /* defined(_WIN32) */
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <unistd.h>
+#endif
 #endif /* defined(_WIN32) */
 
+#ifdef COMPILER_RT_PROFILE_BAREMETAL
+// Baremetal doesn't support logging
+#define PROF_ERR(Format, ...)
+#define PROF_WARN(Format, ...)
+#define PROF_NOTE(Format, ...)
+#else
 #define PROF_ERR(Format, ...)                                                  \
   fprintf(stderr, "LLVM Profile Error: " Format, __VA_ARGS__);
 
@@ -128,6 +136,7 @@ static inline size_t getpagesize() {
 
 #define PROF_NOTE(Format, ...)                                                 \
   fprintf(stderr, "LLVM Profile Note: " Format, __VA_ARGS__);
+#endif /* COMPILER_RT_PROFILE_BAREMETAL */
 
 #ifndef MAP_FILE
 #define MAP_FILE 0
@@ -137,16 +146,6 @@ static inline size_t getpagesize() {
 #define O_BINARY 0
 #endif
 
-#if defined(__FreeBSD__)
-
-#include <inttypes.h>
-#include <sys/types.h>
-
-#else /* defined(__FreeBSD__) */
-
-#include <inttypes.h>
 #include <stdint.h>
-
-#endif /* defined(__FreeBSD__) && defined(__i386__) */
 
 #endif /* PROFILE_INSTRPROFILING_PORT_H_ */

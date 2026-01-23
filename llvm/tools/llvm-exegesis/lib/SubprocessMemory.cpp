@@ -8,6 +8,7 @@
 
 #include "SubprocessMemory.h"
 #include "Error.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cerrno>
@@ -22,7 +23,16 @@
 namespace llvm {
 namespace exegesis {
 
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
+
+// The SYS_* macros for system calls are provided by the libc whereas the
+// __NR_* macros are from the linux headers. This means that sometimes
+// SYS_* macros might not be available for certain system calls depending
+// upon the libc. This happens with the gettid syscall and bionic for
+// example, so we use __NR_gettid when no SYS_gettid is available.
+#ifndef SYS_gettid
+#define SYS_gettid __NR_gettid
+#endif
 
 long SubprocessMemory::getCurrentTID() {
   // We're using the raw syscall here rather than the gettid() function provided
@@ -30,6 +40,8 @@ long SubprocessMemory::getCurrentTID() {
   // version 2.30.
   return syscall(SYS_gettid);
 }
+
+#if !defined(__ANDROID__)
 
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
@@ -45,6 +57,8 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
     return make_error<Failure>(
         "Failed to create shared memory object for auxiliary memory: " +
         Twine(strerror(errno)));
+  scope_exit AuxiliaryMemoryFDClose(
+      [AuxiliaryMemoryFD]() { close(AuxiliaryMemoryFD); });
   if (ftruncate(AuxiliaryMemoryFD, AuxiliaryMemorySize) != 0) {
     return make_error<Failure>("Truncating the auxiliary memory failed: " +
                                Twine(strerror(errno)));
@@ -67,6 +81,8 @@ Error SubprocessMemory::addMemoryDefinition(
       return make_error<Failure>(
           "Failed to create shared memory object for memory definition: " +
           Twine(strerror(errno)));
+    scope_exit SharedMemoryFDClose(
+        [SharedMemoryFD]() { close(SharedMemoryFD); });
     if (ftruncate(SharedMemoryFD, MemVal.SizeBytes) != 0) {
       return make_error<Failure>("Truncating a memory definiton failed: " +
                                  Twine(strerror(errno)));
@@ -110,7 +126,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
   int *AuxiliaryMemoryMapping =
       (int *)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
                   AuxiliaryMemoryFileDescriptor, 0);
-  if ((intptr_t)AuxiliaryMemoryMapping == -1)
+  if (reinterpret_cast<intptr_t>(AuxiliaryMemoryMapping) == -1)
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {
@@ -127,7 +143,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 }
 
 SubprocessMemory::~SubprocessMemory() {
-  for (std::string SharedMemoryName : SharedMemoryNames) {
+  for (const std::string &SharedMemoryName : SharedMemoryNames) {
     if (shm_unlink(SharedMemoryName.c_str()) != 0) {
       errs() << "Failed to unlink shared memory section: " << strerror(errno)
              << "\n";
@@ -157,7 +173,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 
 SubprocessMemory::~SubprocessMemory() {}
 
-#endif // defined(__linux__) && !defined(__ANDROID__)
+#endif // !defined(__ANDROID__)
+#endif // defined(__linux__)
 
 } // namespace exegesis
 } // namespace llvm

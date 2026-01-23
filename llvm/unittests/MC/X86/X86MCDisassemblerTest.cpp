@@ -23,29 +23,30 @@ using namespace llvm;
 namespace {
 
 struct Context {
-  const char *TripleName = "x86_64-unknown-elf";
+  static constexpr char TripleName[] = "x86_64-unknown-elf";
+  const Triple TheTriple;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> Ctx;
   std::unique_ptr<MCSubtargetInfo> STI;
   std::unique_ptr<MCDisassembler> DisAsm;
 
-  Context() {
+  Context() : TheTriple(TripleName) {
     LLVMInitializeX86TargetInfo();
     LLVMInitializeX86TargetMC();
     LLVMInitializeX86Disassembler();
 
     // If we didn't build x86, do not run the test.
     std::string Error;
-    const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                      STI.get());
+    MRI.reset(TheTarget->createMCRegInfo(TheTriple));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
+    STI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
+    Ctx =
+        std::make_unique<MCContext>(TheTriple, MAI.get(), MRI.get(), STI.get());
 
     DisAsm.reset(TheTarget->createMCDisassembler(*STI, *Ctx));
   }
@@ -61,7 +62,7 @@ Context &getContext() {
 class X86MCSymbolizerTest : public MCSymbolizer {
 public:
   X86MCSymbolizerTest(MCContext &MC) : MCSymbolizer(MC, nullptr) {}
-  ~X86MCSymbolizerTest() {}
+  ~X86MCSymbolizerTest() override = default;
 
   struct OpInfo {
     int64_t Value = 0;

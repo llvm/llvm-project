@@ -17,7 +17,7 @@
 #include "llvm/IR/Function.h"
 
 namespace llvm {
-class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
+class DirectXTTIImpl final : public BasicTTIImplBase<DirectXTTIImpl> {
   using BaseT = BasicTTIImplBase<DirectXTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -31,9 +31,14 @@ class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
 
 public:
   explicit DirectXTTIImpl(const DirectXTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-  unsigned getMinVectorRegisterBitWidth() const { return 32; }
+  unsigned getMinVectorRegisterBitWidth() const override { return 32; }
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const override;
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const override;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const override;
 };
 } // namespace llvm
 

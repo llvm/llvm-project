@@ -25,14 +25,14 @@ define dso_local %"struct.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q3, q2, [x9]
 ; CHECK-NEXT:    cmp x8, #1600
 ; CHECK-NEXT:    ldp q5, q4, [x10]
-; CHECK-NEXT:    fcmla v0.2d, v5.2d, v3.2d, #0
-; CHECK-NEXT:    fcmla v1.2d, v4.2d, v2.2d, #0
-; CHECK-NEXT:    fcmla v0.2d, v5.2d, v3.2d, #90
-; CHECK-NEXT:    fcmla v1.2d, v4.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v1.2d, v5.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v4.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v1.2d, v5.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v4.2d, v2.2d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    faddp d1, v2.2d
 ; CHECK-NEXT:    ret
@@ -148,32 +148,31 @@ define %"struct.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add x8, x0, #32
+; CHECK-NEXT:    add x9, x1, #32
+; CHECK-NEXT:    mov x10, #-100 // =0xffffffffffffff9c
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8
-; CHECK-NEXT:    add x10, x1, x8
-; CHECK-NEXT:    add x8, x8, #64
-; CHECK-NEXT:    ldp q5, q4, [x9]
-; CHECK-NEXT:    cmp x8, #1600
-; CHECK-NEXT:    ldp q7, q6, [x10]
-; CHECK-NEXT:    ldp q17, q16, [x9, #32]
-; CHECK-NEXT:    ldp q19, q18, [x10, #32]
+; CHECK-NEXT:    ldp q5, q4, [x8, #-32]
+; CHECK-NEXT:    adds x10, x10, #4
+; CHECK-NEXT:    ldp q7, q6, [x9, #-32]
+; CHECK-NEXT:    ldp q17, q16, [x8], #64
+; CHECK-NEXT:    ldp q19, q18, [x9], #64
 ; CHECK-NEXT:    fcmla v2.2d, v7.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v0.2d, v6.2d, v4.2d, #0
-; CHECK-NEXT:    fcmla v1.2d, v19.2d, v17.2d, #0
+; CHECK-NEXT:    fcmla v1.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v19.2d, v17.2d, #0
 ; CHECK-NEXT:    fcmla v3.2d, v18.2d, v16.2d, #0
 ; CHECK-NEXT:    fcmla v2.2d, v7.2d, v5.2d, #90
-; CHECK-NEXT:    fcmla v0.2d, v6.2d, v4.2d, #90
-; CHECK-NEXT:    fcmla v1.2d, v19.2d, v17.2d, #90
+; CHECK-NEXT:    fcmla v1.2d, v6.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v19.2d, v17.2d, #90
 ; CHECK-NEXT:    fcmla v3.2d, v18.2d, v16.2d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v4.2d, v1.2d, v3.2d
-; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
-; CHECK-NEXT:    zip2 v3.2d, v2.2d, v0.2d
-; CHECK-NEXT:    zip1 v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    fadd v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    zip2 v4.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip2 v3.2d, v2.2d, v1.2d
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v1.2d
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    fadd v1.2d, v4.2d, v3.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    faddp d1, v1.2d

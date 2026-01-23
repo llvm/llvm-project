@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -41,10 +40,14 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
         !llvm::hasSingleElement(resultShapes))
       return failure();
 
+    Attribute encoding;
+    if (auto tensorTy = dyn_cast<RankedTensorType>(reshapeOp.getResultType()))
+      encoding = tensorTy.getEncoding();
+
     // Create new tensor.empty op.
-    // TODO: Do not drop tensor type encoding.
-    Value emptyTensor = rewriter.create<EmptyOp>(
-        loc, resultShapes[0], reshapeOp.getResultType().getElementType());
+    Value emptyTensor =
+        EmptyOp::create(rewriter, loc, resultShapes[0],
+                        reshapeOp.getResultType().getElementType(), encoding);
     if (emptyTensor.getType() != reshapeOp.getResultType()) {
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           reshapeOp, reshapeOp.getResultType(), emptyTensor);
@@ -93,6 +96,38 @@ private:
   bool foldSingleUseOnly = false;
 };
 
+// Fold concat operation where all the operands are empty.
+struct FoldConcatsOfEmpty : public OpRewritePattern<ConcatOp> {
+  using OpRewritePattern<ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    auto concatOperands = concatOp.getInputs();
+    if (concatOperands.empty()) {
+      return failure();
+    }
+    auto firstEmptyOp = concatOperands.front().getDefiningOp<tensor::EmptyOp>();
+    if (!firstEmptyOp) {
+      return failure();
+    }
+    auto isDefinedByEmptyOp = [](Value v) -> bool {
+      return v.getDefiningOp<tensor::EmptyOp>();
+    };
+    if (!llvm::all_of(concatOperands.drop_front(), isDefinedByEmptyOp)) {
+      return rewriter.notifyMatchFailure(
+          concatOp, "not all operands are defined by an empty op");
+    }
+    SmallVector<SmallVector<OpFoldResult>> resultShape;
+    if (failed(concatOp.reifyResultShapes(rewriter, resultShape))) {
+      return rewriter.notifyMatchFailure(concatOp,
+                                         "failed to get result shape");
+    }
+    rewriter.replaceOpWithNewOp<tensor::EmptyOp>(
+        concatOp, resultShape[0], concatOp.getResultType().getElementType());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
@@ -101,4 +136,6 @@ void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
                FoldEmptyTensorWithReshapeOp<tensor::ExpandShapeOp>,
                FoldEmptyTensorWithReshapeOp<tensor::CollapseShapeOp>>(
       patterns.getContext(), /*benefit=*/1, foldSingleUseOnly);
+  patterns.add<FoldConcatsOfEmpty>(patterns.getContext(),
+                                   /*benefit=*/1);
 }

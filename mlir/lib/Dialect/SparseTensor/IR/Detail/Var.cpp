@@ -29,7 +29,7 @@ std::string Var::str() const {
   std::string str;
   llvm::raw_string_ostream os(str);
   print(os);
-  return os.str();
+  return str;
 }
 
 void Var::print(AsmPrinter &printer) const { print(printer.getStream()); }
@@ -143,11 +143,11 @@ void VarInfo::setNum(Var::Num n) {
 
 /// Helper function for `assertUsageConsistency` to better handle SMLoc
 /// mismatches.
-LLVM_ATTRIBUTE_UNUSED static llvm::SMLoc
-minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
-  const auto loc1 = parser.getEncodedSourceLoc(sm1).dyn_cast<FileLineColLoc>();
+[[maybe_unused]] static llvm::SMLoc minSMLoc(AsmParser &parser, llvm::SMLoc sm1,
+                                             llvm::SMLoc sm2) {
+  const auto loc1 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm1));
   assert(loc1 && "Could not get `FileLineColLoc` for first `SMLoc`");
-  const auto loc2 = parser.getEncodedSourceLoc(sm2).dyn_cast<FileLineColLoc>();
+  const auto loc2 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm2));
   assert(loc2 && "Could not get `FileLineColLoc` for second `SMLoc`");
   if (loc1.getFilename() != loc2.getFilename())
     return SMLoc();
@@ -156,13 +156,14 @@ minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
   return pair1 <= pair2 ? sm1 : sm2;
 }
 
-bool isInternalConsistent(VarEnv const &env, VarInfo::ID id, StringRef name) {
+static bool isInternalConsistent(VarEnv const &env, VarInfo::ID id,
+                                 StringRef name) {
   const auto &var = env.access(id);
   return (var.getName() == name && var.getID() == id);
 }
 
-bool isUsageConsistent(VarEnv const &env, VarInfo::ID id, llvm::SMLoc loc,
-                       VarKind vk) {
+static bool isUsageConsistent(VarEnv const &env, VarInfo::ID id,
+                              llvm::SMLoc loc, VarKind vk) {
   const auto &var = env.access(id);
   return var.getKind() == vk;
 }

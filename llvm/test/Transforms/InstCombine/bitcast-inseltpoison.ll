@@ -75,7 +75,7 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[X_LOBIT]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
 ;
@@ -91,7 +91,7 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <4 x i32> [[X_LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
@@ -107,7 +107,7 @@ define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 define <2 x i8> @canonicalize_bitcast_logic_with_constant(<4 x i4> %x) {
 ; CHECK-LABEL: @canonicalize_bitcast_logic_with_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %a = and <4 x i4> %x, <i4 0, i4 8, i4 0, i4 8>
@@ -120,7 +120,7 @@ define <2 x i8> @canonicalize_bitcast_logic_with_constant(<4 x i4> %x) {
 define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @bitcasts_and_bitcast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[BC3:%.*]] = and <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[BC3:%.*]] = and <4 x i32> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[BC3]]
 ;
   %bc1 = bitcast <4 x i32> %a to <2 x i64>
@@ -133,7 +133,7 @@ define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
 define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @bitcasts_and_bitcast_to_fp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <8 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i16> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i16> [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BC3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[BC3]]
 ;
@@ -149,7 +149,7 @@ define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
 define i128 @bitcast_or_bitcast(i128 %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcast_or_bitcast(
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast i128 [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[BC1]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[B:%.*]], [[BC1]]
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[OR]] to i128
 ; CHECK-NEXT:    ret i128 [[BC2]]
 ;
@@ -164,7 +164,7 @@ define i128 @bitcast_or_bitcast(i128 %a, <2 x i64> %b) {
 define <4 x i32> @bitcast_xor_bitcast(<4 x i32> %a, i128 %b) {
 ; CHECK-LABEL: @bitcast_xor_bitcast(
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[A:%.*]] to i128
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC1]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[B:%.*]], [[BC1]]
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast i128 [[XOR]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[BC2]]
 ;

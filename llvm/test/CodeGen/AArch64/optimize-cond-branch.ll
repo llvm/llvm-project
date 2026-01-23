@@ -16,7 +16,7 @@ define void @func() uwtable {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cbnz w8, .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %b1
-; CHECK-NEXT:    cbz wzr, .LBB0_4
+; CHECK-NEXT:    cbz w8, .LBB0_4
 ; CHECK-NEXT:  // %bb.2: // %b3
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w0, w8, #0x100
@@ -38,7 +38,7 @@ define void @func() uwtable {
   br i1 %c0, label %b1, label %b6
 
 b1:
-  br i1 undef, label %b3, label %b2
+  br i1 poison, label %b3, label %b2
 
 b2:
   %v0 = tail call i32 @extfunc()

@@ -86,16 +86,13 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             ExpectedPrinted, "input.cc");
 }
 
-::testing::AssertionResult PrintedDeclCXX11Matches(
-                                  StringRef Code,
-                                  const DeclarationMatcher &NodeMatch,
-                                  StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclCXX11Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
+                        StringRef ExpectedPrinted,
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            NodeMatch,
-                            ExpectedPrinted,
-                            "input.cc");
+  return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
+                            PolicyModifier);
 }
 
 ::testing::AssertionResult PrintedDeclCXX11nonMSCMatches(
@@ -359,42 +356,40 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl12) {
-  ASSERT_TRUE(
-      PrintedDeclCXX98Matches("struct S { int x; };"
-                              "namespace NS { class C {};}"
-                              "void foo() {using namespace NS; C c;}",
-                              "foo",
-                              "void foo() {\nusing namespace NS;\nclass "
-                              "NS::C c;\n}\n",
-                              [](PrintingPolicy &Policy) {
-                                Policy.SuppressTagKeyword = false;
-                                Policy.SuppressScope = true;
-                                Policy.TerseOutput = false;
-                              }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
+                                      "namespace NS { class C {};}"
+                                      "void foo() {using namespace NS; C c;}",
+                                      "foo",
+                                      "void foo() {\nusing namespace NS;\n"
+                                      "C c;\n}\n",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.SuppressTagKeyword = false;
+                                        Policy.SuppressScope = true;
+                                        Policy.TerseOutput = false;
+                                      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl13) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-      "struct S { int x; };"
-      "S s1;"
-      "S foo() {return s1;}",
-      "foo", "struct S foo() {\nreturn s1;\n}\n", [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = false;
-        Policy.SuppressScope = true;
-        Policy.TerseOutput = false;
-      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
+                                      "S s1;"
+                                      "S foo() {return s1;}",
+                                      "foo", "S foo() {\nreturn s1;\n}\n",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.SuppressTagKeyword = false;
+                                        Policy.SuppressScope = true;
+                                        Policy.TerseOutput = false;
+                                      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl14) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-      "struct S { int x; };"
-      "S foo(S s1) {return s1;}",
-      "foo", "struct S foo(struct S s1) {\nreturn s1;\n}\n",
-      [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = false;
-        Policy.SuppressScope = true;
-        Policy.TerseOutput = false;
-      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
+                                      "S foo(S s1) {return s1;}",
+                                      "foo", "S foo(S s1) {\nreturn s1;\n}\n",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.SuppressTagKeyword = false;
+                                        Policy.SuppressScope = true;
+                                        Policy.TerseOutput = false;
+                                      }));
 }
 TEST(DeclPrinter, TestCXXRecordDecl15) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
@@ -402,8 +397,8 @@ TEST(DeclPrinter, TestCXXRecordDecl15) {
       "namespace NS { class C {};}"
       "S foo(S s1, NS::C c1) {using namespace NS; C c; return s1;}",
       "foo",
-      "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
-      "NS::C c;\nreturn s1;\n}\n",
+      "S foo(S s1, NS::C c1) {\nusing namespace NS;\n"
+      "C c;\nreturn s1;\n}\n",
       [](PrintingPolicy &Policy) {
         Policy.SuppressTagKeyword = false;
         Policy.SuppressScope = true;
@@ -1027,91 +1022,91 @@ TEST(DeclPrinter, TestFieldDecl2) {
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl1) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<typename T>"
-    "struct A { T a; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <typename T> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("template<typename T>"
+                              "struct A { T a; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename T> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl2) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<typename T = int>"
-    "struct A { T a; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <typename T = int> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("template<typename T = int>"
+                              "struct A { T a; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename T = int> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl3) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<class T>"
-    "struct A { T a; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <class T> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("template<class T>"
+                              "struct A { T a; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <class T> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl4) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<typename T, typename U>"
-    "struct A { T a; U b; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <typename T, typename U> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("template<typename T, typename U>"
+                              "struct A { T a; U b; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename T, typename U> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl5) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<int N>"
-    "struct A { int a[N]; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <int N> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("template<int N>"
+                              "struct A { int a[N]; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <int N> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl6) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<int N = 42>"
-    "struct A { int a[N]; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <int N = 42> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("template<int N = 42>"
+                              "struct A { int a[N]; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <int N = 42> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl7) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "typedef int MyInt;"
-    "template<MyInt N>"
-    "struct A { int a[N]; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <MyInt N> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("typedef int MyInt;"
+                              "template<MyInt N>"
+                              "struct A { int a[N]; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <MyInt N> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl8) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<template<typename U> class T> struct A { };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <template <typename U> class T> struct A {}"));
+      "template<template<typename U> class T> struct A { };",
+      classTemplateDecl(hasName("A")).bind("id"),
+      "template <template <typename U> class T> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl9) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "template<typename T> struct Z { };"
-    "template<template<typename U> class T = Z> struct A { };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <template <typename U> class T> struct A {}"));
+      "template<typename T> struct Z { };"
+      "template<template<typename U> class T = Z> struct A { };",
+      classTemplateDecl(hasName("A")).bind("id"),
+      "template <template <typename U> class T = Z> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl10) {
-  ASSERT_TRUE(PrintedDeclCXX11Matches(
-    "template<typename... T>"
-    "struct A { int a; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <typename ...T> struct A {}"));
+  ASSERT_TRUE(
+      PrintedDeclCXX11Matches("template<typename... T>"
+                              "struct A { int a; };",
+                              classTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename ...T> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl11) {
   ASSERT_TRUE(PrintedDeclCXX11Matches(
-    "template<typename... T>"
-    "struct A : public T... { int a; };",
-    classTemplateDecl(hasName("A")).bind("id"),
-    "template <typename ...T> struct A : public T... {}"));
+      "template<typename... T>"
+      "struct A : public T... { int a; };",
+      classTemplateDecl(hasName("A")).bind("id"),
+      "template <typename ...T> struct A : public T... {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplatePartialSpecializationDecl1) {
@@ -1199,29 +1194,28 @@ TEST(DeclPrinter, TestUnnamedTemplateParameters) {
 }
 
 TEST(DeclPrinter, TestUnnamedTemplateParametersPacks) {
-  ASSERT_TRUE(PrintedDeclCXX17Matches(
-      "template <typename ..., int ...,"
-      " template <typename ..., bool ...> class ...> void A();",
-      functionTemplateDecl(hasName("A")).bind("id"),
-      "template <typename ..., int ...,"
-      " template <typename ..., bool ...> class ...> void A()"));
+  ASSERT_TRUE(
+      PrintedDeclCXX17Matches("template <typename ..., int ...,"
+                              " template <typename ...> class ...> void A();",
+                              functionTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename ..., int ...,"
+                              " template <typename ...> class ...> void A()"));
 }
 
 TEST(DeclPrinter, TestNamedTemplateParametersPacks) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <typename ...T, int ...I,"
-      " template <typename ...X, bool ...B> class ...Z> void A();",
+      " template <typename ...X> class ...Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
       "template <typename ...T, int ...I,"
-      " template <typename ...X, bool ...B> class ...Z> void A()"));
+      " template <typename ...X> class ...Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <template <typename> typename Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
-      "template <template <typename> class Z> void A()"));
-  // WRONG: We should use typename if the parameter was written with it.
+      "template <template <typename> typename Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList1) {
@@ -1387,34 +1381,38 @@ TEST(DeclPrinter, TestTemplateArgumentList16) {
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl17) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
-                                      "struct X {};"
-                                      "Z<X> A;",
-                                      "A", "Z<X> A"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;",
+      "A", "Z<X> A",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl18) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
-                                      "struct X {};"
-                                      "Z<X> A;"
-                                      "template <typename T1, int>"
-                                      "struct Y{};"
-                                      "Y<Z<X>, 2> B;",
-                                      "B", "Y<Z<X>, 2> B"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl19) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
-                                      "struct X {};"
-                                      "Z<X> A;"
-                                      "template <typename T1, int>"
-                                      "struct Y{};"
-                                      "Y<Z<X>, 2> B;",
-                                      "B", "Y<Z<X>, 2> B"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
 }
+
 TEST(DeclPrinter, TestCXXRecordDecl20) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
       "template <typename T, int N> class Inner;"
@@ -1431,8 +1429,8 @@ TEST(DeclPrinter, TestCXXRecordDecl20) {
       "};"
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
-      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl21) {
@@ -1451,8 +1449,8 @@ TEST(DeclPrinter, TestCXXRecordDecl21) {
       "};"
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
-      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
 }
 
 TEST(DeclPrinter, TestFunctionParamUglified) {
@@ -1551,4 +1549,42 @@ TEST(DeclPrinter, VarDeclWithInitializer) {
   ASSERT_TRUE(
       PrintedDeclCXX17Matches("void foo() {int arr[42]; for(int a : arr);}",
                               namedDecl(hasName("a")).bind("id"), "int a"));
+}
+
+TEST(DeclPrinter, TestTemplateFinal) {
+  // By default we should print 'final' keyword whether class is implicitly or
+  // explicitly marked final.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}"));
+}
+
+TEST(DeclPrinter, TestTemplateFinalWithPolishForDecl) {
+  // clangd relies on the 'final' keyword being printed when
+  // PolishForDeclaration is enabled, so make sure it is even if implicit attrs
+  // are disabled.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}",
+      [](PrintingPolicy &Policy) { Policy.PolishForDeclaration = true; }));
+}
+
+TEST(DeclPrinter, TestClassSuppressDeclAttributes) {
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "class alignas(32) [[deprecated]] A final {};",
+      cxxRecordDecl(hasName("A")).bind("id"), "class A {}",
+      [](PrintingPolicy &Policy) { Policy.SuppressDeclAttributes = true; }));
+}
+
+TEST(DeclPrinter, TestTemplateSuppressDeclAttributes) {
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class alignas(32) [[deprecated]] A final {};",
+      classTemplateDecl(hasName("A")).bind("id"),
+      "template <typename T> class A {}",
+      [](PrintingPolicy &Policy) { Policy.SuppressDeclAttributes = true; }));
 }

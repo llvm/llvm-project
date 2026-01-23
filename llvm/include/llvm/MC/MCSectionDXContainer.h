@@ -24,13 +24,7 @@ class MCSectionDXContainer final : public MCSection {
   friend class MCContext;
 
   MCSectionDXContainer(StringRef Name, SectionKind K, MCSymbol *Begin)
-      : MCSection(SV_DXContainer, Name, K, Begin) {}
-
-public:
-  void printSwitchToSection(const MCAsmInfo &, const Triple &, raw_ostream &,
-                            const MCExpr *) const override;
-  bool useCodeAlign() const override { return false; }
-  bool isVirtualSection() const override { return false; }
+      : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin) {}
 };
 
 } // end namespace llvm

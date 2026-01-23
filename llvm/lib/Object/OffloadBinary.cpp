@@ -15,15 +15,12 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -200,7 +197,9 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
 
   if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-      TheEntry->StringOffset > Buf.getBufferSize())
+      TheEntry->StringOffset > Buf.getBufferSize() ||
+      TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
+          Buf.getBufferSize())
     return errorCodeToError(object_error::unexpected_eof);
 
   return std::unique_ptr<OffloadBinary>(
@@ -304,6 +303,7 @@ OffloadKind object::getOffloadKind(StringRef Name) {
       .Case("openmp", OFK_OpenMP)
       .Case("cuda", OFK_Cuda)
       .Case("hip", OFK_HIP)
+      .Case("sycl", OFK_SYCL)
       .Default(OFK_None);
 }
 
@@ -315,6 +315,8 @@ StringRef object::getOffloadKindName(OffloadKind Kind) {
     return "cuda";
   case OFK_HIP:
     return "hip";
+  case OFK_SYCL:
+    return "sycl";
   default:
     return "none";
   }
@@ -359,7 +361,7 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
     return false;
 
   // If the architecture is "all" we assume it is always compatible.
-  if (LHS.second.equals("generic") || RHS.second.equals("generic"))
+  if (LHS.second == "generic" || RHS.second == "generic")
     return true;
 
   // Only The AMDGPU target requires additional checks.

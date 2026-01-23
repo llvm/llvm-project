@@ -33,11 +33,11 @@ body:             |
     ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
 
     %0 = COPY $sgpr4_sgpr5
-    %1 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %2 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (             dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %3 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                             invariant load (s64) from `ptr addrspace(4) undef`)
-    %4 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(2) undef`)
-    %6 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(1) undef`)
+    %1 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %2 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (             dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %3 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                             invariant load (s64) from `ptr addrspace(4) poison`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(2) poison`)
+    %6 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(1) poison`)
 
 ...

@@ -11,7 +11,7 @@ define void @foo() presplitcoroutine {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 40)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[FOO_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
 ; CHECK-NEXT:    store ptr @foo.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[STACKVAR0_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 2
 ; CHECK-NEXT:    [[STACKVAR1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 3
@@ -23,7 +23,7 @@ define void @foo() presplitcoroutine {
 ; CHECK:       loop:
 ; CHECK-NEXT:    store i64 1234, ptr [[STACKVAR0_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 4
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[AFTERCOROEND:%.*]]
 ; CHECK:       AfterCoroEnd:
@@ -50,7 +50,7 @@ entry:
   br label %loop
 
 loop:
-  call void @llvm.lifetime.start(i64 8, ptr %stackvar0)
+  call void @llvm.lifetime.start(ptr %stackvar0)
 
   store i64 1234, ptr %stackvar0
 
@@ -58,7 +58,7 @@ loop:
   ; %stackvar1 and rely on it staying the same across suspension.
   call void @bar()
 
-  call void @llvm.lifetime.end(i64 8, ptr %stackvar0)
+  call void @llvm.lifetime.end(ptr %stackvar0)
 
   %save = call token @llvm.coro.save(ptr null)
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
@@ -68,7 +68,7 @@ loop:
   ]
 
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -80,6 +80,6 @@ declare i64 @llvm.coro.size.i64()
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1, token)
-declare void @llvm.lifetime.start(i64, ptr nocapture)
-declare void @llvm.lifetime.end(i64, ptr nocapture)
+declare void @llvm.coro.end(ptr, i1, token)
+declare void @llvm.lifetime.start(ptr nocapture)
+declare void @llvm.lifetime.end(ptr nocapture)

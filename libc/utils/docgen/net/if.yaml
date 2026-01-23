@@ -1,0 +1,13 @@
+functions:
+  if_freenameindex:
+    in-latest-posix: ''
+  if_indextoname:
+    in-latest-posix: ''
+  if_nameindex:
+    in-latest-posix: ''
+  if_nametoindex:
+    in-latest-posix: ''
+
+macros:
+  IF_NAMESIZE:
+    in-latest-posix: ''

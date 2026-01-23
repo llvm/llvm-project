@@ -9,7 +9,6 @@
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/AST/Availability.h"
 #include "clang/InstallAPI/FrontendRecords.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
@@ -23,7 +22,8 @@ std::pair<GlobalRecord *, FrontendAttrs *> FrontendRecordsSlice::addGlobal(
 
   GlobalRecord *GR =
       llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
-  auto Result = FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {GR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {GR, &(Result.first->second)};
 }
 
@@ -39,8 +39,8 @@ FrontendRecordsSlice::addObjCInterface(StringRef Name, RecordLinkage Linkage,
 
   ObjCInterfaceRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {ObjCR, &(Result.first->second)};
 }
 
@@ -51,8 +51,8 @@ FrontendRecordsSlice::addObjCCategory(StringRef ClassToExtend,
                                       const Decl *D, HeaderType Access) {
   ObjCCategoryRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {ObjCR, &(Result.first->second)};
 }
 
@@ -67,8 +67,8 @@ std::pair<ObjCIVarRecord *, FrontendAttrs *> FrontendRecordsSlice::addObjCIVar(
     Linkage = RecordLinkage::Internal;
   ObjCIVarRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
 
   return {ObjCR, &(Result.first->second)};
 }
@@ -93,7 +93,7 @@ InstallAPIContext::findAndRecordFile(const FileEntry *FE,
   // included. This is primarily to resolve headers found
   // in a different location than what passed directly as input.
   StringRef IncludeName = PP.getHeaderSearchInfo().getIncludeNameForHeader(FE);
-  auto BackupIt = KnownIncludes.find(IncludeName.str());
+  auto BackupIt = KnownIncludes.find(IncludeName);
   if (BackupIt != KnownIncludes.end()) {
     KnownFiles[FE] = BackupIt->second;
     return BackupIt->second;
@@ -106,7 +106,7 @@ InstallAPIContext::findAndRecordFile(const FileEntry *FE,
 }
 
 void InstallAPIContext::addKnownHeader(const HeaderFile &H) {
-  auto FE = FM->getFile(H.getPath());
+  auto FE = FM->getOptionalFileRef(H.getPath());
   if (!FE)
     return; // File does not exist.
   KnownFiles[*FE] = H.getType();
@@ -160,6 +160,60 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
       {"installapi-includes-", Ctx.Slice->getTriple().str(), "-",
        getName(Ctx.Type), getFileExtension(Ctx.LangMode)});
   return llvm::MemoryBuffer::getMemBufferCopy(Contents, BufferName);
+}
+
+std::string findLibrary(StringRef InstallName, FileManager &FM,
+                        ArrayRef<std::string> FrameworkSearchPaths,
+                        ArrayRef<std::string> LibrarySearchPaths,
+                        ArrayRef<std::string> SearchPaths) {
+  auto getLibrary =
+      [&](const StringRef FullPath) -> std::optional<std::string> {
+    // Prefer TextAPI files when possible.
+    SmallString<PATH_MAX> TextAPIFilePath = FullPath;
+    replace_extension(TextAPIFilePath, ".tbd");
+
+    if (FM.getOptionalFileRef(TextAPIFilePath))
+      return std::string(TextAPIFilePath);
+
+    if (FM.getOptionalFileRef(FullPath))
+      return std::string(FullPath);
+
+    return std::nullopt;
+  };
+
+  const StringRef Filename = sys::path::filename(InstallName);
+  const bool IsFramework = sys::path::parent_path(InstallName)
+                               .ends_with((Filename + ".framework").str());
+  if (IsFramework) {
+    for (const StringRef Path : FrameworkSearchPaths) {
+      SmallString<PATH_MAX> FullPath(Path);
+      sys::path::append(FullPath, Filename + StringRef(".framework"), Filename);
+      if (auto LibOrNull = getLibrary(FullPath))
+        return *LibOrNull;
+    }
+  } else {
+    // Copy Apple's linker behavior: If this is a .dylib inside a framework, do
+    // not search -L paths.
+    bool IsEmbeddedDylib = (sys::path::extension(InstallName) == ".dylib") &&
+                           InstallName.contains(".framework/");
+    if (!IsEmbeddedDylib) {
+      for (const StringRef Path : LibrarySearchPaths) {
+        SmallString<PATH_MAX> FullPath(Path);
+        sys::path::append(FullPath, Filename);
+        if (auto LibOrNull = getLibrary(FullPath))
+          return *LibOrNull;
+      }
+    }
+  }
+
+  for (const StringRef Path : SearchPaths) {
+    SmallString<PATH_MAX> FullPath(Path);
+    sys::path::append(FullPath, InstallName);
+    if (auto LibOrNull = getLibrary(FullPath))
+      return *LibOrNull;
+  }
+
+  return {};
 }
 
 } // namespace clang::installapi

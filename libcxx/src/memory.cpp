@@ -7,13 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
+#if !defined(_LIBCPP_OBJECT_FORMAT_COFF) && !defined(_LIBCPP_OBJECT_FORMAT_XCOFF) &&                                   \
+    _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 5
 #  define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
 
+#include <__functional/hash.h>
 #include <memory>
+#include <typeinfo>
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 #  include <mutex>
 #  include <thread>
 #  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
@@ -96,7 +99,7 @@ __shared_weak_count* __shared_weak_count::lock() noexcept {
 
 const void* __shared_weak_count::__get_deleter(const type_info&) const noexcept { return nullptr; }
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 static constexpr std::size_t __sp_mut_count                = 32;
 static constinit __libcpp_mutex_t mut_back[__sp_mut_count] = {
@@ -128,21 +131,18 @@ __sp_mut& __get_sp_mut(const void* p) {
   return muts[hash<const void*>()(p) & (__sp_mut_count - 1)];
 }
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
-void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
-  void* r = nullptr;
-  if (size <= space) {
-    char* p1 = static_cast<char*>(ptr);
-    char* p2 = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(p1 + (alignment - 1)) & -alignment);
-    size_t d = static_cast<size_t>(p2 - p1);
-    if (d <= space - size) {
-      r   = p2;
-      ptr = r;
-      space -= d;
-    }
-  }
-  return r;
+#if _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 21
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
+// This function only exists for ABI compatibility and we therefore don't provide a declaration in the headers
+_LIBCPP_EXPORTED_FROM_ABI void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
+  return __align_inline::align(alignment, size, ptr, space);
 }
+_LIBCPP_DIAGNOSTIC_POP
+
+#endif
 
 _LIBCPP_END_NAMESPACE_STD

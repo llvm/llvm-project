@@ -99,7 +99,7 @@ static void removeDefsFromFunction(Oracle &O, MachineFunction &MF) {
         unsigned ImpDef = IsGeneric ? TargetOpcode::G_IMPLICIT_DEF
                                     : TargetOpcode::IMPLICIT_DEF;
 
-        unsigned OpFlags = getRegState(MO) & ~RegState::Implicit;
+        RegState OpFlags = getRegState(MO) & ~RegState::Implicit;
         InsPt = BuildMI(MBB, InsPt, DebugLoc(), TII->get(ImpDef))
           .addReg(RegPair.Reg, OpFlags, RegPair.SubReg);
       }
@@ -110,13 +110,10 @@ static void removeDefsFromFunction(Oracle &O, MachineFunction &MF) {
   }
 }
 
-static void removeDefsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceRegisterDefsMIRDeltaPass(Oracle &O,
+                                          ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       removeDefsFromFunction(O, *MF);
   }
-}
-
-void llvm::reduceRegisterDefsMIRDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, removeDefsFromModule, "Reducing register defs");
 }

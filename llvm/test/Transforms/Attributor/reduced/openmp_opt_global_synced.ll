@@ -34,7 +34,7 @@ attributes #1 = { "kernel" }
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
 ;.
-; CHECK: @[[_ZN4OMPX5STATE9TEAMSTATEE:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global ptr undef
+; CHECK: @_ZN4ompx5state9TeamStateE = internal addrspace(3) global ptr undef
 ;.
 ; CHECK: Function Attrs: norecurse nosync nounwind memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_kernel_parallel

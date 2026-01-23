@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
-
 #include "lldb/Utility/UUID.h"
+#include "llvm/Testing/Support/Error.h"
+#include "gtest/gtest.h"
 
 using namespace lldb_private;
 
@@ -85,4 +85,12 @@ TEST(UUIDTest, StringConverion) {
             UUID("@ABCDEFGHIJKLMNO", 16).GetAsString());
   EXPECT_EQ("40414243-4445-4647-4849-4A4B4C4D4E4F-50515253",
             UUID("@ABCDEFGHIJKLMNOPQRS", 20).GetAsString());
+}
+
+TEST(UUIDTest, Generate) {
+  UUID u16 = UUID::Generate();
+  EXPECT_EQ(u16.GetBytes().size(), 16UL);
+
+  UUID u20 = UUID::Generate(20);
+  EXPECT_EQ(u20.GetBytes().size(), 20UL);
 }

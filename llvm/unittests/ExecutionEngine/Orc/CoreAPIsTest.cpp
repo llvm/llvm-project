@@ -9,12 +9,12 @@
 #include "OrcTestCommon.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include <deque>
-#include <set>
 #include <thread>
 
 using namespace llvm;
@@ -23,6 +23,32 @@ using namespace llvm::orc;
 class CoreAPIsStandardTest : public CoreAPIsBasedStandardTest {};
 
 namespace {
+
+class CustomError : public ErrorInfo<CustomError> {
+public:
+  static char ID;
+  void log(raw_ostream &OS) const override { OS << "CustomError"; }
+  std::error_code convertToErrorCode() const override { return {}; }
+};
+char CustomError::ID = 0;
+
+TEST_F(CoreAPIsStandardTest, ErrorReporter) {
+  // Check that errors reported via ExecutionSession::reportError are sent to
+  // the registered error reporter, and that the error reporter can hold
+  // uniquely owned state.
+
+  Error ReportedError = Error::success();
+
+  ES.setErrorReporter(
+      // Make sure error reporter can capture uniquely-owned state.
+      [&, State = std::make_unique<int>(42)](Error Err) {
+        ReportedError = joinErrors(std::move(Err), std::move(ReportedError));
+      });
+
+  ES.reportError(make_error<CustomError>());
+
+  EXPECT_THAT_ERROR(std::move(ReportedError), Failed<CustomError>());
+}
 
 TEST_F(CoreAPIsStandardTest, JITDylibAddToLinkOrder) {
   // Check that the JITDylib::addToLinkOrder methods behave as expected.
@@ -489,6 +515,71 @@ TEST_F(CoreAPIsStandardTest, TestTrivialCircularDependency) {
 
   EXPECT_TRUE(FooReady)
     << "Self-dependency prevented symbol from being marked ready";
+}
+
+TEST_F(CoreAPIsStandardTest, TestBasicQueryDependenciesReporting) {
+  // Test that dependencies are reported as expected.
+
+  bool DependenciesCallbackRan = false;
+
+  std::unique_ptr<MaterializationResponsibility> FooR;
+  std::unique_ptr<MaterializationResponsibility> BarR;
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        FooR = std::move(R);
+      })));
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Bar, BarSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        BarR = std::move(R);
+      })));
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Baz, BazSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        cantFail(R->notifyResolved({{Baz, BazSym}}));
+        cantFail(R->notifyEmitted({}));
+      })));
+
+  // First issue a lookup for Foo and Bar so that we can put them
+  // into the required states for the test lookup below.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo, Bar}), SymbolState::Resolved,
+      [](Expected<SymbolMap> Result) {
+        EXPECT_THAT_EXPECTED(std::move(Result), Succeeded());
+      },
+      NoDependenciesToRegister);
+
+  cantFail(FooR->notifyResolved({{Foo, FooSym}}));
+  cantFail(FooR->notifyEmitted({}));
+
+  cantFail(BarR->notifyResolved({{Bar, BarSym}}));
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo, Bar, Baz}), SymbolState::Resolved,
+      [](Expected<SymbolMap> Result) {
+        EXPECT_THAT_EXPECTED(std::move(Result), Succeeded());
+      },
+      [&](const SymbolDependenceMap &Dependencies) {
+        EXPECT_EQ(Dependencies.size(), 1U)
+            << "Expect dependencies on only one JITDylib";
+        EXPECT_TRUE(Dependencies.count(&JD))
+            << "Expect dependencies on JD only";
+        auto &Deps = Dependencies.begin()->second;
+        EXPECT_EQ(Deps.size(), 2U);
+        EXPECT_TRUE(Deps.count(Bar));
+        EXPECT_TRUE(Deps.count(Baz));
+        DependenciesCallbackRan = true;
+      });
+
+  cantFail(BarR->notifyEmitted({}));
+
+  EXPECT_TRUE(DependenciesCallbackRan);
 }
 
 TEST_F(CoreAPIsStandardTest, TestCircularDependenceInOneJITDylib) {
@@ -1005,11 +1096,11 @@ TEST_F(CoreAPIsStandardTest, RedefineBoundWeakSymbol) {
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
-  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+  DispatchOverride = [&](std::unique_ptr<Task> T) {
     if (ExpectNoMoreMaterialization && isa<MaterializationTask>(*T))
       ADD_FAILURE() << "Unexpected materialization";
     T->run();
-  });
+  };
 
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
@@ -1130,6 +1221,71 @@ TEST_F(CoreAPIsStandardTest, SimpleAsynchronousGeneratorTest) {
   G.takeLookup().LS.continueLookup(Error::success());
 
   EXPECT_TRUE(LookupCompleted);
+}
+
+TEST_F(CoreAPIsStandardTest, ErrorFromSuspendedAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  bool LookupCompleted = false;
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        LookupCompleted = true;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_FALSE(LookupCompleted);
+
+  G.takeLookup().LS.continueLookup(
+      make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  EXPECT_TRUE(LookupCompleted);
+}
+
+TEST_F(CoreAPIsStandardTest, ErrorFromAutoSuspendedAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  std::atomic_size_t LookupsCompleted = 0;
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        ++LookupsCompleted;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_EQ(LookupsCompleted, 0U);
+
+  // Suspend the first lookup.
+  auto LS1 = std::move(G.takeLookup().LS);
+
+  // Start a second lookup that should be auto-suspended.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        ++LookupsCompleted;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_EQ(LookupsCompleted, 0U);
+
+  // Unsuspend the first lookup.
+  LS1.continueLookup(make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  // Unsuspend the second.
+  G.takeLookup().LS.continueLookup(
+      make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  EXPECT_EQ(LookupsCompleted, 2U);
 }
 
 TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
@@ -1346,6 +1502,15 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
   EXPECT_TRUE(QueryHandlerRun) << "Query handler never ran";
 }
 
+TEST_F(CoreAPIsStandardTest, FailDefineDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  EXPECT_THAT_ERROR(FooJD->define(absoluteSymbols({{Foo, FooSym}})),
+                    Failed<JITDylibDefunct>());
+}
+
 TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
   // Check that a defunct resource tracker causes defineMaterializing to error
   // immediately.
@@ -1402,17 +1567,12 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
   std::mutex WorkThreadsMutex;
-  std::vector<std::thread> WorkThreads;
-  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
-    std::promise<void> WaitP;
+  SmallVector<std::thread, 0> WorkThreads;
+  DispatchOverride = [&](std::unique_ptr<Task> T) {
     std::lock_guard<std::mutex> Lock(WorkThreadsMutex);
     WorkThreads.push_back(
-        std::thread([T = std::move(T), WaitF = WaitP.get_future()]() mutable {
-          WaitF.get();
-          T->run();
-        }));
-    WaitP.set_value();
-  });
+        std::thread([T = std::move(T)]() mutable { T->run(); }));
+  };
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
@@ -1423,8 +1583,15 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
   EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
       << "lookup returned incorrect flags";
 
-  for (auto &WT : WorkThreads)
+  std::unique_lock<std::mutex> Lock(WorkThreadsMutex);
+  // This works because every child thread that is allowed to use WorkThreads
+  // must either be in WorkThreads or its parent must be in WorkThreads.
+  while (!WorkThreads.empty()) {
+    auto WT = WorkThreads.pop_back_val();
+    Lock.unlock();
     WT.join();
+    Lock.lock();
+  }
 #endif
 }
 
@@ -1433,8 +1600,6 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
   // have pending queries, and test that MaterializationResponsibility's
   // replace method can be used to return definitions to the JITDylib in a new
   // MaterializationUnit.
-  SymbolNameSet Names({Foo, Bar});
-
   bool FooMaterialized = false;
   bool BarMaterialized = false;
 
@@ -1562,7 +1727,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // form a tree.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1604,7 +1769,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // contain a diamond.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1628,7 +1793,7 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // contain a cycle.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");

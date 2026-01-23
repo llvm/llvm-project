@@ -146,13 +146,13 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
           if (Warn && (Size == 0 || Size > 8))
             H.handleInvalidMaskType(MaskType);
           FS.setMaskType(MaskType);
-        } else if (MatchedStr.equals("sensitive"))
+        } else if (MatchedStr == "sensitive")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
         else if (PrivacyFlags !=
-                 clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
-                 MatchedStr.equals("private"))
+                     clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
+                 MatchedStr == "private")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        else if (PrivacyFlags == 0 && MatchedStr.equals("public"))
+        else if (PrivacyFlags == 0 && MatchedStr == "public")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
       } else {
         size_t CommaOrBracePos =
@@ -543,7 +543,8 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsIntMax:
         return ArgType(Ctx.getIntMaxType(), "intmax_t");
       case LengthModifier::AsSizeT:
-        return ArgType::makeSizeT(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
+        return ArgType::makeSizeT(
+            ArgType(Ctx.getSignedSizeType(), "signed size_t"));
       case LengthModifier::AsInt3264:
         return Ctx.getTargetInfo().getTriple().isArch64Bit()
                    ? ArgType(Ctx.LongLongTy, "__int64")
@@ -626,9 +627,11 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsIntMax:
         return ArgType::PtrTo(ArgType(Ctx.getIntMaxType(), "intmax_t"));
       case LengthModifier::AsSizeT:
-        return ArgType::PtrTo(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
+        return ArgType::PtrTo(ArgType::makeSizeT(
+            ArgType(Ctx.getSignedSizeType(), "signed size_t")));
       case LengthModifier::AsPtrDiff:
-        return ArgType::PtrTo(ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
+        return ArgType::PtrTo(ArgType::makePtrdiffT(
+            ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
       case LengthModifier::AsLongDouble:
         return ArgType(); // FIXME: Is this a known extension?
       case LengthModifier::AsAllocate:
@@ -790,8 +793,8 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   }
 
   // If it's an enum, get its underlying type.
-  if (const EnumType *ETy = QT->getAs<EnumType>())
-    QT = ETy->getDecl()->getIntegerType();
+  if (const auto *ED = QT->getAsEnumDecl())
+    QT = ED->getIntegerType();
 
   const BuiltinType *BT = QT->getAs<BuiltinType>();
   if (!BT) {
@@ -857,7 +860,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
@@ -865,6 +868,10 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define SIGNED_TYPE(Id, SingletonId)
 #define UNSIGNED_TYPE(Id, SingletonId)
 #define FLOATING_TYPE(Id, SingletonId)
@@ -913,7 +920,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
   if (LangOpt.C99 || LangOpt.CPlusPlus11)
-    namedTypeToLengthModifier(QT, LM);
+    namedTypeToLengthModifier(Ctx, QT, LM);
 
   // If fixing the length modifier was enough, we might be done.
   if (hasValidLengthModifier(Ctx.getTargetInfo(), LangOpt)) {

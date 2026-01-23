@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
-#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
 class _LIBCPP_EXPORTED_FROM_ABI steady_clock {
 public:
   typedef nanoseconds duration;
@@ -31,7 +31,7 @@ public:
   typedef chrono::time_point<steady_clock, duration> time_point;
   static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = true;
 
-  static time_point now() _NOEXCEPT;
+  [[__nodiscard__]] static time_point now() _NOEXCEPT;
 };
 #endif
 

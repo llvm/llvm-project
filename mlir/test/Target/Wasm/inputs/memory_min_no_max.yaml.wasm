@@ -1,0 +1,8 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x1
+...

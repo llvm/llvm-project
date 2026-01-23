@@ -58,8 +58,8 @@ dumpDXContainer(MemoryBufferRef Source) {
       assert(DXIL && "Since we are iterating and found a DXIL part, "
                      "this should never not have a value");
       NewPart.Program = DXContainerYAML::DXILProgram{
-          DXIL->first.MajorVersion,
-          DXIL->first.MinorVersion,
+          DXIL->first.getMajorVersion(),
+          DXIL->first.getMinorVersion(),
           DXIL->first.ShaderKind,
           DXIL->first.Size,
           DXIL->first.Bitcode.MajorVersion,
@@ -152,6 +152,16 @@ dumpDXContainer(MemoryBufferRef Source) {
       NewPart.Signature = dumpSignature(Container.getPatchConstantSignature());
       break;
     case dxbc::PartType::Unknown:
+      break;
+    case dxbc::PartType::RTS0:
+      std::optional<DirectX::RootSignature> RS = Container.getRootSignature();
+      if (RS.has_value()) {
+        auto RootSigDescOrErr =
+            DXContainerYAML::RootSignatureYamlDesc::create(*RS);
+        if (Error E = RootSigDescOrErr.takeError())
+          return std::move(E);
+        NewPart.RootSignature = RootSigDescOrErr.get();
+      }
       break;
     }
   }

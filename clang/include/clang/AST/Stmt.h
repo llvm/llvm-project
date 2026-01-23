@@ -19,6 +19,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/CapturedStmt.h"
+#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -31,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -109,6 +111,8 @@ protected:
 
   //===--- Statement bitfields classes ---===//
 
+  #define NumStmtBits 9
+
   class StmtBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -116,9 +120,8 @@ protected:
 
     /// The statement class.
     LLVM_PREFERRED_TYPE(StmtClass)
-    unsigned sClass : 8;
+    unsigned sClass : NumStmtBits;
   };
-  enum { NumStmtBits = 8 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;
@@ -275,24 +278,14 @@ protected:
     SourceLocation GotoLoc;
   };
 
-  class ContinueStmtBitfields {
-    friend class ContinueStmt;
+  class LoopControlStmtBitfields {
+    friend class LoopControlStmt;
 
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-    /// The location of the "continue".
-    SourceLocation ContinueLoc;
-  };
-
-  class BreakStmtBitfields {
-    friend class BreakStmt;
-
-    LLVM_PREFERRED_TYPE(StmtBitfields)
-    unsigned : NumStmtBits;
-
-    /// The location of the "break".
-    SourceLocation BreakLoc;
+    /// The location of the "continue"/"break".
+    SourceLocation KwLoc;
   };
 
   class ReturnStmtBitfields {
@@ -323,6 +316,16 @@ protected:
 
     /// The location of the "case" or "default" keyword.
     SourceLocation KeywordLoc;
+  };
+
+  class DeferStmtBitfields {
+    friend class DeferStmt;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// The location of the "defer".
+    SourceLocation DeferLoc;
   };
 
   //===--- Expression bitfields classes ---===//
@@ -460,10 +463,10 @@ protected:
     unsigned : NumExprBits;
 
     static_assert(
-        llvm::APFloat::S_MaxSemantics < 16,
-        "Too many Semantics enum values to fit in bitfield of size 4");
+        llvm::APFloat::S_MaxSemantics < 32,
+        "Too many Semantics enum values to fit in bitfield of size 5");
     LLVM_PREFERRED_TYPE(llvm::APFloat::Semantics)
-    unsigned Semantics : 4; // Provides semantics for APFloat construction
+    unsigned Semantics : 5; // Provides semantics for APFloat construction
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsExact : 1;
   };
@@ -530,7 +533,7 @@ protected:
     unsigned : NumExprBits;
 
     LLVM_PREFERRED_TYPE(UnaryExprOrTypeTrait)
-    unsigned Kind : 3;
+    unsigned Kind : 4;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };
@@ -538,6 +541,7 @@ protected:
   class ArrayOrMatrixSubscriptExprBitfields {
     friend class ArraySubscriptExpr;
     friend class MatrixSubscriptExpr;
+    friend class MatrixSingleSubscriptExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
@@ -561,15 +565,22 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
-    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 3 - NumExprBits;
+    /// True if the call expression is a must-elide call to a coroutine.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCoroElideSafe : 1;
 
-    /// The offset in bytes from the this pointer to the start of the
-    /// trailing objects belonging to CallExpr. Intentionally byte sized
-    /// for faster access.
-    unsigned OffsetToTrailingObjects : 8;
+    /// Tracks when CallExpr is used to represent an explicit object
+    /// member function, in order to adjust the begin location.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
+
+    /// Indicates that SourceLocations are cached as
+    /// Trailing objects. See the definition of CallExpr.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingSourceLoc : 1;
   };
-  enum { NumCallExprBits = 32 };
+
+  enum { NumCallExprBits = 25 };
 
   class MemberExprBitfields {
     friend class ASTStmtReader;
@@ -583,11 +594,13 @@ protected:
     unsigned IsArrow : 1;
 
     /// True if this member expression used a nested-name-specifier to
-    /// refer to the member, e.g., "x->Base::f", or found its member via
-    /// a using declaration.  When true, a MemberExprNameQualifier
-    /// structure is allocated immediately after the MemberExpr.
+    /// refer to the member, e.g., "x->Base::f".
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasQualifierOrFoundDecl : 1;
+    unsigned HasQualifier : 1;
+
+    // True if this member expression found its member via a using declaration.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFoundDecl : 1;
 
     /// True if this member expression specified a template keyword
     /// and/or a template argument list explicitly, e.g., x->f<int>,
@@ -647,6 +660,11 @@ protected:
     /// It is 0 otherwise.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
+
+    /// Whether or not this BinaryOperator should be excluded from integer
+    /// overflow sanitization.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExcludedOverflowPattern : 1;
 
     SourceLocation OpLoc;
   };
@@ -709,6 +727,27 @@ protected:
     unsigned Kind : 3;
   };
 
+  class ParenExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class ParenExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ProducedByFoldExpansion : 1;
+  };
+
+  class ShuffleVectorExprBitfields {
+    friend class ShuffleVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    unsigned NumExprs;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -720,6 +759,17 @@ protected:
     /// expression. Used to determine if a statement expression remains
     /// dependent after instantiation.
     unsigned TemplateDepth;
+  };
+
+  class ChooseExprBitfields {
+    friend class ASTStmtReader;
+    friend class ChooseExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    bool CondIsTrue : 1;
   };
 
   //===--- C++ Expression bitfields classes ---===//
@@ -781,6 +831,11 @@ protected:
     /// Whether this is an implicit "this".
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImplicit : 1;
+
+    /// Whether there is a lambda with an explicit object parameter that
+    /// captures this "this" by copy.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
 
     /// The location of the "this".
     SourceLocation Loc;
@@ -863,6 +918,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned ShouldPassAlignment : 1;
 
+    /// Should the type identity be passed to the allocation function?
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ShouldPassTypeIdentity : 1;
+
     /// If this is an array allocation, does the usual deallocation
     /// function for the allocated type want to know the allocated size?
     LLVM_PREFERRED_TYPE(bool)
@@ -926,11 +985,13 @@ protected:
     LLVM_PREFERRED_TYPE(TypeTrait)
     unsigned Kind : 8;
 
-    /// If this expression is not value-dependent, this indicates whether
-    /// the trait evaluated true or false.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsBooleanTypeTrait : 1;
+
+    /// If this expression is a non value-dependent boolean trait,
+    /// this indicates whether the trait evaluated true or false.
     LLVM_PREFERRED_TYPE(bool)
     unsigned Value : 1;
-
     /// The number of arguments to this type trait. According to [implimits]
     /// 8 bits would be enough, but we require (and test for) at least 16 bits
     /// to mirror FunctionType.
@@ -1060,11 +1121,6 @@ protected:
     /// argument-dependent lookup if this is the operand of a function call.
     LLVM_PREFERRED_TYPE(bool)
     unsigned RequiresADL : 1;
-
-    /// True if these lookup results are overloaded.  This is pretty trivially
-    /// rederivable if we urgently need to kill this field.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Overloaded : 1;
   };
   static_assert(sizeof(UnresolvedLookupExprBitfields) <= 4,
                 "UnresolvedLookupExprBitfields must be <= than 4 bytes to"
@@ -1151,6 +1207,57 @@ protected:
     SourceLocation RequiresKWLoc;
   };
 
+  class ArrayTypeTraitExprBitfields {
+    friend class ArrayTypeTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
+    LLVM_PREFERRED_TYPE(ArrayTypeTrait)
+    unsigned ATT : 2;
+  };
+
+  class ExpressionTraitExprBitfields {
+    friend class ExpressionTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. A ExpressionTrait enum in MSVC compatible unsigned.
+    LLVM_PREFERRED_TYPE(ExpressionTrait)
+    unsigned ET : 31;
+
+    /// The value of the type trait. Unspecified if dependent.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Value : 1;
+  };
+
+  class CXXFoldExprBitfields {
+    friend class CXXFoldExpr;
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    BinaryOperatorKind Opcode;
+  };
+
+  class PackIndexingExprBitfields {
+    friend class PackIndexingExpr;
+    friend class ASTStmtWriter;
+    friend class ASTStmtReader;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+    // The size of the trailing expressions.
+    unsigned TransformedExpressions : 31;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FullySubstituted : 1;
+  };
+
   //===--- C++ Coroutines bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -1192,6 +1299,20 @@ protected:
     SourceLocation Loc;
   };
 
+  class ConvertVectorExprBitfields {
+    friend class ConvertVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    //
+    /// This is only meaningful for operations on floating point
+    /// types when additional values need to be in trailing storage.
+    /// It is 0 otherwise.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFPFeatures : 1;
+  };
+
   union {
     // Same order as in StmtNodes.td.
     // Statements
@@ -1206,10 +1327,10 @@ protected:
     DoStmtBitfields DoStmtBits;
     ForStmtBitfields ForStmtBits;
     GotoStmtBitfields GotoStmtBits;
-    ContinueStmtBitfields ContinueStmtBits;
-    BreakStmtBitfields BreakStmtBits;
+    LoopControlStmtBitfields LoopControlStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
+    DeferStmtBitfields DeferStmtBits;
 
     // Expressions
     ExprBitfields ExprBits;
@@ -1231,9 +1352,12 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+    ParenExprBitfields ParenExprBits;
+    ShuffleVectorExprBitfields ShuffleVectorExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
+    ChooseExprBitfields ChooseExprBits;
 
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;
@@ -1260,6 +1384,10 @@ protected:
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
     LambdaExprBitfields LambdaExprBits;
     RequiresExprBitfields RequiresExprBits;
+    ArrayTypeTraitExprBitfields ArrayTypeTraitExprBits;
+    ExpressionTraitExprBitfields ExpressionTraitExprBits;
+    CXXFoldExprBitfields CXXFoldExprBits;
+    PackIndexingExprBitfields PackIndexingExprBits;
 
     // C++ Coroutines expressions
     CoawaitExprBitfields CoawaitBits;
@@ -1269,6 +1397,7 @@ protected:
 
     // Clang Extensions
     OpaqueValueExprBitfields OpaqueValueExprBits;
+    ConvertVectorExprBitfields ConvertVectorExprBits;
   };
 
 public:
@@ -1448,8 +1577,7 @@ public:
   child_range children();
 
   const_child_range children() const {
-    auto Children = const_cast<Stmt *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<Stmt *>(this)->children();
   }
 
   child_iterator child_begin() { return children().begin(); }
@@ -1656,6 +1784,11 @@ public:
     return *getTrailingObjects<FPOptionsOverride>();
   }
 
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
   using body_iterator = Stmt **;
   using body_range = llvm::iterator_range<body_iterator>;
 
@@ -1708,26 +1841,6 @@ public:
 
   const_reverse_body_iterator body_rend() const {
     return const_reverse_body_iterator(body_begin());
-  }
-
-  // Get the Stmt that StmtExpr would consider to be the result of this
-  // compound statement. This is used by StmtExpr to properly emulate the GCC
-  // compound expression extension, which ignores trailing NullStmts when
-  // getting the result of the expression.
-  // i.e. ({ 5;;; })
-  //           ^^ ignored
-  // If we don't find something that isn't a NullStmt, just return the last
-  // Stmt.
-  Stmt *getStmtExprResult() {
-    for (auto *B : llvm::reverse(body())) {
-      if (!isa<NullStmt>(B))
-        return B;
-    }
-    return body_back();
-  }
-
-  const Stmt *getStmtExprResult() const {
-    return const_cast<CompoundStmt *>(this)->getStmtExprResult();
   }
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }
@@ -1819,10 +1932,6 @@ class CaseStmt final
 
   unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
     return NumMandatoryStmtPtr + caseStmtIsGNURange();
-  }
-
-  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
-    return caseStmtIsGNURange();
   }
 
   unsigned lhsOffset() const { return LhsOffset; }
@@ -2056,6 +2165,14 @@ public:
   SourceLocation getBeginLoc() const { return getIdentLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
+  /// Look through nested labels and return the first non-label statement; e.g.
+  /// if this is 'a:' in 'a: b: c: for(;;)', this returns the for loop.
+  const Stmt *getInnermostLabeledStmt() const;
+  Stmt *getInnermostLabeledStmt() {
+    return const_cast<Stmt *>(
+        const_cast<const LabelStmt *>(this)->getInnermostLabeledStmt());
+  }
+
   child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 
   const_child_range children() const {
@@ -2086,7 +2203,7 @@ class AttributedStmt final
       : ValueStmt(AttributedStmtClass), SubStmt(SubStmt) {
     AttributedStmtBits.NumAttrs = Attrs.size();
     AttributedStmtBits.AttrLoc = Loc;
-    std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
+    llvm::copy(Attrs, getAttrArrayPtr());
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
@@ -2096,10 +2213,8 @@ class AttributedStmt final
     std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
   }
 
-  const Attr *const *getAttrArrayPtr() const {
-    return getTrailingObjects<const Attr *>();
-  }
-  const Attr **getAttrArrayPtr() { return getTrailingObjects<const Attr *>(); }
+  const Attr *const *getAttrArrayPtr() const { return getTrailingObjects(); }
+  const Attr **getAttrArrayPtr() { return getTrailingObjects(); }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,
@@ -2110,7 +2225,7 @@ public:
 
   SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
   ArrayRef<const Attr *> getAttrs() const {
-    return llvm::ArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
+    return {getAttrArrayPtr(), AttributedStmtBits.NumAttrs};
   }
 
   Stmt *getSubStmt() { return SubStmt; }
@@ -2411,7 +2526,7 @@ class SwitchStmt final : public Stmt,
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
-  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+  unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasInitStorage() + hasVarStorage();
   }
 
@@ -2447,40 +2562,34 @@ public:
   bool hasVarStorage() const { return SwitchStmtBits.HasVar; }
 
   Expr *getCond() {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   const Expr *getCond() const {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   void setCond(Expr *Cond) {
-    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+    getTrailingObjects()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
   }
 
-  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
-  const Stmt *getBody() const {
-    return getTrailingObjects<Stmt *>()[bodyOffset()];
-  }
+  Stmt *getBody() { return getTrailingObjects()[bodyOffset()]; }
+  const Stmt *getBody() const { return getTrailingObjects()[bodyOffset()]; }
 
-  void setBody(Stmt *Body) {
-    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
-  }
+  void setBody(Stmt *Body) { getTrailingObjects()[bodyOffset()] = Body; }
 
   Stmt *getInit() {
-    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
-                            : nullptr;
+    return hasInitStorage() ? getTrailingObjects()[initOffset()] : nullptr;
   }
 
   const Stmt *getInit() const {
-    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
-                            : nullptr;
+    return hasInitStorage() ? getTrailingObjects()[initOffset()] : nullptr;
   }
 
   void setInit(Stmt *Init) {
     assert(hasInitStorage() &&
            "This switch statement has no storage for an init statement!");
-    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+    getTrailingObjects()[initOffset()] = Init;
   }
 
   /// Retrieve the variable declared in this "switch" statement, if any.
@@ -2504,20 +2613,20 @@ public:
   /// If this SwitchStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
   DeclStmt *getConditionVariableDeclStmt() {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   const DeclStmt *getConditionVariableDeclStmt() const {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   void setConditionVariableDeclStmt(DeclStmt *CondVar) {
     assert(hasVarStorage());
-    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+    getTrailingObjects()[varOffset()] = CondVar;
   }
 
   SwitchCase *getSwitchCaseList() { return FirstCase; }
@@ -2561,15 +2670,13 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + numTrailingStatements());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + numTrailingStatements());
   }
 
   static bool classof(const Stmt *T) {
@@ -2606,7 +2713,7 @@ class WhileStmt final : public Stmt,
   unsigned condOffset() const { return VarOffset + hasVarStorage(); }
   unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
 
-  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+  unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasVarStorage();
   }
 
@@ -2632,25 +2739,21 @@ public:
   bool hasVarStorage() const { return WhileStmtBits.HasVar; }
 
   Expr *getCond() {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   const Expr *getCond() const {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   void setCond(Expr *Cond) {
-    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+    getTrailingObjects()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
   }
 
-  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
-  const Stmt *getBody() const {
-    return getTrailingObjects<Stmt *>()[bodyOffset()];
-  }
+  Stmt *getBody() { return getTrailingObjects()[bodyOffset()]; }
+  const Stmt *getBody() const { return getTrailingObjects()[bodyOffset()]; }
 
-  void setBody(Stmt *Body) {
-    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
-  }
+  void setBody(Stmt *Body) { getTrailingObjects()[bodyOffset()] = Body; }
 
   /// Retrieve the variable declared in this "while" statement, if any.
   ///
@@ -2672,20 +2775,20 @@ public:
   /// If this WhileStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
   DeclStmt *getConditionVariableDeclStmt() {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   const DeclStmt *getConditionVariableDeclStmt() const {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   void setConditionVariableDeclStmt(DeclStmt *CondVar) {
     assert(hasVarStorage());
-    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+    getTrailingObjects()[varOffset()] = CondVar;
   }
 
   SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
@@ -2707,15 +2810,13 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + numTrailingStatements());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + numTrailingStatements());
   }
 };
 
@@ -2944,63 +3045,97 @@ public:
   }
 };
 
-/// ContinueStmt - This represents a continue.
-class ContinueStmt : public Stmt {
-public:
-  ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass) {
-    setContinueLoc(CL);
+/// Base class for BreakStmt and ContinueStmt.
+class LoopControlStmt : public Stmt {
+  /// If this is a named break/continue, the label whose statement we're
+  /// targeting, as well as the source location of the label after the
+  /// keyword; for example:
+  ///
+  ///   a: // <-- TargetLabel
+  ///   for (;;)
+  ///     break a; // <-- LabelLoc
+  ///
+  LabelDecl *TargetLabel = nullptr;
+  SourceLocation LabelLoc;
+
+protected:
+  LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
+                  LabelDecl *Target)
+      : Stmt(Class), TargetLabel(Target), LabelLoc(LabelLoc) {
+    setKwLoc(Loc);
   }
 
+  LoopControlStmt(StmtClass Class, SourceLocation Loc)
+      : LoopControlStmt(Class, Loc, SourceLocation(), nullptr) {}
+
+  LoopControlStmt(StmtClass Class, EmptyShell ES) : Stmt(Class, ES) {}
+
+public:
+  SourceLocation getKwLoc() const { return LoopControlStmtBits.KwLoc; }
+  void setKwLoc(SourceLocation L) { LoopControlStmtBits.KwLoc = L; }
+
+  SourceLocation getBeginLoc() const { return getKwLoc(); }
+  SourceLocation getEndLoc() const {
+    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
+  }
+
+  bool hasLabelTarget() const { return TargetLabel != nullptr; }
+
+  SourceLocation getLabelLoc() const { return LabelLoc; }
+  void setLabelLoc(SourceLocation L) { LabelLoc = L; }
+
+  LabelDecl *getLabelDecl() { return TargetLabel; }
+  const LabelDecl *getLabelDecl() const { return TargetLabel; }
+  void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
+
+  /// If this is a named break/continue, get the loop or switch statement
+  /// that this targets.
+  const Stmt *getNamedLoopOrSwitch() const;
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    StmtClass Class = T->getStmtClass();
+    return Class == ContinueStmtClass || Class == BreakStmtClass;
+  }
+};
+
+/// ContinueStmt - This represents a continue.
+class ContinueStmt : public LoopControlStmt {
+public:
+  ContinueStmt(SourceLocation CL) : LoopControlStmt(ContinueStmtClass, CL) {}
+  ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
+      : LoopControlStmt(ContinueStmtClass, CL, LabelLoc, Target) {}
+
   /// Build an empty continue statement.
-  explicit ContinueStmt(EmptyShell Empty) : Stmt(ContinueStmtClass, Empty) {}
-
-  SourceLocation getContinueLoc() const { return ContinueStmtBits.ContinueLoc; }
-  void setContinueLoc(SourceLocation L) { ContinueStmtBits.ContinueLoc = L; }
-
-  SourceLocation getBeginLoc() const { return getContinueLoc(); }
-  SourceLocation getEndLoc() const { return getContinueLoc(); }
+  explicit ContinueStmt(EmptyShell Empty)
+      : LoopControlStmt(ContinueStmtClass, Empty) {}
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ContinueStmtClass;
   }
-
-  // Iterators
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
 };
 
 /// BreakStmt - This represents a break.
-class BreakStmt : public Stmt {
+class BreakStmt : public LoopControlStmt {
 public:
-  BreakStmt(SourceLocation BL) : Stmt(BreakStmtClass) {
-    setBreakLoc(BL);
-  }
+  BreakStmt(SourceLocation BL) : LoopControlStmt(BreakStmtClass, BL) {}
+  BreakStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
+      : LoopControlStmt(BreakStmtClass, CL, LabelLoc, Target) {}
 
   /// Build an empty break statement.
-  explicit BreakStmt(EmptyShell Empty) : Stmt(BreakStmtClass, Empty) {}
-
-  SourceLocation getBreakLoc() const { return BreakStmtBits.BreakLoc; }
-  void setBreakLoc(SourceLocation L) { BreakStmtBits.BreakLoc = L; }
-
-  SourceLocation getBeginLoc() const { return getBreakLoc(); }
-  SourceLocation getEndLoc() const { return getBreakLoc(); }
+  explicit BreakStmt(EmptyShell Empty)
+      : LoopControlStmt(BreakStmtClass, Empty) {}
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BreakStmtClass;
-  }
-
-  // Iterators
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
 
@@ -3025,10 +3160,6 @@ class ReturnStmt final
 
   /// True if this ReturnStmt has storage for an NRVO candidate.
   bool hasNRVOCandidate() const { return ReturnStmtBits.HasNRVOCandidate; }
-
-  unsigned numTrailingObjects(OverloadToken<const VarDecl *>) const {
-    return hasNRVOCandidate();
-  }
 
   /// Build a return statement.
   ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate);
@@ -3055,8 +3186,7 @@ public:
   /// The optimization itself can only be performed if the variable is
   /// also marked as an NRVO object.
   const VarDecl *getNRVOCandidate() const {
-    return hasNRVOCandidate() ? *getTrailingObjects<const VarDecl *>()
-                              : nullptr;
+    return hasNRVOCandidate() ? *getTrailingObjects() : nullptr;
   }
 
   /// Set the variable that might be used for the named return value
@@ -3065,7 +3195,7 @@ public:
   void setNRVOCandidate(const VarDecl *Var) {
     assert(hasNRVOCandidate() &&
            "This return statement has no storage for an NRVO candidate!");
-    *getTrailingObjects<const VarDecl *>() = Var;
+    *getTrailingObjects() = Var;
   }
 
   SourceLocation getReturnLoc() const { return ReturnStmtBits.RetLoc; }
@@ -3091,6 +3221,47 @@ public:
     if (RetExpr)
       return const_child_range(&RetExpr, &RetExpr + 1);
     return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// DeferStmt - This represents a deferred statement.
+class DeferStmt : public Stmt {
+  friend class ASTStmtReader;
+
+  /// The deferred statement.
+  Stmt *Body;
+
+  DeferStmt(EmptyShell Empty);
+  DeferStmt(SourceLocation DeferLoc, Stmt *Body);
+
+public:
+  static DeferStmt *CreateEmpty(ASTContext &Context, EmptyShell Empty);
+  static DeferStmt *Create(ASTContext &Context, SourceLocation DeferLoc,
+                           Stmt *Body);
+
+  SourceLocation getDeferLoc() const { return DeferStmtBits.DeferLoc; }
+  void setDeferLoc(SourceLocation DeferLoc) {
+    DeferStmtBits.DeferLoc = DeferLoc;
+  }
+
+  Stmt *getBody() { return Body; }
+  const Stmt *getBody() const { return Body; }
+  void setBody(Stmt *S) {
+    assert(S && "defer body must not be null");
+    Body = S;
+  }
+
+  SourceLocation getBeginLoc() const { return getDeferLoc(); }
+  SourceLocation getEndLoc() const { return Body->getEndLoc(); }
+
+  child_range children() { return child_range(&Body, &Body + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Body, &Body + 1);
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == DeferStmtClass;
   }
 };
 
@@ -3142,6 +3313,16 @@ public:
   /// Assemble final IR asm string.
   std::string generateAsmString(const ASTContext &C) const;
 
+  using UnsupportedConstraintCallbackTy =
+      llvm::function_ref<void(const Stmt *, StringRef)>;
+  /// Look at AsmExpr and if it is a variable declared as using a particular
+  /// register add that as a constraint that will be used in this asm stmt.
+  std::string
+  addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
+                         const TargetInfo &Target, bool EarlyClobber,
+                         UnsupportedConstraintCallbackTy UnsupportedCB,
+                         std::string *GCCReg = nullptr) const;
+
   //===--- Output operands ---===//
 
   unsigned getNumOutputs() const { return NumOutputs; }
@@ -3149,7 +3330,7 @@ public:
   /// getOutputConstraint - Return the constraint string for the specified
   /// output operand.  All output constraints are known to be non-empty (either
   /// '=' or '+').
-  StringRef getOutputConstraint(unsigned i) const;
+  std::string getOutputConstraint(unsigned i) const;
 
   /// isOutputPlusConstraint - Return true if the specified output constraint
   /// is a "+" constraint (which is both an input and an output) or false if it
@@ -3170,14 +3351,14 @@ public:
 
   /// getInputConstraint - Return the specified input constraint.  Unlike output
   /// constraints, these can be empty.
-  StringRef getInputConstraint(unsigned i) const;
+  std::string getInputConstraint(unsigned i) const;
 
   const Expr *getInputExpr(unsigned i) const;
 
   //===--- Other ---===//
 
   unsigned getNumClobbers() const { return NumClobbers; }
-  StringRef getClobber(unsigned i) const;
+  std::string getClobber(unsigned i) const;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == GCCAsmStmtClass ||
@@ -3258,21 +3439,20 @@ class GCCAsmStmt : public AsmStmt {
   friend class ASTStmtReader;
 
   SourceLocation RParenLoc;
-  StringLiteral *AsmStr;
+  Expr *AsmStr;
 
   // FIXME: If we wanted to, we could allocate all of these in one big array.
-  StringLiteral **Constraints = nullptr;
-  StringLiteral **Clobbers = nullptr;
+  Expr **Constraints = nullptr;
+  Expr **Clobbers = nullptr;
   IdentifierInfo **Names = nullptr;
   unsigned NumLabels = 0;
 
 public:
   GCCAsmStmt(const ASTContext &C, SourceLocation asmloc, bool issimple,
              bool isvolatile, unsigned numoutputs, unsigned numinputs,
-             IdentifierInfo **names, StringLiteral **constraints, Expr **exprs,
-             StringLiteral *asmstr, unsigned numclobbers,
-             StringLiteral **clobbers, unsigned numlabels,
-             SourceLocation rparenloc);
+             IdentifierInfo **names, Expr **constraints, Expr **exprs,
+             Expr *asmstr, unsigned numclobbers, Expr **clobbers,
+             unsigned numlabels, SourceLocation rparenloc);
 
   /// Build an empty inline-assembly statement.
   explicit GCCAsmStmt(EmptyShell Empty) : AsmStmt(GCCAsmStmtClass, Empty) {}
@@ -3282,9 +3462,11 @@ public:
 
   //===--- Asm String Analysis ---===//
 
-  const StringLiteral *getAsmString() const { return AsmStr; }
-  StringLiteral *getAsmString() { return AsmStr; }
-  void setAsmString(StringLiteral *E) { AsmStr = E; }
+  const Expr *getAsmStringExpr() const { return AsmStr; }
+  Expr *getAsmStringExpr() { return AsmStr; }
+  void setAsmStringExpr(Expr *E) { AsmStr = E; }
+
+  std::string getAsmString() const;
 
   /// AsmStringPiece - this is part of a decomposed asm string specification
   /// (for use with the AnalyzeAsmString function below).  An asm string is
@@ -3353,14 +3535,12 @@ public:
     return {};
   }
 
-  StringRef getOutputConstraint(unsigned i) const;
+  std::string getOutputConstraint(unsigned i) const;
 
-  const StringLiteral *getOutputConstraintLiteral(unsigned i) const {
+  const Expr *getOutputConstraintExpr(unsigned i) const {
     return Constraints[i];
   }
-  StringLiteral *getOutputConstraintLiteral(unsigned i) {
-    return Constraints[i];
-  }
+  Expr *getOutputConstraintExpr(unsigned i) { return Constraints[i]; }
 
   Expr *getOutputExpr(unsigned i);
 
@@ -3381,12 +3561,12 @@ public:
     return {};
   }
 
-  StringRef getInputConstraint(unsigned i) const;
+  std::string getInputConstraint(unsigned i) const;
 
-  const StringLiteral *getInputConstraintLiteral(unsigned i) const {
+  const Expr *getInputConstraintExpr(unsigned i) const {
     return Constraints[i + NumOutputs];
   }
-  StringLiteral *getInputConstraintLiteral(unsigned i) {
+  Expr *getInputConstraintExpr(unsigned i) {
     return Constraints[i + NumOutputs];
   }
 
@@ -3396,6 +3576,8 @@ public:
   const Expr *getInputExpr(unsigned i) const {
     return const_cast<GCCAsmStmt*>(this)->getInputExpr(i);
   }
+
+  static std::string ExtractStringFromGCCAsmStmtComponent(const Expr *E);
 
   //===--- Labels ---===//
 
@@ -3445,12 +3627,9 @@ public:
 private:
   void setOutputsAndInputsAndClobbers(const ASTContext &C,
                                       IdentifierInfo **Names,
-                                      StringLiteral **Constraints,
-                                      Stmt **Exprs,
-                                      unsigned NumOutputs,
-                                      unsigned NumInputs,
-                                      unsigned NumLabels,
-                                      StringLiteral **Clobbers,
+                                      Expr **Constraints, Stmt **Exprs,
+                                      unsigned NumOutputs, unsigned NumInputs,
+                                      unsigned NumLabels, Expr **Clobbers,
                                       unsigned NumClobbers);
 
 public:
@@ -3461,12 +3640,10 @@ public:
   /// This returns -1 if the operand name is invalid.
   int getNamedOperand(StringRef SymbolicName) const;
 
-  StringRef getClobber(unsigned i) const;
+  std::string getClobber(unsigned i) const;
 
-  StringLiteral *getClobberStringLiteral(unsigned i) { return Clobbers[i]; }
-  const StringLiteral *getClobberStringLiteral(unsigned i) const {
-    return Clobbers[i];
-  }
+  Expr *getClobberExpr(unsigned i) { return Clobbers[i]; }
+  const Expr *getClobberExpr(unsigned i) const { return Clobbers[i]; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return AsmLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
@@ -3546,16 +3723,13 @@ public:
   //===--- Other ---===//
 
   ArrayRef<StringRef> getAllConstraints() const {
-    return llvm::ArrayRef(Constraints, NumInputs + NumOutputs);
+    return {Constraints, NumInputs + NumOutputs};
   }
 
-  ArrayRef<StringRef> getClobbers() const {
-    return llvm::ArrayRef(Clobbers, NumClobbers);
-  }
+  ArrayRef<StringRef> getClobbers() const { return {Clobbers, NumClobbers}; }
 
   ArrayRef<Expr*> getAllExprs() const {
-    return llvm::ArrayRef(reinterpret_cast<Expr **>(Exprs),
-                          NumInputs + NumOutputs);
+    return {reinterpret_cast<Expr **>(Exprs), NumInputs + NumOutputs};
   }
 
   StringRef getClobber(unsigned i) const { return getClobbers()[i]; }

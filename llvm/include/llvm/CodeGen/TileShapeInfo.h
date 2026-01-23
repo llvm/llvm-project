@@ -54,11 +54,9 @@ public:
   bool operator!=(const ShapeT &Shape) const { return !(*this == Shape); }
 
   MachineOperand *getRow() const { return Row; }
-
   MachineOperand *getCol() const { return Col; }
 
   int64_t getRowImm() const { return RowImm; }
-
   int64_t getColImm() const { return ColImm; }
 
   bool isValid() { return (Row != nullptr) && (Col != nullptr); }
@@ -72,7 +70,14 @@ public:
       for (const MachineOperand &DefMO : MRI->def_operands(Reg)) {
         const auto *MI = DefMO.getParent();
         if (MI->isMoveImmediate()) {
-          Imm = MI->getOperand(1).getImm();
+          if (MI->getOperand(1).isImm()) {
+            Imm = MI->getOperand(1).getImm();
+          } else {
+            assert(MI->getOperand(1).isImplicit() &&
+                   "Operand 1 is assumed to be implicit.");
+            // The implicit immediate can vary (MOV32r0, MOV32r1, MOV32r_1,
+            // ...) but in any case, is not a valid shape.
+          }
           break;
         }
       }

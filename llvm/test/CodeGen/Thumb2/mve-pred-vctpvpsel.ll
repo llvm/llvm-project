@@ -4,15 +4,15 @@
 define void @arm_min_helium_f32(ptr %pSrc, i32 %blockSize, ptr nocapture %pResult, ptr nocapture %pIndex) {
 ; CHECK-LABEL: arm_min_helium_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    mov.w r12, #4
-; CHECK-NEXT:    vidup.u32 q2, r6, #1
-; CHECK-NEXT:    movw r4, #54437
-; CHECK-NEXT:    movt r4, #21352
+; CHECK-NEXT:    vidup.u32 q2, r4, #1
+; CHECK-NEXT:    movw r5, #54437
+; CHECK-NEXT:    movt r5, #21352
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    vdup.32 q1, r4
+; CHECK-NEXT:    vdup.32 q1, r5
 ; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -33,7 +33,7 @@ define void @arm_min_helium_f32(ptr %pSrc, i32 %blockSize, ptr nocapture %pResul
 ; CHECK-NEXT:    vminv.u32 r1, q0
 ; CHECK-NEXT:    str r1, [r3]
 ; CHECK-NEXT:    vstr s8, [r2]
-; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI0_0:

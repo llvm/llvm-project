@@ -5,19 +5,19 @@
 
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_INT:.*]] = {{.*}} c"'unsigned int'\00" }
 // CHECK-SANITIZE-ANYRECOVER-NEXT: @[[SIGNED_INT:.*]] = {{.*}} c"'int'\00" }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_INT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[UNSIGNED_INT]], i8 3 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_INT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[UNSIGNED_INT]], i8 3, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER-NEXT: @[[UNSIGNED_CHAR:.*]] = {{.*}} c"'unsigned char'\00" }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[UNSIGNED_CHAR]], i8 3 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[UNSIGNED_CHAR]], i8 3, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER-NEXT: @[[SIGNED_CHAR:.*]] = {{.*}} c"'signed char'\00" }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[SIGNED_CHAR]], ptr @[[UNSIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 10 }, ptr @[[UNSIGNED_CHAR]], ptr @[[SIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 10 }, ptr @[[SIGNED_CHAR]], ptr @[[UNSIGNED_INT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[SIGNED_CHAR]], ptr @[[UNSIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 10 }, ptr @[[UNSIGNED_CHAR]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 10 }, ptr @[[SIGNED_CHAR]], ptr @[[UNSIGNED_INT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER: @[[UINT32:.*]] = {{.*}} c"'uint32_t' (aka 'unsigned int')\00" }
 // CHECK-SANITIZE-ANYRECOVER: @[[INT32:.*]] = {{.*}} c"'int32_t' (aka 'int')\00" }
-// CHECK-SANITIZE-ANYRECOVER: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 10 }, ptr @[[UINT32]], ptr @[[INT32]], i8 3 }
+// CHECK-SANITIZE-ANYRECOVER: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 10 }, ptr @[[UINT32]], ptr @[[INT32]], i8 3, i32 0 }
 
 // ========================================================================== //
 // The expected true-positives.

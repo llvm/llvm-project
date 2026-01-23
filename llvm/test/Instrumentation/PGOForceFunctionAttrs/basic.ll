@@ -37,6 +37,9 @@
 ; CHECK-NOT: Function Attrs: {{.*}}minsize
 ; CHECK-NOT: Function Attrs: {{.*}}optnone
 
+; O2: define void @cold_attr(){{.*}} #[[ATTR:[0-9]+]]
+; O2-NOT: #[[ATTR]] = {{.*}}minsize
+
 @s = global i32 0
 
 define void @cold() !prof !27 {

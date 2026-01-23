@@ -17,4 +17,13 @@ unsigned accum uksqrtui_fast(unsigned int x) {
 
 LIST_ISQRT_TESTS(UI, unsigned int, LIBC_NAMESPACE::uksqrtui);
 
+TEST_F(LlvmLibcISqrtUITest, LargeInteger) {
+  testSpecificInput(65529u, LIBC_NAMESPACE::uksqrtui(65529u), 0x1.fff8fep7,
+                    0x3.0p-16);
+}
+
 LIST_ISQRT_TESTS(UIFast, unsigned int, uksqrtui_fast);
+
+TEST_F(LlvmLibcISqrtUIFastTest, LargeInteger) {
+  testSpecificInput(65529u, uksqrtui_fast(65529u), 0x1.fff8fep7, 0x3.0p-16);
+}

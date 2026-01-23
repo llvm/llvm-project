@@ -34,16 +34,17 @@ described in the `clang documentation
 by the OpenMP toolchain, but is currently opt-in for the CUDA and HIP toolchains
 through the ``--offload-new-driver``` and ``-fgpu-rdc`` flags.
 
-The installation should contain a static library called ``libcgpu-amdgpu.a`` or
-``libcgpu-nvptx.a`` depending on which GPU architectures your build targeted.
-These contain fat binaries compatible with the offloading toolchain such that
-they can be used directly.
+In order or link the GPU runtime, we simply pass this library to the embedded
+device linker job. This can be done using the ``-Xoffload-linker`` option, which
+forwards an argument to a ``clang`` job used to create the final GPU executable.
+The toolchain should pick up the C libraries automatically in most cases, so
+this shouldn't be necessary.
 
 .. code-block:: sh
 
-  $> clang opnemp.c -fopenmp --offload-arch=gfx90a -lcgpu-amdgpu
-  $> clang cuda.cu --offload-arch=sm_80 --offload-new-driver -fgpu-rdc -lcgpu-nvptx
-  $> clang hip.hip --offload-arch=gfx940 --offload-new-driver -fgpu-rdc -lcgpu-amdgpu
+  $> clang openmp.c -fopenmp --offload-arch=gfx90a -Xoffload-linker -lc
+  $> clang cuda.cu --offload-arch=sm_80 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
+  $> clang hip.hip --offload-arch=gfx942 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
 
 This will automatically link in the needed function definitions if they were
 required by the user's application. Normally using the ``-fgpu-rdc`` option
@@ -97,39 +98,6 @@ threads and two blocks.
 
 Including the wrapper headers, linking the C library, and running the :ref:`RPC
 server<libc_gpu_rpc>` are all handled automatically by the compiler and runtime.
-
-Binary format
-^^^^^^^^^^^^^
-
-The ``libcgpu.a`` static archive is a fat-binary containing LLVM-IR for each
-supported target device. The supported architectures can be seen using LLVM's
-``llvm-objdump`` with the ``--offloading`` flag:
-
-.. code-block:: sh
-
-  $> llvm-objdump --offloading libcgpu-amdgpu.a
-  libcgpu-amdgpu.a(strcmp.cpp.o):    file format elf64-x86-64
-
-  OFFLOADING IMAGE [0]:
-  kind            llvm ir
-  arch            generic
-  triple          amdgcn-amd-amdhsa
-  producer        none
-  ...
-
-Because the device code is stored inside a fat binary, it can be difficult to
-inspect the resulting code. This can be done using the following utilities:
-
-.. code-block:: sh
-
-  $> llvm-ar x libcgpu.a strcmp.cpp.o
-  $> clang-offload-packager strcmp.cpp.o --image=arch=generic,file=strcmp.bc
-  $> opt -S out.bc
-  ...
-
-Please note that this fat binary format is provided for compatibility with
-existing offloading toolchains. The implementation in ``libc`` does not depend
-on any existing offloading languages and is completely freestanding.
 
 Direct compilation
 ------------------
@@ -188,7 +156,7 @@ final executable.
 
   #include <stdio.h>
 
-  int main() { fputs("Hello from AMDGPU!\n", stdout); }
+  int main() { printf("Hello from AMDGPU!\n"); }
 
 This program can then be compiled using the ``clang`` compiler. Note that
 ``-flto`` and ``-mcpu=`` should be defined. This is because the GPU
@@ -226,28 +194,26 @@ Building for NVPTX targets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The infrastructure is the same as the AMDGPU example. However, the NVPTX binary
-utilities are very limited and must be targeted directly. There is no linker
-support for static libraries so we need to link in the ``libc.bc`` bitcode and
-inform the compiler driver of the file's contents.
+utilities are very limited and must be targeted directly. A utility called
+``clang-nvlink-wrapper`` instead wraps around the standard link job to give the
+illusion that ``nvlink`` is a functional linker.
 
 .. code-block:: c++
 
   #include <stdio.h>
 
   int main(int argc, char **argv, char **envp) {
-    fputs("Hello from NVPTX!\n", stdout);
+    printf("Hello from NVPTX!\n");
   }
 
 Additionally, the NVPTX ABI requires that every function signature matches. This
 requires us to pass the full prototype from ``main``. The installation will
 contain the ``nvptx-loader`` utility if the CUDA driver was found during
-compilation.
+compilation. Using link time optimization will help hide this.
 
 .. code-block:: sh
 
-  $> clang hello.c --target=nvptx64-nvidia-cuda -march=native \
-       -x ir <install>/lib/nvptx64-nvidia-cuda/libc.bc \
-       -x ir <install>/lib/nvptx64-nvidia-cuda/crt1.o
+  $> clang hello.c --target=nvptx64-nvidia-cuda -march=native -flto -lc <install>/lib/nvptx64-nvidia-cuda/crt1.o
   $> nvptx-loader --threads 2 --blocks 2 a.out
   Hello from NVPTX!
   Hello from NVPTX!

@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx700 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}scalar_andn2_i32_one_use
 ; GCN: s_andn2_b32
@@ -48,8 +48,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}vector_andn2_i32_s_v_one_use
-; GCN: v_not_b32
-; GCN: v_and_b32
+; GCN: v_bfi_b32
 define amdgpu_kernel void @vector_andn2_i32_s_v_one_use(
     ptr addrspace(1) %r0, i32 %s) {
 entry:
@@ -61,8 +60,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}vector_andn2_i32_v_s_one_use
-; GCN: s_not_b32
-; GCN: v_and_b32
+; GCN: v_bfi_b32
 define amdgpu_kernel void @vector_andn2_i32_v_s_one_use(
     ptr addrspace(1) %r0, i32 %s) {
 entry:
@@ -74,8 +72,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}vector_orn2_i32_s_v_one_use
-; GCN: v_not_b32
-; GCN: v_or_b32
+; GCN: v_bfi_b32
 define amdgpu_kernel void @vector_orn2_i32_s_v_one_use(
     ptr addrspace(1) %r0, i32 %s) {
 entry:
@@ -87,8 +84,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}vector_orn2_i32_v_s_one_use
-; GCN: s_not_b32
-; GCN: v_or_b32
+; GCN: v_bfi_b32
 define amdgpu_kernel void @vector_orn2_i32_v_s_one_use(
     ptr addrspace(1) %r0, i32 %s) {
 entry:

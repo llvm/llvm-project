@@ -1,9 +1,9 @@
 ; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ; PR10946: Vector IVs are not SCEVable.
 ; CHECK-NOT: phi
-define void @test() nounwind {
+define void @test(i1 %arg) nounwind {
 allocas:
-  br i1 undef, label %cif_done, label %for_loop398
+  br i1 %arg, label %cif_done, label %for_loop398
 
 cif_done:                                         ; preds = %allocas
   ret void

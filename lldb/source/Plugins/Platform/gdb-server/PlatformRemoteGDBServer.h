@@ -146,6 +146,9 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
+  llvm::ErrorOr<llvm::MD5::MD5Result>
+  CalculateMD5(const FileSpec &file_spec) override;
+
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
@@ -176,6 +179,10 @@ protected:
 
   virtual std::string MakeUrl(const char *scheme, const char *hostname,
                               uint16_t port, const char *path);
+
+  virtual llvm::StringRef GetDefaultProcessPluginName() const {
+    return "gdb-remote";
+  }
 
 private:
   std::string MakeGdbServerUrl(const std::string &platform_scheme,

@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   ObjCopy
   Object

@@ -1,5 +1,4 @@
-; RUN: llc --relocation-model=pic < %s \
-; RUN:   | FileCheck %s --check-prefix=CHECK-PIC
+; RUN: llc --relocation-model=pic < %s | FileCheck %s
 
 ; Ensure that GlobalISel lowers correctly. GlobalISel is the default ISel for
 ; -O0 on aarch64. GlobalISel lowers the instruction sequence in the static
@@ -13,7 +12,7 @@
 ; mind the code size and performance increase.
 
 ; RUN: llc --aarch64-enable-global-isel-at-O=0 -O0 --relocation-model=pic < %s \
-; RUN:   | FileCheck %s --check-prefix=CHECK-PIC
+; RUN:   | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android"
@@ -22,65 +21,41 @@ target triple = "aarch64-unknown-linux-android"
 declare void @func()
 
 define ptr @global_addr() #0 {
-  ; CHECK-PIC: global_addr:
-  ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:global
-  ; CHECK-PIC: ldr x0, [[[REG]], :got_lo12:global]
-  ; CHECK-PIC: ret
+  ; CHECK-LABEL: global_addr:
+  ; CHECK:         adrp [[REG:x[0-9]+]], :got:global
+  ; CHECK-NEXT:    ldr x0, [[[REG]], :got_lo12:global]
+  ; CHECK-NEXT:    ret
 
   ret ptr @global
 }
 
 define i32 @global_load() #0 {
-  ; CHECK-SELECTIONDAGISEL: global_load:
-  ; CHECK-SELECTIONDAGISEL: adrp [[REG:x[0-9]+]], :pg_hi21_nc:global
-  ; CHECK-SELECTIONDAGISEL: ldr w0, [[[REG]], :lo12:global]
-  ; CHECK-SELECTIONDAGISEL: ret
-
-  ; CHECK-GLOBALISEL: global_load:
-  ; CHECK-GLOBALISEL: adrp [[REG:x[0-9]+]], :pg_hi21_nc:global
-  ; CHECK-GLOBALISEL: movk [[REG]], #:prel_g3:global+4294967296
-  ; CHECK-GLOBALISEL: add [[REG]], [[REG]], :lo12:global
-  ; CHECK-GLOBALISEL: ldr w0, [[[REG]]]
-  ; CHECK-GLOBALISEL: ret
-
-  ; CHECK-PIC: global_load:
-  ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:global
-  ; CHECK-PIC: ldr  [[REG]], [[[REG]], :got_lo12:global]
-  ; CHECK-PIC: ldr w0, [[[REG]]]
-  ; CHECK-PIC: ret
+  ; CHECK-LABEL: global_load:
+  ; CHECK:         adrp [[REG:x[0-9]+]], :got:global
+  ; CHECK-NEXT:    ldr  [[REG]], [[[REG]], :got_lo12:global]
+  ; CHECK-NEXT:    ldr w0, [[[REG]]]
+  ; CHECK-NEXT:    ret
 
   %load = load i32, ptr @global
   ret i32 %load
 }
 
 define void @global_store() #0 {
-  ; CHECK-SELECTIONDAGISEL: global_store:
-  ; CHECK-SELECTIONDAGISEL: adrp [[REG:x[0-9]+]], :pg_hi21_nc:global
-  ; CHECK-SELECTIONDAGISEL: str wzr, [[[REG]], :lo12:global]
-  ; CHECK-SELECTIONDAGISEL: ret
-
-  ; CHECK-GLOBALISEL: global_store:
-  ; CHECK-GLOBALISEL: adrp [[REG:x[0-9]+]], :pg_hi21_nc:global
-  ; CHECK-GLOBALISEL: movk [[REG]], #:prel_g3:global+4294967296
-  ; CHECK-GLOBALISEL: add [[REG]], [[REG]], :lo12:global
-  ; CHECK-GLOBALISEL: str wzr, [[[REG]]]
-  ; CHECK-GLOBALISEL: ret
-
-  ; CHECK-PIC: global_store:
-  ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:global
-  ; CHECK-PIC: ldr  [[REG]], [[[REG]], :got_lo12:global]
-  ; CHECK-PIC: str wzr, [[[REG]]]
-  ; CHECK-PIC: ret
+  ; CHECK-LABEL: global_store:
+  ; CHECK:         adrp [[REG:x[0-9]+]], :got:global
+  ; CHECK-NEXT:    ldr  [[REG]], [[[REG]], :got_lo12:global]
+  ; CHECK-NEXT:    str wzr, [[[REG]]]
+  ; CHECK-NEXT:    ret
 
   store i32 0, ptr @global
   ret void
 }
 
 define ptr @func_addr() #0 {
-  ; CHECK-PIC: func_addr:
-  ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:func
-  ; CHECK-PIC: ldr  x0, [[[REG]], :got_lo12:func]
-  ; CHECK-PIC: ret
+  ; CHECK-LABEL: func_addr:
+  ; CHECK:         adrp [[REG:x[0-9]+]], :got:func
+  ; CHECK-NEXT:    ldr  x0, [[[REG]], :got_lo12:func]
+  ; CHECK-NEXT:    ret
 
   ret ptr @func
 }

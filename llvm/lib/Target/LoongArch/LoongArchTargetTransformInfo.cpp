@@ -26,8 +26,6 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->hasExpAutoVec())
-      return DefSize;
     if (ST->hasExtLASX())
       return TypeSize::getFixed(256);
     if (ST->hasExtLSX())
@@ -40,4 +38,98 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
   llvm_unreachable("Unsupported register kind");
 }
 
-// TODO: Implement more hooks to provide TTI machinery for LoongArch.
+unsigned LoongArchTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  switch (ClassID) {
+  case LoongArchRegisterClass::GPRRC:
+    // 30 = 32 GPRs - r0 (zero register) - r21 (non-allocatable)
+    return 30;
+  case LoongArchRegisterClass::FPRRC:
+    return ST->hasBasicF() ? 32 : 0;
+  case LoongArchRegisterClass::VRRC:
+    return ST->hasExtLSX() ? 32 : 0;
+  }
+  llvm_unreachable("unknown register class");
+}
+
+unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
+                                                   Type *Ty) const {
+  if (Vector)
+    return LoongArchRegisterClass::VRRC;
+  if (!Ty)
+    return LoongArchRegisterClass::GPRRC;
+
+  Type *ScalarTy = Ty->getScalarType();
+  if ((ScalarTy->isFloatTy() && ST->hasBasicF()) ||
+      (ScalarTy->isDoubleTy() && ST->hasBasicD())) {
+    return LoongArchRegisterClass::FPRRC;
+  }
+
+  return LoongArchRegisterClass::GPRRC;
+}
+
+unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+  return ST->getMaxInterleaveFactor();
+}
+
+const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
+  switch (ClassID) {
+  case LoongArchRegisterClass::GPRRC:
+    return "LoongArch::GPRRC";
+  case LoongArchRegisterClass::FPRRC:
+    return "LoongArch::FPRRC";
+  case LoongArchRegisterClass::VRRC:
+    return "LoongArch::VRRC";
+  }
+  llvm_unreachable("unknown register class");
+}
+
+TargetTransformInfo::PopcntSupportKind
+LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) const {
+  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
+  return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
+}
+
+unsigned LoongArchTTIImpl::getCacheLineSize() const { return 64; }
+
+unsigned LoongArchTTIImpl::getPrefetchDistance() const { return 200; }
+
+bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
+
+bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_xor:
+    return false;
+  }
+}
+
+LoongArchTTIImpl::TTI::MemCmpExpansionOptions
+LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+
+  if (!ST->hasUAL())
+    return Options;
+
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.AllowOverlappingLoads = true;
+
+  // TODO: Support for vectors.
+  if (ST->is64Bit()) {
+    Options.LoadSizes = {8, 4, 2, 1};
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
+    Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
+
+  return Options;
+}

@@ -23,14 +23,10 @@
 
 extern "C" void __sanitizer_set_death_callback(void (*callback)(void));
 
-void do_exit() {
-  exit(0);
-}
+void do_exit() { exit(0); }
 
-int main(int, char**)
-{
-#if TEST_STD_VER >= 11 && TEST_CLANG_VER >= 1600
-  // TODO(LLVM-18): Remove the special-casing
+int main(int, char**) {
+#if TEST_STD_VER >= 11
   {
     typedef int T;
     typedef cpp17_input_iterator<T*> MyInputIter;
@@ -52,7 +48,7 @@ int main(int, char**)
     assert(v[1] == 'b');
     assert(is_contiguous_container_asan_correct(v));
   }
-#endif
+#endif // TEST_STD_VER >= 11
   {
     typedef cpp17_input_iterator<int*> MyInputIter;
     // Sould not trigger ASan.

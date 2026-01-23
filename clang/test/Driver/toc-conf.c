@@ -23,7 +23,7 @@ void func() {
 
 // CHECK-CONF1-NOT: warning:
 // CHECK-CONF1: "-cc1"{{.*}}" "-mno-tocdata"
-// CHECK-CONF1: "-mtocdata=g2,g1"
+// CHECK-CONF1: "-mtocdata=g1,g2"
 
 // CHECK-CONF2-NOT: warning:
 // CHECK-CONF2: "-cc1"{{.*}}" "-mtocdata"

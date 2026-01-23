@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S \
-; RUN:     < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 ;
 ;    void pos(float *A, long n) {
 ;      for (long i = 0; i < 100; i++)

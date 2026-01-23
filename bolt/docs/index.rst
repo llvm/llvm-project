@@ -205,8 +205,8 @@ This command will aggregate branch data from ``perf.data`` and store it
 in a format that is both more compact and more resilient to binary
 modifications.
 
-If the profile was collected without LBRs, you will need to add ``-nl``
-flag to the command line above.
+If the profile was collected without brstacks, you will need to add `-ba` flag to
+the command line above.
 
 Step 3: Optimize with BOLT
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

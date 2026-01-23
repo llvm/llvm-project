@@ -27,6 +27,7 @@ namespace clang {
   class FunctionTemplateDecl;
   class Module;
   class NamedDecl;
+  class NamespaceDecl;
   class ObjCCategoryDecl;
   class ObjCContainerDecl;
   class ObjCInterfaceDecl;
@@ -35,6 +36,7 @@ namespace clang {
   class QualType;
   class RecordDecl;
   class TagDecl;
+  class TranslationUnitDecl;
   class ValueDecl;
   class VarDecl;
   class VarTemplateDecl;
@@ -84,6 +86,19 @@ public:
                                       const FunctionDecl *Delete,
                                       Expr *ThisArg) {}
 
+  /// A virtual destructor's operator global delete has been resolved.
+  virtual void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                          const FunctionDecl *GlobDelete) {}
+
+  /// A virtual destructor's operator array delete has been resolved.
+  virtual void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                           const FunctionDecl *ArrayDelete) {}
+
+  /// A virtual destructor's operator global array delete has been resolved.
+  virtual void
+  ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobArrayDelete) {}
+
   /// An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 
@@ -119,6 +134,12 @@ public:
   /// \param D the declaration marked OpenMP threadprivate.
   virtual void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {}
 
+  /// A declaration is marked as OpenMP groupprivate which was not
+  /// previously marked as groupprivate.
+  ///
+  /// \param D the declaration marked OpenMP groupprivate.
+  virtual void DeclarationMarkedOpenMPGroupPrivate(const Decl *D) {}
+
   /// A declaration is marked as OpenMP declaretarget which was not
   /// previously marked as declaretarget.
   ///
@@ -146,6 +167,31 @@ public:
   /// \param Record The RecordDecl that got a new attribute
   virtual void AddedAttributeToRecord(const Attr *Attr,
                                       const RecordDecl *Record) {}
+
+  /// The parser find the named module declaration.
+  virtual void EnteringModulePurview() {}
+
+  /// An mangling number was added to a Decl
+  ///
+  /// \param D The decl that got a mangling number
+  ///
+  /// \param Number The mangling number that was added to the Decl
+  virtual void AddedManglingNumber(const Decl *D, unsigned Number) {}
+
+  /// An static local number was added to a Decl
+  ///
+  /// \param D The decl that got a static local number
+  ///
+  /// \param Number The static local number that was added to the Decl
+  virtual void AddedStaticLocalNumbers(const Decl *D, unsigned Number) {}
+
+  /// An anonymous namespace was added the translation unit decl
+  ///
+  /// \param TU The translation unit decl that got a new anonymous namespace
+  ///
+  /// \param AnonNamespace The anonymous namespace that was added
+  virtual void AddedAnonymousNamespace(const TranslationUnitDecl *TU,
+                                       NamespaceDecl *AnonNamespace) {}
 
   // NOTE: If new methods are added they should also be added to
   // MultiplexASTMutationListener.

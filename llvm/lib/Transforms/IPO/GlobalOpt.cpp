@@ -47,6 +47,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -87,10 +88,22 @@ STATISTIC(NumNestRemoved   , "Number of nest attributes removed");
 STATISTIC(NumAliasesResolved, "Number of global aliases resolved");
 STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
+STATISTIC(NumAtExitRemoved, "Number of atexit handlers removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
+
+static cl::opt<bool>
+    OptimizeNonFMVCallers("optimize-non-fmv-callers",
+                          cl::desc("Statically resolve calls to versioned "
+                                   "functions from non-versioned callers."),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<unsigned> MaxIFuncVersions(
+    "max-ifunc-versions", cl::Hidden, cl::init(5),
+    cl::desc("Maximum number of caller/callee versions that is allowed for "
+             "using the expensive (cubic) static resolution algorithm."));
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -102,7 +115,7 @@ static cl::opt<int> ColdCCRelFreq(
     "coldcc-rel-freq", cl::Hidden, cl::init(2),
     cl::desc(
         "Maximum block frequency, expressed as a percentage of caller's "
-        "entry frequency, for a call site to be considered cold for enabling"
+        "entry frequency, for a call site to be considered cold for enabling "
         "coldcc"));
 
 /// Is this global variable possibly used by a leak checker as a root?  If so,
@@ -241,10 +254,10 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
-  for (int i = 0, e = Dead.size(); i != e; ++i) {
-    if (IsSafeComputationToRemove(Dead[i].first, GetTLI)) {
-      Dead[i].second->eraseFromParent();
-      Instruction *I = Dead[i].first;
+  for (const auto &[Inst, Store] : Dead) {
+    if (IsSafeComputationToRemove(Inst, GetTLI)) {
+      Store->eraseFromParent();
+      Instruction *I = Inst;
       do {
         if (isAllocationFn(I, GetTLI))
           break;
@@ -306,6 +319,10 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       APInt Offset(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
       PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(PtrOp)) {
+        if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+          PtrOp = II->getArgOperand(0);
+      }
       if (PtrOp == GV) {
         if (auto *Value = ConstantFoldLoadFromConst(Init, Ty, Offset, DL)) {
           LI->replaceAllUsesWith(Value);
@@ -318,6 +335,9 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U)) { // memset/cpy/mv
       if (getUnderlyingObject(MI->getRawDest()) == GV)
         EraseFromParent(MI);
+    } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+        append_range(WorkList, II->users());
     }
   }
 
@@ -547,7 +567,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   }
 
   // Some accesses go beyond the end of the global, don't bother.
-  if (Offset > DL.getTypeAllocSize(GV->getValueType()))
+  if (Offset > GV->getGlobalSize(DL))
     return nullptr;
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
@@ -565,15 +585,16 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         *GV->getParent(), Ty, false, GlobalVariable::InternalLinkage,
         Initializer, GV->getName() + "." + Twine(NameSuffix++), GV,
         GV->getThreadLocalMode(), GV->getAddressSpace());
+    // Start out by copying attributes from the original, including alignment.
     NGV->copyAttributesFrom(GV);
     NewGlobals.insert({OffsetForTy, NGV});
 
     // Calculate the known alignment of the field.  If the original aggregate
-    // had 256 byte alignment for example, something might depend on that:
+    // had 256 byte alignment for example, then the element at a given offset
+    // may also have a known alignment, and something might depend on that:
     // propagate info to each field.
     Align NewAlign = commonAlignment(StartAlignment, OffsetForTy);
-    if (NewAlign > DL.getABITypeAlign(Ty))
-      NGV->setAlignment(NewAlign);
+    NGV->setAlignment(NewAlign);
 
     // Copy over the debug info for the variable.
     transferSRADebugInfo(GV, NGV, OffsetForTy * 8,
@@ -702,10 +723,14 @@ static bool allUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
     const Value *P = Worklist.pop_back_val();
     for (const auto *U : P->users()) {
       if (auto *LI = dyn_cast<LoadInst>(U)) {
+        if (!LI->isSimple())
+          return false;
         SmallPtrSet<const PHINode *, 8> PHIs;
         if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
           return false;
       } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+        if (!SI->isSimple())
+          return false;
         // Ignore stores to the global.
         if (SI->getPointerOperand() != P)
           return false;
@@ -935,11 +960,10 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
 
   // If there is a comparison against null, we will insert a global bool to
   // keep track of whether the global was initialized yet or not.
-  GlobalVariable *InitBool =
-    new GlobalVariable(Type::getInt1Ty(GV->getContext()), false,
-                       GlobalValue::InternalLinkage,
-                       ConstantInt::getFalse(GV->getContext()),
-                       GV->getName()+".init", GV->getThreadLocalMode());
+  GlobalVariable *InitBool = new GlobalVariable(
+      Type::getInt1Ty(GV->getContext()), false, GlobalValue::InternalLinkage,
+      ConstantInt::getFalse(GV->getContext()), GV->getName() + ".init",
+      GV->getThreadLocalMode(), GV->getAddressSpace());
   bool InitBoolUsed = false;
 
   // Loop over all instruction uses of GV, processing them in turn.
@@ -949,11 +973,12 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
       // value is null value, the global bool is set to false, otherwise true.
-      new StoreInst(ConstantInt::getBool(
-                        GV->getContext(),
-                        !isa<ConstantPointerNull>(SI->getValueOperand())),
-                    InitBool, false, Align(1), SI->getOrdering(),
-                    SI->getSyncScopeID(), SI->getIterator());
+      auto *NewSI = new StoreInst(
+          ConstantInt::getBool(GV->getContext(), !isa<ConstantPointerNull>(
+                                                     SI->getValueOperand())),
+          InitBool, false, Align(1), SI->getOrdering(), SI->getSyncScopeID(),
+          SI->getIterator());
+      NewSI->setDebugLoc(SI->getDebugLoc());
       SI->eraseFromParent();
       continue;
     }
@@ -972,6 +997,11 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
                                InitBool->getName() + ".val", false, Align(1),
                                LI->getOrdering(), LI->getSyncScopeID(),
                                LI->getIterator());
+      // FIXME: Should we use the DebugLoc of the load used by the predicate, or
+      // the predicate? The load seems most appropriate, but there's an argument
+      // that the new load does not represent the old load, but is simply a
+      // component of recomputing the predicate.
+      cast<LoadInst>(LV)->setDebugLoc(LI->getDebugLoc());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -984,6 +1014,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       case ICmpInst::ICMP_ULE:
       case ICmpInst::ICMP_EQ:
         LV = BinaryOperator::CreateNot(LV, "notinit", ICI->getIterator());
+        cast<BinaryOperator>(LV)->setDebugLoc(ICI->getDebugLoc());
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
@@ -1040,11 +1071,6 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
             SI->getPointerOperand()->stripPointerCasts() != GV)
           return false; // Storing the pointer not into GV... bad.
         continue; // Otherwise, storing through it, or storing into GV... fine.
-      }
-
-      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        Worklist.push_back(BCI);
-        continue;
       }
 
       if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
@@ -1113,9 +1139,6 @@ static bool
 optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
                          const DataLayout &DL,
                          function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  // Ignore no-op GEPs and bitcasts.
-  StoredOnceVal = StoredOnceVal->stripPointerCasts();
-
   // If we are dealing with a pointer global that is initialized to null and
   // only has one (non-null) value stored into it, then we can optimize any
   // users of the loaded value (often calls and loads) that would trap if the
@@ -1205,9 +1228,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       for(auto *GVe : GVs){
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
-        const DataLayout &DL = GV->getParent()->getDataLayout();
-        unsigned SizeInOctets =
-            DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
+        const DataLayout &DL = GV->getDataLayout();
+        unsigned SizeInOctets = NewGV->getGlobalSize(DL);
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will
@@ -1265,6 +1287,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
               new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
                            false, Align(1), LI->getOrdering(),
                            LI->getSyncScopeID(), LI->getIterator());
+          cast<LoadInst>(StoreVal)->setDebugLoc(LI->getDebugLoc());
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
                  "This is not a form that we understand!");
@@ -1285,8 +1308,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI->getIterator());
-      else
+      else {
         NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI->getIterator());
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NSI, DEBUG_TYPE);
+      }
       NSI->takeName(LI);
       // Since LI is split into two instructions, NLI and NSI both inherit the
       // same DebugLoc
@@ -1330,6 +1355,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
+  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;
@@ -1348,7 +1374,7 @@ static bool isPointerValueDeadOnEntryToFunction(
   //
   // We don't do an exhaustive search for memory operations - simply look
   // through bitcasts as they're quite common and benign.
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   SmallVector<LoadInst *, 4> Loads;
   SmallVector<StoreInst *, 4> Stores;
   for (auto *U : GV->users()) {
@@ -1444,7 +1470,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
                       function_ref<TargetTransformInfo &(Function &)> GetTTI,
                       function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                       function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  auto &DL = GV->getParent()->getDataLayout();
+  auto &DL = GV->getDataLayout();
   // If this is a first class global and has only one accessing function and
   // this function is non-recursive, we replace the global with a local alloca
   // in this function.
@@ -1461,7 +1487,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       GS.AccessingFunction->doesNotRecurse() &&
       isPointerValueDeadOnEntryToFunction(GS.AccessingFunction, GV,
                                           LookupDomTree)) {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
 
     LLVM_DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
     BasicBlock::iterator FirstI =
@@ -1470,8 +1496,14 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // FIXME: Pass Global's alignment when globals have alignment
     AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(),
                                         nullptr, GV->getName(), FirstI);
-    if (!isa<UndefValue>(GV->getInitializer()))
-      new StoreInst(GV->getInitializer(), Alloca, FirstI);
+    Alloca->setDebugLoc(DebugLoc::getCompilerGenerated());
+    if (!isa<UndefValue>(GV->getInitializer())) {
+      auto *SI = new StoreInst(GV->getInitializer(), Alloca, FirstI);
+      // FIXME: We're localizing a global and creating a store instruction for
+      // the initial value of that global. Could we logically use the global
+      // variable's (if one exists) line for this?
+      SI->setDebugLoc(DebugLoc::getCompilerGenerated());
+    }
 
     GV->replaceAllUsesWith(Alloca);
     GV->eraseFromParent();
@@ -1532,7 +1564,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     ++NumMarked;
   }
   if (!GV->getInitializer()->getType()->isSingleValueType()) {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     if (SRAGlobal(GV, DL))
       return true;
   }
@@ -1552,8 +1584,8 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // shared memory (AS 3).
     auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
     if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
-        DL.getTypeAllocSize(SOVConstant->getType()) ==
-            DL.getTypeAllocSize(GV->getValueType()) &&
+        DL.getTypeAllocSize(SOVConstant->getType()).getFixedValue() ==
+            GV->getGlobalSize(DL) &&
         CanHaveNonUndefGlobalInitializer) {
       if (SOVConstant->getType() == GV->getValueType()) {
         // Change the initializer in place.
@@ -1654,11 +1686,10 @@ processGlobal(GlobalValue &GV,
 /// Walk all of the direct calls of the specified function, changing them to
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
-  for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
-    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
-  }
+  for (User *U : F->users())
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Fast);
 }
 
 static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
@@ -1672,8 +1703,6 @@ static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
 static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
   F->setAttributes(StripAttr(F->getContext(), F->getAttributes(), A));
   for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
     CallBase *CB = cast<CallBase>(U);
     CB->setAttributes(StripAttr(F->getContext(), CB->getAttributes(), A));
   }
@@ -1698,8 +1727,6 @@ static bool hasChangeableCCImpl(Function *F) {
   // Can't change CC of the function that either has musttail calls, or is a
   // musttail callee itself
   for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
     CallInst* CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
@@ -1748,13 +1775,12 @@ isValidCandidateForColdCC(Function &F,
     return false;
 
   for (User *U : F.users()) {
-    if (isa<BlockAddress>(U))
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
       continue;
-
-    CallBase &CB = cast<CallBase>(*U);
-    Function *CallerFunc = CB.getParent()->getParent();
+    Function *CallerFunc = CB->getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(CB, CallerBFI))
+    if (!isColdCallSite(*CB, CallerBFI))
       return false;
     if (!llvm::is_contained(AllCallsCold, CallerFunc))
       return false;
@@ -1763,11 +1789,10 @@ isValidCandidateForColdCC(Function &F,
 }
 
 static void changeCallSitesToColdCC(Function *F) {
-  for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
-    cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
-  }
+  for (User *U : F->users())
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Cold);
 }
 
 // This function iterates over all the call instructions in the input Function
@@ -1808,12 +1833,7 @@ hasOnlyColdCalls(Function &F,
 
 static bool hasMustTailCallers(Function *F) {
   for (User *U : F->users()) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB) {
-      assert(isa<BlockAddress>(U) &&
-             "Expected either CallBase or BlockAddress");
-      continue;
-    }
+    CallBase *CB = cast<CallBase>(U);
     if (CB->isMustTailCall())
       return true;
   }
@@ -1868,7 +1888,7 @@ static void RemovePreallocated(Function *F) {
 
     Builder.SetInsertPoint(PreallocatedSetup);
     auto *StackSave = Builder.CreateStackSave();
-    Builder.SetInsertPoint(NewCB->getNextNonDebugInstruction());
+    Builder.SetInsertPoint(NewCB->getNextNode());
     Builder.CreateStackRestore(StackSave);
 
     // Replace @llvm.call.preallocated.arg() with alloca.
@@ -1892,7 +1912,7 @@ static void RemovePreallocated(Function *F) {
         auto AddressSpace = UseCall->getType()->getPointerAddressSpace();
         auto *ArgType =
             UseCall->getFnAttr(Attribute::Preallocated).getValueAsType();
-        auto *InsertBefore = PreallocatedSetup->getNextNonDebugInstruction();
+        auto *InsertBefore = PreallocatedSetup->getNextNode();
         Builder.SetInsertPoint(InsertBefore);
         auto *Alloca =
             Builder.CreateAlloca(ArgType, AddressSpace, nullptr, "paarg");
@@ -2005,12 +2025,15 @@ OptimizeFunctions(Module &M,
 
     if (hasChangeableCC(&F, ChangeableCCCache)) {
       // If this function has a calling convention worth changing, is not a
-      // varargs function, and is only called directly, promote it to use the
-      // Fast calling convention.
-      F.setCallingConv(CallingConv::Fast);
-      ChangeCalleesToFastCall(&F);
-      ++NumFastCallFns;
-      Changed = true;
+      // varargs function, is only called directly, and is supported by the
+      // target, promote it to use the Fast calling convention.
+      TargetTransformInfo &TTI = GetTTI(F);
+      if (TTI.useFastCCForInternalCall(F)) {
+        F.setCallingConv(CallingConv::Fast);
+        ChangeCalleesToFastCall(&F);
+        ++NumFastCallFns;
+        Changed = true;
+      }
     }
 
     if (F.getAttributes().hasAttrSomewhere(Attribute::Nest) &&
@@ -2123,9 +2146,10 @@ static void setUsedInitializer(GlobalVariable &V,
 
   Module *M = V.getParent();
   V.removeFromParent();
-  GlobalVariable *NV =
-      new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, UsedArray), "");
+  GlobalVariable *NV = new GlobalVariable(
+      *M, ATy, false, GlobalValue::AppendingLinkage,
+      ConstantArray::get(ATy, UsedArray), "", nullptr,
+      GlobalVariable::NotThreadLocal, V.getType()->getAddressSpace());
   NV->takeName(&V);
   NV->setSection("llvm.metadata");
   delete &V;
@@ -2144,10 +2168,10 @@ public:
   LLVMUsed(Module &M) {
     SmallVector<GlobalValue *, 4> Vec;
     UsedV = collectUsedGlobalVariables(M, Vec, false);
-    Used = {Vec.begin(), Vec.end()};
+    Used = {llvm::from_range, Vec};
     Vec.clear();
     CompilerUsedV = collectUsedGlobalVariables(M, Vec, true);
-    CompilerUsed = {Vec.begin(), Vec.end()};
+    CompilerUsed = {llvm::from_range, Vec};
   }
 
   using iterator = SmallPtrSet<GlobalValue *, 4>::iterator;
@@ -2216,6 +2240,9 @@ static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
 
 static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
                              bool &RenameTarget) {
+  if (GA.isWeakForLinker())
+    return false;
+
   RenameTarget = false;
   bool Ret = false;
   if (hasUseOtherThanLLVMUsed(GA, U))
@@ -2321,18 +2348,19 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *
-FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+FindAtExitLibFunc(Module &M,
+                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                  LibFunc Func) {
   // Hack to get a default TLI before we have actual Function.
   auto FuncIter = M.begin();
   if (FuncIter == M.end())
     return nullptr;
   auto *TLI = &GetTLI(*FuncIter);
 
-  LibFunc F = LibFunc_cxa_atexit;
-  if (!TLI->has(F))
+  if (!TLI->has(Func))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(F));
+  Function *Fn = M.getFunction(TLI->getName(Func));
   if (!Fn)
     return nullptr;
 
@@ -2340,17 +2368,18 @@ FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc_cxa_atexit)
+  LibFunc F;
+  if (!TLI->getLibFunc(*Fn, F) || F != Func)
     return nullptr;
 
   return Fn;
 }
 
-/// Returns whether the given function is an empty C++ destructor and can
-/// therefore be eliminated.
-/// Note that we assume that other optimization passes have already simplified
-/// the code so we simply check for 'ret'.
-static bool cxxDtorIsEmpty(const Function &Fn) {
+/// Returns whether the given function is an empty C++ destructor or atexit
+/// handler and can therefore be eliminated. Note that we assume that other
+/// optimization passes have already simplified the code so we simply check for
+/// 'ret'.
+static bool IsEmptyAtExitFunction(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
   if (Fn.isDeclaration())
@@ -2366,7 +2395,7 @@ static bool cxxDtorIsEmpty(const Function &Fn) {
   return false;
 }
 
-static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
+static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   /// Itanium C++ ABI p3.3.5:
   ///
   ///   After constructing a global (or local static) object, that will require
@@ -2379,8 +2408,8 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   ///   registered before this one. It returns zero if registration is
   ///   successful, nonzero on failure.
 
-  // This pass will look for calls to __cxa_atexit where the function is trivial
-  // and remove them.
+  // This pass will look for calls to __cxa_atexit or atexit where the function
+  // is trivial and remove them.
   bool Changed = false;
 
   for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
@@ -2393,14 +2422,17 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 
     Function *DtorFn =
       dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
-    if (!DtorFn || !cxxDtorIsEmpty(*DtorFn))
+    if (!DtorFn || !IsEmptyAtExitFunction(*DtorFn))
       continue;
 
     // Just remove the call.
     CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
     CI->eraseFromParent();
 
-    ++NumCXXDtorsRemoved;
+    if (isCXX)
+      ++NumCXXDtorsRemoved;
+    else
+      ++NumAtExitRemoved;
 
     Changed |= true;
   }
@@ -2442,7 +2474,9 @@ static bool OptimizeStaticIFuncs(Module &M) {
   bool Changed = false;
   for (GlobalIFunc &IF : M.ifuncs())
     if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
-      if (!IF.use_empty()) {
+      if (!IF.use_empty() &&
+          (!Callee->isDeclaration() ||
+           none_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))) {
         IF.replaceAllUsesWith(Callee);
         NumIFuncsResolved++;
         Changed = true;
@@ -2459,6 +2493,255 @@ DeleteDeadIFuncs(Module &M,
       NumIFuncsDeleted++;
       Changed = true;
     }
+  return Changed;
+}
+
+// Follows the use-def chain of \p V backwards until it finds a Function,
+// in which case it collects in \p Versions. Return true on successful
+// use-def chain traversal, false otherwise.
+static bool
+collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
+                function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  if (auto *F = dyn_cast<Function>(V)) {
+    if (!GetTTI(*F).isMultiversionedFunction(*F))
+      return false;
+    Versions.push_back(F);
+  } else if (auto *Sel = dyn_cast<SelectInst>(V)) {
+    if (!collectVersions(Sel->getTrueValue(), Versions, GetTTI))
+      return false;
+    if (!collectVersions(Sel->getFalseValue(), Versions, GetTTI))
+      return false;
+  } else if (auto *Phi = dyn_cast<PHINode>(V)) {
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+      if (!collectVersions(Phi->getIncomingValue(I), Versions, GetTTI))
+        return false;
+  } else {
+    // Unknown instruction type. Bail.
+    return false;
+  }
+  return true;
+}
+
+// Try to statically resolve calls to versioned functions when possible. First
+// we identify the function versions which are associated with an IFUNC symbol.
+// We do that by examining the resolver function of the IFUNC. Once we have
+// collected all the function versions, we sort them in decreasing priority
+// order. This is necessary for determining the most suitable callee version
+// for each caller version. We then collect all the callsites to versioned
+// functions. The static resolution is performed by comparing the feature sets
+// between callers and callees. Specifically:
+// * Start a walk over caller and callee lists simultaneously in order of
+//   decreasing priority.
+// * Statically resolve calls from the current caller to the current callee,
+//   iff the caller feature bits are a superset of the callee feature bits.
+// * For FMV callers, as long as the caller feature bits are a subset of the
+//   callee feature bits, advance to the next callee. This effectively prevents
+//   considering the current callee as a candidate for static resolution by
+//   following callers (explanation: preceding callers would not have been
+//   selected in a hypothetical runtime execution).
+// * Advance to the next caller.
+//
+// Presentation in EuroLLVM2025:
+// https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
+static bool OptimizeNonTrivialIFuncs(
+    Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  bool Changed = false;
+
+  // Map containing the feature bits for a given function.
+  DenseMap<Function *, APInt> FeatureMask;
+  // Map containing the priority bits for a given function.
+  DenseMap<Function *, APInt> PriorityMask;
+  // Map containing all the function versions corresponding to an IFunc symbol.
+  DenseMap<GlobalIFunc *, SmallVector<Function *>> VersionedFuncs;
+  // Map containing the IFunc symbol a function is version of.
+  DenseMap<Function *, GlobalIFunc *> VersionOf;
+  // List of all the interesting IFuncs found in the module.
+  SmallVector<GlobalIFunc *> IFuncs;
+
+  for (GlobalIFunc &IF : M.ifuncs()) {
+    LLVM_DEBUG(dbgs() << "Examining IFUNC " << IF.getName() << "\n");
+
+    if (IF.isInterposable())
+      continue;
+
+    Function *Resolver = IF.getResolverFunction();
+    if (!Resolver)
+      continue;
+
+    if (Resolver->isInterposable())
+      continue;
+
+    SmallVector<Function *> Versions;
+    // Discover the versioned functions.
+    if (any_of(*Resolver, [&](BasicBlock &BB) {
+          if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
+            if (!collectVersions(Ret->getReturnValue(), Versions, GetTTI))
+              return true;
+          return false;
+        }))
+      continue;
+
+    if (Versions.empty())
+      continue;
+
+    for (Function *V : Versions) {
+      VersionOf.insert({V, &IF});
+      auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(V);
+      if (FeatInserted)
+        FeatIt->second = GetTTI(*V).getFeatureMask(*V);
+      auto [PriorIt, PriorInserted] = PriorityMask.try_emplace(V);
+      if (PriorInserted)
+        PriorIt->second = GetTTI(*V).getPriorityMask(*V);
+    }
+
+    // Sort function versions in decreasing priority order.
+    sort(Versions, [&](auto *LHS, auto *RHS) {
+      return PriorityMask[LHS].ugt(PriorityMask[RHS]);
+    });
+
+    IFuncs.push_back(&IF);
+    VersionedFuncs.try_emplace(&IF, std::move(Versions));
+  }
+
+  for (GlobalIFunc *CalleeIF : IFuncs) {
+    SmallVector<Function *> NonFMVCallers;
+    DenseSet<GlobalIFunc *> CallerIFuncs;
+    DenseMap<Function *, SmallVector<CallBase *>> CallSites;
+
+    // Find the callsites.
+    for (User *U : CalleeIF->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        if (CB->getCalledOperand() == CalleeIF) {
+          Function *Caller = CB->getFunction();
+          GlobalIFunc *CallerIF = nullptr;
+          TargetTransformInfo &TTI = GetTTI(*Caller);
+          bool CallerIsFMV = TTI.isMultiversionedFunction(*Caller);
+          // The caller is a version of a known IFunc.
+          if (auto It = VersionOf.find(Caller); It != VersionOf.end())
+            CallerIF = It->second;
+          else if (!CallerIsFMV && OptimizeNonFMVCallers) {
+            // The caller is non-FMV.
+            auto [It, Inserted] = FeatureMask.try_emplace(Caller);
+            if (Inserted)
+              It->second = TTI.getFeatureMask(*Caller);
+          } else
+            // The caller is none of the above, skip.
+            continue;
+          auto [It, Inserted] = CallSites.try_emplace(Caller);
+          if (Inserted) {
+            if (CallerIsFMV)
+              CallerIFuncs.insert(CallerIF);
+            else
+              NonFMVCallers.push_back(Caller);
+          }
+          It->second.push_back(CB);
+        }
+      }
+    }
+
+    if (CallSites.empty())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
+                      << CalleeIF->getResolverFunction()->getName() << "\n");
+
+    // The complexity of this algorithm is linear: O(NumCallers + NumCallees)
+    // if NumCallers > MaxIFuncVersions || NumCallees > MaxIFuncVersions,
+    // otherwise it is cubic: O((NumCallers ^ 2) x NumCallees).
+    auto staticallyResolveCalls = [&](ArrayRef<Function *> Callers,
+                                      ArrayRef<Function *> Callees,
+                                      bool CallerIsFMV) {
+      bool AllowExpensiveChecks = CallerIsFMV &&
+                                  Callers.size() <= MaxIFuncVersions &&
+                                  Callees.size() <= MaxIFuncVersions;
+      // Index to the highest callee candidate.
+      unsigned J = 0;
+
+      for (unsigned I = 0, E = Callers.size(); I < E; ++I) {
+        // There are no callee candidates left.
+        if (J == Callees.size())
+          break;
+
+        Function *Caller = Callers[I];
+        APInt CallerBits = FeatureMask[Caller];
+
+        // Compare the feature bits of the best callee candidate with all the
+        // caller versions preceeding the current one. For each prior caller
+        // discard feature bits that are known to be available in the current
+        // caller. As long as the known missing feature bits are a subset of the
+        // callee feature bits, advance to the next callee and start over.
+        auto eliminateAvailableFeatures = [&](unsigned BestCandidate) {
+          unsigned K = 0;
+          while (K < I && BestCandidate < Callees.size()) {
+            APInt MissingBits = FeatureMask[Callers[K]] & ~CallerBits;
+            if (MissingBits.isSubsetOf(FeatureMask[Callees[BestCandidate]])) {
+              ++BestCandidate;
+              // Start over.
+              K = 0;
+            } else
+              ++K;
+          }
+          return BestCandidate;
+        };
+
+        unsigned BestCandidate =
+            AllowExpensiveChecks ? eliminateAvailableFeatures(J) : J;
+        // No callee candidate was found for this caller.
+        if (BestCandidate == Callees.size())
+          continue;
+
+        LLVM_DEBUG(dbgs() << "   Examining "
+                          << (CallerIsFMV ? "FMV" : "regular") << " caller "
+                          << Caller->getName() << "\n");
+
+        Function *Callee = Callees[BestCandidate];
+        APInt CalleeBits = FeatureMask[Callee];
+
+        // Statically resolve calls from the current caller to the current
+        // callee, iff the caller feature bits are a superset of the callee
+        // feature bits.
+        if (CalleeBits.isSubsetOf(CallerBits)) {
+          // Not all caller versions are necessarily users of the callee IFUNC.
+          if (auto It = CallSites.find(Caller); It != CallSites.end()) {
+            for (CallBase *CS : It->second) {
+              LLVM_DEBUG(dbgs() << "   Redirecting call " << Caller->getName()
+                                << " -> " << Callee->getName() << "\n");
+              CS->setCalledOperand(Callee);
+            }
+            Changed = true;
+          }
+        }
+
+        // Nothing else to do about non-FMV callers.
+        if (!CallerIsFMV)
+          continue;
+
+        // For FMV callers, as long as the caller feature bits are a subset of
+        // the callee feature bits, advance to the next callee. This effectively
+        // prevents considering the current callee as a candidate for static
+        // resolution by following callers.
+        while (CallerBits.isSubsetOf(FeatureMask[Callees[J]]) &&
+               ++J < Callees.size())
+          ;
+      }
+    };
+
+    auto &Callees = VersionedFuncs[CalleeIF];
+
+    // Optimize non-FMV calls.
+    if (OptimizeNonFMVCallers)
+      staticallyResolveCalls(NonFMVCallers, Callees, /*CallerIsFMV=*/false);
+
+    // Optimize FMV calls.
+    for (GlobalIFunc *CallerIF : CallerIFuncs) {
+      auto &Callers = VersionedFuncs[CallerIF];
+      staticallyResolveCalls(Callers, Callees, /*CallerIsFMV=*/true);
+    }
+
+    if (CalleeIF->use_empty() ||
+        all_of(CalleeIF->users(), [](User *U) { return isa<GlobalAlias>(U); }))
+      NumIFuncsResolved++;
+  }
   return Changed;
 }
 
@@ -2518,12 +2801,18 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
-    if (CXAAtExitFn)
-      LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
+    if (Function *CXAAtExitFn =
+            FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
+
+    if (Function *AtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_atexit))
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
 
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);
+
+    // Optimize IFuncs based on the target features of the caller.
+    LocalChange |= OptimizeNonTrivialIFuncs(M, GetTTI);
 
     // Remove any IFuncs that are now dead.
     LocalChange |= DeleteDeadIFuncs(M, NotDiscardableComdats);

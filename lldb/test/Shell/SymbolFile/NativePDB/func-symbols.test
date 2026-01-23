@@ -1,0 +1,133 @@
+# REQUIRES: lld, target-windows
+
+# Test that functions have the correct types.
+# This uses the same input as SymbolFile/PDB/func-symbols.test. However, DIA 
+# creates one named `Type` per function and uses identical UIDs for `Type` and
+# `Function`, whereas native creates one unnamed type per signature and has different UIDs.
+
+# RUN: split-file %s %t
+# RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib -o %t.exe %t/main.cpp %t/second.cpp
+# RUN: lldb-test symbols %t.exe | FileCheck --check-prefix=CHECK-ONE %s
+# RUN: lldb-test symbols %t.exe | FileCheck --check-prefix=CHECK-TWO %s
+
+#--- main.cpp
+
+// Global functions
+int Func_arg_array(int array[]) { return 1; }
+void Func_arg_void(void) { return; }
+void Func_arg_none(void) { return; }
+void Func_varargs(...) { return; }
+
+// Class
+namespace MemberTest {
+  class A {
+  public:
+    int Func(int a, ...) { return 1; }
+  };
+}
+
+// Template
+template <int N=1, class ...T>
+void TemplateFunc(T ...Arg) {
+  return;
+}
+
+// namespace
+namespace {
+  void Func(int a, const long b, volatile bool c, ...) { return; }
+}
+
+namespace NS {
+  void Func(char a, int b) {
+    return;
+  }
+}
+
+// Static function
+static long StaticFunction(int a)
+{
+  return 2;
+}
+
+// Inlined function
+inline void InlinedFunction(long a) { return; }
+
+extern void FunctionCall();
+
+int main() {
+  MemberTest::A v1;
+  v1.Func('a',10);
+
+  Func(1, 5, true, 10, 8);
+  NS::Func('c', 2);
+
+  TemplateFunc(10);
+  TemplateFunc(10,11,88);
+
+  StaticFunction(2);
+  InlinedFunction(1);
+
+  FunctionCall();
+  return 0;
+}
+
+#--- main-checks
+
+# CHECK-ONE: Module [[MD:.*]]
+# CHECK-ONE-DAG: SymbolFile native-pdb ([[MD]])
+# CHECK-ONE-DAG: [[TY0:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} int (int *)
+# CHECK-ONE-DAG: [[TY1:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (void)
+# CHECK-ONE-DAG: [[TY2:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (...)
+# CHECK-ONE-DAG: [[TY3:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (char, int)
+# CHECK-ONE-DAG: [[TY4:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} int (void)
+# CHECK-ONE-DAG: [[TY5:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (int, const long, volatile _Bool, ...)
+# CHECK-ONE-DAG: [[TY6:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} long (int)
+# CHECK-ONE-DAG: [[TY7:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} int (int, ...)
+# CHECK-ONE-DAG: [[TY8:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (int)
+# CHECK-ONE-DAG: [[TY9:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (int, int, int)
+# CHECK-ONE-DAG: [[TY10:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (long)
+
+# CHECK-ONE: {{.*}}:   CompileUnit{{.*}}, language = "c++", file = '{{.*}}main.cpp'
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?Func_arg_array@@YAHQAH@Z, type = [[TY0]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?Func_arg_void@@YAXXZ, type = [[TY1]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?Func_arg_none@@YAXXZ, type = [[TY1]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?Func_varargs@@YAXZZ, type = [[TY2]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?Func@NS@@YAXDH@Z, type = [[TY3]]
+# CHECK-ONE-DAG: Function{{.*}}, demangled = main, type = [[TY4]]
+# CHECK-ONE-DAG: Function{{.*}}, demangled = {{.*}}`anonymous namespace'::Func{{.*}}, type = [[TY5]]
+# CHECK-ONE-DAG: Function{{.*}}, demangled = {{.*}}StaticFunction{{.*}}, type = [[TY6]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?Func@A@MemberTest@@QAAHHZZ, type = [[TY7]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ??$TemplateFunc@$00H@@YAXH@Z, type = [[TY8]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ??$TemplateFunc@$00HHH@@YAXHHH@Z, type = [[TY9]]
+# CHECK-ONE-DAG: Function{{.*}}, mangled = ?InlinedFunction@@YAXJ@Z, type = [[TY10]]
+
+#--- second.cpp
+
+// Static function
+namespace {
+static long StaticFunction(int a)
+{
+  return 2;
+}
+}
+
+// Inlined function
+static inline int InlinedFunction(long a) { return 10; }
+
+void FunctionCall()
+{
+  StaticFunction(1);
+  InlinedFunction(1);
+}
+
+#--- second-checks
+
+# We expect new types observed in another compile unit
+# CHECK-TWO-DAG: [[TY1:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} void (void)
+# CHECK-TWO-DAG: [[TY2:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} long (int)
+# CHECK-TWO-DAG: [[TY3:.*]]:   Type{{.*}} , size = 0, compiler_type = {{.*}} int (long)
+
+# CHECK-TWO: {{.*}}:   CompileUnit{{.*}}, language = "c++", file = '{{.*}}second.cpp'
+# CHECK-TWO-DAG: Function{{.*}}, mangled = ?FunctionCall@@YAXXZ, type = [[TY1]]
+# CHECK-TWO-DAG: Function{{.*}}, demangled = {{.*}}`anonymous namespace'::StaticFunction{{.*}}, type = [[TY2]]
+# CHECK-TWO-DAG: Function{{.*}}, demangled = {{.*}}InlinedFunction{{.*}}, type = [[TY3]]

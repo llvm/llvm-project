@@ -17,7 +17,6 @@
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 
@@ -28,11 +27,11 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Up, class = void>
-struct __is_equality_comparable : false_type {};
+inline const bool __is_equality_comparable_v = false;
 
 template <class _Tp, class _Up>
-struct __is_equality_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() == std::declval<_Up>())> > : true_type {
-};
+inline const bool
+    __is_equality_comparable_v<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() == std::declval<_Up>())> > = true;
 
 // A type is_trivially_equality_comparable if the expression `a == b` is equivalent to `std::memcmp(&a, &b, sizeof(T))`
 // (with `a` and `b` being of type `T`). For the case where we compare two object of the same type, we can use
@@ -45,42 +44,39 @@ struct __is_equality_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() 
 // pointers that don't have the same type (ignoring cv-qualifiers): pointers to virtual bases are equality comparable,
 //   but don't have the same bit-pattern. An exception to this is comparing to a void-pointer. There the bit-pattern is
 //   always compared.
+// objects with padding bytes: since objects with padding bytes may compare equal, even though their object
+//   representation may not be equivalent.
 
 template <class _Tp, class _Up, class = void>
-struct __libcpp_is_trivially_equality_comparable_impl : false_type {};
+inline const bool __is_trivially_equality_comparable_impl = false;
 
 template <class _Tp>
-struct __libcpp_is_trivially_equality_comparable_impl<_Tp, _Tp>
+inline const bool __is_trivially_equality_comparable_impl<_Tp, _Tp>
 #if __has_builtin(__is_trivially_equality_comparable)
-    : integral_constant<bool, __is_trivially_equality_comparable(_Tp) && __is_equality_comparable<_Tp, _Tp>::value> {
-};
+    = __is_trivially_equality_comparable(_Tp) && __is_equality_comparable_v<_Tp, _Tp>;
 #else
-    : is_integral<_Tp> {
-};
+    = is_integral<_Tp>::value;
 #endif // __has_builtin(__is_trivially_equality_comparable)
 
 template <class _Tp, class _Up>
-struct __libcpp_is_trivially_equality_comparable_impl<
+inline const bool __is_trivially_equality_comparable_impl<
     _Tp,
     _Up,
-    __enable_if_t<is_integral<_Tp>::value && is_integral<_Up>::value && !is_same<_Tp, _Up>::value &&
-                  is_signed<_Tp>::value == is_signed<_Up>::value && sizeof(_Tp) == sizeof(_Up)> > : true_type {};
+    __enable_if_t<is_integral<_Tp>::value && is_integral<_Up>::value && !is_same<_Tp, _Up>::value> > =
+    is_signed<_Tp>::value == is_signed<_Up>::value && sizeof(_Tp) == sizeof(_Up);
 
 template <class _Tp>
-struct __libcpp_is_trivially_equality_comparable_impl<_Tp*, _Tp*> : true_type {};
+inline const bool __is_trivially_equality_comparable_impl<_Tp*, _Tp*> = true;
 
 // TODO: Use is_pointer_inverconvertible_base_of
 template <class _Tp, class _Up>
-struct __libcpp_is_trivially_equality_comparable_impl<_Tp*, _Up*>
-    : integral_constant<
-          bool,
-          __is_equality_comparable<_Tp*, _Up*>::value &&
-              (is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value || is_void<_Tp>::value || is_void<_Up>::value)> {
-};
+inline const bool __is_trivially_equality_comparable_impl<_Tp*, _Up*> =
+    __is_equality_comparable_v<_Tp*, _Up*> &&
+    (is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value || is_void<_Tp>::value || is_void<_Up>::value);
 
 template <class _Tp, class _Up>
-using __libcpp_is_trivially_equality_comparable =
-    __libcpp_is_trivially_equality_comparable_impl<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >;
+inline const bool __is_trivially_equality_comparable_v =
+    __is_trivially_equality_comparable_impl<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >;
 
 _LIBCPP_END_NAMESPACE_STD
 

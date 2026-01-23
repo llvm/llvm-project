@@ -21,9 +21,7 @@
 #include "container_test_types.h"
 #include "../../set_allocator_requirement_test_templates.h"
 
-
-int main(int, char**)
-{
+int main(int, char**) {
   testSetInsert<TCT::unordered_set<> >();
   testSetEmplace<TCT::unordered_set<> >();
 

@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mcpu=mips32  < %s | FileCheck %s --check-prefixes=ALL,BE
-; RUN: llc -march=mipsel -mcpu=mips32  < %s | FileCheck %s --check-prefixes=ALL,LE
+; RUN: llc -mtriple=mips -mcpu=mips32  < %s | FileCheck %s --check-prefixes=ALL,BE
+; RUN: llc -mtriple=mipsel -mcpu=mips32  < %s | FileCheck %s --check-prefixes=ALL,LE
 
 ; Verify visitTRUNCATE respects endianness when transforming trunc to insert_vector_elt.
 

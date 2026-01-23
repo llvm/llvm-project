@@ -379,6 +379,12 @@ private:
   /// predecessors in case of a phi definition.
   void forceRecomputeVNI(const VNInfo &ParentVNI);
 
+  /// \return true if rematerializing \p DefMI at \p UseIdx will make the
+  /// register class requirements stricter at the use.
+  bool rematWillIncreaseRestriction(const MachineInstr *DefMI,
+                                    MachineBasicBlock &MBB,
+                                    SlotIndex UseIdx) const;
+
   /// defFromParent - Define Reg from ParentVNI at UseIdx using either
   /// rematerialization or a COPY from parent. Return the new value.
   VNInfo *defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,

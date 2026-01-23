@@ -31,6 +31,15 @@
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL uptr __hwasan_tls;
 
+namespace __sanitizer {
+void EarlySanitizerInit() {
+  // Setup the hwasan runtime before any `__libc_extensions_init`s are called.
+  // This is needed because libraries which define this function (like fdio)
+  // may be instrumented and either access `__hwasan_tls` or make runtime calls.
+  __hwasan_init();
+}
+}  // namespace __sanitizer
+
 namespace __hwasan {
 
 bool InitShadow() {

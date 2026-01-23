@@ -95,7 +95,6 @@ public:
 
     switch (V.getKind()) {
     case Value::Kind::Integer:
-    case Value::Kind::Record:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
@@ -126,15 +125,15 @@ public:
       return;
 
     JOS.attribute("type", L.getType().getAsString());
-    if (auto *V = Env.getValue(L))
-      dump(*V);
+    if (!L.getType()->isRecordType())
+      if (auto *V = Env.getValue(L))
+        dump(*V);
 
     if (auto *RLoc = dyn_cast<RecordStorageLocation>(&L)) {
       for (const auto &Child : RLoc->children())
         JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
           if (Child.second)
-            if (Value *Val = Env.getValue(*Child.second))
-              dump(*Val);
+            dump(*Child.second);
         });
 
       for (const auto &SyntheticField : RLoc->synthetic_fields())
@@ -281,9 +280,10 @@ public:
             Iters.back().Block->Elements[ElementIndex - 1].getAs<CFGStmt>();
         if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr) {
           if (E->isPRValue()) {
-            if (auto *V = State.Env.getValue(*E))
-              JOS.attributeObject(
-                  "value", [&] { ModelDumper(JOS, State.Env).dump(*V); });
+            if (!E->getType()->isRecordType())
+              if (auto *V = State.Env.getValue(*E))
+                JOS.attributeObject(
+                    "value", [&] { ModelDumper(JOS, State.Env).dump(*V); });
           } else {
             if (auto *Loc = State.Env.getStorageLocation(*E))
               JOS.attributeObject(
@@ -539,12 +539,10 @@ llvm::Expected<std::string> renderSVG(llvm::StringRef DotGraph) {
                                                    Input))
     return llvm::createStringError(EC, "failed to create `dot` temp input");
   llvm::raw_fd_ostream(InputFD, /*shouldClose=*/true) << DotGraph;
-  auto DeleteInput =
-      llvm::make_scope_exit([&] { llvm::sys::fs::remove(Input); });
+  llvm::scope_exit DeleteInput([&] { llvm::sys::fs::remove(Input); });
   if (auto EC = llvm::sys::fs::createTemporaryFile("analysis", ".svg", Output))
     return llvm::createStringError(EC, "failed to create `dot` temp output");
-  auto DeleteOutput =
-      llvm::make_scope_exit([&] { llvm::sys::fs::remove(Output); });
+  llvm::scope_exit DeleteOutput([&] { llvm::sys::fs::remove(Output); });
 
   std::vector<std::optional<llvm::StringRef>> Redirects = {
       Input, Output,

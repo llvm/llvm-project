@@ -284,13 +284,15 @@ public:
     /// The conversion specifier and the argument type are disallowed by the C
     /// standard, but are in practice harmless. For instance, "%p" and int*.
     NoMatchPedantic,
+    /// The conversion specifier and the argument type have different sign.
+    NoMatchSignedness,
     /// The conversion specifier and the argument type are compatible, but still
     /// seems likely to be an error. For instance, "%hd" and _Bool.
     NoMatchTypeConfusion,
   };
 
 private:
-  const Kind K;
+  Kind K;
   QualType T;
   const char *Name = nullptr;
   bool Ptr = false;
@@ -336,6 +338,7 @@ public:
   }
 
   MatchKind matchesType(ASTContext &C, QualType argTy) const;
+  MatchKind matchesArgType(ASTContext &C, const ArgType &other) const;
 
   QualType getRepresentativeType(ASTContext &C) const;
 
@@ -384,7 +387,7 @@ public:
   }
 
   const char *getStart() const {
-      // We include the . character if it is given.
+    // We include the . character if it is given.
     return start - UsesDotPrefix;
   }
 
@@ -486,7 +489,8 @@ public:
 
   /// For a TypedefType QT, if it is a named integer type such as size_t,
   /// assign the appropriate value to LM and return true.
-  static bool namedTypeToLengthModifier(QualType QT, LengthModifier &LM);
+  static bool namedTypeToLengthModifier(ASTContext &Ctx, QualType QT,
+                                        LengthModifier &LM);
 };
 
 } // end analyze_format_string namespace

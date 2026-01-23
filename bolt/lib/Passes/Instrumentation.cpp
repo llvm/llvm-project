@@ -51,6 +51,12 @@ cl::opt<bool> ConservativeInstrumentation(
              "accuracy (for debugging, default: false)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
+cl::opt<uint32_t> InstrumentationMaxSize(
+    "instrumentation-max-size",
+    cl::desc("Set max memory size of the instrumentation bump allocator "
+             "default: 0x6400000)"),
+    cl::init(0x6400000), cl::Optional, cl::cat(BoltInstrCategory));
+
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
     cl::desc("interval between profile writes (default: 0 = write only at "
@@ -109,9 +115,8 @@ static bool hasAArch64ExclusiveMemop(
     BinaryBasicBlock *BB = BBQueue.front().first;
     bool IsLoad = BBQueue.front().second;
     BBQueue.pop();
-    if (Visited.find(BB) != Visited.end())
+    if (!Visited.insert(BB).second)
       continue;
-    Visited.insert(BB);
 
     for (const MCInst &Inst : *BB) {
       // Two loads one after another - skip whole function
@@ -126,8 +131,7 @@ static bool hasAArch64ExclusiveMemop(
       if (BC.MIB->isAArch64ExclusiveLoad(Inst))
         IsLoad = true;
 
-      if (IsLoad && BBToSkip.find(BB) == BBToSkip.end()) {
-        BBToSkip.insert(BB);
+      if (IsLoad && BBToSkip.insert(BB).second) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: skip BB " << BB->getName()
                  << " due to exclusive instruction in function "
@@ -479,8 +483,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
         HasJumpTable = true;
       else if (BC.MIB->isUnconditionalBranch(Inst))
         HasUnconditionalBranch = true;
-      else if ((!BC.MIB->isCall(Inst) && !BC.MIB->isConditionalBranch(Inst)) ||
-               BC.MIB->isUnsupportedBranch(Inst))
+      else if (!(BC.MIB->isCall(Inst) || BC.MIB->isConditionalBranch(Inst)))
         continue;
 
       const uint32_t FromOffset = *BC.MIB->getOffset(Inst);
@@ -603,11 +606,27 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 Error Instrumentation::runOnFunctions(BinaryContext &BC) {
+  if (BC.usesBTI())
+    return createFatalBOLTError(
+        "BOLT-ERROR: instrumenting binaries using BTI is not supported.\n");
+  /* BTI TODO:
+   Instrumentation functions add indirect branches into the .text.injected
+   section, see:
+   - __bolt_instr_ind_call_handler
+   - __bolt_instr_ind_tail_call_handler
+   - __bolt_instr_ind_tailcall_handler_func
+   - __bolt_start_trampoline
+   - __bolt_fini_trampoline
+   We cannot add BTIs to their targets when they are created, because the
+   instrumentation snippets get added later to these targets, and the added BTI
+   instruction will not be the first (rendering it useless).
+   */
+
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
   BC.registerOrUpdateSection(".bolt.instr.counters", ELF::SHT_PROGBITS, Flags,
-                             nullptr, 0, 1);
+                             nullptr, 0, BC.RegularPageSize);
 
   BC.registerOrUpdateNoteSection(".bolt.instr.tables", nullptr, 0,
                                  /*Alignment=*/1,
@@ -669,8 +688,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
       const auto LEA = std::find_if(
           std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
-      LEA->getOperand(4).setExpr(
-          MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
+      LEA->getOperand(4).setExpr(MCSymbolRefExpr::create(Target, *BC.Ctx));
     } else {
       BC.errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
     }
@@ -755,8 +773,10 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       // with unknown symbol in runtime library. E.g. for static PIE
       // executable
       createSimpleFunction("__bolt_fini_trampoline",
-                           BC.MIB->createDummyReturnFunction(BC.Ctx.get()));
+                           BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
+    if (BC.isAArch64())
+      BC.MIB->createInstrCounterIncrFunc(BC);
   }
 }
 

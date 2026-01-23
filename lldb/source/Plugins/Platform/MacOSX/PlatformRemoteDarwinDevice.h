@@ -40,10 +40,6 @@ public:
   ~PlatformRemoteDarwinDevice() override;
 
   // Platform functions
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   void GetStatus(Stream &strm) override;
 
   virtual Status GetSymbolFile(const FileSpec &platform_file,
@@ -51,7 +47,6 @@ public:
 
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
-                         const FileSpecList *module_search_paths_ptr,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
 

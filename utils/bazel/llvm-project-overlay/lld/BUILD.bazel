@@ -2,13 +2,15 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
 )
 load("//llvm:binary_alias.bzl", "binary_alias")
-load("//llvm:tblgen.bzl", "gentbl")
+load("//llvm:driver.bzl", "llvm_driver_cc_binary")
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -18,17 +20,21 @@ package(
 licenses(["notice"])
 
 # TODO: Actually compute version info
-genrule(
+write_file(
     name = "config_version_gen",
-    outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo '#define LLD_VERSION_STRING \"{}\"' > $@".format(LLVM_VERSION),
+    out = "include/lld/Common/Version.inc",
+    content = [
+        "#define LLD_VERSION_STRING \"{}\"".format(LLVM_VERSION),
+    ],
 )
 
-genrule(
+write_file(
     name = "vcs_version_gen",
-    outs = ["Common/VCSVersion.inc"],
-    cmd = "echo '#undef LLD_REVISION' >> $@\n" +
-          "echo '#undef LLD_REPOSITORY' >> $@\n",
+    out = "Common/VCSVersion.inc",
+    content = [
+        "#undef LLD_REVISION",
+        "#undef LLD_REPOSITORY",
+    ],
 )
 
 # See https://github.com/bazelbuild/bazel/issues/13803
@@ -43,13 +49,14 @@ cc_library(
     srcs = [":config_version_gen"] + glob(["Common/*.cpp"]),
     hdrs = glob(["include/lld/Common/*.h"]),
     includes = ["include"],
+    textual_hdrs = glob(["include/lld/Common/*.inc"]),
     deps = [
         ":vcs_version",
         "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
-        "//llvm:IRPrinter",
         "//llvm:Option",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
@@ -57,27 +64,21 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "elf_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "ELF",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "ELF/Options.inc",
-    )],
+    tbl_outs = {"ELF/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "ELF/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
     name = "ELF",
     srcs = glob([
-        "ELF/*.cpp",
-        "ELF/*.h",
-        "ELF/Arch/*.cpp",
+        "ELF/**/*.cpp",
+        "ELF/**/*.h",
     ]),
     includes = ["ELF"],
     textual_hdrs = [
@@ -95,6 +96,7 @@ cc_library(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:DTLTO",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:IPO",
@@ -109,24 +111,19 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
-        "@llvm_zstd//:zstd",
+        "//third-party:zlib",
+        "//third-party:zstd",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "coff_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "COFF",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "COFF/Options.inc",
-    )],
+    tbl_outs = {"COFF/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "COFF/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -147,6 +144,7 @@ cc_library(
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:Core",
+        "//llvm:DTLTO",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoCodeView",
         "//llvm:DebugInfoMSF",
@@ -161,7 +159,6 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Symbolize",
-        "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
@@ -170,17 +167,12 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "mingw_options_inc_gen",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "MinGW/Options.inc",
-    )],
+    tbl_outs = {"MinGW/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "MinGW/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -198,19 +190,14 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "macho_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "MachO",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "MachO/Options.inc",
-    )],
+    tbl_outs = {"MachO/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "MachO/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -227,12 +214,10 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
-        "//llvm:Core",
+        "//llvm:CGData",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:LTO",
-        "//llvm:MC",
-        "//llvm:ObjCARC",
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
@@ -242,19 +227,14 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "wasm_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "wasm",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "wasm/Options.inc",
-    )],
+    tbl_outs = {"wasm/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "wasm/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -270,32 +250,23 @@ cc_library(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
         "//llvm:Core",
         "//llvm:Demangle",
         "//llvm:LTO",
         "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
 
-expand_template(
-    name = "lld_main",
-    out = "lld-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "lld",
-    },
-    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
-)
-
-cc_binary(
-    name = "lld",
-    srcs = glob([
-        "tools/lld/*.cpp",
-    ]) + ["lld-driver.cpp"],
+cc_library(
+    name = "lld-lib",
+    srcs = glob(["tools/lld/*.cpp"]),
     deps = [
         ":COFF",
         ":Common",
@@ -306,6 +277,11 @@ cc_binary(
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "lld",
+    deps = [":lld-lib"],
 )
 
 # These are the required names for lld running under different environs.

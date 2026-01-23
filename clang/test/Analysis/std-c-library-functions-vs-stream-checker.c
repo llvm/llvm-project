@@ -1,6 +1,7 @@
 // Check the case when only the StreamChecker is enabled.
 // RUN: %clang_analyze_cc1 %s \
-// RUN:   -analyzer-checker=core,alpha.unix.Stream \
+// RUN:   -analyzer-checker=core,unix.Stream \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple x86_64-unknown-linux \
@@ -18,7 +19,8 @@
 // Check the case when both the StreamChecker and the
 // StdLibraryFunctionsChecker are enabled.
 // RUN: %clang_analyze_cc1 %s \
-// RUN:   -analyzer-checker=core,alpha.unix.Stream \
+// RUN:   -analyzer-checker=core,unix.Stream \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
@@ -29,8 +31,8 @@
 // Verify that the summaries are loaded when the StdLibraryFunctionsChecker is
 // enabled.
 //      CHECK: Loaded summary for: int getchar(void)
-// CHECK-NEXT: Loaded summary for: unsigned long fread(void *restrict, size_t, size_t, FILE *restrict)
-// CHECK-NEXT: Loaded summary for: unsigned long fwrite(const void *restrict, size_t, size_t, FILE *restrict)
+// CHECK-NEXT: Loaded summary for: __size_t fread(void *restrict, size_t, size_t, FILE *restrict)
+// CHECK-NEXT: Loaded summary for: __size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict)
 
 #include "Inputs/system-header-simulator.h"
 

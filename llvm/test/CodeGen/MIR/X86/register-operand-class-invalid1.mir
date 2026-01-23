@@ -1,4 +1,4 @@
-# RUN: not llc -o /dev/null %s -march=x86-64 -run-pass none 2>&1 | FileCheck %s
+# RUN: not llc -o /dev/null %s -mtriple=x86_64 -run-pass none 2>&1 | FileCheck %s
 # This test ensures that an error is reported for specifying the register class
 # of a physical register.
 --- |

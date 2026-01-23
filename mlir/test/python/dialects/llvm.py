@@ -98,6 +98,9 @@ def testStructType():
     assert opaque.opaque
     # CHECK: !llvm.struct<"opaque", opaque>
 
+    typ = Type.parse('!llvm.struct<"zoo", (i32, i64)>')
+    assert isinstance(typ, llvm.StructType)
+
 
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
@@ -107,3 +110,68 @@ def testSmoke():
     )
     result = llvm.UndefOp(mat64f32_t)
     # CHECK: %0 = llvm.mlir.undef : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
+
+
+# CHECK-LABEL: testPointerType
+@constructAndPrintInModule
+def testPointerType():
+    ptr = llvm.PointerType.get()
+    # CHECK: !llvm.ptr
+    print(ptr)
+
+    ptr_with_addr = llvm.PointerType.get(1)
+    # CHECK: !llvm.ptr<1>
+    print(ptr_with_addr)
+
+    typ = Type.parse("!llvm.ptr<1>")
+    assert isinstance(typ, llvm.PointerType)
+
+
+# CHECK-LABEL: testConstant
+@constructAndPrintInModule
+def testConstant():
+    i32 = IntegerType.get_signless(32)
+    c_128 = llvm.mlir_constant(IntegerAttr.get(i32, 128))
+    # CHECK: %{{.*}} = llvm.mlir.constant(128 : i32) : i32
+    print(c_128.owner)
+
+
+# CHECK-LABEL: testIntrinsics
+@constructAndPrintInModule
+def testIntrinsics():
+    i32 = IntegerType.get_signless(32)
+    ptr = llvm.PointerType.get()
+    c_128 = llvm.mlir_constant(IntegerAttr.get(i32, 128))
+    # CHECK: %[[CST128:.*]] = llvm.mlir.constant(128 : i32) : i32
+    print(c_128.owner)
+
+    alloca = llvm.alloca(ptr, c_128, i32)
+    # CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[CST128]] x i32 : (i32) -> !llvm.ptr
+    print(alloca.owner)
+
+    c_0 = llvm.mlir_constant(IntegerAttr.get(IntegerType.get_signless(8), 0))
+    # CHECK: %[[CST0:.+]] = llvm.mlir.constant(0 : i8) : i8
+    print(c_0.owner)
+
+    result = llvm.intr_memset(alloca, c_0, c_128, False)
+    # CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[CST0]], %[[CST128]]) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
+    print(result)
+
+
+# CHECK-LABEL: testTranslateToLLVMIR
+@constructAndPrintInModule
+def testTranslateToLLVMIR():
+    with Context(), Location.unknown():
+        module = Module.parse(
+            """\
+            llvm.func @add(%arg0: i64, %arg1: i64) -> i64 { 
+               %0 = llvm.add %arg0, %arg1  : i64 
+               llvm.return %0 : i64 
+            }
+        """
+        )
+        # CHECK: define i64 @add(i64 %0, i64 %1) {
+        # CHECK:   %3 = add i64 %0, %1
+        # CHECK:   ret i64 %3
+        # CHECK: }
+        print(llvm.translate_module_to_llvmir(module.operation))

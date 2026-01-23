@@ -2,9 +2,10 @@
 Test saving a core file (or mini dump).
 """
 
-
 import os
 import lldb
+import tempfile
+import stat
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -21,6 +22,8 @@ class ProcessSaveCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertNotEqual(process.GetState(), lldb.eStateStopped)
+        options = lldb.SBSaveCoreOptions()
+        options.SetOutputFile(lldb.SBFileSpec(core))
         error = process.SaveCore(core)
         self.assertTrue(error.Fail())
 
@@ -87,3 +90,48 @@ class ProcessSaveCoreTestCase(TestBase):
                 os.unlink(core)
             except OSError:
                 pass
+
+    def test_help(self):
+        """Test that help shows an option in plugin-names and style."""
+        self.expect(
+            "help process save-core",
+            substrs=["process save-core", "<plugin>", "Values:", "minidump"],
+        )
+
+        self.expect(
+            "help process save-core",
+            substrs=[
+                "process save-core",
+                "<corefile-style>",
+                "Values:",
+                "full",
+                "stack",
+            ],
+        )
+
+    @skipIfRemote
+    def test_save_core_to_nonwritable_dir(self):
+        """Test that saving a core file to a non-writable directory produces a helpful error message."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a non-writable temporary directory.
+        temp_dir = tempfile.mkdtemp()
+        os.chmod(temp_dir, stat.S_IRUSR | stat.S_IXUSR)
+        self.addTearDownHook(lambda: os.rmdir(temp_dir))
+
+        target = self.dbg.CreateTarget(exe)
+        breakpoint = target.BreakpointCreateByName("bar")
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertState(process.GetState(), lldb.eStateStopped)
+
+        # Try to save a core file to the non-writable directory.
+        core_file = os.path.join(temp_dir, "core")
+        self.expect(
+            f"process save-core {core_file}",
+            error=True,
+            substrs=[
+                "failed to save core file for process to",
+                os.path.join(temp_dir, "core"),
+            ],
+        )

@@ -20,7 +20,6 @@
 
 #include <cinttypes>
 #include <complex>
-#include <vector>
 
 using namespace mlir::sparse_tensor;
 
@@ -73,6 +72,14 @@ MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEPOSITIONS)
 /// for the given level.
 #define DECL_SPARSECOORDINATES(CNAME, C)                                       \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseCoordinates##CNAME(         \
+      StridedMemRefType<C, 1> *out, void *tensor, index_type lvl);
+MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
+#undef DECL_SPARSECOORDINATES
+
+/// Tensor-storage method to obtain direct access to the coordinates array
+/// buffer for the given level (provides an AoS view into the library).
+#define DECL_SPARSECOORDINATES(CNAME, C)                                       \
+  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseCoordinatesBuffer##CNAME(   \
       StridedMemRefType<C, 1> *out, void *tensor, index_type lvl);
 MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
 #undef DECL_SPARSECOORDINATES

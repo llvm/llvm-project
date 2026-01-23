@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparcv9 | FileCheck %s
+; RUN: llc < %s -mtriple=sparcv9 | FileCheck %s
 
 define dso_local zeroext i32 @f() local_unnamed_addr {
 entry:

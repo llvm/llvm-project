@@ -25,7 +25,6 @@
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
-#include <algorithm>
 #include <set>
 
 // clang-format off
@@ -276,7 +275,7 @@ namespace yaml {
 template <> struct MappingTraits<ExportSection> {
   static void mapping(IO &IO, ExportSection &Section) {
     const auto *Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
-    assert((!Ctx || (Ctx && Ctx->FileKind != FileType::Invalid)) &&
+    assert((!Ctx || Ctx->FileKind != FileType::Invalid) &&
            "File type is not set in YAML context");
 
     IO.mapRequired("archs", Section.Architectures);
@@ -298,7 +297,7 @@ template <> struct MappingTraits<ExportSection> {
 template <> struct MappingTraits<UndefinedSection> {
   static void mapping(IO &IO, UndefinedSection &Section) {
     const auto *Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
-    assert((!Ctx || (Ctx && Ctx->FileKind != FileType::Invalid)) &&
+    assert((!Ctx || Ctx->FileKind != FileType::Invalid) &&
            "File type is not set in YAML context");
 
     IO.mapRequired("archs", Section.Architectures);

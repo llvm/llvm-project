@@ -86,8 +86,13 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
       StructuredData::ParseJSON(stream.GetData());
   m_impl_up->SetObjectSP(json_obj);
 
-  if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)
-    error.SetErrorString("Invalid Syntax");
+  static constexpr StructuredDataType unsupported_type[] = {
+      eStructuredDataTypeInvalid,
+      eStructuredDataTypeGeneric,
+  };
+
+  if (!json_obj || llvm::is_contained(unsupported_type, json_obj->GetType()))
+    error = Status::FromErrorString("Invalid Syntax");
   return error;
 }
 
@@ -128,7 +133,7 @@ lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
 
   Status error = m_impl_up->GetDescription(stream.ref());
   SBError sb_error;
-  sb_error.SetError(error);
+  sb_error.SetError(std::move(error));
   return sb_error;
 }
 
@@ -226,4 +231,48 @@ lldb::SBScriptObject SBStructuredData::GetGenericValue() const {
   LLDB_INSTRUMENT_VA(this);
 
   return {m_impl_up->GetGenericValue(), eScriptLanguageDefault};
+}
+
+void SBStructuredData::SetValueForKey(const char *key,
+                                      SBStructuredData &value) {
+  LLDB_INSTRUMENT_VA(this, key, value);
+
+  if (StructuredData::ObjectSP obj_sp = value.m_impl_up->GetObjectSP())
+    m_impl_up->SetValueForKey(key, obj_sp);
+}
+
+void SBStructuredData::SetUnsignedIntegerValue(uint64_t value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetUnsignedIntegerValue(value);
+}
+
+void SBStructuredData::SetSignedIntegerValue(int64_t value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetSignedIntegerValue(value);
+}
+
+void SBStructuredData::SetFloatValue(double value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetFloatValue(value);
+}
+
+void SBStructuredData::SetBooleanValue(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetBooleanValue(value);
+}
+
+void SBStructuredData::SetStringValue(const char *value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetStringValue(value);
+}
+
+void SBStructuredData::SetGenericValue(SBScriptObject value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetGenericValue(value.GetPointer());
 }

@@ -24,7 +24,7 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::opt<unsigned> Verbosity;
 
-cl::opt<bool>
+static cl::opt<bool>
     PrintSymbolAliases("print-aliases",
                        cl::desc("print aliases when printing objects"),
                        cl::Hidden, cl::cat(BoltCategory));
@@ -51,14 +51,6 @@ void BinaryData::merge(const BinaryData *Other) {
 bool BinaryData::hasName(StringRef Name) const {
   for (const MCSymbol *Symbol : Symbols)
     if (Name == Symbol->getName())
-      return true;
-  return false;
-}
-
-bool BinaryData::hasNameRegex(StringRef NameRegex) const {
-  Regex MatchName(NameRegex);
-  for (const MCSymbol *Symbol : Symbols)
-    if (MatchName.match(Symbol->getName()))
       return true;
   return false;
 }

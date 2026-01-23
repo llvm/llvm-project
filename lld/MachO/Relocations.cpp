@@ -18,21 +18,47 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-static_assert(sizeof(void *) != 8 || sizeof(Reloc) == 24,
+static_assert(sizeof(void *) != 8 || sizeof(Relocation) == 24,
               "Try to minimize Reloc's size; we create many instances");
 
-InputSection *Reloc::getReferentInputSection() const {
+InputSection *Relocation::getReferentInputSection() const {
   if (const auto *sym = referent.dyn_cast<Symbol *>()) {
     if (const auto *d = dyn_cast<Defined>(sym))
-      return d->isec;
+      return d->isec();
     return nullptr;
   } else {
-    return referent.get<InputSection *>();
+    return cast<InputSection *>(referent);
   }
 }
 
+StringRef Relocation::getReferentString() const {
+  if (auto *isec = dyn_cast<InputSection *>(referent)) {
+    const auto *cisec = dyn_cast<CStringInputSection>(isec);
+    assert(cisec && "referent must be a CStringInputSection");
+    return cisec->getStringRefAtOffset(addend);
+  }
+
+  auto *sym = dyn_cast<Defined>(cast<Symbol *>(referent));
+  assert(sym && "referent must be a Defined symbol");
+
+  auto *symIsec = sym->isec();
+  auto symOffset = sym->value + addend;
+
+  if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
+    return s->getStringRefAtOffset(symOffset);
+
+  if (isa<ConcatInputSection>(symIsec)) {
+    auto strData = symIsec->data.slice(symOffset);
+    const char *pszData = reinterpret_cast<const char *>(strData.data());
+    return StringRef(pszData, strnlen(pszData, strData.size()));
+  }
+
+  llvm_unreachable("unknown reference section in getReferentString");
+}
+
 bool macho::validateSymbolRelocation(const Symbol *sym,
-                                     const InputSection *isec, const Reloc &r) {
+                                     const InputSection *isec,
+                                     const Relocation &r) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
   bool valid = true;
   auto message = [&](const Twine &diagnostic) {
@@ -92,7 +118,7 @@ InputSection *macho::offsetToInputSection(uint64_t *off) {
   return nullptr;
 }
 
-void macho::reportRangeError(void *loc, const Reloc &r, const Twine &v,
+void macho::reportRangeError(void *loc, const Relocation &r, const Twine &v,
                              uint8_t bits, int64_t min, uint64_t max) {
   std::string hint;
   uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;

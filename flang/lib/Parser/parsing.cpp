@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parsing.h"
-#include "preprocessor.h"
 #include "prescan.h"
 #include "type-parsers.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/preprocessor.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,9 +42,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     sourceFile =
         allSources.Open(path, fileError, "."s /*prepend to search path*/);
   }
-  if (!fileError.str().empty()) {
+  if (!buf.empty()) {
     ProvenanceRange range{allSources.AddCompilerInsertion(path)};
-    messages_.Say(range, "%s"_err_en_US, fileError.str());
+    messages_.Say(range, "%s"_err_en_US, buf);
     return sourceFile;
   }
   CHECK(sourceFile);
@@ -60,34 +60,42 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     }
   }
 
-  Preprocessor preprocessor{allSources};
   if (!options.predefinitions.empty()) {
-    preprocessor.DefineStandardMacros();
+    preprocessor_.DefineStandardMacros();
     for (const auto &predef : options.predefinitions) {
       if (predef.second) {
-        preprocessor.Define(predef.first, *predef.second);
+        preprocessor_.Define(predef.first, *predef.second);
       } else {
-        preprocessor.Undefine(predef.first);
+        preprocessor_.Undefine(predef.first);
       }
     }
   }
   currentCooked_ = &allCooked_.NewCookedSource();
   Prescanner prescanner{
-      messages_, *currentCooked_, preprocessor, options.features};
+      messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
+      .set_preprocessingOnly(options.prescanAndReformat)
+      .set_expandIncludeLines(!options.prescanAndReformat ||
+          options.expandIncludeLinesInPreprocessedOutput)
       .AddCompilerDirectiveSentinel("dir$");
-  if (options.features.IsEnabled(LanguageFeature::OpenACC)) {
+  bool noneOfTheAbove{!options.features.IsEnabled(LanguageFeature::OpenACC) &&
+      !options.features.IsEnabled(LanguageFeature::OpenMP) &&
+      !options.features.IsEnabled(LanguageFeature::CUDA)};
+  if (options.features.IsEnabled(LanguageFeature::OpenACC) ||
+      (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");
+    prescanner.AddCompilerDirectiveSentinel("@acc");
   }
-  if (options.features.IsEnabled(LanguageFeature::OpenMP)) {
+  if (options.features.IsEnabled(LanguageFeature::OpenMP) ||
+      (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$omp");
     prescanner.AddCompilerDirectiveSentinel("$"); // OMP conditional line
   }
-  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
+  if (options.features.IsEnabled(LanguageFeature::CUDA) ||
+      (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
-    preprocessor.Define("_CUDA", "1");
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
@@ -107,17 +115,23 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   return sourceFile;
 }
 
+void Parsing::EmitPreprocessorMacros(llvm::raw_ostream &out) const {
+  preprocessor_.PrintMacros(out);
+}
+
 void Parsing::EmitPreprocessedSource(
     llvm::raw_ostream &out, bool lineDirectives) const {
   const std::string *sourcePath{nullptr};
   int sourceLine{0};
   int column{1};
   bool inDirective{false};
+  bool ompConditionalLine{false};
   bool inContinuation{false};
   bool lineWasBlankBefore{true};
   const AllSources &allSources{allCooked().allSources()};
-  // All directives that flang support are known to have a length of 3 chars
-  constexpr int directiveNameLength{3};
+  // All directives that flang supports are known to have a length of 4 chars,
+  // except for OpenMP conditional compilation lines (!$).
+  constexpr int directiveNameLength{4};
   // We need to know the current directive in order to provide correct
   // continuation for the directive
   std::string directive;
@@ -127,6 +141,7 @@ void Parsing::EmitPreprocessedSource(
       out << '\n'; // TODO: DOS CR-LF line ending if necessary
       column = 1;
       inDirective = false;
+      ompConditionalLine = false;
       inContinuation = false;
       lineWasBlankBefore = true;
       ++sourceLine;
@@ -138,7 +153,7 @@ void Parsing::EmitPreprocessedSource(
       const auto getOriginalChar{[&](char ch) {
         if (IsLetter(ch) && provenance && provenance->size() == 1) {
           if (const char *orig{allSources.GetSource(*provenance)}) {
-            const char upper{ToUpperCaseLetter(ch)};
+            char upper{ToUpperCaseLetter(ch)};
             if (*orig == upper) {
               return upper;
             }
@@ -147,35 +162,43 @@ void Parsing::EmitPreprocessedSource(
         return ch;
       }};
 
+      bool inDirectiveSentinel{false};
       if (ch == '!' && lineWasBlankBefore) {
         // Other comment markers (C, *, D) in original fixed form source
         // input card column 1 will have been deleted or normalized to !,
         // which signifies a comment (directive) in both source forms.
         inDirective = true;
-      }
-      if (inDirective && directive.size() < directiveNameLength &&
-          IsLetter(ch)) {
-        directive += getOriginalChar(ch);
+        inDirectiveSentinel = true;
+      } else if (inDirective && !ompConditionalLine &&
+          directive.size() < directiveNameLength) {
+        if (IsLetter(ch) || ch == '$' || ch == '@') {
+          directive += getOriginalChar(ch);
+          inDirectiveSentinel = true;
+        } else if (directive == "$"s) {
+          ompConditionalLine = true;
+        }
       }
 
       std::optional<SourcePosition> position{provenance
               ? allSources.GetSourcePosition(provenance->start())
               : std::nullopt};
-      if (lineDirectives && column == 1 && position) {
-        if (&*position->path != sourcePath) {
-          out << "#line \"" << *position->path << "\" " << position->line
-              << '\n';
-        } else if (position->line != sourceLine) {
-          if (sourceLine < position->line &&
-              sourceLine + 10 >= position->line) {
-            // Emit a few newlines to catch up when they'll likely
-            // require fewer bytes than a #line directive would have
-            // occupied.
-            while (sourceLine++ < position->line) {
-              out << '\n';
+      if (column == 1 && position) {
+        if (lineDirectives) {
+          if (&*position->path != sourcePath) {
+            out << "#line \"" << *position->path << "\" " << position->line
+                << '\n';
+          } else if (position->line != sourceLine) {
+            if (sourceLine < position->line &&
+                sourceLine + 10 >= position->line) {
+              // Emit a few newlines to catch up when they'll likely
+              // require fewer bytes than a #line directive would have
+              // occupied.
+              while (sourceLine++ < position->line) {
+                out << '\n';
+              }
+            } else {
+              out << "#line " << position->line << '\n';
             }
-          } else {
-            out << "#line " << position->line << '\n';
           }
         }
         sourcePath = &*position->path;
@@ -192,23 +215,41 @@ void Parsing::EmitPreprocessedSource(
         // column limit override option.
         // OpenMP and OpenACC directives' continuations should have the
         // corresponding sentinel at the next line.
-        const auto continuation{
-            inDirective ? "&\n!$" + directive + "&" : "&\n     &"s};
-        out << continuation;
+        out << "&\n";
+        if (inDirective) {
+          if (ompConditionalLine) {
+            out << "!$   &";
+          } else {
+            out << '!' << directive << '&';
+          }
+        } else {
+          out << "     &";
+        }
         column = 7; // start of fixed form source field
         ++sourceLine;
         inContinuation = true;
-      } else if (!inDirective && ch != ' ' && (ch < '0' || ch > '9')) {
+      } else if (!inDirective && !ompConditionalLine && ch != ' ' &&
+          (ch < '0' || ch > '9')) {
         // Put anything other than a label or directive into the
         // Fortran fixed form source field (columns [7:72]).
-        for (; column < 7; ++column) {
+        for (int toCol{ch == '&' ? 6 : 7}; column < toCol; ++column) {
           out << ' ';
         }
       }
-      if (!inContinuation && position && position->column <= 72 && ch != ' ') {
-        // Preserve original indentation
-        for (; column < position->column; ++column) {
-          out << ' ';
+      if (ch != ' ') {
+        if (ompConditionalLine) {
+          // Only digits can stay in the label field
+          if (!(ch >= '0' && ch <= '9')) {
+            for (int toCol{ch == '&' ? 6 : 7}; column < toCol; ++column) {
+              out << ' ';
+            }
+          }
+        } else if (!inContinuation && !inDirectiveSentinel && position &&
+            position->line == sourceLine && position->column < 72) {
+          // Preserve original indentation
+          for (; column < position->column; ++column) {
+            out << ' ';
+          }
         }
       }
       out << getOriginalChar(ch);
@@ -242,6 +283,8 @@ void Parsing::Parse(llvm::raw_ostream &out) {
       .set_log(&log_);
   ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
+  // Don't bother managing message buffers when parsing module files.
+  parseState.set_deferMessages(options_.isModuleFile);
   parseTree_ = program.Parse(parseState);
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());

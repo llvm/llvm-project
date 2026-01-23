@@ -27,7 +27,7 @@ TEST_F(AIXRelocModelTest, DefalutToPIC) {
   // Create a TargetMachine for powerpc--aix target, and deliberately leave its
   // relocation model unset.
   std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
-      /*TT*/ TheTriple.getTriple(), /*CPU*/ "", /*Features*/ "",
+      /*TT*/ TheTriple, /*CPU*/ "", /*Features*/ "",
       /*Options*/ Options, /*RM*/ std::nullopt, /*CM*/ std::nullopt,
       /*OL*/ CodeGenOptLevel::Default));
   ASSERT_TRUE(Target) << "Could not allocate target machine!";

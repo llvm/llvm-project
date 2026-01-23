@@ -22,7 +22,7 @@ define void @foo(ptr %A, ptr %B, ptr %C, i32 %N) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[DIV0:%.*]] = udiv i32 5, [[TMP3]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD3]], [[DIV0]]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
@@ -224,7 +224,7 @@ define i32 @foo3(i32 %M) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 [[IDXPROM4]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
@@ -365,7 +365,7 @@ define i32 @foo5(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INPUT]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw nsw i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 [[IDX_EXT]]
@@ -514,7 +514,7 @@ define void @foo7(i32 %n, ptr %a, i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]

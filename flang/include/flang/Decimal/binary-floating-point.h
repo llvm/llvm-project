@@ -15,6 +15,7 @@
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cinttypes>
 #include <climits>
 #include <cstring>
@@ -30,25 +31,24 @@ enum FortranRounding {
   RoundCompatible, /* RC: like RN, but ties go away from 0 */
 };
 
-template <int BINARY_PRECISION>
-class BinaryFloatingPointNumber : public common::RealDetails<BINARY_PRECISION> {
+template <int BINARY_PRECISION> class BinaryFloatingPointNumber {
 public:
-  using Details = common::RealDetails<BINARY_PRECISION>;
-  using Details::binaryPrecision;
-  using Details::bits;
-  using Details::decimalPrecision;
-  using Details::decimalRange;
-  using Details::exponentBias;
-  using Details::exponentBits;
-  using Details::isImplicitMSB;
-  using Details::maxDecimalConversionDigits;
-  using Details::maxExponent;
-  using Details::maxHexadecimalConversionDigits;
-  using Details::significandBits;
+  RT_OFFLOAD_VAR_GROUP_BEGIN
+  static constexpr common::RealCharacteristics realChars{BINARY_PRECISION};
+  static constexpr int binaryPrecision{BINARY_PRECISION};
+  static constexpr int bits{realChars.bits};
+  static constexpr int isImplicitMSB{realChars.isImplicitMSB};
+  static constexpr int significandBits{realChars.significandBits};
+  static constexpr int exponentBits{realChars.exponentBits};
+  static constexpr int exponentBias{realChars.exponentBias};
+  static constexpr int maxExponent{realChars.maxExponent};
+  static constexpr int decimalPrecision{realChars.decimalPrecision};
+  static constexpr int decimalRange{realChars.decimalRange};
+  static constexpr int maxDecimalConversionDigits{
+      realChars.maxDecimalConversionDigits};
 
   using RawType = common::HostUnsignedIntType<bits>;
   static_assert(CHAR_BIT * sizeof(RawType) >= bits);
-  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr RawType significandMask{(RawType{1} << significandBits) - 1};
 
   constexpr RT_API_ATTRS BinaryFloatingPointNumber() {} // zero
@@ -69,7 +69,7 @@ public:
   template <typename A>
   explicit constexpr RT_API_ATTRS BinaryFloatingPointNumber(A x) {
     static_assert(sizeof raw_ <= sizeof x);
-    std::memcpy(reinterpret_cast<void *>(&raw_),
+    runtime::memcpy(reinterpret_cast<void *>(&raw_),
         reinterpret_cast<const void *>(&x), sizeof raw_);
   }
 

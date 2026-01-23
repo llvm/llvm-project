@@ -372,6 +372,72 @@ define i32 @ptestz_v2i64_concat(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
   ret i32 %t9
 }
 
+; PR123456 - all_of(x == 0)
+define i1 @ptestc_v4i32_eq0(<4 x i32> %a0) {
+; SSE-LABEL: ptestc_v4i32_eq0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    ptest %xmm0, %xmm0
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ptestc_v4i32_eq0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+  %icmp = icmp eq <4 x i32> %a0, zeroinitializer
+  %sext = sext <4 x i1> %icmp to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %test = tail call noundef i32 @llvm.x86.sse41.ptestc(<2 x i64> %bc, <2 x i64> splat (i64 -1))
+  %res = icmp ne i32 %test, 0
+  ret i1 %res
+}
+
+; PR123456 - all_of((a & b) == 0)
+define i1 @ptestc_v4i32_and_eq0(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE-LABEL: ptestc_v4i32_and_eq0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ptestc_v4i32_and_eq0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest %xmm0, %xmm1
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+  %and = and <4 x i32> %a1, %a0
+  %icmp = icmp eq <4 x i32> %and, zeroinitializer
+  %sext = sext <4 x i1> %icmp to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %test = tail call noundef i32 @llvm.x86.sse41.ptestc(<2 x i64> %bc, <2 x i64> splat (i64 -1))
+  %res = icmp ne i32 %test, 0
+  ret i1 %res
+}
+
+; PR123456 - !all_of((a & ~b) == 0)
+define i1 @ptestc_v4i32_andnot_eq0(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE-LABEL: ptestc_v4i32_andnot_eq0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    setae %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ptestc_v4i32_andnot_eq0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest %xmm0, %xmm1
+; AVX-NEXT:    setae %al
+; AVX-NEXT:    retq
+  %not = xor <4 x i32> %a1, splat (i32 -1)
+  %and = and <4 x i32> %a0, %not
+  %icmp = icmp eq <4 x i32> %and, zeroinitializer
+  %sext = sext <4 x i1> %icmp to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %test = tail call noundef i32 @llvm.x86.sse41.ptestc(<2 x i64> %bc, <2 x i64> splat (i64 -1))
+  %res = icmp eq i32 %test, 0
+  ret i1 %res
+}
+
 ; FIXME: Foldable to ptest(xor(%0,%1),xor(%0,%1))
 define i1 @PR38788(<4 x i32> %0, <4 x i32> %1) {
 ; SSE-LABEL: PR38788:
@@ -395,6 +461,46 @@ define i1 @PR38788(<4 x i32> %0, <4 x i32> %1) {
   %6 = tail call i32 @llvm.x86.sse41.ptestc(<2 x i64> %5, <2 x i64> <i64 -1, i64 -1>)
   %7 = icmp eq i32 %6, 1
   ret i1 %7
+}
+
+define i32 @PR88958_1(ptr %0, <2 x i64> %1) {
+; SSE-LABEL: PR88958_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ptest (%rdi), %xmm0
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR88958_1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vptest (%rdi), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+  %3 = load <2 x i64>, ptr %0
+  %4 = tail call i32 @llvm.x86.sse41.ptestz(<2 x i64> %3, <2 x i64> %1)
+  ret i32 %4
+}
+
+define i32 @PR88958_2(ptr %0, <2 x i64> %1) {
+; SSE-LABEL: PR88958_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    setb %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR88958_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm1
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vptest %xmm0, %xmm1
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
+  %3 = load <2 x i64>, ptr %0
+  %4 = tail call i32 @llvm.x86.sse41.ptestc(<2 x i64> %3, <2 x i64> %1)
+  ret i32 %4
 }
 
 declare i32 @llvm.x86.sse41.ptestz(<2 x i64>, <2 x i64>) nounwind readnone

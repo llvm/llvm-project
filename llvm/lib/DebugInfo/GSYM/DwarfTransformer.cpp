@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <thread>
-#include <unordered_set>
-
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -320,8 +317,24 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   const object::SectionedAddress SecAddress{
       StartAddress, object::SectionedAddress::UndefSection};
 
+  // Attempt to retrieve DW_AT_LLVM_stmt_sequence if present.
+  std::optional<uint64_t> StmtSeqOffset;
+  if (auto StmtSeqAttr = Die.find(llvm::dwarf::DW_AT_LLVM_stmt_sequence)) {
+    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to an invalid
+    // sentinel value when it refers to an empty line sequence. In such cases,
+    // the DWARF linker will exclude the empty sequence from the final output
+    // and assign the sentinel value to the `DW_AT_LLVM_stmt_sequence`
+    // attribute. The sentinel value is UINT32_MAX for DWARF32 and UINT64_MAX
+    // for DWARF64.
+    const uint64_t InvalidOffset =
+        Die.getDwarfUnit()->getFormParams().getDwarfMaxOffset();
+    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, InvalidOffset);
+    if (StmtSeqVal != InvalidOffset)
+      StmtSeqOffset = StmtSeqVal;
+  }
 
-  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
+  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
+                                         StmtSeqOffset)) {
     // If we have a DW_TAG_subprogram but no line entries, fall back to using
     // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
     std::string FilePath = Die.getDeclFile(
@@ -329,9 +342,13 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     if (FilePath.empty()) {
       // If we had a DW_AT_decl_file, but got no file then we need to emit a
       // warning.
+      const uint64_t DwarfFileIdx = dwarf::toUnsigned(
+          Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
+      // Check if there is no DW_AT_decl_line attribute, and don't report an
+      // error if it isn't there.
+      if (DwarfFileIdx == UINT32_MAX)
+        return;
       Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream &OS) {
-        const uint64_t DwarfFileIdx = dwarf::toUnsigned(
-            Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
         OS << "error: function DIE at " << HEX32(Die.getOffset())
            << " has an invalid file index " << DwarfFileIdx
            << " in its DW_AT_decl_file attribute, unable to create a single "
@@ -546,6 +563,11 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
           FI.Inline = std::nullopt;
         }
       }
+
+      // If dwarf-callsites flag is set, parse DW_TAG_call_site DIEs.
+      if (LoadDwarfCallSites)
+        parseCallSiteInfoFromDwarf(CUI, Die, FI);
+
       Gsym.addFunctionInfo(std::move(FI));
     }
   } break;
@@ -556,10 +578,69 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
     handleDie(Out, CUI, ChildDie);
 }
 
+void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
+                                                  FunctionInfo &FI) {
+  // Parse all DW_TAG_call_site DIEs that are children of this subprogram DIE.
+  // DWARF specification:
+  // - DW_TAG_call_site can have DW_AT_call_return_pc for return address offset.
+  // - DW_AT_call_origin might point to a DIE of the function being called.
+  // For simplicity, we will just extract return_offset and possibly target name
+  // if available.
+
+  CallSiteInfoCollection CSIC;
+
+  for (DWARFDie Child : Die.children()) {
+    if (Child.getTag() != dwarf::DW_TAG_call_site)
+      continue;
+
+    CallSiteInfo CSI;
+    // DW_AT_call_return_pc: the return PC (address). We'll convert it to
+    // offset relative to FI's start.
+    auto ReturnPC =
+        dwarf::toAddress(Child.findRecursively(dwarf::DW_AT_call_return_pc));
+    if (!ReturnPC || !FI.Range.contains(*ReturnPC))
+      continue;
+
+    CSI.ReturnOffset = *ReturnPC - FI.startAddress();
+
+    // Attempt to get function name from DW_AT_call_origin. If present, we can
+    // insert it as a match regex.
+    if (DWARFDie OriginDie =
+            Child.getAttributeValueAsReferencedDie(dwarf::DW_AT_call_origin)) {
+
+      // Include the full unmangled name if available, otherwise the short name.
+      if (const char *LinkName = OriginDie.getLinkageName()) {
+        uint32_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
+        CSI.MatchRegex.push_back(LinkNameOff);
+      } else if (const char *ShortName = OriginDie.getShortName()) {
+        uint32_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
+        CSI.MatchRegex.push_back(ShortNameOff);
+      }
+    }
+
+    // For now, we won't attempt to deduce InternalCall/ExternalCall flags
+    // from DWARF.
+    CSI.Flags = CallSiteInfo::Flags::None;
+
+    CSIC.CallSites.push_back(CSI);
+  }
+
+  if (!CSIC.CallSites.empty()) {
+    if (!FI.CallSites)
+      FI.CallSites = CallSiteInfoCollection();
+    // Append parsed DWARF callsites:
+    llvm::append_range(FI.CallSites->CallSites, CSIC.CallSites);
+  }
+}
+
 Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
+    // Apple uses DW_AT_GNU_dwo_id for things other than split DWARF.
+    if (IsMachO)
+      return ReturnDie;
+
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit())
@@ -612,7 +693,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &LogMutex, Out, Die]() mutable {
+        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
@@ -620,7 +701,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
           if (Out.GetOS()) {
-            StrStream.flush();
             Out << storage;
           }
           Out.Merge(ThreadOut);
@@ -671,7 +751,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
       uint32_t NumDwarfInlineInfos = DwarfInlineInfos.getNumberOfFrames();
       if (NumDwarfInlineInfos == 0) {
         DwarfInlineInfos.addFrame(
-            DICtx.getLineInfoForAddress(SectAddr, DLIS));
+            DICtx.getLineInfoForAddress(SectAddr, DLIS).value_or(DILineInfo()));
       }
 
       // Check for 1 entry that has no file and line info
@@ -700,7 +780,6 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
             Log << "    [" << Idx << "]: " << gii.Name << " @ " << gii.Dir
                 << '/' << gii.Base << ':' << gii.Line << '\n';
           }
-          DwarfInlineInfos = DICtx.getInliningInfoForAddress(SectAddr, DLIS);
           Gsym->dump(Log, *FI);
         }
         continue;
@@ -713,7 +792,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
           const auto &dii = DwarfInlineInfos.getFrame(Idx);
           gsymFilename = LR->getSourceFile(Idx);
           // Verify function name
-          if (dii.FunctionName.find(gii.Name.str()) != 0)
+          if (!StringRef(dii.FunctionName).starts_with(gii.Name))
             Out << "error: address " << HEX64(Addr) << " DWARF function \""
                 << dii.FunctionName.c_str()
                 << "\" doesn't match GSYM function \"" << gii.Name << "\"\n";

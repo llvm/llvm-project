@@ -15,7 +15,6 @@
 #include "Common/CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -31,43 +30,43 @@ struct ManualMapEntry {
   const char *MemInstStr;
   uint16_t Strategy;
 };
+} // namespace
 
 // List of instructions requiring explicitly aligned memory.
-const char *ExplicitAlign[] = {
-    "MOVDQA",    "MOVAPS",     "MOVAPD",     "MOVNTPS",    "MOVNTPD",
-    "MOVNTDQ",   "MOVNTDQA",   "SHA1MSG1",   "SHA1MSG2",   "SHA1NEXTE",
-    "SHA1RNDS4", "SHA256MSG1", "SHA256MSG2", "SHA256RNDS2"};
+static constexpr const char *ExplicitAlign[] = {
+    "MOVDQA", "MOVAPS", "MOVAPD", "MOVNTPS", "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
-const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
-                                 "PCMPESTRM", "PCMPESTRI", "PCMPISTRM",
-                                 "PCMPISTRI"};
+static constexpr const char *ExplicitUnalign[] = {
+    "MOVDQU",    "MOVUPS",    "MOVUPD",   "PCMPESTRM",
+    "PCMPESTRI", "PCMPISTRM", "PCMPISTRI"};
 
-const ManualMapEntry ManualMapSet[] = {
+static const ManualMapEntry ManualMapSet[] = {
 #define ENTRY(REG, MEM, FLAGS) {#REG, #MEM, FLAGS},
 #include "X86ManualFoldTables.def"
 };
 
-const std::set<StringRef> NoFoldSet = {
+static const std::set<StringRef> NoFoldSet = {
 #define NOFOLD(INSN) #INSN,
 #include "X86ManualFoldTables.def"
 };
 
 static bool isExplicitAlign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitAlign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().contains(InstStr);
+    return Inst->getName().contains(InstStr);
   });
 }
 
 static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitUnalign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().contains(InstStr);
+    return Inst->getName().contains(InstStr);
   });
 }
 
+namespace {
 class X86FoldTablesEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
   // Represents an entry in the folding table
   class X86FoldTableEntry {
@@ -97,10 +96,10 @@ class X86FoldTablesEmitter {
                       const CodeGenInstruction *MemInst)
         : RegInst(RegInst), MemInst(MemInst) {}
 
-    void print(formatted_raw_ostream &OS) const {
+    void print(raw_ostream &OS) const {
       OS.indent(2);
-      OS << "{X86::" << RegInst->TheDef->getName() << ", ";
-      OS << "X86::" << MemInst->TheDef->getName() << ", ";
+      OS << "{X86::" << RegInst->getName() << ", ";
+      OS << "X86::" << MemInst->getName() << ", ";
 
       std::string Attrs;
       if (FoldLoad)
@@ -176,9 +175,8 @@ class X86FoldTablesEmitter {
     }
   };
 
-  typedef std::map<const CodeGenInstruction *, X86FoldTableEntry,
-                   CompareInstrsByEnum>
-      FoldTable;
+  using FoldTable = std::map<const CodeGenInstruction *, X86FoldTableEntry,
+                             CompareInstrsByEnum>;
   // Table2Addr - Holds instructions which their memory form performs
   //              load+store.
   //
@@ -199,7 +197,7 @@ class X86FoldTablesEmitter {
   FoldTable BroadcastTable4;
 
 public:
-  X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86FoldTablesEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Generate the 6 X86 memory fold tables.
   void run(raw_ostream &OS);
@@ -224,7 +222,7 @@ private:
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
-                  formatted_raw_ostream &OS) {
+                  raw_ostream &OS) {
     OS << "static const X86FoldTableEntry " << TableName << "[] = {\n";
 
     for (auto &E : Table)
@@ -233,6 +231,7 @@ private:
     OS << "};\n\n";
   }
 };
+} // namespace
 
 // Return true if one of the instruction's operands is a RST register class
 static bool hasRSTRegClass(const CodeGenInstruction *Inst) {
@@ -246,18 +245,6 @@ static bool hasPtrTailcallRegClass(const CodeGenInstruction *Inst) {
   return any_of(Inst->Operands, [](const CGIOperandList::OperandInfo &OpIn) {
     return OpIn.Rec->getName() == "ptr_rc_tailcall";
   });
-}
-
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
 }
 
 static bool mayFoldFromForm(uint8_t Form) {
@@ -333,6 +320,7 @@ static bool isNOREXRegClass(const Record *Op) {
 
 // Function object - Operator() returns true if the given Reg instruction
 // matches the Mem instruction of this object.
+namespace {
 class IsMatch {
   const CodeGenInstruction *MemInst;
   const X86Disassembler::RecognizableInstrBase MemRI;
@@ -407,8 +395,8 @@ public:
 
     bool FoundFoldedOp = false;
     for (unsigned I = 0, E = MemInst->Operands.size(); I != E; I++) {
-      Record *MemOpRec = MemInst->Operands[I].Rec;
-      Record *RegOpRec = RegInst->Operands[I + RegStartIdx].Rec;
+      const Record *MemOpRec = MemInst->Operands[I].Rec;
+      const Record *RegOpRec = RegInst->Operands[I + RegStartIdx].Rec;
 
       if (MemOpRec == RegOpRec)
         continue;
@@ -449,7 +437,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   assert((IsManual || Table.find(RegInst) == Table.end()) &&
          "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
-  Record *RegRec = RegInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
@@ -460,8 +448,8 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
     return;
   }
 
-  Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
-  Record *MemOpRec = MemInst->Operands[FoldedIdx].Rec;
+  const Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
+  const Record *MemOpRec = MemInst->Operands[FoldedIdx].Rec;
 
   // Unfolding code generates a load/store instruction according to the size of
   // the register in the register form instruction.
@@ -478,7 +466,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   StringRef RegInstName = RegRec->getName();
   unsigned DropLen =
       RegInstName.ends_with("rkz") ? 2 : (RegInstName.ends_with("rk") ? 1 : 0);
-  Record *BaseDef =
+  const Record *BaseDef =
       DropLen ? Records.getDef(RegInstName.drop_back(DropLen)) : nullptr;
   bool IsMoveReg =
       BaseDef ? Target.getInstruction(BaseDef).isMoveReg : RegInst->isMoveReg;
@@ -490,7 +478,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   uint8_t Enc = byteFromBitsInit(RegRec->getValueAsBitsInit("OpEncBits"));
   if (isExplicitAlign(RegInst)) {
     // The instruction require explicitly aligned memory.
-    BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
+    const BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
     Result.Alignment = Align(byteFromBitsInit(VectSize));
   } else if (!Enc && !isExplicitUnalign(RegInst) &&
              getMemOperandSize(MemOpRec) > 64) {
@@ -515,7 +503,7 @@ void X86FoldTablesEmitter::addBroadcastEntry(
   assert(Table.find(RegInst) == Table.end() && "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
 
-  DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
+  const DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
   for (unsigned I = 0, E = In->getNumArgs(); I != E; ++I) {
     Result.BroadcastKind =
         StringSwitch<X86FoldTableEntry::BcastType>(In->getArg(I)->getAsString())
@@ -540,8 +528,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
                                         uint16_t S, bool IsManual,
                                         bool IsBroadcast) {
 
-  Record *RegRec = RegInst->TheDef;
-  Record *MemRec = MemInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
+  const Record *MemRec = MemInst->TheDef;
   unsigned MemOutSize = MemRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned RegOutSize = RegRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();
@@ -566,12 +554,12 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     // If the i'th register form operand is a register and the i'th memory form
     // operand is a memory operand, add instructions to Table#i.
     for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
-      Record *RegOpRec = RegInst->Operands[I].Rec;
-      Record *MemOpRec = MemInst->Operands[I].Rec;
-      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
+      const Record *RegOpRec = RegInst->Operands[I].Rec;
+      const Record *MemOpRec = MemInst->Operands[I].Rec;
+      // RegClassByHwMode: For instructions like TAILJMPr, TAILJMPr64,
       // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
-           RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
+           (RegOpRec->isSubClassOf("RegClassByHwMode"))) &&
           isMemoryOperand(MemOpRec)) {
         switch (I) {
         case 0:
@@ -610,8 +598,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     // For example:
     //   MOVAPSrr => (outs VR128:$dst), (ins VR128:$src)
     //   MOVAPSmr => (outs), (ins f128mem:$dst, VR128:$src)
-    Record *RegOpRec = RegInst->Operands[RegOutSize - 1].Rec;
-    Record *MemOpRec = MemInst->Operands[RegOutSize - 1].Rec;
+    const Record *RegOpRec = RegInst->Operands[RegOutSize - 1].Rec;
+    const Record *MemOpRec = MemInst->Operands[RegOutSize - 1].Rec;
     if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
         getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec)) {
       assert(!IsBroadcast && "Store can not be broadcast");
@@ -621,16 +609,14 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
   }
 }
 
-void X86FoldTablesEmitter::run(raw_ostream &O) {
-  formatted_raw_ostream OS(O);
-
+void X86FoldTablesEmitter::run(raw_ostream &OS) {
   // Holds all memory instructions
   std::vector<const CodeGenInstruction *> MemInsts;
   // Holds all register instructions - divided according to opcode.
   std::map<uint8_t, std::vector<const CodeGenInstruction *>> RegInsts;
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     const Record *Rec = Inst->TheDef;
@@ -675,10 +661,10 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
   // added into memory fold tables.
   auto RegInstsForBroadcast = RegInsts;
 
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   auto FixUp = [&](const CodeGenInstruction *RegInst) {
-    StringRef RegInstName = RegInst->TheDef->getName();
+    StringRef RegInstName = RegInst->getName();
     if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt"))
       if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4)))
         RegInst = &Target.getInstruction(RegAltRec);
@@ -707,7 +693,7 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
     }
 
     // Broadcast tables
-    StringRef MemInstName = MemInst->TheDef->getName();
+    StringRef MemInstName = MemInst->getName();
     if (!MemInstName.contains("mb") && !MemInstName.contains("mib"))
       continue;
     RegInstsIt = RegInstsForBroadcast.find(Opc);
@@ -726,8 +712,8 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
 
   // Add the manually mapped instructions listed above.
   for (const ManualMapEntry &Entry : ManualMapSet) {
-    Record *RegInstIter = Records.getDef(Entry.RegInstStr);
-    Record *MemInstIter = Records.getDef(Entry.MemInstStr);
+    const Record *RegInstIter = Records.getDef(Entry.RegInstStr);
+    const Record *MemInstIter = Records.getDef(Entry.MemInstStr);
 
     updateTables(&(Target.getInstruction(RegInstIter)),
                  &(Target.getInstruction(MemInstIter)), Entry.Strategy, true);

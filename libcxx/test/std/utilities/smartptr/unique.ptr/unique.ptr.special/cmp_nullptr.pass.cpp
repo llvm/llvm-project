@@ -39,9 +39,9 @@
 //   constexpr compare_three_way_result_t<typename unique_ptr<T, D>::pointer>
 //     operator<=>(const unique_ptr<T, D>& x, nullptr_t);                        // C++20
 
-#include <memory>
 #include <cassert>
-#include <type_traits>
+#include <cstddef>
+#include <memory>
 
 #include "test_macros.h"
 #include "test_comparisons.h"

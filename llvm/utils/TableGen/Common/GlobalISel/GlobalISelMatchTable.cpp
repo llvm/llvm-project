@@ -20,70 +20,71 @@
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
-namespace {
-
-Error failUnsupported(const Twine &Reason) {
+// FIXME: Use createStringError instead.
+static Error failUnsupported(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
 }
 
 /// Get the name of the enum value used to number the predicate function.
-std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
+static std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
+  if (Predicate.hasGISelLeafPredicateCode())
+    return "GICXXPred_MO_" + Predicate.getFnName();
   return "GICXXPred_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
 
-std::string getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
+static std::string
+getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
   return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
 // GIMT_Encode2/4/8
 constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
 
-} // namespace
-
 //===- Helpers ------------------------------------------------------------===//
 
-void emitEncodingMacrosDef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosDef(raw_ostream &OS) {
   OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t(Val), uint8_t((uint16_t)Val >> 8)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t(Val), uint8_t((uint32_t)Val >> 8), "
-        "uint8_t((uint32_t)Val >> 16), uint8_t((uint32_t)Val >> 24)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t(Val), uint8_t((uint64_t)Val >> 8), "
-        "uint8_t((uint64_t)Val >> 16), uint8_t((uint64_t)Val >> 24),  "
-        "uint8_t((uint64_t)Val >> 32), uint8_t((uint64_t)Val >> 40), "
-        "uint8_t((uint64_t)Val >> 48), uint8_t((uint64_t)Val >> 56)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24),  "
+        "uint8_t(uint64_t(Val) >> 32), uint8_t(uint64_t(Val) >> 40), "
+        "uint8_t(uint64_t(Val) >> 48), uint8_t(uint64_t(Val) >> 56)\n"
      << "#else\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t((uint16_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t((uint32_t)Val >> 24), uint8_t((uint32_t)Val >> 16), "
-        "uint8_t((uint32_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t((uint64_t)Val >> 56), uint8_t((uint64_t)Val >> 48), "
-        "uint8_t((uint64_t)Val >> 40), uint8_t((uint64_t)Val >> 32),  "
-        "uint8_t((uint64_t)Val >> 24), uint8_t((uint64_t)Val >> 16), "
-        "uint8_t((uint64_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t(uint64_t(Val) >> 56), uint8_t(uint64_t(Val) >> 48), "
+        "uint8_t(uint64_t(Val) >> 40), uint8_t(uint64_t(Val) >> 32),  "
+        "uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#endif\n";
 }
 
-void emitEncodingMacrosUndef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosUndef(raw_ostream &OS) {
   OS << "#undef " << EncodeMacroName << "2\n"
      << "#undef " << EncodeMacroName << "4\n"
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
-                                    int HwModeIdx) {
+std::string
+llvm::gi::getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
+                                  int HwModeIdx) {
   std::string Name = "GIFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   if (HwModeIdx >= 0)
     Name += ("_HwMode" + std::to_string(HwModeIdx));
@@ -92,8 +93,8 @@ std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
 
 template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
+llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
+                        std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
 
   std::vector<Matcher *> OptRules;
   std::unique_ptr<GroupT> CurrentGroup = std::make_unique<GroupT>();
@@ -140,11 +141,11 @@ optimizeRules(ArrayRef<Matcher *> Rules,
   return OptRules;
 }
 
-template std::vector<Matcher *> optimizeRules<GroupMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<GroupMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
-template std::vector<Matcher *> optimizeRules<SwitchMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<SwitchMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
@@ -154,9 +155,13 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
   llvm_unreachable("Unsupported number of bytes!");
 }
 
+template <class Range> static bool matchersRecordOperand(Range &&R) {
+  return any_of(R, [](const auto &I) { return I->recordsOperand(); });
+}
+
 //===- Global Data --------------------------------------------------------===//
 
-std::set<LLTCodeGen> KnownTypes;
+std::set<LLTCodeGen> llvm::gi::KnownTypes;
 
 //===- MatchTableRecord ---------------------------------------------------===//
 
@@ -227,31 +232,20 @@ MatchTableRecord MatchTable::NamedValue(unsigned NumBytes,
                           MatchTableRecord::MTRF_CommaFollows);
 }
 
-MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef NamedValue,
-                                        int64_t RawValue) {
-  return MatchTableRecord(std::nullopt, NamedValue, NumBytes,
-                          MatchTableRecord::MTRF_CommaFollows, RawValue);
-}
-
 MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
                                         StringRef NamedValue) {
   return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
                           NumBytes, MatchTableRecord::MTRF_CommaFollows);
 }
 
-MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
-                                        StringRef NamedValue,
-                                        int64_t RawValue) {
-  return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
-                          NumBytes, MatchTableRecord::MTRF_CommaFollows,
-                          RawValue);
-}
-
 MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  auto Str = llvm::to_string(IntValue);
-  if (NumBytes == 1 && IntValue < 0)
-    Str = "uint8_t(" + Str + ")";
+  uint64_t UIntValue = IntValue;
+  if (NumBytes < 8)
+    UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
+  std::string Str = llvm::to_string(UIntValue);
+  if (UIntValue > INT64_MAX)
+    Str += 'u';
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
@@ -300,11 +294,28 @@ MatchTableRecord MatchTable::JumpTarget(unsigned LabelID) {
 void MatchTable::emitUse(raw_ostream &OS) const { OS << "MatchTable" << ID; }
 
 void MatchTable::emitDeclaration(raw_ostream &OS) const {
-  unsigned Indentation = 4;
+  static constexpr unsigned BaseIndent = 4;
+  unsigned Indentation = 0;
   OS << "  constexpr static uint8_t MatchTable" << ID << "[] = {";
   LineBreak.emit(OS, true, *this);
-  OS << std::string(Indentation, ' ');
 
+  // We want to display the table index of each line in a consistent
+  // manner. It has to appear as a column on the left side of the table.
+  // To determine how wide the column needs to be, check how many characters
+  // we need to fit the largest possible index in the current table.
+  const unsigned NumColsForIdx = llvm::to_string(CurrentSize).size();
+
+  unsigned CurIndex = 0;
+  const auto BeginLine = [&]() {
+    OS.indent(BaseIndent);
+    std::string IdxStr = llvm::to_string(CurIndex);
+    // Pad the string with spaces to keep the size of the prefix consistent.
+    OS << " /* ";
+    OS.indent(NumColsForIdx - IdxStr.size()) << IdxStr << " */ ";
+    OS.indent(Indentation);
+  };
+
+  BeginLine();
   for (auto I = Contents.begin(), E = Contents.end(); I != E; ++I) {
     bool LineBreakIsNext = false;
     const auto &NextI = std::next(I);
@@ -320,11 +331,14 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
 
     I->emit(OS, LineBreakIsNext, *this);
     if (I->Flags & MatchTableRecord::MTRF_LineBreakFollows)
-      OS << std::string(Indentation, ' ');
+      BeginLine();
 
     if (I->Flags & MatchTableRecord::MTRF_Outdent)
       Indentation -= 2;
+
+    CurIndex += I->size();
   }
+  assert(CurIndex == CurrentSize);
   OS << "}; // Size: " << CurrentSize << " bytes\n";
 }
 
@@ -426,9 +440,7 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
 
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
-  MVT VT(SVT);
-
+std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT VT) {
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
     return LLTCodeGen(
         LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));
@@ -443,9 +455,13 @@ std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
 
 void Matcher::optimize() {}
 
-Matcher::~Matcher() {}
+Matcher::~Matcher() = default;
 
 //===- GroupMatcher -------------------------------------------------------===//
+
+bool GroupMatcher::recordsOperand() const {
+  return matchersRecordOperand(Conditions) || matchersRecordOperand(Matchers);
+}
 
 bool GroupMatcher::candidateConditionMatches(
     const PredicateMatcher &Predicate) const {
@@ -468,12 +484,32 @@ bool GroupMatcher::candidateConditionMatches(
   return Predicate.isIdentical(RepresentativeCondition);
 }
 
+std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
+  assert(!Conditions.empty() &&
+         "Trying to pop a condition from a condition-less group");
+  std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
+  Conditions.erase(Conditions.begin());
+  return P;
+}
+
+/// Check if the Condition, which is a predicate of M, cannot be hoisted outside
+/// of (i.e., checked before) M.
+static bool cannotHoistCondition(const PredicateMatcher &Condition,
+                                 const Matcher &M) {
+  // The condition can't be hoisted if it is a C++ predicate that refers to
+  // operands and the operands are registered within the matcher.
+  return Condition.dependsOnOperands() && M.recordsOperand();
+}
+
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
 
+  // Only add candidates that have a matching first condition that can be
+  // hoisted into the GroupMatcher.
   const PredicateMatcher &Predicate = Candidate.getFirstCondition();
-  if (!candidateConditionMatches(Predicate))
+  if (!candidateConditionMatches(Predicate) ||
+      cannotHoistCondition(Predicate, Candidate))
     return false;
 
   Matchers.push_back(&Candidate);
@@ -491,10 +527,17 @@ void GroupMatcher::finalize() {
     for (const auto &Rule : Matchers)
       if (!Rule->hasFirstCondition())
         return;
+    // Hoist the first condition if it is identical in all matchers in the group
+    // and it can be hoisted in every matcher.
     const auto &FirstCondition = FirstRule.getFirstCondition();
-    for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
-      if (!Matchers[I]->getFirstCondition().isIdentical(FirstCondition))
+    if (cannotHoistCondition(FirstCondition, FirstRule))
+      return;
+    for (unsigned I = 1, E = Matchers.size(); I < E; ++I) {
+      const auto &OtherFirstCondition = Matchers[I]->getFirstCondition();
+      if (!OtherFirstCondition.isIdentical(FirstCondition) ||
+          cannotHoistCondition(OtherFirstCondition, *Matchers[I]))
         return;
+    }
 
     Conditions.push_back(FirstRule.popFirstCondition());
     for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
@@ -550,6 +593,12 @@ void GroupMatcher::optimize() {
 }
 
 //===- SwitchMatcher ------------------------------------------------------===//
+
+bool SwitchMatcher::recordsOperand() const {
+  assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
+         "Switch conditions should not record named operands");
+  return matchersRecordOperand(Matchers);
+}
 
 bool SwitchMatcher::isSupportedPredicateType(const PredicateMatcher &P) {
   return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandMatcher>(P);
@@ -651,8 +700,8 @@ void SwitchMatcher::emit(MatchTable &Table) {
                 [&Table]() { return Table.allocateLabelID(); });
   const unsigned Default = Table.allocateLabelID();
 
-  const int64_t LowerBound = Values.begin()->getRawValue();
-  const int64_t UpperBound = Values.rbegin()->getRawValue() + 1;
+  const int64_t LowerBound = Values.begin()->RawValue;
+  const int64_t UpperBound = Values.rbegin()->RawValue + 1;
 
   emitPredicateSpecificOpcodes(*Condition, Table);
 
@@ -664,10 +713,11 @@ void SwitchMatcher::emit(MatchTable &Table) {
   auto VI = Values.begin();
   for (unsigned I = 0, E = Values.size(); I < E; ++I) {
     auto V = *VI++;
-    while (J++ < V.getRawValue())
+    while (J++ < V.RawValue)
       Table << MatchTable::IntValue(4, 0);
-    V.turnIntoComment();
-    Table << MatchTable::LineBreak << V << MatchTable::JumpTarget(LabelIDs[I]);
+    V.Record.turnIntoComment();
+    Table << MatchTable::LineBreak << V.Record
+          << MatchTable::JumpTarget(LabelIDs[I]);
   }
   Table << MatchTable::LineBreak;
 
@@ -681,14 +731,17 @@ void SwitchMatcher::emit(MatchTable &Table) {
 
 //===- RuleMatcher --------------------------------------------------------===//
 
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
+    : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
+
 uint64_t RuleMatcher::NextRuleID = 0;
 
 StringRef RuleMatcher::getOpcode() const {
   return Matchers.front()->getOpcode();
 }
 
-unsigned RuleMatcher::getNumOperands() const {
-  return Matchers.front()->getNumOperands();
+bool RuleMatcher::recordsOperand() const {
+  return matchersRecordOperand(Matchers);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
@@ -723,6 +776,29 @@ void RuleMatcher::optimize() {
     return std::tuple(L->getKind(), L->getInsnVarID(), L->getOpIdx()) <
            std::tuple(R->getKind(), R->getInsnVarID(), R->getOpIdx());
   });
+
+  // Deduplicate EraseInst actions, and if an EraseInst erases the root, place
+  // it at the end to favor generation of GIR_EraseRootFromParent_Done
+  DenseSet<unsigned> AlreadySeenEraseInsts;
+  auto EraseRootIt = Actions.end();
+  auto It = Actions.begin();
+  while (It != Actions.end()) {
+    if (const auto *EI = dyn_cast<EraseInstAction>(It->get())) {
+      unsigned InstID = EI->getInsnID();
+      if (!AlreadySeenEraseInsts.insert(InstID).second) {
+        It = Actions.erase(It);
+        continue;
+      }
+
+      if (InstID == 0)
+        EraseRootIt = It;
+    }
+
+    ++It;
+  }
+
+  if (EraseRootIt != Actions.end())
+    Actions.splice(Actions.end(), Actions, EraseRootIt);
 }
 
 bool RuleMatcher::hasFirstCondition() const {
@@ -803,12 +879,14 @@ SaveAndRestore<GISelFlags> RuleMatcher::setGISelFlags(const Record *R) {
 }
 
 Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
-                                           Record *ComplexPattern,
+                                           const Record *ComplexPattern,
                                            unsigned RendererID,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {
   std::string ParentName(ParentSymbolicName);
-  if (ComplexSubOperands.count(SymbolicName)) {
+  auto [It, Inserted] = ComplexSubOperands.try_emplace(
+      SymbolicName, ComplexPattern, RendererID, SubOperandID);
+  if (!Inserted) {
     const std::string &RecordedParentName =
         ComplexSubOperandsParentName[SymbolicName];
     if (RecordedParentName != ParentName)
@@ -821,9 +899,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
     return Error::success();
   }
 
-  ComplexSubOperands[SymbolicName] =
-      std::tuple(ComplexPattern, RendererID, SubOperandID);
-  ComplexSubOperandsParentName[SymbolicName] = ParentName;
+  ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();
 }
@@ -842,14 +918,6 @@ const std::vector<std::string> &RuleMatcher::getRequiredSimplePredicates() {
   return RequiredSimplePredicates;
 }
 
-void RuleMatcher::addRequiredFeature(Record *Feature) {
-  RequiredFeatures.push_back(Feature);
-}
-
-const std::vector<Record *> &RuleMatcher::getRequiredFeatures() const {
-  return RequiredFeatures;
-}
-
 unsigned RuleMatcher::implicitlyDefineInsnVar(InstructionMatcher &Matcher) {
   unsigned NewInsnVarID = NextInsnVarID++;
   InsnVariableIDs[&Matcher] = NewInsnVarID;
@@ -864,10 +932,8 @@ unsigned RuleMatcher::getInsnVarID(InstructionMatcher &InsnMatcher) const {
 }
 
 void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
-  if (!DefinedOperands.contains(SymbolicName)) {
-    DefinedOperands[SymbolicName] = &OM;
+  if (DefinedOperands.try_emplace(SymbolicName, &OM).second)
     return;
-  }
 
   // If the operand is already defined, then we must ensure both references in
   // the matcher have the exact same node.
@@ -877,11 +943,8 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
       RM.getGISelFlags());
 }
 
-void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {
-  if (!PhysRegOperands.contains(Reg)) {
-    PhysRegOperands[Reg] = &OM;
-    return;
-  }
+void RuleMatcher::definePhysRegOperand(const Record *Reg, OperandMatcher &OM) {
+  PhysRegOperands.try_emplace(Reg, &OM);
 }
 
 InstructionMatcher &
@@ -893,7 +956,8 @@ RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
       ("Failed to lookup instruction " + SymbolicName).str().c_str());
 }
 
-const OperandMatcher &RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
+const OperandMatcher &
+RuleMatcher::getPhysRegOperandMatcher(const Record *Reg) const {
   const auto &I = PhysRegOperands.find(Reg);
 
   if (I == PhysRegOperands.end()) {
@@ -966,78 +1030,92 @@ void RuleMatcher::emit(MatchTable &Table) {
 
   // We must also check if it's safe to fold the matched instructions.
   if (InsnVariableIDs.size() >= 2) {
-    // Invert the map to create stable ordering (by var names)
-    SmallVector<unsigned, 2> InsnIDs;
-    for (const auto &Pair : InsnVariableIDs) {
-      // Skip the root node since it isn't moving anywhere. Everything else is
-      // sinking to meet it.
-      if (Pair.first == Matchers.front().get())
-        continue;
 
-      InsnIDs.push_back(Pair.second);
-    }
-    llvm::sort(InsnIDs);
+    // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
+    //        account for unsafe cases.
+    //
+    //        Example:
+    //          MI1--> %0 = ...
+    //                 %1 = ... %0
+    //          MI0--> %2 = ... %0
+    //          It's not safe to erase MI1. We currently handle this by not
+    //          erasing %0 (even when it's dead).
+    //
+    //        Example:
+    //          MI1--> %0 = load volatile @a
+    //                 %1 = load volatile @a
+    //          MI0--> %2 = ... %0
+    //          It's not safe to sink %0's def past %1. We currently handle
+    //          this by rejecting all loads.
+    //
+    //        Example:
+    //          MI1--> %0 = load @a
+    //                 %1 = store @a
+    //          MI0--> %2 = ... %0
+    //          It's not safe to sink %0's def past %1. We currently handle
+    //          this by rejecting all loads.
+    //
+    //        Example:
+    //                   G_CONDBR %cond, @BB1
+    //                 BB0:
+    //          MI1-->   %0 = load @a
+    //                   G_BR @BB1
+    //                 BB1:
+    //          MI0-->   %2 = ... %0
+    //          It's not always safe to sink %0 across control flow. In this
+    //          case it may introduce a memory fault. We currentl handle
+    //          this by rejecting all loads.
 
-    for (const auto &InsnID : InsnIDs) {
-      // Reject the difficult cases until we have a more accurate check.
-      Table << MatchTable::Opcode("GIM_CheckIsSafeToFold")
-            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
-            << MatchTable::LineBreak;
-
-      // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
-      //        account for unsafe cases.
-      //
-      //        Example:
-      //          MI1--> %0 = ...
-      //                 %1 = ... %0
-      //          MI0--> %2 = ... %0
-      //          It's not safe to erase MI1. We currently handle this by not
-      //          erasing %0 (even when it's dead).
-      //
-      //        Example:
-      //          MI1--> %0 = load volatile @a
-      //                 %1 = load volatile @a
-      //          MI0--> %2 = ... %0
-      //          It's not safe to sink %0's def past %1. We currently handle
-      //          this by rejecting all loads.
-      //
-      //        Example:
-      //          MI1--> %0 = load @a
-      //                 %1 = store @a
-      //          MI0--> %2 = ... %0
-      //          It's not safe to sink %0's def past %1. We currently handle
-      //          this by rejecting all loads.
-      //
-      //        Example:
-      //                   G_CONDBR %cond, @BB1
-      //                 BB0:
-      //          MI1-->   %0 = load @a
-      //                   G_BR @BB1
-      //                 BB1:
-      //          MI0-->   %2 = ... %0
-      //          It's not always safe to sink %0 across control flow. In this
-      //          case it may introduce a memory fault. We currentl handle
-      //          this by rejecting all loads.
-    }
+    Table << MatchTable::Opcode("GIM_CheckIsSafeToFold")
+          << MatchTable::Comment("NumInsns")
+          << MatchTable::IntValue(1, InsnVariableIDs.size() - 1)
+          << MatchTable::LineBreak;
   }
 
   for (const auto &PM : EpilogueMatchers)
     PM->emitPredicateOpcodes(Table, *this);
 
-  for (const auto &MA : Actions)
-    MA->emitActionOpcodes(Table, *this);
-
-  assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
-         "Combiner tables don't support coverage!");
-  if (Table.isWithCoverage())
-    Table << MatchTable::Opcode("GIR_Coverage")
-          << MatchTable::IntValue(4, RuleID) << MatchTable::LineBreak;
-  else if (!Table.isCombiner())
-    Table << MatchTable::Comment(("GIR_Coverage, " + Twine(RuleID) + ",").str())
+  if (!CustomCXXAction.empty()) {
+    /// Handle combiners relying on custom C++ code instead of actions.
+    assert(Table.isCombiner() && "CustomCXXAction is only for combiners!");
+    // We cannot have actions other than debug comments.
+    assert(none_of(Actions, [](auto &A) {
+      return A->getKind() != MatchAction::AK_DebugComment;
+    }));
+    for (const auto &MA : Actions)
+      MA->emitActionOpcodes(Table, *this);
+    Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
+          << MatchTable::Comment("Fn")
+          << MatchTable::NamedValue(2, CustomCXXAction)
           << MatchTable::LineBreak;
+  } else {
+    // Emit all actions except the last one, then emit coverage and emit the
+    // final action.
+    //
+    // This is because some actions, such as GIR_EraseRootFromParent_Done, also
+    // double as a GIR_Done and terminate execution of the rule.
+    if (!Actions.empty()) {
+      for (const auto &MA : drop_end(Actions))
+        MA->emitActionOpcodes(Table, *this);
+    }
 
-  Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak
-        << MatchTable::Label(LabelID);
+    assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
+           "Combiner tables don't support coverage!");
+    if (Table.isWithCoverage())
+      Table << MatchTable::Opcode("GIR_Coverage")
+            << MatchTable::IntValue(4, RuleID) << MatchTable::LineBreak;
+    else if (!Table.isCombiner())
+      Table << MatchTable::Comment(
+                   ("GIR_Coverage, " + Twine(RuleID) + ",").str())
+            << MatchTable::LineBreak;
+
+    if (Actions.empty() ||
+        !Actions.back()->emitActionOpcodesAndDone(Table, *this)) {
+      Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak;
+    }
+  }
+
+  Table << MatchTable::Label(LabelID);
   ++NumPatternEmitted;
 }
 
@@ -1066,13 +1144,15 @@ unsigned RuleMatcher::countRendererFns() const {
       });
 }
 
+void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+
 //===- PredicateMatcher ---------------------------------------------------===//
 
-PredicateMatcher::~PredicateMatcher() {}
+PredicateMatcher::~PredicateMatcher() = default;
 
 //===- OperandPredicateMatcher --------------------------------------------===//
 
-OperandPredicateMatcher::~OperandPredicateMatcher() {}
+OperandPredicateMatcher::~OperandPredicateMatcher() = default;
 
 bool OperandPredicateMatcher::isHigherPriorityThan(
     const OperandPredicateMatcher &B) const {
@@ -1125,11 +1205,11 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
 
 std::map<LLTCodeGen, unsigned> LLTOperandMatcher::TypeIDValues;
 
-MatchTableRecord LLTOperandMatcher::getValue() const {
+RecordAndValue LLTOperandMatcher::getValue() const {
   const auto VI = TypeIDValues.find(Ty);
   if (VI == TypeIDValues.end())
     return MatchTable::NamedValue(1, getTy().getCxxEnumValue());
-  return MatchTable::NamedValue(1, getTy().getCxxEnumValue(), VI->second);
+  return {MatchTable::NamedValue(1, getTy().getCxxEnumValue()), VI->second};
 }
 
 bool LLTOperandMatcher::hasValue() const {
@@ -1140,10 +1220,15 @@ bool LLTOperandMatcher::hasValue() const {
 
 void LLTOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                              RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
-        << MatchTable::ULEB128Value(InsnVarID) << MatchTable::Comment("Op")
-        << MatchTable::ULEB128Value(OpIdx) << MatchTable::Comment("Type")
-        << getValue() << MatchTable::LineBreak;
+  if (InsnVarID == 0) {
+    Table << MatchTable::Opcode("GIM_RootCheckType");
+  } else {
+    Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
+          << MatchTable::ULEB128Value(InsnVarID);
+  }
+  Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Type") << getValue().Record
+        << MatchTable::LineBreak;
 }
 
 //===- PointerToAnyOperandMatcher -----------------------------------------===//
@@ -1205,9 +1290,14 @@ bool RegisterBankOperandMatcher::isIdentical(const PredicateMatcher &B) const {
 
 void RegisterBankOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                                       RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
-        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
-        << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
+  if (InsnVarID == 0) {
+    Table << MatchTable::Opcode("GIM_RootCheckRegBankForClass");
+  } else {
+    Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID);
+  }
+
+  Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
         << MatchTable::Comment("RC")
         << MatchTable::NamedValue(2, RC.getQualifiedIdName())
         << MatchTable::LineBreak;
@@ -1272,7 +1362,7 @@ void IntrinsicIDOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
   Table << MatchTable::Opcode("GIM_CheckIntrinsicID")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -1281,6 +1371,19 @@ void IntrinsicIDOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
 void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
                                                       RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIM_CheckImmOperandPredicate")
+        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+        << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Predicate")
+        << MatchTable::NamedValue(2, getEnumNameForPredicate(Predicate))
+        << MatchTable::LineBreak;
+}
+
+//===- OperandLeafPredicateMatcher
+//-----------------------------------------===//
+
+void OperandLeafPredicateMatcher::emitPredicateOpcodes(
+    MatchTable &Table, RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIM_CheckLeafOperandPredicate")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
         << MatchTable::Comment("Predicate")
@@ -1298,6 +1401,7 @@ std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
 unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
 
 TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
+  assert(!IsVariadic && "Cannot use this on variadic operands!");
   if (TTIdx >= 0) {
     // Temp type index not assigned yet, so assign one and add the necessary
     // predicate.
@@ -1307,6 +1411,10 @@ TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
     return TTIdx;
   }
   return TTIdx;
+}
+
+bool OperandMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates);
 }
 
 void OperandMatcher::emitPredicateOpcodes(MatchTable &Table,
@@ -1357,7 +1465,9 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
   if (!VTy.isMachineValueType())
     return failUnsupported("unsupported typeset");
 
-  if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
+  if ((VTy.getMachineValueType() == MVT::iPTR ||
+       VTy.getMachineValueType() == MVT::cPTR) &&
+      OperandIsAPointer) {
     addPredicate<PointerToAnyOperandMatcher>(0);
     return Error::success();
   }
@@ -1381,32 +1491,30 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
 DenseMap<const CodeGenInstruction *, unsigned>
     InstructionOpcodeMatcher::OpcodeValues;
 
-MatchTableRecord
+RecordAndValue
 InstructionOpcodeMatcher::getInstValue(const CodeGenInstruction *I) const {
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName(),
-                                  VI->second);
-  return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
+    return {MatchTable::NamedValue(2, I->Namespace, I->getName()), VI->second};
+  return MatchTable::NamedValue(2, I->Namespace, I->getName());
 }
 
 void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
+  for (const CodeGenInstruction *I : Target.getInstructions())
     OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 
-MatchTableRecord InstructionOpcodeMatcher::getValue() const {
+RecordAndValue InstructionOpcodeMatcher::getValue() const {
   assert(Insts.size() == 1);
 
   const CodeGenInstruction *I = Insts[0];
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName(),
-                                  VI->second);
-  return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
+    return {MatchTable::NamedValue(2, I->Namespace, I->getName()), VI->second};
+  return MatchTable::NamedValue(2, I->Namespace, I->getName());
 }
 
 void InstructionOpcodeMatcher::emitPredicateOpcodes(MatchTable &Table,
@@ -1417,7 +1525,7 @@ void InstructionOpcodeMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(InsnVarID);
 
   for (const CodeGenInstruction *I : Insts)
-    Table << getInstValue(I);
+    Table << getInstValue(I).Record;
   Table << MatchTable::LineBreak;
 }
 
@@ -1433,17 +1541,17 @@ bool InstructionOpcodeMatcher::isHigherPriorityThan(
   // using instruction frequency information to improve compile time.
   if (const InstructionOpcodeMatcher *BO =
           dyn_cast<InstructionOpcodeMatcher>(&B))
-    return Insts[0]->TheDef->getName() < BO->Insts[0]->TheDef->getName();
+    return Insts[0]->getName() < BO->Insts[0]->getName();
 
   return false;
 }
 
 bool InstructionOpcodeMatcher::isConstantInstruction() const {
-  return Insts.size() == 1 && Insts[0]->TheDef->getName() == "G_CONSTANT";
+  return Insts.size() == 1 && Insts[0]->getName() == "G_CONSTANT";
 }
 
 StringRef InstructionOpcodeMatcher::getOpcode() const {
-  return Insts[0]->TheDef->getName();
+  return Insts[0]->getName();
 }
 
 bool InstructionOpcodeMatcher::isVariadicNumOperands() const {
@@ -1460,8 +1568,20 @@ StringRef InstructionOpcodeMatcher::getOperandType(unsigned OpIdx) const {
 
 void InstructionNumOperandsMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckNumOperands")
-        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+  StringRef Opc;
+  switch (CK) {
+  case CheckKind::Eq:
+    Opc = "GIM_CheckNumOperands";
+    break;
+  case CheckKind::GE:
+    Opc = "GIM_CheckNumOperandsGE";
+    break;
+  case CheckKind::LE:
+    Opc = "GIM_CheckNumOperandsLE";
+    break;
+  }
+  Table << MatchTable::Opcode(Opc) << MatchTable::Comment("MI")
+        << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Expected")
         << MatchTable::ULEB128Value(NumOperands) << MatchTable::LineBreak;
 }
@@ -1534,13 +1654,14 @@ bool MemoryAddressSpacePredicateMatcher::isIdentical(
 
 void MemoryAddressSpacePredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
+  assert(AddrSpaces.size() < 256);
   Table << MatchTable::Opcode("GIM_CheckMemoryAddressSpace")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MMO")
         << MatchTable::ULEB128Value(MMOIdx)
         // Encode number of address spaces to expect.
         << MatchTable::Comment("NumAddrSpace")
-        << MatchTable::ULEB128Value(AddrSpaces.size());
+        << MatchTable::IntValue(1, AddrSpaces.size());
   for (unsigned AS : AddrSpaces)
     Table << MatchTable::Comment("AddrSpace") << MatchTable::ULEB128Value(AS);
 
@@ -1559,10 +1680,13 @@ bool MemoryAlignmentPredicateMatcher::isIdentical(
 
 void MemoryAlignmentPredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
+  // TODO: we could support more, just need to emit the right opcode or switch
+  // to log alignment.
+  assert(MinAlign < 256);
   Table << MatchTable::Opcode("GIM_CheckMemoryAlignment")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MMO") << MatchTable::ULEB128Value(MMOIdx)
-        << MatchTable::Comment("MinAlign") << MatchTable::ULEB128Value(MinAlign)
+        << MatchTable::Comment("MinAlign") << MatchTable::IntValue(1, MinAlign)
         << MatchTable::LineBreak;
 }
 
@@ -1645,12 +1769,14 @@ void MIFlagsInstructionPredicateMatcher::emitPredicateOpcodes(
 
 OperandMatcher &
 InstructionMatcher::addOperand(unsigned OpIdx, const std::string &SymbolicName,
-                               unsigned AllocatedTemporariesBaseID) {
-  Operands.emplace_back(new OperandMatcher(*this, OpIdx, SymbolicName,
-                                           AllocatedTemporariesBaseID));
+                               unsigned AllocatedTemporariesBaseID,
+                               bool IsVariadic) {
+  assert((Operands.empty() || !Operands.back()->isVariadic()) &&
+         "Cannot add more operands after a variadic operand");
+  Operands.emplace_back(new OperandMatcher(
+      *this, OpIdx, SymbolicName, AllocatedTemporariesBaseID, IsVariadic));
   if (!SymbolicName.empty())
     Rule.defineOperand(SymbolicName, *Operands.back());
-
   return *Operands.back();
 }
 
@@ -1664,21 +1790,26 @@ OperandMatcher &InstructionMatcher::getOperand(unsigned OpIdx) {
   llvm_unreachable("Failed to lookup operand");
 }
 
-OperandMatcher &InstructionMatcher::addPhysRegInput(Record *Reg, unsigned OpIdx,
+OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
+                                                    unsigned OpIdx,
                                                     unsigned TempOpIdx) {
   assert(SymbolicName.empty());
   OperandMatcher *OM = new OperandMatcher(*this, OpIdx, "", TempOpIdx);
   Operands.emplace_back(OM);
   Rule.definePhysRegOperand(Reg, *OM);
-  PhysRegInputs.emplace_back(Reg, OpIdx);
   return *OM;
+}
+
+bool InstructionMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates) || matchersRecordOperand(operands());
 }
 
 void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule) {
-  if (NumOperandsCheck)
-    InstructionNumOperandsMatcher(InsnVarID, getNumOperands())
+  if (canAddNumOperandsCheck()) {
+    InstructionNumOperandsMatcher(InsnVarID, getNumOperandMatchers())
         .emitPredicateOpcodes(Table, Rule);
+  }
 
   // First emit all instruction level predicates need to be verified before we
   // can verify operands.
@@ -1743,11 +1874,13 @@ void InstructionMatcher::optimize() {
 
   Stash.push_back(predicates_pop_front());
   if (Stash.back().get() == &OpcMatcher) {
-    if (NumOperandsCheck && OpcMatcher.isVariadicNumOperands() &&
-        getNumOperands() != 0)
-      Stash.emplace_back(
-          new InstructionNumOperandsMatcher(InsnVarID, getNumOperands()));
-    NumOperandsCheck = false;
+    // FIXME: Is this even needed still? Why the isVariadicNumOperands check?
+    if (canAddNumOperandsCheck() && OpcMatcher.isVariadicNumOperands() &&
+        getNumOperandMatchers() != 0) {
+      Stash.emplace_back(new InstructionNumOperandsMatcher(
+          InsnVarID, getNumOperandMatchers()));
+    }
+    AllowNumOpsCheck = false;
 
     for (auto &OM : Operands)
       for (auto &OP : OM->predicates())
@@ -1806,21 +1939,35 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
 //===- OperandRenderer ----------------------------------------------------===//
 
-OperandRenderer::~OperandRenderer() {}
+OperandRenderer::~OperandRenderer() = default;
 
 //===- CopyRenderer -------------------------------------------------------===//
+
+void CopyRenderer::emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                     unsigned NewInsnID, unsigned OldInsnID,
+                                     unsigned OpIdx, StringRef Name,
+                                     bool ForVariadic) {
+  if (!ForVariadic && NewInsnID == 0 && OldInsnID == 0) {
+    Table << MatchTable::Opcode("GIR_RootToRootCopy");
+  } else {
+    Table << MatchTable::Opcode(ForVariadic ? "GIR_CopyRemaining" : "GIR_Copy")
+          << MatchTable::Comment("NewInsnID")
+          << MatchTable::ULEB128Value(NewInsnID)
+          << MatchTable::Comment("OldInsnID")
+          << MatchTable::ULEB128Value(OldInsnID);
+  }
+
+  Table << MatchTable::Comment("OpIdx") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment(Name) << MatchTable::LineBreak;
+}
 
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table,
                                      RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
   unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-  Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
-        << MatchTable::ULEB128Value(NewInsnID)
-        << MatchTable::Comment("OldInsnID")
-        << MatchTable::ULEB128Value(OldInsnVarID)
-        << MatchTable::Comment("OpIdx")
-        << MatchTable::ULEB128Value(Operand.getOpIdx())
-        << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+
+  emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID, Operand.getOpIdx(),
+                    SymbolicName, Operand.isVariadic());
 }
 
 //===- CopyPhysRegRenderer ------------------------------------------------===//
@@ -1829,13 +1976,8 @@ void CopyPhysRegRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getPhysRegOperandMatcher(PhysReg);
   unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-  Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
-        << MatchTable::ULEB128Value(NewInsnID)
-        << MatchTable::Comment("OldInsnID")
-        << MatchTable::ULEB128Value(OldInsnVarID)
-        << MatchTable::Comment("OpIdx")
-        << MatchTable::ULEB128Value(Operand.getOpIdx())
-        << MatchTable::Comment(PhysReg->getName()) << MatchTable::LineBreak;
+  CopyRenderer::emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID,
+                                  Operand.getOpIdx(), PhysReg->getName());
 }
 
 //===- CopyOrAddZeroRegRenderer -------------------------------------------===//
@@ -1928,10 +2070,14 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
   // TODO: This is encoded as a 64-bit element, but only 16 or 32-bits are
   // really needed for a physical register reference. We can pack the
   // register and flags in a single field.
-  if (IsDef)
-    Table << MatchTable::NamedValue(2, "RegState::Define");
-  else
+  if (IsDef) {
+    Table << MatchTable::NamedValue(
+        2, IsDead ? "static_cast<uint16_t>(RegState::Define|RegState::Dead)"
+                  : "static_cast<uint16_t>(RegState::Define)");
+  } else {
+    assert(!IsDead && "A use cannot be dead");
     Table << MatchTable::IntValue(2, 0);
+  }
   Table << MatchTable::LineBreak;
 }
 
@@ -1943,9 +2089,10 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   if (SubRegIdx) {
     assert(!IsDef);
     Table << MatchTable::Opcode("GIR_AddTempSubRegister");
-  } else
+  } else {
     Table << MatchTable::Opcode(NeedsFlags ? "GIR_AddTempRegister"
                                            : "GIR_AddSimpleTempRegister");
+  }
 
   Table << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
         << MatchTable::Comment("TempRegID")
@@ -1959,12 +2106,14 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   Table << MatchTable::Comment("TempRegFlags");
   if (IsDef) {
     SmallString<32> RegFlags;
-    RegFlags += "RegState::Define";
+    RegFlags += "static_cast<uint16_t>(RegState::Define";
     if (IsDead)
       RegFlags += "|RegState::Dead";
+    RegFlags += ")";
     Table << MatchTable::NamedValue(2, RegFlags);
-  } else
+  } else {
     Table << MatchTable::IntValue(2, 0);
+  }
 
   if (SubRegIdx)
     Table << MatchTable::NamedValue(2, SubRegIdx->getQualifiedName());
@@ -1992,8 +2141,9 @@ void ImmRenderer::emitRenderOpcodes(MatchTable &Table,
           << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type")
           << *CImmLLT << MatchTable::Comment("Imm")
           << MatchTable::IntValue(8, Imm) << MatchTable::LineBreak;
-  } else
+  } else {
     emitAddImm(Table, Rule, InsnID, Imm);
+  }
 }
 
 //===- SubRegIndexRenderer ------------------------------------------------===//
@@ -2030,7 +2180,7 @@ void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_AddIntrinsicID") << MatchTable::Comment("MI")
         << MatchTable::ULEB128Value(InsnID)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -2067,22 +2217,14 @@ void CustomOperandRenderer::emitRenderOpcodes(MatchTable &Table,
         << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
 }
 
-//===- CustomCXXAction ----------------------------------------------------===//
-
-void CustomCXXAction::emitActionOpcodes(MatchTable &Table,
-                                        RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIR_CustomAction")
-        << MatchTable::NamedValue(2, FnEnumName) << MatchTable::LineBreak;
-}
-
 //===- BuildMIAction ------------------------------------------------------===//
 
 bool BuildMIAction::canMutate(RuleMatcher &Rule,
                               const InstructionMatcher *Insn) const {
-  if (!Insn)
+  if (!Insn || Insn->hasVariadicMatcher())
     return false;
 
-  if (OperandRenderers.size() != Insn->getNumOperands())
+  if (OperandRenderers.size() != Insn->getNumOperandMatchers())
     return false;
 
   for (const auto &Renderer : enumerate(OperandRenderers)) {
@@ -2092,8 +2234,9 @@ bool BuildMIAction::canMutate(RuleMatcher &Rule,
       if (Insn != &OM.getInstructionMatcher() ||
           OM.getOpIdx() != Renderer.index())
         return false;
-    } else
+    } else {
       return false;
+    }
   }
 
   return true;
@@ -2146,7 +2289,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
           << MatchTable::Comment("RecycleInsnID")
           << MatchTable::ULEB128Value(RecycleInsnID)
           << MatchTable::Comment("Opcode")
-          << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
+          << MatchTable::NamedValue(2, I->Namespace, I->getName())
           << MatchTable::LineBreak;
 
     if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
@@ -2159,7 +2302,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
               << MatchTable::Comment("InsnID")
               << MatchTable::ULEB128Value(InsnID)
               << MatchTable::NamedValue(2, Namespace, Def->getName())
-              << (IsDead ? MatchTable::NamedValue(2, "RegState", "Dead")
+              << (IsDead ? MatchTable::NamedValue(
+                               2, "static_cast<unsigned>(RegState::Dead)")
                          : MatchTable::IntValue(2, 0))
               << MatchTable::LineBreak;
       }
@@ -2185,10 +2329,17 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   // TODO: Simple permutation looks like it could be almost as common as
   //       mutation due to commutative operations.
 
-  Table << MatchTable::Opcode("GIR_BuildMI") << MatchTable::Comment("InsnID")
-        << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Opcode")
-        << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
+  if (InsnID == 0) {
+    Table << MatchTable::Opcode("GIR_BuildRootMI");
+  } else {
+    Table << MatchTable::Opcode("GIR_BuildMI") << MatchTable::Comment("InsnID")
+          << MatchTable::ULEB128Value(InsnID);
+  }
+
+  Table << MatchTable::Comment("Opcode")
+        << MatchTable::NamedValue(2, I->Namespace, I->getName())
         << MatchTable::LineBreak;
+
   for (const auto &Renderer : OperandRenderers)
     Renderer->emitRenderOpcodes(Table, Rule);
 
@@ -2244,8 +2395,8 @@ void BuildConstantAction::emitActionOpcodes(MatchTable &Table,
 
 //===- EraseInstAction ----------------------------------------------------===//
 
-void EraseInstAction::emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                        unsigned InsnID) {
+void EraseInstAction::emitActionOpcodes(MatchTable &Table,
+                                        RuleMatcher &Rule) const {
   // Avoid erasing the same inst twice.
   if (!Rule.tryEraseInsnID(InsnID))
     return;
@@ -2255,9 +2406,19 @@ void EraseInstAction::emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
         << MatchTable::LineBreak;
 }
 
-void EraseInstAction::emitActionOpcodes(MatchTable &Table,
-                                        RuleMatcher &Rule) const {
-  emitActionOpcodes(Table, Rule, InsnID);
+bool EraseInstAction::emitActionOpcodesAndDone(MatchTable &Table,
+                                               RuleMatcher &Rule) const {
+  if (InsnID != 0) {
+    emitActionOpcodes(Table, Rule);
+    return false;
+  }
+
+  if (!Rule.tryEraseInsnID(0))
+    return false;
+
+  Table << MatchTable::Opcode("GIR_EraseRootFromParent_Done", -1)
+        << MatchTable::LineBreak;
+  return true;
 }
 
 //===- ReplaceRegAction ---------------------------------------------------===//
@@ -2320,6 +2481,3 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID")
         << Ty << MatchTable::LineBreak;
 }
-
-} // namespace gi
-} // namespace llvm

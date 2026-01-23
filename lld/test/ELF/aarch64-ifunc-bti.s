@@ -1,6 +1,6 @@
 # REQUIRES: aarch64
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %p/Inputs/aarch64-addrifunc.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/aarch64-addrifunc.s -o %t1.o
 
 # RUN: ld.lld --shared --soname=t1.so %t1.o -o %t1.so
 # RUN: ld.lld --pie %t1.so %t.o -o %t

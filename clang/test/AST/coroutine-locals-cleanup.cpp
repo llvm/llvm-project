@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -ast-dump %s | FileCheck %s
 
 #include "Inputs/std-coroutine.h"
 
@@ -86,7 +86,7 @@ Task bar() {
 // CHECK:             ExprWithCleanups {{.*}} 'void'
 // CHECK-NEXT:          CoawaitExpr
 // CHECK-NEXT:            CXXBindTemporaryExpr {{.*}} 'Task' (CXXTemporary {{.*}})
-// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Awaiter':'Task::Awaiter'
+// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Awaiter'
 // CHECK:                 ExprWithCleanups {{.*}} 'bool'
 // CHECK-NEXT:              CXXMemberCallExpr {{.*}} 'bool'
 // CHECK-NEXT:                MemberExpr {{.*}} .await_ready
@@ -96,7 +96,7 @@ Task bar() {
 // CHECK:             ExprWithCleanups {{.*}} 'void'
 // CHECK-NEXT:          CoawaitExpr
 // CHECK-NEXT:            CXXBindTemporaryExpr {{.*}} 'Task' (CXXTemporary {{.*}})
-// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Awaiter':'Task::Awaiter'
+// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Awaiter'
 // CHECK:                 ExprWithCleanups {{.*}} 'bool'
 // CHECK-NEXT:              CXXMemberCallExpr {{.*}} 'bool'
 // CHECK-NEXT:                MemberExpr {{.*}} .await_ready

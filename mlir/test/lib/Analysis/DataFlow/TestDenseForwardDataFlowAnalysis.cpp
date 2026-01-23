@@ -12,9 +12,9 @@
 
 #include "TestDenseDataFlowAnalysis.h"
 #include "TestDialect.h"
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "TestOps.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -57,8 +57,8 @@ public:
   /// is propagated with no change. If the operation allocates a resource, then
   /// its reaching definitions is set to empty. If the operation writes to a
   /// resource, then its reaching definition is set to the written value.
-  void visitOperation(Operation *op, const LastModification &before,
-                      LastModification *after) override;
+  LogicalResult visitOperation(Operation *op, const LastModification &before,
+                               LastModification *after) override;
 
   void visitCallControlFlowTransfer(CallOpInterface call,
                                     CallControlFlowAction action,
@@ -71,6 +71,11 @@ public:
                                             const LastModification &before,
                                             LastModification *after) override;
 
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  void buildOperationEquivalentLatticeAnchor(Operation *op) override;
+
   /// At an entry point, the last modifications of all memory resources are
   /// unknown.
   void setToEntryState(LastModification *lattice) override {
@@ -82,14 +87,15 @@ private:
 };
 } // end anonymous namespace
 
-void LastModifiedAnalysis::visitOperation(Operation *op,
-                                          const LastModification &before,
-                                          LastModification *after) {
+LogicalResult LastModifiedAnalysis::visitOperation(
+    Operation *op, const LastModification &before, LastModification *after) {
   auto memory = dyn_cast<MemoryEffectOpInterface>(op);
   // If we can't reason about the memory effects, then conservatively assume we
   // can't deduce anything about the last modifications.
-  if (!memory)
-    return setToEntryState(after);
+  if (!memory) {
+    setToEntryState(after);
+    return success();
+  }
 
   SmallVector<MemoryEffects::EffectInstance> effects;
   memory.getEffects(effects);
@@ -105,20 +111,23 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
 
     // If we see an effect on anything other than a value, assume we can't
     // deduce anything about the last modifications.
-    if (!value)
-      return setToEntryState(after);
+    if (!value) {
+      setToEntryState(after);
+      return success();
+    }
 
     // If we cannot find the underlying value, we shouldn't just propagate the
     // effects through, return the pessimistic state.
     std::optional<Value> underlyingValue =
         UnderlyingValueAnalysis::getMostUnderlyingValue(
             value, [&](Value value) {
-              return getOrCreateFor<UnderlyingValueLattice>(op, value);
+              return getOrCreateFor<UnderlyingValueLattice>(
+                  getProgramPointAfter(op), value);
             });
 
     // If the underlying value is not yet known, don't propagate yet.
     if (!underlyingValue)
-      return;
+      return success();
 
     underlyingValues.push_back(*underlyingValue);
   }
@@ -127,8 +136,10 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
   ChangeResult result = after->join(before);
   for (const auto &[effect, value] : llvm::zip(effects, underlyingValues)) {
     // If the underlying value is known to be unknown, set to fixpoint state.
-    if (!value)
-      return setToEntryState(after);
+    if (!value) {
+      setToEntryState(after);
+      return success();
+    }
 
     // Nothing to do for reads.
     if (isa<MemoryEffects::Read>(effect.getEffect()))
@@ -137,6 +148,15 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
     result |= after->set(value, op);
   }
   propagateIfChanged(after, result);
+  return success();
+}
+
+void LastModifiedAnalysis::buildOperationEquivalentLatticeAnchor(
+    Operation *op) {
+  if (isMemoryEffectFree(op)) {
+    unionLatticeAnchors<LastModification>(getProgramPointBefore(op),
+                                          getProgramPointAfter(op));
+  }
 }
 
 void LastModifiedAnalysis::visitCallControlFlowTransfer(
@@ -150,7 +170,7 @@ void LastModifiedAnalysis::visitCallControlFlowTransfer(
           UnderlyingValueAnalysis::getMostUnderlyingValue(
               operand, [&](Value value) {
                 return getOrCreateFor<UnderlyingValueLattice>(
-                    call.getOperation(), value);
+                    getProgramPointAfter(call.getOperation()), value);
               });
       if (!underlyingValue)
         return;
@@ -168,7 +188,8 @@ void LastModifiedAnalysis::visitCallControlFlowTransfer(
                             testCallAndStore.getStoreBeforeCall()) ||
                            (action == CallControlFlowAction::ExitCallee &&
                             !testCallAndStore.getStoreBeforeCall()))) {
-    return visitOperation(call, before, after);
+    (void)visitOperation(call, before, after);
+    return;
   }
   AbstractDenseForwardDataFlowAnalysis::visitCallControlFlowTransfer(
       call, action, before, after);
@@ -187,7 +208,7 @@ void LastModifiedAnalysis::visitRegionBranchControlFlowTransfer(
           [=](auto storeWithRegion) {
             if ((!regionTo && !storeWithRegion.getStoreBeforeRegion()) ||
                 (!regionFrom && storeWithRegion.getStoreBeforeRegion()))
-              visitOperation(branch, before, after);
+              (void)visitOperation(branch, before, after);
             defaultHandling();
           })
       .Default([=](auto) { defaultHandling(); });
@@ -218,8 +239,7 @@ struct TestLastModifiedPass
     Operation *op = getOperation();
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<LastModifiedAnalysis>(assumeFuncWrites);
     solver.load<UnderlyingValueAnalysis>();
     if (failed(solver.initializeAndRun(op)))
@@ -235,7 +255,7 @@ struct TestLastModifiedPass
         return;
       os << "test_tag: " << tag.getValue() << ":\n";
       const LastModification *lastMods =
-          solver.lookupState<LastModification>(op);
+          solver.lookupState<LastModification>(solver.getProgramPointAfter(op));
       assert(lastMods && "expected a dense lattice");
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         os << " operand #" << index << "\n";

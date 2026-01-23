@@ -36,11 +36,11 @@ Reproducer::~Reproducer() = default;
 ReproducerGenerate::ReproducerGenerate(std::error_code &EC, int Argc,
                                        char **Argv, bool GenerateOnExit)
     : Root(createReproducerDir(EC)), GenerateOnExit(GenerateOnExit) {
-  for (int I = 0; I < Argc; ++I)
-    Args.push_back(Argv[I]);
+  llvm::append_range(Args, ArrayRef(Argv, Argc));
+  auto RealFS = vfs::getRealFileSystem();
   if (!Root.empty())
-    FC = std::make_shared<FileCollector>(Root, Root);
-  VFS = FileCollector::createCollectorVFS(vfs::getRealFileSystem(), FC);
+    FC = std::make_shared<FileCollector>(Root, Root, RealFS);
+  VFS = FileCollector::createCollectorVFS(std::move(RealFS), FC);
 }
 
 ReproducerGenerate::~ReproducerGenerate() {

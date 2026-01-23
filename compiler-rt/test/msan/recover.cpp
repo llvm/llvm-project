@@ -1,8 +1,8 @@
 // RUN: %clangxx_msan -O0 %s -o %t && not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -O0 %s -o %t && MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -O0 %s -o %t && env MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -O0 %s -o %t && MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -O0 %s -o %t && env MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
 
 // Test behavior of -fsanitize-recover=memory and MSAN_OPTIONS=keep_going.
@@ -11,20 +11,20 @@
 
 // RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
-// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && env MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && env MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
-// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && MSAN_OPTIONS=halt_on_error=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && env MSAN_OPTIONS=halt_on_error=1 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && MSAN_OPTIONS=halt_on_error=0 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && env MSAN_OPTIONS=halt_on_error=0 not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
 
 // Basic test of legacy -mllvm -msan-keep-going and MSAN_OPTIONS=keep_going.
 
 // RUN: %clangxx_msan -mllvm -msan-keep-going=1 -O0 %s -o %t && not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
-// RUN: %clangxx_msan -mllvm -msan-keep-going=1 -O0 %s -o %t && MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -mllvm -msan-keep-going=1 -O0 %s -o %t && env MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
 
 #include <stdio.h>

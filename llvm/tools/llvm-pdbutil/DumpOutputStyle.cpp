@@ -68,7 +68,7 @@ DumpOutputStyle::DumpOutputStyle(InputFile &File)
     RefTracker.reset(new TypeReferenceTracker(File));
 }
 
-DumpOutputStyle::~DumpOutputStyle() {}
+DumpOutputStyle::~DumpOutputStyle() = default;
 
 PDBFile &DumpOutputStyle::getPdb() { return File.pdb(); }
 object::COFFObjectFile &DumpOutputStyle::getObj() { return File.obj(); }
@@ -1494,13 +1494,13 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
           if (auto EC = Visitor.visitSymbolStreamFiltered(ModS.getSymbolArray(),
                                                           Filter)) {
             P.formatLine("Error while processing symbol records.  {0}",
-                         toString(std::move(EC)));
+                         toStringWithoutConsuming(EC));
             return EC;
           }
         } else if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(),
                                                        SS.Offset)) {
           P.formatLine("Error while processing symbol records.  {0}",
-                       toString(std::move(EC)));
+                       toStringWithoutConsuming(EC));
           return EC;
         }
         return Error::success();

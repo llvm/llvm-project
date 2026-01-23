@@ -1,4 +1,4 @@
-; DISABLE: llc -march=mipsel < %s | FileCheck %s
+; DISABLE: llc -mtriple=mipsel < %s | FileCheck %s
 ; RUN: false
 ; XFAIL: *
 

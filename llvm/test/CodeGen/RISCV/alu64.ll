@@ -37,7 +37,7 @@ define i64 @slti(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    beqz a1, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    slti a0, a1, 0
+; RV32I-NEXT:    srli a0, a1, 31
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB1_2:
@@ -57,8 +57,8 @@ define i64 @sltiu(i64 %a) nounwind {
 ;
 ; RV32I-LABEL: sltiu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    seqz a1, a1
 ; RV32I-NEXT:    sltiu a0, a0, 3
+; RV32I-NEXT:    seqz a1, a1
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret

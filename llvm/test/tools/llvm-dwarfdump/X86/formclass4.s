@@ -1,21 +1,23 @@
-# Source:
-#   struct e {
-#     enum {} f[16384];
-#     short g;
-#   };
-#   e foo() {
-#     auto E = new e;
-#     return *E;
-#   }
-# Compile with:
-#   clang -O2 -gdwarf-4 -S a.cpp -o a4.s
-
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o %t.o
 # RUN: llvm-dwarfdump -debug-info -name g %t.o | FileCheck %s
 
 # CHECK: DW_TAG_member
 # CHECK: DW_AT_name ("g")
 # CHECK: DW_AT_data_member_location    (0x4000)
+
+.ifdef GEN
+#--- a.cpp
+struct e {
+  enum {} f[16384];
+  short g;
+};
+e foo() {
+  auto E = new e;
+  return *E;
+}
+#--- gen
+clang --target=x86_64-apple-macosx -O2 -gdwarf-4 -S a.cpp -o -
+.endif
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 14

@@ -4,8 +4,8 @@
 ; RUN: llvm-as -o %t2.o %S/Inputs/libcall-archive.ll
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux -o %t3.o %S/Inputs/libcall-archive.s
 ; RUN: llvm-ar rcs %t.a %t2.o %t3.o
-; RUN: ld.lld --why-extract=why.txt -o %t %t.o %t.a
-; RUN: FileCheck %s --input-file=why.txt --check-prefix=CHECK-WHY
+; RUN: ld.lld --why-extract=%t.why.txt -o %t %t.o %t.a
+; RUN: FileCheck %s --input-file=%t.why.txt --check-prefix=CHECK-WHY
 ; RUN: llvm-nm %t | FileCheck %s
 ; RUN: ld.lld -o %t2 %t.o --start-lib %t2.o %t3.o --end-lib
 ; RUN: llvm-nm %t2 | FileCheck %s

@@ -26,6 +26,19 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesInFile) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("MY_MACRO"))));
 }
 
+static std::string constructMacroName(llvm::StringRef A, llvm::StringRef B) {
+  return (A + "_" + B).str();
+}
+
+TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) (4 + (a))
+    void Test() { MY_MACRO(4); }
+  )cc";
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
+}
+
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
   StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
@@ -1167,6 +1180,23 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_EmptyName) {
   EXPECT_TRUE(notMatches(Code, cxxRecordDecl(isSameOrDerivedFrom(""))));
 }
 
+TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  DeclarationMatcher IsDerivenFromBase = cxxRecordDecl(
+      isDerivedFrom(decl().bind("typedef")), unless(isImplicit()));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct AnInterface {};"
+      "typedef AnInterface UnusedTypedef;"
+      "typedef AnInterface Base;"
+      "class AClass : public Base {};",
+      IsDerivenFromBase,
+      std::make_unique<VerifyIdIsBoundTo<TypedefDecl>>("typedef", "Base")));
+}
+
 TEST_P(ASTMatchersTest, IsDerivedFrom_ObjC) {
   DeclarationMatcher IsDerivedFromX = objcInterfaceDecl(isDerivedFrom("X"));
   EXPECT_TRUE(
@@ -1569,11 +1599,12 @@ TEST_P(ASTMatchersTest, IsArrow_MatchesMemberVariablesViaArrow) {
       matches("class Y { void x() { y; } int y; };", memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { (*this).y; } int y; };",
                          memberExpr(isArrow())));
-  EXPECT_TRUE(matches("template <class T> class Y { void x() { this->m; } };",
-                      cxxDependentScopeMemberExpr(isArrow())));
   EXPECT_TRUE(
-      notMatches("template <class T> class Y { void x() { (*this).m; } };",
-                 cxxDependentScopeMemberExpr(isArrow())));
+      matches("template <class T> class Y { void x() { this->m; } int m; };",
+              memberExpr(isArrow())));
+  EXPECT_TRUE(notMatches(
+      "template <class T> class Y { void x() { (*this).m; } int m; };",
+      memberExpr(isArrow())));
 }
 
 TEST_P(ASTMatchersTest, IsArrow_MatchesStaticMemberVariablesViaArrow) {
@@ -2010,6 +2041,13 @@ TEST_P(ASTMatchersTest, TemplateArgumentCountIs) {
   EXPECT_TRUE(
       notMatches("template<typename T> struct C {}; C<int> c;",
                  templateSpecializationType(templateArgumentCountIs(2))));
+
+  const char *FuncTemplateCode =
+      "template<typename T> T f(); auto v = f<int>();";
+  EXPECT_TRUE(
+      matches(FuncTemplateCode, functionDecl(templateArgumentCountIs(1))));
+  EXPECT_TRUE(
+      notMatches(FuncTemplateCode, functionDecl(templateArgumentCountIs(2))));
 }
 
 TEST_P(ASTMatchersTest, IsIntegral) {
@@ -2234,6 +2272,39 @@ TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
                  Constructor1Arg));
 }
 
+TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
+  if (!GetParam().isCXX() || GetParam().hasDelayedTemplateParsing()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr(hasDependentName("v"))));
+
+  EXPECT_TRUE(matches("template <typename T> struct S { static T Foo; };"
+                      "template <typename T> void x() { (void)S<T>::Foo; }",
+                      dependentScopeDeclRefExpr(hasDependentName("Foo"))));
+
+  EXPECT_TRUE(matches("template <typename T> struct S { static T foo(); };"
+                      "template <typename T> void x() { S<T>::foo(); }",
+                      dependentScopeDeclRefExpr(hasDependentName("foo"))));
+}
+
+TEST_P(ASTMatchersTest, HasDependentName_DependentNameType) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template <typename T> struct declToImport {
+          typedef typename T::type dependent_name;
+        };
+      )",
+      dependentNameType(hasDependentName("type"))));
+}
+
 TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
 
   // Member functions:
@@ -2244,10 +2315,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
-                templateSpecializationType(hasDeclaration(classTemplateDecl(
-                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
-                                              .bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2265,10 +2335,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
-                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2283,10 +2352,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {
@@ -2551,6 +2619,10 @@ TEST_P(ASTMatchersTest, HasName_MatchesNamespaces) {
                          recordDecl(hasName("a+b::C"))));
   EXPECT_TRUE(notMatches("namespace a { namespace b { class AC; } }",
                          recordDecl(hasName("C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::a::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesOuterClasses) {
@@ -2594,6 +2666,35 @@ TEST_P(ASTMatchersTest, HasName_MatchesInlinedNamespaces) {
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
 }
 
+TEST_P(ASTMatchersTest, HasName_MatchesSpecializedInlinedNamespace) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+
+  StringRef code = R"(
+namespace a {
+    inline namespace v1 {
+        template<typename T> T foo(T);
+    }
+}
+
+namespace a {
+    enum Tag{T1, T2};
+
+    template <Tag, typename T> T foo(T);
+}
+
+auto v1 = a::foo(1);
+auto v2 = a::foo<a::T1>(1);
+)";
+  EXPECT_TRUE(matches(
+      code, varDecl(hasName("v1"), hasDescendant(callExpr(callee(
+                                       functionDecl(hasName("::a::foo"))))))));
+  EXPECT_TRUE(matches(
+      code, varDecl(hasName("v2"), hasDescendant(callExpr(callee(
+                                       functionDecl(hasName("::a::foo"))))))));
+}
+
 TEST_P(ASTMatchersTest, HasName_MatchesAnonymousNamespaces) {
   if (!GetParam().isCXX()) {
     return;
@@ -2608,23 +2709,46 @@ TEST_P(ASTMatchersTest, HasName_MatchesAnonymousNamespaces) {
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
 }
 
-TEST_P(ASTMatchersTest, HasName_MatchesAnonymousOuterClasses) {
+TEST_P(ASTMatchersTest, HasName_MatchesUnnamedOuterClasses) {
   if (!GetParam().isCXX()) {
     return;
   }
 
   EXPECT_TRUE(matches("class A { class { class C; } x; };",
-                      recordDecl(hasName("A::(anonymous class)::C"))));
+                      recordDecl(hasName("A::(unnamed class)::C"))));
   EXPECT_TRUE(matches("class A { class { class C; } x; };",
-                      recordDecl(hasName("::A::(anonymous class)::C"))));
+                      recordDecl(hasName("::A::(unnamed class)::C"))));
   EXPECT_FALSE(matches("class A { class { class C; } x; };",
                        recordDecl(hasName("::A::C"))));
   EXPECT_TRUE(matches("class A { struct { class C; } x; };",
-                      recordDecl(hasName("A::(anonymous struct)::C"))));
+                      recordDecl(hasName("A::(unnamed struct)::C"))));
   EXPECT_TRUE(matches("class A { struct { class C; } x; };",
-                      recordDecl(hasName("::A::(anonymous struct)::C"))));
+                      recordDecl(hasName("::A::(unnamed struct)::C"))));
   EXPECT_FALSE(matches("class A { struct { class C; } x; };",
                        recordDecl(hasName("::A::C"))));
+}
+
+TEST_P(ASTMatchersTest, HasName_MatchesAnonymousOuterClasses) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "class A { struct { struct { class C; } x; }; };",
+      recordDecl(hasName("A::(anonymous struct)::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { struct { struct { class C; } x; }; };",
+      recordDecl(hasName("::A::(anonymous struct)::(unnamed struct)::C"))));
+  EXPECT_FALSE(matches("class A { struct { struct { class C; } x; }; };",
+                       recordDecl(hasName("A::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { class { public: struct { class C; } x; }; };",
+      recordDecl(hasName("A::(anonymous class)::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { class { public: struct { class C; } x; }; };",
+      recordDecl(hasName("::A::(anonymous class)::(unnamed struct)::C"))));
+  EXPECT_FALSE(matches("class A { class { public: struct { class C; } x; }; };",
+                       recordDecl(hasName("A::(unnamed struct)::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesFunctionScope) {
@@ -2834,6 +2958,19 @@ TEST_P(ASTMatchersTest, IsBitField) {
                          fieldDecl(isBitField(), hasName("b"))));
   EXPECT_TRUE(matches("struct C { int a : 2; int b : 4; };",
                       fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  if (GetParam().isCXX()) {
+    // This test verifies 2 things:
+    // (1) That templates work correctly.
+    // (2) That the matcher does not crash on template-dependent bit widths.
+    EXPECT_TRUE(matches("template<int N> "
+                        "struct C { "
+                        "explicit C(bool x) : a(x) { } "
+                        "int a : N; "
+                        "int b : 4; "
+                        "}; "
+                        "template struct C<2>;",
+                        fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  }
 }
 
 TEST_P(ASTMatchersTest, HasInClassInitializer) {
@@ -3305,6 +3442,45 @@ TEST_P(ASTMatchersTest,
   }
 
   EXPECT_TRUE(notMatches("template<typename T> void A(T t) { T i; }",
+                         declStmt(isInTemplateInstantiation())));
+}
+
+TEST_P(ASTMatchersTest, IsInstantiated_MatchesVariableInstantiation) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template<typename T> int V = 10; void x() { V<int>; }",
+                      varDecl(isInstantiated())));
+}
+
+TEST_P(ASTMatchersTest, IsInstantiated_NotMatchesVariableDefinition) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(notMatches("template<typename T> int V = 10;",
+                         varDecl(isInstantiated())));
+}
+
+TEST_P(ASTMatchersTest,
+       IsInTemplateInstantiation_MatchesVariableInstantiationStmt) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "template<typename T> auto V = []() { T i; }; void x() { V<int>(); }",
+      declStmt(isInTemplateInstantiation())));
+}
+
+TEST_P(ASTMatchersTest,
+       IsInTemplateInstantiation_NotMatchesVariableDefinitionStmt) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(notMatches("template<typename T> auto V = []() { T i; };",
                          declStmt(isInTemplateInstantiation())));
 }
 
@@ -4223,7 +4399,7 @@ TEST_P(ASTMatchersTest, hasOperator) {
 TEST_P(ASTMatchersTest, IsMain) {
   EXPECT_TRUE(matches("int main() {}", functionDecl(isMain())));
 
-  EXPECT_TRUE(notMatches("int main2() {}", functionDecl(isMain())));
+  EXPECT_TRUE(notMatches("int main2() { return 0; }", functionDecl(isMain())));
 }
 
 TEST_P(ASTMatchersTest, OMPExecutableDirective_IsStandaloneDirective) {
@@ -4592,6 +4768,404 @@ void x() {
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source8, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_IsStandaloneDirective) {
+  auto Matcher = ompTargetUpdateDirective(isStandaloneDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_IsStandaloneDirective) {
+  auto Matcher = ompTargetUpdateDirective(isStandaloneDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_HasStructuredBlock) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(
+      Source0, ompTargetUpdateDirective(hasStructuredBlock(nullStmt()))));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_HasStructuredBlock) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(
+      Source0, ompTargetUpdateDirective(hasStructuredBlock(nullStmt()))));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_HasClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+    // base (arr)
+    const Expr *Base = ArraySection->getBase();
+    ASSERT_TRUE(Base);
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound);
+    ASSERT_TRUE(LowerBoundLiteral)
+        << "Expected lower bound to be an integer literal";
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    ASSERT_TRUE(LengthLiteral) << "Expected length to be an integer literal";
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 8u);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride);
+    ASSERT_TRUE(StrideLiteral) << "Expected stride to be an integer literal";
+    EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 2u);
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_ArraySection_NoStride) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update from(arr[2:10])
+      ;
+    }
+  )";
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound);
+    ASSERT_TRUE(LowerBoundLiteral)
+        << "Expected lower bound to be an integer literal";
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 2u);
+
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    ASSERT_TRUE(LengthLiteral) << "Expected length to be an integer literal";
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 10u);
+
+    // Stride is optional (defaults to 1 when omitted)
+    const Expr *Stride = ArraySection->getStride();
+    if (Stride) {
+      const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride);
+      ASSERT_TRUE(StrideLiteral) << "Expected stride to be an integer literal";
+      EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 1u);
+    }
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_HasClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompToClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *Base = ArraySection->getBase();
+    ASSERT_TRUE(Base);
+
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound);
+    ASSERT_TRUE(LowerBoundLiteral)
+        << "Expected lower bound to be an integer literal";
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    ASSERT_TRUE(LengthLiteral) << "Expected length to be an integer literal";
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 8u);
+
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride);
+    ASSERT_TRUE(StrideLiteral) << "Expected stride to be an integer literal";
+    EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 2u);
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_ArraySection_NoStride) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update to(arr[1:15])
+      ;
+    }
+  )";
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound);
+    ASSERT_TRUE(LowerBoundLiteral)
+        << "Expected lower bound to be an integer literal";
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 1u);
+
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    ASSERT_TRUE(LengthLiteral) << "Expected length to be an integer literal";
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 15u);
+
+    // Stride is optional (defaults to 1 when omitted)
+    const Expr *Stride = ArraySection->getStride();
+    if (Stride) {
+      const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride);
+      ASSERT_TRUE(StrideLiteral) << "Expected stride to be an integer literal";
+      EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 1u);
+    }
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_IsAllowedToContainClauseKind_From) {
+  auto Matcher = ompTargetUpdateDirective(
+      isAllowedToContainClauseKind(llvm::omp::OMPC_from));
+
+  StringRef Source0 = R"(
+    void x() {
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  StringRef Source1 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_IsAllowedToContainClauseKind_To) {
+  auto Matcher = ompTargetUpdateDirective(
+      isAllowedToContainClauseKind(llvm::omp::OMPC_to));
+
+  StringRef Source0 = R"(
+    void x() {
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  StringRef Source1 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPFromClause_DoesNotMatchToClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPToClause_DoesNotMatchFromClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompToClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_DoesNotMatchTarget) {
+  auto Matcher = ompTargetUpdateDirective();
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target map(tofrom:arr)
+      { arr[0] = 1; }
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_DoesNotMatchTargetData) {
+  auto Matcher = ompTargetUpdateDirective();
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target data map(to:arr)
+      { }
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPFromClause_DoesNotMatchMapClause) {
+  auto Matcher = ompExecutableDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target map(from:arr)
+      { }
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 }
 
 TEST_P(ASTMatchersTest, HasAnyBase_DirectBase) {

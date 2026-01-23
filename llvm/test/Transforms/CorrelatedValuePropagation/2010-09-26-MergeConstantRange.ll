@@ -5,7 +5,7 @@
 @g_128 = external global %struct.S2, align 1
 @g_106 = external global i16, align 2
 
-define void @int328(i16 signext %p_82) noreturn nounwind ssp {
+define void @int328(i16 signext %p_82, i1 %arg) noreturn nounwind ssp {
 entry:
   %tobool3 = icmp eq i16 %p_82, 0
   br label %for.cond.outer
@@ -32,10 +32,11 @@ for.cond.split.us:                                ; preds = %for.cond
   br label %lbl_133.us
 
 lbl_133.us:                                       ; preds = %lbl_134.us, %for.cond.split.us
-  br i1 undef, label %if.else14.us-lcssa.us, label %if.then.us
+  br i1 %arg, label %if.else14.us-lcssa.us, label %if.then.us
 
 lbl_134.us:                                       ; preds = %if.then.us
-  br i1 icmp eq (i16 ptrtoint (ptr @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa.us, label %lbl_133.us
+  %cmp = icmp eq i16 ptrtoint (ptr @g_128 to i16), 0
+  br i1 %cmp, label %for.cond9.preheader.us-lcssa.us, label %lbl_133.us
 
 if.then.us:                                       ; preds = %lbl_133.us
   br i1 true, label %for.cond.loopexit4.us-lcssa.us, label %lbl_134.us
@@ -58,13 +59,14 @@ if.then:                                          ; preds = %lbl_133
   br i1 false, label %for.cond.loopexit4.us-lcssa, label %lbl_134
 
 lbl_134:                                          ; preds = %if.then
-  br i1 icmp eq (i16 ptrtoint (ptr @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa, label %lbl_133
+  %cmp2 = icmp eq i16 ptrtoint (ptr @g_128 to i16), 0
+  br i1 %cmp2, label %for.cond9.preheader.us-lcssa, label %lbl_133
 
 for.cond9.preheader.us-lcssa:                     ; preds = %lbl_134
   br label %for.cond9.preheader
 
 for.cond9.preheader:                              ; preds = %for.cond9.preheader.us-lcssa, %for.cond9.preheader.us-lcssa.us
-  br i1 undef, label %bb.nph, label %for.cond.loopexit
+  br i1 %arg, label %bb.nph, label %for.cond.loopexit
 
 bb.nph:                                           ; preds = %for.cond9.preheader
   br label %for.cond.loopexit

@@ -27,25 +27,24 @@ body:             |
   bb.0 (%ir-block.0):
     ; X32-LABEL: name: test_add_i64
     ; X32: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
-    ; X32: [[DEF1:%[0-9]+]]:gr32 = IMPLICIT_DEF
-    ; X32: [[DEF2:%[0-9]+]]:gr32 = IMPLICIT_DEF
-    ; X32: [[DEF3:%[0-9]+]]:gr32 = IMPLICIT_DEF
-    ; X32: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[DEF]], [[DEF2]], implicit-def $eflags
-    ; X32: [[COPY:%[0-9]+]]:gr32 = COPY $eflags
-    ; X32: $eflags = COPY [[COPY]]
-    ; X32: [[ADC32rr:%[0-9]+]]:gr32 = ADC32rr [[DEF1]], [[DEF3]], implicit-def $eflags, implicit $eflags
-    ; X32: [[COPY1:%[0-9]+]]:gr32 = COPY $eflags
-    ; X32: $eax = COPY [[ADD32rr]]
-    ; X32: $edx = COPY [[ADC32rr]]
-    ; X32: RET 0, implicit $eax, implicit $edx
+    ; X32-NEXT: [[DEF1:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32-NEXT: [[DEF2:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32-NEXT: [[DEF3:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32-NEXT: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[DEF]], [[DEF2]], implicit-def $eflags
+    ; X32-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; X32-NEXT: CMP8ri [[SETCCr]], 1, implicit-def $eflags
+    ; X32-NEXT: [[ADC32rr:%[0-9]+]]:gr32 = ADC32rr [[DEF1]], [[DEF3]], implicit-def $eflags, implicit $eflags
+    ; X32-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; X32-NEXT: $eax = COPY [[ADD32rr]]
+    ; X32-NEXT: $edx = COPY [[ADC32rr]]
+    ; X32-NEXT: RET 0, implicit $eax, implicit $edx
     %0(s32) = IMPLICIT_DEF
     %1(s32) = IMPLICIT_DEF
     %2(s32) = IMPLICIT_DEF
     %3(s32) = IMPLICIT_DEF
     %9(s8) = G_CONSTANT i8 0
-    %4(s1) = G_TRUNC %9(s8)
-    %5(s32), %6(s1) = G_UADDE %0, %2, %4
-    %7(s32), %8(s1) = G_UADDE %1, %3, %6
+    %5(s32), %6(s8) = G_UADDE %0, %2, %9
+    %7(s32), %8(s8) = G_UADDE %1, %3, %6
     $eax = COPY %5(s32)
     $edx = COPY %7(s32)
     RET 0, implicit $eax, implicit $edx

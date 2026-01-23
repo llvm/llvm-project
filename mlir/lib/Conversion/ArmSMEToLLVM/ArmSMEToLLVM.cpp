@@ -16,13 +16,15 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
+#include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTARMSMETOLLVM
@@ -43,41 +45,42 @@ static Operation *createLoadTileSliceIntrinsic(
   if (layout == arm_sme::TileSliceLayout::Horizontal) {
     switch (type) {
     case arm_sme::ArmSMETileType::ZAB:
-      return rewriter.create<arm_sme::aarch64_sme_ld1b_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1b_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAH:
-      return rewriter.create<arm_sme::aarch64_sme_ld1h_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1h_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAS:
-      return rewriter.create<arm_sme::aarch64_sme_ld1w_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1w_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAD:
-      return rewriter.create<arm_sme::aarch64_sme_ld1d_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1d_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAQ:
-      return rewriter.create<arm_sme::aarch64_sme_ld1q_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1q_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     }
   } else {
     switch (type) {
     case arm_sme::ArmSMETileType::ZAB:
-      return rewriter.create<arm_sme::aarch64_sme_ld1b_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1b_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAH:
-      return rewriter.create<arm_sme::aarch64_sme_ld1h_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1h_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAS:
-      return rewriter.create<arm_sme::aarch64_sme_ld1w_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1w_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAD:
-      return rewriter.create<arm_sme::aarch64_sme_ld1d_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1d_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAQ:
-      return rewriter.create<arm_sme::aarch64_sme_ld1q_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_ld1q_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
       break;
     }
   }
+  llvm_unreachable("unknown type in createLoadTileSliceIntrinsic");
 }
 
 /// Helper to create an arm_sme.intr.st1*.(horiz|vert)' intrinsic.
@@ -88,40 +91,41 @@ static Operation *createStoreTileSliceIntrinsic(
   if (layout == arm_sme::TileSliceLayout::Horizontal) {
     switch (type) {
     case arm_sme::ArmSMETileType::ZAB:
-      return rewriter.create<arm_sme::aarch64_sme_st1b_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1b_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAH:
-      return rewriter.create<arm_sme::aarch64_sme_st1h_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1h_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAS:
-      return rewriter.create<arm_sme::aarch64_sme_st1w_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1w_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAD:
-      return rewriter.create<arm_sme::aarch64_sme_st1d_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1d_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAQ:
-      return rewriter.create<arm_sme::aarch64_sme_st1q_horiz>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1q_horiz::create(rewriter, loc, maskOp, ptr,
+                                                     tileId, tileSliceI32);
     }
   } else {
     switch (type) {
     case arm_sme::ArmSMETileType::ZAB:
-      return rewriter.create<arm_sme::aarch64_sme_st1b_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1b_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAH:
-      return rewriter.create<arm_sme::aarch64_sme_st1h_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1h_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAS:
-      return rewriter.create<arm_sme::aarch64_sme_st1w_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1w_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAD:
-      return rewriter.create<arm_sme::aarch64_sme_st1d_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1d_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     case arm_sme::ArmSMETileType::ZAQ:
-      return rewriter.create<arm_sme::aarch64_sme_st1q_vert>(
-          loc, maskOp, ptr, tileId, tileSliceI32);
+      return arm_sme::aarch64_sme_st1q_vert::create(rewriter, loc, maskOp, ptr,
+                                                    tileId, tileSliceI32);
     }
   }
+  llvm_unreachable("unknown type in createStoreTileSliceIntrinsic");
 }
 
 IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
@@ -142,16 +146,16 @@ createAllocaForTile(RewriterBase &rewriter, Location loc,
   // Move to the first operation in the function.
   rewriter.setInsertionPointToStart(&func.getBlocks().front());
   // Create an alloca matching the tile size of the `tileOp`.
-  auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
+  auto vscale = vector::VectorScaleOp::create(rewriter, loc);
   auto tileElementType = tileOp.getTileType().getElementType();
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamic, ShapedType::kDynamic}, tileElementType);
   unsigned minElements = arm_sme::getSMETileSliceMinNumElts(tileElementType);
   auto minElementsOp =
-      rewriter.create<arith::ConstantIndexOp>(loc, minElements);
-  auto vectorLen = rewriter.create<arith::MulIOp>(loc, vscale, minElementsOp);
-  auto alloca = rewriter.create<memref::AllocaOp>(
-      loc, memrefType, ValueRange{vectorLen, vectorLen});
+      arith::ConstantIndexOp::create(rewriter, loc, minElements);
+  auto vectorLen = arith::MulIOp::create(rewriter, loc, vscale, minElementsOp);
+  auto alloca = memref::AllocaOp::create(rewriter, loc, memrefType,
+                                         ValueRange{vectorLen, vectorLen});
   return alloca;
 }
 
@@ -245,6 +249,10 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     if (!tileOp.isInMemoryTile())
       return failure();
 
+    tileOp->emitWarning(
+        "failed to allocate SME virtual tile to operation, tile value will go "
+        "through memory, expect degraded performance");
+
     // Step 1. Create an alloca for the tile at the top of the function (if one
     // does not already exist).
     auto loc = tileOp.getLoc();
@@ -285,14 +293,14 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
                                 Value tileMemory, Value sliceIndex) const {
     auto llvmType = getTypeConverter()->convertType(tileMemory.getType());
     auto descriptor =
-        rewriter.create<UnrealizedConversionCastOp>(loc, llvmType, tileMemory);
-    auto zero = rewriter.create<arith::ConstantIntOp>(loc, 0, /*width=*/64);
-    auto sliceIndexI64 = rewriter.create<arith::IndexCastOp>(
-        loc, rewriter.getI64Type(), sliceIndex);
+        UnrealizedConversionCastOp::create(rewriter, loc, llvmType, tileMemory);
+    auto zero = arith::ConstantIntOp::create(rewriter, loc, 0, /*width=*/64);
+    auto sliceIndexI64 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(), sliceIndex);
     return getStridedElementPtr(
-        loc, llvm::cast<MemRefType>(tileMemory.getType()),
-        descriptor.getResult(0), {sliceIndexI64, zero},
-        static_cast<ConversionPatternRewriter &>(rewriter));
+        static_cast<ConversionPatternRewriter &>(rewriter), loc,
+        llvm::cast<MemRefType>(tileMemory.getType()), descriptor.getResult(0),
+        {sliceIndexI64, zero});
   }
 
   /// Emits an in-place swap of a slice of a tile in ZA and a slice of a
@@ -301,28 +309,29 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
                      arm_sme::ArmSMETileType tileType, VectorType sliceType,
                      IntegerAttr tileId, Value sliceIndex) const {
     // Cast the slice index to an i32.
-    auto sliceIndexI32 = rewriter.create<arith::IndexCastOp>(
-        loc, rewriter.getI32Type(), sliceIndex);
+    auto sliceIndexI32 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI32Type(), sliceIndex);
     // Create an all-true predicate for the slice.
     auto predicateType = sliceType.clone(rewriter.getI1Type());
-    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(predicateType, true));
+    auto allTruePredicate = arith::ConstantOp::create(
+        rewriter, loc, DenseElementsAttr::get(predicateType, true));
     // Create padding vector (never used due to all-true predicate).
-    auto padVector = rewriter.create<LLVM::UndefOp>(loc, sliceType);
+    auto padVector = LLVM::PoisonOp::create(rewriter, loc, sliceType);
     // Get a pointer to the current slice.
     auto slicePtr =
         getInMemoryTileSlicePtr(rewriter, loc, tileAlloca, sliceIndex);
     // Read the value of the current slice from ZA.
-    auto currentTileSlice = rewriter.create<arm_sme::aarch64_sme_read_horiz>(
-        loc, sliceType, padVector, allTruePredicate, tileId, sliceIndexI32);
+    auto currentTileSlice = arm_sme::aarch64_sme_read_horiz::create(
+        rewriter, loc, sliceType, padVector, allTruePredicate, tileId,
+        sliceIndexI32);
     // Load the new tile slice back from memory into ZA.
     createLoadTileSliceIntrinsic(
         rewriter, loc, tileType, arm_sme::TileSliceLayout::Horizontal,
         allTruePredicate, slicePtr, tileId, sliceIndexI32);
     // Store the current tile slice to memory.
-    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    rewriter.create<vector::StoreOp>(loc, currentTileSlice, tileAlloca,
-                                     ValueRange{sliceIndex, zero});
+    auto zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    vector::StoreOp::create(rewriter, loc, currentTileSlice, tileAlloca,
+                            ValueRange{sliceIndex, zero});
   }
 
   /// Emits a full in-place swap of the contents of a tile in ZA and a
@@ -333,12 +342,14 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     RewriterBase::InsertionGuard guard(rewriter);
     // Create an scf.for over all tile slices.
     auto minNumElts =
-        rewriter.create<arith::ConstantIndexOp>(loc, sliceType.getDimSize(0));
-    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto upperBound = rewriter.create<arith::MulIOp>(
-        loc, minNumElts, rewriter.create<vector::VectorScaleOp>(loc));
-    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+        arith::ConstantIndexOp::create(rewriter, loc, sliceType.getDimSize(0));
+    auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto upperBound =
+        arith::MulIOp::create(rewriter, loc, minNumElts,
+                              vector::VectorScaleOp::create(rewriter, loc));
+    auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    auto forOp =
+        scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
     // Emit a swap for each tile slice.
     rewriter.setInsertionPointToStart(forOp.getBody());
     auto sliceIndex = forOp.getInductionVar();
@@ -391,20 +402,6 @@ addArmSMEConversionPatterns(RewritePatternSet &patterns,
   (addArmSMEConversionPattern<Patterns>(patterns, typeConverter), ...);
 }
 
-struct GetTileConversion
-    : public ConvertArmSMEOpToLLVMPattern<arm_sme::GetTileOp,
-                                          RequiresSpillsAndFills::No> {
-  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(arm_sme::GetTileOp getTile, OpAdaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATileOp>(
-        getTile, getTile.getTileType());
-    return success();
-  }
-};
-
 /// Lower 'arm_sme.zero' to SME intrinsics.
 ///
 ///  BEFORE:
@@ -415,11 +412,11 @@ struct GetTileConversion
 ///  AFTER:
 ///  ```mlir
 ///     "arm_sme.intr.zero"() <{tile_mask = 17 : i32}> : () -> ()
-///     %v = arm_sme.materialize_ssa_tile : vector<[4]x[4]xi32>
+///     %v = arm_sme.get_tile : vector<[4]x[4]xi32>
 ///  ```
 ///
-///  The 'arm_sme.materialize_ssa_tile' (which models the return) will fold away
-///  once all ArmSME ops have been converted to LLVM intrinsics.
+///  The 'arm_sme.get_tile' (which models the return) will fold away once all
+///  ArmSME ops have been converted to LLVM intrinsics.
 struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
   using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
@@ -436,7 +433,8 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
     // The base mask is just the mask to zero the first tile (of a size).
     // These masks are derived from:
     // https://developer.arm.com/documentation/ddi0602/2022-06/SME-Instructions/ZERO--Zero-a-list-of-64-bit-element-ZA-tiles-
-    arm_sme::ArmSMETileType tileType = *zero.getAllocatedTileType();
+    arm_sme::ArmSMETileType tileType =
+        *arm_sme::getSMETileType(zero.getTileType());
     auto baseMaskForSize = [&] {
       switch (tileType) {
       case arm_sme::ArmSMETileType::ZAB:
@@ -484,12 +482,14 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
     //
     // This holds for all tile sizes.
     int32_t zeroMask = baseMaskForSize << int32_t(tileId.getInt());
-    rewriter.create<arm_sme::aarch64_sme_zero>(
-        loc, rewriter.getI32IntegerAttr(zeroMask));
+    arm_sme::aarch64_sme_zero::create(rewriter, loc,
+                                      rewriter.getI32IntegerAttr(zeroMask));
 
     // Create a placeholder op to preserve dataflow.
-    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATileOp>(
-        zero, zero.getVectorType());
+    // Note: Place the `get_tile` op at the start of the block. This ensures
+    // that if there are multiple `zero` ops the intrinsics will be consecutive.
+    rewriter.setInsertionPointToStart(zero->getBlock());
+    rewriter.replaceOpWithNewOp<arm_sme::GetTileOp>(zero, zero.getVectorType());
 
     return success();
   }
@@ -509,15 +509,15 @@ struct LoadTileSliceConversion
     if (!tileId)
       return failure();
 
-    Value ptr = this->getStridedElementPtr(loc, loadTileSliceOp.getMemRefType(),
-                                           adaptor.getBase(),
-                                           adaptor.getIndices(), rewriter);
+    Value ptr = this->getStridedElementPtr(
+        rewriter, loc, loadTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices());
 
     auto tileSlice = loadTileSliceOp.getTileSliceIndex();
 
     // Cast tile slice to i32 for intrinsic.
-    auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
-        loc, rewriter.getI32Type(), tileSlice);
+    auto tileSliceI32 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), tileSlice);
 
     // Create all active predicate mask.
     auto maskOp = loadTileSliceOp.getMask();
@@ -556,14 +556,14 @@ struct StoreTileSliceConversion
 
     // Create 'arm_sme.intr.st1*.horiz' intrinsic to store ZA tile slice.
     Value ptr = this->getStridedElementPtr(
-        loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
-        adaptor.getIndices(), rewriter);
+        rewriter, loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices());
 
     auto tileSlice = storeTileSliceOp.getTileSliceIndex();
 
     // Cast tile slice to i32 for intrinsic.
-    auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
-        loc, rewriter.getI32Type(), tileSlice);
+    auto tileSliceI32 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), tileSlice);
 
     auto maskOp = storeTileSliceOp.getMask();
 
@@ -579,100 +579,99 @@ struct StoreTileSliceConversion
   }
 };
 
-/// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics.
-struct MoveVectorToTileSliceConversion
-    : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
+/// Lower `arm_sme.insert_tile_slice` to SME intrinsics.
+struct InsertTileSliceConversion
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::InsertTileSliceOp> {
   using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arm_sme::MoveVectorToTileSliceOp moveVectorToTileSliceOp,
-                  arm_sme::MoveVectorToTileSliceOp::Adaptor adaptor,
+  matchAndRewrite(arm_sme::InsertTileSliceOp insertTileSliceOp,
+                  arm_sme::InsertTileSliceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = moveVectorToTileSliceOp.getLoc();
-    auto tileType = moveVectorToTileSliceOp.getTileType();
+    auto loc = insertTileSliceOp.getLoc();
+    auto tileType = insertTileSliceOp.getTileType();
 
-    auto tileId = getTileIdOrError(moveVectorToTileSliceOp);
+    auto tileId = getTileIdOrError(insertTileSliceOp);
     if (!tileId)
       return failure();
 
-    auto tileSlice = moveVectorToTileSliceOp.getTileSliceIndex();
+    auto tileSlice = insertTileSliceOp.getTileSliceIndex();
 
     // Cast tile slice from index to i32 for intrinsic.
-    auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
-        loc, rewriter.getI32Type(), tileSlice);
+    auto tileSliceI32 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), tileSlice);
 
     // Create all active predicate mask.
-    auto one = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI1Type(),
+    auto one = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getI1Type(),
         rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
     auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
                                   /*scalableDims=*/{true});
-    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
+    auto allActiveMask =
+        vector::BroadcastOp::create(rewriter, loc, predTy, one);
 
     // Create 'arm_sme.intr.write.(horiz|vert)' to write vector to tile slice.
-    switch (moveVectorToTileSliceOp.getLayout()) {
+    switch (insertTileSliceOp.getLayout()) {
     case arm_sme::TileSliceLayout::Horizontal:
-      rewriter.create<arm_sme::aarch64_sme_write_horiz>(
-          loc, tileId, tileSliceI32, allActiveMask,
-          moveVectorToTileSliceOp.getVector());
+      arm_sme::aarch64_sme_write_horiz::create(rewriter, loc, tileId,
+                                               tileSliceI32, allActiveMask,
+                                               insertTileSliceOp.getVector());
       break;
     case arm_sme::TileSliceLayout::Vertical:
-      rewriter.create<arm_sme::aarch64_sme_write_vert>(
-          loc, tileId, tileSliceI32, allActiveMask,
-          moveVectorToTileSliceOp.getVector());
+      arm_sme::aarch64_sme_write_vert::create(rewriter, loc, tileId,
+                                              tileSliceI32, allActiveMask,
+                                              insertTileSliceOp.getVector());
       break;
     }
 
-    // Intrinsic has no result, replace 'arm_sme.move_vector_to_tile_slice' with
+    // Intrinsic has no result, replace 'arm_sme.insert_tile_slice' with
     // the input tile to preserve dataflow.
-    rewriter.replaceOp(moveVectorToTileSliceOp,
-                       moveVectorToTileSliceOp.getTile());
+    rewriter.replaceOp(insertTileSliceOp, insertTileSliceOp.getTile());
 
     return success();
   }
 };
 
-/// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics.
-struct MoveTileSliceToVectorConversion
-    : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
+/// Lower `arm_sme.extract_tile_slice` to SME intrinsics.
+struct ExtractTileSliceConversion
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::ExtractTileSliceOp> {
   using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arm_sme::MoveTileSliceToVectorOp moveTileSliceToVector,
-                  OpAdaptor,
+  matchAndRewrite(arm_sme::ExtractTileSliceOp extractTileSlice, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = moveTileSliceToVector.getLoc();
-    auto sliceType = moveTileSliceToVector.getSliceType();
-    auto sliceIndex = moveTileSliceToVector.getTileSliceIndex();
+    auto loc = extractTileSlice.getLoc();
+    auto sliceType = extractTileSlice.getSliceType();
+    auto sliceIndex = extractTileSlice.getTileSliceIndex();
 
-    auto tileId = getTileIdOrError(moveTileSliceToVector);
+    auto tileId = getTileIdOrError(extractTileSlice);
     if (!tileId)
       return failure();
 
     // Create an 'all true' predicate for the tile slice.
     auto predicateType = sliceType.cloneWith({}, rewriter.getI1Type());
-    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(predicateType, true));
+    auto allTruePredicate = arith::ConstantOp::create(
+        rewriter, loc, DenseElementsAttr::get(predicateType, true));
 
     // Zero destination/fallback for tile slice extraction.
-    auto zeroVector = rewriter.create<arith::ConstantOp>(
-        loc, sliceType, rewriter.getZeroAttr(sliceType));
+    auto zeroVector = arith::ConstantOp::create(
+        rewriter, loc, sliceType, rewriter.getZeroAttr(sliceType));
 
     // Cast tile slice from index to i32 for intrinsic.
-    auto sliceIndexI32 = rewriter.create<arith::IndexCastOp>(
-        loc, rewriter.getI32Type(), sliceIndex);
+    auto sliceIndexI32 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI32Type(), sliceIndex);
 
     // Create 'arm_sme.intr.read.(horiz|vert)' to extract the tile slice.
-    switch (moveTileSliceToVector.getLayout()) {
+    switch (extractTileSlice.getLayout()) {
     case arm_sme::TileSliceLayout::Horizontal:
       rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_horiz>(
-          moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
-          tileId, sliceIndexI32);
+          extractTileSlice, sliceType, zeroVector, allTruePredicate, tileId,
+          sliceIndexI32);
       break;
     case arm_sme::TileSliceLayout::Vertical:
       rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_vert>(
-          moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
-          tileId, sliceIndexI32);
+          extractTileSlice, sliceType, zeroVector, allTruePredicate, tileId,
+          sliceIndexI32);
       break;
     }
 
@@ -746,10 +745,12 @@ struct OuterProductOpConversion
     auto loc = outerProductOp.getLoc();
 
     Value acc = outerProductOp.getAcc();
-    if (!acc)
+    if (!acc) {
       // Initalize accumulator with zero.
-      acc = outerProductOp.createOpAndForwardTileId<arm_sme::ZeroOp>(
-          rewriter, loc, resultVectorType);
+      auto zero = arm_sme::ZeroOp::create(rewriter, loc, resultVectorType);
+      zero.setTileId(tileId);
+      acc = zero;
+    }
 
     Value lhsMask = outerProductOp.getLhsMask();
     Value rhsMask = outerProductOp.getRhsMask();
@@ -757,16 +758,16 @@ struct OuterProductOpConversion
     if (!lhsMask || !rhsMask) {
       auto predTy =
           outerProductOp.getLhsType().cloneWith({}, rewriter.getI1Type());
-      Value allActiveMask = rewriter.create<arith::ConstantOp>(
-          loc, DenseElementsAttr::get(predTy, true));
+      Value allActiveMask = arith::ConstantOp::create(
+          rewriter, loc, DenseElementsAttr::get(predTy, true));
       lhsMask = allActiveMask;
       rhsMask = allActiveMask;
     }
 
     // Create 'arm_sme.intr.mopa' outer product intrinsic.
-    rewriter.create<arm_sme::aarch64_sme_mopa>(loc, tileId, lhsMask, rhsMask,
-                                               outerProductOp.getLhs(),
-                                               outerProductOp.getRhs());
+    arm_sme::aarch64_sme_mopa::create(rewriter, loc, tileId, lhsMask, rhsMask,
+                                      outerProductOp.getLhs(),
+                                      outerProductOp.getRhs());
 
     // The outerproduct intrinsics have no result, replace
     // 'arm_sme.outerproduct' with the input tile to preserve dataflow.
@@ -791,25 +792,27 @@ struct OuterProductWideningOpConversion
     if (!tileId)
       return failure();
 
+    auto loc = op.getLoc();
     Value acc = op.getAcc();
-    if (!acc)
+    if (!acc) {
       // Initalize accumulator with zero.
-      acc = op.template createOpAndForwardTileId<arm_sme::ZeroOp>(
-          rewriter, op.getLoc(), op.getResultType());
+      auto zero = arm_sme::ZeroOp::create(rewriter, loc, op.getResultType());
+      zero.setTileId(tileId);
+      acc = zero;
+    }
 
     Value lhsMask = op.getLhsMask();
     Value rhsMask = op.getRhsMask();
     if (!lhsMask || !rhsMask) {
       auto predTy = op.getLhsType().cloneWith({}, rewriter.getI1Type());
-      Value allActiveMask = rewriter.create<arith::ConstantOp>(
-          op.getLoc(), DenseElementsAttr::get(predTy, true));
+      Value allActiveMask = arith::ConstantOp::create(
+          rewriter, loc, DenseElementsAttr::get(predTy, true));
       lhsMask = allActiveMask;
       rhsMask = allActiveMask;
     }
 
-    rewriter.create<OuterProductWideningIntrOp>(op.getLoc(), tileId, lhsMask,
-                                                rhsMask, adaptor.getLhs(),
-                                                adaptor.getRhs());
+    OuterProductWideningIntrOp::create(rewriter, loc, tileId, lhsMask, rhsMask,
+                                       adaptor.getLhs(), adaptor.getRhs());
 
     // The outerproduct intrinsics have no result, replace
     // 'arm_sme.outerproduct' with the input tile to preserve dataflow.
@@ -819,7 +822,7 @@ struct OuterProductWideningOpConversion
   }
 };
 
-/// Lower `arm_sme.streaming_vl` to SME CNTS intrinsics.
+/// Lower `arm_sme.streaming_vl` to SME CNTSD intrinsic.
 ///
 /// Example:
 ///
@@ -827,8 +830,10 @@ struct OuterProductWideningOpConversion
 ///
 /// is converted to:
 ///
-///   %cnt = "arm_sme.intr.cntsh"() : () -> i64
-///   %0 = arith.index_cast %cnt : i64 to index
+///   %cnt = "arm_sme.intr.cntsd"() : () -> i64
+///   %scale = arith.constant 4 : index
+///   %cntIndex = arith.index_cast %cnt : i64 to index
+///   %0 = arith.muli %cntIndex, %scale : index
 ///
 struct StreamingVLOpConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::StreamingVLOp,
@@ -841,23 +846,46 @@ struct StreamingVLOpConversion
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = streamingVlOp.getLoc();
     auto i64Type = rewriter.getI64Type();
-    auto *intrOp = [&]() -> Operation * {
-      switch (streamingVlOp.getTypeSize()) {
-      case arm_sme::TypeSize::Byte:
-        return rewriter.create<arm_sme::aarch64_sme_cntsb>(loc, i64Type);
-      case arm_sme::TypeSize::Half:
-        return rewriter.create<arm_sme::aarch64_sme_cntsh>(loc, i64Type);
-      case arm_sme::TypeSize::Word:
-        return rewriter.create<arm_sme::aarch64_sme_cntsw>(loc, i64Type);
-      case arm_sme::TypeSize::Double:
-        return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
-      }
-    }();
-    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
-        streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));
+    auto cntsd = arm_sme::aarch64_sme_cntsd::create(rewriter, loc, i64Type);
+    auto cntsdIdx = arith::IndexCastOp::create(rewriter, loc,
+                                               rewriter.getIndexType(), cntsd);
+    auto scale = arith::ConstantIndexOp::create(
+        rewriter, loc,
+        8 / arm_sme::getSizeInBytes(streamingVlOp.getTypeSize()));
+    rewriter.replaceOpWithNewOp<arith::MulIOp>(streamingVlOp, cntsdIdx, scale);
     return success();
   }
 };
+
+/// Merges consecutive `arm_sme.intr.zero` operations in a block by bitwise
+/// or-ing the zero masks. Note: In future the backend _should_ handle this.
+static void mergeConsecutiveTileZerosInBlock(Block *block) {
+  uint32_t mergedZeroMask = 0;
+  SmallVector<arm_sme::aarch64_sme_zero, 16> zeroOpsToMerge;
+  auto replaceMergedZeroOps = [&] {
+    llvm::scope_exit cleanup([&] {
+      mergedZeroMask = 0;
+      zeroOpsToMerge.clear();
+    });
+    if (zeroOpsToMerge.size() <= 1)
+      return;
+    IRRewriter rewriter(zeroOpsToMerge.front());
+    arm_sme::aarch64_sme_zero::create(
+        rewriter, zeroOpsToMerge.front().getLoc(),
+        rewriter.getI32IntegerAttr(mergedZeroMask));
+    for (auto zeroOp : zeroOpsToMerge)
+      rewriter.eraseOp(zeroOp);
+  };
+  for (Operation &op : *block) {
+    if (auto zeroOp = dyn_cast<arm_sme::aarch64_sme_zero>(op)) {
+      mergedZeroMask |= zeroOp.getTileMask();
+      zeroOpsToMerge.push_back(zeroOp);
+    } else {
+      replaceMergedZeroOps();
+    }
+  }
+  replaceMergedZeroOps();
+}
 
 } // namespace
 
@@ -865,16 +893,43 @@ namespace {
 
 struct ConvertArmSMEToLLVMPass
     : public impl::ConvertArmSMEToLLVMBase<ConvertArmSMEToLLVMPass> {
+  ConvertArmSMEToLLVMPass(bool dumpTileLiveRanges) {
+    this->dumpTileLiveRanges = dumpTileLiveRanges;
+  }
   void runOnOperation() override {
+    auto function = getOperation();
+
+    if (failed(arm_sme::allocateSMETiles(function, dumpTileLiveRanges)))
+      return signalPassFailure();
+
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext());
     configureArmSMEToLLVMConversionLegality(target);
     populateArmSMEToLLVMConversionPatterns(converter, patterns);
 
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(applyPartialConversion(function, target, std::move(patterns))))
       signalPassFailure();
+
+    function->walk(mergeConsecutiveTileZerosInBlock);
+
+    // Walk the function and fail if there are unexpected operations on SME
+    // tile types after conversion.
+    function->walk([&](Operation *op) {
+      // These ops are legal post conversion, skip these.
+      if (isa<arm_sme::CopyTileOp, arm_sme::GetTileOp, cf::BranchOp>(op) ||
+          !op->isRegistered())
+        return;
+      auto isSMETileType = [](Type type) {
+        return arm_sme::isValidSMETileVectorType(type);
+      };
+      if (llvm::any_of(op->getResultTypes(), isSMETileType) ||
+          llvm::any_of(op->getOperandTypes(), isSMETileType)) {
+        op->emitOpError("unexpected operation with SME tile type after "
+                        "conversion to LLVM");
+        signalPassFailure();
+      }
+    });
   }
 };
 
@@ -883,34 +938,36 @@ struct ConvertArmSMEToLLVMPass
 void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
   target.addIllegalDialect<arm_sme::ArmSMEDialect>();
   target.addLegalOp<
-      arm_sme::MaterializeSSATileOp, arm_sme::aarch64_sme_zero,
-      arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_ld1b_horiz,
-      arm_sme::aarch64_sme_ld1h_horiz, arm_sme::aarch64_sme_ld1w_horiz,
-      arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_ld1q_horiz,
-      arm_sme::aarch64_sme_st1b_horiz, arm_sme::aarch64_sme_st1h_horiz,
-      arm_sme::aarch64_sme_st1w_horiz, arm_sme::aarch64_sme_st1d_horiz,
-      arm_sme::aarch64_sme_st1q_horiz, arm_sme::aarch64_sme_ld1b_vert,
-      arm_sme::aarch64_sme_ld1h_vert, arm_sme::aarch64_sme_ld1w_vert,
-      arm_sme::aarch64_sme_ld1d_vert, arm_sme::aarch64_sme_ld1q_vert,
-      arm_sme::aarch64_sme_st1b_vert, arm_sme::aarch64_sme_st1h_vert,
-      arm_sme::aarch64_sme_st1w_vert, arm_sme::aarch64_sme_st1d_vert,
-      arm_sme::aarch64_sme_st1q_vert, arm_sme::aarch64_sme_read_horiz,
-      arm_sme::aarch64_sme_read_vert, arm_sme::aarch64_sme_write_horiz,
-      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa,
-      arm_sme::aarch64_sme_mopa_wide, arm_sme::aarch64_sme_mops_wide,
-      arm_sme::aarch64_sme_smopa_wide, arm_sme::aarch64_sme_smops_wide,
-      arm_sme::aarch64_sme_umopa_wide, arm_sme::aarch64_sme_umops_wide,
-      arm_sme::aarch64_sme_smopa_za32, arm_sme::aarch64_sme_smops_za32,
-      arm_sme::aarch64_sme_umopa_za32, arm_sme::aarch64_sme_umops_za32,
-      arm_sme::aarch64_sme_sumopa_wide, arm_sme::aarch64_sme_sumops_wide,
-      arm_sme::aarch64_sme_usmopa_wide, arm_sme::aarch64_sme_usmops_wide,
-      arm_sme::aarch64_sme_cntsb, arm_sme::aarch64_sme_cntsh,
-      arm_sme::aarch64_sme_cntsw, arm_sme::aarch64_sme_cntsd>();
+      arm_sme::aarch64_sme_zero, arm_sme::aarch64_sme_str,
+      arm_sme::aarch64_sme_ld1b_horiz, arm_sme::aarch64_sme_ld1h_horiz,
+      arm_sme::aarch64_sme_ld1w_horiz, arm_sme::aarch64_sme_ld1d_horiz,
+      arm_sme::aarch64_sme_ld1q_horiz, arm_sme::aarch64_sme_st1b_horiz,
+      arm_sme::aarch64_sme_st1h_horiz, arm_sme::aarch64_sme_st1w_horiz,
+      arm_sme::aarch64_sme_st1d_horiz, arm_sme::aarch64_sme_st1q_horiz,
+      arm_sme::aarch64_sme_ld1b_vert, arm_sme::aarch64_sme_ld1h_vert,
+      arm_sme::aarch64_sme_ld1w_vert, arm_sme::aarch64_sme_ld1d_vert,
+      arm_sme::aarch64_sme_ld1q_vert, arm_sme::aarch64_sme_st1b_vert,
+      arm_sme::aarch64_sme_st1h_vert, arm_sme::aarch64_sme_st1w_vert,
+      arm_sme::aarch64_sme_st1d_vert, arm_sme::aarch64_sme_st1q_vert,
+      arm_sme::aarch64_sme_read_horiz, arm_sme::aarch64_sme_read_vert,
+      arm_sme::aarch64_sme_write_horiz, arm_sme::aarch64_sme_write_vert,
+      arm_sme::aarch64_sme_mopa, arm_sme::aarch64_sme_mopa_wide,
+      arm_sme::aarch64_sme_mops_wide, arm_sme::aarch64_sme_smopa_wide,
+      arm_sme::aarch64_sme_smops_wide, arm_sme::aarch64_sme_umopa_wide,
+      arm_sme::aarch64_sme_umops_wide, arm_sme::aarch64_sme_smopa_za32,
+      arm_sme::aarch64_sme_smops_za32, arm_sme::aarch64_sme_umopa_za32,
+      arm_sme::aarch64_sme_umops_za32, arm_sme::aarch64_sme_sumopa_wide,
+      arm_sme::aarch64_sme_sumops_wide, arm_sme::aarch64_sme_usmopa_wide,
+      arm_sme::aarch64_sme_usmops_wide, arm_sme::aarch64_sme_cntsd>();
   target.addLegalDialect<arith::ArithDialect,
                          /* The following are used to lower tile spills/fills */
                          vector::VectorDialect, scf::SCFDialect,
                          memref::MemRefDialect>();
-  target.addLegalOp<UnrealizedConversionCastOp>();
+  // Pseudo operations. These cannot be code-generated but may exist in the
+  // input IR, or be generated during the conversion. They need to be eliminated
+  // before the final conversion to LLVM IR (and likely will be due to DCE).
+  target.addLegalOp<arm_sme::GetTileOp, arm_sme::CopyTileOp,
+                    UnrealizedConversionCastOp>();
 }
 
 void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
@@ -924,8 +981,8 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
   });
 
   addArmSMEConversionPatterns<
-      LoadTileSliceConversion, MoveTileSliceToVectorConversion,
-      MoveVectorToTileSliceConversion, StoreTileSliceConversion,
+      LoadTileSliceConversion, ExtractTileSliceConversion,
+      InsertTileSliceConversion, StoreTileSliceConversion,
       StreamingVLOpConversion, OuterProductOpConversion,
       OuterProductWideningOpConversion<arm_sme::FMopa2WayOp,
                                        arm_sme::aarch64_sme_mopa_wide>,
@@ -955,9 +1012,10 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                        arm_sme::aarch64_sme_usmopa_wide>,
       OuterProductWideningOpConversion<arm_sme::UsMops4WayOp,
                                        arm_sme::aarch64_sme_usmops_wide>,
-      ZeroOpConversion, GetTileConversion>(patterns, converter);
+      ZeroOpConversion>(patterns, converter);
 }
 
-std::unique_ptr<Pass> mlir::createConvertArmSMEToLLVMPass() {
-  return std::make_unique<ConvertArmSMEToLLVMPass>();
+std::unique_ptr<Pass>
+mlir::createConvertArmSMEToLLVMPass(bool dumpTileLiveRanges) {
+  return std::make_unique<ConvertArmSMEToLLVMPass>(dumpTileLiveRanges);
 }

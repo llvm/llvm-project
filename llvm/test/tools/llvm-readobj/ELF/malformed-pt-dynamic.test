@@ -91,7 +91,7 @@
 
 ## Case D: the same as "Case C", but for a 32-bit object.
 
-# RUN: yaml2obj %s -DBITS=32 -DOFFSET=0xffffffff -o %t5
+# RUN: yaml2obj %s -DBITS=32 -DFILESIZE=8 -DOFFSET=0xffffffff -o %t5
 # RUN: llvm-readobj %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s \
 # RUN:   --check-prefix=WARN5 --implicit-check-not=warning:
 # RUN: llvm-readelf %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s \
@@ -101,7 +101,7 @@
 # WARN5: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0xffffffff) + size (0x8) is greater than the file size (0x10c8)
 # WARN5: warning: '[[FILE]]': no valid dynamic table was found
 
-# RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DOFFSET=0xffffffff -o %t5.noheaders
+# RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DFILESIZE=8 -DOFFSET=0xffffffff -o %t5.noheaders
 # RUN: llvm-readobj %t5.noheaders --dynamic-table 2>&1 | \
 # RUN:   FileCheck -DFILE=%t5.noheaders %s --check-prefix=WARN5-NOHEADERS
 # RUN: llvm-readelf %t5.noheaders --dynamic-table 2>&1 | \
@@ -133,7 +133,7 @@ Sections:
     Type:     SHT_DYNAMIC
     Address:  0x1000
     Offset:   0x1000
-    ShOffset: [[OFFSET=<none>]]
+    ShOffset: [[OFFSET=0x1000]]
     Entries:
       - Tag:   DT_NULL
         Value: 0
@@ -141,6 +141,5 @@ Sections:
     NoHeaders: [[NOHEADERS=false]]
 ProgramHeaders:
   - Type:     PT_DYNAMIC
-    FileSize: [[FILESIZE=<none>]]
-    FirstSec: .dynamic
-    LastSec:  .dynamic
+    FileSize: [[FILESIZE=0x10]]
+    Offset:   [[OFFSET=0x1000]]

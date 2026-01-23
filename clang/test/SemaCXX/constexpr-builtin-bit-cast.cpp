@@ -262,7 +262,7 @@ constexpr int ttn = test_to_nullptr();
 constexpr const long &returns_local() { return 0L; }
 
 // expected-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
-// expected-note@+1 {{read of temporary whose lifetime has ended}}
+// expected-note@+1 {{read of object outside its lifetime}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
 constexpr int test_indeterminate(bool read_indet) {
@@ -510,4 +510,34 @@ constexpr bool9 bad_short_to_bool9 = __builtin_bit_cast(bool9, static_cast<unsig
 // expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(17)))' (vector of 17 'bool' values) is not allowed in a constant expression; element size 1 * element count 17 is not a multiple of the byte size 8}}
 constexpr bool17 bad_int_to_bool17 = __builtin_bit_cast(bool17, 0x0001CAFEU);
 
+}
+
+namespace test_complex {
+  constexpr _Complex unsigned test_int_complex = { 0x0C05FEFE, 0xCAFEBABE };
+  static_assert(round_trip<_Complex unsigned>(0xCAFEBABE0C05FEFEULL), "");
+  static_assert(bit_cast<unsigned long long>(test_int_complex) == (LITTLE_END
+                                                                   ? 0xCAFEBABE0C05FEFE
+                                                                   : 0x0C05FEFECAFEBABE), "");
+  static_assert(sizeof(double) == 2 * sizeof(float));
+  struct TwoFloats { float A; float B; };
+  constexpr _Complex float test_float_complex = {1.0f, 2.0f};
+  constexpr TwoFloats TF = __builtin_bit_cast(TwoFloats, test_float_complex);
+  static_assert(TF.A == 1.0f && TF.B == 2.0f);
+
+  constexpr double D = __builtin_bit_cast(double, test_float_complex);
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // expected-error {{size of '__builtin_bit_cast' source type 'const _Complex unsigned int' does not match destination type 'int' (8 vs 4 bytes)}}
+}
+
+namespace InvalidBaseClass {
+  class F {
+  public:
+    char c;
+  };
+
+  class InBetween : public F{};
+  class E : public InBetween {
+  public:
+    constexpr E() :  F{3} {} // expected-error {{not a direct or virtual base}}
+  };
+  static_assert(__builtin_bit_cast(char, E()) == 0); // expected-error {{not an integral constant expression}}
 }

@@ -12,8 +12,8 @@
 #include "CXXPredicates.h"
 #include "llvm/ADT/STLExtras.h"
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
 std::vector<const CXXPredicateCode *>
 CXXPredicateCode::getSorted(const CXXPredicateCodePool &Pool) {
@@ -45,7 +45,4 @@ CXXPredicateCode::CXXPredicateCode(std::string Code, unsigned ID)
     : Code(Code), ID(ID), BaseEnumName("GICombiner" + std::to_string(ID)) {}
 
 CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXMatchCode;
-CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXApplyCode;
-
-} // namespace gi
-} // namespace llvm
+CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXCustomActionCode;

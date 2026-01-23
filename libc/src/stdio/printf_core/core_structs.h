@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
+#include "src/__support/macros/config.h"
+
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -17,12 +19,17 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
 // is why they are formatted differently from the rest of the file.
-enum class LengthModifier { hh, h, l, ll, j, z, t, L, none };
+enum class LengthModifier { hh, h, l, ll, j, z, t, L, w, wf, none };
+
+struct LengthSpec {
+  LengthModifier lm;
+  size_t bit_width;
+};
 
 enum FormatFlags : uint8_t {
   LEFT_JUSTIFIED = 0x01, // -
@@ -44,11 +51,17 @@ struct FormatSection {
   // Format Specifier Values
   FormatFlags flags = FormatFlags(0);
   LengthModifier length_modifier = LengthModifier::none;
+  size_t bit_width = 0;
   int min_width = 0;
   int precision = -1;
 
-  // Needs to be large enough to hold a long double.
+  // Needs to be large enough to hold a long double. Special case handling for
+  // the PowerPC double double type because it has no FPBits interface.
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  UInt128 conv_val_raw;
+#else
   fputil::FPBits<long double>::StorageType conv_val_raw;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   void *conv_val_ptr;
 
   char conv_name;
@@ -66,6 +79,7 @@ struct FormatSection {
       if (!((static_cast<uint8_t>(flags) ==
              static_cast<uint8_t>(other.flags)) &&
             (min_width == other.min_width) && (precision == other.precision) &&
+            (bit_width == other.bit_width) &&
             (length_modifier == other.length_modifier) &&
             (conv_name == other.conv_name)))
         return false;
@@ -118,15 +132,20 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
 
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
-// These are the printf return values for when an error has occurred. They are
-// all negative, and should be distinct.
-constexpr int FILE_WRITE_ERROR = -1;
-constexpr int FILE_STATUS_ERROR = -2;
-constexpr int NULLPTR_WRITE_ERROR = -3;
-constexpr int INT_CONVERSION_ERROR = -4;
-constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
+// These are the error return values used by the printf engine when an
+// error has occurred. They are all large negative, distinct values starting
+// from -1000 to not overlap with system errors.
+constexpr int FILE_WRITE_ERROR = -1001;
+constexpr int FILE_STATUS_ERROR = -1002;
+constexpr int NULLPTR_WRITE_ERROR = -1003;
+constexpr int INT_CONVERSION_ERROR = -1004;
+constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
+constexpr int ALLOCATION_ERROR = -1006;
+constexpr int OVERFLOW_ERROR = -1007;
+constexpr int ILLEGAL_WIDE_CHAR = -1008;
+constexpr int MB_CONVERSION_ERROR = -1009;
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H

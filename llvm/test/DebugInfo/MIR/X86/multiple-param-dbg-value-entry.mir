@@ -1,5 +1,5 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s| FileCheck %s
-# RUN: llc -force-instr-ref-livedebugvalues=1 -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s| FileCheck %s
+# RUN: llc -debug-entry-values -run-pass=livedebugvalues -mtriple=x86_64 -o - %s| FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -debug-entry-values -run-pass=livedebugvalues -mtriple=x86_64 -o - %s| FileCheck %s
 ## Test case:
 ## int global;
 ## int foo(int p, int q, int r) {

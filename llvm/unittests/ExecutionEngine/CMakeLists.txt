@@ -21,5 +21,3 @@ list(FIND LLVM_TARGETS_WITH_JIT "${LLVM_NATIVE_ARCH}" jit_idx)
 if (NOT build_idx LESS 0 AND NOT jit_idx LESS 0)
   add_subdirectory(MCJIT)
 endif()
-
-set_property(TARGET ExecutionEngineTests PROPERTY FOLDER "Tests/UnitTests/ExecutionTests")

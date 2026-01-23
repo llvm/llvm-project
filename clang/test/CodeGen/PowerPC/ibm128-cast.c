@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -triple powerpc64le-unknown-unknown -verify \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -verify \
 // RUN:   -target-feature +float128 -mabi=ieeelongdouble -fsyntax-only -Wno-unused %s
-// RUN: %clang_cc1 -emit-llvm -triple powerpc64le-unknown-unknown -verify \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -verify \
 // RUN:   -target-feature +float128 -fsyntax-only -Wno-unused %s
 
 __float128 cast1(__ibm128 x) { return x; } // expected-error {{returning '__ibm128' from a function with incompatible result type '__float128'}}

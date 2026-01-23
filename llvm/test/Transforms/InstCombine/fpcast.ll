@@ -29,6 +29,50 @@ define half @test3(float %a) {
   ret half %c
 }
 
+define half @test3_fast(float %a) {
+; CHECK-LABEL: @test3_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call fast half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call float @llvm.fabs.f32(float %a)
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test3_both_ninf(float %a) {
+; CHECK-LABEL: @test3_both_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call ninf float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
+  ret half %c
+}
+
+define half @test3_fabs_ninf(float %a) {
+; CHECK-LABEL: @test3_fabs_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call ninf float @llvm.fabs.f32(float %a)
+  %c = fptrunc float %b to half
+  ret half %c
+}
+
+define half @test3_fptrunc_ninf(float %a) {
+; CHECK-LABEL: @test3_fptrunc_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
+  ret half %c
+}
+
 define half @fneg_fptrunc(float %a) {
 ; CHECK-LABEL: @fneg_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
@@ -51,13 +95,13 @@ define half @unary_fneg_fptrunc(float %a) {
   ret half %c
 }
 
-define <2 x half> @fneg_fptrunc_vec_undef(<2 x float> %a) {
-; CHECK-LABEL: @fneg_fptrunc_vec_undef(
+define <2 x half> @fneg_fptrunc_vec_poison(<2 x float> %a) {
+; CHECK-LABEL: @fneg_fptrunc_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
 ; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x half> [[C]]
 ;
-  %b = fsub <2 x float> <float -0.0, float undef>, %a
+  %b = fsub <2 x float> <float -0.0, float poison>, %a
   %c = fptrunc <2 x float> %b to <2 x half>
   ret <2 x half> %c
 }
@@ -75,8 +119,30 @@ define <2 x half> @unary_fneg_fptrunc_vec(<2 x float> %a) {
 
 define half @test4-fast(float %a) {
 ; CHECK-LABEL: @test4-fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast float [[A:%.*]] to half
 ; CHECK-NEXT:    [[C:%.*]] = fneg fast half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fsub fast float -0.0, %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4-mixed-fast-1(float %a) {
+; CHECK-LABEL: @test4-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fsub float -0.0, %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4-mixed-fast-2(float %a) {
+; CHECK-LABEL: @test4-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fsub fast float -0.0, %a
@@ -86,13 +152,68 @@ define half @test4-fast(float %a) {
 
 define half @test4_unary_fneg-fast(float %a) {
 ; CHECK-LABEL: @test4_unary_fneg-fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast float [[A:%.*]] to half
 ; CHECK-NEXT:    [[C:%.*]] = fneg fast half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fneg fast float %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4_unary_fneg-mixed-fast-1(float %a) {
+; CHECK-LABEL: @test4_unary_fneg-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fneg float %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4_unary_fneg-mixed-fast-2(float %a) {
+; CHECK-LABEL: @test4_unary_fneg-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fneg fast float %a
   %c = fptrunc float %b to half
   ret half %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-fast(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg fast <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg fast <2 x float> %a
+  %c = fptrunc fast <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-mixed-fast-1(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg <2 x float> %a
+  %c = fptrunc fast <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-mixed-fast-2(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg fast <2 x float> %a
+  %c = fptrunc <2 x float> %b to <2 x half>
+  ret <2 x half> %c
 }
 
 define half @test5(float %a, float %b, float %c) {
@@ -170,7 +291,7 @@ define half @sint_to_fptrunc(i32 %x) {
 define half @masked_sint_to_fptrunc1(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fptrunc1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 16777215
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %m = and i32 %x, 16777215
@@ -182,7 +303,7 @@ define half @masked_sint_to_fptrunc1(i32 %x) {
 define half @masked_sint_to_fptrunc2(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fptrunc2(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %m = lshr i32 %x, 8
@@ -194,7 +315,7 @@ define half @masked_sint_to_fptrunc2(i32 %x) {
 define half @masked_sint_to_fptrunc3(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fptrunc3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[M]] to float
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[F]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
@@ -218,7 +339,7 @@ define double @sint_to_fpext(i32 %x) {
 define double @masked_sint_to_fpext1(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fpext1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 16777215
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %m = and i32 %x, 16777215
@@ -230,7 +351,7 @@ define double @masked_sint_to_fpext1(i32 %x) {
 define double @masked_sint_to_fpext2(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fpext2(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %m = lshr i32 %x, 8
@@ -242,7 +363,7 @@ define double @masked_sint_to_fpext2(i32 %x) {
 define double @masked_sint_to_fpext3(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fpext3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[M]] to float
 ; CHECK-NEXT:    [[R:%.*]] = fpext float [[F]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -266,7 +387,7 @@ define half @uint_to_fptrunc(i32 %x) {
 define half @masked_uint_to_fptrunc1(i32 %x) {
 ; CHECK-LABEL: @masked_uint_to_fptrunc1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 16777215
-; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %m = and i32 %x, 16777215
@@ -278,7 +399,7 @@ define half @masked_uint_to_fptrunc1(i32 %x) {
 define half @masked_uint_to_fptrunc2(i32 %x) {
 ; CHECK-LABEL: @masked_uint_to_fptrunc2(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %m = lshr i32 %x, 8
@@ -290,7 +411,7 @@ define half @masked_uint_to_fptrunc2(i32 %x) {
 define half @masked_uint_to_fptrunc3(i32 %x) {
 ; CHECK-LABEL: @masked_uint_to_fptrunc3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = uitofp i32 [[M]] to float
+; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[M]] to float
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[F]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
@@ -314,7 +435,7 @@ define double @uint_to_fpext(i32 %x) {
 define double @masked_uint_to_fpext1(i32 %x) {
 ; CHECK-LABEL: @masked_uint_to_fpext1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 16777215
-; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %m = and i32 %x, 16777215
@@ -326,7 +447,7 @@ define double @masked_uint_to_fpext1(i32 %x) {
 define double @masked_uint_to_fpext2(i32 %x) {
 ; CHECK-LABEL: @masked_uint_to_fpext2(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[M]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %m = lshr i32 %x, 8
@@ -338,7 +459,7 @@ define double @masked_uint_to_fpext2(i32 %x) {
 define double @masked_uint_to_fpext3(i32 %x) {
 ; CHECK-LABEL: @masked_uint_to_fpext3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = uitofp i32 [[M]] to float
+; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[M]] to float
 ; CHECK-NEXT:    [[R:%.*]] = fpext float [[F]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -402,9 +523,7 @@ define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
 
 define i32 @fptosi_nonnorm_fmul(float %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_fmul(
-; CHECK-NEXT:    [[SEL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[SEL]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %sel = fmul float %x, 0.000000e+00
   %ret = fptosi float %sel to i32

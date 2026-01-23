@@ -7,10 +7,10 @@
 ; to UMax and thus same reduction kind is returned.
 ; The routine's later code merely assumes the instruction to be a select.
 
-define dso_local void @test() {
+define dso_local void @test(i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[NEXT:%.*]], label [[THEN:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[NEXT:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[UM:%.*]] = call i8 @llvm.umax.i8(i8 0, i8 undef)
 ; CHECK-NEXT:    [[SELCMP:%.*]] = icmp ult i8 [[UM]], undef
@@ -21,7 +21,7 @@ define dso_local void @test() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %next, label %then
+  br i1 %arg, label %next, label %then
 
 then:
   %um = call i8 @llvm.umax.i8(i8 0, i8 undef)
@@ -43,7 +43,7 @@ declare i32 @llvm.umin.i32(i32, i32)
 define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> <i32 3, i32 2, i32 1, i32 undef>, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 0>)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> undef, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 77)

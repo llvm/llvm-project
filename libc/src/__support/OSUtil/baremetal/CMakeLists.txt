@@ -1,7 +1,8 @@
 add_object_library(
   baremetal_util
   SRCS
-    quick_exit.cpp
+    io.cpp
+    exit.cpp
   HDRS
     io.h
   DEPENDS

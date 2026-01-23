@@ -6,16 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/log1pf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcLog1pfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -65,7 +69,7 @@ TEST_F(LlvmLibcLog1pfTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
-                                   LIBC_NAMESPACE::log1pf(x), 0.5);
+                                   LIBC_NAMESPACE::log1pf(x), TOLERANCE + 0.5);
   }
 }
 
@@ -74,9 +78,8 @@ TEST_F(LlvmLibcLog1pfTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    LIBC_NAMESPACE::libc_errno = 0;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
                                    LIBC_NAMESPACE::log1pf(x), 0.5);
   }

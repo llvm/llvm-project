@@ -18,7 +18,7 @@
 #include <limits>
 #include <string>
 
-// Some environments, viz. glibc 2.17, allow the macro HUGE
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
 #undef HUGE
 
@@ -30,25 +30,30 @@ namespace Fortran::evaluate::value {
 // LOG10(2.)*1E12
 static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 
+// Ignore error about requesting a large alignment not being ABI compatible
+// with older AIX systems.
+#if defined(_AIX)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waix-compat"
+#endif
 // Models IEEE binary floating-point numbers (IEEE 754-2008,
 // ISO/IEC/IEEE 60559.2011).  The first argument to this
 // class template must be (or look like) an instance of Integer<>;
 // the second specifies the number of effective bits (binary precision)
 // in the fraction.
-template <typename WORD, int PREC>
-class Real : public common::RealDetails<PREC> {
+template <typename WORD, int PREC> class Real {
 public:
   using Word = WORD;
   static constexpr int binaryPrecision{PREC};
-  using Details = common::RealDetails<PREC>;
-  using Details::exponentBias;
-  using Details::exponentBits;
-  using Details::isImplicitMSB;
-  using Details::maxExponent;
-  using Details::significandBits;
+  static constexpr common::RealCharacteristics realChars{PREC};
+  static constexpr int exponentBias{realChars.exponentBias};
+  static constexpr int exponentBits{realChars.exponentBits};
+  static constexpr int isImplicitMSB{realChars.isImplicitMSB};
+  static constexpr int maxExponent{realChars.maxExponent};
+  static constexpr int significandBits{realChars.significandBits};
 
   static constexpr int bits{Word::bits};
-  static_assert(bits >= Details::bits);
+  static_assert(bits >= realChars.bits);
   using Fraction = Integer<binaryPrecision>; // all bits made explicit
 
   template <typename W, int P> friend class Real;
@@ -176,6 +181,8 @@ public:
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> KahanSummation(const Real &, Real &correction,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
@@ -205,8 +212,8 @@ public:
   }
 
   static constexpr int DIGITS{binaryPrecision};
-  static constexpr int PRECISION{Details::decimalPrecision};
-  static constexpr int RANGE{Details::decimalRange};
+  static constexpr int PRECISION{realChars.decimalPrecision};
+  static constexpr int RANGE{realChars.decimalRange};
   static constexpr int MAXEXPONENT{maxExponent - exponentBias};
   static constexpr int MINEXPONENT{2 - exponentBias};
   Real RRSPACING() const;
@@ -282,15 +289,16 @@ public:
     }
     if constexpr (bits == 80) { // x87
       // 7FFF8000000000000000 is Infinity, not NaN, on 80387 & later.
-      infinity.IBSET(63);
+      infinity = infinity.IBSET(63);
     }
     return {infinity};
   }
 
   template <typename INT>
   static ValueWithRealFlags<Real> FromInteger(const INT &n,
+      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
-    bool isNegative{n.IsNegative()};
+    bool isNegative{!isUnsigned && n.IsNegative()};
     INT absN{n};
     if (isNegative) {
       absN = n.Negate().value; // overflow is safe to ignore
@@ -371,6 +379,10 @@ public:
       return result;
     }
     bool isNegative{x.IsNegative()};
+    if (x.IsInfinite()) {
+      result.value = Infinity(isNegative);
+      return result;
+    }
     A absX{x};
     if (isNegative) {
       absX = x.Negate();
@@ -438,6 +450,7 @@ public:
   // or parenthesized constant expression that produces this value.
   llvm::raw_ostream &AsFortran(
       llvm::raw_ostream &, int kind, bool minimal = false) const;
+  std::string AsFortran(int kind, bool minimal = false) const;
 
 private:
   using Significand = Integer<significandBits>; // no implicit bit
@@ -486,14 +499,20 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  Word word_{}; // an Integer<>
+  // Require alignment, in case code generation on x86_64 decides that our
+  // Real object is suitable for SSE2 instructions and then gets surprised
+  // by unaligned address.
+  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
+#if defined(_AIX)
+#pragma GCC diagnostic pop
+#endif
 
 extern template class Real<Integer<16>, 11>; // IEEE half format
 extern template class Real<Integer<16>, 8>; // the "other" half format
 extern template class Real<Integer<32>, 24>; // IEEE single
 extern template class Real<Integer<64>, 53>; // IEEE double
-extern template class Real<Integer<80>, 64>; // 80387 extended precision
+extern template class Real<X87IntegerContainer, 64>; // 80387 extended precision
 extern template class Real<Integer<128>, 113>; // IEEE quad
 // N.B. No "double-double" support.
 } // namespace Fortran::evaluate::value

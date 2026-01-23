@@ -24,9 +24,9 @@ or remove ivars without breaking binary compatibility. In some cases, the SB
 class is a thin wrapper around an internal lldb_private object. In that case,
 the class can have a single ivar, which is either a pointer, shared_ptr or
 unique_ptr to the object in the lldb_private API. All the lldb_private classes
-that get used this way are declared as opaque classes in lldb_forward.h, which
+that get used this way are declared as opaque classes in lldb-forward.h, which
 is included in SBDefines.h. So if you need an SB class to wrap an lldb_private
-class that isn't in lldb_forward.h, add it there rather than making a direct
+class that isn't in lldb-forward.h, add it there rather than making a direct
 opaque declaration in the SB classes .h file.
 
 If the SB Class needs some state of its own, as well as the backing object,
@@ -45,6 +45,17 @@ or other, this can easily be done, but it means all the methods must be
 prepared to handle their opaque implementation pointer being empty, and doing
 something reasonable. We also always have an "IsValid" method on all the SB
 classes to report whether the object is empty or not.
+
+.. note::
+  The implication of an object being "empty" can vary by class.
+
+  For most classes, the lack of anything backing the class means that it
+  would not be valid to interact with it by calling any other methods
+  on it.
+
+  One exception to this is ``SBError``, which can provide valid
+  information even when empty. This is because it does not need an
+  underlying object to be able to represent a success state.
 
 Another piece of the SB API infrastructure is the Python (or other script
 interpreter) customization. SWIG allows you to add property access, iterators
@@ -71,6 +82,17 @@ SWIG case, you can invert the condition and use ``#ifdef SWIG`` instead. When
 building the LLDB framework for macOS, the headers are processed with
 ``unifdef`` prior to being copied into the framework bundle to remove macros
 involving SWIG.
+
+Another good principle when adding SB API methods is: if you find yourself
+implementing a significant algorithm in the SB API method, you should not do
+that, but instead look for and then add it - if not found - as a method in the
+underlying lldb_private class, and then call that from your SB API method.
+If it was a useful algorithm, it's very likely it already exists
+because the lldb_private code also needed to do it.  And if it doesn't at
+present, if it was a useful thing to do, it's likely someone will later need
+it in lldb_private and then we end up with two implementations of the same
+algorithm.  If we keep the SB API code to just what's needed to manage the SB
+objects and requests, we won't get into this situation.
 
 Lifetime
 --------

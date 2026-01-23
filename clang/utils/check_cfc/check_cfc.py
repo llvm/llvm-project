@@ -56,11 +56,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+import configparser
 import io
 
 import obj_diff
@@ -156,7 +152,7 @@ def get_output_file(args):
         elif arg.startswith("-o"):
             # Specified conjoined with -o
             return arg[2:]
-    assert grabnext == False
+    assert not grabnext
 
     return None
 
@@ -182,7 +178,7 @@ def replace_output_file(args, new_name):
     if replaceidx is None:
         raise Exception
     replacement = new_name
-    if attached == True:
+    if attached:
         replacement = "-o" + new_name
     args[replaceidx] = replacement
     return args

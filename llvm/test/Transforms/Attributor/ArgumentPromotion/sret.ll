@@ -9,13 +9,13 @@ define internal void @add(ptr %this, ptr sret(i32) %r) {
 ;
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@add
-; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nofree nonnull readnone align 8 captures(none) dereferenceable(8) [[THIS:%.*]], ptr noalias nofree noundef nonnull writeonly sret(i32) align 4 captures(none) dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    store i32 undef, ptr [[R]], align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@add
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[THIS:%.*]], ptr noalias nofree noundef nonnull writeonly sret(i32) align 4 captures(none) dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, ptr [[THIS]], i32 0, i32 1
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[THIS]], align 8
 ; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[BP]], align 4
@@ -37,7 +37,7 @@ define void @f() {
 ; TUNIT-LABEL: define {{[^@]+}}@f
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    [[R:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @add(ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) undef, ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    call void @add(ptr noalias nofree nonnull readnone align 8 captures(none) dereferenceable(8) undef, ptr noalias nofree noundef nonnull writeonly sret(i32) align 4 captures(none) dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -45,7 +45,7 @@ define void @f() {
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[R:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }, align 8
-; CGSCC-NEXT:    call void @add(ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[PAIR]], ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    call void @add(ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[PAIR]], ptr noalias nofree noundef nonnull writeonly sret(i32) align 4 captures(none) dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   %r = alloca i32

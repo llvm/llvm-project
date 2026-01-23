@@ -7,9 +7,11 @@ Converts calls to ``printf``, ``fprintf``, ``absl::PrintF`` and
 ``absl::FPrintf`` to equivalent calls to C++23's ``std::print`` or
 ``std::println`` as appropriate, modifying the format string appropriately.
 The replaced and replacement functions can be customised by configuration
-options. Each argument that is the result of a call to ``std::string::c_str()`` and
-``std::string::data()`` will have that now-unnecessary call removed in a
-similar manner to the `readability-redundant-string-cstr` check.
+options. Each argument that is the result of a call to
+``std::string::c_str()`` and ``std::string::data()`` will have that
+now-unnecessary call removed in a similar manner to the
+:doc:`readability-redundant-string-cstr
+<../readability/redundant-string-cstr>` check.
 
 In other words, it turns lines like:
 
@@ -24,8 +26,15 @@ into:
   std::println(stderr, "The {} is {:3}", description, value);
 
 If the `ReplacementPrintFunction` or `ReplacementPrintlnFunction` options
-are left, or assigned to their default values then this check is only
-enabled with `-std=c++23` or later.
+are left at or set to their default values then this check is only enabled
+with `-std=c++23` or later.
+
+Macros starting with ``PRI`` and ``__PRI`` from `<inttypes.h>` are
+expanded, escaping is handled and adjacent strings are concatenated to form
+a single ``StringLiteral`` before the format string is converted. Use of
+any other macros in the format string will cause a warning message to be
+emitted and no conversion will be performed. The converted format string
+will always be a single string literal.
 
 The check doesn't do a bad job, but it's not perfect. In particular:
 
@@ -34,13 +43,10 @@ The check doesn't do a bad job, but it's not perfect. In particular:
   possible.
 
 - At the point that the check runs, the AST contains a single
-  ``StringLiteral`` for the format string and any macro expansion, token
-  pasting, adjacent string literal concatenation and escaping has been
-  handled. Although it's possible for the check to automatically put the
-  escapes back, they may not be exactly as they were written (e.g.
-  ``"\x0a"`` will become ``"\n"`` and ``"ab" "cd"`` will become
-  ``"abcd"``.) This is helpful since it means that the ``PRIx`` macros from
-  ``<inttypes.h>`` are removed correctly.
+  ``StringLiteral`` for the format string where escapes have been expanded.
+  The check tries to reconstruct escape sequences, they may not be the same
+  as they were written (e.g. ``"\x41\x0a"`` will become ``"A\n"`` and
+  ``"ab" "cd"`` will become ``"abcd"``.)
 
 - It supports field widths, precision, positional arguments, leading zeros,
   leading ``+``, alignment and alternative forms.
@@ -103,7 +109,7 @@ Options
 
     int i = -42;
     unsigned int u = 0xffffffff;
-    printf("%d %u\n", i, u);
+    printf("%u %d\n", i, u);
 
   would be converted to:
 
@@ -118,22 +124,27 @@ Options
 
 .. option:: PrintfLikeFunctions
 
-   A semicolon-separated list of (fully qualified) extra function names to
-   replace, with the requirement that the first parameter contains the
-   printf-style format string and the arguments to be formatted follow
-   immediately afterwards. If neither this option nor
-   `FprintfLikeFunctions` are set then the default value for this option
-   is `printf; absl::PrintF`, otherwise it is empty.
+   A semicolon-separated list of regular expressions matching the
+   (fully qualified) names of functions to replace, with the requirement
+   that the first parameter contains the printf-style format string and the
+   arguments to be formatted follow immediately afterwards. Qualified member
+   function names are supported, but the replacement function name must be
+   unqualified. If neither this option nor `FprintfLikeFunctions` are set then
+   the default value is `printf; absl::PrintF`, otherwise it is the empty
+   string.
 
 
 .. option:: FprintfLikeFunctions
 
-   A semicolon-separated list of (fully qualified) extra function names to
-   replace, with the requirement that the first parameter is retained, the
-   second parameter contains the printf-style format string and the
-   arguments to be formatted follow immediately afterwards. If neither this
-   option nor `PrintfLikeFunctions` are set then the default value for
-   this option is `fprintf; absl::FPrintF`, otherwise it is empty.
+   A semicolon-separated list of regular expressions matching the
+   (fully qualified) names of functions to replace, with the requirement
+   that the first parameter is retained, the second parameter contains the
+   printf-style format string and the arguments to be formatted follow
+   immediately afterwards. Qualified member function names are supported,
+   but the replacement function name must be unqualified. If neither this
+   option nor `PrintfLikeFunctions` are set then the default value is
+   `fprintf;absl::FPrintF`, otherwise it is the empty string.
+
 
 .. option:: ReplacementPrintFunction
 

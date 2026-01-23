@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -march=hexagon -stats -o /dev/null < %s
+; RUN: llc -mtriple=hexagon -stats -o /dev/null < %s
 
 %s.0 = type { ptr, ptr, ptr, i32, i32, i32, i32, ptr, ptr, ptr }
 %s.1 = type opaque

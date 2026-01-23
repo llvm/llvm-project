@@ -41,6 +41,8 @@ public:
                             llvm::opt::ArgStringList &CmdArgs) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   unsigned GetDefaultDwarfVersion() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
@@ -51,17 +53,20 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
+  std::string ComputeEffectiveClangTriple(
+      const llvm::opt::ArgList &Args,
+      types::ID InputType = types::TY_INVALID) const override;
   std::string computeSysRoot() const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;
 
   void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const override;
 
   std::vector<std::string> ExtraOpts;
-
-  llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
-      const llvm::fltSemantics *FPType = nullptr) const override;
 
   const char *getDefaultLinker() const override;
 
