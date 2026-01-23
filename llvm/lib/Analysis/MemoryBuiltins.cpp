@@ -615,7 +615,7 @@ std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
     if (!GV->getValueType()->isSized() || GV->hasExternalWeakLinkage() ||
         !GV->hasInitializer() || GV->isInterposable())
       return std::nullopt;
-    return Align(DL.getTypeAllocSize(GV->getValueType()), GV->getAlign());
+    return Align(TypeSize::getFixed(GV->getGlobalSize(DL)), GV->getAlign());
   }
 
   if (auto *A = dyn_cast<Argument>(Ptr)) {
@@ -1048,7 +1048,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV) {
        Options.EvalMode != ObjectSizeOpts::Mode::Min))
     return ObjectSizeOffsetVisitor::unknown();
 
-  APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
+  APInt Size(IntTyBits, GV.getGlobalSize(DL));
   return OffsetSpan(Zero, align(Size, GV.getAlign()));
 }
 

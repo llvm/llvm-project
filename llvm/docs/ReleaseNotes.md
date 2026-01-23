@@ -84,6 +84,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Initial support for gfx1310
+
 Changes to the ARM Backend
 --------------------------
 
@@ -104,6 +106,13 @@ Changes to the LoongArch Backend
 
 Changes to the MIPS Backend
 ---------------------------
+
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
 Changes to the PowerPC Backend
 ------------------------------

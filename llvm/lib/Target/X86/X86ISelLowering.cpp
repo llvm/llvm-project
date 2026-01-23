@@ -39261,6 +39261,29 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::BZHI: {
+    KnownBits Known2;
+    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    // If the mask control (lower 8 bits) is less than the bitwidth, then the
+    // upper bits are set to zero: dst[BW:IMM8] = 0
+    // TODO: Generalise this to use Known2 getMinValue() + getMaxValue().
+    Known2 = Known2.trunc(8);
+    if (Known2.isConstant()) {
+      uint64_t Mask = Known2.getConstant().getZExtValue();
+      if (Mask < BitWidth) {
+        Known.One.clearBits(Mask, BitWidth);
+        Known.Zero.setBits(Mask, BitWidth);
+        if (Known.isConstant())
+          break;
+      }
+    }
+
+    // Zeros are retained from the src operand. But not necessarily ones.
+    Known.One.clearAllBits();
+    break;
+  }
   case X86ISD::PDEP: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -55968,23 +55991,6 @@ static SDValue combineAVG(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineBEXTR(SDNode *N, SelectionDAG &DAG,
-                            TargetLowering::DAGCombinerInfo &DCI,
-                            const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  unsigned NumBits = VT.getSizeInBits();
-
-  // TODO - Constant Folding.
-
-  // Simplify the inputs.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  APInt DemandedMask(APInt::getAllOnes(NumBits));
-  if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
-    return SDValue(N, 0);
-
-  return SDValue();
-}
-
 static bool isNullFPScalarOrVectorConst(SDValue V) {
   return isNullFPConstant(V) || ISD::isBuildVectorAllZeros(V.getNode());
 }
@@ -61741,8 +61747,9 @@ static SDValue combineMOVDQ2Q(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue combinePDEP(SDNode *N, SelectionDAG &DAG,
-                           TargetLowering::DAGCombinerInfo &DCI) {
+// Common folds for BMI1/BMI2/TBM intrinsics.
+static SDValue combineBMI(SDNode *N, SelectionDAG &DAG,
+                          TargetLowering::DAGCombinerInfo &DCI) {
   unsigned NumBits = N->getSimpleValueType(0).getSizeInBits();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumBits), DCI))
@@ -61765,7 +61772,7 @@ static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
     if (!getTargetShuffleInputs(peekThroughBitcasts(Op), Src, Mask, DAG) ||
         Src.size() != 1 || Src[0].getValueSizeInBits() != VT.getSizeInBits() ||
         !scaleShuffleMaskElts(NumElts, Mask, ScaledMask) ||
-        !is128BitLaneRepeatedShuffleMask(VT, ScaledMask, RepeatedMask) ||
+        !isRepeatedTargetShuffleMask(128, VT, ScaledMask, RepeatedMask) ||
         !isInRange(RepeatedMask[M & 1], 0, 2))
       return false;
     Op = DAG.getBitcast(VT, Src[0]);
@@ -61918,8 +61925,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:      return combineAVG(N, DAG, DCI, Subtarget);
-  case X86ISD::BEXTR:
-  case X86ISD::BEXTRI:      return combineBEXTR(N, DAG, DCI, Subtarget);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);
@@ -62068,7 +62073,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VBROADCAST_LOAD:
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
-  case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
+  case X86ISD::BEXTR:
+  case X86ISD::BEXTRI:
+  case X86ISD::BZHI:
+  case X86ISD::PDEP:        return combineBMI(N, DAG, DCI);
   case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);

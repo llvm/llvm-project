@@ -2407,7 +2407,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           ScoreBrackets.determineWaitForPhysReg(SmemAccessCounter, Reg, Wait);
         }
 
-        if (ST->hasWaitXCnt() && Op.isDef())
+        if (ST->hasWaitXcnt() && Op.isDef())
           ScoreBrackets.determineWaitForPhysReg(X_CNT, Reg, Wait);
       }
     }
@@ -2426,7 +2426,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // In all other cases, ensure safety by ensuring that there are no outstanding
   // memory operations.
   if (Opc == AMDGPU::S_BARRIER && !ST->hasAutoWaitcntBeforeBarrier() &&
-      !ST->supportsBackOffBarrier()) {
+      !ST->hasBackOffBarrier()) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }
 
@@ -2744,7 +2744,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   }
 
-  if (!ST->hasWaitXCnt())
+  if (!ST->hasWaitXcnt())
     return;
 
   if (IsVMEMAccess)
@@ -3343,10 +3343,15 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         else
           *Brackets = *BI.Incoming;
       } else {
-        if (!Brackets)
+        if (!Brackets) {
           Brackets = std::make_unique<WaitcntBrackets>(this);
-        else
-          *Brackets = WaitcntBrackets(this);
+        } else {
+          // Reinitialize in-place. N.B. do not do this by assigning from a
+          // temporary because the WaitcntBrackets class is large and it could
+          // cause this function to use an unreasonable amount of stack space.
+          Brackets->~WaitcntBrackets();
+          new (Brackets.get()) WaitcntBrackets(this);
+        }
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);

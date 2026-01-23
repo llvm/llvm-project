@@ -5828,6 +5828,34 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
     }
   }
 
+  // fold (abd? (?ext ty:x), small_const:c) -> (zext (abd? x, c))
+  if (sd_match(N, m_c_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_Value(Y))) ||
+      sd_match(N, m_c_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_Value(Y)))) {
+    EVT SmallVT = X.getValueType();
+    if (!LegalOperations || hasOperation(Opcode, SmallVT)) {
+      uint64_t Bits = SmallVT.getScalarSizeInBits();
+      unsigned RelevantBits =
+          (Opcode == ISD::ABDS) ? DAG.ComputeMaxSignificantBits(Y)
+                                : DAG.computeKnownBits(Y).countMaxActiveBits();
+      bool TruncatingYIsCheap = TLI.isTruncateFree(Y, SmallVT) ||
+                                ISD::matchUnaryPredicate(
+                                    Y,
+                                    [&](auto *C) {
+                                      const APInt &YConst = C->getAsAPIntVal();
+                                      return (Opcode == ISD::ABDS)
+                                                 ? YConst.isSignedIntN(Bits)
+                                                 : YConst.isIntN(Bits);
+                                    },
+                                    /*AllowUndefs=*/true);
+
+      if (RelevantBits <= Bits && TruncatingYIsCheap) {
+        SDValue NewY = DAG.getNode(ISD::TRUNCATE, SDLoc(Y), SmallVT, Y);
+        SDValue SmallABD = DAG.getNode(Opcode, DL, SmallVT, {X, NewY});
+        return DAG.getZExtOrTrunc(SmallABD, DL, VT);
+      }
+    }
+  }
+
   return SDValue();
 }
 
