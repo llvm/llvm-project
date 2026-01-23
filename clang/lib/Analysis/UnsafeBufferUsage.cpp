@@ -3120,15 +3120,14 @@ public:
     if (!Ctx.getLangOpts().CPlusPlus /* Warn about libc ONLY in C++ */ ||
         Handler->ignoreUnsafeBufferInLibcCall(Stmt->getBeginLoc()))
       return false;
-
-    auto *CE = dyn_cast<CallExpr>(Stmt);
-    if (!CE || !CE->getDirectCallee())
+    const auto *CE = dyn_cast<CallExpr>(Stmt);
+    if (!CE)
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const auto *FD = CE->getDirectCallee();
     if (!FD)
       return false;
 
-    bool IsGlobalAndNotInAnyNamespace =
+    const bool IsGlobalAndNotInAnyNamespace =
         FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
 
     // A libc function must either be in the std:: namespace or a global
