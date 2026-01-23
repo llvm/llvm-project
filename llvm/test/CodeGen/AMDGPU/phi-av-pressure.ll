@@ -3,36 +3,36 @@
 
 declare hidden i32 @_ZN25__hip_builtin_threadIdx_t7__get_xEv()
 
-define amdgpu_kernel void @main(i1 %arg) {
+define amdgpu_kernel void @main(i1 %arg, ptr %ptr, ptr addrspace(1) %ptr1, ptr addrspace(5) %ptr5) {
 ; GFX950-LABEL: main:
 ; GFX950:       ; %bb.0: ; %bb
-; GFX950-NEXT:    s_mov_b32 s33, 0
-; GFX950-NEXT:    scratch_load_dwordx4 v[40:43], off, s33
+; GFX950-NEXT:    s_load_dword s33, s[4:5], 0x3c
 ; GFX950-NEXT:    s_mov_b32 s14, s10
 ; GFX950-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX950-NEXT:    s_load_dword s6, s[4:5], 0x24
+; GFX950-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x2c
 ; GFX950-NEXT:    s_mov_b32 s12, s8
-; GFX950-NEXT:    s_mov_b32 s13, s9
-; GFX950-NEXT:    v_mov_b32_e32 v31, v0
-; GFX950-NEXT:    s_mov_b32 s32, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    scratch_load_dwordx4 v[40:43], off, s33
+; GFX950-NEXT:    s_mov_b32 s13, s9
 ; GFX950-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX950-NEXT:    s_cselect_b64 s[34:35], -1, 0
-; GFX950-NEXT:    s_add_u32 s8, s4, 40
+; GFX950-NEXT:    s_add_u32 s8, s4, 64
 ; GFX950-NEXT:    s_addc_u32 s9, s5, 0
 ; GFX950-NEXT:    s_getpc_b64 s[16:17]
 ; GFX950-NEXT:    s_add_u32 s16, s16, _ZN25__hip_builtin_threadIdx_t7__get_xEv@rel32@lo+4
 ; GFX950-NEXT:    s_addc_u32 s17, s17, _ZN25__hip_builtin_threadIdx_t7__get_xEv@rel32@hi+12
 ; GFX950-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX950-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX950-NEXT:    v_mov_b32_e32 v31, v0
+; GFX950-NEXT:    s_mov_b32 s32, 0
 ; GFX950-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX950-NEXT:    v_mov_b32_e32 v1, 0
-; GFX950-NEXT:    v_lshlrev_b64 v[10:11], 3, v[0:1]
-; GFX950-NEXT:    v_mov_b64_e32 v[12:13], 0
+; GFX950-NEXT:    v_lshl_add_u64 v[10:11], v[0:1], 3, s[38:39]
 ; GFX950-NEXT:    global_load_dwordx4 v[2:5], v[10:11], off
-; GFX950-NEXT:    global_load_dwordx4 v[6:9], v[12:13], off
+; GFX950-NEXT:    global_load_dwordx4 v[6:9], v1, s[38:39]
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    v_mov_b64_e32 v[10:11], 20
+; GFX950-NEXT:    v_mov_b64_e32 v[10:11], s[36:37]
 ; GFX950-NEXT:    s_and_b64 vcc, exec, s[34:35]
 ; GFX950-NEXT:    v_mov_b32_e32 v12, v1
 ; GFX950-NEXT:    v_mov_b32_e32 v14, v1
@@ -47,9 +47,10 @@ define amdgpu_kernel void @main(i1 %arg) {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    v_mov_b32_e32 v13, v1
 ; GFX950-NEXT:    v_lshlrev_b64 v[22:23], 3, v[12:13]
+; GFX950-NEXT:    v_lshl_add_u64 v[22:23], s[38:39], 0, v[22:23]
 ; GFX950-NEXT:    global_load_dwordx4 v[22:25], v[22:23], off
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_lshlrev_b64 v[26:27], 3, v[0:1]
+; GFX950-NEXT:    v_lshl_add_u64 v[26:27], v[0:1], 3, s[38:39]
 ; GFX950-NEXT:    s_waitcnt vmcnt(1)
 ; GFX950-NEXT:    v_or_b32_e32 v0, v40, v6
 ; GFX950-NEXT:    v_or_b32_e32 v13, v41, v7
@@ -85,17 +86,16 @@ define amdgpu_kernel void @main(i1 %arg) {
 ; GFX950-NEXT:    v_or_b32_e32 v1, v19, v15
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_or_b32_e32 v0, v17, v14
-; GFX950-NEXT:    s_mov_b32 s0, 0
-; GFX950-NEXT:    scratch_store_dwordx4 off, v[0:3], s0
+; GFX950-NEXT:    scratch_store_dwordx4 off, v[0:3], s33
 ; GFX950-NEXT:    s_endpgm
 bb:
-  %i = load <4 x i32>, ptr addrspace(5) null, align 2147483648
+  %i = load <4 x i32>, ptr addrspace(5) %ptr5
   %i1 = tail call i32 @_ZN25__hip_builtin_threadIdx_t7__get_xEv()
   br label %bb4
 
 bb2:                                              ; preds = %bb4
   %i3 = or <4 x i32> %i17, %i13
-  store <4 x i32> %i3, ptr addrspace(5) null, align 2147483648
+  store <4 x i32> %i3, ptr addrspace(5) %ptr5
   ret void
 
 bb4:                                              ; preds = %bb4, %bb
@@ -105,21 +105,21 @@ bb4:                                              ; preds = %bb4, %bb
   %i8 = phi <4 x i32> [ zeroinitializer, %bb ], [ %i17, %bb4 ]
   %i9 = phi <4 x i32> [ zeroinitializer, %bb ], [ %i13, %bb4 ]
   %i10 = zext i32 %i1 to i64
-  %i11 = getelementptr i64, ptr addrspace(1) null, i64 %i10
-  %i12 = load <4 x i32>, ptr addrspace(1) %i11, align 16
+  %i11 = getelementptr i64, ptr addrspace(1) %ptr1, i64 %i10
+  %i12 = load <4 x i32>, ptr addrspace(1) %i11
   %i13 = or <4 x i32> %i12, %i9
   %i14 = zext i32 %i6 to i64
-  %i15 = getelementptr i64, ptr addrspace(1) null, i64 %i14
-  %i16 = load <4 x i32>, ptr addrspace(1) %i15, align 16
+  %i15 = getelementptr i64, ptr addrspace(1) %ptr1, i64 %i14
+  %i16 = load <4 x i32>, ptr addrspace(1) %i15
   %i17 = or <4 x i32> %i16, %i8
   %i18 = zext i32 %i7 to i64
-  %i19 = getelementptr i64, ptr addrspace(1) null, i64 %i18
-  %i20 = load <4 x i32>, ptr addrspace(1) %i19, align 16
-  %i21 = load <4 x i32>, ptr addrspace(1) null, align 16
+  %i19 = getelementptr i64, ptr addrspace(1) %ptr1, i64 %i18
+  %i20 = load <4 x i32>, ptr addrspace(1) %i19
+  %i21 = load <4 x i32>, ptr addrspace(1) %ptr1
   %i22 = or <4 x i32> %i5, %i21
   %i23 = or <4 x i32> %i20, %i22
-  store <4 x i32> %i23, ptr addrspace(5) null, align 2147483648
-  %i24 = load i32, ptr inttoptr (i64 20 to ptr), align 4
+  store <4 x i32> %i23, ptr addrspace(5) %ptr5
+  %i24 = load i32, ptr %ptr
   %i25 = or i32 %i7, 1
   br i1 %arg, label %bb2, label %bb4
 }
