@@ -9,13 +9,12 @@
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN: -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis
 
-typedef struct notnested {
-  long bad1;
-} NOTNESTED;
+struct union_mem {
+  long g;
+};
 
 typedef struct nested1 {
   long a;
-  NOTNESTED var2;
 } NESTED1;
 
 struct nested2 {
@@ -26,6 +25,8 @@ struct nested2 {
 
 typedef union nested3 {
   long f;
+  struct union_mem; // ms-anonymous-warning {{anonymous structs are a Microsoft extension}}
+                    // ms-anonymous-dis-warning@-1 {{declaration does not declare anything}}
 } NESTED3;
 
 struct test {
@@ -48,6 +49,8 @@ void foo(void)
 {
   struct test var;
   var.c;
+  var.a;          // ms-anonymous-dis-error {{no member named 'a' in 'struct test'}}
   var.b;          // ms-anonymous-dis-error {{no member named 'b' in 'struct test'}}
   var.f;          // ms-anonymous-dis-error {{no member named 'f' in 'struct test'}}
+  var.g;          // ms-anonymous-dis-error {{no member named 'g' in 'struct test'}}
 }
