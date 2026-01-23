@@ -108,6 +108,8 @@ public:
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
