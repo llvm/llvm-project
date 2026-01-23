@@ -95,9 +95,7 @@ class DAPTestCaseBase(TestBase):
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        breakpoint_ids = [b["id"] for b in breakpoints]
         if wait_for_resolve:
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
@@ -115,14 +113,12 @@ class DAPTestCaseBase(TestBase):
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        breakpoint_ids = [b["id"] for b in breakpoints]
         if wait_for_resolve:
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def wait_for_breakpoints_to_resolve(self, breakpoint_ids: list[str]):
+    def wait_for_breakpoints_to_resolve(self, breakpoint_ids: List[int]):
         unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
             breakpoint_ids
         )
@@ -156,14 +152,13 @@ class DAPTestCaseBase(TestBase):
         if key in self.dap_server.capabilities:
             self.assertEqual(self.dap_server.capabilities[key], False, msg)
 
-    def verify_breakpoint_hit(self, breakpoint_ids: List[Union[int, str]]):
+    def verify_breakpoint_hit(self, breakpoint_ids: List[int]):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
-        "breakpoint_ids" should be a list of breakpoint ID strings
-        (["1", "2"]). The return value from self.set_source_breakpoints()
+        "breakpoint_ids" should be a list of breakpoint IDs
+        ([1, 2]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
         stopped_events = self.dap_server.wait_for_stopped()
-        normalized_bp_ids = [str(b) for b in breakpoint_ids]
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -179,14 +174,13 @@ class DAPTestCaseBase(TestBase):
                     continue
                 hit_breakpoint_ids = body["hitBreakpointIds"]
                 for bp in hit_breakpoint_ids:
-                    if str(bp) in normalized_bp_ids:
+                    if bp in breakpoint_ids:
                         return
-        self.assertTrue(
-            False,
+        self.fail(
             f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stopped_events {stopped_events}",
         )
 
-    def verify_all_breakpoints_hit(self, breakpoint_ids):
+    def verify_all_breakpoints_hit(self, breakpoint_ids: List[int]) -> None:
         """Wait for the process we are debugging to stop, and verify we hit
         all of the breakpoint locations in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
@@ -238,7 +232,7 @@ class DAPTestCaseBase(TestBase):
             "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
         )
 
-    def verify_commands(self, flavor: str, output: str, commands: list[str]):
+    def verify_commands(self, flavor: str, output: str, commands: List[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
         lines = output.splitlines()
         prefix = "(lldb) "
@@ -430,10 +424,10 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         return self.dap_server.wait_for_stopped()
 
-    def continue_to_breakpoint(self, breakpoint_id: str):
-        self.continue_to_breakpoints((breakpoint_id))
+    def continue_to_breakpoint(self, breakpoint_id: int):
+        self.continue_to_breakpoints([breakpoint_id])
 
-    def continue_to_breakpoints(self, breakpoint_ids):
+    def continue_to_breakpoints(self, breakpoint_ids: List[int]):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 

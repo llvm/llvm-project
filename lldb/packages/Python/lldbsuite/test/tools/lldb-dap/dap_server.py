@@ -41,13 +41,19 @@ from typing import (
 # timeout by a factor of 10 if ASAN is enabled.
 DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
 
+
+# A quiet period between events, used to determine if we're done receiving
+# events in a given window, otherwise 'wait_for_stopped' would need to wait
+# until the DEFAULT_TIMEOUT occurs, slows down tests significantly.
+EVENT_QUIET_PERIOD = 0.25
+
+
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
 # created by the DAP client are terminated correctly when the test ends.
 class SpawnHelperCallback(Protocol):
     def __call__(
         self, executable: str, args: List[str], extra_env: List[str], **kwargs
-    ) -> subprocess.Popen:
-        ...
+    ) -> subprocess.Popen: ...
 
 
 ## DAP type references
@@ -280,7 +286,7 @@ class DebugCommunication(object):
         self.thread_stop_reasons: Dict[str, Any] = {}
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
-        self.resolved_breakpoints: dict[str, Breakpoint] = {}
+        self.resolved_breakpoints: dict[int, Breakpoint] = {}
 
         # Modifiers used when replaying a log file.
         self._mod = ReplayMods()
@@ -575,7 +581,7 @@ class DebugCommunication(object):
             if "id" not in bp:
                 continue
 
-            self.resolved_breakpoints[str(bp["id"])] = bp
+            self.resolved_breakpoints[bp["id"]] = bp
 
     def send_packet(self, packet: ProtocolMessage) -> int:
         """Takes a dictionary representation of a DAP request and send the request to the debug adapter.
@@ -633,8 +639,11 @@ class DebugCommunication(object):
             self._recv_packet(predicate=predicate),
         )
 
-    def wait_for_stopped(self) -> Optional[List[Event]]:
+    def wait_for_stopped(self) -> List[Event]:
+        """Wait for the next 'stopped' event to occur, coalescing all stopped events within a given quiet period."""
         stopped_events = []
+        # Check for either 'stopped' or 'exited' to ensure we catch if the
+        # process exits unexpectedly.
         stopped_event = self.wait_for_event(filter=["stopped", "exited"])
         while stopped_event:
             stopped_events.append(stopped_event)
@@ -645,25 +654,32 @@ class DebugCommunication(object):
             # Otherwise we stopped and there might be one or more 'stopped'
             # events for each thread that stopped with a reason, so keep
             # checking for more 'stopped' events and return all of them
-            # Use a shorter timeout for additional stopped events
+            # Use a shorter timeout for additional stopped events.
             def predicate(p: ProtocolMessage):
                 return p["type"] == "event" and p["event"] in ["stopped", "exited"]
 
             stopped_event = cast(
-                Optional[Event], self._recv_packet(predicate=predicate, timeout=0.25)
+                Optional[Event],
+                self._recv_packet(predicate=predicate, timeout=EVENT_QUIET_PERIOD),
             )
         return stopped_events
 
     def wait_for_breakpoint_events(self):
         breakpoint_events: list[Event] = []
-        while True:
-            event = self.wait_for_event(["breakpoint"])
-            if not event:
-                break
-            breakpoint_events.append(event)
+        breakpoint_event = self.wait_for_event(["breakpoint"])
+        while breakpoint_event:
+            breakpoint_events.append(breakpoint_event)
+
+            def predicate(p: ProtocolMessage):
+                return p["type"] == "event" and p["event"] == "breakpoint"
+
+            breakpoint_event = cast(
+                Optional[Event],
+                self._recv_packet(predicate=predicate, timeout=EVENT_QUIET_PERIOD),
+            )
         return breakpoint_events
 
-    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[str]):
+    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[int]):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
         while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
             breakpoint_event = self.wait_for_event(["breakpoint"])
@@ -2063,9 +2079,7 @@ def main():
         level=(
             logging.DEBUG
             if opts.verbose > 1
-            else logging.INFO
-            if opts.verbose > 0
-            else logging.WARNING
+            else logging.INFO if opts.verbose > 0 else logging.WARNING
         ),
     )
 
