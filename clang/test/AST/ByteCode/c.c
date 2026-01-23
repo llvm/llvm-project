@@ -417,3 +417,11 @@ void callReturnsComplex(void) {
   _Complex double c;
   c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
+
+int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
