@@ -732,7 +732,7 @@ public:
 
   MachineInstr *pierceThroughRegSequence(const MachineInstr &MI) const;
 
-  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+  static bool setsSCCIfResultIsNonZero(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::S_ABSDIFF_I32:
     case AMDGPU::S_ABS_I32:
