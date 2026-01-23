@@ -18,6 +18,7 @@
 #include "llvm/CAS/CASNodeSchema.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::cas {
 
@@ -30,12 +31,14 @@ struct NamedValuesEntry {
   StringRef Name;
   ObjectRef Ref;
 
-  friend bool operator==(const NamedValuesEntry &LHS, const NamedValuesEntry &RHS) {
+  friend bool operator==(const NamedValuesEntry &LHS,
+                         const NamedValuesEntry &RHS) {
     return LHS.Ref == RHS.Ref && LHS.Name == RHS.Name;
   }
 
   /// Ordering the entries by name. Items should have unique names.
-  friend bool operator<(const NamedValuesEntry &LHS, const NamedValuesEntry &RHS) {
+  friend bool operator<(const NamedValuesEntry &LHS,
+                        const NamedValuesEntry &RHS) {
     return LHS.Name < RHS.Name;
   }
 };
@@ -43,7 +46,8 @@ struct NamedValuesEntry {
 /// A schema for representing an array of named nodes in a CAS. The name of the
 /// nodes are stored in the root node so child node can be loaded on demand
 /// based on name and the name for all nodes need to be unique.
-class NamedValuesSchema : public RTTIExtends<NamedValuesSchema, NodeSchema> {
+class LLVM_ABI NamedValuesSchema
+    : public RTTIExtends<NamedValuesSchema, NodeSchema> {
   void anchor() override;
 
 public:
@@ -75,10 +79,10 @@ public:
     Builder(ObjectStore &CAS) : CAS(CAS) {}
 
     /// Add an entry to the builder.
-    void add(StringRef Name, ObjectRef Ref);
+    LLVM_ABI void add(StringRef Name, ObjectRef Ref);
 
     /// Build the node from added entries.
-    Expected<NamedValuesProxy> build();
+    LLVM_ABI Expected<NamedValuesProxy> build();
 
   private:
     ObjectStore &CAS;
@@ -95,11 +99,13 @@ private:
   size_t getNumEntries(NamedValuesProxy Values) const;
 
   /// Iterate over entries with a callback.
-  Error forEachEntry(NamedValuesProxy Values,
-                     function_ref<Error(const NamedValuesEntry &)> Callback) const;
+  Error
+  forEachEntry(NamedValuesProxy Values,
+               function_ref<Error(const NamedValuesEntry &)> Callback) const;
 
   /// Lookup an entry by name.
-  std::optional<size_t> lookupEntry(NamedValuesProxy Values, StringRef Name) const;
+  std::optional<size_t> lookupEntry(NamedValuesProxy Values,
+                                    StringRef Name) const;
 
   /// Load an entry by index.
   NamedValuesEntry loadEntry(NamedValuesProxy Values, size_t I) const;
@@ -117,7 +123,8 @@ public:
   const NamedValuesSchema &getSchema() const { return *Schema; }
 
   /// Iterate over entries with a callback.
-  Error forEachEntry(function_ref<Error(const NamedValuesEntry &)> Callback) const {
+  Error
+  forEachEntry(function_ref<Error(const NamedValuesEntry &)> Callback) const {
     return Schema->forEachEntry(*this, Callback);
   }
 
@@ -135,7 +142,7 @@ public:
   }
 
   /// Get the name of an entry by index.
-  StringRef getName(size_t I) const;
+  LLVM_ABI StringRef getName(size_t I) const;
 
   /// Get an entry by index.
   NamedValuesEntry get(size_t I) const { return Schema->loadEntry(*this, I); }
