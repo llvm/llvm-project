@@ -1713,6 +1713,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v16f16, Expand);
 
+    // Only PCLMUL required as we always unroll clmul vectors.
+    if (Subtarget.hasPCLMUL()) {
+      for (auto VT : {MVT::v8i32, MVT::v4i64}) {
+        setOperationAction(ISD::CLMUL, VT, Custom);
+        setOperationAction(ISD::CLMULH, VT, Custom);
+      }
+    }
+
     if (HasInt256) {
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
@@ -2110,6 +2118,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
       setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
+    }
+
+    // Only PCLMUL required as we always unroll clmul vectors.
+    if (Subtarget.hasPCLMUL()) {
+      for (auto VT : {MVT::v16i32, MVT::v8i64}) {
+        setOperationAction(ISD::CLMUL, VT, Custom);
+        setOperationAction(ISD::CLMULH, VT, Custom);
+      }
     }
 
     setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
