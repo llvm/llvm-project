@@ -112,7 +112,7 @@ static cl::opt<bool> EnableCFIInstrInserter(
 static cl::opt<bool>
     EnableSelectOpt("riscv-select-opt", cl::Hidden,
                     cl::desc("Enable select to branch optimizations"),
-                    cl::init(true));
+                    cl::init(false));
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
