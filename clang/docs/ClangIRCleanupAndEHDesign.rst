@@ -590,7 +590,7 @@ variable to track their location. If an exception is thrown by one of the
 constructor, the ``__array_idx`` variable will point to the object that was
 being constructed when the exception was thrown. If the exception was thrown
 during construction of the first object, ``__array_idx`` will point to the start
-of the array, and so no constructor will be called. If an exception is thrown
+of the array, and so no destructor will be called. If an exception is thrown
 during the constructor call for any other object, ``__array_idx`` will not point
 to the start of the array, and so the cleanup region will decrement the pointer,
 call the destructor for the previous object, and so on until we reach the
@@ -775,7 +775,7 @@ operations.
 
 If the ``SomeClass`` constructor throws an exception, it unwinds to an EH catch
 block (``^bb3``), which has excecutes a ``cir.eh.initiate`` operation before
-branching to a shared catch dispatch block (``^bb5``).
+branching to a shared catch dispatch block (``^bb6``).
 
 If the ``doSomething()`` function throws an exception, it unwinds to an EH block
 ``^bb4`` that performs cleanup before branching to the shared catch dispatch
@@ -1085,10 +1085,10 @@ Example: Try-catch with cleanup
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.br ^bb8
   ^bb3 // EH catch (from entry block)
-    %exn, %type_id = cir.eh.landingpad [null] : !cir.eh_token
+    %exn, %type_id = cir.eh.landingpad [null] : (!cir.ptr<!void>, !u32i)
     cir.br ^bb6(%exn, &type_id : !cir.ptr<!void>, !u32i)
   ^bb4 // EH cleanup (from ^bb1)
-    %exn.1, %type_id.1 = cir.eh.landingpad cleanup [null] : !cir.eh_token
+    %exn.1, %type_id.1 = cir.eh.landingpad cleanup [null] : (!cir.ptr<!void>, !u32i)
     cir.br ^bb5(%exn, %type_id : !cir.ptr<!void>, !u32i)
   ^bb5(%1: !cir.ptr<!void>, %2: !u32i)
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
