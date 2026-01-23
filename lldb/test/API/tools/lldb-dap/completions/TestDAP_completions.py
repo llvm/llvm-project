@@ -120,10 +120,10 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # complete the command
-        self.verify_completions(TestCase(input=part, expected={expected_item.clone()}))
+        self.verify_completions(TestCase(input=part, expected={expected_item}))
         # complete the help
         self.verify_completions(
-            TestCase(input=f"help {part}", expected={expected_item.clone()})
+            TestCase(input=f"help {part}", expected={expected_item})
         )
 
         # remove the alias
@@ -186,11 +186,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.verify_completions(
             TestCase(
                 input="`",
-                expected={
-                    session_completion.clone(),
-                    settings_completion.clone(),
-                    memory_completion.clone(),
-                },
+                expected={session_completion, settings_completion, memory_completion},
             )
         )
 
@@ -225,8 +221,8 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.verify_completions(
             TestCase(
                 input="var",
-                expected={command_var_completion.clone()},
-                not_expected={variable_var_completion.clone()},
+                expected={command_var_completion},
+                not_expected={variable_var_completion},
             )
         )
 
@@ -261,8 +257,8 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.verify_completions(
             TestCase(
                 input="var",
-                expected={variable_var_completion.clone()},
-                not_expected={command_var_completion.clone()},
+                expected={variable_var_completion},
+                not_expected={command_var_completion},
             )
         )
 
