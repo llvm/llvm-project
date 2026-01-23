@@ -1547,10 +1547,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
       return VPR->replaceAllUsesWith(VPR->getOperand(0));
 
-  // VPScalarIVSteps for part 0 can be replaced by their start value, if only
-  // the first lane is demanded.
+  // VPScalarIVSteps after unrolling can be replaced by their start value, if
+  // the start index is zero and only the first lane 0 is demanded.
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(Def)) {
-    if (Steps->isPart0() && vputils::onlyFirstLaneUsed(Steps)) {
+    if (!Steps->getStartIndex() && vputils::onlyFirstLaneUsed(Steps)) {
       Steps->replaceAllUsesWith(Steps->getOperand(0));
       return;
     }

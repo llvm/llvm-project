@@ -249,8 +249,7 @@ add_entrypoint_object(
   HDRS
     ../dfmaf128.h
   DEPENDS
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.dfmaf128
 )
 
 add_entrypoint_object(
@@ -5122,8 +5121,7 @@ add_entrypoint_object(
   HDRS
     ../f16fmal.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.fma
+    libc.src.__support.math.f16fmal
 )
 
 add_entrypoint_object(
