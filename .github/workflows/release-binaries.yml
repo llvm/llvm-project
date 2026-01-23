@@ -168,6 +168,10 @@ jobs:
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
+          windows-2022-arm)
+            build_runs_on="windows-2022-arm-16core"
+            test_runs_on=$build_runs_on
+            ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"

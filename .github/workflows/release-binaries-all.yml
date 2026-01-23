@@ -94,6 +94,7 @@ jobs:
           - ubuntu-22.04-arm
           - macos-14
           - windows-2022
+          - windows-2022-arm
 
     uses: ./.github/workflows/release-binaries.yml
     with:
