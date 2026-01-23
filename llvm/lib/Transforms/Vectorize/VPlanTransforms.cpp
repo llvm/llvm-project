@@ -4064,6 +4064,9 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                 llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
                 std::nullopt);
           } else {
+            assert(ExtOpc != Instruction::CastOps::FPExt &&
+                   "Floating-point extended reductions are not currently "
+                   "supported");
             ExtRedCost = Ctx.TTI.getExtendedReductionCost(
                 Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
                 Red->getFastMathFlags(), CostKind);
