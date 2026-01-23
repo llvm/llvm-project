@@ -667,7 +667,7 @@ a cleanup token.
 .. code-block::
 
   ^bb4 (%eh_token : !cir.eh_token): 
-    %cleanup_token = cir.begin_catch %eh_token : !cir.eh_token -> !cir.cleanup_token
+    %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
 
 This is followed by the operations to perform the cleanup and then a
 cir.end_cleanup operation.
@@ -755,7 +755,7 @@ Example: Try-catch with cleanup
     %3 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.end_cleanup(%3 : !cir.cleanup_token)
-    cir.br ^bb6(%eh_toekn : !cir.eh_token)
+    cir.br ^bb6(%eh_token : !cir.eh_token)
   ^bb6(%eh_token.1 : !cir.eh_token) // Catch dispatch (from ^bb3 or ^bb4)
     cir.eh.dispatch %eh_token.1 : !cir.eh_token [
       catch_all : ^bb7
@@ -814,26 +814,19 @@ Example: Cleanup with unhandled exception
   cir.func @someFunc(){
     %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
     cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.try_call @_ZN9SomeClass11doSomethingEv(%0) ^bb1, ^bb4 : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.try_call @_ZN9SomeClass11doSomethingEv(%0) ^bb1, ^bb2 : (!cir.ptr<!rec_SomeClass>) -> ()
   ^bb1 // Normal cleanup
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.br ^bb6
+    cir.br ^bb4
   ^bb2 // EH cleanup (from entry block)
-    %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
-    cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.try_call @_ZN9SomeClass11doSomethingEv(%0) ^bb3, ^bb4 : (!cir.ptr<!rec_SomeClass>) -> ()
-  ^bb3 // Normal cleanup
-    cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.br ^bb6
-  ^bb4 // EH cleanup (from entry block)
     %1 = cir.eh.initiate cleanup : !cir.eh_token
-    cir.br ^bb5(%1 : !cir.eh_token)
-  ^bb5(%eh_token : !cir.eh_token) // Perform cleanup
+    cir.br ^bb3(%1 : !cir.eh_token)
+  ^bb3(%eh_token : !cir.eh_token) // Perform cleanup
     %2 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.end_cleanup(%2 : !cir.cleanup_token)
     cir.resume // Unwind to caller
-  ^bb6 // Normal continue (from ^bb1)
+  ^bb4 // Normal continue (from ^bb1)
     cir.return
   }
 
@@ -924,7 +917,7 @@ Example: Shared cleanups
     cir.br ^bb1
   ^bb1:  // 3 preds: ^bb0, ^bb9, ^bb11
     %5 = cir.const #true
-    cir.brcond %5 ^bb2, ^bb17
+    cir.brcond %5 ^bb2, ^bb12
   ^bb2:  // pred: ^bb1
     cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.br ^bb3
@@ -936,17 +929,17 @@ Example: Shared cleanups
   ^bb4:  // pred: ^bb3
     // Set the destination slot and branch through cleanup
     %9 = cir.const #cir.int<0> : !s32i
-    cir.store %1, %9 : !cir.ptr<!s32i>, !s32i
+    cir.store %9, %1 : !s32i, !cir.ptr<!s32i>
     cir.br ^bb9
   ^bb5:  // pred: ^bb3
     %10 = cir.load align(4) %3 : !cir.ptr<!s32i>, !s32i
     %11 = cir.const #cir.int<7> : !s32i
     %12 = cir.cmp(eq, %10, %11) : !s32i, !cir.bool
-    cir.brcond %11 ^bb6, ^bb7
+    cir.brcond %12 ^bb6, ^bb7
   ^bb6:  // pred: ^bb5
     // Set the destination slot and branch through cleanup
     %13 = cir.const #cir.int<1> : !s32i
-    cir.store %1, %13 : !cir.ptr<!s32i>, !s32i
+    cir.store %13, %1 : !s32i, !cir.ptr<!s32i>
     cir.br ^bb9
   ^bb7:  // pred: ^bb5
     %14 = cir.call @_ZN9SomeClass3getEv(%0) : (!cir.ptr<!rec_SomeClass>) -> !s32i
@@ -954,14 +947,14 @@ Example: Shared cleanups
     cir.br ^bb8
   ^bb8: // pred: ^bb7
     // Set the destination slot and branch through cleanup
-    %13 = cir.const #cir.int<2> : !s32i
-    cir.store %1, %13 : !cir.ptr<!s32i>, !s32i
+    %15 = cir.const #cir.int<2> : !s32i
+    cir.store %15, %1 : !s32i, !cir.ptr<!s32i>
     cir.br ^bb9
   ^bb9: // pred
     // Shared cleanup
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    %14 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
-    cir.switch.flat %14 : !s32i, ^bb10 [
+    %16 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+    cir.switch.flat %16 : !s32i, ^bb10 [
       0: ^bb1  // continue
       1: ^bb12 // break
       2: ^bb11 // end of loop
@@ -970,11 +963,11 @@ Example: Shared cleanups
     cir.unreachable
   ^bb11:  // pred: ^bb9
     cir.br ^bb1
-  ^bb12:  // pred: ^bb9
-    %23 = cir.load align(4) %3 : !cir.ptr<!s32i>, !s32i
-    cir.store align(4) %23, %2 : !s32i, !cir.ptr<!s32i>
-    %24 = cir.load align(4) %2 : !cir.ptr<!s32i>, !s32i
-    cir.return %24 : !s32i
+  ^bb12:  // pred: ^bb1
+    %17 = cir.load align(4) %3 : !cir.ptr<!s32i>, !s32i
+    cir.store align(4) %17, %2 : !s32i, !cir.ptr<!s32i>
+    %18 = cir.load align(4) %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %18 : !s32i
   }
 
 In this example we have a cleanup scope inside the body of a while loop, and
@@ -1066,7 +1059,7 @@ Example: Try-catch with cleanup
     %3 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.end_cleanup(%3 : !cir.cleanup_token)
-    cir.br ^bb6(%eh_toekn : !cir.eh_token)
+    cir.br ^bb6(%eh_token : !cir.eh_token)
   ^bb6(%eh_token.1 : !cir.eh_token) // Catch dispatch (from ^bb3 or ^bb4)
     cir.eh.dispatch %eh_token.1 : !cir.eh_token [
       catch_all : ^bb7
@@ -1092,18 +1085,18 @@ Example: Try-catch with cleanup
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.br ^bb8
   ^bb3 // EH catch (from entry block)
-    %exn, &type_id = cir.eh.landingpad [null] : !cir.eh_token
+    %exn, %type_id = cir.eh.landingpad [null] : !cir.eh_token
     cir.br ^bb6(%exn, &type_id : !cir.ptr<!void>, !u32i)
   ^bb4 // EH cleanup (from ^bb1)
-    %exn.1, &type_id.1 = cir.eh.landingpad cleanup [null] : !cir.eh_token
-    cir.br ^bb5(%exn, &type_id : !cir.ptr<!void>, !u32i)
+    %exn.1, %type_id.1 = cir.eh.landingpad cleanup [null] : !cir.eh_token
+    cir.br ^bb5(%exn, %type_id : !cir.ptr<!void>, !u32i)
   ^bb5(%1: !cir.ptr<!void>, %2: !u32i)
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.br ^bb6(%1, %2 : !cir.ptr<!void>, !u32i)
   ^bb6(%3: !cir.ptr<!void>, %4: !u32i) // Catch dispatch (from ^bb3 or ^bb4)
     cir.br ^bb7(%3, %4 : !cir.ptr<!void>, !u32i)
   ^bb7(%5: !cir.ptr<!void>, %6: !u32i) // Catch all handler
-    %7 = cir.call @__cxa_begin_catch(%4 : !cir.ptr<!void>)
+    %7 = cir.call @__cxa_begin_catch(%5 : !cir.ptr<!void>)
     cir.call @__cxa_end_catch()
     cir.br ^bb8
   ^bb8 // Normal continue (from ^bb2 or ^bb6)
@@ -1204,7 +1197,7 @@ Example: Try-catch with cleanup
     %3 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
     cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.end_cleanup(%3 : !cir.cleanup_token)
-    cir.br ^bb6(%eh_toekn : !cir.eh_token)
+    cir.br ^bb6(%eh_token : !cir.eh_token)
   ^bb6(%eh_token.1 : !cir.eh_token) // Catch dispatch (from ^bb3 or ^bb4)
     cir.eh.dispatch %eh_token.1 : !cir.eh_token [
       catch_all : ^bb7
