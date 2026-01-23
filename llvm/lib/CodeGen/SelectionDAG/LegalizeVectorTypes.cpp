@@ -1949,7 +1949,7 @@ void DAGTypeLegalizer::SplitVecRes_ExtVecInRegOp(SDNode *N, SDValue &Lo,
   SmallVector<int, 8> SplitHi(InNumElements, -1);
   for (unsigned i = 0; i != OutNumElements; ++i)
     SplitHi[i] = i + OutNumElements;
-  InHi = DAG.getVectorShuffle(InLoVT, dl, InLo, DAG.getUNDEF(InLoVT), SplitHi);
+  InHi = DAG.getVectorShuffle(InLoVT, dl, InLo, DAG.getPOISON(InLoVT), SplitHi);
 
   Lo = DAG.getNode(Opcode, dl, OutLoVT, InLo);
   Hi = DAG.getNode(Opcode, dl, OutHiVT, InHi);
@@ -3235,14 +3235,14 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     processShuffleMasks(
         Mask, std::size(Inputs), std::size(Inputs),
         /*NumOfUsedRegs=*/1,
-        [&Output, &DAG = DAG, NewVT]() { Output = DAG.getUNDEF(NewVT); },
+        [&Output, &DAG = DAG, NewVT]() { Output = DAG.getPOISON(NewVT); },
         [&Output, &DAG = DAG, NewVT, &DL, &Inputs,
          &BuildVector](ArrayRef<int> Mask, unsigned Idx, unsigned /*Unused*/) {
           if (Inputs[Idx]->getOpcode() == ISD::BUILD_VECTOR)
             Output = BuildVector(Inputs[Idx], Inputs[Idx], Mask);
           else
             Output = DAG.getVectorShuffle(NewVT, DL, Inputs[Idx],
-                                          DAG.getUNDEF(NewVT), Mask);
+                                          DAG.getPOISON(NewVT), Mask);
           Inputs[Idx] = Output;
         },
         [&AccumulateResults, &Output, &DAG = DAG, NewVT, &DL, &Inputs,
@@ -7050,7 +7050,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_REVERSE(SDNode *N) {
   SmallVector<int, 16> Mask(WidenNumElts, -1);
   std::iota(Mask.begin(), Mask.begin() + VTNumElts, IdxVal);
 
-  return DAG.getVectorShuffle(WidenVT, dl, ReverseVal, DAG.getUNDEF(WidenVT),
+  return DAG.getVectorShuffle(WidenVT, dl, ReverseVal, DAG.getPOISON(WidenVT),
                               Mask);
 }
 
