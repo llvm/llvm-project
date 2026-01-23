@@ -958,7 +958,8 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
+void VPlanTransforms::foldTailByMasking(
+    VPlan &Plan, DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks) {
   assert(Plan.getExitBlocks().size() == 1 &&
          "only a single-exit block is supported currently");
   assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
@@ -979,8 +980,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
 
   // Predicate everything after the header mask.
-  Builder.setInsertPoint(Header, Header->end());
-  Builder.createNaryOp(VPInstruction::PredicateSuccessors, HeaderMask);
+  SuccessorMasks[Header] = HeaderMask;
 
   // Any extract of the last element must be updated to extract from the last
   // active lane of the header mask instead (i.e., the lane corresponding to the

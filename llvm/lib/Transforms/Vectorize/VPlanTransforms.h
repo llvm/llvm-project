@@ -419,17 +419,19 @@ struct VPlanTransforms {
   /// %wide.iv = widen-canonical-iv ...
   /// %header-mask = icmp ult %wide.iv, BTC
   ///
-  /// The header is then split at the header mask and successors are predicated
-  /// with VPInstruction::PredicateSuccessors. Any
+  /// The header is then split at the header mask, and everything afterwards is
+  /// predicated by adding the header mask to \p SuccessorMasks. Any
   /// VPInstruction::ExtractLastLanes are also updated to extract from the last
   /// active lane of the header mask.
-  static void foldTailByMasking(VPlan &Plan);
+  static void
+  foldTailByMasking(VPlan &Plan,
+                    DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks);
 
   /// Predicate and linearize the control-flow in the only loop region of \p
   /// Plan. Masks for blocks are added to a block-to-mask map which is returned
   /// in order to be used later for wide recipe construction.
-  static DenseMap<VPBasicBlock *, VPValue *>
-  introduceMasksAndLinearize(VPlan &Plan);
+  static DenseMap<VPBasicBlock *, VPValue *> introduceMasksAndLinearize(
+      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.

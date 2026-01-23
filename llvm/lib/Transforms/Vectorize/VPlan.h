@@ -1193,10 +1193,6 @@ public:
     /// active (non-zero) lane in the mask (second operand), or if no lanes
     /// were active in the mask, returns the default value (third operand).
     ExtractLastActive,
-    /// A transient terminator that indicates any successors of the block should
-    /// be predicated with the mask from the first operand. Should be removed
-    /// after introduceMasksAndLinearize.
-    PredicateSuccessors,
 
     /// Returns the value for vscale.
     VScale,

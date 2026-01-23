@@ -14,13 +14,11 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
-#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
-using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
@@ -36,6 +34,10 @@ class VPPredicator {
   EdgeMaskCacheTy EdgeMaskCache;
 
   BlockMaskCacheTy BlockMaskCache;
+
+  /// A map of blocks to masks that should be applied to each of its successors'
+  /// edges.
+  const BlockMaskCacheTy SuccessorMasks;
 
   /// Create an edge mask for every destination of cases and/or default.
   void createSwitchEdgeMasks(VPInstruction *SI);
@@ -63,6 +65,9 @@ class VPPredicator {
   }
 
 public:
+  VPPredicator(const BlockMaskCacheTy &SuccessorMasks)
+      : SuccessorMasks(SuccessorMasks) {}
+
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
@@ -73,7 +78,8 @@ public:
     return EdgeMaskCache.lookup({Src, Dst});
   }
 
-  /// Compute and return the predicate of \p VPBB.
+  /// Compute and return the predicate of \p VPBB, assuming that the header
+  /// block of the loop is set to True, or to the loop mask when tail folding.
   VPValue *createBlockInMask(VPBasicBlock *VPBB);
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
@@ -93,13 +99,9 @@ VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
 
   VPValue *SrcMask = getBlockInMask(Src);
 
-  VPValue *SuccPred;
-  if (!Src->empty() &&
-      match(&Src->back(), m_VPInstruction<VPInstruction::PredicateSuccessors>(
-                              m_VPValue(SuccPred)))) {
-    Src->back().eraseFromParent();
-    SrcMask = SrcMask ? Builder.createLogicalAnd(SrcMask, SuccPred) : SuccPred;
-  }
+  if (VPValue *SuccessorMask = SuccessorMasks.lookup(Src))
+    SrcMask = SrcMask ? Builder.createLogicalAnd(SrcMask, SuccessorMask)
+                      : SuccessorMask;
 
   // If there's a single successor, there's no terminator recipe.
   if (Src->getNumSuccessors() == 1)
@@ -243,15 +245,15 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-DenseMap<VPBasicBlock *, VPValue *>
-VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+DenseMap<VPBasicBlock *, VPValue *> VPlanTransforms::introduceMasksAndLinearize(
+    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  VPPredicator Predicator;
+  VPPredicator Predicator(SuccessorMasks);
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
