@@ -621,6 +621,14 @@ MDString *MDString::get(LLVMContext &Context, StringRef Str) {
   return &MapEntry;
 }
 
+MDString *MDString::getIfExists(LLVMContext &Context, StringRef Str) {
+  auto &Store = Context.pImpl->MDStringCache;
+  auto I = Store.find(Str);
+  if (I == Store.end())
+    return nullptr;
+  return &I->getValue();
+}
+
 StringRef MDString::getString() const {
   assert(Entry && "Expected to find string map entry");
   return Entry->first();

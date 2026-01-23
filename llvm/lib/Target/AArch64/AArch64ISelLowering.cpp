@@ -1498,6 +1498,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    setOperationAction(ISD::CLMUL, MVT::v8i8, Legal);
+    setOperationAction(ISD::CLMUL, MVT::v16i8, Legal);
+
   } else /* !isNeonAvailable */ {
     for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
@@ -1984,11 +1987,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                 MVT::nxv16i8, Custom);
     }
 
-    // Wide add types
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
+      // Wide add types
       setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv4i32, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
+
+      setOperationAction(ISD::CLMUL, MVT::nxv16i8, Legal);
     }
 
     // Handle floating-point partial reduction
@@ -6914,10 +6919,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return LowerVectorMatch(Op, DAG);
   }
   case Intrinsic::aarch64_cls:
-  case Intrinsic::aarch64_cls64:
+  case Intrinsic::aarch64_cls64: {
     SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(),
                               Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
+  }
+  case Intrinsic::aarch64_sve_pmul:
+  case Intrinsic::aarch64_neon_pmul:
+    return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2));
   }
 }
 
