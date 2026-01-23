@@ -276,10 +276,8 @@ define i8 @abd_sminumax_i8(i8 %a, i8 %b) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0x7f
 ; CHECK-NEXT:    and w9, w1, #0x7f
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w10, w8, w9, lt
-; CHECK-NEXT:    csel w8, w8, w9, hi
-; CHECK-NEXT:    sub w0, w8, w10
+; CHECK-NEXT:    subs w8, w8, w9
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
 entry:
   %a2 = and i8 %a, 127        ; 0x7f
@@ -295,10 +293,8 @@ define i16 @abd_sminumax_i16(i16 %a, i16 %b) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0x7fff
 ; CHECK-NEXT:    and w9, w1, #0x7fff
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w10, w8, w9, lt
-; CHECK-NEXT:    csel w8, w8, w9, hi
-; CHECK-NEXT:    sub w0, w8, w10
+; CHECK-NEXT:    subs w8, w8, w9
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
 entry:
   %a2 = and i16 %a, 32767     ; 0x7fff
@@ -314,10 +310,8 @@ define i32 @abd_sminumax_i32(i32 %a, i32 %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0x7fffffff
 ; CHECK-NEXT:    and w9, w1, #0x7fffffff
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w10, w8, w9, lt
-; CHECK-NEXT:    csel w8, w8, w9, hi
-; CHECK-NEXT:    sub w0, w8, w10
+; CHECK-NEXT:    subs w8, w8, w9
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
   %a2 = and i32 %a, 2147483647 ; 0x7fffffff
   %b2 = and i32 %b, 2147483647
@@ -332,10 +326,8 @@ define i64 @abd_sminumax_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and x8, x0, #0x7fffffffffffffff
 ; CHECK-NEXT:    and x9, x1, #0x7fffffffffffffff
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    csel x10, x8, x9, lt
-; CHECK-NEXT:    csel x8, x8, x9, hi
-; CHECK-NEXT:    sub x0, x8, x10
+; CHECK-NEXT:    subs x8, x8, x9
+; CHECK-NEXT:    cneg x0, x8, mi
 ; CHECK-NEXT:    ret
 entry:
   %a2 = and i64 %a, 9223372036854775807
