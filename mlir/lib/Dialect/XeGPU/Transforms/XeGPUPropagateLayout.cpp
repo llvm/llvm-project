@@ -1141,40 +1141,86 @@ void LayoutInfoPropagation::visitLoadGatherOp(
 
   LayoutInfo loadLayout;
   LayoutInfo maskLayout;
+  auto uArch = getUArch(getChipStr(load).value_or(""));
+  const int subgroupSize = uArch->getSubgroupSize();
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
     maskLayout = loadLayout;
   } else {
+    LayoutInfo valueLayout = results[0]->getValue();
+    // Need the layout of the value to propagate to the tensor descriptor.
+    if (!valueLayout.isAssigned())
+      return;
 
-    // The layout is strictly determined by the payload type.
+    auto resAttr = dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
+    auto instDataIncoming = resAttr.getEffectiveInstDataAsInt();
+    if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
+      instDataIncoming = SmallVector<int64_t>(
+          cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent())
+              .getInstData()
+              .asArrayRef());
+
     VectorType payloadTy = load.getValueType();
     if (!payloadTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-    auto uArch = getUArch(getChipStr(load).value_or(""));
-    const int subgroupSize = uArch->getSubgroupSize();
-    SmallVector<int> instData{subgroupSize};
-    if (auto chunkSize = load.getChunkSize().value_or(0); chunkSize > 1)
-      instData.push_back(chunkSize);
-    else if (auto srcTdescTy =
-                 dyn_cast<xegpu::TensorDescType>(load.getSourceType())) {
-      if (srcTdescTy.getChunkSizeAsInt() > 1)
-        instData.push_back(chunkSize);
+    const auto *uArchInstruction =
+        dyn_cast<xegpu::uArch::LoadGatherInstruction>(
+            uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+
+    // Check if value inst_data complies with uArch
+    if (layoutKind == LayoutKind::InstData) {
+      // Each lane loads either one element
+      SmallVector<int> instDataUarch{subgroupSize};
+      // Or multiple elements as 2D with lane's elements in the inner dimension
+      if (payloadTy.getRank() != 1) {
+        if (payloadTy.getRank() != 2) {
+          load.emitWarning("Expected 2D payload for LoadGatherOp.");
+          return;
+        }
+        instDataUarch.push_back(
+            (std::min(static_cast<int>(payloadTy.getShape().back()),
+                      uArchInstruction->getMaxLaneLoadStoreSize())));
+      }
+      // If inst data does not match, enforce the uArch-based one
+      if (!llvm::equal(instDataIncoming, instDataUarch)) {
+        xegpu::LayoutAttr sourceAttr = dyn_cast<xegpu::LayoutAttr>(resAttr);
+        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr)) {
+          sourceAttr = cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent());
+        }
+        assert(sourceAttr);
+        xegpu::DistributeLayoutAttr updatedLayoutAttr = xegpu::LayoutAttr::get(
+            load.getContext(), sourceAttr.getSgLayout(), sourceAttr.getSgData(),
+            DenseI32ArrayAttr::get(load.getContext(), instDataUarch),
+            sourceAttr.getLaneLayout(), sourceAttr.getLaneData(),
+            sourceAttr.getOrder());
+
+        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
+          updatedLayoutAttr = xegpu::SliceAttr::get(
+              load.getContext(), updatedLayoutAttr, sliceAttr.getDims());
+        valueLayout = LayoutInfo(updatedLayoutAttr);
+      }
     }
-
-    if (layoutKind == LayoutKind::InstData)
-      loadLayout =
-          LayoutInfo(xegpu::LayoutAttr::get(load.getContext(), instData));
-    else
-      loadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
-
-    // Mask operand should have 1D default layout.
-    maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
-
+    loadLayout = valueLayout;
     load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
   }
+
+  // If no user-defined anchor or we deal with a chunked op, set the default
+  // mask layout.
+  // Rank 1 data : Keep the mask layout aligned with data.
+  // Rank >1 data: Enforce the default xegpu 1D layout for mask.
+  if (!hasParamsOfLayoutKind(anchorLayout) ||
+      load.getValueType().getRank() > 1) {
+    if (layoutKind == LayoutKind::InstData)
+      maskLayout = LayoutInfo(
+          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}));
+    else if (layoutKind == LayoutKind::Lane)
+      maskLayout =
+          getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
+  }
+
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
     propagateIfChanged(operands[0], operands[0]->meet(loadLayout));
@@ -1209,6 +1255,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   LayoutInfo payloadLayout;
   LayoutInfo maskLayout;
   xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getLayoutAttr();
+  auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
+  const int subgroupSize = uArch->getSubgroupSize();
+
   if (hasParamsOfLayoutKind(anchorLayout)) {
     payloadLayout = LayoutInfo(anchorLayout);
     maskLayout = payloadLayout;
@@ -1222,21 +1271,23 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       return;
     }
 
-    auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
-    const int subgroupSize = uArch->getSubgroupSize();
-
     if (layoutKind == LayoutKind::InstData) {
-      SmallVector<int> instData{subgroupSize};
-      if (auto chunkSize = storeScatter.getChunkSize().value_or(0);
-          chunkSize > 1)
-        instData.push_back(chunkSize);
-      else if (auto dstTdescTy = dyn_cast<xegpu::TensorDescType>(
-                   storeScatter.getDestType())) {
-        if (dstTdescTy.getChunkSizeAsInt() > 1)
-          instData.push_back(chunkSize);
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::StoreScatterInstruction>(uArch->getInstruction(
+              xegpu::uArch::InstructionKind::StoreScatter));
+      const int subgroupSize = uArch->getSubgroupSize();
+      SmallVector<int> instDataUarch{subgroupSize};
+      if (payloadTy.getRank() != 1) {
+        if (payloadTy.getRank() != 2) {
+          storeScatter.emitWarning("Expected 2D payload for StoreScatterOp.");
+          return;
+        }
+        instDataUarch.push_back(
+            (std::min(static_cast<int>(payloadTy.getShape().back()),
+                      uArchInstruction->getMaxLaneLoadStoreSize())));
       }
       payloadLayout = LayoutInfo(
-          xegpu::LayoutAttr::get(storeScatter.getContext(), instData));
+          xegpu::LayoutAttr::get(storeScatter.getContext(), instDataUarch));
     } else {
       auto payloadShape = payloadTy.getShape();
       if (payloadShape.size() > 1)
@@ -1247,12 +1298,24 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       payloadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
     }
 
-    maskLayout =
-        getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
-
     storeScatter.setLayoutAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(payloadLayout.get()));
   }
+
+  // If no user-defined anchor or we deal with a chunked op, set the default
+  // mask layout.
+  // Rank 1 data : Keep the mask layout aligned with data.
+  // Rank >1 data: Enforce the default xegpu 1D layout for mask.
+  if (!hasParamsOfLayoutKind(anchorLayout) ||
+      storeScatter.getValueType().getRank() > 1) {
+    if (layoutKind == LayoutKind::InstData)
+      maskLayout = LayoutInfo(
+          xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize}));
+    else if (layoutKind == LayoutKind::Lane)
+      maskLayout =
+          getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
+  }
+
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(payloadLayout));
   // Propagate the destination (if tdesc) operand layout
