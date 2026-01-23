@@ -8,6 +8,9 @@
 // CHECK-DAG: #map5 = affine_map<()[s0] -> ((s0 mod 32) floordiv 16)>
 // CHECK-DAG: #map6 = affine_map<()[s0] -> (s0 mod 16)>
 // CHECK-DAG: #map7 = affine_map<()[s0] -> ((s0 mod 16) floordiv 4)>
+// CHECK-DAG: #map8 = affine_map<()[s0] -> (s0 floordiv 16)>
+// CHECK-DAG: #map9 = affine_map<()[s0] -> (s0 floordiv 8)>
+// CHECK-DAG: #map10 = affine_map<()[s0] -> (s0 mod 8)>
 gpu.module @test_distribution {
   // CHECK-LABEL: create_nd_tdesc_no_offset
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
@@ -836,6 +839,40 @@ gpu.module @test_distribution {
     %load =  xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], inst_data = [32, 16],lane_layout = [1, 16], lane_data = [1, 1]>}>
       : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
       -> vector<256x128xf32>
+    gpu.return
+  }
+
+  // CHECK-LABEL: convert_layout_slm
+  // CHECK-SAME: %[[ARG0:.*]]: memref<128x256xf32>
+  gpu.func @convert_layout_slm(%arg0: memref<128x256xf32>) {
+    // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[SGIDX:.*]] = arith.remui %[[SGID]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[SGIDY_TMP:.*]] = arith.divui %[[SGID]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[SGIDY:.*]] = arith.remui %[[SGIDY_TMP]], %[[C4:.*]] : index
+    // CHECK-DAG: %[[MUL_Y:.*]] = arith.muli %[[SGIDY]], %[[C32:.*]] : index
+    // CHECK-DAG: %[[MUL_X:.*]] = arith.muli %[[SGIDX]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[OFF_Y:.*]] = arith.remui %[[MUL_Y]], %[[C128:.*]] : index
+    // CHECK-DAG: %[[OFF_X:.*]] = arith.remui %[[MUL_X]], %[[C256:.*]] : index
+    // CHECK-DAG: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%[[OFF_Y]], %[[OFF_X]]] : memref<128x256xf32> -> !xegpu.tensor_desc<32x16xf32, #xegpu.layout<inst_data = [16, 16]>>
+    // CHECK-DAG: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]] <{layout = #xegpu.layout<inst_data = [16, 16]>}> : !xegpu.tensor_desc<32x16xf32, #xegpu.layout<inst_data = [16, 16]>> -> vector<32x16xf32>
+    // CHECK-DAG: %[[ALLOCA:.*]] = memref.alloca() : memref<131072xi8, 3>
+    // CHECK-DAG: %[[MDESC:.*]] = xegpu.create_mem_desc %[[ALLOCA]] : memref<131072xi8, 3> -> !xegpu.mem_desc<128x256xf32>
+    // CHECK-DAG: %[[SGID_:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[AFFINE1:.*]] = affine.apply #map8()[%[[SGID_]]]
+    // CHECK-DAG: %[[AFFINE2:.*]] = affine.apply #map6()[%[[SGID_]]]
+    // CHECK-DAG: %[[ROW_OFF:.*]] = arith.muli %[[AFFINE1]], %[[C32:.*]] : index
+    // CHECK-DAG: %[[COL_OFF:.*]] = arith.muli %[[AFFINE2]], %[[C16:.*]] : index
+    // CHECK-DAG: xegpu.store_matrix %[[LOAD]], %[[MDESC]][%[[ROW_OFF]], %[[COL_OFF]]] <{layout = #xegpu.layout<inst_data = [16, 16]>}>: vector<32x16xf32>, !xegpu.mem_desc<128x256xf32>, index, index
+    // CHECK-DAG: gpu.barrier
+    // CHECK-DAG: %[[AFFINE3:.*]] = affine.apply #map9()[%[[SGID_]]]
+    // CHECK-DAG: %[[AFFINE4:.*]] = affine.apply #map10()[%[[SGID_]]]
+    // CHECK-DAG: %[[ROW_OFF2:.*]] = arith.muli %[[AFFINE3]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[COL_OFF2:.*]] = arith.muli %[[AFFINE4]], %[[C32:.*]] : index
+    // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MDESC]][%[[ROW_OFF2]], %[[COL_OFF2]]] : !xegpu.mem_desc<128x256xf32>, index, index -> vector<16x32xf32>
+    %0 = xegpu.create_nd_tdesc %arg0[0, 0] : memref<128x256xf32> -> !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>>
+    %1 = xegpu.load_nd %0 {layout = #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>} : !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>> -> vector<128x256xf32>
+    %2 = xegpu.convert_layout %1 <{input_layout = #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>,
+                                   target_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32], inst_data = [16, 16]>}> : vector<128x256xf32>
     gpu.return
   }
 }

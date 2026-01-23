@@ -604,44 +604,142 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 struct WgToSgConvertLayoutOp
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // TODO: currently, we only support LayoutAttr
-    auto input = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
-    auto target = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
+    Location loc = op.getLoc();
 
-    if (!input || !target || !input.isForWorkgroup() ||
-        !target.isForWorkgroup())
+    VectorType resultType = op.getResult().getType();
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+    auto inputLayout = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
+    auto targetLayout = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
+
+    if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
+        !targetLayout.isForWorkgroup())
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
-    DenseI32ArrayAttr inputSgLayout = input.getSgLayout();
-    DenseI32ArrayAttr inputSgData = input.getSgData();
-    DenseI32ArrayAttr inputOrder = input.getOrder();
-    DenseI32ArrayAttr targetSgLayout = target.getSgLayout();
-    DenseI32ArrayAttr targetSgData = target.getSgData();
-    DenseI32ArrayAttr targetOrder = target.getOrder();
+    SmallVector<int64_t> inputSgLayout =
+        inputLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> inputSgData = inputLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> targetSgLayout =
+        targetLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
 
-    // TODO: currently we only support for optimal case, where input and
-    // output has the same sg_layout and sg_data, so SLM is not involved.
-    if (inputSgLayout != targetSgLayout || inputSgData != targetSgData ||
-        inputOrder != targetOrder)
-      return failure();
+    // if sg_layout and sg_data are identical, no SLM needed
+    if (inputSgLayout == targetSgLayout && inputSgData == targetSgData) {
+      inputLayout = inputLayout.dropSgLayoutAndData();
+      targetLayout = targetLayout.dropSgLayoutAndData();
 
-    input = input.dropSgLayoutAndData();
-    target = target.dropSgLayoutAndData();
-
-    SmallVector<Value> newOps(adaptor.getSource());
-    if (input && target) {
-      // keep the ConvertLayoutOp for rest fields, e.g., inst_data.
-      for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
-        auto newOp = xegpu::ConvertLayoutOp::create(
-            rewriter, op.getLoc(), src.getType(), src, input, target);
-        newOps[i] = newOp;
+      SmallVector<Value> newOps(adaptor.getSource());
+      if (inputLayout && targetLayout) {
+        for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
+          auto newOp = xegpu::ConvertLayoutOp::create(
+              rewriter, loc, src.getType(), src, inputLayout, targetLayout);
+          newOps[i] = newOp;
+        }
       }
+      rewriter.replaceOpWithMultiple(op, {newOps});
+      return success();
     }
-    rewriter.replaceOpWithMultiple(op, {newOps});
+
+    // SLM path: layouts differ, need cross-subgroup data redistribution
+    auto srcVectorType = cast<VectorType>(op.getSource().getType());
+    Type elemTy = srcVectorType.getElementType();
+
+    // Calculate SLM size requirements
+    auto slmShape = wgShape;
+    auto bitWidth = elemTy.getIntOrFloatBitWidth();
+    auto bytesPerElement = bitWidth / 8;
+    auto slmSize = computeProduct(slmShape) * bytesPerElement;
+
+    // Allocate SLM
+    auto slmTy = MemRefType::get({slmSize}, rewriter.getI8Type(), {}, 3);
+    auto slm = memref::AllocaOp::create(rewriter, loc, slmTy);
+
+    auto memDescType = xegpu::MemDescType::get(rewriter.getContext(), slmShape,
+                                               elemTy, nullptr);
+    auto memDesc =
+        xegpu::CreateMemDescOp::create(rewriter, loc, memDescType, slm);
+
+    auto sgId = gpu::SubgroupIdOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), nullptr);
+
+    // STORE PHASE: Store input data to SLM using input layout
+    // Convert input sg_layout to Values for delinearizeIndex
+    SmallVector<Value> inputSgLayoutValues;
+    for (int64_t dim : inputSgLayout) {
+      inputSgLayoutValues.push_back(
+          arith::ConstantIndexOp::create(rewriter, loc, dim));
+    }
+
+    auto inputSgIdsResult = affine::delinearizeIndex(
+        rewriter, loc, sgId.getResult(), inputSgLayoutValues);
+    if (failed(inputSgIdsResult))
+      return failure();
+    SmallVector<Value> inputSgIds = *inputSgIdsResult;
+
+    // Calculate store offsets based on input subgroup position and sg_data
+    SmallVector<Value> storeOffsets;
+    for (size_t i = 0; i < inputSgIds.size(); ++i) {
+      Value sgDataVal =
+          arith::ConstantIndexOp::create(rewriter, loc, inputSgData[i]);
+      Value offset =
+          arith::MulIOp::create(rewriter, loc, inputSgIds[i], sgDataVal);
+      storeOffsets.push_back(offset);
+    }
+
+    SmallVector<OpFoldResult> storeMatrixOffsets(storeOffsets.begin(),
+                                                 storeOffsets.end());
+
+    for (auto src : adaptor.getSource()) {
+      xegpu::StoreMatrixOp::create(rewriter, loc, src, memDesc.getResult(),
+                                   storeMatrixOffsets,
+                                   targetLayout.dropSgLayoutAndData());
+    }
+
+    gpu::BarrierOp::create(rewriter, loc);
+
+    // LOAD PHASE: Load data from SLM using target layout
+    // Convert target sg_layout to Values for delinearizeIndex
+    SmallVector<Value> targetSgLayoutValues;
+    for (int64_t dim : targetSgLayout) {
+      targetSgLayoutValues.push_back(
+          arith::ConstantIndexOp::create(rewriter, loc, dim));
+    }
+
+    auto targetSgIdsResult = affine::delinearizeIndex(
+        rewriter, loc, sgId.getResult(), targetSgLayoutValues);
+    if (failed(targetSgIdsResult))
+      return failure();
+    SmallVector<Value> targetSgIds = *targetSgIdsResult;
+
+    // Calculate load offsets based on target subgroup position and sg_data
+    SmallVector<Value> loadOffsets;
+    for (size_t i = 0; i < targetSgIds.size(); ++i) {
+      Value sgDataVal =
+          arith::ConstantIndexOp::create(rewriter, loc, targetSgData[i]);
+      Value offset =
+          arith::MulIOp::create(rewriter, loc, targetSgIds[i], sgDataVal);
+      loadOffsets.push_back(offset);
+    }
+
+    SmallVector<OpFoldResult> loadMatrixOffsets(loadOffsets.begin(),
+                                                loadOffsets.end());
+
+    VectorType targetVectorType = VectorType::get(targetSgData, elemTy);
+
+    SmallVector<Value> loadedVectors;
+    for (size_t i = 0; i < adaptor.getSource().size(); ++i) {
+      auto loadOp =
+          xegpu::LoadMatrixOp::create(rewriter, loc, targetVectorType,
+                                      memDesc.getResult(), loadMatrixOffsets,
+                                      /*layout=*/nullptr);
+      loadedVectors.push_back(loadOp.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {loadedVectors});
     return success();
   }
 };
