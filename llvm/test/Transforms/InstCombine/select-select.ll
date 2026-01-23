@@ -531,7 +531,7 @@ define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison3(<2 x i32> %a, <2 x i32> 
   ret <2 x i8> %sel.gt
 }
 
-; Minimal code that triigers the optimizations.
+; Minimal code that triggers the optimizations.
 
 define i32 @selectSelect11(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
 ; CHECK-LABEL: @selectSelect11(

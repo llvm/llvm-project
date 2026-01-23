@@ -4520,12 +4520,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // example).
       if (TrueSI->hasOneUse()) {
         Value *And = nullptr, *OtherVal = nullptr;
-        // select(C0, select(C1, a, b), b) -> select(C0&C1, a, b)
+        // select(C0, select(C1, a, b), b) -> select(C0&&C1, a, b)
         if (TrueSI->getFalseValue() == FalseVal) {
           And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
           OtherVal = TrueSI->getTrueValue();
         }
-        // select(C0, select(C1, b, a), b) -> select(C0&!C1, a, b)
+        // select(C0, select(C1, b, a), b) -> select(C0&&!C1, a, b)
         else if (TrueSI->getTrueValue() == FalseVal) {
           Value *InvertedCond = Builder.CreateNot(TrueSI->getCondition());
           And = Builder.CreateLogicalAnd(CondVal, InvertedCond);
@@ -4549,12 +4549,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
       if (FalseSI->hasOneUse()) {
         Value *Or = nullptr, *OtherVal = nullptr;
-        // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
+        // select(C0, a, select(C1, a, b)) -> select(C0||C1, a, b)
         if (FalseSI->getTrueValue() == TrueVal) {
           Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
           OtherVal = FalseSI->getFalseValue();
         }
-        // select(C0, a, select(C1, b, a)) -> select(C0|!C1, a, b)
+        // select(C0, a, select(C1, b, a)) -> select(C0||!C1, a, b)
         else if (FalseSI->getFalseValue() == TrueVal) {
           Value *InvertedCond = Builder.CreateNot(FalseSI->getCondition());
           Or = Builder.CreateLogicalOr(CondVal, InvertedCond);
