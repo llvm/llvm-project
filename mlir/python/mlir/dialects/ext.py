@@ -86,6 +86,7 @@ def infer_type(type_) -> Optional[Callable[[], ir.Type]]:
 
 
 class FieldDef:
+    """Base class for kinds of fields that can occur in an `Operation`'s definition.""" 
     pass
 
 
