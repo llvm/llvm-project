@@ -89,14 +89,6 @@ define i32 @testmswh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtms w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testmswh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintm s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.floor.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
@@ -131,14 +123,6 @@ define i64 @testmsxh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtms x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testmsxh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintm s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.floor.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
@@ -150,11 +134,6 @@ define i32 @testmsws(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtms w0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testmsws:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintm s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.floor.f32(float %a)
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
@@ -166,11 +145,6 @@ define i64 @testmsxs(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtms x0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testmsxs:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintm s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.floor.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
@@ -182,11 +156,6 @@ define i32 @testmswd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtms w0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testmswd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintm d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.floor.f64(double %a)
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
@@ -198,11 +167,6 @@ define i64 @testmsxd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtms x0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testmsxd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintm d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.floor.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
@@ -283,14 +247,6 @@ define i32 @testpswh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtps w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testpswh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintp s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.ceil.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
@@ -325,14 +281,6 @@ define i64 @testpsxh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtps x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testpsxh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintp s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.ceil.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
@@ -344,11 +292,6 @@ define i32 @testpsws(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtps w0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testpsws:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintp s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.ceil.f32(float %a)
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
@@ -360,11 +303,6 @@ define i64 @testpsxs(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtps x0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testpsxs:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintp s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.ceil.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
@@ -376,11 +314,6 @@ define i32 @testpswd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtps w0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testpswd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintp d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.ceil.f64(double %a)
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
@@ -392,11 +325,6 @@ define i64 @testpsxd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtps x0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testpsxd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintp d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.ceil.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
@@ -477,14 +405,6 @@ define i32 @testzswh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testzswh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintz s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.trunc.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
@@ -519,14 +439,6 @@ define i64 @testzsxh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testzsxh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintz s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.trunc.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
@@ -538,11 +450,6 @@ define i32 @testzsws(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testzsws:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintz s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.trunc.f32(float %a)
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
@@ -554,11 +461,6 @@ define i64 @testzsxs(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs x0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testzsxs:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintz s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.trunc.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
@@ -570,11 +472,6 @@ define i32 @testzswd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testzswd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintz d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.trunc.f64(double %a)
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
@@ -586,11 +483,6 @@ define i64 @testzsxd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs x0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testzsxd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frintz d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.trunc.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
@@ -671,14 +563,6 @@ define i32 @testaswh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtas w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testaswh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frinta s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.round.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
@@ -713,14 +597,6 @@ define i64 @testasxh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtas x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testasxh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frinta s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.round.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
@@ -732,11 +608,6 @@ define i32 @testasws(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtas w0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testasws:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frinta s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.round.f32(float %a)
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
@@ -748,11 +619,6 @@ define i64 @testasxs(float %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtas x0, s0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testasxs:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frinta s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call float @llvm.round.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
@@ -764,11 +630,6 @@ define i32 @testaswd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtas w0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testaswd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frinta d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.round.f64(double %a)
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
@@ -780,11 +641,6 @@ define i64 @testasxd(double %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtas x0, d0
 ; CHECK-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testasxd:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    frinta d0, d0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, d0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call double @llvm.round.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
@@ -865,14 +721,6 @@ define i32 @testnswh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtns w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testnswh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintn s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.roundeven.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
@@ -907,14 +755,6 @@ define i64 @testnsxh(half %a) {
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtns x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
-; CHECK-GI-NOFP16-LABEL: testnsxh:
-; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    frintn s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NOFP16-NEXT:    ret
 entry:
   %r = call half @llvm.roundeven.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
