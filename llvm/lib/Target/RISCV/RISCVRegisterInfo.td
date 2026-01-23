@@ -856,7 +856,9 @@ defvar VM8VTs = [vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
 
 def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
-                   (sequence "V%u", 7, 0)), 1>;
+                   (sequence "V%u", 7, 0)), 1> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::V0, 32>";
+}
 
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
@@ -961,7 +963,9 @@ foreach Index = 0-15 in
                 DwarfRegNum<[!add(Index, 3072)]>;
 
 let RegInfos = XLenRI in {
-  def TR   : RISCVRegisterClass<[untyped], 32, (add (sequence "T%u", 0, 15))>;
+  def TR   : RISCVRegisterClass<[untyped], 32, (add (sequence "T%u", 0, 15))> {
+    let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::T0, 16>";
+  }
   def TRM2 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 2))>;
   def TRM4 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 4))>;
 }

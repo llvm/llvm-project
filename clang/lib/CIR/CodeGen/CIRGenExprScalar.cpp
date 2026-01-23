@@ -2246,9 +2246,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
     const MemberPointerType *mpt = ce->getType()->getAs<MemberPointerType>();
     if (mpt->isMemberFunctionPointerType()) {
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "CK_NullToMemberPointer: member function pointer");
-      return {};
+      auto ty = mlir::cast<cir::MethodType>(cgf.convertType(destTy));
+      return builder.getNullMethodPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
     }
 
     auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));

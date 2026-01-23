@@ -581,3 +581,75 @@ TEST(VirtualDataExtractorTest, ReadExactlyAtEntryEnd) {
   EXPECT_EQ(extractor->GetU8(&virtual_offset), 0x04U);
   EXPECT_EQ(virtual_offset, 0x1004U);
 }
+
+TEST(VirtualDataExtractorTest, SubsetExtractorGetU32) {
+  uint32_t buffer[16];
+  // 0x11111111 0x22222222 ... 0xffffffff
+  for (int i = 0; i < 16; i++)
+    buffer[i] =
+        i << 28 | i << 24 | i << 20 | i << 16 | i << 12 | i << 8 | i << 4 | i;
+  DataBufferSP buffer_sp =
+      std::make_shared<DataBufferUnowned>((uint8_t *)&buffer, sizeof(buffer));
+  lldb::DataExtractorSP extractor = std::make_shared<VirtualDataExtractor>(
+      buffer_sp, eByteOrderLittle, 8,
+      Table{Entry(0x0, 4 * sizeof(uint32_t), 12 * sizeof(uint32_t)),
+            Entry(0x10, 4 * sizeof(uint32_t), 0 * sizeof(uint32_t)),
+            Entry(0x20, 4 * sizeof(uint32_t), 8 * sizeof(uint32_t)),
+            Entry(0x30, 4 * sizeof(uint32_t), 4 * sizeof(uint32_t))});
+
+  offset_t virtual_offset = 0;
+  // Entry(0x0, 4*sizeof(uint32_t), 12*sizeof(uint32_t))
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xccccccccU);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xddddddddU);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xeeeeeeeeU);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xffffffffU);
+  // Entry(0x10, 4*sizeof(uint32_t), 0*sizeof(uint32_t))
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x00000000U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x11111111U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x22222222U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x33333333U);
+  // Entry(0x20, 4*sizeof(uint32_t), 8*sizeof(uint32_t))
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x88888888U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x99999999U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xAAAAAAAAU);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xBBBBBBBBU);
+  // Entry(0x30, 4*sizeof(uint32_t), 4*sizeof(uint32_t))
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x44444444U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x55555555U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x66666666U);
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0x77777777U);
+
+  // sub_extractor starts at buffer[4] for 4 uint32_t's, aligned
+  // to the start of a LookupTable entry.
+  lldb::DataExtractorSP aligned_sub_extractor = extractor->GetSubsetExtractorSP(
+      4 * sizeof(uint32_t), 4 * sizeof(uint32_t));
+
+  virtual_offset = 0;
+  // Entry(0x10, 4*sizeof(uint32_t), 0*sizeof(uint32_t))
+  // {subset virtual offset: 0x0}
+  EXPECT_EQ(aligned_sub_extractor->GetU32(&virtual_offset), 0x00000000U);
+  EXPECT_EQ(aligned_sub_extractor->GetU32(&virtual_offset), 0x11111111U);
+  EXPECT_EQ(aligned_sub_extractor->GetU32(&virtual_offset), 0x22222222U);
+  EXPECT_EQ(aligned_sub_extractor->GetU32(&virtual_offset), 0x33333333U);
+
+  // sub_extractor starts at buffer[10] for 2 uint32_t's,
+  // only PART of a LookupTable entry.
+  lldb::DataExtractorSP misaligned_sub_extractor =
+      extractor->GetSubsetExtractorSP(10 * sizeof(uint32_t),
+                                      2 * sizeof(uint32_t));
+  virtual_offset = 0;
+  EXPECT_EQ(misaligned_sub_extractor->GetU32(&virtual_offset), 0xAAAAAAAAU);
+  EXPECT_EQ(misaligned_sub_extractor->GetU32(&virtual_offset), 0xBBBBBBBBU);
+
+  lldb::DataExtractorSP contiguous_subset = extractor->GetSubsetExtractorSP(0);
+  EXPECT_EQ(contiguous_subset->GetByteSize(), 4 * sizeof(uint32_t));
+
+  lldb::DataExtractorSP misaligned_contiguous_subset =
+      extractor->GetSubsetExtractorSP(2 * sizeof(uint32_t));
+  EXPECT_EQ(misaligned_contiguous_subset->GetByteSize(), 2 * sizeof(uint32_t));
+
+  // Ask for a subset in the second LookupTable entry.
+  lldb::DataExtractorSP middle_contiguous_subset =
+      extractor->GetSubsetExtractorSP(4 * sizeof(uint32_t));
+  EXPECT_EQ(middle_contiguous_subset->GetByteSize(), 4 * sizeof(uint32_t));
+}

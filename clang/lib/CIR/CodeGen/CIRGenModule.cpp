@@ -1529,12 +1529,9 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   // A member function pointer.
   if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
     auto ty = mlir::cast<cir::MethodType>(convertType(e->getType()));
-    if (methodDecl->isVirtual()) {
-      assert(!cir::MissingFeatures::virtualMethodAttr());
-      errorNYI(e->getSourceRange(),
-               "emitMemberPointerConstant: virtual method pointer");
-      return {};
-    }
+    if (methodDecl->isVirtual())
+      return cir::ConstantOp::create(
+          builder, loc, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
 
     cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
     return cir::ConstantOp::create(builder, loc,
