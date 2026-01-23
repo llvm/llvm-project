@@ -683,8 +683,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
 
 bool RegBankLegalizeHelper::lowerSplitTo32Mul(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst);
-  assert(DstTy == S64);
+  assert(MRI.getType(Dst) == S64);
   auto Op1 = B.buildUnmerge({VgprRB_S32}, MI.getOperand(1).getReg());
   auto Op2 = B.buildUnmerge({VgprRB_S32}, MI.getOperand(2).getReg());
 
