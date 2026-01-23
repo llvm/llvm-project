@@ -178,7 +178,7 @@ public:
 
   void EmitValueTypeFunction(raw_ostream &OS);
 
-  void EmitHistogram(const Matcher *N, raw_ostream &OS);
+  void EmitHistogram(raw_ostream &OS);
 
   void EmitPatternMatchTable(raw_ostream &OS);
 
@@ -1364,19 +1364,23 @@ void MatcherTableEmitter::EmitValueTypeFunction(raw_ostream &OS) {
 
   for (const auto &[VTs, Idx] : ValueTypeMap) {
     OS << "  case " << (Idx - 1) << ":\n";
-    OS << "    switch (HwMode) {\n";
-    if (!VTs.hasDefault())
-      OS << "    default:\n      return MVT();\n";
-    for (const auto [Mode, VT] : VTs) {
-      if (Mode == DefaultMode)
-        OS << "    default:\n";
-      else
-        OS << "    case " << Mode << ":\n";
-      OS << "      return " << getEnumName(VT) << ";\n";
-    }
+    if (VTs.isSimple()) {
+      OS << "    return " << getEnumName(VTs.getSimple()) << ";\n";
+    } else {
+      OS << "    switch (HwMode) {\n";
+      if (!VTs.hasDefault())
+        OS << "    default:\n      return MVT();\n";
+      for (const auto [Mode, VT] : VTs) {
+        if (Mode == DefaultMode)
+          OS << "    default:\n";
+        else
+          OS << "    case " << Mode << ":\n";
+        OS << "      return " << getEnumName(VT) << ";\n";
+      }
 
-    OS << "    }\n";
-    OS << "    break;\n";
+      OS << "    }\n";
+      OS << "    break;\n";
+    }
   }
 
   OS << "  }\n";
@@ -1466,7 +1470,7 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
   llvm_unreachable("Unhandled opcode?");
 }
 
-void MatcherTableEmitter::EmitHistogram(const Matcher *M, raw_ostream &OS) {
+void MatcherTableEmitter::EmitHistogram(raw_ostream &OS) {
   if (OmitComments)
     return;
 
@@ -1536,7 +1540,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   OS << "    0\n  }; // Total Array size is " << (TotalSize + 1)
      << " bytes\n\n";
 
-  MatcherEmitter.EmitHistogram(TheMatcher, OS);
+  MatcherEmitter.EmitHistogram(OS);
 
   OS << "  #undef COVERAGE_IDX_VAL\n";
   OS << "  #undef TARGET_VAL\n";

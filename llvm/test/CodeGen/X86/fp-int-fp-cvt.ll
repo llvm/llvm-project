@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX,AVX512,AVX512-VL
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=x86-64-v4 -mattr=-avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512-NOVL
+; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=knl       | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
 
 ;
 ; fptosi -> sitofp
@@ -34,11 +35,32 @@ define double @scvtf64_i64(double %a0) {
 ; SSE-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: scvtf64_i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vcvttsd2si %xmm0, %rax
-; AVX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: scvtf64_i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-VL-LABEL: scvtf64_i64:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttpd2qq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtqq2pd %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: scvtf64_i64:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NOVL-NEXT:    vcvttpd2qq %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: scvtf64_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX512F-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %ii = fptosi double %a0 to i64
   %ff = sitofp i64 %ii to double
   ret double %ff
@@ -69,11 +91,32 @@ define float @scvtf32_i64(float %a0) {
 ; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: scvtf32_i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vcvttss2si %xmm0, %rax
-; AVX-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: scvtf32_i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvttss2si %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-VL-LABEL: scvtf32_i64:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttps2qq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtqq2ps %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: scvtf32_i64:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NOVL-NEXT:    vcvttps2qq %ymm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtqq2ps %zmm0, %ymm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: scvtf32_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512F-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %ii = fptosi float %a0 to i64
   %ff = sitofp i64 %ii to float
   ret float %ff
@@ -99,11 +142,26 @@ define double @ucvtf64_i32(double %a0) {
 ; AVX2-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ucvtf64_i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm15, %xmm0
-; AVX512-NEXT:    retq
+; AVX512-VL-LABEL: ucvtf64_i32:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: ucvtf64_i32:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NOVL-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX512-NOVL-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: ucvtf64_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttsd2usi %xmm0, %eax
+; AVX512F-NEXT:    vcvtusi2sd %eax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %ii = fptoui double %a0 to i32
   %ff = uitofp i32 %ii to double
   ret double %ff
@@ -143,11 +201,26 @@ define double @ucvtf64_i64(double %a0) {
 ; AVX2-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ucvtf64_i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %rax
-; AVX512-NEXT:    vcvtusi2sd %rax, %xmm15, %xmm0
-; AVX512-NEXT:    retq
+; AVX512-VL-LABEL: ucvtf64_i64:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttpd2uqq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtuqq2pd %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: ucvtf64_i64:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NOVL-NEXT:    vcvttpd2uqq %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtuqq2pd %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: ucvtf64_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttsd2usi %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %ii = fptoui double %a0 to i64
   %ff = uitofp i64 %ii to double
   ret double %ff
@@ -169,11 +242,26 @@ define float @ucvtf32_i32(float %a0) {
 ; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ucvtf32_i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvttss2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2ss %eax, %xmm15, %xmm0
-; AVX512-NEXT:    retq
+; AVX512-VL-LABEL: ucvtf32_i32:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: ucvtf32_i32:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NOVL-NEXT:    vcvttps2udq %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: ucvtf32_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512F-NEXT:    vcvtusi2ss %eax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %ii = fptoui float %a0 to i32
   %ff = uitofp i32 %ii to float
   ret float %ff
@@ -226,15 +314,29 @@ define float @ucvtf32_i64(float %a0) {
 ; AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ucvtf32_i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvttss2usi %xmm0, %rax
-; AVX512-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm0
-; AVX512-NEXT:    retq
+; AVX512-VL-LABEL: ucvtf32_i64:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtuqq2ps %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: ucvtf32_i64:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NOVL-NEXT:    vcvttps2uqq %ymm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtuqq2ps %zmm0, %ymm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: ucvtf32_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %ii = fptoui float %a0 to i64
   %ff = uitofp i64 %ii to float
   ret float %ff
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX512-NOVL: {{.*}}
-; AVX512-VL: {{.*}}
+; AVX512: {{.*}}
