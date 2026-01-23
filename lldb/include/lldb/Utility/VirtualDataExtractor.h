@@ -55,6 +55,10 @@ public:
   lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset,
                                              lldb::offset_t length) override;
 
+  lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset) override;
+
+  llvm::ArrayRef<uint8_t> GetData() const override;
+
   /// Unchecked overrides
   /// @{
   uint8_t GetU8_unchecked(lldb::offset_t *offset_ptr) const override;

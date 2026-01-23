@@ -148,7 +148,9 @@ DataExtractorSP
 VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
                                            offset_t virtual_length) {
   const LookupTable::Entry *entry = FindEntry(virtual_offset);
-  assert(entry && "Unchecked methods require valid virtual address");
+  assert(
+      entry &&
+      "VirtualDataExtractor subset extractor requires valid virtual address");
 
   // Entry::data is the offset into the DataBuffer's actual start/end range
   // Entry::base is the virtual address at the start of this region of data
@@ -168,4 +170,35 @@ VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
       GetSharedDataBuffer(), GetByteOrder(), GetAddressByteSize());
   new_sp->SetData(GetSharedDataBuffer(), physical_start, virtual_length);
   return new_sp;
+}
+
+// Return a DataExtractorSP that contains a single LookupTable's entry; all
+// bytes are guaranteed to be readable.
+DataExtractorSP
+VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset) {
+  const LookupTable::Entry *entry = FindEntry(virtual_offset);
+  assert(
+      entry &&
+      "VirtualDataExtractor subset extractor requires valid virtual address");
+
+  // Entry::data is the offset into the DataBuffer's actual start/end range
+  // Entry::base is the virtual address at the start of this region of data
+  offset_t offset_into_entry_range = virtual_offset - entry->base;
+
+  offset_t physical_start = entry->data + offset_into_entry_range;
+  std::shared_ptr<DataExtractor> new_sp = std::make_shared<DataExtractor>(
+      GetSharedDataBuffer(), GetByteOrder(), GetAddressByteSize());
+  new_sp->SetData(GetSharedDataBuffer(), physical_start,
+                  entry->size - offset_into_entry_range);
+  return new_sp;
+}
+
+// Return an ArrayRef to the first contiguous region of the LookupTable
+// only.  The LookupTable entries may have gaps of unmapped data, and we
+// can't include those in the ArrayRef or something may touch those pages.
+llvm::ArrayRef<uint8_t> VirtualDataExtractor::GetData() const {
+  const LookupTable::Entry *entry = FindEntry(0);
+  assert(entry &&
+         "VirtualDataExtractor GetData requires valid virtual address");
+  return {m_start + entry->data, entry->size};
 }

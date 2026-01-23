@@ -1059,3 +1059,7 @@ DataExtractorSP DataExtractor::GetSubsetExtractorSP(offset_t offset,
                   length);
   return new_sp;
 }
+
+DataExtractorSP DataExtractor::GetSubsetExtractorSP(offset_t offset) {
+  return GetSubsetExtractorSP(offset, GetByteSize() - offset);
+}
