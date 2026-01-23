@@ -7402,6 +7402,33 @@ CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
   return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
+CallInst *OpenMPIRBuilder::createOMPAllocShared(const LocationDescription &Loc,
+                                                Type *VarType,
+                                                const Twine &Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  updateToLocation(Loc);
+
+  const DataLayout &DL = M.getDataLayout();
+  Value *Args[] = {Builder.getInt64(DL.getTypeStoreSize(VarType))};
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_alloc_shared);
+  CallInst *Call = Builder.CreateCall(Fn, Args, Name);
+  Call->addRetAttr(
+      Attribute::getWithAlignment(M.getContext(), DL.getPrefTypeAlign(Int64)));
+  return Call;
+}
+
+CallInst *OpenMPIRBuilder::createOMPFreeShared(const LocationDescription &Loc,
+                                               Value *Addr, Type *VarType,
+                                               const Twine &Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  updateToLocation(Loc);
+
+  Value *Args[] = {
+      Addr, Builder.getInt64(M.getDataLayout().getTypeStoreSize(VarType))};
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_free_shared);
+  return Builder.CreateCall(Fn, Args, Name);
+}
+
 CallInst *OpenMPIRBuilder::createOMPInteropInit(
     const LocationDescription &Loc, Value *InteropVar,
     omp::OMPInteropType InteropType, Value *Device, Value *NumDependences,
