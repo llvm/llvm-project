@@ -55,36 +55,16 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
       };
 
   // Single range algorithms.
-  AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(SingleSig),
-               {"adjacent_find",
-                "all_of",
-                "any_of",
-                "binary_search",
-                "copy",
-                "copy_if",
-                "count",
-                "count_if",
-                "fill",
-                "find",
-                "find_if",
-                "find_if_not",
-                "for_each",
-                "is_sorted",
-                "lower_bound",
-                "max_element",
-                "min_element",
-                "none_of",
-                "partition",
-                "partition_point",
-                "remove_if",
-                "replace",
-                "replace_copy",
-                "replace_copy_if",
-                "stable_sort",
-                "transform",
-                "uninitialized_copy",
-                "unique",
-                "upper_bound"});
+  AddStdToLLVM(
+      llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(SingleSig),
+      {"accumulate",      "adjacent_find", "all_of",    "any_of",
+       "binary_search",   "copy",          "copy_if",   "count",
+       "count_if",        "fill",          "find",      "find_if",
+       "find_if_not",     "for_each",      "is_sorted", "lower_bound",
+       "max_element",     "min_element",   "none_of",   "partition",
+       "partition_point", "remove_if",     "replace",   "replace_copy",
+       "replace_copy_if", "stable_sort",   "transform", "uninitialized_copy",
+       "unique",          "upper_bound"});
 
   // Two range algorithms.
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(TwoSig),
