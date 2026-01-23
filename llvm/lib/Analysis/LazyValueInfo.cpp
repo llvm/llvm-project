@@ -14,6 +14,7 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -833,13 +834,38 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
     // Only check assumes in the block of the context instruction. Other
     // assumes will have already been taken into account when the value was
     // propagated from predecessor blocks.
-    auto *I = cast<CallInst>(AssumeVH);
+    auto *I = cast<AssumeInst>(AssumeVH);
+
     if (I->getParent() != BB || !isValidAssumeForContext(I, BBI))
       continue;
 
-    BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
-                                                 /*IsTrueDest*/ true,
-                                                 /*UseBlockValue*/ false));
+    if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
+      if (RetainedKnowledge RK = getKnowledgeFromBundle(
+              *I, I->bundle_op_info_begin()[AssumeVH.Index])) {
+        if (RK.WasOn != Val)
+          continue;
+        switch (RK.AttrKind) {
+        case Attribute::NonNull:
+          BBLV = BBLV.intersect(ValueLatticeElement::getNot(
+              Constant::getNullValue(RK.WasOn->getType())));
+          break;
+
+        case Attribute::Dereferenceable:
+          if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
+              CI && !CI->isZero())
+            BBLV = BBLV.intersect(ValueLatticeElement::getNot(
+                Constant::getNullValue(RK.IRArgValue->getType())));
+          break;
+
+        default:
+          break;
+        }
+      }
+    } else {
+      BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
+                                                   /*IsTrueDest*/ true,
+                                                   /*UseBlockValue*/ false));
+    }
   }
 
   // If guards are not used in the module, don't spend time looking for them

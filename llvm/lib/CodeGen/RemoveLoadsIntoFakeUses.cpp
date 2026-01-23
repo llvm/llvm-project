@@ -47,10 +47,7 @@ class RemoveLoadsIntoFakeUsesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {
-    initializeRemoveLoadsIntoFakeUsesLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

@@ -2072,6 +2072,17 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     llvm_unreachable("dependent cast kind in CIR gen!");
   case clang::CK_BuiltinFnToFnPtr:
     llvm_unreachable("builtin functions are handled elsewhere");
+  case CK_LValueBitCast:
+  case CK_LValueToRValueBitCast: {
+    LValue sourceLVal = cgf.emitLValue(subExpr);
+    Address sourceAddr = sourceLVal.getAddress();
+
+    mlir::Type destElemTy = cgf.convertTypeForMem(destTy);
+    Address destAddr = sourceAddr.withElementType(cgf.getBuilder(), destElemTy);
+    LValue destLVal = cgf.makeAddrLValue(destAddr, destTy);
+    assert(!cir::MissingFeatures::opTBAA());
+    return emitLoadOfLValue(destLVal, ce->getExprLoc());
+  }
 
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
@@ -2244,6 +2255,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
+  case CK_ReinterpretMemberPointer: {
+    mlir::Value src = Visit(subExpr);
+    return builder.createBitcast(cgf.getLoc(subExpr->getExprLoc()), src,
+                                 cgf.convertType(destTy));
+  }
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer: {
     mlir::Value src = Visit(subExpr);
