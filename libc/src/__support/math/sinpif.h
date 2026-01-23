@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF_H
 
+#include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -16,7 +17,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "sincosf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
