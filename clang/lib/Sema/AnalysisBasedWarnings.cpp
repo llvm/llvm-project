@@ -2906,15 +2906,10 @@ public:
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      const Expr *EscapeExpr) override {
-    unsigned DiagID;
-    switch (Scope) {
-    case SuggestionScope::CrossTU:
-      DiagID = diag::warn_lifetime_safety_cross_tu_param_suggestion;
-      break;
-    case SuggestionScope::IntraTU:
-      DiagID = diag::warn_lifetime_safety_intra_tu_param_suggestion;
-      break;
-    }
+    unsigned DiagID =
+        (Scope == SuggestionScope::CrossTU)
+            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
+            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
 
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
         ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
@@ -2950,22 +2945,7 @@ public:
   }
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
-    CXXMethodDecl *MutableMD = const_cast<CXXMethodDecl *>(MD);
-    if (lifetimes::implicitObjectParamIsLifetimeBound(MutableMD))
-      return;
-    ASTContext &Ctx = S.getASTContext();
-    auto *Attr =
-        LifetimeBoundAttr::CreateImplicit(Ctx, MutableMD->getLocation());
-    QualType MethodType = MutableMD->getType();
-    QualType AttributedType =
-        Ctx.getAttributedType(Attr, MethodType, MethodType);
-    TypeLocBuilder TLB;
-    if (TypeSourceInfo *TSI = MutableMD->getTypeSourceInfo())
-      TLB.pushFullCopy(TSI->getTypeLoc());
-    AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
-    TyLoc.setAttr(Attr);
-    MutableMD->setType(AttributedType);
-    MutableMD->setTypeSourceInfo(TLB.getTypeSourceInfo(Ctx, AttributedType));
+    S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
   }
 
 private:

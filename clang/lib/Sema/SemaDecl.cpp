@@ -14735,6 +14735,24 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
                                                       : IdentLoc);
 }
 
+void Sema::addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) {
+  CXXMethodDecl *MutableMD = const_cast<CXXMethodDecl *>(MD);
+  if (lifetimes::implicitObjectParamIsLifetimeBound(MutableMD))
+    return;
+  auto *Attr =
+      LifetimeBoundAttr::CreateImplicit(Context, MutableMD->getLocation());
+  QualType MethodType = MutableMD->getType();
+  QualType AttributedType =
+      Context.getAttributedType(attr::LifetimeBound, MethodType, MethodType);
+  TypeLocBuilder TLB;
+  if (TypeSourceInfo *TSI = MutableMD->getTypeSourceInfo())
+    TLB.pushFullCopy(TSI->getTypeLoc());
+  AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+  TyLoc.setAttr(Attr);
+  MutableMD->setType(AttributedType);
+  MutableMD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
+}
+
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
