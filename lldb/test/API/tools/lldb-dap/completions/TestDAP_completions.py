@@ -30,7 +30,7 @@ class CompletionItem:
         return replace(self, **kwargs)
 
 
-@dataclass
+@dataclass(frozen=True)
 class TestCase:
     input: str
     expected: set[CompletionItem]
