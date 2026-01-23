@@ -285,8 +285,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
+    AMDGPU::FeatureUnalignedScratchAccess, AMDGPU::FeatureUnalignedAccessMode,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 

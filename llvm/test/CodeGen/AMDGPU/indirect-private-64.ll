@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mattr=-promote-alloca,+max-private-element-size-16 < %s | FileCheck --check-prefixes=SI-ALLOCA16,SI %s
-; RUN: llc -mtriple=amdgcn -mattr=-promote-alloca,+max-private-element-size-4 < %s | FileCheck --check-prefixes=SI-ALLOCA4,SI %s
-; RUN: llc -mtriple=amdgcn -mattr=+promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI-PROMOTE,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=-promote-alloca,+max-private-element-size-16 < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=+promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI-PROMOTE,SI %s
+; RUN: llc -mtriple=amdgcn -amdgpu-enable-promote-alloca=0 -mattr=+max-private-element-size-16 < %s | FileCheck --check-prefixes=SI-ALLOCA16,SI %s
+; RUN: llc -mtriple=amdgcn -amdgpu-enable-promote-alloca=0 -mattr=+max-private-element-size-4 < %s | FileCheck --check-prefixes=SI-ALLOCA4,SI %s
+; RUN: llc -mtriple=amdgcn -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI-PROMOTE,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-enable-promote-alloca=0 -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI-PROMOTE,SI %s
 
 declare void @llvm.amdgcn.s.barrier() #0
 

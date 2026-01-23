@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
-; RxN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=-promote-alloca,+sram-ecc < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-promote-alloca < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -mattr=+enable-flat-scratch < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-enable-promote-alloca=0 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
+; RxN: llc -mtriple=amdgcn -mcpu=gfx906 -amdgpu-enable-promote-alloca=0 -mattr=+sram-ecc < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -amdgpu-enable-promote-alloca=0 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-enable-promote-alloca=0 -mattr=+enable-flat-scratch < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16:
 ; GCN: s_waitcnt

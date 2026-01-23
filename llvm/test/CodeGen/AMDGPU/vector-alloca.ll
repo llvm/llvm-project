@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=verde -mattr=-promote-alloca < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=verde -mattr=+promote-alloca < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=verde -amdgpu-enable-promote-alloca=0 < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=verde < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -amdgpu-enable-promote-alloca=0 < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga < %s | FileCheck -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' < %s | FileCheck -check-prefix=OPT %s
 

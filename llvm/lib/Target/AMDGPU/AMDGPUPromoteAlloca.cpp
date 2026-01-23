@@ -52,6 +52,10 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<bool> EnablePromoteAlloca("amdgpu-enable-promote-alloca",
+                                         cl::desc("Enable promote alloca pass"),
+                                         cl::init(true));
+
 static cl::opt<bool>
     DisablePromoteAllocaToVector("disable-promote-alloca-to-vector",
                                  cl::desc("Disable promote alloca to vector"),
@@ -367,12 +371,11 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
+  if (!EnablePromoteAlloca)
+    return false;
+
   Mod = F.getParent();
   DL = &Mod->getDataLayout();
-
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.isPromoteAllocaEnabled())
-    return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);

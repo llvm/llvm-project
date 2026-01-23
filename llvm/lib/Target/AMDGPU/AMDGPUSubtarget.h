@@ -88,7 +88,6 @@ protected:
   bool HasMulI24 = true;
   bool HasMulU24 = true;
   bool HasSMulHi = false;
-  bool EnablePromoteAlloca = false;
   bool HasFminFmaxLegacy = true;
 
 #define DECL_HAS_MEMBER(Name) bool Has##Name = false;
@@ -262,10 +261,6 @@ public:
 
   bool hasFminFmaxLegacy() const {
     return HasFminFmaxLegacy;
-  }
-
-  bool isPromoteAllocaEnabled() const {
-    return EnablePromoteAlloca;
   }
 
   unsigned getWavefrontSize() const {
