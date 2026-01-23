@@ -201,11 +201,7 @@ class Operation(ir.OpView):
 
     @staticmethod
     def _variadicity_to_segment(variadicity: Variadicity) -> int:
-        if variadicity == Variadicity.variadic:
-            return -1
-        if variadicity == Variadicity.optional:
-            return 0
-        return 1
+        return { Variadicity.variadic: -1, Variadicity.optional: 0 }.get(variadicity, 1)
 
     @staticmethod
     def _generate_segments(
