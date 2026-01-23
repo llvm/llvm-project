@@ -304,8 +304,8 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
                     [&](raw_ostream &OS) {
                       OS << "warning: same address range contains "
                             "different debug "
-                         << "info. Removing:\n"
-                         << Prev << "\nIn favor of this one:\n"
+                         << "info. Removing [" << getString(Prev.Name) << "]:\n"
+                         << Prev << "\nIn favor of this one [" << getString(Curr.Name) << "]:\n"
                          << Curr << "\n";
                     });
 
