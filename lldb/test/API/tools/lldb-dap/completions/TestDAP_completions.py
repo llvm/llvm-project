@@ -100,6 +100,38 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             ],
         )
 
+    def check_non_ascii_completion(self, alias_cmd: str):
+        """Creates an command alias for the `next` command and
+        verify if it has completion for the command and its help.
+
+        It assumes we are in command mode in the repl.
+        """
+        res = self.dap_server.request_evaluate(
+            f"command alias {alias_cmd} next", context="repl"
+        )
+        self.assertTrue(res["success"])
+
+        part = alias_cmd[:2]  # first two characters
+        part_codeunits = len(part.encode("utf-16-le")) // 2
+
+        next_detail = "Source level single step, stepping over calls.  Defaults to current thread unless specified."
+        expected_item = CompletionItem(
+            label=alias_cmd, detail=next_detail, length=part_codeunits
+        )
+
+        # complete the command
+        self.verify_completions(TestCase(input=part, expected={expected_item.clone()}))
+        # complete the help
+        self.verify_completions(
+            TestCase(input=f"help {part}", expected={expected_item.clone()})
+        )
+
+        # remove the alias
+        res = self.dap_server.request_evaluate(
+            f"command unalias {alias_cmd}", context="repl"
+        )
+        self.assertTrue(res["success"])
+
     def test_command_completions(self):
         """
         Tests completion requests for lldb commands, within "repl-mode=command"
@@ -205,6 +237,13 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
                 expected={CompletionItem(label="architecture", length=2)},
             )
         )
+
+        # Complete custom command with non ascii character.
+        self.check_non_ascii_completion("n€xt")  # 2 bytes £
+        self.check_non_ascii_completion("n£xt")  # 3 bytes €
+        self.check_non_ascii_completion("n💩xt")  # 4 bytes 💩
+        self.check_non_ascii_completion("√∂xt")  # start with non ascii
+        self.check_non_ascii_completion("one_seç")  # ends with non ascii
 
     def test_variable_completions(self):
         """
