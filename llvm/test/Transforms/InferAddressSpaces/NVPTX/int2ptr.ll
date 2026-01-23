@@ -19,6 +19,26 @@ define void @test_smem_fail(ptr addrspace(3) %sp) {
   ret void
 }
 
+define void @test_smem_fail2(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_smem_fail2(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP1:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[GP:%.*]] = getelementptr i8, ptr [[GP1]], i32 8
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = xor i64 4095, [[A]]
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp1 = addrspacecast ptr addrspace(3) %sp to ptr
+  %gp = getelementptr i8, ptr %gp1, i32 8
+  %a = ptrtoint ptr %gp to i64
+  %b = xor i64 4095, %a
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
 define void @test_xor_smem(ptr addrspace(3) %sp) {
 ; CHECK-LABEL: define void @test_xor_smem(
 ; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
