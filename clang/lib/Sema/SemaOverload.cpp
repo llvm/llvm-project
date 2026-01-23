@@ -7551,6 +7551,12 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function,
     return nullptr;
 
   SFINAETrap Trap(*this);
+  // Perform the access checking immediately so any access diagnostics are
+  // caught by the SFINAE trap.
+  llvm::scope_exit UndelayDiags(
+      [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
+        DelayedDiagnostics.popUndelayed(CurrentState);
+      });
   SmallVector<Expr *, 16> ConvertedArgs;
   // FIXME: We should look into making enable_if late-parsed.
   Expr *DiscardedThis;
