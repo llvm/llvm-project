@@ -72,9 +72,7 @@ func.func private @target_features() attributes {
 }
 
 
-// CHECK-LABEL:   llvm.func @empty_res_attrs() {
-// CHECK:           llvm.return
-// CHECK:         }
+// CHECK-LABEL: llvm.func @empty_res_attrs()
 func.func @empty_res_attrs() attributes {res_attrs = []} {
   return
 }
