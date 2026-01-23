@@ -17,7 +17,10 @@
 ; CHECK-NOT: The tensor contraction pattern was detected
 ; PATTERN-MATCHING-OPTS: The tensor contraction pattern was detected
 ; PATTERN-MATCHING-OPTS: The matrix multiplication pattern was detected
+; PARALLEL-AST:     Stmt_bb9
+; PARALLEL-AST:     // 1st level tiling - Tiles
 ; PARALLEL-AST-NOT: #pragma known-parallel
+; PARALLEL-AST:     for (
 ; STATS:  1 polly-opt-isl    - Number of matrix multiplication patterns detected and optimized
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
