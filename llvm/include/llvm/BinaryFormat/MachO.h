@@ -494,11 +494,11 @@ enum RelocationInfoType {
   //    .word _a - _b
   //    .end_data_region
   RISCV_RELOC_SUBTRACTOR = 1,
-  // A B/BL instruction with 21-bit displacement. For example, a
+  // A jal/j instruction with 21-bit displacement. For example, a
   // function call:
   //
   //    _foo:
-  //          call _bar
+  //          jal _bar
   RISCV_RELOC_BRANCH21 = 2,
   // High 20 bits of pointer. r_pcrel=1 means this is paired with an
   // AUIPC.  r_pcrel=0 means this is paired with a LUI.
