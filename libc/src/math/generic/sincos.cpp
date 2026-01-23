@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/math/sincos.h"
 #include "src/math/sincos.h"
+#include "src/__support/math/sincos.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
