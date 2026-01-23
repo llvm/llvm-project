@@ -958,8 +958,7 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-void VPlanTransforms::foldTailByMasking(
-    VPlan &Plan, DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks) {
+void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   assert(Plan.getExitBlocks().size() == 1 &&
          "only a single-exit block is supported currently");
   assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
@@ -971,16 +970,30 @@ void VPlanTransforms::foldTailByMasking(
 
   Header->splitAt(Header->getFirstNonPhi());
 
-  // Create the header mask and insert it in the header.
+  // Create the header mask, insert it in the header and branch on it.
   auto *IV =
       new VPWidenCanonicalIVRecipe(Header->getParent()->getCanonicalIV());
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   Builder.insert(IV);
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
-  // Predicate everything after the header mask.
-  SuccessorMasks[Header] = HeaderMask;
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  VPValue *IVInc;
+  [[maybe_unused]] bool TermBranchOnCount =
+      match(Latch->getTerminator(),
+            m_BranchOnCount(m_VPValue(IVInc),
+                            m_Specific(&Plan.getVectorTripCount())));
+  assert(TermBranchOnCount &&
+         match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                            m_Specific(&Plan.getVFxUF()))) &&
+         "Unexpected terminator");
+
+  // Split the latch at the IV update, and branch to it from the header mask.
+  VPBasicBlock *LatchSplit =
+      Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
+  VPBlockUtils::connectBlocks(Header, LatchSplit);
 
   // Any extract of the last element must be updated to extract from the last
   // active lane of the header mask instead (i.e., the lane corresponding to the

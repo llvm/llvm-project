@@ -413,25 +413,44 @@ struct VPlanTransforms {
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      TypeSize VectorRegWidth);
 
-  /// Adapts the vector loop region for tail folding by inserting a header mask
-  /// after the first non-phi in the header:
+  /// Adapts the vector loop region for tail folding by introducing a header
+  /// mask and predicating the region:
   ///
-  /// %wide.iv = widen-canonical-iv ...
-  /// %header-mask = icmp ult %wide.iv, BTC
+  /// Vector loop region before:
+  /// +-------------------------------------------+
+  /// |%iv = ...                                  |
+  /// |...                                        |
+  /// |%iv.next = add %iv, vfxuf                  |
+  /// |branch-on-count %iv.next, vector-trip-count|
+  /// +-------------------------------------------+
   ///
-  /// The header is then split at the header mask, and everything afterwards is
-  /// predicated by adding the header mask to \p SuccessorMasks. Any
-  /// VPInstruction::ExtractLastLanes are also updated to extract from the last
-  /// active lane of the header mask.
-  static void
-  foldTailByMasking(VPlan &Plan,
-                    DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks);
+  /// Vector loop region after:
+  /// +-------------------------------------------+
+  /// |%iv = ...                                  |
+  /// |%wide.iv = widen-canonical-iv ...          |
+  /// |%header-mask = icmp ult %wide.iv, BTC      |
+  /// |branch-on-cond %header-mask                |---+
+  /// +-------------------------------------------+   |
+  ///                      |                          |
+  ///                      v                          |
+  /// +-------------------------------------------+   |
+  /// |                   ...                     |   |
+  /// +-------------------------------------------+   |
+  ///                      |                          |
+  ///                      v                          |
+  /// +-------------------------------------------+   |
+  /// |%iv.next = add %iv, vfxuf                  |<--+
+  /// |branch-on-count %iv.next, vector-trip-count|
+  /// +-------------------------------------------+
+  ///
+  /// Any VPInstruction::ExtractLastLanes are also updated to extract from the
+  /// last active lane of the header mask.
+  static void foldTailByMasking(VPlan &Plan);
 
-  /// Predicate and linearize the control-flow in the only loop region of \p
-  /// Plan. Masks for blocks are added to a block-to-mask map which is returned
-  /// in order to be used later for wide recipe construction.
-  static DenseMap<VPBasicBlock *, VPValue *> introduceMasksAndLinearize(
-      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks);
+  /// Predicate and linearize the control-flow in the only loop region of
+  /// \p Plan.
+  static DenseMap<VPBasicBlock *, VPValue *>
+  introduceMasksAndLinearize(VPlan &Plan);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
