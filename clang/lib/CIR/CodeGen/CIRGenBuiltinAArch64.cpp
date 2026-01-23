@@ -1245,7 +1245,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   assert(!cir::MissingFeatures::neonSISDIntrinsics());
 
-  llvm::SmallVector<mlir::Value, 4> ops;
+  llvm::SmallVector<mlir::Value> ops;
   mlir::Location loc = getLoc(expr->getExprLoc());
 
   // Handle non-overloaded intrinsics first.
