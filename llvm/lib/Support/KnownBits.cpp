@@ -610,7 +610,7 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
       BitWidth, LHS.countMaxActiveBits() + RHS.countMaxActiveBits() - 1);
 
   // The result of the bottom bits of a clmul can be inferred by looking at the
-  // bottomo bits of both operands and carryless multiplying them together. The
+  // bottom bits of both operands and carryless multiplying them together. The
   // number of bits we can determine follows the same logic as KnownBits::mul.
   const APInt &Bottom0 = LHS.One;
   const APInt &Bottom1 = RHS.One;
