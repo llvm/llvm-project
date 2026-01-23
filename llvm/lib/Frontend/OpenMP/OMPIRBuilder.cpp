@@ -7539,20 +7539,21 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
   if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
-    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
+    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams);
 
   // If MaxThreads not set, select the maximum between the default workgroup
   // size and the MinThreads value.
-  int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0)
-    MaxThreadsVal = std::max(
+  SmallVector<int32_t, 3> MaxThreadsVals = Attrs.MaxThreads;
+  if (MaxThreadsVals.front() < 0) {
+    MaxThreadsVals[0] = std::max(
         int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
+  }
 
-  if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
+  if (MaxThreadsVals.front() > 0)
+    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVals);
 
   Constant *MinThreads = ConstantInt::getSigned(Int32, Attrs.MinThreads);
-  Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
+  Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVals.front());
   Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams);
   Constant *MaxTeams = ConstantInt::getSigned(Int32, Attrs.MaxTeams.front());
   Constant *ReductionDataSize =
@@ -7723,16 +7724,32 @@ OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
 
 void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
                                                  Function &Kernel, int32_t LB,
-                                                 int32_t UB) {
-  Kernel.addFnAttr("omp_target_thread_limit", std::to_string(UB));
+                                                 ArrayRef<int32_t> UBs) {
+  assert(!UBs.empty() && "Expected at least one upper bound");
+  assert(UBs.size() <= 3 &&
+         "Max 3 dimensions supported for AMDGPU/NVPTX targets");
+
+  // For multi-dimensional, store comma-separated values
+  std::string UBsStr;
+  for (size_t I = 0; I < UBs.size(); ++I) {
+    if (I > 0)
+      UBsStr += ",";
+    UBsStr += std::to_string(UBs[I]);
+  }
+  Kernel.addFnAttr("omp_target_thread_limit", UBsStr);
+
+  // Compute total thread count (product of all dimensions)
+  int32_t TotalUB = 1;
+  for (int32_t UB : UBs)
+    TotalUB *= UB;
 
   if (T.isAMDGPU()) {
     Kernel.addFnAttr("amdgpu-flat-work-group-size",
-                     llvm::utostr(LB) + "," + llvm::utostr(UB));
+                     llvm::utostr(LB) + "," + llvm::utostr(TotalUB));
     return;
   }
 
-  updateNVPTXAttr(Kernel, "nvvm.maxntid", UB, true);
+  updateNVPTXAttr(Kernel, "nvvm.maxntid", TotalUB, true);
 }
 
 std::pair<int32_t, int32_t>
@@ -7742,14 +7759,40 @@ OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
 }
 
 void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
-                                          int32_t LB, int32_t UB) {
-  if (T.isNVPTX())
-    if (UB > 0)
-      Kernel.addFnAttr("nvvm.maxclusterrank", llvm::utostr(UB));
-  if (T.isAMDGPU())
-    Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
+                                          int32_t LB, ArrayRef<int32_t> UBs) {
+  assert(!UBs.empty() && "Expected at least one upper bound");
+  assert(UBs.size() <= 3 &&
+         "Max 3 dimensions supported for AMDGPU/NVPTX targets");
 
-  Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
+  // Compute total teams count (product of all dimensions)
+  int32_t TotalUB = 1;
+  for (int32_t UB : UBs)
+    TotalUB *= UB;
+
+  if (T.isNVPTX()) {
+    if (TotalUB > 0)
+      Kernel.addFnAttr("nvvm.maxclusterrank", llvm::utostr(TotalUB));
+  }
+
+  if (T.isAMDGPU()) {
+    // AMDGPU supports 3D workgroup grid (x,y,z)
+    std::string WorkgroupStr;
+    for (size_t I = 0; I < 3; ++I) {
+      if (I > 0)
+        WorkgroupStr += ",";
+      WorkgroupStr += (I < UBs.size()) ? llvm::utostr(UBs[I]) : "1";
+    }
+    Kernel.addFnAttr("amdgpu-max-num-workgroups", WorkgroupStr);
+  }
+
+  // For multi-dimensional, store comma-separated values
+  std::string UBsStr;
+  for (size_t I = 0; I < UBs.size(); ++I) {
+    if (I > 0)
+      UBsStr += ",";
+    UBsStr += std::to_string(UBs[I]);
+  }
+  Kernel.addFnAttr("omp_target_num_teams", UBsStr);
 }
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(

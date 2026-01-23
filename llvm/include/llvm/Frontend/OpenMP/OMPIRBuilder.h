@@ -3212,19 +3212,21 @@ public:
   ///{
 
   /// Read/write a bounds on threads for \p Kernel. Read will return 0 if none
-  /// is set.
+  /// is set. Multi-dimensional bounds are supported for OpenMP 6.1 dims
+  /// modifier.
   LLVM_ABI static std::pair<int32_t, int32_t>
   readThreadBoundsForKernel(const Triple &T, Function &Kernel);
   LLVM_ABI static void writeThreadBoundsForKernel(const Triple &T,
                                                   Function &Kernel, int32_t LB,
-                                                  int32_t UB);
+                                                  ArrayRef<int32_t> UBs);
 
   /// Read/write a bounds on teams for \p Kernel. Read will return 0 if none
-  /// is set.
+  /// is set. Multi-dimensional bounds are supported for OpenMP 6.1 dims
+  /// modifier.
   LLVM_ABI static std::pair<int32_t, int32_t>
   readTeamBoundsForKernel(const Triple &T, Function &Kernel);
   LLVM_ABI static void writeTeamsForKernel(const Triple &T, Function &Kernel,
-                                           int32_t LB, int32_t UB);
+                                           int32_t LB, ArrayRef<int32_t> UBs);
   ///}
 
 private:
