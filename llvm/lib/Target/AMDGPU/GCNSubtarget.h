@@ -143,6 +143,8 @@ public:
 
   Generation getGeneration() const { return (Generation)Gen; }
 
+  bool isGFX10Plus() const { return getGeneration() >= GFX10; }
+
   bool isGFX11Plus() const { return getGeneration() >= GFX11; }
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
