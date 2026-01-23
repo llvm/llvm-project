@@ -3045,21 +3045,6 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
           << LibOmpTargetName << ArchPrefix;
   }
 }
-void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                                 const llvm::opt::ArgList &Args,
-                                 llvm::opt::ArgStringList &CmdArgs) {
-  if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      (!Args.hasArg(options::OPT_nostdlib) ||
-       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
-      !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
-    TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
-  } else {
-    // Claim "no HIP libraries" arguments if any
-    for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
-      Arg->claim();
-    }
-  }
-}
 
 void tools::addOpenCLBuiltinsLib(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,

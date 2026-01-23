@@ -426,25 +426,15 @@ define half @fmed3_f32_fpext_f16_k0_k2(half %arg1) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_fabs(half %arg0, half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fabs:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_fabs:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_fabs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_fabs:
 ; GFX8-SDAG:       ; %bb.0:
@@ -649,9 +639,9 @@ define half @fmed3_f32_fpext_f16_fneg_fabs(half %arg0, half %arg1, half %arg2) #
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fneg_fabs:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]

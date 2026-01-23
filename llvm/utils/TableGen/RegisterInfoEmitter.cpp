@@ -1044,6 +1044,23 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   }
   OS << "};\n\n";
 
+  // Emit the table of register unit intervals.
+  if (Target.getRegistersAreIntervals()) {
+    OS << "extern const unsigned " << TargetName
+       << "RegUnitIntervals[][2] = {\n";
+    for (const CodeGenRegister &Reg : Regs) {
+      const auto &Units = Reg.getNativeRegUnits();
+      if (Units.empty()) {
+        OS << "  { 0, 0 },\n";
+      } else {
+        unsigned First = Units.find_first();
+        unsigned Last = Units.find_last();
+        OS << "  { " << First << ", " << Last + 1 << " },\n";
+      }
+    }
+    OS << "};\n\n";
+  }
+
   const auto &RegisterClasses = RegBank.getRegClasses();
 
   // Loop over all of the register classes... emitting each one.
