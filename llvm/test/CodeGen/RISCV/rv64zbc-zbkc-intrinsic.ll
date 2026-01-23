@@ -94,9 +94,7 @@ define i32 @llvm_clmulh_i32(i32 %a, i32 %b) nounwind {
 ; RV64ZBC-ZBKC:       # %bb.0:
 ; RV64ZBC-ZBKC-NEXT:    slli a1, a1, 32
 ; RV64ZBC-ZBKC-NEXT:    slli a0, a0, 32
-; RV64ZBC-ZBKC-NEXT:    srli a1, a1, 32
-; RV64ZBC-ZBKC-NEXT:    srli a0, a0, 32
-; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
+; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    srli a0, a0, 32
 ; RV64ZBC-ZBKC-NEXT:    ret
   %tmp1 = zext i32 %a to i64

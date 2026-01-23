@@ -651,6 +651,16 @@ add_header_library(
 )
 
 add_header_library(
+  f16fmal
+  HDRS
+    f16fmal.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fma
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   ilogbf16
   HDRS
     ilogbf16.h
@@ -1245,3 +1255,13 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  dfmaf128
+  HDRS
+    dfmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+)

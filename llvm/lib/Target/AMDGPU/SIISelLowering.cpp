@@ -504,6 +504,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->has16BitInsts()) {
     setOperationAction({ISD::FPOW, ISD::FPOWI}, MVT::f16, Promote);
     setOperationAction({ISD::FLOG, ISD::FEXP, ISD::FLOG10}, MVT::f16, Custom);
+    setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
+    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
   } else {
     setOperationAction(ISD::FSQRT, MVT::f16, Custom);
   }

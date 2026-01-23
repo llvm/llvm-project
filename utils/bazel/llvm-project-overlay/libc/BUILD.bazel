@@ -2878,6 +2878,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16fmal",
+    hdrs = ["src/__support/math/f16fmal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_frexpf128",
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
@@ -3351,6 +3362,16 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_dfmal",
     hdrs = ["src/__support/math/dfmal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dfmaf128",
+    hdrs = ["src/__support/math/dfmaf128.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_fma",
@@ -3980,7 +4001,8 @@ libc_math_function(
 libc_math_function(
     name = "dfmaf128",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_dfmaf128",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -4171,7 +4193,7 @@ libc_math_function(
 libc_math_function(
     name = "f16fmal",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_f16fmal",
     ],
 )
 
