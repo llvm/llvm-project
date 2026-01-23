@@ -6468,11 +6468,17 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!Scope.destroyLocals())
       return false;
   }
-  if (const auto *Body = cast_if_present<CompoundStmt>(Ctor->getBody());
-      Body && !Body->body_empty()) {
 
-    if (!this->emitCtorCheck(SourceInfo{}))
-      return false;
+  if (const Stmt *Body = Ctor->getBody()) {
+    // Only emit the CtorCheck op for non-empty CompoundStmt bodies.
+    // For non-CompoundStmts, always assume they are non-empty and emit it.
+    if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
+      if (!CS->body_empty() && !this->emitCtorCheck(SourceInfo{}))
+        return false;
+    } else {
+      if (!this->emitCtorCheck(SourceInfo{}))
+        return false;
+    }
 
     if (!visitStmt(Body))
       return false;
