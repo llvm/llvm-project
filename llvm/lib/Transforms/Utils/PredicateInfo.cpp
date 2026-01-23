@@ -726,7 +726,7 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_BundleAssume: {
-    auto *BA = cast<PredicateBundleAssume>(this);
+    [[maybe_unused]] auto *BA = cast<PredicateBundleAssume>(this);
     assert(BA->AttrKind == Attribute::NonNull &&
            "Cannot handle anything other than NonNull");
     return {{CmpInst::ICMP_NE, ConstantPointerNull::get(
