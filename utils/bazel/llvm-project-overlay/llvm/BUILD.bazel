@@ -6726,13 +6726,15 @@ cc_binary(
 cc_binary(
     name = "llvm-ir2vec",
     testonly = True,
-    srcs = glob([
-        "tools/llvm-ir2vec/**/*.cpp",
-        "tools/llvm-ir2vec/lib/*.h",
-    ],
+    srcs = glob(
+        [
+            "tools/llvm-ir2vec/**/*.cpp",
+            "tools/llvm-ir2vec/lib/*.h",
+        ],
         exclude = [
             "tools/llvm-ir2vec/Bindings/*.cpp",
-        ]),
+        ],
+    ),
     copts = llvm_copts,
     includes = ["tools/llvm-ir2vec/lib"],
     stamp = 0,
