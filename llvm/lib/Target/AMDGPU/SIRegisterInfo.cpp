@@ -866,7 +866,8 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
     [[fallthrough]];
   }
   case AMDGPU::V_ADD_U32_e64:
-    // FIXME: This optimization is barely profitable enableFlatScratch as-is.
+    // FIXME: This optimization is barely profitable hasFlatScratchEnabled
+    // as-is.
     //
     // Much of the benefit with the MUBUF handling is we avoid duplicating the
     // shift of the frame register, which isn't needed with scratch.
@@ -874,7 +875,7 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
     // materializeFrameBaseRegister doesn't know the register classes of the
     // uses, and unconditionally uses an s_add_i32, which will end up using a
     // copy for the vector uses.
-    return !ST.enableFlatScratch();
+    return !ST.hasFlatScratchEnabled();
   case AMDGPU::V_ADD_CO_U32_e32:
     if (ST.getConstantBusLimit(AMDGPU::V_ADD_CO_U32_e32) < 2 &&
         !isFIPlusImmOrVGPR(*this, *MI))
@@ -914,12 +915,12 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   MachineFunction *MF = MBB->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned MovOpc = ST.enableFlatScratch() ? AMDGPU::S_MOV_B32
-                                           : AMDGPU::V_MOV_B32_e32;
+  unsigned MovOpc =
+      ST.hasFlatScratchEnabled() ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 
   Register BaseReg = MRI.createVirtualRegister(
-      ST.enableFlatScratch() ? &AMDGPU::SReg_32_XEXEC_HIRegClass
-                             : &AMDGPU::VGPR_32RegClass);
+      ST.hasFlatScratchEnabled() ? &AMDGPU::SReg_32_XEXEC_HIRegClass
+                                 : &AMDGPU::VGPR_32RegClass);
 
   if (Offset == 0) {
     BuildMI(*MBB, Ins, DL, TII->get(MovOpc), BaseReg)
@@ -929,16 +930,16 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   Register OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
-  Register FIReg = MRI.createVirtualRegister(
-      ST.enableFlatScratch() ? &AMDGPU::SReg_32_XM0RegClass
-                             : &AMDGPU::VGPR_32RegClass);
+  Register FIReg = MRI.createVirtualRegister(ST.hasFlatScratchEnabled()
+                                                 ? &AMDGPU::SReg_32_XM0RegClass
+                                                 : &AMDGPU::VGPR_32RegClass);
 
   BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_MOV_B32), OffsetReg)
     .addImm(Offset);
   BuildMI(*MBB, Ins, DL, TII->get(MovOpc), FIReg)
     .addFrameIndex(FrameIdx);
 
-  if (ST.enableFlatScratch() ) {
+  if (ST.hasFlatScratchEnabled()) {
     // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
         .addReg(OffsetReg, RegState::Kill)
@@ -991,9 +992,9 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
     MachineRegisterInfo &MRI = MF->getRegInfo();
 
     // FIXME: materializeFrameBaseRegister does not know the register class of
-    // the uses of the frame index, and assumes SGPR for enableFlatScratch. Emit
-    // a copy so we have a legal operand and hope the register coalescer can
-    // clean it up.
+    // the uses of the frame index, and assumes SGPR for hasFlatScratchEnabled.
+    // Emit a copy so we have a legal operand and hope the register coalescer
+    // can clean it up.
     if (isSGPRReg(MRI, BaseReg)) {
       Register BaseRegVGPR =
           MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -1732,8 +1733,8 @@ void SIRegisterInfo::buildSpillLoadStore(
             : Register(getSubReg(ValueReg,
                                  getSubRegFromChannel(RegOffset / 4, NumRegs)));
 
-    unsigned SOffsetRegState = 0;
-    unsigned SrcDstRegState = getDefRegState(!IsStore);
+    RegState SOffsetRegState = {};
+    RegState SrcDstRegState = getDefRegState(!IsStore);
     const bool IsLastSubReg = i + 1 == e;
     const bool IsFirstSubReg = i == 0;
     if (IsLastSubReg) {
@@ -1773,7 +1774,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       }
       if ((IsSubReg || NeedSuperRegImpOperand) && (IsFirstSubReg || IsLastSubReg)) {
         NeedSuperRegImpOperand = true;
-        unsigned State = SrcDstRegState;
+        RegState State = SrcDstRegState;
         if (!IsLastSubReg || (Lane != LaneE))
           State &= ~RegState::Kill;
         if (!IsFirstSubReg || (Lane != LaneS))
@@ -1896,7 +1897,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     }
 
-    bool IsSrcDstDef = SrcDstRegState & RegState::Define;
+    bool IsSrcDstDef = hasRegState(SrcDstRegState, RegState::Define);
     bool PartialReloadCopy = (RemEltSize != EltSize) && !IsStore;
     if (NeedSuperRegImpOperand &&
         (IsFirstSubReg || (IsLastSubReg && !IsSrcDstDef))) {
@@ -1980,13 +1981,15 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
       SB.EltSize, Alignment);
 
   if (IsLoad) {
-    unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                                          : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+    unsigned Opc = ST.hasFlatScratchEnabled()
+                       ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                       : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
     buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, false,
                         FrameReg, (int64_t)Offset * SB.EltSize, MMO, SB.RS);
   } else {
-    unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                                          : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+    unsigned Opc = ST.hasFlatScratchEnabled()
+                       ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                       : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
     buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, IsKill,
                         FrameReg, (int64_t)Offset * SB.EltSize, MMO, SB.RS);
     // This only ever adds one VGPR spill
@@ -2066,13 +2069,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     SB.prepare();
 
     // SubReg carries the "Kill" flag when SubReg == SB.SuperReg.
-    unsigned SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
+    RegState SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
 
     // Per VGPR helper data
     auto PVD = SB.getPerVGPRData();
 
     for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
-      unsigned TmpVGPRFlags = RegState::Undef;
+      RegState TmpVGPRFlags = RegState::Undef;
 
       // Write sub registers into the VGPR
       for (unsigned i = Offset * PVD.PerVGPR,
@@ -2089,7 +2092,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                 .addReg(SubReg, SubKillState)
                 .addImm(i % PVD.PerVGPR)
                 .addReg(SB.TmpVGPR, TmpVGPRFlags);
-        TmpVGPRFlags = 0;
+        TmpVGPRFlags = {};
 
         if (Indexes) {
           if (i == 0)
@@ -2102,7 +2105,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
         // TODO: Can we detect this and skip the spill?
         if (SB.NumSubRegs > 1) {
           // The last implicit use of the SB.SuperReg carries the "Kill" flag.
-          unsigned SuperKillState = 0;
+          RegState SuperKillState = {};
           if (i + 1 == SB.NumSubRegs)
             SuperKillState |= getKillRegState(SB.IsKill);
           WriteLane.addReg(SB.SuperReg, RegState::Implicit | SuperKillState);
@@ -2212,10 +2215,10 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
                       RS);
   SB.prepare();
   // Generate the spill of SGPR to SB.TmpVGPR.
-  unsigned SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
+  RegState SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
   auto PVD = SB.getPerVGPRData();
   for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
-    unsigned TmpVGPRFlags = RegState::Undef;
+    RegState TmpVGPRFlags = RegState::Undef;
     // Write sub registers into the VGPR
     for (unsigned i = Offset * PVD.PerVGPR,
                   e = std::min((Offset + 1) * PVD.PerVGPR, SB.NumSubRegs);
@@ -2231,12 +2234,12 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
               .addReg(SubReg, SubKillState)
               .addImm(i % PVD.PerVGPR)
               .addReg(SB.TmpVGPR, TmpVGPRFlags);
-      TmpVGPRFlags = 0;
+      TmpVGPRFlags = {};
       // There could be undef components of a spilled super register.
       // TODO: Can we detect this and skip the spill?
       if (SB.NumSubRegs > 1) {
         // The last implicit use of the SB.SuperReg carries the "Kill" flag.
-        unsigned SuperKillState = 0;
+        RegState SuperKillState = {};
         if (i + 1 == SB.NumSubRegs)
           SuperKillState |= getKillRegState(SB.IsKill);
         WriteLane.addReg(SB.SuperReg, RegState::Implicit | SuperKillState);
@@ -2442,13 +2445,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       unsigned Opc;
       if (MI->getOpcode() == AMDGPU::SI_SPILL_V16_SAVE) {
-        assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
+        assert(ST.hasFlatScratchEnabled() && "Flat Scratch is not enabled!");
         Opc = AMDGPU::SCRATCH_STORE_SHORT_SADDR_t16;
       } else {
         Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
                   ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
-              : ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                                       : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+              : ST.hasFlatScratchEnabled() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
       }
 
       auto *MBB = MI->getParent();
@@ -2527,15 +2530,15 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       unsigned Opc;
       if (MI->getOpcode() == AMDGPU::SI_SPILL_V16_RESTORE) {
-        assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
+        assert(ST.hasFlatScratchEnabled() && "Flat Scratch is not enabled!");
         Opc = ST.d16PreservesUnusedBits()
                   ? AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR_t16
                   : AMDGPU::SCRATCH_LOAD_USHORT_SADDR;
       } else {
         Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
                   ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
-              : ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                                       : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+              : ST.hasFlatScratchEnabled() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                                           : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
       }
 
       auto *MBB = MI->getParent();
@@ -2614,7 +2617,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         Offset = 0;
       }
 
-      if (FrameReg && !ST.enableFlatScratch()) {
+      if (FrameReg && !ST.hasFlatScratchEnabled()) {
         // We should just do an in-place update of the result register. However,
         // the value there may also be used by the add, in which case we need a
         // temporary register.
@@ -2635,7 +2638,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
 
       if ((!OtherOp->isImm() || OtherOp->getImm() != 0) && MaterializedReg) {
-        if (ST.enableFlatScratch() &&
+        if (ST.hasFlatScratchEnabled() &&
             !TII->isOperandLegal(*MI, Src1Idx, OtherOp)) {
           // We didn't need the shift above, so we have an SGPR for the frame
           // register, but may have a VGPR only operand.
@@ -2665,7 +2668,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (NumDefs == 2)
           AddI32.add(MI->getOperand(1));
 
-        unsigned MaterializedRegFlags =
+        RegState MaterializedRegFlags =
             getKillRegState(MaterializedReg != FrameReg);
 
         if (isVGPRClass(getPhysRegBaseClass(MaterializedReg))) {
@@ -2796,7 +2799,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       if (OtherOp.isReg() && OtherOp.getReg() != DstOp.getReg())
         TmpReg = DstOp.getReg();
 
-      if (FrameReg && !ST.enableFlatScratch()) {
+      if (FrameReg && !ST.hasFlatScratchEnabled()) {
         // FIXME: In the common case where the add does not also read its result
         // (i.e. this isn't a reg += fi), it's not finding the dest reg as
         // available.
@@ -2881,7 +2884,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
 
     int64_t Offset = FrameInfo.getObjectOffset(Index);
-    if (ST.enableFlatScratch()) {
+    if (ST.hasFlatScratchEnabled()) {
       if (TII->isFLATScratch(*MI)) {
         assert(
             (int16_t)FIOperandNum ==

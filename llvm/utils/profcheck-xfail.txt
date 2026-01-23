@@ -236,7 +236,6 @@ Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive
 Transforms/InstCombine/cast-mul-select.ll
 Transforms/InstCombine/clamp-to-minmax.ll
 Transforms/InstCombine/cttz.ll
-Transforms/InstCombine/demorgan.ll
 Transforms/InstCombine/div.ll
 Transforms/InstCombine/div-shift.ll
 Transforms/InstCombine/fabs.ll
@@ -246,13 +245,9 @@ Transforms/InstCombine/ffs-i16.ll
 Transforms/InstCombine/fmul-bool.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/fneg.ll
-Transforms/InstCombine/fold-ctpop-of-not.ll
-Transforms/InstCombine/free-inversion.ll
 Transforms/InstCombine/icmp-and-lowbit-mask.ll
 Transforms/InstCombine/icmp.ll
 Transforms/InstCombine/icmp-mul-and.ll
-Transforms/InstCombine/icmp-of-and-x.ll
-Transforms/InstCombine/icmp-of-or-x.ll
 Transforms/InstCombine/icmp-select-implies-common-op.ll
 Transforms/InstCombine/icmp-select.ll
 Transforms/InstCombine/icmp-with-selects.ll
@@ -285,10 +280,8 @@ Transforms/InstCombine/mul-masked-bits.ll
 Transforms/InstCombine/mul-pow2.ll
 Transforms/InstCombine/multiple-uses-load-bitcast-select.ll
 Transforms/InstCombine/nested-select.ll
-Transforms/InstCombine/not.ll
 Transforms/InstCombine/or-bitmask.ll
 Transforms/InstCombine/or-fcmp.ll
-Transforms/InstCombine/or.ll
 Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
@@ -308,8 +301,6 @@ Transforms/InstCombine/shift.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
-Transforms/InstCombine/sink-not-into-logical-and.ll
-Transforms/InstCombine/sink-not-into-logical-or.ll
 Transforms/InstCombine/strchr-1.ll
 Transforms/InstCombine/strchr-3.ll
 Transforms/InstCombine/strlen-1.ll
@@ -415,6 +406,7 @@ Transforms/LoopDeletion/invalidate-scev-after-hoisting.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
 Transforms/LoopIdiom/RISCV/byte-compare-index.ll
+Transforms/LoopInterchange/reduction2mem.ll
 Transforms/LowerAtomic/atomic-load.ll
 Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll
@@ -541,5 +533,6 @@ Transforms/UnifyLoopExits/nested.ll
 Transforms/UnifyLoopExits/restore-ssa.ll
 Transforms/UnifyLoopExits/switch.ll
 Transforms/UnifyLoopExits/undef-phis.ll
+Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
