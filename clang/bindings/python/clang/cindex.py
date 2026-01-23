@@ -3080,18 +3080,21 @@ class CompletionChunk:
         This will be removed without deprecation warning in a future release.
         Please do not use it directly!
         """
+
+        deprecation_message = (
+            "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
+            "and adapted to use 'CompletionChunkKind's as keys instead of their "
+            "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
+            "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
+            "will be removed in a future release."
+        )
+
         def __getitem__(self, value: int):
-            warnings.warn(
-                "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
-                "and adapted to use 'CompletionChunkKind's as keys instea of their "
-                "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
-                "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
-                "will be removed in a future release.",
-                DeprecationWarning,
-            )
+            warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
         
         def __contains__(self, value: int):
+            warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
 
 
