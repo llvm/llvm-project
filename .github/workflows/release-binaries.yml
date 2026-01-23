@@ -81,6 +81,11 @@ jobs:
         vcpkg install openssl
         vcpkg integrate install
 
+    - name: Debug
+      shell: bash
+      run: |
+        find /c/vcpkg -iname '*openssl*'
+
     - name: Install Dependencies
       shell: bash
       run: |
