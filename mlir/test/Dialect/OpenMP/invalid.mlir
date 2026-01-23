@@ -3143,3 +3143,17 @@ func.func @invalid_workdistribute() -> () {
 // -----
 // expected-error @+1 {{'omp.declare_simd' op must be nested inside a function}}
 omp.declare_simd
+
+// -----
+func.func @target_allocmem_invalid_uniq_name(%device : i32) -> () {
+// expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.target_allocmem %device : i32, i64 {uniq_name=2}
+  return
+}
+
+// -----
+func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
+// expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.target_allocmem %device : i32, i64 {bindc_name=2}
+  return
+}

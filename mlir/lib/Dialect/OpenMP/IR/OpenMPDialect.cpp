@@ -799,6 +799,58 @@ static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser and printer for Heap Alloc Clause
+//===----------------------------------------------------------------------===//
+
+/// operation ::= $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
+static ParseResult parseHeapAllocClause(
+    OpAsmParser &parser, TypeAttr &inTypeAttr,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &typeparams,
+    SmallVectorImpl<Type> &typeparamsTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &shape,
+    SmallVectorImpl<Type> &shapeTypes) {
+  mlir::Type inType;
+  if (parser.parseType(inType))
+    return mlir::failure();
+  inTypeAttr = TypeAttr::get(inType);
+
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(typeparams, OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeparamsTypes) || parser.parseRParen())
+      return failure();
+  }
+
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(shape, OpAsmParser::Delimiter::None))
+      return failure();
+
+    // TODO: This overrides the actual types of the operands, which might cause
+    // issues when they don't match. At the moment this is done in place of
+    // making the corresponding operand type `Variadic<Index>` because index
+    // types are lowered to I64 prior to LLVM IR translation.
+    shapeTypes.append(shape.size(), IndexType::get(parser.getContext()));
+  }
+
+  return success();
+}
+
+static void printHeapAllocClause(OpAsmPrinter &p, Operation *op,
+                                 TypeAttr inType, ValueRange typeparams,
+                                 TypeRange typeparamsTypes, ValueRange shape,
+                                 TypeRange shapeTypes) {
+  p << inType;
+  if (!typeparams.empty()) {
+    p << '(' << typeparams << " : " << typeparamsTypes << ')';
+  }
+  for (auto sh : shape) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -4293,107 +4345,6 @@ LogicalResult AllocateDirOp::verify() {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// TargetAllocMemOp
-//===----------------------------------------------------------------------===//
-
-mlir::Type omp::TargetAllocMemOp::getAllocatedType() {
-  return getInTypeAttr().getValue();
-}
-
-/// operation ::= %res = (`omp.target_alloc_mem`) $device : devicetype,
-///                      $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
-///                      attr-dict-without-keyword
-static mlir::ParseResult parseTargetAllocMemOp(mlir::OpAsmParser &parser,
-                                               mlir::OperationState &result) {
-  auto &builder = parser.getBuilder();
-  bool hasOperands = false;
-  std::int32_t typeparamsSize = 0;
-
-  // Parse device number as a new operand
-  mlir::OpAsmParser::UnresolvedOperand deviceOperand;
-  mlir::Type deviceType;
-  if (parser.parseOperand(deviceOperand) || parser.parseColonType(deviceType))
-    return mlir::failure();
-  if (parser.resolveOperand(deviceOperand, deviceType, result.operands))
-    return mlir::failure();
-  if (parser.parseComma())
-    return mlir::failure();
-
-  mlir::Type intype;
-  if (parser.parseType(intype))
-    return mlir::failure();
-  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
-  llvm::SmallVector<mlir::Type> typeVec;
-  if (!parser.parseOptionalLParen()) {
-    // parse the LEN params of the derived type. (<params> : <types>)
-    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
-        parser.parseColonTypeList(typeVec) || parser.parseRParen())
-      return mlir::failure();
-    typeparamsSize = operands.size();
-    hasOperands = true;
-  }
-  std::int32_t shapeSize = 0;
-  if (!parser.parseOptionalComma()) {
-    // parse size to scale by, vector of n dimensions of type index
-    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
-      return mlir::failure();
-    shapeSize = operands.size() - typeparamsSize;
-    auto idxTy = builder.getIndexType();
-    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
-      typeVec.push_back(idxTy);
-    hasOperands = true;
-  }
-  if (hasOperands &&
-      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
-                             result.operands))
-    return mlir::failure();
-
-  mlir::Type restype = builder.getIntegerType(64);
-  if (!restype) {
-    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
-    return mlir::failure();
-  }
-  llvm::SmallVector<std::int32_t> segmentSizes{1, typeparamsSize, shapeSize};
-  result.addAttribute("operandSegmentSizes",
-                      builder.getDenseI32ArrayAttr(segmentSizes));
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.addTypeToList(restype, result.types))
-    return mlir::failure();
-  return mlir::success();
-}
-
-mlir::ParseResult omp::TargetAllocMemOp::parse(mlir::OpAsmParser &parser,
-                                               mlir::OperationState &result) {
-  return parseTargetAllocMemOp(parser, result);
-}
-
-void omp::TargetAllocMemOp::print(mlir::OpAsmPrinter &p) {
-  p << " ";
-  p.printOperand(getDevice());
-  p << " : ";
-  p << getDevice().getType();
-  p << ", ";
-  p << getInType();
-  if (!getTypeparams().empty()) {
-    p << '(' << getTypeparams() << " : " << getTypeparams().getTypes() << ')';
-  }
-  for (auto sh : getShape()) {
-    p << ", ";
-    p.printOperand(sh);
-  }
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {"in_type", "operandSegmentSizes"});
-}
-
-llvm::LogicalResult omp::TargetAllocMemOp::verify() {
-  mlir::Type outType = getType();
-  if (!mlir::dyn_cast<IntegerType>(outType))
-    return emitOpError("must be a integer type");
-  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
