@@ -615,14 +615,58 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_word_t result;
   __unw_get_reg(cursor, UNW_REG_IP, &result);
 
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-  // If we are in an arm64e frame, then the PC should have been signed with the
-  // sp
+#if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
+    !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
   {
-    unw_word_t sp;
-    __unw_get_reg(cursor, UNW_REG_SP, &sp);
-    result = (unw_word_t)ptrauth_auth_data((void *)result,
-                                           ptrauth_key_return_address, sp);
+    unw_word_t raSignState, raSignUseBKey;
+    __unw_get_reg(cursor, UNW_AARCH64_RA_SIGN_STATE, &raSignState);
+    __unw_get_reg(cursor, UNW_AARCH64_RA_SIGN_USE_B_KEY, &raSignUseBKey);
+
+    bool isReturnAddressSigned = (raSignState & 1);
+    bool isReturnAddressSignedWithPC = (raSignState & 2);
+
+    if (isReturnAddressSigned) {
+#if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+      // We should never go here since non-null RA signed state is either set
+      // by architecture-specific __unw_getcontext or by stepWithDwarf which
+      // already contains a corresponding check and should have already
+      // emitted the UNW_ECROSSRASIGNING error.
+      _LIBUNWIND_ABORT("UNW_ECROSSRASIGNING");
+#else
+      unw_word_t sp;
+      __unw_get_reg(cursor, UNW_REG_SP, &sp);
+
+      register uint64_t x17 __asm("x17") = result;
+      register uint64_t x16 __asm("x16") = sp;
+
+      if (isReturnAddressSignedWithPC) {
+        unw_word_t raSignSecondModifier;
+        __unw_get_reg(cursor, UNW_AARCH64_RA_SIGN_SECOND_MODIFIER,
+                      &raSignSecondModifier);
+
+        register uint64_t x15 __asm("x15") = raSignSecondModifier;
+
+        if (raSignUseBKey) {
+          __asm__("hint 0x27\n\t" // pacm
+                  "hint 0xe     " // autib1716
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15));
+        } else {
+          __asm__("hint 0x27\n\t" // pacm
+                  "hint 0xc     " // autia1716
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15));
+        }
+      } else {
+        if (raSignUseBKey) {
+          __asm__("hint 0xe" : "+r"(x17) : "r"(x16)); // autib1716
+        } else {
+          __asm__("hint 0xc" : "+r"(x17) : "r"(x16)); // autia1716
+        }
+      }
+      result = x17;
+#endif
+    }
   }
 #endif
 
