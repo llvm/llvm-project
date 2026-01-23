@@ -204,7 +204,8 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
-  if (isa<FieldDecl>(ME->getMemberDecl())) {
+  auto *MD = ME->getMemberDecl();
+  if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
     assert(ME->isGLValue() && "Field member should be GL value");
     OriginList *Dst = getOriginsList(*ME);
     assert(Dst && "Field member should have an origin list as it is GL value");
@@ -402,9 +403,9 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   if (!MTEList)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
-  assert(!SubExprList ||
-         MTEList->getLength() == SubExprList->getLength() + 1 &&
-             "MTE top level origin should contain a loan to the MTE itself");
+  assert((!SubExprList ||
+          MTEList->getLength() == (SubExprList->getLength() + 1)) &&
+         "MTE top level origin should contain a loan to the MTE itself");
   MTEList = getRValueOrigins(MTE, MTEList);
   if (getChildBinding(MTE)) {
     // Issue a loan to MTE for the storage location represented by MTE.

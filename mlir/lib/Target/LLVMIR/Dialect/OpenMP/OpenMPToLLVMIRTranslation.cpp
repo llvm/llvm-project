@@ -6319,6 +6319,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
       llvm::Value *upperBound = moduleTranslation.lookupValue(loopUpper);
       llvm::Value *step = moduleTranslation.lookupValue(loopStep);
 
+      if (!lowerBound || !upperBound || !step) {
+        attrs.LoopTripCount = nullptr;
+        break;
+      }
+
       llvm::OpenMPIRBuilder::LocationDescription loc(builder);
       llvm::Value *tripCount = ompBuilder->calculateCanonicalLoopTripCount(
           loc, lowerBound, upperBound, step, /*IsSigned=*/true,
