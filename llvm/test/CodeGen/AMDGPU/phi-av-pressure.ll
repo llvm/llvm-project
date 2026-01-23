@@ -3,6 +3,10 @@
 
 declare hidden i32 @_ZN25__hip_builtin_threadIdx_t7__get_xEv()
 
+; Before #177352 this test showed poor scheduling due to register pressure
+; problems. The symptom was that two global_load instructions were immediately
+; followed by s_waitcnt vmcnt(0).
+
 define amdgpu_kernel void @main(i1 %arg, ptr %ptr, ptr addrspace(1) %ptr1, ptr addrspace(5) %ptr5) {
 ; GFX950-LABEL: main:
 ; GFX950:       ; %bb.0: ; %bb
