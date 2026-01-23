@@ -710,62 +710,60 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    FC0.Peeled =
-        peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
-    if (FC0.Peeled) {
-      LLVM_DEBUG(dbgs() << "Done Peeling\n");
+    peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+    FC0.Peeled = true;
+    LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
 #ifndef NDEBUG
-      auto IdenticalTripCount = haveIdenticalTripCounts(FC0, FC1);
+    auto IdenticalTripCount = haveIdenticalTripCounts(FC0, FC1);
 
-      assert(IdenticalTripCount.first && *IdenticalTripCount.second == 0 &&
-             "Loops should have identical trip counts after peeling");
+    assert(IdenticalTripCount.first && *IdenticalTripCount.second == 0 &&
+           "Loops should have identical trip counts after peeling");
 #endif
 
-      FC0.PP.PeelCount += PeelCount;
+    FC0.PP.PeelCount += PeelCount;
 
-      // Peeling does not update the PDT
-      PDT.recalculate(*FC0.Preheader->getParent());
+    // Peeling does not update the PDT
+    PDT.recalculate(*FC0.Preheader->getParent());
 
-      FC0.updateAfterPeeling();
+    FC0.updateAfterPeeling();
 
-      // In this case the iterations of the loop are constant, so the first
-      // loop will execute completely (will not jump from one of
-      // the peeled blocks to the second loop). Here we are updating the
-      // branch conditions of each of the peeled blocks, such that it will
-      // branch to its successor which is not the preheader of the second loop
-      // in the case of unguarded loops, or the succesors of the exit block of
-      // the first loop otherwise. Doing this update will ensure that the entry
-      // block of the first loop dominates the entry block of the second loop.
-      BasicBlock *BB =
-          FC0.GuardBranch ? FC0.ExitBlock->getUniqueSuccessor() : FC1.Preheader;
-      if (BB) {
-        SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
-        SmallVector<Instruction *, 8> WorkList;
-        for (BasicBlock *Pred : predecessors(BB)) {
-          if (Pred != FC0.ExitBlock) {
-            WorkList.emplace_back(Pred->getTerminator());
-            TreeUpdates.emplace_back(
-                DominatorTree::UpdateType(DominatorTree::Delete, Pred, BB));
-          }
+    // In this case the iterations of the loop are constant, so the first
+    // loop will execute completely (will not jump from one of
+    // the peeled blocks to the second loop). Here we are updating the
+    // branch conditions of each of the peeled blocks, such that it will
+    // branch to its successor which is not the preheader of the second loop
+    // in the case of unguarded loops, or the succesors of the exit block of
+    // the first loop otherwise. Doing this update will ensure that the entry
+    // block of the first loop dominates the entry block of the second loop.
+    BasicBlock *BB =
+        FC0.GuardBranch ? FC0.ExitBlock->getUniqueSuccessor() : FC1.Preheader;
+    if (BB) {
+      SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
+      SmallVector<Instruction *, 8> WorkList;
+      for (BasicBlock *Pred : predecessors(BB)) {
+        if (Pred != FC0.ExitBlock) {
+          WorkList.emplace_back(Pred->getTerminator());
+          TreeUpdates.emplace_back(
+              DominatorTree::UpdateType(DominatorTree::Delete, Pred, BB));
         }
-        // Cannot modify the predecessors inside the above loop as it will cause
-        // the iterators to be nullptrs, causing memory errors.
-        for (Instruction *CurrentBranch : WorkList) {
-          BasicBlock *Succ = CurrentBranch->getSuccessor(0);
-          if (Succ == BB)
-            Succ = CurrentBranch->getSuccessor(1);
-          ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
-        }
-
-        DTU.applyUpdates(TreeUpdates);
-        DTU.flush();
       }
-      LLVM_DEBUG(
-          dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
-                 << " iterations from the first loop.\n"
-                    "Both Loops have the same number of iterations now.\n");
+      // Cannot modify the predecessors inside the above loop as it will cause
+      // the iterators to be nullptrs, causing memory errors.
+      for (Instruction *CurrentBranch : WorkList) {
+        BasicBlock *Succ = CurrentBranch->getSuccessor(0);
+        if (Succ == BB)
+          Succ = CurrentBranch->getSuccessor(1);
+        ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
+      }
+
+      DTU.applyUpdates(TreeUpdates);
+      DTU.flush();
     }
+    LLVM_DEBUG(
+        dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
+               << " iterations from the first loop.\n"
+                  "Both Loops have the same number of iterations now.\n");
   }
 
   /// Walk each set of strictly adjacent fusion candidates and attempt to fuse

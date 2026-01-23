@@ -1027,6 +1027,9 @@ PRAGMA_ANNOTATION(pragma_fp)
 // Annotation for the attribute pragma directives - #pragma clang attribute ...
 PRAGMA_ANNOTATION(pragma_attribute)
 
+// Annotation for C/C++ #pragma export(ident)
+PRAGMA_ANNOTATION(pragma_export)
+
 // Annotation for the riscv pragma directives - #pragma clang riscv intrinsic ...
 PRAGMA_ANNOTATION(pragma_riscv)
 

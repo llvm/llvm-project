@@ -859,6 +859,15 @@ def : PatGprGpr<clmul, CLMUL>;
 def : PatGprGpr<clmulh, CLMULH>;
 } // Predicates = [HasStdExtZbcOrZbkc]
 
+let Predicates = [HasStdExtZbcOrZbkc, IsRV64, NoStdExtZba] in {
+// Special case for calculating the full 64-bit product of a 32x32 unsigned
+// multiply where the inputs aren't known to be zero extended. We can shift the
+// inputs left by 32 and use a CLMULH. This saves two SRLIs needed to finish
+// zeroing the upper 32 bits.
+def : Pat<(i64 (clmul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
+          (CLMULH (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
+} // Predicates = [HasStdExtZbcOrZbkc, IsRV64, NoStdExtZba]
+
 let Predicates = [HasStdExtZbc] in
 def : PatGprGpr<clmulr, CLMULR>;
 

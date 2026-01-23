@@ -3916,11 +3916,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CLMUL: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // TODO: Trailing zeros, known LSBs.
-    unsigned ActiveBits = std::min(
-        BitWidth, Known.countMaxActiveBits() + Known2.countMaxActiveBits() - 1);
-    Known.Zero = APInt::getBitsSetFrom(BitWidth, ActiveBits);
-    Known.One.clearAllBits();
+    Known = KnownBits::clmul(Known, Known2);
     break;
   }
   case ISD::MGATHER:

@@ -7041,6 +7041,7 @@ private:
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
+  std::unique_ptr<PragmaHandler> ExportHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 
   /// Initialize all pragma handlers.
@@ -7161,6 +7162,12 @@ private:
       SourceLocation &AnyLoc, SourceLocation &LastMatchRuleEndLoc);
 
   void HandlePragmaAttribute();
+
+  void zOSHandlePragmaHelper(tok::TokenKind);
+
+  /// Handle the annotation token produced for
+  /// #pragma export ...
+  void HandlePragmaExport();
 
   ///@}
 
