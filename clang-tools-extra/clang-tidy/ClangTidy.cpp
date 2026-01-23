@@ -17,7 +17,7 @@
 #include "ClangTidy.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
-#include "ClangTidyModuleRegistry.h"
+#include "ClangTidyModule.h"
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
 #include "clang-tidy-config.h"
@@ -176,7 +176,7 @@ public:
               ++AppliedFixes;
             }
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
-            FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
+            FixLocations.emplace_back(FixLoc, CanBeApplied);
             Entry.BuildDir = Error.BuildDirectory;
           }
         }
@@ -339,7 +339,7 @@ private:
   std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
-  void anchor() override {};
+  void anchor() override {}
 };
 
 } // namespace

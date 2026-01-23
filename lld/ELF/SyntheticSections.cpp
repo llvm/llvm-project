@@ -674,7 +674,6 @@ GotSection::GotSection(Ctx &ctx)
   numEntries = ctx.target->gotHeaderEntriesNum;
 }
 
-void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().gotIdx = numEntries++;
@@ -944,7 +943,7 @@ void MipsGotSection::build() {
   // using 32-bit value at the end of 16-bit entries.
   for (FileGot &got : gots) {
     got.relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-      return got.global.count(p.first);
+      return got.global.contains(p.first);
     });
     set_union(got.local16, got.local32);
     got.local32.clear();
@@ -1006,7 +1005,7 @@ void MipsGotSection::build() {
   // by subtracting "global" entries in the primary GOT.
   primGot = &gots.front();
   primGot->relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-    return primGot->global.count(p.first);
+    return primGot->global.contains(p.first);
   });
 
   // Calculate indexes for each GOT entry.
@@ -1061,8 +1060,8 @@ void MipsGotSection::build() {
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset, true, *s, 0, R_ABS});
+        ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+            ctx.target->tlsGotRel, *this, offset, *s, ctx.target->symbolicRel);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1156,6 +1155,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   // if we had to do this.
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
+  ctx.target->relocateAlloc(*this, buf);
   for (const FileGot &g : gots) {
     auto write = [&](size_t i, const Symbol *s, int64_t a) {
       uint64_t va = a;
@@ -1185,9 +1185,10 @@ void MipsGotSection::writeTo(uint8_t *buf) {
         write(p.second, p.first, 0);
     for (const std::pair<Symbol *, size_t> &p : g.relocs)
       write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first,
-            p.first->isPreemptible || ctx.arg.shared ? 0 : -0x7000);
+    for (const std::pair<Symbol *, size_t> &p : g.tls) {
+      if (!p.first->isPreemptible && !ctx.arg.shared)
+        write(p.second, p.first, -0x7000);
+    }
     for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
       if (p.first == nullptr && !ctx.arg.shared)
         write(p.second, nullptr, 1);
@@ -1708,6 +1709,9 @@ void RelocationBaseSection::partitionRels() {
 }
 
 void RelocationBaseSection::finalizeContents() {
+  mergeRels();
+  // Compute DT_RELACOUNT to be used by part.dynamic.
+  partitionRels();
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
@@ -1796,6 +1800,8 @@ void RelrBaseSection::mergeRels() {
     llvm::append_range(relocs, v);
   relocsVec.clear();
 }
+
+void RelrBaseSection::finalizeContents() { mergeRels(); }
 
 template <class ELFT>
 AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(

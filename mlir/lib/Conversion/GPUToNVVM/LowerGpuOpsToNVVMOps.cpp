@@ -708,11 +708,11 @@ void mlir::populateGpuToNVVMConversionPatterns(
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
       NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>>(
-      converter, IndexKind::Other, IntrType::Id, benefit);
+      converter, IndexKind::Cluster, IntrType::Id, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
       NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>>(
-      converter, IndexKind::Other, IntrType::Dim, benefit);
+      converter, IndexKind::Cluster, IntrType::Dim, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
       converter, IndexKind::Grid, IntrType::Id, benefit);
@@ -737,7 +737,9 @@ void mlir::populateGpuToNVVMConversionPatterns(
           StringAttr::get(&converter.getContext(),
                           NVVM::NVVMDialect::getKernelFuncAttrName()),
           StringAttr::get(&converter.getContext(),
-                          NVVM::NVVMDialect::getMaxntidAttrName())},
+                          NVVM::NVVMDialect::getMaxntidAttrName()),
+          StringAttr::get(&converter.getContext(),
+                          NVVM::NVVMDialect::getClusterDimAttrName())},
       benefit);
 
   populateLibDeviceConversionPatterns(converter, patterns, benefit);

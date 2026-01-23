@@ -10,9 +10,17 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 
 namespace clang ::lifetimes {
+
+// This function is needed because Decl::isInStdNamespace will return false for
+// iterators in some STL implementations due to them being defined in a
+// namespace outside of the std namespace.
+bool isInStlNamespace(const Decl *D);
+
+bool isPointerLikeType(QualType QT);
 
 /// Returns the most recent declaration of the method to ensure all
 /// lifetime-bound attributes from redeclarations are considered.
@@ -37,6 +45,21 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
+
+// Returns true if the implicit object argument (this) of a method call should
+// be tracked for GSL lifetime analysis. This applies to STL methods that return
+// pointers or references that depend on the lifetime of the object, such as
+// container iterators (begin, end), data accessors (c_str, data, get), or
+// element accessors (operator[], operator*, front, back, at).
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+                                  bool RunningUnderLifetimeSafety);
+
+// Returns true if the first argument of a free function should be tracked for
+// GSL lifetime analysis. This applies to STL free functions that take a pointer
+// to a GSL Owner or Pointer and return a pointer or reference that depends on
+// the lifetime of the argument, such as std::begin, std::data, std::get, or
+// std::any_cast.
+bool shouldTrackFirstArgument(const FunctionDecl *FD);
 
 // Tells whether the type is annotated with [[gsl::Pointer]].
 bool isGslPointerType(QualType QT);

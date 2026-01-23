@@ -669,6 +669,13 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   func.return
 }
 
+// CHECK-LABEL: func @gather_to_lds_0d
+func.func @gather_to_lds_0d(%mem1 : memref<f16>, %smem1 : memref<f16, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.gather_to_lds %{{.*}}[], %{{.*}}[]
+  amdgpu.gather_to_lds %mem1[], %smem1[] : vector<2xf16>, memref<f16>, memref<f16, #gpu.address_space<workgroup>>
+  func.return
+}
+
 // CHECK-LABEL: func @memory_counter_wait
 func.func @memory_counter_wait() {
   // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)

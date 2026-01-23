@@ -28,6 +28,8 @@
 
 using namespace llvm;
 
+constexpr static int BackrefLimit = 20;
+
 StringRef ExpressionFormat::toString() const {
   switch (Value) {
   case Kind::NoFormat:
@@ -1054,10 +1056,11 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         if (!IsNumBlock &&
             (It = VariableDefs.find(SubstStr)) != VariableDefs.end()) {
           unsigned CaptureParenGroup = It->second;
-          if (CaptureParenGroup < 1 || CaptureParenGroup > 9) {
+          if (CaptureParenGroup < 1 || CaptureParenGroup > BackrefLimit) {
             SM.PrintMessage(SMLoc::getFromPointer(SubstStr.data()),
                             SourceMgr::DK_Error,
-                            "Can't back-reference more than 9 variables");
+                            "Can't back-reference more than " +
+                                Twine(BackrefLimit) + " variables");
             return true;
           }
           AddBackrefToRegEx(CaptureParenGroup);
@@ -1108,8 +1111,14 @@ bool Pattern::AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM) {
 }
 
 void Pattern::AddBackrefToRegEx(unsigned BackrefNum) {
-  assert(BackrefNum >= 1 && BackrefNum <= 9 && "Invalid backref number");
-  std::string Backref = std::string("\\") + std::string(1, '0' + BackrefNum);
+  assert(BackrefNum >= 1 && BackrefNum <= BackrefLimit &&
+         "Invalid backref number");
+  std::string Backref;
+  if (BackrefNum >= 1 && BackrefNum <= 9)
+    Backref = std::string("\\") + std::string(1, '0' + BackrefNum);
+  else
+    Backref = std::string("\\g{") + std::to_string(BackrefNum) + '}';
+
   RegExStr += Backref;
 }
 
@@ -1999,13 +2008,9 @@ bool FileCheck::readCheckFile(
       (ImplicitNegativeChecks.empty() || !Req.IsDefaultCheckPrefix)) {
     errs() << "error: no check strings found with prefix"
            << (PrefixesNotFound.size() > 1 ? "es " : " ");
-    bool First = true;
-    for (StringRef MissingPrefix : PrefixesNotFound) {
-      if (!First)
-        errs() << ", ";
-      errs() << "\'" << MissingPrefix << ":'";
-      First = false;
-    }
+    ListSeparator LS;
+    for (StringRef MissingPrefix : PrefixesNotFound)
+      errs() << LS << "\'" << MissingPrefix << ":'";
     errs() << '\n';
     return true;
   }

@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
@@ -115,6 +114,7 @@
 
 namespace clang::tidy {
 namespace bugprone {
+namespace {
 
 class BugproneModule : public ClangTidyModule {
 public:
@@ -319,6 +319,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace bugprone
 
 // Register the BugproneTidyModule using this statically initialized variable.

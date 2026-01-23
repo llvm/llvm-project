@@ -521,17 +521,15 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     auto H = static_cast<Heuristic>(Idx);
     if (GetToggleOpt(H))
       AppliedHeuristics.emplace_back(H);
-    ConfiguredBounds.emplace_back(
-        std::make_pair(GetBoundOpt(H, BoundKind::DissimilarBelow),
-                       GetBoundOpt(H, BoundKind::SimilarAbove)));
+    ConfiguredBounds.emplace_back(GetBoundOpt(H, BoundKind::DissimilarBelow),
+                                  GetBoundOpt(H, BoundKind::SimilarAbove));
   }
 
   for (const StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
-    auto KeyAndValue = Abbreviation.split("=");
-    assert(!KeyAndValue.first.empty() && !KeyAndValue.second.empty());
-    AbbreviationDictionary.insert(
-        std::make_pair(KeyAndValue.first, KeyAndValue.second.str()));
+    const auto [Key, Value] = Abbreviation.split("=");
+    assert(!Key.empty() && !Value.empty());
+    AbbreviationDictionary.try_emplace(Key, Value.str());
   }
 }
 

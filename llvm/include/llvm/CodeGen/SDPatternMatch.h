@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/KnownBits.h"
 
 namespace llvm {
 namespace SDPatternMatch {
@@ -922,6 +923,11 @@ inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_Clmul(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::CLMUL, L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_FAdd(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::FADD, L, R);
 }
@@ -1041,6 +1047,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ABS, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FABS, Op);
 }
 
 /// Match a zext or identity
@@ -1173,6 +1183,46 @@ inline SpecificFP_match m_SpecificFP(double V) {
   return SpecificFP_match(APFloat(V));
 }
 
+struct Negative_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNegative();
+  }
+};
+
+struct NonNegative_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNonNegative();
+  }
+};
+
+struct StrictlyPositive_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isStrictlyPositive();
+  }
+};
+
+struct NonPositive_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNonPositive();
+  }
+};
+
+struct NonZero_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNonZero();
+  }
+};
+
 struct Zero_match {
   bool AllowUndefs;
 
@@ -1204,6 +1254,28 @@ struct AllOnes_match {
   }
 };
 
+inline Negative_match m_Negative() { return Negative_match(); }
+template <typename Pattern> inline auto m_Negative(const Pattern &P) {
+  return m_AllOf(m_Negative(), P);
+}
+inline NonNegative_match m_NonNegative() { return NonNegative_match(); }
+template <typename Pattern> inline auto m_NonNegative(const Pattern &P) {
+  return m_AllOf(m_NonNegative(), P);
+}
+inline StrictlyPositive_match m_StrictlyPositive() {
+  return StrictlyPositive_match();
+}
+template <typename Pattern> inline auto m_StrictlyPositive(const Pattern &P) {
+  return m_AllOf(m_StrictlyPositive(), P);
+}
+inline NonPositive_match m_NonPositive() { return NonPositive_match(); }
+template <typename Pattern> inline auto m_NonPositive(const Pattern &P) {
+  return m_AllOf(m_NonPositive(), P);
+}
+inline NonZero_match m_NonZero() { return NonZero_match(); }
+template <typename Pattern> inline auto m_NonZero(const Pattern &P) {
+  return m_AllOf(m_NonZero(), P);
+}
 inline Ones_match m_One(bool AllowUndefs = false) {
   return Ones_match(AllowUndefs);
 }
@@ -1297,6 +1369,34 @@ inline BinaryOpc_match<Zero_match, ValTy, false> m_Neg(const ValTy &V) {
 template <typename ValTy>
 inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
+}
+
+template <unsigned IntrinsicId, typename... OpndPreds>
+inline auto m_IntrinsicWOChain(const OpndPreds &...Opnds) {
+  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Opnds...);
+}
+
+struct SpecificNeg_match {
+  SDValue V;
+
+  explicit SpecificNeg_match(SDValue V) : V(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Neg(m_Specific(V))))
+      return true;
+
+    return ISD::matchBinaryPredicate(
+        V, N, [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
+          return LHS->getAPIntValue() == -RHS->getAPIntValue();
+        });
+  }
+};
+
+/// Match a negation of a specific value V, either as sub(0, V) or as
+/// constant(s) that are the negation of V's constant(s).
+inline SpecificNeg_match m_SpecificNeg(SDValue V) {
+  return SpecificNeg_match(V);
 }
 
 template <typename... PatternTs> struct ReassociatableOpc_match {

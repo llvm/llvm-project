@@ -29,47 +29,72 @@ void doSomething() noexcept;
 // CHECK: define{{.*}} i32 @_Z1fv(
 int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
-  // CHECK: %[[GroActive:.+]] = alloca i1
-  // CHECK: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata:.+]]
+  // CHECK-NEXT: %[[GroActive:.+]] = alloca i1
+  // CHECK-NEXT: %[[Promise:.+]] = alloca %"struct.std::coroutine_traits<int>::promise_type", align 1
+  // CHECK-NEXT: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata:.+]]
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
+  // CHECK-NEXT: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
+
   // CHECK: store i1 false, ptr %[[GroActive]]
-  // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeC1Ev(
-  // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_type17get_return_objectEv({{.*}} %[[CoroGro]]
-  // CHECK: store i1 true, ptr %[[GroActive]]
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[Promise]])
+  // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeC1Ev(
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[CoroGro]])
+  // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_type17get_return_objectEv({{.*}} %[[CoroGro]]
+  // CHECK-NEXT: store i1 true, ptr %[[GroActive]]
 
   Cleanup cleanup;
   doSomething();
   co_return;
 
   // CHECK: call void @_Z11doSomethingv(
-  // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_type11return_voidEv(
-  // CHECK: call void @_ZN7CleanupD1Ev(
-
-  // Destroy promise and free the memory.
-
-  // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeD1Ev(
-  // CHECK: %[[Mem:.+]] = call ptr @llvm.coro.free(
-  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call void @_ZdlPvm(ptr noundef %[[Mem]], i64 noundef %[[SIZE]])
+  // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_type11return_voidEv(
+  // CHECK-NEXT: call void @_ZN7CleanupD1Ev(
 
   // Initialize retval from Gro and destroy Gro
   // Note this also tests delaying initialization when Gro and function return
   // types mismatch (see cwg2563).
 
-  // CHECK: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv(
-  // CHECK: store i32 %[[Conv]], ptr %[[RetVal]]
-  // CHECK: %[[IsActive:.+]] = load i1, ptr %[[GroActive]]
-  // CHECK: br i1 %[[IsActive]], label %[[CleanupGro:.+]], label %[[Done:.+]]
+  // CHECK: pre.gvo.conv:
+  // CHECK-NEXT: %[[IsFinalExit:.+]] = phi i1 [ true, %cleanup8 ], [ false, %final.suspend ], [ false, %init.suspend ]
+  // CHECK-NEXT: %InRamp = call i1 @llvm.coro.is_in_ramp()
+  // CHECK-NEXT: br i1 %InRamp, label %[[GroConv:.+]], label %[[AfterGroConv:.+]]
+
+  // CHECK: [[GroConv]]:
+  // CHECK-NEXT: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv(
+  // CHECK-NEXT: store i32 %[[Conv]], ptr %[[RetVal]]
+  // CHECK-NEXT: br label %[[AfterGroConv]]
+
+  // CHECK: [[AfterGroConv]]:
+  // CHECK-NEXT: br i1  %[[IsFinalExit]], label %cleanup.cont10, label %[[CoroRet:.+]]
+
+  // CHECK: cleanup.cont10:
+  // CHECK-NEXT: br label %[[Cleanup:.+]]
+
+  // CHECK: [[Cleanup]]:
+  // CHECK-NEXT: %{{.*}} = phi i32
+  // CHECK-NEXT: %[[IsActive:.+]] = load i1, ptr %[[GroActive]]
+  // CHECK-NEXT: br i1 %[[IsActive]], label %[[CleanupGro:.+]], label %[[Done:.+]]
 
   // CHECK: [[CleanupGro]]:
-  // CHECK:   call void @_ZN7GroTypeD1Ev(
-  // CHECK:   br label %[[Done]]
+  // CHECK-NEXT: call void @_ZN7GroTypeD1Ev(
+  // CHECK-NEXT: br label %[[Done]]
+
+  // Destroy promise and free the memory.
 
   // CHECK: [[Done]]:
-  // CHECK:   %[[LoadRet:.+]] = load i32, ptr %[[RetVal]]
-  // CHECK:   ret i32 %[[LoadRet]]
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[CoroGro]])
+  // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeD1Ev(
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[Promise]])
+  // CHECK-NEXT: %[[Mem:.+]] = call ptr @llvm.coro.free(
+
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK-NEXT: call void @_ZdlPvm(ptr noundef %[[Mem]], i64 noundef %[[SIZE]])
+
+  // CHECK: [[CoroRet]]:
+  // CHECK-NEXT: call void @llvm.coro.end(
+  // CHECK-NEXT: %[[LoadRet:.+]] = load i32, ptr %[[RetVal]]
+  // CHECK-NEXT: ret i32 %[[LoadRet]]
 }
 
 class invoker {

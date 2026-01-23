@@ -7065,7 +7065,9 @@ def CFIUncheckedCalleeDocs : Documentation {
   let Content = [{
 ``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
 `Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
-function calls. Specifically, the attribute has the following semantics:
+function calls. This also includes control flow checks added by
+`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+Specifically, the attribute has the following semantics:
 
 1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
    the indirect call will not be checked. Note that this only changes the behavior for indirect calls

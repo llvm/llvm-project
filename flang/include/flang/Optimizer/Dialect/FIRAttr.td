@@ -243,4 +243,21 @@ def fir_FortranInlineAttr
     : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs"> {
   let assemblyFormat = "`<` $value `>`";
 }
+
+// USE statement rename mapping: local_name => use_name
+def fir_UseRenameAttr : fir_Attr<"UseRename"> {
+  let mnemonic = "use_rename";
+  let summary = "Represents a rename in a Fortran USE statement";
+  let description = [{
+    This attribute stores the mapping for a renamed symbol in a USE statement.
+    For example, in "USE mod, local_var => module_var", this stores the
+    local name and a symbol reference to the module variable.
+  }];
+
+  let parameters = (ins "mlir::StringAttr":$local_name,
+      "mlir::FlatSymbolRefAttr":$symbol);
+
+  let assemblyFormat = "`<` $local_name `,` $symbol `>`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

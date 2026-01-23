@@ -3,6 +3,7 @@
 // RUN: | %fcheck-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

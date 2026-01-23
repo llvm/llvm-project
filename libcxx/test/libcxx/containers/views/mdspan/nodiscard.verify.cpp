@@ -33,6 +33,8 @@ void test() {
   mdsp.static_extent(0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   mdsp.extent(0);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
+  mdsp.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   mdsp.extents();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   mdsp.data_handle(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   mdsp.mapping();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

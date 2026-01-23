@@ -234,7 +234,7 @@ private:
   /// Align consecutive bitfields over all \c Changes.
   void alignConsecutiveBitFields();
 
-  /// Align consecutive colon. For bitfields, TableGen DAGArgs and defintions.
+  /// Align consecutive colon. For bitfields, TableGen DAGArgs and definitions.
   void
   alignConsecutiveColons(const FormatStyle::AlignConsecutiveStyle &AlignStyle,
                          TokenType Type);
