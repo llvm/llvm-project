@@ -3855,6 +3855,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     PriorityFlag = 0x20,
     DetachableFlag = 0x40,
     FreeAgentFlag = 0x80,
+    TransparentFlag = 0x100,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -3869,6 +3870,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     if (Kind == OMPC_THREADSET_omp_pool)
       Flags = Flags | FreeAgentFlag;
   }
+  if (D.getSingleClause<OMPTransparentClause>())
+    Flags |= TransparentFlag;
+
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
   if (D.hasClausesOfKind<OMPDetachClause>())
@@ -10461,10 +10465,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///                                           void *base, void *begin,
 ///                                           int64_t size, int64_t type,
 ///                                           void *name = nullptr) {
-///   // Allocate space for an array section first or add a base/begin for
-///   // pointer dereference.
-///   if ((size > 1 || (base != begin && maptype.IsPtrAndObj)) &&
-///       !maptype.IsDelete)
+///   // Allocate space for an array section first.
+///   if ((size > 1 || (base != begin)) && !maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
 ///                                 size*sizeof(Ty), clearToFromMember(type));
 ///   // Map members.

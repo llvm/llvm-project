@@ -199,9 +199,10 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
-  let PostEncoderMethod = ps.PostEncoderMethod;
 
   VOPProfile Pfl = ps.Pfl;
+
+  let PostEncoderMethod = !if(!and(Pfl.HasSrc0, Pfl.HasSrc1, Pfl.HasSrc2), "", "postEncodeVOP3<"#Pfl.HasSrc0#","#Pfl.HasSrc1#","#Pfl.HasSrc2#">");
 }
 
 class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
@@ -769,16 +770,9 @@ class VOP_SDWA9Be<VOPProfile P> : VOP_SDWA9e<P> {
 }
 
 class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
-  InstSI <P.OutsSDWA, P.InsSDWA, "", pattern>,
-  VOP <opName>,
-  SIMCInstr <opName#"_sdwa", SIEncodingFamily.NONE> {
+  VOP_Pseudo <opName, "_sdwa", P, P.OutsSDWA, P.InsSDWA, "", pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = P.AsmSDWA;
+  let AsmOperands = P.AsmSDWA;
   string AsmOperands9 = P.AsmSDWA9;
 
   let Size = 8;
@@ -798,8 +792,6 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let AsmVariantName = !if(P.HasExtSDWA, AMDGPUAsmVariants.SDWA,
                                          AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "GFX8";
-
-  VOPProfile Pfl = P;
 }
 
 class VOP_SDWA8_Real <VOP_SDWA_Pseudo ps> :

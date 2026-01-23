@@ -1785,6 +1785,19 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+The ``ReportMode`` option controls when warnings are reported:
+
+* ``all``: Reports all unsafe functions regardless of C standard or Annex K availability. Useful for security auditing and vulnerability scanning.
+
+* ``actionable``: Only reports when Annex K is available (C11 with ``__STDC_LIB_EXT1__`` and ``__STDC_WANT_LIB_EXT1__=1``).
+
+* ``c11-only``: Reports when C11 standard is enabled (does not take Annex K availability into account).
+
+To set this option, use:
+``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all``
+
+By default, this option is set to *c11-only*.
+
 .. _security-MmapWriteExec:
 
 security.MmapWriteExec (C)
@@ -1963,7 +1976,7 @@ unix.BlockInCriticalSection (C, C++)
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
 Critical section handling functions modeled by this checker:
-``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock, scoped_lock``.
 
 .. code-block:: c
 

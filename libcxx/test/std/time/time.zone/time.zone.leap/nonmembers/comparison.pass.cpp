@@ -9,9 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// TODO TZDB investigate why this fails with GCC
-// UNSUPPORTED: gcc-14
-
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 

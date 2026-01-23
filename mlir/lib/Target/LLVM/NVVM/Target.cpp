@@ -547,7 +547,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (auto status = (expr)) {                                                \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error code ")  \
                      << status;                                                \
-      return std::nullopt;                                                     \
+      return failure();                                                  \
     }                                                                          \
   } while (false)
 
@@ -559,7 +559,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (result != nvFatbinResult::NVFATBIN_SUCCESS) {                          \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error: ")      \
                      << nvFatbinGetErrorString(result);                        \
-      return std::nullopt;                                                     \
+      return failure();                                                  \
     }                                                                          \
   } while (false)
 
@@ -581,7 +581,7 @@ NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   setOptionalCommandlineArguments(getTarget(), cmdOpts.second);
   // Create the compiler handle.
   RETURN_ON_NVPTXCOMPILER_ERROR(
-      nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.c_str()));
+      nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.str().c_str()));
 
   // Try to compile the binary.
   status = nvPTXCompilerCompile(compiler, cmdOpts.second.size(),

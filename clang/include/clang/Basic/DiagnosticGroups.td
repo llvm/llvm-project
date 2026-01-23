@@ -533,20 +533,20 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
-def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
-def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
+def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive">;
+def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict">;
+def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
   code Documentation = [{
     Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"experimental-lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"experimental-lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
 def LifetimeSafetySuggestions
-    : DiagGroup<"experimental-lifetime-safety-suggestions",
+    : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,
                  LifetimeSafetyIntraTUSuggestions]> {
   code Documentation = [{
@@ -1774,7 +1774,9 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess]>;
+def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
+def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;

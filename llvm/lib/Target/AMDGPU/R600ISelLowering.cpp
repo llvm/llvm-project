@@ -2178,7 +2178,7 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 }
 
 TargetLowering::AtomicExpansionKind
-R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+R600TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:

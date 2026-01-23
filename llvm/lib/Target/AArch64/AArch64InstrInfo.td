@@ -3308,13 +3308,6 @@ def : Pat<(cttz GPR32:$Rn),
           (CLZWr (RBITWr GPR32:$Rn))>;
 def : Pat<(cttz GPR64:$Rn),
           (CLZXr (RBITXr GPR64:$Rn))>;
-// FIXME: Remove these patterns when gisel supports ctls
-def : Pat<(ctlz (or (shl (xor (sra GPR32:$Rn, (i64 31)), GPR32:$Rn), (i64 1)),
-                (i32 1))),
-          (CLSWr GPR32:$Rn)>;
-def : Pat<(ctlz (or (shl (xor (sra GPR64:$Rn, (i64 63)), GPR64:$Rn), (i64 1)),
-                (i64 1))),
-          (CLSXr GPR64:$Rn)>;
 
 // Unlike the other one operand instructions, the instructions with the "rev"
 // mnemonic do *not* just different in the size bit, but actually use different
@@ -4621,9 +4614,6 @@ let Predicates = [HasLSUI, HasNEON] in {
 
 def : Pat<(AArch64stp GPR64z:$Rt, GPR64z:$Rt2, (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (STPXi GPR64z:$Rt, GPR64z:$Rt2, GPR64sp:$Rn, simm7s8:$offset)>;
-
-def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
-          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
 
 
 //---
@@ -6072,7 +6062,7 @@ defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
-defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
+defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
@@ -7812,6 +7802,12 @@ def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
 // The top bits will be zero from the FMOVWSr
 def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
           (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
+
+def: Pat<(f64 (bitconvert (i64 (zext (i32 (bitconvert (f32 FPR32:$Rn))))))),
+         (SUBREG_TO_REG (i32 0), (f32 (FMOVSr FPR32:$Rn)), ssub)>;
+
+def: Pat<(f32 (bitconvert (i32 (trunc (i64 (bitconvert (f64 FPR64:$Rn))))))),
+         (f32 (EXTRACT_SUBREG FPR64:$Rn, ssub))>;
 
 def : Pat<(v8i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
@@ -10727,8 +10723,18 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 // Patterns for nontemporal/no-allocate stores.
 // We have to resort to tricks to turn a single-input store into a store pair,
 // because there is no single-input nontemporal store, only STNP.
-let Predicates = [IsLE] in {
-let AddedComplexity = 15 in {
+//
+// Currently, STNP lowering can only either keep or increase code size, thus
+// we predicate it to not apply when optimizing for code size.
+let Predicates = [IsLE, NotForCodeSize] in {
+
+// Make non-temporal store patterns have high complexity so they are prioritized
+// for non-temporal stores over temporal store patterns.
+let AddedComplexity = 18 in {
+
+def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
+
 class NTStore128Pat<ValueType VT> :
   Pat<(nontemporalstore (VT FPR128:$Rt),
         (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
@@ -10760,7 +10766,7 @@ def : Pat<(nontemporalstore GPR64:$Rt,
           (STNPWi (EXTRACT_SUBREG GPR64:$Rt, sub_32),
                   (EXTRACT_SUBREG (UBFMXri GPR64:$Rt, 32, 63), sub_32),
                   GPR64sp:$Rn, simm7s4:$offset)>;
-} // AddedComplexity=10
+} // AddedComplexity=18
 } // Predicates = [IsLE]
 
 // Tail call return handling. These are all compiler pseudo-instructions,

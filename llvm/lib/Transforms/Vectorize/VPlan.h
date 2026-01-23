@@ -849,7 +849,6 @@ public:
       break;
     case OperationType::ReductionOp:
       llvm_unreachable("reduction ops should not use applyFlags");
-      [[fallthrough]];
     case OperationType::Cmp:
     case OperationType::Other:
       break;
@@ -1131,7 +1130,6 @@ public:
     /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
     /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
-    ComputeFindIVResult,
     ComputeReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,
@@ -3163,8 +3161,8 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
-    assert(SubConst && SubConst->getValue() == 0 &&
+    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+    assert(SubConst && SubConst->isZero() &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
 
@@ -3826,9 +3824,13 @@ protected:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their scalar values.
-class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
-                                                public VPUnrollPartAccessor<3> {
+/// producing their scalar values. Before unrolling by UF the recipe represents
+/// the VF*UF scalar values to be produced, or UF scalar values if only first
+/// lane is used, and has 3 operands: IV, step and VF. Unrolling adds one extra
+/// operand StartIndex to all unroll parts except part 0, as the recipe
+/// represents the VF scalar values (this number of values is taken from
+/// State.VF rather than from the VF operand) starting at IV + StartIndex.
+class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags {
   Instruction::BinaryOps InductionOpcode;
 
 public:
@@ -3858,10 +3860,6 @@ public:
         getDebugLoc());
   }
 
-  /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
-  /// this is only accurate after the VPlan has been unrolled.
-  bool isPart0() const { return getUnrollPart(*this) == 0; }
-
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
   /// Generate the scalarized versions of the phi node as needed by their users.
@@ -3875,6 +3873,16 @@ public:
   }
 
   VPValue *getStepValue() const { return getOperand(1); }
+
+  /// Return the number of scalars to produce per unroll part, used to compute
+  /// StartIndex during unrolling.
+  VPValue *getVFValue() const { return getOperand(2); }
+
+  /// Return the StartIndex, or null if known to be zero, valid only after
+  /// unrolling.
+  VPValue *getStartIndex() const {
+    return getNumOperands() == 4 ? getOperand(3) : nullptr;
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -4566,8 +4574,12 @@ public:
   VPIRValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPIRValue of a null Value");
     auto [It, Inserted] = LiveIns.try_emplace(V);
-    if (Inserted)
-      It->second = new VPIRValue(V);
+    if (Inserted) {
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        It->second = new VPConstantInt(CI);
+      else
+        It->second = new VPIRValue(V);
+    }
 
     assert(isa<VPIRValue>(It->second) &&
            "Only VPIRValues should be in mapping");

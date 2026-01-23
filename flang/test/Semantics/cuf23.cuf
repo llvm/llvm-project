@@ -77,3 +77,9 @@ subroutine intrinsic_error_size(n)
   x = size(d,dim=1) ! ok
   x = sizeof(d) ! ok
 end subroutine
+
+subroutine intrinsic_error_skip_show_descriptor(n)
+  use flang_debug
+  real(8), allocatable, device :: d(:)
+  call show_descriptor(d) ! ok, descriptore in managed memory
+end subroutine

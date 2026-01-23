@@ -5098,6 +5098,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             .intersectWith(ComputeForArm(Op->getOperand(2), /*Invert=*/true));
     break;
   }
+  case Instruction::Load: {
+    const MDNode *NoFPClass =
+        cast<LoadInst>(Op)->getMetadata(LLVMContext::MD_nofpclass);
+    if (!NoFPClass)
+      break;
+
+    ConstantInt *MaskVal =
+        mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
+    Known.knownNot(static_cast<FPClassTest>(MaskVal->getZExtValue()));
+    break;
+  }
   case Instruction::Call: {
     const CallInst *II = cast<CallInst>(Op);
     const Intrinsic::ID IID = II->getIntrinsicID();
@@ -7573,9 +7584,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
-        if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
-          return false;
-        break;
+        // We're not considering flags so it is safe to just return false.
+        return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
         if (!includesPoison(Kind) ||
