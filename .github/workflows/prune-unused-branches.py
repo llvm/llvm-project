@@ -42,7 +42,7 @@ def get_branches_from_open_prs(github_token) -> list[str]:
     has_next_page = True
     variables = {"after": None}
     while has_next_page:
-        _, res_data = gh.requester.graphql_query(query, variables=variables)
+        _, res_data = gh._Github__requester.graphql_query(query, variables=variables)
         page_info = res_data["data"]["search"]["pageInfo"]
         has_next_page = page_info["hasNextPage"]
         if has_next_page:
