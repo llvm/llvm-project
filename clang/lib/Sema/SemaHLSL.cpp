@@ -3324,6 +3324,123 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
   return false;
 }
 
+enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
+
+static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
+  unsigned MinArgs, MaxArgs;
+  if (Kind == SampleKind::Sample) {
+    MinArgs = 3;
+    MaxArgs = 5;
+  } else if (Kind == SampleKind::Bias) {
+    MinArgs = 4;
+    MaxArgs = 6;
+  } else if (Kind == SampleKind::Grad) {
+    MinArgs = 5;
+    MaxArgs = 7;
+  } else if (Kind == SampleKind::Level) {
+    MinArgs = 4;
+    MaxArgs = 5;
+  } else if (Kind == SampleKind::Cmp) {
+    MinArgs = 4;
+    MaxArgs = 6;
+  } else {
+    assert(Kind == SampleKind::CmpLevelZero);
+    MinArgs = 4;
+    MaxArgs = 5;
+  }
+
+  if (S.checkArgCountRange(TheCall, MinArgs, MaxArgs))
+    return true;
+
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return ResType->getAttrs().ResourceDimension ==
+                                   llvm::dxil::ResourceDimension::Unknown;
+                          }))
+    return true;
+
+  if (CheckResourceHandle(&S, TheCall, 1,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return ResType->getAttrs().ResourceClass !=
+                                   llvm::hlsl::ResourceClass::Sampler;
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  unsigned ExpectedDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
+                              S.Context.FloatTy, ExpectedDim,
+                              TheCall->getBeginLoc()))
+    return true;
+
+  unsigned NextIdx = 3;
+  if (Kind == SampleKind::Bias || Kind == SampleKind::Level ||
+      Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
+    QualType BiasOrLODOrCmpTy = TheCall->getArg(NextIdx)->getType();
+    if (!BiasOrLODOrCmpTy->isFloatingType() ||
+        BiasOrLODOrCmpTy->isVectorType()) {
+      S.Diag(TheCall->getArg(NextIdx)->getBeginLoc(),
+             diag::err_typecheck_convert_incompatible)
+          << BiasOrLODOrCmpTy << S.Context.FloatTy << 1 << 0 << 0;
+      return true;
+    }
+    NextIdx++;
+  } else if (Kind == SampleKind::Grad) {
+    if (ExpectedDim != 0) {
+      if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
+                                  S.Context.FloatTy, ExpectedDim,
+                                  TheCall->getArg(NextIdx)->getBeginLoc()))
+        return true;
+      if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx + 1)->getType(),
+                                  S.Context.FloatTy, ExpectedDim,
+                                  TheCall->getArg(NextIdx + 1)->getBeginLoc()))
+        return true;
+    }
+    NextIdx += 2;
+  }
+
+  // Offset
+  if (TheCall->getNumArgs() > NextIdx) {
+    if (ExpectedDim != 0) {
+      if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
+                                  S.Context.IntTy, ExpectedDim,
+                                  TheCall->getArg(NextIdx)->getBeginLoc()))
+        return true;
+    }
+    NextIdx++;
+  }
+
+  // Clamp
+  if (Kind != SampleKind::Level && Kind != SampleKind::CmpLevelZero &&
+      TheCall->getNumArgs() > NextIdx) {
+    QualType ClampTy = TheCall->getArg(NextIdx)->getType();
+    if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
+      S.Diag(TheCall->getArg(NextIdx)->getBeginLoc(),
+             diag::err_typecheck_convert_incompatible)
+          << ClampTy << S.Context.FloatTy << 1 << 0 << 0;
+      return true;
+    }
+  }
+
+  assert(ResourceTy->hasContainedType() &&
+         "Expecting a contained type for resource with a dimension "
+         "attribute.");
+  QualType ReturnType = ResourceTy->getContainedType();
+  if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
+    if (!ReturnType->hasFloatingRepresentation()) {
+      S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_samplecmp_requires_float);
+      return true;
+    }
+    ReturnType = S.Context.FloatTy;
+  }
+  TheCall->setType(ReturnType);
+
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -3497,6 +3614,18 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_sample:
+    return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
+  case Builtin::BI__builtin_hlsl_resource_sample_bias:
+    return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Bias);
+  case Builtin::BI__builtin_hlsl_resource_sample_grad:
+    return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Grad);
+  case Builtin::BI__builtin_hlsl_resource_sample_level:
+    return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Level);
+  case Builtin::BI__builtin_hlsl_resource_sample_cmp:
+    return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Cmp);
+  case Builtin::BI__builtin_hlsl_resource_sample_cmp_level_zero:
+    return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::CmpLevelZero);
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
     // Update return type to be the attributed resource type from arg0.
