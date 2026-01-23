@@ -2918,10 +2918,10 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
 
 /// Attempt to find a triangle-like pattern where sinking and duplicating a call
 /// may be profitable in order to enable further tail call optimization.
-/// We look for the following pattern:
+/// The following pattern:
 /// @code
 ///   entry:
-///     %retval = call @func()
+///     %retval = tail call @func()
 ///     br i1 %c, label %if.then, label %return
 ///   if.then:
 ///     ...
@@ -2929,6 +2929,21 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
 ///   return:
 ///     ret %retval
 /// @endcode
+/// May be transformed into the following:
+/// @code
+///   entry:
+///     %c.fr = freeze i1 %c
+///     br i1 %c.fr, label %if.then, label %return
+///   if.then:
+///     %retval = tail call @func()
+///     ...
+///     ret %retval
+///   return:
+///     %retval.cloned = tail call @func()
+///     ret %retval.cloned
+/// @endcode
+/// The freeze is needed in order to avoid introducing undefined behaviour. The
+/// duplicated call in %return is now in tail position.
 static bool
 sinkAndDuplicateCallForTailCall(CallInst *CI, BasicBlock *RetBB,
                                 function_ref<bool(BasicBlock *)> TryFoldReturn,
