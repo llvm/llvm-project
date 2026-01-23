@@ -627,4 +627,8 @@ Sanitizers
 
 * Memtag: N/A - there is currently no ratified RISC-V memory tagging spec.
 
-* MSan is unlikely to work: there are currently no RISC-V-specific shadow mappings (this is probably easy to fix; perhaps the default Linux 64-bit mapping will work) and MSan does not explicitly handle any of the `@llvm.riscv.*` intrinsics (this is significantly more work to fix). Some intrinsics will be handled correctly anyway, if the RISC-V intrinsic is auto-upgraded into cross-platform LLVM intrinsics. Some others will be "heuristically" handled (possibly incorrectly). The rest will default to the "strict" handler, which checks that all the parameters are fully initialized.
+* MSan is unlikely to work: there are currently no RISC-V-specific shadow mappings (this is probably easy to fix; perhaps the default Linux 64-bit mapping will work) and MSan does not explicitly handle any of the `@llvm.riscv.*` intrinsics (this is significantly more work to fix).
+
+  Some intrinsics will be handled correctly anyway, if the RISC-V intrinsic is auto-upgraded into cross-platform LLVM intrinsics. Some others will be "heuristically" handled (possibly incorrectly). The rest will default to the "strict" handler, which checks that all the parameters are fully initialized.
+
+  MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
