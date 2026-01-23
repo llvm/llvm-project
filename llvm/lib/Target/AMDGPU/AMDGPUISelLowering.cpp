@@ -954,8 +954,8 @@ bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
   assert(VT.isFloatingPoint());
 
   // Packed operations do not have a fabs modifier.
-  return VT == MVT::f32 || VT == MVT::f64 ||
-         (Subtarget->has16BitInsts() && (VT == MVT::f16 || VT == MVT::bf16));
+  // Report this based on the end legalized type.
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16 || VT == MVT::bf16;
 }
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
