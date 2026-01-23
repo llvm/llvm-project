@@ -13,8 +13,16 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVTargetMachine.h"
+#include "RISCVTargetMachine.h" 
+// Added includes:
 #include <unordered_map>
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/FormatVariadic.h"
+#include <string>
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
 
 using namespace llvm;
 
@@ -43,8 +51,7 @@ private:
   unsigned countLRSC(MachineBasicBlock &MBB,
                      MachineFunction &MF); // added &MF as a param
   unsigned totalCount = 0;
-  unsigned numBBs = 0; // number of basic blocks
-#include <unordered_map>
+
   // How it used to be:
   /*    std::unordered_map<const MachineFunction*, std::unordered_map<const
      MachineBasicBlock*, std::unordered_map< uint16_t, int>>>
@@ -61,7 +68,7 @@ private:
   struct LRSCCounts {
     using MFKey = const MachineFunction *;
     using BBKey = const MachineBasicBlock *;
-    using OpKey = uint16_t;
+    using OpKey = std::string;
 
     using FlavourMap = std::unordered_map<OpKey, int>;
     using BBToFlavourMap = std::unordered_map<BBKey, FlavourMap>;
@@ -81,13 +88,65 @@ private:
 
     // MF -> total LR/SC occurrences (or pairs)
     MFCountMap functionCounts;
-
-    void clear() {
+    
+        void clear() {
       basicBlocksFlavourCounts.clear();
       basicBlocksCounts.clear();
       functionCounts.clear();
     }
+    llvm::json::Value toJSON() const { //
+      llvm::json::Object Root;
+      llvm::json::Array Funcs;
+
+      for (const auto &FP : functionCounts) {
+        const MachineFunction *MF = FP.first;
+        int FuncTotal = FP.second;
+
+        llvm::json::Object FObj;
+        FObj["function"] = MF ? MF->getName().str() : "<null>";
+        FObj["total_lrsc_occurrences"] = FuncTotal;
+
+        llvm::json::Array Blocks;
+
+        auto ItBBTotals = basicBlocksCounts.find(MF);
+        auto ItBBFlavors = basicBlocksFlavourCounts.find(MF);
+
+        if (ItBBTotals != basicBlocksCounts.end()) {
+          for (const auto &BBP : ItBBTotals->second) {
+            const MachineBasicBlock *MBB = BBP.first;
+            int BBTotal = BBP.second;
+
+            llvm::json::Object BBObj;
+            BBObj["bb_number"] = MBB ? MBB->getNumber() : -1;
+            BBObj["bb_total_lrsc_occurrences"] = BBTotal;
+
+            llvm::json::Object FlavorsObj; // flavor string -> count
+
+            if (ItBBFlavors != basicBlocksFlavourCounts.end()) {
+              auto ItFlavorMapForBB = ItBBFlavors->second.find(MBB);
+              if (ItFlavorMapForBB != ItBBFlavors->second.end()) {
+                for (const auto &OP : ItFlavorMapForBB->second) {
+                  const std::string &Flavor = OP.first;
+                  int Cnt = OP.second;
+                  FlavorsObj.try_emplace(Flavor, Cnt);
+                }
+              }
+            }
+
+            BBObj["flavors"] = std::move(FlavorsObj);
+            Blocks.push_back(std::move(BBObj));
+          }
+        }
+
+        FObj["basic_blocks"] = std::move(Blocks);
+        Funcs.push_back(std::move(FObj));
+      }
+
+      Root["riscv_lrsc_counts"] = std::move(Funcs);
+      return llvm::json::Value(std::move(Root));
+    }
   };
+  LRSCCounts Counts;
 };
 
 } // end anonymous namespace
@@ -101,6 +160,7 @@ RISCVCountLRSC::~RISCVCountLRSC() { print(dbgs()); }
 FunctionPass *llvm::createRISCVCountLRSCPass() { return new RISCVCountLRSC(); }
 
 bool RISCVCountLRSC::runOnMachineFunction(MachineFunction &MF) {
+  Counts.clear(); //Clears all the stats for the new function
   STI =
       &MF.getSubtarget<RISCVSubtarget>(); // Sub Target Instruction CPU features
                                           // :extensions, scheduling model, etc.
@@ -108,7 +168,6 @@ bool RISCVCountLRSC::runOnMachineFunction(MachineFunction &MF) {
                              // expansion info, etc.
   unsigned bbCount = 0;
   unsigned mfCount = 0;
-  LRSCCounts Counts;
 
   // traverse through the machine basic blocks and
   // get the running count of detected LR/SC pairs [Ali]: We are not counting
@@ -140,7 +199,7 @@ RISCVCountLRSC::countLRSC(MachineBasicBlock &MBB,
   // iterates over each MBBI and compares the opcode to every flavour of LR/SC
   // instructions and adds to the count of each flavour of each instruction in
   // an unordered mapping
-  LRSCCounts Counts;
+
   unsigned total = 0;
   uint16_t opc = 0;
   while (MBBI != E) {
@@ -149,24 +208,70 @@ RISCVCountLRSC::countLRSC(MachineBasicBlock &MBB,
     switch (opc) {
     // LR flavours
     case RISCV::LR_W:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_W"]++;
+      total++;
+      break;
     case RISCV::LR_D:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_D"]++;
+      total++;
+      break;
     case RISCV::LR_D_AQ:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_D_AQ"]++;
+      total++;
+      break;
     case RISCV::LR_W_AQ:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_W_AQ"]++;
+      total++;
+      break;
     case RISCV::LR_D_RL:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_D_RL"]++;
+      total++;
+      break;
     case RISCV::LR_W_RL:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_W_RL"]++;
+      total++;
+      break;
     case RISCV::LR_D_AQRL:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_D_AQRL"]++;
+      total++;
+      break;
     case RISCV::LR_W_AQRL:
-    // SC flavours
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["LR_W_AQRL"]++;
+      total++;
+      break;
+
+      // SC flavours
     case RISCV::SC_W:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_W"]++;
+      total++;
+      break;
     case RISCV::SC_D:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_D"]++;
+      total++;
+      break;
     case RISCV::SC_D_AQ:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_D_AQ"]++;
+      total++;
+      break;
     case RISCV::SC_W_AQ:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_W_AQ"]++;
+      total++;
+      break;
     case RISCV::SC_D_RL:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_D_RL"]++;
+      total++;
+      break;
     case RISCV::SC_W_RL:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_W_RL"]++;
+      total++;
+      break;
     case RISCV::SC_D_AQRL:
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_D_AQRL"]++;
+      total++;
+      break;
     case RISCV::SC_W_AQRL:
-      Counts.basicBlocksFlavourCounts[&MF][&MBB][opc]++; // per-flavour count
-      total++; // total LR/SC in this BB
+      Counts.basicBlocksFlavourCounts[&MF][&MBB]["SC_W_AQRL"]++;
+      total++;
       break;
 
     default:
@@ -179,5 +284,10 @@ RISCVCountLRSC::countLRSC(MachineBasicBlock &MBB,
 }
 
 void RISCVCountLRSC::print(raw_ostream &OS) const {
-  OS << "Number of LR/SC instruction pairs: " << " " << totalCount << "\n";
+  OS << "Number of LR/SC instruction: " << totalCount << "\n";
+
+  llvm::json::Value J = Counts.toJSON();
+
+  // Pretty print with indent=2
+  OS << llvm::formatv("{0:2}", J) << "\n";
 }
