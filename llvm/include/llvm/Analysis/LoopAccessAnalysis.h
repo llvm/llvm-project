@@ -888,6 +888,12 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// The \p Assume parameter indicates if we are allowed to make additional
 /// run-time assumptions.
 ///
+/// If AllowRuntimeStridedIVs is true, this method will check if the ptr is
+/// making use of a runtime constant to calculate the stride i.e.
+/// A[stride * multiplier] with multiplier defined at runtime. In the case that
+/// the stride is of the form stride * multiplier, this method will return the
+/// base stride and also add a runtime SCEV for stride.
+///
 /// Note that the analysis results are defined if-and-only-if the original
 /// memory access was defined.  If that access was dead, or UB, then the
 /// result of this function is undefined.
@@ -896,18 +902,8 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
-             bool Assume = false, bool ShouldCheckWrap = true);
-
-/// This method will check if the ptr is making use of a runtime constant to
-/// calculate the stride i.e. A[stride * multiplier] with multiplier defined at
-/// runtime. In the case that the stride is of the form stride * multiplier,
-/// this method will return a pair of the base stride and the multiplier SCEV.
-LLVM_ABI std::optional<int64_t>
-getPtrConstRuntimeStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
-             Value *Ptr, const Loop *Lp, const DominatorTree &DT,
-             const DenseMap<Value *, const SCEV *> &StridesMap =
-                 DenseMap<Value *, const SCEV *>(),
-             bool Assume = false);
+             bool Assume = false, bool ShouldCheckWrap = true,
+             bool AllowRuntimeStridedIVs = false);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This
