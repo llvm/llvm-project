@@ -501,6 +501,7 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
     "SPIRV_KHR_CooperativeMatrixLayoutAttr",
     "SPIRV_MemorySemanticsAttr",
     "SPIRV_MatrixLayoutAttr",
+    "SPIRV_TosaExtAccTypeAttr",
     "SPIRV_TosaExtNaNPropagationModeAttr",
 };
 
@@ -556,11 +557,18 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << "    return failure();\n";
     os << tabs << "  }\n";
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
-  } else if (attr.getAttrDefName() == "SPIRV_TensorArmAxisAttr") {
+  } else if (llvm::is_contained(
+                 {"SPIRV_BoolConstAttr", "SPIRV_TensorArmAxisAttr"},
+                 attr.getAttrDefName())) {
     os << tabs
        << formatv(
               "  {0}.push_back(prepareConstantScalar({1}.getLoc(), attr));\n",
               operandList, opVar);
+  } else if (attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("  {0}.push_back(prepareConstant({1}.getLoc(), "
+                  "llvm::cast<DenseElementsAttr>(attr).getType(), attr));\n",
+                  operandList, opVar);
   } else {
     PrintFatalError(
         loc,
@@ -855,7 +863,8 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
-  } else if (attr.getAttrDefName() == "SPIRV_TensorArmAxisAttr") {
+  } else if (attr.getAttrDefName() == "SPIRV_BoolConstAttr" ||
+             attr.getAttrDefName().contains("TensorArm")) {
     os << tabs
        << formatv("std::optional<std::pair<Attribute, Type>> c = "
                   "getConstant({0}[{1}++]);\n",

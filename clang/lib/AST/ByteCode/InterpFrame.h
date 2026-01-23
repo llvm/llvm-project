@@ -192,6 +192,9 @@ private:
   const size_t FrameOffset;
   /// Mapping from arg offsets to their argument blocks.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
+
+public:
+  unsigned MSVCConstexprAllowed = 0;
 };
 
 } // namespace interp
