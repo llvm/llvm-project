@@ -2065,7 +2065,7 @@ def main():
             logging.DEBUG
             if opts.verbose > 1
             else logging.INFO
-            if opts.verbose > 0 
+            if opts.verbose > 0
             else logging.WARNING
         ),
     )
