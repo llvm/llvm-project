@@ -26,9 +26,6 @@
 //   bool HasXXX = false;                      // member declaration
 //   bool hasXXX() const { return HasXXX; }    // getter
 //
-// AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY: Features with member only
-//   bool HasXXX = false;                      // member declaration only
-//
 // AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY: Features with member only
 //   bool EnableXXX = false;                   // member declaration only
 //
@@ -46,12 +43,11 @@
 // to GCNSubtarget.h instead.
 //===----------------------------------------------------------------------===//
 
-#define AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(X) X(MadMacF32Insts)
-
 #define AMDGPU_SUBTARGET_HAS_FEATURE(X)                                        \
   X(16BitInsts)                                                                \
   X(FastFMAF32)                                                                \
   X(Inv2PiInlineImm)                                                           \
+  X(MadMacF32Insts)                                                            \
   X(SDWA)                                                                      \
   X(True16BitInsts)                                                            \
   X(VOP3PInsts)
@@ -97,7 +93,6 @@ protected:
 
 #define DECL_HAS_MEMBER(Name) bool Has##Name = false;
   AMDGPU_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
-  AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(DECL_HAS_MEMBER)
 #undef DECL_HAS_MEMBER
 #undef AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY
 
@@ -254,10 +249,6 @@ public:
   bool useRealTrue16Insts() const;
 
   bool hasD16Writes32BitVgpr() const;
-
-  bool hasMadMacF32Insts() const {
-    return HasMadMacF32Insts || !isGCN();
-  }
 
   bool hasMulI24() const {
     return HasMulI24;
