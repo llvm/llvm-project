@@ -1245,11 +1245,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   assert(!cir::MissingFeatures::neonSISDIntrinsics());
 
+  llvm::SmallVector<mlir::Value, 4> ops;
+  mlir::Location loc = getLoc(expr->getExprLoc());
+
   // Handle non-overloaded intrinsics first.
   switch (builtinID) {
   default:
     break;
-  case NEON::BI__builtin_neon_vabsh_f16:
+  case NEON::BI__builtin_neon_vabsh_f16: {
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return cir::FAbsOp::create(builder, loc, ops);
+  }
   case NEON::BI__builtin_neon_vaddq_p128:
   case NEON::BI__builtin_neon_vldrq_p128:
   case NEON::BI__builtin_neon_vstrq_p128:
