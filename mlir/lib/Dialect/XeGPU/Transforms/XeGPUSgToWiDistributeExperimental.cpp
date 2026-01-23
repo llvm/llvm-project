@@ -46,10 +46,13 @@ using namespace mlir;
 
 namespace {
 
+/// Casts the given vector value `v` to the expected vector type `expectedTy`.
 static Value castValueTo(ConversionPatternRewriter &rewriter,
                          TypedValue<VectorType> v, VectorType expectedTy) {
+  // If the type matches, simply return the value itself.
   if (v.getType() == expectedTy)
     return v;
+  // If only shape differs, use shape cast.
   if (isa<VectorType>(v.getType()) &&
       v.getType().getNumElements() == expectedTy.getNumElements())
     return vector::ShapeCastOp::create(rewriter, v.getLoc(), expectedTy, v);
@@ -60,6 +63,8 @@ static Value castValueTo(ConversionPatternRewriter &rewriter,
   return newOp.getResult(0);
 }
 
+/// Checks if all XeGPU anchor ops and vector results have valid layouts.
+/// TODO: This function can be removed once the full layout refactoring is done.
 static LogicalResult verifyLayouts(Operation *root) {
   auto walkResult = root->walk([&](Operation *nestedOp) -> WalkResult {
     if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(nestedOp)) {
@@ -87,6 +92,8 @@ static LogicalResult verifyLayouts(Operation *root) {
   return walkResult.wasInterrupted() ? failure() : success();
 }
 
+/// Distributes a subgroup-level CreateNdDesc op to workitem-level CreateNdDesc
+/// op. This simply drops the layout attribute from the tensor descriptor type.
 struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
@@ -106,6 +113,9 @@ struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
   }
 };
 
+/// Distributes a subgroup-level LoadNd op to workitem-level LoadNd op. Output
+/// of workitem-level LoadNd op is 1D. ShapeCast is added to restore the
+/// original rank.
 struct SgToWiLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
   using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
 
@@ -154,6 +164,9 @@ struct SgToWiLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
   }
 };
 
+/// Distributes a subgroup-level StoreNd op to workitem-level StoreNd op. Stored
+/// value in workitem-level StoreNd op is 1D. ShapeCast is added to cast the
+/// incoming value to 1D.
 struct SgToWiStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
   using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
 
@@ -192,6 +205,9 @@ struct SgToWiStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
   }
 };
 
+/// Distributes a subgroup-level Dpas op to workitem-level Dpas op. All inpputs
+/// and output of workitem-level Dpas op are 1D. Necessary casts are added to
+/// convert the inputs and output to/from 1D.
 struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern<xegpu::DpasOp>::OpConversionPattern;
 
@@ -223,8 +239,6 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "unable to compute expected workitem vector type for DpasOp from "
               "lane layout");
-    // llvm::errs() << "adaptor acc type: " << adaptor.getAcc().getType() <<
-    // "\n"; llvm::errs() << "ops acc type: " << op.getAcc().getType() << "\n";
     auto newOp = xegpu::DpasOp::create(
         rewriter, op->getLoc(), wiResultTyOrFailure.value(),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
@@ -242,6 +256,8 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
   }
 };
 
+/// Distributes elementwise ops to workitem-level elementwise ops. This
+/// currently handles elementwise ops with single result only.
 struct WgToWiElementWise : public ConversionPattern {
   WgToWiElementWise(TypeConverter &typeConverter, MLIRContext *ctx)
       : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
@@ -293,6 +309,8 @@ struct WgToWiElementWise : public ConversionPattern {
   }
 };
 
+/// Distributes a subgroup-level arith ConstantOp to workitem-level arith
+/// ConstantOp.
 struct SgToWiArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -333,6 +351,7 @@ struct SgToWiArithConstant : public OpConversionPattern<arith::ConstantOp> {
   }
 };
 
+/// Distributes a subgroup-level PrefetchNd op to workitem-level PrefetchNd op.
 struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
 
