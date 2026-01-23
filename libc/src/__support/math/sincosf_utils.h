@@ -35,7 +35,7 @@ namespace LIBC_NAMESPACE_DECL {
 // Table is generated with Sollya as follow:
 // > display = hexadecimal;
 // > for k from 0 to 63 do { D(sin(k * pi/32)); };
-static const double SIN_K_PI_OVER_32[64] = {
+LIBC_INLINE_VAR const double SIN_K_PI_OVER_32[64] = {
     0x0.0000000000000p+0,  0x1.917a6bc29b42cp-4,  0x1.8f8b83c69a60bp-3,
     0x1.294062ed59f06p-2,  0x1.87de2a6aea963p-2,  0x1.e2b5d3806f63bp-2,
     0x1.1c73b39ae68c8p-1,  0x1.44cf325091dd6p-1,  0x1.6a09e667f3bcdp-1,
