@@ -2283,8 +2283,8 @@ Expected<Value *> OpenMPIRBuilder::createTaskDuplicationFunction(
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
-    const LocationDescription &Loc, InsertPointTy AllocaIP,
-    BodyGenCallbackTy BodyGenCB,
+    const LocationDescription &Loc, InsertPointTy AllocIP,
+    ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
     llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
     Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
     Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
@@ -2308,8 +2308,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
       InsertPointTy(TaskloopAllocaBB, TaskloopAllocaBB->begin());
   InsertPointTy TaskloopBodyIP =
       InsertPointTy(TaskloopBodyBB, TaskloopBodyBB->begin());
+  InsertPointTy TaskloopDeallocIP =
+      InsertPointTy(TaskloopExitBB, TaskloopExitBB->begin());
 
-  if (Error Err = BodyGenCB(TaskloopAllocaIP, TaskloopBodyIP))
+  if (Error Err =
+          BodyGenCB(TaskloopAllocaIP, TaskloopBodyIP, TaskloopDeallocIP))
     return Err;
 
   llvm::Expected<llvm::CanonicalLoopInfo *> result = LoopInfo();
@@ -2320,19 +2323,22 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   llvm::CanonicalLoopInfo *CLI = result.get();
   auto OI = std::make_unique<OutlineInfo>();
   OI->EntryBB = TaskloopAllocaBB;
-  OI->OuterAllocaBB = AllocaIP.getBlock();
+  OI->OuterAllocBB = AllocIP.getBlock();
   OI->ExitBB = TaskloopExitBB;
+  OI->OuterDeallocBBs.reserve(DeallocIPs.size());
+  for (InsertPointTy DeallocIP : DeallocIPs)
+    OI->OuterDeallocBBs.push_back(DeallocIP.getBlock());
 
   // Add the thread ID argument.
   SmallVector<Instruction *> ToBeDeleted;
   // dummy instruction to be used as a fake argument
   OI->ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP, "global.tid", false));
-  Value *FakeLB = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
+      Builder, AllocIP, ToBeDeleted, TaskloopAllocaIP, "global.tid", false));
+  Value *FakeLB = createFakeIntVal(Builder, AllocIP, ToBeDeleted,
                                    TaskloopAllocaIP, "lb", false, true);
-  Value *FakeUB = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
+  Value *FakeUB = createFakeIntVal(Builder, AllocIP, ToBeDeleted,
                                    TaskloopAllocaIP, "ub", false, true);
-  Value *FakeStep = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
+  Value *FakeStep = createFakeIntVal(Builder, AllocIP, ToBeDeleted,
                                      TaskloopAllocaIP, "step", false, true);
   // For Taskloop, we want to force the bounds being the first 3 inputs in the
   // aggregate struct

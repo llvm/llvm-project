@@ -1466,7 +1466,9 @@ public:
   /// Generator for `#omp taskloop`
   ///
   /// \param Loc The location where the taskloop construct was encountered.
-  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param AllocIP The insertion point to be used for alloca instructions.
+  /// \param DeallocIPs The list of insertion points where explicit
+  ///                   deallocations, if needed, should be placed.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param LoopInfo Callback that return the CLI
   /// \param LBVal Lowerbound value of loop
@@ -1495,7 +1497,7 @@ public:
   ///                                bound, step} values in the task data.
   LLVM_ABI InsertPointOrErrorTy createTaskloop(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
-      BodyGenCallbackTy BodyGenCB,
+      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
       llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
       Value *LBVal, Value *UBVal, Value *StepVal, bool Untied = false,
       Value *IfCond = nullptr, Value *GrainSize = nullptr, bool NoGroup = false,
