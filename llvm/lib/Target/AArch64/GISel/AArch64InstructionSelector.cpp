@@ -2359,6 +2359,46 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_AND: {
+    Register Dst = I.getOperand(0).getReg();
+    Register LHS = I.getOperand(1).getReg();
+    Register RHS = I.getOperand(2).getReg();
+    LLT Ty = MRI.getType(Dst);
+
+    if (Ty.isVector() || Ty.getSizeInBits() != 64)
+      return false;
+
+    auto match = [&](Register Op1, Register Op2) {
+      auto Op1Cst = getIConstantVRegValWithLookThrough(Op1, MRI);
+      if (!(Op1Cst && Op1Cst->Value == 0))
+        return false;
+      // Expecting a G_CONSTANT_FOLD_BARRIER that can't be looked thru.
+      auto Op2Cst = getIConstantVRegValWithLookThrough(Op2, MRI);
+      if (Op2Cst)
+        return false;
+      return true;
+    };
+
+    if (!match(LHS, RHS) && !match(RHS, LHS))
+      return false;
+
+    // Copy either operand into plain GPR class if necessary so the opcode is
+    // legal.
+    auto moveToGPR64 = [&](Register &Reg) {
+      const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
+      if (!Reg.isVirtual() || (RC && RC == &AArch64::GPR64RegClass))
+        return;
+      auto Copy = MIB.buildCopy({&AArch64::GPR64RegClass}, {Reg});
+      selectCopy(*Copy, TII, MRI, TRI, RBI);
+      Reg = Copy.getReg(0);
+    };
+
+    moveToGPR64(LHS);
+    moveToGPR64(RHS);
+    auto NewAnd = MIB.buildInstr(AArch64::ANDXrr, {Dst}, {LHS, RHS});
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*NewAnd, TII, TRI, RBI);
+  }
   case TargetOpcode::G_SEXT:
     // Check for i64 sext(i32 vector_extract) prior to tablegen to select SMOV
     // over a normal extend.
