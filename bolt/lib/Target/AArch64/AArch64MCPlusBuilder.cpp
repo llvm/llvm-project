@@ -689,7 +689,7 @@ public:
     if (matchInst(CurRef, AArch64::ADR, Xn /*, .LJTIxyz*/)) {
       if (!StepBack())
         return false;
-      if (!matchInst(CurRef, AArch64::HINT, Imm(0)) || !StepBack())
+      if (!matchInst(CurRef, AArch64::NOP) || !StepBack())
         return false;
     } else if (matchInst(CurRef, AArch64::ADDXri, Xn,
                          Xn /*, :lo12:.LJTIxyz*/)) {
