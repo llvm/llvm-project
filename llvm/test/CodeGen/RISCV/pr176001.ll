@@ -35,19 +35,21 @@ define <32 x i64> @main(i1 %tobool93.not, <32 x i64> %0, <32 x i64> %1) #0 {
   ; CHECK-NEXT:   liveins: $v8m8:0x0000000000000002, $v16m8:0x0000000000000006, $v24m8:0x0000000000000002
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PseudoVMV_X_S:%[0-9]+]]:gpr = PseudoVMV_X_S killed renamable $v24, 6 /* e64 */
-  ; CHECK-NEXT:   VS8R_V renamable $v8m8, %stack.0 :: (store (<vscale x 1 x s512>) into %stack.0, align 8)
   ; CHECK-NEXT:   BEQ [[PseudoVMV_X_S]], $x0, %bb.6
   ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.cond.true108:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
-  ; CHECK-NEXT:   liveins: $v16m8:0x0000000000000006
+  ; CHECK-NEXT:   liveins: $v8m8:0x0000000000000002, $v16m8:0x0000000000000006
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   VS8R_V renamable $v8m8, %stack.0 :: (store (<vscale x 1 x s512>) into %stack.0, align 8)
   ; CHECK-NEXT:   PseudoBR %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.cond.false111:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
-  ; CHECK-NEXT:   liveins: $v16m8:0x0000000000000006
+  ; CHECK-NEXT:   liveins: $v8m8:0x0000000000000002, $v16m8:0x0000000000000006
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   VS8R_V renamable $v8m8, %stack.0 :: (store (<vscale x 1 x s512>) into %stack.0, align 8)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.cond.end113:
   ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.9(0x40000000)

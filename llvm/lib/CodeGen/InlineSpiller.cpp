@@ -1409,8 +1409,11 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
 
   for (const Register &SibReg : Siblings) {
     LiveInterval &LI = LIS.getInterval(SibReg);
-    VNInfo *VNI = LI.getVNInfoAt(Idx);
-    if (VNI) {
+    if (!LI.getVNInfoAt(Idx))
+      continue;
+    if (all_of(LI.subranges(), [&](const LiveInterval::SubRange &SR) {
+          return SR.getVNInfoAt(Idx);
+        })) {
       LiveReg = SibReg;
       return true;
     }
