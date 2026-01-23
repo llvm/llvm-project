@@ -26,7 +26,7 @@
 float4 fn(float2x2 m) {
     float4 v = m;
     return v;
-m
+}
 
 // CHECK-LABEL: define hidden noundef <2 x i32> @_Z3fn1Dv2_i(
 // CHECK-SAME: <2 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
