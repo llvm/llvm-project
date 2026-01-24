@@ -14,6 +14,18 @@
 #define __isl_calloc(type,size)		((type *)calloc(1, size))
 #define __isl_calloc_type(type)		__isl_calloc(type,sizeof(type))
 
+/* Construct an isl_stat indicating whether "b" is not isl_bool_error.
+ *
+ * That is, return isl_stat_ok if "b" is not isl_bool_error and
+ * isl_stat_error if it is.
+ */
+isl_stat isl_stat_non_error_bool(isl_bool b)
+{
+	if (b < 0)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
 /* Construct an isl_stat indicating whether "obj" is non-NULL.
  *
  * That is, return isl_stat_ok if "obj" is non_NULL and

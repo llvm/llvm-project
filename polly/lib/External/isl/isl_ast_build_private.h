@@ -122,13 +122,6 @@
  * in turn only used by user code from within a callback.
  * The value is set right before we may be calling such a callback.
  *
- * "single_valued" is set if the current inverse schedule (which may or may
- * not be stored in "executed") is known to be single valued, specifically
- * an inverse schedule that was not (appeared not to be) single valued
- * is extended to a single valued inverse schedule.  This is mainly used
- * to avoid an infinite recursion when we fail to detect later on that
- * the extended inverse schedule is single valued.
- *
  * "node" points to the current band node in case we are generating
  * an AST from a schedule tree.  It may be NULL if we are not generating
  * an AST from a schedule tree or if we are not inside a band node.
@@ -191,7 +184,6 @@ struct isl_ast_build {
 	void *create_leaf_user;
 
 	isl_union_map *executed;
-	int single_valued;
 
 	isl_schedule_node *node;
 	int n;
@@ -230,8 +222,6 @@ __isl_give isl_ast_build *isl_ast_build_include_stride(
 __isl_give isl_ast_build *isl_ast_build_set_executed(
 	__isl_take isl_ast_build *build,
 	__isl_take isl_union_map *executed);
-__isl_give isl_ast_build *isl_ast_build_set_single_valued(
-	__isl_take isl_ast_build *build, int sv);
 __isl_give isl_multi_aff *isl_ast_build_get_internal2input(
 	__isl_keep isl_ast_build *build);
 __isl_give isl_set *isl_ast_build_get_domain(

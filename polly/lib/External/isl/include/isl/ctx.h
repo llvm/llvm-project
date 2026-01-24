@@ -91,6 +91,7 @@ typedef enum {
 	isl_bool_false = 0,
 	isl_bool_true = 1
 } isl_bool;
+isl_stat isl_stat_non_error_bool(isl_bool b);
 isl_bool isl_bool_not(isl_bool b);
 isl_bool isl_bool_ok(int b);
 typedef int	isl_size;
