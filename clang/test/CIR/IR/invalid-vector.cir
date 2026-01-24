@@ -14,7 +14,7 @@ cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
 cir.func @invalid_scalable_vec_syntax() {
   // expected-error@+2 {{missing closing `]` for scalable dim size}}
   // expected-error @below {{expected ']'}}
-  %3 = cir.alloca !cir.vector<[1 x] !s32i>, !cir.ptr<!cir.vector<[1] x !s32i>>
+  %3 = cir.alloca !cir.vector<[1 x] !s32i>, !cir.ptr<!cir.vector<[1] x !s32i>> {alignment = 4 : i64}
   cir.return
 
 }

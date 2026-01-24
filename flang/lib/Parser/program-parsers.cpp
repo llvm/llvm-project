@@ -77,7 +77,7 @@ static constexpr auto globalCompilerDirective{
 
 static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
-        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
@@ -256,7 +256,7 @@ TYPE_CONTEXT_PARSER("PROGRAM statement"_en_US,
 // R1403 end-program-stmt -> END [PROGRAM [program-name]]
 TYPE_CONTEXT_PARSER("END PROGRAM statement"_en_US,
     construct<EndProgramStmt>(
-        recovery("END" >> defaulted("PROGRAM" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("PROGRAM" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1404 module ->
@@ -274,7 +274,7 @@ TYPE_CONTEXT_PARSER(
 // R1406 end-module-stmt -> END [MODULE [module-name]]
 TYPE_CONTEXT_PARSER("END MODULE statement"_en_US,
     construct<EndModuleStmt>(
-        recovery("END" >> defaulted("MODULE" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("MODULE" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1407 module-subprogram-part -> contains-stmt [module-subprogram]...
@@ -342,7 +342,7 @@ TYPE_PARSER(construct<ParentIdentifier>(name, maybe(":" >> name)))
 // R1419 end-submodule-stmt -> END [SUBMODULE [submodule-name]]
 TYPE_CONTEXT_PARSER("END SUBMODULE statement"_en_US,
     construct<EndSubmoduleStmt>(
-        recovery("END" >> defaulted("SUBMODULE" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("SUBMODULE" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1420 block-data -> block-data-stmt [specification-part] end-block-data-stmt
@@ -358,7 +358,7 @@ TYPE_CONTEXT_PARSER("BLOCK DATA statement"_en_US,
 // R1422 end-block-data-stmt -> END [BLOCK DATA [block-data-name]]
 TYPE_CONTEXT_PARSER("END BLOCK DATA statement"_en_US,
     construct<EndBlockDataStmt>(
-        recovery("END" >> defaulted("BLOCK DATA" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("BLOCK DATA" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1501 interface-block ->
@@ -533,10 +533,12 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 //         NON_RECURSIVE | PURE | RECURSIVE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
-TYPE_PARSER(first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
-    "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
-    "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
-    "HOST" >> pure(common::CUDASubprogramAttrs::Host)))
+TYPE_PARSER(withMessage(
+    "expected DEVICE, GLOBAL, GRID_GLOBAL, or HOST attribute"_err_en_US,
+    first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
+        "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
+        "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
+        "HOST" >> pure(common::CUDASubprogramAttrs::Host))))
 TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Elemental>("ELEMENTAL"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Impure>("IMPURE"_tok)),
@@ -546,9 +548,12 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
     extension<LanguageFeature::CUDA>(
-        construct<PrefixSpec>(construct<PrefixSpec::Attributes>("ATTRIBUTES" >>
-            parenthesized(
-                optionalList(Parser<common::CUDASubprogramAttrs>{}))))),
+        construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
+            localRecovery("expected valid ATTRIBUTES specification"_err_en_US,
+                "ATTRIBUTES" >> parenthesized(nonemptyList(
+                                    Parser<common::CUDASubprogramAttrs>{})),
+                "ATTRIBUTES" >> SkipTo<')'>{} >> ")"_ch >>
+                    pure<std::list<common::CUDASubprogramAttrs>>())))),
     extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
         construct<PrefixSpec::Launch_Bounds>("LAUNCH_BOUNDS" >>
             parenthesized(nonemptyList(
@@ -576,7 +581,7 @@ TYPE_PARSER(construct<Suffix>(
 
 // R1533 end-function-stmt -> END [FUNCTION [function-name]]
 TYPE_PARSER(construct<EndFunctionStmt>(
-    recovery("END" >> defaulted("FUNCTION" >> maybe(name)) / atEndOfStmt,
+    recovery("END " >> defaulted("FUNCTION" >> maybe(name)) / atEndOfStmt,
         progUnitEndStmtErrorRecovery)))
 
 // R1534 subroutine-subprogram ->
@@ -604,7 +609,7 @@ TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))
 
 // R1537 end-subroutine-stmt -> END [SUBROUTINE [subroutine-name]]
 TYPE_PARSER(construct<EndSubroutineStmt>(
-    recovery("END" >> defaulted("SUBROUTINE" >> maybe(name)) / atEndOfStmt,
+    recovery("END " >> defaulted("SUBROUTINE" >> maybe(name)) / atEndOfStmt,
         progUnitEndStmtErrorRecovery)))
 
 // R1538 separate-module-subprogram ->
@@ -622,7 +627,7 @@ TYPE_CONTEXT_PARSER("MODULE PROCEDURE statement"_en_US,
 // R1540 end-mp-subprogram-stmt -> END [PROCEDURE [procedure-name]]
 TYPE_CONTEXT_PARSER("END PROCEDURE statement"_en_US,
     construct<EndMpSubprogramStmt>(
-        recovery("END" >> defaulted("PROCEDURE" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("PROCEDURE" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1541 entry-stmt -> ENTRY entry-name [( [dummy-arg-list] ) [suffix]]

@@ -555,6 +555,18 @@ public:
 
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
+  // Given an address space cast of the given pointer value, calculate the known
+  // bits of the source pointer in the source addrspace and the destination
+  // pointer in the destination addrspace.
+  LLVM_ABI std::pair<KnownBits, KnownBits>
+  computeKnownBitsAddrSpaceCast(unsigned ToAS, const Value &PtrOp) const;
+
+  // Given an address space cast, calculate the known bits of the resulting ptr
+  // in the destination addrspace using the known bits of the source pointer in
+  // the source addrspace.
+  LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
+      unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
+
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
   LLVM_ABI bool
@@ -1210,7 +1222,6 @@ public:
                          ///< with any shuffle mask.
     SK_PermuteSingleSrc, ///< Shuffle elements of single source vector with any
                          ///< shuffle mask.
-    // TODO: Split into SK_SpliceLeft + SK_SpliceRight
     SK_Splice            ///< Concatenates elements from the first input vector
                          ///< with elements of the second input vector. Returning
                          ///< a vector of the same type as the input vectors.
@@ -1254,6 +1265,17 @@ public:
 
     OperandValueInfo getNoProps() const {
       return {Kind, OP_None};
+    }
+
+    OperandValueInfo mergeWith(const OperandValueInfo OpInfoY) {
+      OperandValueKind MergeKind = OK_AnyValue;
+      if (isConstant() && OpInfoY.isConstant())
+        MergeKind = OK_NonUniformConstantValue;
+
+      OperandValueProperties MergeProp = OP_None;
+      if (Properties == OpInfoY.Properties)
+        MergeProp = Properties;
+      return {MergeKind, MergeProp};
     }
   };
 
@@ -1430,6 +1452,10 @@ public:
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
+
+  /// Collect common data between two OperandValueInfo inputs
+  LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
+                                                     const Value *Y);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
