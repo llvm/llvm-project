@@ -11,9 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
-#include <functional>
 #include <utility>
-#include <vector>
 
 using namespace clang::ast_matchers;
 
@@ -48,35 +46,44 @@ static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   return isa<DeclRefExpr, MemberExpr>(LHS) ? LHS : nullptr;
 }
 
-/// Checks if leaf nodes in a bitwise expression satisfy a given condition.
+/// Checks if all leaf nodes in a bitwise expression satisfy a given condition.
 ///
 /// \param Expr The bitwise expression to check.
 /// \param Condition A function that checks if a leaf node satisfies the
 ///                  desired condition.
-/// \param Combine A function that combines results from LHS and RHS (e.g., &&
-/// for "all", || for "any").
 /// \returns true if the condition is satisfied according to the combiner logic.
-template <typename F, typename Combiner>
-static bool leavesOfBitwiseSatisfy(const clang::Expr *Expr, const F &Condition,
-                                   const Combiner &Combine) {
-  // For leaf nodes, check if the condition is satisfied
+template <typename F>
+static bool leavesOfBitwiseSatisfy(const clang::Expr *Expr,
+                                   const F &Condition) {
+  // Strip away implicit casts and parentheses before checking the condition.
+  // This is important for cases like:
+  //   bool b1, b2;
+  //   bool Deprecated = 0xFFFFFFF8 & (b1 & b2);
+  // where the operands of the inner '&' are represented in the AST as
+  //   ImplicitCastExpr <int> (ImplicitCastExpr <bool> (DeclRefExpr 'bool'))
+  // and we still want to classify the leaves as boolean.
+  Expr = Expr->IgnoreParenImpCasts();
+
+  // For leaf nodes, check if the condition is satisfied after stripping
+  // implicit casts/parens.
   if (Condition(Expr))
     return true;
 
-  Expr = Expr->IgnoreParenImpCasts();
-
-  // If it's a binary operator, recursively check both operands
+  // If it's a binary operator, recursively check both operands.
   if (const auto *BinOp = dyn_cast<clang::BinaryOperator>(Expr)) {
     if (!isBitwiseOperation(BinOp->getOpcodeStr()))
       return false;
-    return Combine(leavesOfBitwiseSatisfy(BinOp->getLHS(), Condition, Combine),
-                   leavesOfBitwiseSatisfy(BinOp->getRHS(), Condition, Combine));
+    return leavesOfBitwiseSatisfy(BinOp->getLHS(), Condition) &&
+           leavesOfBitwiseSatisfy(BinOp->getRHS(), Condition);
   }
 
   return false;
 }
 
 namespace {
+
+// FIXME: provide memoization for this matcher
+
 /// Custom matcher that checks if all leaf nodes in an bitwise expression
 /// satisfy the given inner matcher condition. This uses
 /// leavesOfBitwiseSatisfy to recursively check.
@@ -88,22 +95,9 @@ AST_MATCHER_P(Expr, hasAllLeavesOfBitwiseSatisfying,
   auto Condition = [&](const clang::Expr *E) -> bool {
     return InnerMatcher.matches(*E, Finder, Builder);
   };
-  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_and<>{});
+  return leavesOfBitwiseSatisfy(&Node, Condition);
 }
 
-/// Custom matcher that checks if any leaf node in a bitwise expression
-/// satisfies the given inner matcher condition. This uses
-/// leavesOfBitwiseSatisfy to recursively check.
-///
-/// Example usage:
-///   expr(hasAnyLeafOfBitwiseSatisfying(hasType(booleanType())))
-AST_MATCHER_P(Expr, hasAnyLeafOfBitwiseSatisfying,
-              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  auto Condition = [&](const clang::Expr *E) -> bool {
-    return InnerMatcher.matches(*E, Finder, Builder);
-  };
-  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_or<>{});
-}
 } // namespace
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
@@ -121,49 +115,13 @@ void BoolBitwiseOperationCheck::storeOptions(
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
-  // Matcher for checking if all leaves in an bitwise expression are boolean
-  // type
   auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
-  // Matcher for checking if at least one leaf in an bitwise expression is
-  // boolean type
-  auto BooleanAnyLeaf = hasAnyLeafOfBitwiseSatisfying(hasType(booleanType()));
-
-  auto BitwiseOps = hasAnyOperatorName("|", "&", "|=", "&=");
-  auto CompoundBitwiseOps = hasAnyOperatorName("|=", "&=");
-  auto NotNestedInBitwise = unless(hasParent(binaryOperator(BitwiseOps)));
-  auto OptionalParent = optionally(hasParent(binaryOperator().bind("p")));
-
-  // Conditions that make it a boolean bitwise operation without ICE(*) context:
-  // 1. Both LHS and RHS have all boolean leaves
-  // 2. LHS has boolean leaves AND it's a compound assignment
-  //
-  // * ICE - Implicit cast expression
-  auto BothBoolean = allOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves));
-  auto CompoundWithBoolLHS = allOf(hasLHS(BooleanLeaves), CompoundBitwiseOps);
-  auto NoContextNeeded = anyOf(BothBoolean, CompoundWithBoolLHS);
-
-  // Check if any leaf in LHS or RHS is boolean (needs ICE context to be
-  // considered boolean bitwise)
-  auto AtLeastOneBoolean =
-      anyOf(hasLHS(BooleanAnyLeaf), hasRHS(BooleanAnyLeaf));
-
-  // Matcher for binop that doesn't need ICE context
-  auto BinOpNoContext = traverse(TK_IgnoreUnlessSpelledInSource,
-                                 binaryOperator(NotNestedInBitwise, BitwiseOps,
-                                                OptionalParent, NoContextNeeded)
-                                     .bind("binOpRoot"));
-
-  // Matcher for binop that needs ICE context (at least one boolean operand,
-  // but not already covered by NoContextNeeded)
-  auto BinOpNeedsContext =
-      traverse(TK_IgnoreUnlessSpelledInSource,
-               binaryOperator(NotNestedInBitwise, BitwiseOps, OptionalParent,
-                              AtLeastOneBoolean, unless(NoContextNeeded))
-                   .bind("binOpRoot"));
-  auto BooleanICE =
-      implicitCastExpr(hasType(booleanType()), has(BinOpNeedsContext));
-
-  Finder->addMatcher(expr(anyOf(BooleanICE, BinOpNoContext)), this);
+  Finder->addMatcher(
+      binaryOperator(hasAnyOperatorName("|", "&", "|=", "&="),
+                     optionally(hasParent(binaryOperator().bind("p"))),
+                     allOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves)))
+          .bind("binOp"),
+      this);
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
@@ -305,81 +263,15 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
                 << InsertBrace2;
 }
 
-namespace {
-class BinaryOperatorVisitor : public clang::DynamicRecursiveASTVisitor {
-  clang::tidy::misc::BoolBitwiseOperationCheck &Check;
-  const clang::SourceManager &SM;
-  clang::ASTContext &Ctx;
-  const clang::BinaryOperator *const ParentRoot;
-  // Stack to track parent binary operators during traversal
-  std::vector<const clang::BinaryOperator *> ParentStack;
-
-  /// Checks if BinOp is a direct child of the parent binary operator in the
-  /// stack (ignoring parentheses and implicit casts).
-  bool isDirectChildOfParent(const clang::BinaryOperator *BinOp) const {
-    if (ParentStack.empty())
-      return true;
-
-    const clang::BinaryOperator *Parent = ParentStack.back();
-    const std::array<const Expr *, 2> ParentOperands = {Parent->getLHS(),
-                                                        Parent->getRHS()};
-
-    return llvm::any_of(ParentOperands, [&](const Expr *E) {
-      return E->IgnoreParenImpCasts() == BinOp;
-    });
-  }
-
-public:
-  BinaryOperatorVisitor(clang::tidy::misc::BoolBitwiseOperationCheck &Check,
-                        const clang::SourceManager &SM, clang::ASTContext &Ctx,
-                        const clang::BinaryOperator *ParentRoot)
-      : Check(Check), SM(SM), Ctx(Ctx), ParentRoot(ParentRoot) {}
-
-  bool TraverseBinaryOperator(clang::BinaryOperator *BinOp) override {
-    if (!BinOp)
-      return true;
-
-    if (!isDirectChildOfParent(BinOp))
-      return true;
-
-    // Track this binary operator as a parent for its children.
-    ParentStack.push_back(BinOp);
-    const bool Result =
-        clang::DynamicRecursiveASTVisitor::TraverseBinaryOperator(BinOp);
-    ParentStack.pop_back();
-
-    return Result;
-  }
-
-  bool VisitBinaryOperator(clang::BinaryOperator *BinOp) override {
-    if (!BinOp)
-      return true;
-
-    if (!isBitwiseOperation(BinOp->getOpcodeStr()))
-      return true;
-
-    const clang::BinaryOperator *ParentBinOp =
-        ParentStack.size() < 2 ? ParentRoot
-                               : ParentStack[ParentStack.size() - 2];
-
-    Check.emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
-
-    return true;
-  }
-};
-} // namespace
-
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *BinOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
-  const auto *ParentRoot = Result.Nodes.getNodeAs<BinaryOperator>("p");
-  assert(BinOpRoot);
+  const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
+  const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
+  assert(BinOp);
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
-  BinaryOperatorVisitor Visitor(*this, SM, Ctx, ParentRoot);
-  // TraverseStmt requires non-const pointer, but we're only reading
-  Visitor.TraverseStmt(const_cast<BinaryOperator *>(BinOpRoot));
+  emitWarningAndChangeOperatorsIfPossible(BinOp, Parent, SM, Ctx);
 }
 
 } // namespace clang::tidy::misc
