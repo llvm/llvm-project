@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
-#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -64,6 +63,14 @@ enum class IndirectBranchType : char {
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
   POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
                              /// PIC jump table.
+};
+
+/// Enum used for readability when describing different BTI instruction
+/// variants. The variant is encoded as an immediate of the instruction in LLVM.
+enum BTIKind {
+  C, /// Accepting calls, and jumps using x16/x17.
+  J, /// Accepting jumps.
+  JC /// Accepting both.
 };
 
 class MCPlusBuilder {
@@ -1776,6 +1783,10 @@ public:
     return 0;
   }
 
+  virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,
@@ -1871,8 +1882,7 @@ public:
 
   /// Check if an Instruction is a BTI landing pad with the required properties.
   /// Takes both explicit and implicit BTIs into account.
-  virtual bool isBTILandingPad(MCInst &Inst, bool CallTarget,
-                               bool JumpTarget) const {
+  virtual bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1884,13 +1894,7 @@ public:
   }
 
   /// Create a BTI landing pad instruction.
-  virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
-    llvm_unreachable("not implemented");
-  }
-
-  /// Update operand of BTI instruction.
-  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
-                                bool JumpTarget) const {
+  virtual void createBTI(MCInst &Inst, BTIKind BTI) const {
     llvm_unreachable("not implemented");
   }
 
@@ -2041,7 +2045,7 @@ public:
   /// targets).
   virtual std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const {
+                        InstructionListType::iterator CallInst) const {
     return std::nullopt;
   }
 

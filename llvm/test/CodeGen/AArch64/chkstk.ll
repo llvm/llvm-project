@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=aarch64-windows -verify-machineinstrs %s -o - \
 ; RUN:  | FileCheck -check-prefix CHECK-DEFAULT-CODE-MODEL %s
+; RUN: llc -mtriple=aarch64-w64-mingw32 -verify-machineinstrs %s -o - \
+; RUN:  | FileCheck -check-prefix CHECK-DEFAULT-CODE-MODEL %s
 ; RUN: llc < %s -mtriple=aarch64-windows -stop-after=prologepilog \
 ; RUN:  | FileCheck -check-prefix CHECK-REGSTATE %s
 

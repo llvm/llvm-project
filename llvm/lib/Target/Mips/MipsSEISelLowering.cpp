@@ -307,7 +307,7 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
     setOperationAction(ISD::SETCC, MVT::f64, Legal);
-    setOperationAction(ISD::SELECT, MVT::f64, Custom);
+    setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
     setOperationAction(ISD::BRCOND, MVT::Other, Legal);
@@ -317,11 +317,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
 
     setCondCodeAction(ISD::SETOGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETOGT, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f64, Expand);
   }
 
   if (Subtarget.hasMips64r6()) {
@@ -3257,14 +3265,14 @@ MipsSETargetLowering::emitCOPY_FW(MachineInstr &MI,
       BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Wt).addReg(Ws);
     }
 
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_lo);
   } else {
     Register Wt = RegInfo.createVirtualRegister(
         Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
                                 : &Mips::MSA128WEvensRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_W), Wt).addReg(Ws).addImm(Lane);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_lo);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3294,12 +3302,12 @@ MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
 
   if (Lane == 0)
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, {}, Mips::sub_64);
   else {
     Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_D), Wt).addReg(Ws).addImm(1);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_64);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3466,7 +3474,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), WdTmp1)
       .addReg(SrcVecReg)
       .addReg(SrcVecReg)
-      .addReg(LaneReg, 0, SubRegIdx);
+      .addReg(LaneReg, {}, SubRegIdx);
 
   Register WdTmp2 = RegInfo.createVirtualRegister(VecRC);
   if (IsFP) {
@@ -3495,7 +3503,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)
       .addReg(WdTmp2)
-      .addReg(LaneTmp2, 0, SubRegIdx);
+      .addReg(LaneTmp2, {}, SubRegIdx);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -3658,7 +3666,8 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
 
   if(!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp).addReg(Rt, 0, Mips::sub_32);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp)
+        .addReg(Rt, {}, Mips::sub_32);
     Rt = Tmp;
   }
 

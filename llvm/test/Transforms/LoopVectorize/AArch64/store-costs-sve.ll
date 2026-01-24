@@ -20,8 +20,8 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 16
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
+; DEFAULT-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 4
+; DEFAULT-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 101, [[TMP3]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 101, [[N_MOD_VF]]
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -43,7 +43,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT:       vec.epilog.ph:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
+; DEFAULT-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 101, [[TMP12]]
 ; DEFAULT-NEXT:    [[N_VEC3:%.*]] = sub i64 101, [[N_MOD_VF2]]
 ; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -76,7 +76,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; PRED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; PRED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 101, [[TMP3]]
@@ -133,8 +133,8 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP2]], 16
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP16]], 2
+; DEFAULT-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP2]], 4
+; DEFAULT-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP16]], 1
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1000, [[TMP3]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 1000, [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i16> poison, i16 [[X]], i64 0
@@ -211,7 +211,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; PRED-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; PRED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i16> poison, i16 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 1000)

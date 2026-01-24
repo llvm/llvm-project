@@ -168,7 +168,9 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
 
   bool isValid() const { return !Map.empty(); }
   MVT getType(unsigned Mode) const { return get(Mode); }
-  MVT &getOrCreateTypeForMode(unsigned Mode, MVT Type);
+  void insertTypeForMode(unsigned Mode, MVT Type) {
+    Map.try_emplace(Mode, Type);
+  }
 
   static StringRef getMVTName(MVT T);
   void writeToStream(raw_ostream &OS) const;

@@ -83,12 +83,8 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static cl::opt<bool>
-NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
-               cl::desc("MIPS: Don't trap on integer division by zero."),
-               cl::init(false));
-
 extern cl::opt<bool> EmitJalrReloc;
+extern cl::opt<bool> NoZeroDivCheck;
 
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
@@ -445,9 +441,9 @@ MipsTargetLowering::create(const MipsTargetMachine &TM,
 }
 
 // Create a fast isel object.
-FastISel *
-MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
+FastISel *MipsTargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
   const MipsTargetMachine &TM =
       static_cast<const MipsTargetMachine &>(funcInfo.MF->getTarget());
 
@@ -462,7 +458,8 @@ MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
       Subtarget.useXGOT())
     UseFastISel = false;
 
-  return UseFastISel ? Mips::createFastISel(funcInfo, libInfo) : nullptr;
+  return UseFastISel ? Mips::createFastISel(funcInfo, libInfo, libcallLowering)
+                     : nullptr;
 }
 
 EVT MipsTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
@@ -1188,7 +1185,7 @@ bool MipsTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
 
 bool MipsTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   // We can use ANDI+SLTIU as a bit test. Y contains the bit position.
-  // For MIPSR2 or later, we may be able to use the `ext` instruction or its'
+  // For MIPSR2 or later, we may be able to use the `ext` instruction or its
   // double-word variants.
   if (auto *C = dyn_cast<ConstantSDNode>(Y))
     return C->getAPIntValue().ule(15);
@@ -1803,7 +1800,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
   BuildMI(BB, DL, TII->get(ABI.GetPtrAndOp()), AlignedAddr)
     .addReg(Ptr).addReg(MaskLSB2);
   BuildMI(BB, DL, TII->get(Mips::ANDi), PtrLSB2)
-      .addReg(Ptr, 0, ArePtrs64bit ? Mips::sub_32 : 0).addImm(3);
+      .addReg(Ptr, {}, ArePtrs64bit ? Mips::sub_32 : 0)
+      .addImm(3);
   if (Subtarget.isLittle()) {
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
@@ -1990,7 +1988,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   BuildMI(BB, DL, TII->get(ArePtrs64bit ? Mips::AND64 : Mips::AND), AlignedAddr)
     .addReg(Ptr).addReg(MaskLSB2);
   BuildMI(BB, DL, TII->get(Mips::ANDi), PtrLSB2)
-      .addReg(Ptr, 0, ArePtrs64bit ? Mips::sub_32 : 0).addImm(3);
+      .addReg(Ptr, {}, ArePtrs64bit ? Mips::sub_32 : 0)
+      .addImm(3);
   if (Subtarget.isLittle()) {
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
@@ -2938,6 +2937,11 @@ SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
                   Loc, Op.getValueType(), SrcVal);
 
   return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
+}
+
+ArrayRef<MCPhysReg> MipsTargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {Mips::FCR31};
+  return RCRegs;
 }
 
 //===----------------------------------------------------------------------===//

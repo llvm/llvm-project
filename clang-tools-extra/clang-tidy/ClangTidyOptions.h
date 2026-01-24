@@ -170,9 +170,11 @@ struct ClangTidyOptions {
 /// Abstract interface for retrieving various ClangTidy options.
 class ClangTidyOptionsProvider {
 public:
-  static const char OptionsSourceTypeDefaultBinary[];
-  static const char OptionsSourceTypeCheckCommandLineOption[];
-  static const char OptionsSourceTypeConfigCommandLineOption[];
+  static constexpr char OptionsSourceTypeDefaultBinary[] = "clang-tidy binary";
+  static constexpr char OptionsSourceTypeCheckCommandLineOption[] =
+      "command-line option '-checks'";
+  static constexpr char OptionsSourceTypeConfigCommandLineOption[] =
+      "command-line option '-config'";
 
   virtual ~ClangTidyOptionsProvider() = default;
 

@@ -118,8 +118,10 @@ func.func @for_loop_with_constant_result() -> i1 {
 
 // Test to catch a bug present in some versions of the data flow analysis
 // CHECK-LABEL: func @while_false
-// CHECK: %[[false:.*]] = arith.constant false
-// CHECK: scf.condition(%[[false]])
+// CHECK: %[[divui:.*]] = arith.divui
+// CHECK-NOT: scf.while
+// CHECK-NOT: scf.condition
+// CHECK: return %[[divui]]
 func.func @while_false(%arg0 : index) -> index {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -661,6 +663,24 @@ func.func @select_union(%arg0 : index, %arg1 : i1) -> i1 {
     %4 = arith.cmpi ne, %c100, %2 : index
     %5 = arith.andi %3, %4 : i1
     func.return %5 : i1
+}
+
+// CHECK-LABEL: func @select_undefined_union
+// CHECK-COUNT-2: arith.select
+// CHECK: %[[ret:.*]] = arith.cmpi eq
+// CHECK: return %[[ret]]
+
+func.func @select_undefined_union(%arg0: i1) -> i1 {
+  %c32 = arith.constant 32 : index
+  %c64 = arith.constant 64 : index
+  %0 = test.without_bounds : index
+  %1 = arith.select %arg0, %0, %c64 : index
+  %2 = arith.cmpi eq, %1, %c64 : index
+  %3 = test.without_bounds : index
+  %4 = arith.select %2, %c32, %3 : index
+  %5 = arith.cmpi eq, %4, %c32 : index
+
+  return %5 : i1
 }
 
 // CHECK-LABEL: func @if_union

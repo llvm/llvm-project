@@ -218,6 +218,9 @@ set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI 
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
+set(LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
+  "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
+   version must correspond to the major version of an LLVM release.")
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
@@ -536,6 +539,7 @@ function(cxx_add_basic_build_flags target)
   # Let the library headers know they are currently being used to build the
   # library.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)
+  target_compile_definitions(${target} PRIVATE -D_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION=${LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION})
 
   # Make sure the library can be build without transitive includes. This makes
   # it easier to upgrade the library to a newer language standard without build
@@ -773,12 +777,10 @@ if (RUNTIMES_USE_LIBC STREQUAL "picolibc")
   config_define(1 _LIBCPP_LIBC_NEWLIB)
 elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
   config_define(1 _LIBCPP_LIBC_NEWLIB)
+elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
+  config_define(1 _LIBCPP_LIBC_LLVM_LIBC)
 endif()
 
-# TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
-if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been removed. Please use LIBCXX_HARDENING_MODE instead.")
-endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
   config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")

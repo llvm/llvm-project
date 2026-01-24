@@ -152,6 +152,15 @@ void TestAllocator<Config>::operator delete(void *ptr) {
   TestAllocatorStorage::release(ptr);
 }
 
+class ScopedScudoOptions {
+public:
+  explicit ScopedScudoOptions(const char *Options) {
+    setenv("SCUDO_OPTIONS", Options, 1);
+  }
+
+  ~ScopedScudoOptions() { unsetenv("SCUDO_OPTIONS"); }
+};
+
 template <class TypeParam> struct ScudoCombinedTest : public Test {
   ScudoCombinedTest() { Allocator = std::make_unique<AllocatorT>(); }
   ~ScudoCombinedTest() { Allocator->releaseToOS(scudo::ReleaseToOS::Force); }
@@ -1118,42 +1127,37 @@ struct TestNoZeroOnDeallocConfig : public TestZeroOnDeallocConfig {
 };
 
 TEST(ScudoCombinedTest, ZeroOnDeallocEnabledAndFlag) {
-  ([]() { // Cleanup on exit scope.
-    for (scudo::uptr FlagValue = 128; FlagValue <= 2048; FlagValue *= 2) {
-      // Set the size limit flag via the environment variable.
-      char Options[256];
-      snprintf(Options, sizeof(Options),
-               "SCUDO_OPTIONS=zero_on_dealloc_max_size=%ld",
-               static_cast<long>(FlagValue));
-      putenv(Options);
+  for (scudo::uptr FlagValue = 128; FlagValue <= 2048; FlagValue *= 2) {
+    // Set the size limit flag via the environment variable.
+    char OptionsStr[256];
+    snprintf(OptionsStr, sizeof(OptionsStr), "zero_on_dealloc_max_size=%ld",
+             static_cast<long>(FlagValue));
+    ScopedScudoOptions Options(OptionsStr);
 
-      // Creates an allocator, configured from the environment.
-      using AllocatorT = TestAllocator<TestZeroOnDeallocConfig>;
-      auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+    // Creates an allocator, configured from the environment.
+    using AllocatorT = TestAllocator<TestZeroOnDeallocConfig>;
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-      for (scudo::uptr AllocatedSize : {FlagValue / 2, FlagValue}) {
-        // Allocates and sets the memory.
-        void *P = Allocator->allocate(AllocatedSize, Origin);
-        ASSERT_NE(P, nullptr);
-        memset(P, 'B', AllocatedSize);
+    for (scudo::uptr AllocatedSize : {FlagValue / 2, FlagValue}) {
+      // Allocates and sets the memory.
+      void *P = Allocator->allocate(AllocatedSize, Origin);
+      ASSERT_NE(P, nullptr);
+      memset(P, 'B', AllocatedSize);
 
-        char *Begin =
-            reinterpret_cast<char *>(Allocator->getBlockBeginTestOnly(P));
-        char *End = reinterpret_cast<char *>(P) + AllocatedSize;
-        // Deallocates and eventually clears the memory.
-        Allocator->deallocate(P, Origin);
+      char *Begin =
+          reinterpret_cast<char *>(Allocator->getBlockBeginTestOnly(P));
+      char *End = reinterpret_cast<char *>(P) + AllocatedSize;
+      // Deallocates and eventually clears the memory.
+      Allocator->deallocate(P, Origin);
 
-        if (End - Begin <= static_cast<long>(FlagValue)) {
-          // Verifies the memory was cleared, including the header.
-          for (char *T = Begin; T < End; ++T) {
-            ASSERT_EQ(*T, 0);
-          }
+      if (End - Begin <= static_cast<long>(FlagValue)) {
+        // Verifies the memory was cleared, including the header.
+        for (char *T = Begin; T < End; ++T) {
+          ASSERT_EQ(*T, 0);
         }
       }
     }
-  })();
-  // Clear the scudo flag option.
-  unsetenv("SCUDO_OPTIONS");
+  }
 }
 #endif
 

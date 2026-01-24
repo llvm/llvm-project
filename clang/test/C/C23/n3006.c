@@ -103,7 +103,7 @@ void misc_struct_test(void) {
 
   constexpr struct {
       int b;
-  } b = (struct S { int x; }){ 0 };  // expected-error-re {{initializing 'const struct (unnamed struct at {{.*}}n3006.c:104:13)' with an expression of incompatible type 'struct S'}}
+  } b = (struct S { int x; }){ 0 };  // expected-error-re {{initializing 'const struct (unnamed at {{.*}}n3006.c:104:13)' with an expression of incompatible type 'struct S'}}
 
   auto z = ({
       int a = 12;

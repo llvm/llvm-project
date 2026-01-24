@@ -1870,11 +1870,11 @@ bool AMDGPURegisterBankInfo::buildVCopy(MachineIRBuilder &B, Register DstReg,
   Register TmpReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
   B.buildInstr(AMDGPU::V_MOV_B32_e32)
-    .addDef(TmpReg0)
-    .addUse(SrcReg, 0, AMDGPU::sub0);
+      .addDef(TmpReg0)
+      .addUse(SrcReg, {}, AMDGPU::sub0);
   B.buildInstr(AMDGPU::V_MOV_B32_e32)
-    .addDef(TmpReg1)
-    .addUse(SrcReg, 0, AMDGPU::sub1);
+      .addDef(TmpReg1)
+      .addUse(SrcReg, {}, AMDGPU::sub1);
   B.buildInstr(AMDGPU::REG_SEQUENCE)
     .addDef(DstReg)
     .addUse(TmpReg0)
@@ -5239,11 +5239,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(regBankID, OpSize);
       break;
     }
-    case Intrinsic::amdgcn_s_bitreplicate:
+    case Intrinsic::amdgcn_s_bitreplicate: {
       Register MaskReg = MI.getOperand(2).getReg();
       unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64);
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_wave_shuffle: {
+      unsigned OpSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
+      break;
+    }
     }
     break;
   }

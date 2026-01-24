@@ -1643,8 +1643,9 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 
   BuildMI(MBB, MI, dl, get(OpCode), DestReg)
-    .addReg(FirstReg).addReg(SecondReg)
-    .addReg(Cond[1].getReg(), 0, SubIdx);
+      .addReg(FirstReg)
+      .addReg(SecondReg)
+      .addReg(Cond[1].getReg(), {}, SubIdx);
 }
 
 static unsigned getCRBitValue(unsigned CRBit) {
@@ -2081,7 +2082,7 @@ void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
-                                        Register VReg,
+                                        Register VReg, unsigned SubReg,
                                         MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
@@ -2722,7 +2723,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineBasicBlock::iterator MII = MI;
   BuildMI(*MI->getParent(), std::next(MII), MI->getDebugLoc(),
           get(TargetOpcode::COPY), CRReg)
-    .addReg(PPC::CR0, MIOpC != NewOpC ? RegState::Kill : 0);
+      .addReg(PPC::CR0, getKillRegState(MIOpC != NewOpC));
 
   // Even if CR0 register were dead before, it is alive now since the
   // instruction we just built uses it.
@@ -3004,17 +3005,31 @@ bool PPCInstrInfo::shouldClusterMemOps(
 unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (Opcode == PPC::INLINEASM || Opcode == PPC::INLINEASM_BR) {
+  switch (Opcode) {
+  case PPC::INLINEASM:
+  case PPC::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
-  } else if (Opcode == TargetOpcode::STACKMAP) {
+  }
+  case TargetOpcode::STACKMAP: {
     StackMapOpers Opers(&MI);
     return Opers.getNumPatchBytes();
-  } else if (Opcode == TargetOpcode::PATCHPOINT) {
+  }
+  case TargetOpcode::PATCHPOINT: {
     PatchPointOpers Opers(&MI);
     return Opers.getNumPatchBytes();
-  } else {
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+    return Num * 4;
+  }
+  default:
     return get(Opcode).getSize();
   }
 }
@@ -3832,9 +3847,9 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     return true;
 
   ImmInstrInfo III;
-  bool IsVFReg = MI.getOperand(0).isReg()
-                     ? PPC::isVFRegister(MI.getOperand(0).getReg())
-                     : false;
+  bool IsVFReg = MI.getOperand(0).isReg() &&
+                 MI.getOperand(0).getReg().isPhysical() &&
+                 PPC::isVFRegister(MI.getOperand(0).getReg());
   bool HasImmForm = instrHasImmForm(MI.getOpcode(), IsVFReg, III, PostRA);
   // If this is a reg+reg instruction that has a reg+imm form,
   // and one of the operands is produced by an add-immediate,
@@ -4873,9 +4888,9 @@ bool PPCInstrInfo::transformToNewImmFormFedByAdd(
 
   // get Imm Form info.
   ImmInstrInfo III;
-  bool IsVFReg = MI.getOperand(0).isReg()
-                     ? PPC::isVFRegister(MI.getOperand(0).getReg())
-                     : false;
+  bool IsVFReg = MI.getOperand(0).isReg() &&
+                 MI.getOperand(0).getReg().isPhysical() &&
+                 PPC::isVFRegister(MI.getOperand(0).getReg());
 
   if (!instrHasImmForm(XFormOpcode, IsVFReg, III, PostRA))
     return false;
