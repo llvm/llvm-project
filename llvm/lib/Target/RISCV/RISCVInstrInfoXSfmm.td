@@ -37,16 +37,10 @@ def twiden : RISCVOp {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class SFInstSetSingle<dag outs, dag ins, bits<5> rs2, string opcodestr,
                       string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
-  bits<5> rs1;
-  bits<5> rd;
+    : RVInstIBase<OPCFG.Value, OPC_OP_V, outs, ins, opcodestr, argstr> {
 
   let Inst{31-25} = 0b1000010;
   let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = OPCFG.Value;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
 
   let Defs = [VTYPE, VL];
 }
