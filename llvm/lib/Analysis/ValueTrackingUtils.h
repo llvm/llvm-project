@@ -84,8 +84,7 @@ void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower, APInt &Upper,
                        const InstrInfoQuery &IIQ, bool PreferSignedRange);
 std::optional<bool> isImpliedCondOperands(CmpInst::Predicate Pred,
                                           const Value *ALHS, const Value *ARHS,
-                                          const Value *BLHS,
-                                          const Value *BRHS);
+                                          const Value *BLHS, const Value *BRHS);
 std::optional<bool> isImpliedCondCommonOperandWithCR(CmpPredicate LPred,
                                                      const ConstantRange &LCR,
                                                      CmpPredicate RPred,

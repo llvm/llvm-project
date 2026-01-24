@@ -2359,8 +2359,8 @@ const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
 }
 
 bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
-                                   const APInt &DemandedElts,
-                                   APInt &DemandedLHS, APInt &DemandedRHS) {
+                            const APInt &DemandedElts, APInt &DemandedLHS,
+                            APInt &DemandedRHS) {
   if (isa<ScalableVectorType>(Shuf->getType())) {
     assert(DemandedElts == APInt(1, 1));
     DemandedLHS = DemandedRHS = DemandedElts;
@@ -2659,9 +2659,8 @@ bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   return true;
 }
 
-void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
-                                  Value *&ValOut, Instruction *&CtxIOut,
-                                  const PHINode **PhiOut) {
+void breakSelfRecursivePHI(const Use *U, const PHINode *PHI, Value *&ValOut,
+                           Instruction *&CtxIOut, const PHINode **PhiOut) {
   ValOut = U->get();
   if (ValOut == PHI)
     return;
@@ -2756,8 +2755,8 @@ bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
 }
 
 void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
-                                    Value *LHS, Value *RHS, KnownBits &Known,
-                                    const SimplifyQuery &Q) {
+                             Value *LHS, Value *RHS, KnownBits &Known,
+                             const SimplifyQuery &Q) {
   if (RHS->getType()->isPointerTy()) {
     // Handle comparison of pointer to null explicitly, as it will not be
     // covered by the m_APInt() logic below.
@@ -2862,8 +2861,8 @@ void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
 }
 
 void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
-                                         KnownBits &Known,
-                                         const SimplifyQuery &SQ, bool Invert) {
+                                  KnownBits &Known, const SimplifyQuery &SQ,
+                                  bool Invert) {
   ICmpInst::Predicate Pred =
       Invert ? Cmp->getInversePredicate() : Cmp->getPredicate();
   Value *LHS = Cmp->getOperand(0);
@@ -2884,8 +2883,8 @@ void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
 }
 
 bool isKnownNonNullFromDominatingCondition(const Value *V,
-                                                  const Instruction *CtxI,
-                                                  const DominatorTree *DT) {
+                                           const Instruction *CtxI,
+                                           const DominatorTree *DT) {
   assert(!isa<Constant>(V) && "Called for constant?");
 
   if (!CtxI || !DT)
@@ -2982,7 +2981,7 @@ bool isKnownNonNullFromDominatingCondition(const Value *V,
 // Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
 // Returns the input and lower/upper bounds.
 bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
-                                const APInt *&CLow, const APInt *&CHigh) {
+                         const APInt *&CLow, const APInt *&CHigh) {
   assert(isa<Operator>(Select) &&
          cast<Operator>(Select)->getOpcode() == Instruction::Select &&
          "Input should be a Select!");
@@ -3010,9 +3009,8 @@ bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
   return CLow->sle(*CHigh);
 }
 
-bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
-                                         const APInt *&CLow,
-                                         const APInt *&CHigh) {
+bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II, const APInt *&CLow,
+                                  const APInt *&CHigh) {
   assert((II->getIntrinsicID() == Intrinsic::smin ||
           II->getIntrinsicID() == Intrinsic::smax) &&
          "Must be smin/smax");
@@ -3029,8 +3027,7 @@ bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
   return CLow->sle(*CHigh);
 }
 
-void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
-                                          KnownBits &Known) {
+void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II, KnownBits &Known) {
   const APInt *CLow, *CHigh;
   if (isSignedMinMaxIntrinsicClamp(II, CLow, CHigh))
     Known = Known.unionWith(
@@ -3040,8 +3037,7 @@ void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
 /// Return true if we can infer that \p V is known to be a power of 2 from
 /// dominating condition \p Cond (e.g., ctpop(V) == 1).
 bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
-                                             const Value *Cond,
-                                             bool CondIsTrue) {
+                                      const Value *Cond, bool CondIsTrue) {
   CmpPredicate Pred;
   const APInt *RHSC;
   if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
@@ -3099,7 +3095,7 @@ bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
 // the same/higher offset than B we are only incrementing the pointer further in
 // loop if offset of recursive GEP is greater than 0.
 bool isNonEqualPointersWithRecursiveGEP(const Value *A, const Value *B,
-                                               const SimplifyQuery &Q) {
+                                        const SimplifyQuery &Q) {
   if (!A->getType()->isPointerTy() || !B->getType()->isPointerTy())
     return false;
 
@@ -3360,7 +3356,7 @@ static Value *lookThroughCastConst(CmpInst *CmpI, Type *SrcTy, Constant *C,
 /// NOTE: We return only the new second value because the first value could be
 /// accessed as operand of cast instruction.
 Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
-                              Instruction::CastOps *CastOp) {
+                       Instruction::CastOps *CastOp) {
   auto *Cast1 = dyn_cast<CastInst>(V1);
   if (!Cast1)
     return nullptr;
@@ -3418,8 +3414,7 @@ void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
   }
 }
 
-ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
-                                          bool UseInstrInfo) {
+ConstantRange getRangeForIntrinsic(const IntrinsicInst &II, bool UseInstrInfo) {
   unsigned Width = II.getType()->getScalarSizeInBits();
   const APInt *C;
   switch (II.getIntrinsicID()) {
@@ -3532,7 +3527,7 @@ ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
 }
 
 ConstantRange getRangeForSelectPattern(const SelectInst &SI,
-                                              const InstrInfoQuery &IIQ) {
+                                       const InstrInfoQuery &IIQ) {
   unsigned BitWidth = SI.getType()->getScalarSizeInBits();
   const Value *LHS = nullptr, *RHS = nullptr;
   SelectPatternResult R = matchSelectPattern(&SI, LHS, RHS);
@@ -3578,9 +3573,8 @@ ConstantRange getRangeForSelectPattern(const SelectInst &SI,
   }
 }
 
-void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
-                              APInt &Upper, const InstrInfoQuery &IIQ,
-                              bool PreferSignedRange) {
+void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower, APInt &Upper,
+                       const InstrInfoQuery &IIQ, bool PreferSignedRange) {
   unsigned Width = Lower.getBitWidth();
   const APInt *C;
   switch (BO.getOpcode()) {
@@ -3805,9 +3799,10 @@ void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
 
 /// Return true if "icmp Pred BLHS BRHS" is true whenever "icmp Pred
 /// ALHS ARHS" is true.  Otherwise, return std::nullopt.
-std::optional<bool>
-isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
-                      const Value *ARHS, const Value *BLHS, const Value *BRHS) {
+std::optional<bool> isImpliedCondOperands(CmpInst::Predicate Pred,
+                                          const Value *ALHS, const Value *ARHS,
+                                          const Value *BLHS,
+                                          const Value *BRHS) {
   switch (Pred) {
   default:
     return std::nullopt;
@@ -3845,9 +3840,10 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
 /// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
 /// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-std::optional<bool>
-isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
-                                 CmpPredicate RPred, const ConstantRange &RCR) {
+std::optional<bool> isImpliedCondCommonOperandWithCR(CmpPredicate LPred,
+                                                     const ConstantRange &LCR,
+                                                     CmpPredicate RPred,
+                                                     const ConstantRange &RCR) {
   auto CRImpliesPred = [&](ConstantRange CR,
                            CmpInst::Predicate Pred) -> std::optional<bool> {
     // If all true values for lhs and true for rhs, lhs implies rhs

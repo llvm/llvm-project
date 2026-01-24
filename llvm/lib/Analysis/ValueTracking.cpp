@@ -5122,14 +5122,14 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
 /// Convert ConstantRange OverflowResult into ValueTracking OverflowResult.
 static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
   switch (OR) {
-    case ConstantRange::OverflowResult::MayOverflow:
-      return OverflowResult::MayOverflow;
-    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
-      return OverflowResult::AlwaysOverflowsLow;
-    case ConstantRange::OverflowResult::AlwaysOverflowsHigh:
-      return OverflowResult::AlwaysOverflowsHigh;
-    case ConstantRange::OverflowResult::NeverOverflows:
-      return OverflowResult::NeverOverflows;
+  case ConstantRange::OverflowResult::MayOverflow:
+    return OverflowResult::MayOverflow;
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+    return OverflowResult::AlwaysOverflowsLow;
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh:
+    return OverflowResult::AlwaysOverflowsHigh;
+  case ConstantRange::OverflowResult::NeverOverflows:
+    return OverflowResult::NeverOverflows;
   }
   llvm_unreachable("Unknown OverflowResult");
 }
@@ -6028,7 +6028,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   }
 
   if (CmpInst::isIntPredicate(Pred))
-    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS, Depth);
+    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS,
+                       Depth);
 
   // According to (IEEE 754-2008 5.3.1), minNum(0.0, -0.0) and similar
   // may return either -0.0 or 0.0, so fcmp/select pair has stricter
@@ -6048,10 +6049,12 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
     return {SPF_UNKNOWN, SPNB_NA, false};
 
   SelectInst *SI = dyn_cast<SelectInst>(V);
-  if (!SI) return {SPF_UNKNOWN, SPNB_NA, false};
+  if (!SI)
+    return {SPF_UNKNOWN, SPNB_NA, false};
 
   CmpInst *CmpI = dyn_cast<CmpInst>(SI->getCondition());
-  if (!CmpI) return {SPF_UNKNOWN, SPNB_NA, false};
+  if (!CmpI)
+    return {SPF_UNKNOWN, SPNB_NA, false};
 
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
@@ -6091,21 +6094,21 @@ SelectPatternResult llvm::matchDecomposedSelectPattern(
       // -0.0 because there is no corresponding integer value.
       if (*CastOp == Instruction::FPToSI || *CastOp == Instruction::FPToUI)
         FMF.setNoSignedZeros();
-      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
-                                  C, cast<CastInst>(FalseVal)->getOperand(0),
-                                  LHS, RHS, Depth);
+      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, C,
+                                  cast<CastInst>(FalseVal)->getOperand(0), LHS,
+                                  RHS, Depth);
     }
   }
-  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal,
-                              LHS, RHS, Depth);
+  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS,
+                              RHS, Depth);
 }
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondICmps(CmpPredicate LPred, const Value *L0,
-                                       const Value *L1, CmpPredicate RPred,
-                                       const Value *R0, const Value *R1,
-                                       const DataLayout &DL, bool LHSIsTrue) {
+static std::optional<bool>
+isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
+                   CmpPredicate RPred, const Value *R0, const Value *R1,
+                   const DataLayout &DL, bool LHSIsTrue) {
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
   if (!LHSIsTrue)
@@ -6213,11 +6216,10 @@ static std::optional<bool> isImpliedCondICmps(CmpPredicate LPred, const Value *L
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondFCmps(FCmpInst::Predicate LPred,
-                                       const Value *L0, const Value *L1,
-                                       FCmpInst::Predicate RPred,
-                                       const Value *R0, const Value *R1,
-                                       const DataLayout &DL, bool LHSIsTrue) {
+static std::optional<bool>
+isImpliedCondFCmps(FCmpInst::Predicate LPred, const Value *L0, const Value *L1,
+                   FCmpInst::Predicate RPred, const Value *R0, const Value *R1,
+                   const DataLayout &DL, bool LHSIsTrue) {
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
   if (!LHSIsTrue)
