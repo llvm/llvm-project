@@ -60,7 +60,7 @@ __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templat
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _ForwardIterator
+_LIBCPP_HIDE_FROM_ABI constexpr _ForwardIterator
 shift_left(_ForwardIterator __first,
            _ForwardIterator __last,
            typename iterator_traits<_ForwardIterator>::difference_type __n) {
