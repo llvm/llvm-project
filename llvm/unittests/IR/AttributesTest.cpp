@@ -344,6 +344,24 @@ TEST(Attributes, ConstantRangeAttributeCAPI) {
   }
 }
 
+TEST(Attributes, DenormalFPEnvAttributeCAPI) {
+  LLVMContext C;
+  LLVMContextRef CtxC = wrap(&C);
+  {
+    LLVMAttributeRef CAttr = LLVMCreateDenormalFPEnvAttribute(
+        CtxC, LLVMDenormalModeKindIEEE, LLVMDenormalModeKindIEEE,
+        LLVMDenormalModeKindPreserveSign, LLVMDenormalModeKindPreserveSign);
+
+    Attribute OutAttr = unwrap(CAttr);
+
+    ASSERT_TRUE(OutAttr.isStringAttribute());
+    EXPECT_EQ(OutAttr.getKindAsString(), "denormal-fp-math-f32");
+
+    StringRef Val = OutAttr.getValueAsString();
+    EXPECT_EQ(parseDenormalFPAttribute(Val), DenormalMode::getPreserveSign());
+  }
+}
+
 TEST(Attributes, CalleeAttributes) {
   const char *IRString = R"IR(
     declare void @f1(i32 %i)

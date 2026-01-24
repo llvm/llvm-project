@@ -209,6 +209,19 @@ LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
                     APInt(NumBits, ArrayRef(UpperWords, NumWords)))));
 }
 
+LLVMAttributeRef LLVMCreateDenormalFPEnvAttribute(
+    LLVMContextRef C, LLVMDenormalModeKind DefaultModeOutput,
+    LLVMDenormalModeKind DefaultModeInput, LLVMDenormalModeKind FloatModeOutput,
+    LLVMDenormalModeKind FloatModeInput) {
+  assert(DefaultModeOutput == LLVMDenormalModeKindIEEE &&
+         DefaultModeInput == LLVMDenormalModeKindIEEE &&
+         "staging API only supports setting float modes");
+
+  DenormalMode DM(static_cast<DenormalMode::DenormalModeKind>(FloatModeOutput),
+                  static_cast<DenormalMode::DenormalModeKind>(FloatModeInput));
+  return wrap(Attribute::get(*unwrap(C), "denormal-fp-math-f32", DM.str()));
+}
+
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
                                            const char *K, unsigned KLength,
                                            const char *V, unsigned VLength) {
