@@ -57,6 +57,7 @@ def VMaskCarryInAsmOperand : AsmOperandClass {
   let DiagnosticString = "operand must be v0";
 }
 
+// An optional v0.t operand encoded in vm..
 def VMaskOp : RegisterOperand<VMV0> {
   let ParserMatchClass = VMaskAsmOperand;
   let PrintMethod = "printVMaskReg";
@@ -66,6 +67,8 @@ def VMaskOp : RegisterOperand<VMV0> {
   let OperandType = "OPERAND_VMASK";
 }
 
+// An always present v0 operand encoded with vm=0. Classes that use this must
+// set the vm field in RVInstV* to 0.
 def VMaskCarryInOp : RegisterOperand<VMV0> {
   let ParserMatchClass = VMaskCarryInAsmOperand;
   let EncoderMethod = "getVMaskReg";
