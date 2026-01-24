@@ -3922,7 +3922,9 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::DeclareSimdOperands clauseOps;
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAligned(clauseOps);
+  cp.processInbranch(clauseOps);
   cp.processLinear(clauseOps);
+  cp.processNotinbranch(clauseOps);
   cp.processSimdlen(clauseOps);
   cp.processUniform(clauseOps);
 
