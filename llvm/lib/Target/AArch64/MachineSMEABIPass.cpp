@@ -894,7 +894,7 @@ void MachineSMEABI::addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
   CallingConv::ID CC = LLI->getLibcallImplCallingConv(LCImpl);
   StringRef SymbolName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
   if (CC != ExpectedCC)
-    emitError("Invalid calling convention for SME rountine: " + SymbolName);
+    emitError("invalid calling convention for SME routine: '" + SymbolName + "'");
   // FIXME: This assumes the SymbolName StringRef is null-terminated.
   MIB.addExternalSymbol(SymbolName.data());
   MIB.addRegMask(TRI->getCallPreservedMask(*MF, CC));
