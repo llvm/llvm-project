@@ -67,7 +67,12 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Replace the outer function name (preserving qualifier and template args),
   // and then remove the inner call's callee and opening paren and closing
-  // paren.
+  // paren. Example:
+  // ```
+  // llvm::to_vector<4>(llvm::map_range(X, F))
+  //       ^replace~^   ^----remove-----^   ^
+  //                                      remove
+  // ```
   Diag << FixItHint::CreateReplacement(
               OuterCallee->getNameInfo().getSourceRange(), ReplacementFuncName)
        << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
