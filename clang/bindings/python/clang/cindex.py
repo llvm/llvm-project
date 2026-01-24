@@ -3018,12 +3018,6 @@ class ClangObject:
         return self._as_parameter_
 
 
-class _CXUnsavedFile(Structure):
-    """Helper for passing unsaved file arguments."""
-
-    _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
-
-
 ### Completion Chunk Kinds ###
 class CompletionChunkKind(BaseEnumeration):
     """
@@ -3071,6 +3065,12 @@ class CompletionChunkKind(BaseEnumeration):
     EQUAL = 18
     HORIZONTAL_SPACE = 19
     VERTICAL_SPACE = 20
+
+
+class _CXUnsavedFile(Structure):
+    """Helper for passing unsaved file arguments."""
+
+    _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
 
 
 class CompletionChunk:
