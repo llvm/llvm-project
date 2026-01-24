@@ -206,7 +206,6 @@ AMDGPU Support
   a late / deferred query for the current target processor.
 - Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
   which enables fine-grained, per-builtin, feature availability.
-
 - Initial support for gfx1310
 
 NVPTX Support
