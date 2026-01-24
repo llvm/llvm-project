@@ -1,13 +1,19 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[FOOBAR:%.+]] "foobar"
 ; CHECK-DAG: OpName [[PRODUCER:%.+]] "producer"
 ; CHECK-DAG: OpName [[CONSUMER:%.+]] "consumer"
+; CHECK-DAG: OpName [[SNEAKY:%.+]] "sneaky"
+; CHECK-DAG: OpName [[ARR_RET:%.+]] "arr_ret"
 
 ; CHECK-NOT: DAG-FENCE
 
 %ty1 = type {i16, i32}
 %ty2 = type {%ty1, i64}
+%ty3 = type {ptr addrspace(4), ptr addrspace(4), [8 x i8]}
 
 ; CHECK-DAG: [[I16:%.+]] = OpTypeInt 16
 ; CHECK-DAG: [[I32:%.+]] = OpTypeInt 32
@@ -18,6 +24,12 @@
 ; CHECK-DAG: [[UNDEF_I64:%.+]] = OpUndef [[I64]]
 ; CHECK-DAG: [[UNDEF_TY2:%.+]] = OpUndef [[TY2]]
 ; CHECK-DAG: [[CST_42:%.+]] = OpConstant [[I32]] 42
+; CHECK-DAG: [[I8:%.+]] = OpTypeInt 8 0
+; CHECK-DAG: [[PTR:%.+]] = OpTypePointer Generic [[I8]]
+; CHECK-DAG: [[CST_8:%.+]] = OpConstant [[I32]] 8
+; CHECK-DAG: [[ARR:%.+]] = OpTypeArray [[I8]] [[CST_8]]
+; CHECK-DAG: [[TY3:%.+]] = OpTypeStruct [[PTR]] [[PTR]] [[ARR]]
+; CHECK-DAG: [[PTR_ARR:%.+]] = OpTypePointer Generic [[ARR]]
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -62,3 +74,21 @@ define i32 @consumer(%ty2 %agg) {
 ; CHECK: [[RET:%.+]] = OpCompositeExtract [[I32]] [[AGG]] 0 1
 ; CHECK: OpReturnValue [[RET]]
 ; CHECK: OpFunctionEnd
+
+declare %ty3 @arr_ret()
+
+define void @sneaky(ptr addrspace(4) %p, [8 x i8] %a) {
+  %1 = call spir_func %ty3 @arr_ret()
+  %2 = getelementptr inbounds nuw %ty3, ptr addrspace(4) %p, i32 0, i32 2
+  %3 = extractvalue %ty3 %1, 2
+  store [8 x i8] %3, ptr addrspace(4) %2, align 8
+  ret void
+}
+
+; CHECK: [[SNEAKY]] = OpFunction
+; CHECK: [[PTR_AGG:%.+]] = OpFunctionParameter
+; CHECK: [[A:%.+]] = OpFunctionParameter [[ARR]]
+; CHECK: [[AGG_RET:%.+]] = OpFunctionCall [[TY3]]
+; CHECK: [[GEP:%.+]] = OpInBoundsPtrAccessChain [[PTR_ARR]] [[PTR_AGG]]
+; CHECK: [[EXTRACTV:%.+]] = OpCompositeExtract [[ARR]] [[AGG_RET]] 2
+; CHECK: OpStore [[GEP]] [[EXTRACTV]]

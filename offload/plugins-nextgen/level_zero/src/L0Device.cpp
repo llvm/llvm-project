@@ -64,7 +64,8 @@ constexpr int DeviceArchMapSize = sizeof(DeviceArchMap) / sizeof(DeviceArchMap[0
 DeviceArchTy L0DeviceTy::computeArch() const {
   const auto PCIDeviceId = getPCIId();
   if (PCIDeviceId == 0) {
-    DP("Warning: Cannot decide device arch for %s.\n", getNameCStr());
+    ODBG(OLDT_Device) << "Warning: Cannot decide device arch for " << getName()
+                      << ".";
     return DeviceArchTy::DeviceArch_None;
   }
 
@@ -79,7 +80,8 @@ DeviceArchTy L0DeviceTy::computeArch() const {
     }
   }
 
-  DP("Warning: Cannot decide device arch for %s.\n", getNameCStr());
+  ODBG(OLDT_Device) << "Warning: Cannot decide device arch for " << getName()
+                    << ".";
   return DeviceArchTy::DeviceArch_None;
 }
 
@@ -116,7 +118,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
     }
   }
   if (Ordinal.first == MaxOrdinal)
-    DP("Error: no command queues are found\n");
+    ODBG(OLDT_Device) << "Error: no command queues are found";
 
   return Ordinal;
 }
@@ -141,15 +143,14 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
       auto NumQueues = Properties[I].numQueues;
       if (LinkCopy && NumQueues > 1) {
         Ordinal = {I, NumQueues};
-        DP("Found link copy command queue for device " DPxMOD
-           ", ordinal = %" PRIu32 ", number of queues = %" PRIu32 "\n",
-           DPxPTR(zeDevice), Ordinal.first, Ordinal.second);
+        ODBG(OLDT_Init) << "Found link copy command queue for device "
+                        << zeDevice << ", ordinal = " << Ordinal.first
+                        << ", number of queues = " << Ordinal.second;
         break;
       } else if (!LinkCopy && NumQueues == 1) {
         Ordinal = {I, NumQueues};
-        DP("Found copy command queue for device " DPxMOD ", ordinal = %" PRIu32
-           "\n",
-           DPxPTR(zeDevice), Ordinal.first);
+        ODBG(OLDT_Init) << "Found copy command queue for device " << zeDevice
+                        << ", ordinal = " << Ordinal.first;
         break;
       }
     }
@@ -158,22 +159,25 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
 }
 
 void L0DeviceTy::reportDeviceInfo() const {
-  DP("Device %" PRIu32 " information\n", DeviceId);
-  DP("-- Name                         : %s\n", getNameCStr());
-  DP("-- PCI ID                       : 0x%" PRIx32 "\n", getPCIId());
-  DP("-- UUID                         : %s\n", getUuid().data());
-  DP("-- Number of total EUs          : %" PRIu32 "\n", getNumEUs());
-  DP("-- Number of threads per EU     : %" PRIu32 "\n", getNumThreadsPerEU());
-  DP("-- EU SIMD width                : %" PRIu32 "\n", getSIMDWidth());
-  DP("-- Number of EUs per subslice   : %" PRIu32 "\n", getNumEUsPerSubslice());
-  DP("-- Number of subslices per slice: %" PRIu32 "\n",
-     getNumSubslicesPerSlice());
-  DP("-- Number of slices             : %" PRIu32 "\n", getNumSlices());
-  DP("-- Local memory size (bytes)    : %" PRIu32 "\n",
-     getMaxSharedLocalMemory());
-  DP("-- Global memory size (bytes)   : %" PRIu64 "\n", getGlobalMemorySize());
-  DP("-- Cache size (bytes)           : %" PRIu64 "\n", getCacheSize());
-  DP("-- Max clock frequency (MHz)    : %" PRIu32 "\n", getClockRate());
+  ODBG_OS(OLDT_Device, [&](llvm::raw_ostream &O) {
+    O << "Device " << DeviceId << " information\n"
+      << "-- Name                         : " << getName() << "\n"
+      << "-- PCI ID                       : "
+      << llvm::format("0x%" PRIx32, getPCIId()) << "\n"
+      << "-- UUID                         : " << getUuid().data() << "\n"
+      << "-- Number of total EUs          : " << getNumEUs() << "\n"
+      << "-- Number of threads per EU     : " << getNumThreadsPerEU() << "\n"
+      << "-- EU SIMD width                : " << getSIMDWidth() << "\n"
+      << "-- Number of EUs per subslice   : " << getNumEUsPerSubslice() << "\n"
+      << "-- Number of subslices per slice: " << getNumSubslicesPerSlice()
+      << "\n"
+      << "-- Number of slices             : " << getNumSlices() << "\n"
+      << "-- Local memory size (bytes)    : " << getMaxSharedLocalMemory()
+      << "\n"
+      << "-- Global memory size (bytes)   : " << getGlobalMemorySize() << "\n"
+      << "-- Cache size (bytes)           : " << getCacheSize() << "\n"
+      << "-- Max clock frequency (MHz)    : " << getClockRate() << "\n";
+  });
 }
 
 Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
@@ -188,10 +192,9 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   CALL_ZE_RET_ERROR(zeDeviceGetCacheProperties, zeDevice, &Count,
                     &CacheProperties);
 
-  DeviceName =
-      std::string(DeviceProperties.name, sizeof(DeviceProperties.name));
+  DeviceName = std::string(DeviceProperties.name);
 
-  DP("Found a GPU device, Name = %s\n", DeviceProperties.name);
+  ODBG(OLDT_Device) << "Found a GPU device, Name = " << DeviceProperties.name;
 
   DeviceArch = computeArch();
   // Default allocation kind for this device.
@@ -537,6 +540,27 @@ Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return Plugin::success();
 }
 
+const char *L0DeviceTy::getArchCStr() const {
+  switch (getDeviceArch()) {
+  case DeviceArchTy::DeviceArch_Gen:
+    return "Intel GPU Xe";
+  case DeviceArchTy::DeviceArch_XeLPG:
+    return "Intel GPU Xe LPG";
+  case DeviceArchTy::DeviceArch_XeHPC:
+    return "Intel GPU Xe HPC";
+  case DeviceArchTy::DeviceArch_XeHPG:
+    return "Intel GPU Xe HPG";
+  case DeviceArchTy::DeviceArch_Xe2LP:
+    return "Intel GPU Xe2 LP";
+  case DeviceArchTy::DeviceArch_Xe2HP:
+    return "Intel GPU Xe HP";
+  case DeviceArchTy::DeviceArch_x86_64:
+    return "Intel X86 64";
+  default:
+    return "Intel GPU Unknown";
+  }
+}
+
 static const char *DriverVersionToStrTable[] = {
     "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
     "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"};
@@ -547,6 +571,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
   Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
+  Info.add("Product Name", getArchCStr(), "", DeviceInfo::PRODUCT_NAME);
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
@@ -581,7 +606,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   MaxSize.add("y", getMaxGroupSizeY() * getMaxGroupCountY());
   MaxSize.add("z", getMaxGroupSizeZ() * getMaxGroupCountZ());
 
-  Info.add("Local memory size (bytes)", getMaxSharedLocalMemory());
+  Info.add("Local memory size (bytes)", getMaxSharedLocalMemory(), "",
+           DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
   Info.add("Global memory size (bytes)", getGlobalMemorySize(), "",
            DeviceInfo::GLOBAL_MEM_SIZE);
   Info.add("Cache size (bytes)", getCacheSize());
@@ -875,9 +901,9 @@ Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
   ze_command_list_handle_t cmdList;
   CALL_ZE_RET_ERROR(zeCommandListCreate, Context, Device, &cmdListDesc,
                     &cmdList);
-  DP("Created a command list " DPxMOD " (Ordinal: %" PRIu32
-     ") for device %s.\n",
-     DPxPTR(cmdList), Ordinal, DeviceIdStr.data());
+  ODBG(OLDT_Device) << "Created a command list " << cmdList
+                    << " (Ordinal: " << Ordinal << ") for device "
+                    << DeviceIdStr.data() << ".";
   return cmdList;
 }
 
@@ -921,9 +947,10 @@ L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
   ze_command_queue_handle_t cmdQueue;
   CALL_ZE_RET_ERROR(zeCommandQueueCreate, Context, Device, &cmdQueueDesc,
                     &cmdQueue);
-  DP("Created a command queue " DPxMOD " (Ordinal: %" PRIu32 ", Index: %" PRIu32
-     ", Flags: %" PRIu32 ") for device %s.\n",
-     DPxPTR(cmdQueue), Ordinal, Index, Flags, DeviceIdStr.data());
+  ODBG(OLDT_Device) << "Created a command queue " << cmdQueue
+                    << " (Ordinal: " << Ordinal << ", Index: " << Index
+                    << ", Flags: " << Flags << ") for device "
+                    << DeviceIdStr.data() << ".";
   return cmdQueue;
 }
 
@@ -960,9 +987,9 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   ze_command_list_handle_t CmdList = nullptr;
   CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, getZeContext(), getZeDevice(),
                     &Desc, &CmdList);
-  DP("Created an immediate command list " DPxMOD " (Ordinal: %" PRIu32
-     ", Index: %" PRIu32 ", Flags: %" PRIu32 ") for device %s.\n",
-     DPxPTR(CmdList), Ordinal, Index, Flags, getZeIdCStr());
+  ODBG(OLDT_Device) << "Created an immediate command list " << CmdList
+                    << " (Ordinal: " << Ordinal << ", Index: " << Index
+                    << ", Flags: " << Flags << ") for device " << getZeIdCStr();
   return CmdList;
 }
 

@@ -7,6 +7,7 @@
 // CHECK-NOTRAP: ddiv	$zero, $4, $5                   # encoding: [0x1e,0x00,0x85,0x00]
 // CHECK-NOTRAP: bne	$5, $zero, .Ltmp0               # encoding: [A,A,0xa0,0x14]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: .Ltmp0-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x0d,0x00,0x07,0x00]
 // CHECK-NOTRAP: .Ltmp0:
 // CHECK-NOTRAP: mfhi	$4                              # encoding: [0x10,0x20,0x00,0x00]
@@ -80,6 +81,7 @@
 // CHECK-NOTRAP: ddiv	$zero, $5, $6                   # encoding: [0x1e,0x00,0xa6,0x00]
 // CHECK-NOTRAP: bne	$6, $zero, .Ltmp1               # encoding: [A,A,0xc0,0x14]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: .Ltmp1-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x0d,0x00,0x07,0x00]
 // CHECK-NOTRAP: .Ltmp1:
 // CHECK-NOTRAP: mfhi	$4                              # encoding: [0x10,0x20,0x00,0x00]
@@ -165,6 +167,7 @@
 // CHECK-NOTRAP: ddiv	$zero, $4, $5                   # encoding: [0x1e,0x00,0x85,0x00]
 // CHECK-NOTRAP: bne	$5, $zero, .Ltmp2               # encoding: [A,A,0xa0,0x14]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: .Ltmp2-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x0d,0x00,0x07,0x00]
 // CHECK-NOTRAP: .Ltmp2:
 // CHECK-NOTRAP: mfhi	$4                              # encoding: [0x10,0x20,0x00,0x00]
@@ -238,6 +241,7 @@
 // CHECK-NOTRAP: ddiv	$zero, $5, $6                   # encoding: [0x1e,0x00,0xa6,0x00]
 // CHECK-NOTRAP: bne	$6, $zero, .Ltmp3               # encoding: [A,A,0xc0,0x14]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: .Ltmp3-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x0d,0x00,0x07,0x00]
 // CHECK-NOTRAP: .Ltmp3:
 // CHECK-NOTRAP: mfhi	$4                              # encoding: [0x10,0x20,0x00,0x00]

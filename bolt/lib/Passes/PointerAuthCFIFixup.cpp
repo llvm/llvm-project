@@ -183,7 +183,7 @@ void PointerAuthCFIFixup::fillUnknownStateInBB(BinaryContext &BC,
 void PointerAuthCFIFixup::markUnknownBlock(BinaryContext &BC,
                                            BinaryBasicBlock &BB, bool State) {
   // If we call this when an Instruction has either kRASigned or kRAUnsigned
-  // annotation, setRASigned or setRAUnsigned would fail.
+  // annotation, setRAState would fail.
   assert(isUnknownBlock(BC, BB) &&
          "markUnknownBlock should only be called on unknown blocks");
   for (MCInst &Inst : BB) {

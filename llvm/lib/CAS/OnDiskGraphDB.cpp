@@ -49,6 +49,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
 #include "llvm/Support/Alignment.h"
@@ -504,15 +505,17 @@ namespace {
 /// files and has a signal handler registerd that removes them all.
 class TempFile {
   bool Done = false;
-  TempFile(StringRef Name, int FD) : TmpName(std::string(Name)), FD(FD) {}
+  TempFile(StringRef Name, int FD, OnDiskCASLogger *Logger)
+      : TmpName(std::string(Name)), FD(FD), Logger(Logger) {}
 
 public:
   /// This creates a temporary file with createUniqueFile.
-  static Expected<TempFile> create(const Twine &Model);
+  static Expected<TempFile> create(const Twine &Model, OnDiskCASLogger *Logger);
   TempFile(TempFile &&Other) { *this = std::move(Other); }
   TempFile &operator=(TempFile &&Other) {
     TmpName = std::move(Other.TmpName);
     FD = Other.FD;
+    Logger = Other.Logger;
     Other.Done = true;
     Other.FD = -1;
     return *this;
@@ -523,6 +526,8 @@ public:
 
   // The open file descriptor.
   int FD = -1;
+
+  OnDiskCASLogger *Logger = nullptr;
 
   // Keep this with the given name.
   Error keep(const Twine &Name);
@@ -571,6 +576,8 @@ Error TempFile::discard() {
   std::error_code RemoveEC;
   if (!TmpName.empty()) {
     std::error_code EC = sys::fs::remove(TmpName);
+    if (Logger)
+      Logger->logTempFileRemove(TmpName, EC);
     if (EC)
       return errorCodeToError(EC);
   }
@@ -585,6 +592,9 @@ Error TempFile::keep(const Twine &Name) {
   // Always try to close and rename.
   std::error_code RenameEC = sys::fs::rename(TmpName, Name);
 
+  if (Logger)
+    Logger->logTempFileKeep(TmpName, Name.str(), RenameEC);
+
   if (!RenameEC)
     TmpName = "";
 
@@ -596,13 +606,17 @@ Error TempFile::keep(const Twine &Name) {
   return errorCodeToError(RenameEC);
 }
 
-Expected<TempFile> TempFile::create(const Twine &Model) {
+Expected<TempFile> TempFile::create(const Twine &Model,
+                                    OnDiskCASLogger *Logger) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC = sys::fs::createUniqueFile(Model, FD, ResultPath))
     return errorCodeToError(EC);
 
-  TempFile Ret(ResultPath, FD);
+  if (Logger)
+    Logger->logTempFileCreate(ResultPath);
+
+  TempFile Ret(ResultPath, FD, Logger);
   return std::move(Ret);
 }
 
@@ -1015,6 +1029,36 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
   });
 }
 
+Error OnDiskGraphDB::validateObjectID(ObjectID ExternalRef) {
+  auto formatError = [&](Twine Msg) {
+    return createStringError(
+        llvm::errc::illegal_byte_sequence,
+        "bad ref=0x" +
+            utohexstr(ExternalRef.getOpaqueData(), /*LowerCase=*/true) + ": " +
+            Msg.str());
+  };
+
+  if (ExternalRef.getOpaqueData() == 0)
+    return formatError("zero is not a valid ref");
+
+  InternalRef InternalRef = getInternalRef(ExternalRef);
+  auto I = getIndexProxyFromRef(InternalRef);
+  if (!I)
+    return formatError(llvm::toString(I.takeError()));
+  auto Hash = getDigest(*I);
+
+  OnDiskTrieRawHashMap::ConstOnDiskPtr P = Index.find(Hash);
+  if (!P)
+    return formatError("not found using hash " + toHex(Hash));
+  IndexProxy OtherI = getIndexProxyFromPointer(P);
+  ObjectID OtherRef = getExternalReference(makeInternalRef(OtherI.Offset));
+  if (OtherRef != ExternalRef)
+    return formatError("ref does not match indexed offset " +
+                       utohexstr(OtherRef.getOpaqueData(), /*LowerCase=*/true) +
+                       " for hash " + toHex(Hash));
+  return Error::success();
+}
+
 void OnDiskGraphDB::print(raw_ostream &OS) const {
   OS << "on-disk-root-path: " << RootPath << "\n";
 
@@ -1330,12 +1374,12 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
   return OnDiskContent{Record, std::nullopt};
 }
 
-static Expected<MappedTempFile> createTempFile(StringRef FinalPath,
-                                               uint64_t Size) {
+static Expected<MappedTempFile>
+createTempFile(StringRef FinalPath, uint64_t Size, OnDiskCASLogger *Logger) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   assert(Size && "Unexpected request for an empty temp file");
-  Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%");
+  Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%", Logger);
   if (!File)
     return File.takeError();
 
@@ -1375,7 +1419,7 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
 
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.
-  Expected<MappedTempFile> File = createTempFile(Path, FileSize);
+  Expected<MappedTempFile> File = createTempFile(Path, FileSize, Logger.get());
   if (!File)
     return File.takeError();
   assert(File->size() == (uint64_t)FileSize);
@@ -1441,7 +1485,7 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     getStandalonePath(TrieRecord::getStandaloneFilePrefix(
                           TrieRecord::StorageKind::Standalone),
                       *I, Path);
-    if (Error E = createTempFile(Path, Size).moveInto(File))
+    if (Error E = createTempFile(Path, Size, Logger.get()).moveInto(File))
       return std::move(E);
     assert(File->size() == Size);
     FileSize = Size;
@@ -1551,6 +1595,7 @@ unsigned OnDiskGraphDB::getHardStorageLimitUtilization() const {
 Expected<std::unique_ptr<OnDiskGraphDB>>
 OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
                     unsigned HashByteSize, OnDiskGraphDB *UpstreamDB,
+                    std::shared_ptr<OnDiskCASLogger> Logger,
                     FaultInPolicy Policy) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
@@ -1579,7 +1624,7 @@ OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
                     IndexPath, IndexTableName + "[" + HashName + "]",
                     HashByteSize * CHAR_BIT,
                     /*DataSize=*/sizeof(TrieRecord), MaxIndexSize,
-                    /*MinFileSize=*/MB)
+                    /*MinFileSize=*/MB, Logger)
                     .moveInto(Index))
     return std::move(E);
 
@@ -1593,7 +1638,7 @@ OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
   if (Error E = OnDiskDataAllocator::create(
                     DataPoolPath,
                     DataPoolTableName + "[" + HashName + "]" + PolicyName,
-                    MaxDataPoolSize, /*MinFileSize=*/MB, UserHeaderSize,
+                    MaxDataPoolSize, /*MinFileSize=*/MB, UserHeaderSize, Logger,
                     [](void *UserHeaderPtr) {
                       new (UserHeaderPtr) std::atomic<uint64_t>(0);
                     })
@@ -1604,15 +1649,18 @@ OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
                              "unexpected user header in '" + DataPoolPath +
                                  "'");
 
-  return std::unique_ptr<OnDiskGraphDB>(new OnDiskGraphDB(
-      AbsPath, std::move(*Index), std::move(*DataPool), UpstreamDB, Policy));
+  return std::unique_ptr<OnDiskGraphDB>(
+      new OnDiskGraphDB(AbsPath, std::move(*Index), std::move(*DataPool),
+                        UpstreamDB, Policy, std::move(Logger)));
 }
 
 OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                              OnDiskDataAllocator DataPool,
-                             OnDiskGraphDB *UpstreamDB, FaultInPolicy Policy)
+                             OnDiskGraphDB *UpstreamDB, FaultInPolicy Policy,
+                             std::shared_ptr<OnDiskCASLogger> Logger)
     : Index(std::move(Index)), DataPool(std::move(DataPool)),
-      RootPath(RootPath.str()), UpstreamDB(UpstreamDB), FIPolicy(Policy) {
+      RootPath(RootPath.str()), UpstreamDB(UpstreamDB), FIPolicy(Policy),
+      Logger(std::move(Logger)) {
   /// Lifetime for "big" objects not in DataPool.
   ///
   /// NOTE: Could use ThreadSafeTrieRawHashMap here. For now, doing something

@@ -11,9 +11,9 @@
 
 // constexpr T* optional<T>::operator->();
 
-#include <optional>
-#include <type_traits>
 #include <cassert>
+#include <memory>
+#include <optional>
 
 #include "test_macros.h"
 
@@ -53,17 +53,20 @@ int main(int, char**)
       std::optional<X&> opt(x);
       ASSERT_SAME_TYPE(decltype(opt.operator->()), X*);
       ASSERT_NOEXCEPT(opt.operator->());
+      assert(opt.operator->() == std::addressof(x));
     }
     {
       X x{};
       std::optional<const X&> opt(x);
       ASSERT_SAME_TYPE(decltype(opt.operator->()), const X*);
       ASSERT_NOEXCEPT(opt.operator->());
+      assert(opt.operator->() == std::addressof(x));
     }
     {
       X x{};
       optional<X&> opt{x};
       assert(opt->test() == 3);
+      assert(opt.operator->() == std::addressof(x));
     }
     {
       X x{};

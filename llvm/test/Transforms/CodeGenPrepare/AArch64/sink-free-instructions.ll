@@ -142,12 +142,12 @@ entry:
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s1, <8 x i8> %s2) #3
+  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s1, <8 x i8> %s2)
   ret <8 x i16> %vmull0
 
 if.else:
   %s4 = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s3, <8 x i8> %s4) #3
+  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
   ret <8 x i16> %vmull1
 }
 
@@ -174,12 +174,12 @@ entry:
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %s1, <8 x i8> %s2) #3
+  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %s1, <8 x i8> %s2)
   ret <8 x i16> %vmull0
 
 if.else:
   %s4 = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %s3, <8 x i8> %s4) #3
+  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
   ret <8 x i16> %vmull1
 }
 
@@ -294,12 +294,12 @@ entry:
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s1, <8 x i8> %s2) #3
+  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s1, <8 x i8> %s2)
   ret <8 x i16> %vmull0
 
 if.else:
   %s4 = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s3, <8 x i8> %s4) #3
+  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
   ret <8 x i16> %vmull1
 }
 
@@ -1003,3 +1003,89 @@ entry:
   %2 = sub <vscale x 8 x i16> %0, %1
   ret <vscale x 8 x i16> %2
 }
+
+declare range(i64 0, 65536) i64 @backsmith_pure_3(ptr dead_on_return readonly captures(none) %0, <8 x i8> %BS_ARG_1, i32 %BS_ARG_2)
+define i32 @dont_sink_calls(ptr %func_1_a) {
+; CHECK-LABEL: @dont_sink_calls(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca <16 x i16>, align 16
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]])
+; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr [[BYVAL_TEMP]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @backsmith_pure_3(ptr dead_on_return nonnull [[BYVAL_TEMP]], <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 10, i8 0, i8 0>, i32 0)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[FUNC_1_A:%.*]], align 8
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VQADDQ_V_I:%.*]] = tail call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> <i8 3, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[VQADDQ_V_I]], <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINIT21:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i64> poison, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[VECINIT38:%.*]] = shufflevector <16 x i64> [[TMP3]], <16 x i64> poison, <16 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw <16 x i64> [[VECINIT38]], [[VECINIT21]]
+; CHECK-NEXT:    store <16 x i64> [[MUL]], ptr [[FUNC_1_A]], align 128
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %byval-temp = alloca <16 x i16>, align 16
+  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
+  store <16 x i16> zeroinitializer, ptr %byval-temp, align 16
+  %call4 = call i64 @backsmith_pure_3(ptr dead_on_return nonnull %byval-temp, <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 10, i8 0, i8 0>, i32 0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
+  %0 = load i64, ptr %func_1_a, align 8
+  %tobool.not = icmp eq i64 %0, 0
+  br i1 %tobool.not, label %if.end, label %cleanup
+
+if.end:                                           ; preds = %entry
+  %vqaddq_v.i = tail call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> <i8 3, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> zeroinitializer)
+  %1 = shufflevector <16 x i8> %vqaddq_v.i, <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %vecinit21 = zext <16 x i8> %1 to <16 x i64>
+  %2 = insertelement <16 x i64> poison, i64 %call4, i64 0
+  %vecinit38 = shufflevector <16 x i64> %2, <16 x i64> poison, <16 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %mul = mul nuw nsw <16 x i64> %vecinit38, %vecinit21
+  store <16 x i64> %mul, ptr %func_1_a
+  br label %cleanup
+
+cleanup:                                          ; preds = %entry, %if.end
+  ret i32 0
+}
+
+define i32 @dont_sink_loads(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @dont_sink_loads(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P1:%.*]], align 8, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
+; CHECK-NEXT:    store i64 0, ptr [[P2:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VQADDQ_V_I:%.*]] = tail call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> <i8 3, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> zeroinitializer)
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[VQADDQ_V_I]], <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINIT21:%.*]] = zext <16 x i8> [[TMP0]] to <16 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[VECINIT38:%.*]] = shufflevector <16 x i64> [[TMP2]], <16 x i64> poison, <16 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw <16 x i64> [[VECINIT38]], [[VECINIT21]]
+; CHECK-NEXT:    store <16 x i64> [[MUL]], ptr [[P1]], align 128
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %call4 = load i64, ptr %p1, !range !0, !noundef !{}
+  store i64 0, ptr %p2
+  br i1 %c, label %if.end, label %cleanup
+
+if.end:                                           ; preds = %entry
+  %vqaddq_v.i = tail call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> <i8 3, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> zeroinitializer)
+  %1 = shufflevector <16 x i8> %vqaddq_v.i, <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %vecinit21 = zext <16 x i8> %1 to <16 x i64>
+  %2 = insertelement <16 x i64> poison, i64 %call4, i64 0
+  %vecinit38 = shufflevector <16 x i64> %2, <16 x i64> poison, <16 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %mul = mul nuw nsw <16 x i64> %vecinit38, %vecinit21
+  store <16 x i64> %mul, ptr %p1
+  br label %cleanup
+
+cleanup:                                          ; preds = %entry, %if.end
+  ret i32 0
+}
+!0 = !{i64 0, i64 128}

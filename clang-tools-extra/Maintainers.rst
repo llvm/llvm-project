@@ -48,8 +48,8 @@ clang-doc
 | Paul Kirth
 | paulkirth@google.com (email), ilovepi (GitHub), ilovepi (Discourse)
 
-| Peter Chou
-| peterchou411@gmail.com (email), PeterChou1 (GitHub), PeterChou1 (Discourse), .peterchou (Discord)
+| Erick Velez
+| erickvelez7@gmail.com (email), evelez7 (GitHub), evelez (Discourse), erick.velez (Discord)
 
 
 clangd
@@ -80,3 +80,4 @@ Inactive component maintainers
 | Nathan James (n.james93@hotmail.co.uk) -- clang-tidy
 | Julie Hockett (juliehockett@google.com) -- clang-doc
 | Sam McCall (sammccall@google.com (email), sam-mccall (GitHub, Discourse, Discord)) -- clangd
+| Peter Chou (peterchou411@gmail.com (email), PeterChou1 (GitHub, Discourse), .peterchou (Discord)) -- clang-doc

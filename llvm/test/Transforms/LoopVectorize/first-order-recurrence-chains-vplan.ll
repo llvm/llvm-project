@@ -185,17 +185,17 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
-; CHECK-NEXT:   CLONE ir<%for.x.next> = mul ir<%x>, ir<2>
+; CHECK-NEXT:   EMIT vp<[[SHL:%.+]]> = shl ir<%x>, ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, vp<[[SHL]]>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, ir<%for.x.next>
+; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, vp<[[SHL]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc vp<[[SPLICE_X]]> to i32
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_Y:%.+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
 ; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext vp<[[SPLICE_Y]]> to i64
@@ -208,7 +208,7 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXT_X_PART:%.+]]> = extract-last-part ir<%for.x.next>
+; CHECK-NEXT:   EMIT vp<[[EXT_X_PART:%.+]]> = extract-last-part vp<[[SHL]]>
 ; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-last-lane vp<[[EXT_X_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[EXT_Y_PART:%.+]]> = extract-last-part ir<%for.x.prev>
 ; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-last-lane vp<[[EXT_Y_PART]]>
@@ -269,14 +269,14 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, vp<%6>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     WIDEN ir<%for.x.next> = mul ir<%l>, ir<2>
-; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, ir<%for.x.next>
+; CHECK-NEXT:     EMIT vp<%6> = shl ir<%l>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, vp<%6>
 ; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc vp<[[SPLICE_X]]> to i32
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_Y:%.+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
 ; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext vp<[[SPLICE_Y]]> to i64
@@ -289,7 +289,7 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXT_X_PART:%.+]]> = extract-last-part ir<%for.x.next>
+; CHECK-NEXT:   EMIT vp<[[EXT_X_PART:%.+]]> = extract-last-part vp<%6>
 ; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-last-lane vp<[[EXT_X_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[EXT_Y_PART:%.+]]> = extract-last-part ir<%for.x.prev>
 ; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-last-lane vp<[[EXT_Y_PART]]>

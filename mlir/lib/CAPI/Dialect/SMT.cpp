@@ -49,17 +49,25 @@ MlirType mlirSMTTypeGetBitVector(MlirContext ctx, int32_t width) {
   return wrap(BitVectorType::get(unwrap(ctx), width));
 }
 
+MlirStringRef mlirSMTBitVectorTypeGetName(void) {
+  return wrap(BitVectorType::name);
+}
+
 bool mlirSMTTypeIsABool(MlirType type) { return isa<BoolType>(unwrap(type)); }
 
 MlirType mlirSMTTypeGetBool(MlirContext ctx) {
   return wrap(BoolType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirSMTBoolTypeGetName(void) { return wrap(BoolType::name); }
+
 bool mlirSMTTypeIsAInt(MlirType type) { return isa<IntType>(unwrap(type)); }
 
 MlirType mlirSMTTypeGetInt(MlirContext ctx) {
   return wrap(IntType::get(unwrap(ctx)));
 }
+
+MlirStringRef mlirSMTIntTypeGetName(void) { return wrap(IntType::name); }
 
 bool mlirSMTTypeIsASMTFunc(MlirType type) {
   return isa<SMTFuncType>(unwrap(type));

@@ -26,6 +26,7 @@
 
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/Passes.h"
@@ -73,6 +74,7 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   bool tryConvertToXqcilsmLdStPair(MachineFunction *MF,
                                    MachineBasicBlock::iterator First,
                                    MachineBasicBlock::iterator Second);
+  bool tryConvertToXqcilsmMultiLdSt(MachineBasicBlock::iterator &First);
   bool tryConvertToMIPSLdStPair(MachineFunction *MF,
                                 MachineBasicBlock::iterator First,
                                 MachineBasicBlock::iterator Second);
@@ -99,6 +101,7 @@ private:
   MachineRegisterInfo *MRI;
   const RISCVInstrInfo *TII;
   const RISCVRegisterInfo *TRI;
+  const RISCVSubtarget *STI = nullptr;
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 };
 } // end anonymous namespace
@@ -110,17 +113,17 @@ INITIALIZE_PASS(RISCVLoadStoreOpt, DEBUG_TYPE, RISCV_LOAD_STORE_OPT_NAME, false,
 bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
-  const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
 
   bool MadeChange = false;
-  TII = Subtarget.getInstrInfo();
-  TRI = Subtarget.getRegisterInfo();
+  STI = &Fn.getSubtarget<RISCVSubtarget>();
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
 
-  if (Subtarget.useMIPSLoadStorePairs() || Subtarget.hasVendorXqcilsm()) {
+  if (STI->useMIPSLoadStorePairs() || STI->hasVendorXqcilsm()) {
     for (MachineBasicBlock &MBB : Fn) {
       LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
 
@@ -135,7 +138,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     }
   }
 
-  if (!Subtarget.is64Bit() && Subtarget.hasStdExtZilsd()) {
+  if (!STI->is64Bit() && STI->hasStdExtZilsd()) {
     for (auto &MBB : Fn) {
       for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E;) {
         if (fixInvalidRegPairOp(MBB, MBBI)) {
@@ -163,6 +166,12 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   if (!TII->isLdStSafeToPair(MI, TRI))
     return false;
 
+  // If Xqcilsm is available, first try to form a multi-instruction group (>2).
+  if (!STI->is64Bit() && STI->hasVendorXqcilsm()) {
+    if (tryConvertToXqcilsmMultiLdSt(MBBI))
+      return true;
+  }
+
   // Look ahead for a pairable instruction.
   MachineBasicBlock::iterator E = MI.getParent()->end();
   bool MergeForward;
@@ -172,6 +181,201 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     return true;
   }
   return false;
+}
+
+static bool isMemOpAligned(MachineInstr &MI, Align RequiredAlignment) {
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  Align MMOAlign = MMO->getAlign();
+  return MMOAlign >= RequiredAlignment;
+}
+
+// Convert set of 3 or more LW/SW instructions to QC_LWMI/QC_SWMI/QC_SETWMI.
+// For now this only handles consecutive loads and stores traversing the basic
+// block top-down.
+// TODO: Traverse the basic block bottom-up as well.
+bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
+    MachineBasicBlock::iterator &FirstIt) {
+  MachineInstr &FirstMI = *FirstIt;
+  MachineFunction *MF = FirstMI.getMF();
+
+  if (STI->is64Bit() || !STI->hasVendorXqcilsm())
+    return false;
+
+  unsigned Opc = FirstMI.getOpcode();
+  if (Opc != RISCV::LW && Opc != RISCV::SW)
+    return false;
+
+  if (!FirstMI.hasOneMemOperand())
+    return false;
+
+  if (!isMemOpAligned(FirstMI, Align(4)))
+    return false;
+
+  // Require simple reg+imm addressing.
+  const MachineOperand &BaseOp = FirstMI.getOperand(1);
+  const MachineOperand &OffOp = FirstMI.getOperand(2);
+  if (!BaseOp.isReg() || !OffOp.isImm())
+    return false;
+
+  Register Base = BaseOp.getReg();
+  int64_t BaseOff = OffOp.getImm();
+
+  if (!isShiftedUInt<5, 2>(BaseOff))
+    return false;
+
+  Register StartReg = FirstMI.getOperand(0).getReg();
+  bool IsLoad = (Opc == RISCV::LW);
+
+  // Load rd cannot be x0 and must not clobber the base register.
+  if (IsLoad) {
+    if (StartReg == RISCV::X0)
+      return false;
+    if (StartReg == Base)
+      return false;
+  }
+
+  // Collect a set of consecutive matching instructions.
+  SmallVector<MachineInstr *, 8> Group;
+  Group.push_back(&FirstMI);
+
+  MachineBasicBlock::iterator E = FirstIt->getParent()->end();
+  MachineBasicBlock::iterator It = next_nodbg(FirstIt, E);
+  int64_t ExpectedOff = BaseOff + 4;
+  unsigned Index = 1;
+  enum class StoreMode { Unknown, Setwmi, Swmi };
+  StoreMode SMode = StoreMode::Unknown;
+
+  while (It != E) {
+    MachineInstr &MI = *It;
+
+    if (!TII->isPairableLdStInstOpc(MI.getOpcode()))
+      break;
+    if (MI.getOpcode() != Opc)
+      break;
+    if (!TII->isLdStSafeToPair(MI, TRI))
+      break;
+    if (!MI.hasOneMemOperand())
+      break;
+    if (!isMemOpAligned(MI, Align(4)))
+      break;
+
+    const MachineOperand &BaseMIOp = MI.getOperand(1);
+    const MachineOperand &OffsetMIOp = MI.getOperand(2);
+    if (!BaseMIOp.isReg() || !OffsetMIOp.isImm())
+      break;
+    if (BaseMIOp.getReg() != Base)
+      break;
+    int64_t Off = OffsetMIOp.getImm();
+    if (Off != ExpectedOff)
+      break;
+
+    Register Reg = MI.getOperand(0).getReg();
+    if (IsLoad) {
+      // For loads, require consecutive destination registers.
+      if (Reg != StartReg + Index)
+        break;
+      if (Reg == Base)
+        break;
+    } else {
+      // For stores, decide mode based on the second instruction and then
+      // enforce the same for the rest.
+      if (SMode == StoreMode::Unknown) {
+        if (Reg == StartReg)
+          SMode = StoreMode::Setwmi;
+        else if (Reg == StartReg + 1)
+          SMode = StoreMode::Swmi;
+        else
+          break;
+      } else if (SMode == StoreMode::Setwmi) {
+        if (Reg != StartReg)
+          break;
+      } else {
+        if (Reg != StartReg + Index)
+          break;
+      }
+    }
+
+    // Passed checks, extend the group.
+    Group.push_back(&MI);
+    ++Index;
+    ExpectedOff += 4;
+    It = next_nodbg(It, E);
+  }
+
+  // We only handle more than 2 here. Pairs are handled in
+  // tryConvertToXqcilsmLdStPair.
+  unsigned Len = Group.size();
+  if (Len < 3 || Len > 31)
+    return false;
+
+  unsigned NewOpc;
+  unsigned StartRegState;
+  bool AddImplicitRegs = true;
+
+  if (IsLoad) {
+    NewOpc = RISCV::QC_LWMI;
+    StartRegState = static_cast<unsigned>(RegState::Define);
+  } else {
+    assert(SMode != StoreMode::Unknown &&
+           "Group should be large enough to know the store mode");
+    if (SMode == StoreMode::Setwmi) {
+      NewOpc = RISCV::QC_SETWMI;
+      // Kill if any of the individual stores killed the reg.
+      bool StartKill = false;
+      for (MachineInstr *MI : Group)
+        StartKill |= MI->getOperand(0).isKill();
+      StartRegState = getKillRegState(StartKill);
+      AddImplicitRegs = false;
+    } else {
+      // SWMI requires consecutive source regs and rd != x0.
+      if (StartReg == RISCV::X0)
+        return false;
+      NewOpc = RISCV::QC_SWMI;
+      StartRegState = getKillRegState(Group.front()->getOperand(0).isKill());
+    }
+  }
+
+  // Aggregate kill on base.
+  bool BaseKill = false;
+  for (MachineInstr *MI : Group)
+    BaseKill |= MI->getOperand(1).isKill();
+
+  // Build the new instruction.
+  DebugLoc DL = FirstMI.getDebugLoc();
+  if (!DL)
+    DL = Group.back()->getDebugLoc();
+  MachineInstrBuilder MIB = BuildMI(*MF, DL, TII->get(NewOpc));
+  MIB.addReg(StartReg, StartRegState)
+      .addReg(Base, getKillRegState(BaseKill))
+      .addImm(Len)
+      .addImm(BaseOff);
+
+  // Merge memory references.
+  MIB.cloneMergedMemRefs(Group);
+
+  if (AddImplicitRegs) {
+    // Add implicit operands for the additional registers.
+    for (unsigned i = 1; i < Len; ++i) {
+      Register R = StartReg + i;
+      unsigned State = 0;
+      if (IsLoad)
+        State = static_cast<unsigned>(RegState::ImplicitDefine);
+      else
+        State = RegState::Implicit |
+                getKillRegState(Group[i]->getOperand(0).isKill());
+      MIB.addReg(R, State);
+    }
+  }
+
+  // Insert before the first instruction and remove all in the group.
+  MachineBasicBlock *MBB = FirstIt->getParent();
+  MachineBasicBlock::iterator NewIt = MBB->insert(FirstIt, MIB);
+  for (MachineInstr *MI : Group)
+    MI->removeFromParent();
+
+  // Advance the cursor to the next non-debug instruction after the group.
+  FirstIt = next_nodbg(NewIt, MBB->end());
+  return true;
 }
 
 bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
@@ -197,10 +401,10 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   if (Base1 != Base2)
     return false;
 
-  const MachineMemOperand *MMO = *First->memoperands_begin();
-  Align MMOAlign = MMO->getAlign();
+  if (!First->hasOneMemOperand() || !Second->hasOneMemOperand())
+    return false;
 
-  if (MMOAlign < Align(4))
+  if (!isMemOpAligned(*First, Align(4)) || !isMemOpAligned(*Second, Align(4)))
     return false;
 
   auto &FirstOp0 = First->getOperand(0);
@@ -247,7 +451,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       XqciOpc = RISCV::QC_SETWMI;
       StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
       AddNextReg = false;
-    } else if (NextReg == StartReg + 1) {
+    } else if (NextReg == StartReg + 1 && StartReg != RISCV::X0) {
       XqciOpc = RISCV::QC_SWMI;
       StartRegState = getKillRegState(FirstOp0.isKill());
       NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
@@ -303,10 +507,10 @@ bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
     break;
   }
 
-  const MachineMemOperand *MMO = *First->memoperands_begin();
-  Align MMOAlign = MMO->getAlign();
+  if (!First->hasOneMemOperand())
+    return false;
 
-  if (MMOAlign < RequiredAlignment)
+  if (!isMemOpAligned(*First, RequiredAlignment))
     return false;
 
   int64_t Offset = First->getOperand(2).getImm();
@@ -338,10 +542,9 @@ bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
   MachineFunction *MF = First->getMF();
-  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
 
   // Try converting to QC_LWMI/QC_SWMI if the XQCILSM extension is enabled.
-  if (!STI.is64Bit() && STI.hasVendorXqcilsm())
+  if (!STI->is64Bit() && STI->hasVendorXqcilsm())
     return tryConvertToXqcilsmLdStPair(MF, First, Second);
 
   // Else try to convert them into MIPS Paired Loads/Stores.
@@ -482,10 +685,13 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                                     bool MergeForward) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
-  // If NextI is the second of the two instructions to be merged, we need
-  // to skip one further. Either way we merge will invalidate the iterator,
-  // and we don't need to scan the new instruction, as it's a pairwise
-  // instruction, which we're not considering for further action anyway.
+  // If NextI is the second of the two instructions to be merged, skip one
+  // further for now. For the MIPS load/store, the merge will invalidate the
+  // iterator, and we don't need to scan the new instruction, as it's a pairwise
+  // instruction, which we're not considering for further action anyway. For the
+  // Xqcilsm load/store, we may not want to do this as the second instruction
+  // could possibly be the first in another pair if we do not merge here. This
+  // is handled in the else block after the call to tryConvertToLdStPair below.
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
 
@@ -538,6 +744,10 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   if (tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
+  } else if (!STI->is64Bit() && STI->hasVendorXqcilsm()) {
+    // We were unable to form the pair, so use the next non-debug instruction
+    // after the first instruction we had wanted to merge.
+    NextI = next_nodbg(I, E);
   }
 
   return NextI;

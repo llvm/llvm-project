@@ -192,21 +192,14 @@ define half @func_fp32fp16(ptr %fl.ptr, float %a) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
-; CHECK-NEXT:    st %s19, 296(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __truncsfhf2@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __truncsfhf2@hi(, %s0)
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
-; CHECK-NEXT:    or %s19, 0, %s0
-; CHECK-NEXT:    lea %s0, __extendhfsf2@lo
-; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s12, __extendhfsf2@hi(, %s0)
-; CHECK-NEXT:    or %s0, 0, %s19
-; CHECK-NEXT:    bsic %s10, (, %s12)
-; CHECK-NEXT:    st2b %s19, (, %s18)
-; CHECK-NEXT:    ld %s19, 296(, %s11) # 8-byte Folded Reload
+; CHECK-NEXT:    and %s1, %s0, (32)0
+; CHECK-NEXT:    st2b %s1, (, %s18)
 ; CHECK-NEXT:    ld %s18, 288(, %s11) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)

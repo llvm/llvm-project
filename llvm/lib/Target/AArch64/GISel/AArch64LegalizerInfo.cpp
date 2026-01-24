@@ -339,7 +339,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
-  getActionDefinitionsBuilder(G_CTLZ)
+  getActionDefinitionsBuilder({G_CTLZ, G_CTLS})
       .legalFor({{s32, s32},
                  {s64, s64},
                  {v8s8, v8s8},
@@ -1752,6 +1752,20 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                      (unsigned)IsStream; // Stream bit
 
     MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_range_prefetch: {
+    auto &AddrVal = MI.getOperand(1);
+
+    int64_t IsWrite = MI.getOperand(2).getImm();
+    int64_t IsStream = MI.getOperand(3).getImm();
+    unsigned PrfOp = (IsStream << 2) | IsWrite;
+
+    MIB.buildInstr(AArch64::G_AARCH64_RANGE_PREFETCH)
+        .addImm(PrfOp)
+        .add(AddrVal)
+        .addUse(MI.getOperand(4).getReg()); // Metadata
     MI.eraseFromParent();
     return true;
   }
