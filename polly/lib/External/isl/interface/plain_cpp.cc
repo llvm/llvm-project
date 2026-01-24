@@ -253,14 +253,14 @@ void plain_cpp_generator::print_class(ostream &os, const isl_class &clazz)
 	printer.print_subclass_type();
 	printer.print_class_factory("  friend ");
 	osprintf(os, "\n");
-	osprintf(os, "protected:\n");
+	osprintf(os, " protected:\n");
 	if (!clazz.is_type_subclass()) {
 		osprintf(os, "  %s *ptr = nullptr;\n", name);
 		osprintf(os, "\n");
 	}
 	printer.print_protected_constructors();
 	osprintf(os, "\n");
-	osprintf(os, "public:\n");
+	osprintf(os, " public:\n");
 	printer.print_public_methods();
 
 	osprintf(os, "};\n");
@@ -503,11 +503,11 @@ void plain_cpp_generator::decl_printer::print_downcast()
 	if (!clazz.fn_type)
 		return;
 
-	osprintf(os, "private:\n");
+	osprintf(os, " private:\n");
 	print_isa_type_template(2, clazz);
 	osprintf(os, "  inline %s isa_type(T subtype) const;\n",
 		generator.isl_bool2cpp().c_str());
-	osprintf(os, "public:\n");
+	osprintf(os, " public:\n");
 	osprintf(os, "  template <class T> inline %s isa() const;\n",
 		generator.isl_bool2cpp().c_str());
 	osprintf(os, "  template <class T> inline T as() const;\n");
@@ -631,13 +631,13 @@ void plain_cpp_generator::decl_printer::print_persistent_callbacks()
 	if (!clazz.has_persistent_callbacks())
 		return;
 
-	osprintf(os, "private:\n");
+	osprintf(os, " private:\n");
 	osprintf(os, "  inline %s &copy_callbacks(const %s &obj);\n",
 		cppname, cppname);
 	for (const auto &callback : clazz.persistent_callbacks)
 		print_persistent_callback_data(callback);
 
-	osprintf(os, "public:\n");
+	osprintf(os, " public:\n");
 	for (const auto &callback : clazz.persistent_callbacks)
 		print_method(Method(clazz, callback));
 }
