@@ -3138,9 +3138,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         // isn't a nan.
         // Otherwise, we also need to avoid denormal inputs to drop the
         // canonicalize.
-        if ((KnownSrc.isKnownNeverNaN() || (DemandedMask & fcNan) == fcNone) &&
-            (Mode == DenormalMode::getIEEE() ||
-             KnownSrc.isKnownNeverSubnormal()))
+        if (KnownSrc.isKnownNeverNaN() && (Mode == DenormalMode::getIEEE() ||
+                                           KnownSrc.isKnownNeverSubnormal()))
           return CI->getArgOperand(0);
 
         return nullptr;
