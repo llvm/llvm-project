@@ -702,13 +702,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
+    // These passes do not use MSSA.
     LoopPassManager LPM;
     LPM.addPass(CanonicalizeFreezeInLoopsPass());
     LPM.addPass(LoopStrengthReducePass());
     if (Opt.EnableLoopTermFold)
       LPM.addPass(LoopTermFoldPass());
     addFunctionPass(createFunctionToLoopPassAdaptor(std::move(LPM),
-                                                    /*UseMemorySSA=*/true),
+                                                    /*UseMemorySSA=*/false),
                     PMW);
   }
 
