@@ -2827,6 +2827,29 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                     CodeGenFunction::CFITCK_DerivedCast,
                                     CE->getBeginLoc());
 
+    // Propagate static_cast<Derived*> type information to the middle-end via
+    // llvm.type.test + llvm.assume. The programmer's downcast asserts (with UB
+    // if violated) that the object is of the derived type, so we record this as
+    // a type assumption that devirtualization passes can exploit.
+    //
+    // We use the BASE/SOURCE object pointer (not the vtable pointer) as the
+    // type.test argument so that tryPromoteCall can find it immediately after
+    // inlining the callee: after inlining, the vtable is loaded from the same
+    // SSA value (the original object pointer), making the type.test findable by
+    // scanning uses of the object pointer.
+    if (DerivedClassDecl->isPolymorphic() &&
+        DerivedClassDecl->isEffectivelyFinal()) {
+      llvm::Value *BasePtr = Base.emitRawPointer(CGF);
+      CanQualType Ty = CGF.CGM.getContext().getCanonicalTagType(DerivedClassDecl);
+      llvm::Metadata *MD = CGF.CGM.CreateMetadataIdentifierForType(Ty);
+      llvm::Value *TypeId =
+          llvm::MetadataAsValue::get(CGF.CGM.getLLVMContext(), MD);
+      llvm::Value *TypeTest = CGF.Builder.CreateCall(
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::type_test), {BasePtr, TypeId});
+      CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(llvm::Intrinsic::assume),
+                             TypeTest);
+    }
+
     return CGF.getAsNaturalPointerTo(Derived, CE->getType()->getPointeeType());
   }
   case CK_UncheckedDerivedToBase:

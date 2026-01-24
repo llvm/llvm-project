@@ -17,6 +17,7 @@
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -682,60 +683,159 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   return promoteCall(NewInst, Callee);
 }
 
+// Try to devirtualize an indirect virtual call using
+// llvm.type.test + llvm.assume pairs that were emitted by Clang,
+// e.g., at static_cast<Derived*> downcast sites.
+// Such a cast is a programmer assertion (UB if wrong) that the object is of
+// type Derived. Clang records this as:
+//   %tt = call i1 @llvm.type.test(ptr %base_obj, metadata !"_ZTS4Derived")
+//   call void @llvm.assume(i1 %tt)
+//
+// After the callee is inlined into the caller, the vtable is loaded from the
+// same object pointer (%base_obj). By scanning uses of Object (the vtable-load
+// source) for such type.test calls, we can determine the concrete vtable and
+// resolve the virtual call to a direct call.
+static bool tryDevirtualizeViaTypeTestAssume(CallBase &CB, Value *Object,
+                                             APInt VTableOffset,
+                                             const DataLayout &DL, Module &M) {
+  // Build a dominator tree so we can verify that all execution paths to the
+  // call (CB) must go through the assume that uses the type.test result.
+  DominatorTree DT(*CB.getFunction());
+
+  for (User *U : Object->users()) {
+    auto *TypeTestCI = dyn_cast<CallInst>(U);
+    if (!TypeTestCI || TypeTestCI->getIntrinsicID() != Intrinsic::type_test)
+      continue;
+    // The type.test must use Object as its pointer argument.
+    if (TypeTestCI->getArgOperand(0) != Object)
+      continue;
+
+    // There must be a dominating llvm.assume consuming the type.test result.
+    bool HasDominatingAssume = false;
+    for (User *TU : TypeTestCI->users()) {
+      if (auto *Assume = dyn_cast<AssumeInst>(TU);
+          Assume && DT.dominates(Assume, &CB)) {
+        HasDominatingAssume = true;
+        break;
+      }
+    }
+    if (!HasDominatingAssume)
+      continue;
+
+    // Extract the type metadata identifier, e.g. MDString "_ZTS4Impl".
+    Metadata *TypeId =
+        cast<MetadataAsValue>(TypeTestCI->getArgOperand(1))->getMetadata();
+
+    // Vtable lookup via !type metadata.
+    // We require exactly one matching vtable — if multiple vtables carry the
+    // same type ID the type is not effectively final and we cannot safely
+    // devirtualize (the object could be a further-derived subclass).
+    GlobalVariable *MatchedVTable = nullptr;
+    uint64_t MatchedAddrPointOffset = 0;
+    bool Ambiguous = false;
+    for (GlobalVariable &GV : M.globals()) {
+      if (!GV.isConstant() || !GV.hasDefinitiveInitializer())
+        continue;
+      SmallVector<MDNode *, 2> Types;
+      GV.getMetadata(LLVMContext::MD_type, Types);
+      for (MDNode *TypeMD : Types) {
+        if (TypeMD->getNumOperands() < 2)
+          continue;
+        if (TypeMD->getOperand(1).get() != TypeId)
+          continue;
+        auto *OffsetCmd =
+            dyn_cast<ConstantAsMetadata>(TypeMD->getOperand(0));
+        if (!OffsetCmd)
+          continue;
+        if (MatchedVTable) {
+          Ambiguous = true;
+          break;
+        }
+        MatchedVTable = &GV;
+        MatchedAddrPointOffset =
+            cast<ConstantInt>(OffsetCmd->getValue())->getZExtValue();
+      }
+      if (Ambiguous)
+        break;
+    }
+    if (MatchedVTable && !Ambiguous) {
+      if (VTableOffset.getActiveBits() > 64)
+        continue;
+      uint64_t TotalOffset =
+          MatchedAddrPointOffset + VTableOffset.getZExtValue();
+      auto [DirectCallee, _] =
+          getFunctionAtVTableOffset(MatchedVTable, TotalOffset, M);
+      if (DirectCallee && isLegalToPromote(CB, DirectCallee)) {
+        promoteCall(CB, DirectCallee);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool llvm::tryPromoteCall(CallBase &CB) {
   assert(!CB.getCalledFunction());
   Module *M = CB.getCaller()->getParent();
   const DataLayout &DL = M->getDataLayout();
   Value *Callee = CB.getCalledOperand();
 
+  // We expect the indirect callee to be a function pointer loaded from a vtable
+  // slot, which is itself a getelementptr into the vtable, which is loaded from
+  // the object's vptr field.  The chain is:
+  //   %obj      = ... (alloca or argument)
+  //   %vtable   = load ptr, ptr %obj            (VTablePtrLoad)
+  //   %vfn_slot = GEP ptr %vtable, i64 N        (VTableEntryPtr, VTableOffset)
+  //   %fn       = load ptr, ptr %vfn_slot       (VTableEntryLoad)
   LoadInst *VTableEntryLoad = dyn_cast<LoadInst>(Callee);
   if (!VTableEntryLoad)
-    return false; // Not a vtable entry load.
+    return false;
   Value *VTableEntryPtr = VTableEntryLoad->getPointerOperand();
   APInt VTableOffset(DL.getIndexTypeSizeInBits(VTableEntryPtr->getType()), 0);
   Value *VTableBasePtr = VTableEntryPtr->stripAndAccumulateConstantOffsets(
       DL, VTableOffset, /* AllowNonInbounds */ true);
   LoadInst *VTablePtrLoad = dyn_cast<LoadInst>(VTableBasePtr);
   if (!VTablePtrLoad)
-    return false; // Not a vtable load.
+    return false;
   Value *Object = VTablePtrLoad->getPointerOperand();
   APInt ObjectOffset(DL.getIndexTypeSizeInBits(Object->getType()), 0);
   Value *ObjectBase = Object->stripAndAccumulateConstantOffsets(
       DL, ObjectOffset, /* AllowNonInbounds */ true);
-  if (!(isa<AllocaInst>(ObjectBase) && ObjectOffset == 0))
-    // Not an Alloca or the offset isn't zero.
+
+  if (ObjectOffset != 0)
     return false;
 
-  // Look for the vtable pointer store into the object by the ctor.
-  BasicBlock::iterator BBI(VTablePtrLoad);
-  Value *VTablePtr = FindAvailableLoadedValue(
-      VTablePtrLoad, VTablePtrLoad->getParent(), BBI, 0, nullptr, nullptr);
-  if (!VTablePtr || !VTablePtr->getType()->isPointerTy())
-    return false; // No vtable found.
-  APInt VTableOffsetGVBase(DL.getIndexTypeSizeInBits(VTablePtr->getType()), 0);
-  Value *VTableGVBase = VTablePtr->stripAndAccumulateConstantOffsets(
-      DL, VTableOffsetGVBase, /* AllowNonInbounds */ true);
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(VTableGVBase);
-  if (!(GV && GV->isConstant() && GV->hasDefinitiveInitializer()))
-    // Not in the form of a global constant variable with an initializer.
-    return false;
+  if (isa<AllocaInst>(ObjectBase)) {
+    // Look for a store of a concrete vtable pointer to the vptr field;
+    // this is set by the copy/move constructor when the object was materialised
+    // locally.
+    BasicBlock::iterator BBI(VTablePtrLoad);
+    Value *VTablePtr = FindAvailableLoadedValue(
+        VTablePtrLoad, VTablePtrLoad->getParent(), BBI, 0, nullptr, nullptr);
+    if (!VTablePtr || !VTablePtr->getType()->isPointerTy())
+      return false;
 
-  APInt VTableGVOffset = VTableOffsetGVBase + VTableOffset;
-  if (!(VTableGVOffset.getActiveBits() <= 64))
-    return false; // Out of range.
+    APInt VTableOffsetGVBase(DL.getIndexTypeSizeInBits(VTablePtr->getType()),
+                             0);
+    Value *VTableGVBase = VTablePtr->stripAndAccumulateConstantOffsets(
+        DL, VTableOffsetGVBase, /* AllowNonInbounds */ true);
+    GlobalVariable *GV = dyn_cast<GlobalVariable>(VTableGVBase);
+    if (!(GV && GV->isConstant() && GV->hasDefinitiveInitializer()))
+      return false;
 
-  Function *DirectCallee = nullptr;
-  std::tie(DirectCallee, std::ignore) =
-      getFunctionAtVTableOffset(GV, VTableGVOffset.getZExtValue(), *M);
-  if (!DirectCallee)
-    return false; // No function pointer found.
+    APInt VTableGVOffset = VTableOffsetGVBase + VTableOffset;
+    if (VTableGVOffset.getActiveBits() > 64)
+      return false;
 
-  if (!isLegalToPromote(CB, DirectCallee))
-    return false;
+    auto [DirectCallee, _] =
+        getFunctionAtVTableOffset(GV, VTableGVOffset.getZExtValue(), *M);
+    if (!DirectCallee || !isLegalToPromote(CB, DirectCallee))
+      return false;
 
-  // Success.
-  promoteCall(CB, DirectCallee);
-  return true;
+    promoteCall(CB, DirectCallee);
+    return true;
+  }
+  return tryDevirtualizeViaTypeTestAssume(CB, Object, VTableOffset, DL, *M);
 }
 
 #undef DEBUG_TYPE
