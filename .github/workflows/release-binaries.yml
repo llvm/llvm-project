@@ -91,6 +91,7 @@ jobs:
       #env:
       #  OPENSSL_DIR: /c/vcpkg/installed/arm64-windows/
       run: |
+         pip install --only-binary :all: cryptography
         pip -vvv install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Check Permissions
