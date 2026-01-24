@@ -509,7 +509,7 @@ def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, FlagsVT>,
 def SDT_AArch64Rev : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
 def SDT_AArch64Dup   : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
 def SDT_AArch64DupLane   : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<2>]>;
-def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
+def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
@@ -1097,7 +1097,7 @@ def AArch64smull    : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull,
 def AArch64umull    : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
 def AArch64sqdmulh : SDNode<"AArch64ISD::SQDMULH",
-                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>]>>;
+                            SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>>;
 
 // Reciprocal estimates and steps.
 def AArch64frecpe   : SDNode<"AArch64ISD::FRECPE", SDTFPUnaryOp>;
@@ -1228,69 +1228,95 @@ def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
                              [SDTCisInt<0>, SDTCisVec<1>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
-// TODO: Complete SDTypeProfile constraints.
-def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>,
-                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld3post : SDNode<"AArch64ISD::LD3post", SDTypeProfile<4, 2, []>,
-                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld4post : SDNode<"AArch64ISD::LD4post", SDTypeProfile<5, 2, []>,
-                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64st2post : SDNode<"AArch64ISD::ST2post", SDTypeProfile<1, 4, []>,
-                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st3post : SDNode<"AArch64ISD::ST3post", SDTypeProfile<1, 5, []>,
-                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st4post : SDNode<"AArch64ISD::ST4post", SDTypeProfile<1, 6, []>,
-                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64ld1x2post : SDNode<"AArch64ISD::LD1x2post", SDTypeProfile<3, 2, []>,
+def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i64>, SDTCisSameAs<2, 3>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3post : SDNode<"AArch64ISD::LD3post", SDTypeProfile<4, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i64>, SDTCisSameAs<3, 4>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4post : SDNode<"AArch64ISD::LD4post", SDTypeProfile<5, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<4, i64>, SDTCisSameAs<4, 5>, SDTCisPtrTy<5>, SDTCisInt<6>]>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st2post : SDNode<"AArch64ISD::ST2post", SDTypeProfile<1, 4,
+           [SDTCisVT<0, i64>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st3post : SDNode<"AArch64ISD::ST3post", SDTypeProfile<1, 5,
+           [SDTCisVT<0, i64>, SDTCisSameAs<0, 4>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st4post : SDNode<"AArch64ISD::ST4post", SDTypeProfile<1, 6,
+           [SDTCisVT<0, i64>, SDTCisSameAs<0, 5>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisSameAs<1, 4>, SDTCisPtrTy<5>, SDTCisInt<6>]>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld1x2post : SDNode<"AArch64ISD::LD1x2post", SDTypeProfile<3, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i64>, SDTCisSameAs<2, 3>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1x3post : SDNode<"AArch64ISD::LD1x3post", SDTypeProfile<4, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i64>, SDTCisSameAs<3, 4>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1x4post : SDNode<"AArch64ISD::LD1x4post", SDTypeProfile<5, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<4, i64>, SDTCisSameAs<4, 5>, SDTCisPtrTy<5>, SDTCisInt<6>]>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st1x2post : SDNode<"AArch64ISD::ST1x2post", SDTypeProfile<1, 4,
+           [SDTCisVT<0, i64>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st1x3post : SDNode<"AArch64ISD::ST1x3post", SDTypeProfile<1, 5,
+           [SDTCisVT<0, i64>, SDTCisSameAs<0, 4>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st1x4post : SDNode<"AArch64ISD::ST1x4post", SDTypeProfile<1, 6,
+           [SDTCisVT<0, i64>, SDTCisSameAs<0, 5>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisSameAs<1, 4>, SDTCisPtrTy<5>, SDTCisInt<6>]>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld1duppost : SDNode<"AArch64ISD::LD1DUPpost", SDTypeProfile<2, 2,
+           [SDTCisVec<0>, SDTCisVT<1, i64>, SDTCisSameAs<1, 2>, SDTCisPtrTy<2>, SDTCisInt<3>]>,
                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld1x3post : SDNode<"AArch64ISD::LD1x3post", SDTypeProfile<4, 2, []>,
+def AArch64ld2duppost : SDNode<"AArch64ISD::LD2DUPpost", SDTypeProfile<3, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i64>, SDTCisSameAs<2, 3>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld1x4post : SDNode<"AArch64ISD::LD1x4post", SDTypeProfile<5, 2, []>,
+def AArch64ld3duppost: SDNode<"AArch64ISD::LD3DUPpost", SDTypeProfile<4, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i64>, SDTCisSameAs<3, 4>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64st1x2post : SDNode<"AArch64ISD::ST1x2post", SDTypeProfile<1, 4, []>,
-                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st1x3post : SDNode<"AArch64ISD::ST1x3post", SDTypeProfile<1, 5, []>,
-                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st1x4post : SDNode<"AArch64ISD::ST1x4post", SDTypeProfile<1, 6, []>,
-                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64ld1duppost : SDNode<"AArch64ISD::LD1DUPpost", SDTypeProfile<2, 2, []>,
+def AArch64ld4duppost: SDNode<"AArch64ISD::LD4DUPpost", SDTypeProfile<5, 2,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<4, i64>, SDTCisSameAs<4, 5>, SDTCisPtrTy<5>, SDTCisInt<6>]>,
                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld2duppost : SDNode<"AArch64ISD::LD2DUPpost", SDTypeProfile<3, 2, []>,
-                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld3duppost: SDNode<"AArch64ISD::LD3DUPpost", SDTypeProfile<4, 2, []>,
-                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld4duppost: SDNode<"AArch64ISD::LD4DUPpost", SDTypeProfile<5, 2, []>,
-                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld1lanepost: SDNode<"AArch64ISD::LD1LANEpost", SDTypeProfile<2, 4, []>,
+def AArch64ld1lanepost: SDNode<"AArch64ISD::LD1LANEpost", SDTypeProfile<2, 4,
+           [SDTCisVec<0>, SDTCisVT<1, i64>, SDTCisVec<2>, SDTCisSameAs<0, 2>, SDTCisInt<3>, SDTCisSameAs<1, 4>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
                                [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld2lanepost : SDNode<"AArch64ISD::LD2LANEpost", SDTypeProfile<3, 5, []>,
+def AArch64ld2lanepost : SDNode<"AArch64ISD::LD2LANEpost", SDTypeProfile<3, 5,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i64>, SDTCisVec<3>, SDTCisSameAs<0, 3>, SDTCisSameAs<0, 4>, SDTCisInt<5>, SDTCisSameAs<2, 6>, SDTCisPtrTy<6>, SDTCisInt<7>]>,
                                 [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld3lanepost: SDNode<"AArch64ISD::LD3LANEpost", SDTypeProfile<4, 6, []>,
+def AArch64ld3lanepost: SDNode<"AArch64ISD::LD3LANEpost", SDTypeProfile<4, 6,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i64>, SDTCisVec<4>, SDTCisSameAs<0, 4>, SDTCisSameAs<0, 5>, SDTCisSameAs<0, 6>, SDTCisInt<7>, SDTCisSameAs<3, 8>, SDTCisPtrTy<8>, SDTCisInt<9>]>,
                                [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld4lanepost: SDNode<"AArch64ISD::LD4LANEpost", SDTypeProfile<5, 7, []>,
+def AArch64ld4lanepost: SDNode<"AArch64ISD::LD4LANEpost", SDTypeProfile<5, 7,
+           [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<4, i64>, SDTCisVec<5>, SDTCisSameAs<0, 5>, SDTCisSameAs<0, 6>, SDTCisSameAs<0, 7>, SDTCisSameAs<0, 8>, SDTCisInt<9>, SDTCisSameAs<4, 10>, SDTCisPtrTy<10>, SDTCisInt<11>]>,
                                [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64st2lanepost : SDNode<"AArch64ISD::ST2LANEpost", SDTypeProfile<1, 5, []>,
+def AArch64st2lanepost : SDNode<"AArch64ISD::ST2LANEpost", SDTypeProfile<1, 5,
+           [SDTCisVT<0, i64>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisInt<3>, SDTCisSameAs<0, 4>, SDTCisPtrTy<4>, SDTCisInt<5>]>,
                                [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st3lanepost : SDNode<"AArch64ISD::ST3LANEpost", SDTypeProfile<1, 6, []>,
+def AArch64st3lanepost : SDNode<"AArch64ISD::ST3LANEpost", SDTypeProfile<1, 6,
+           [SDTCisVT<0, i64>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisInt<4>, SDTCisSameAs<0, 5>, SDTCisPtrTy<5>, SDTCisInt<6>]>,
                                [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st4lanepost : SDNode<"AArch64ISD::ST4LANEpost", SDTypeProfile<1, 7, []>,
+def AArch64st4lanepost : SDNode<"AArch64ISD::ST4LANEpost", SDTypeProfile<1, 7,
+           [SDTCisVT<0, i64>, SDTCisVec<1>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisSameAs<1, 4>, SDTCisInt<5>, SDTCisSameAs<0, 6>, SDTCisPtrTy<6>, SDTCisInt<7>]>,
                                [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 // Scatter store
 def AArch64sstnt1_index_pred
-  : SDNode<"AArch64ISD::SSTNT1_INDEX_PRED", SDTypeProfile<0, 5, []>,
+  : SDNode<"AArch64ISD::SSTNT1_INDEX_PRED", SDTypeProfile<0, 5,
+           [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 // Non-temporal scatter store
 def AArch64sst1q_index_pred
-  : SDNode<"AArch64ISD::SST1Q_INDEX_PRED", SDTypeProfile<0, 5, []>,
+  : SDNode<"AArch64ISD::SST1Q_INDEX_PRED", SDTypeProfile<0, 5,
+           [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>, SDTCisPtrTy<3>, SDTCisInt<4>]>,
            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 // Non-temporal gather loads
 def AArch64gldnt1_index_merge_zero
-  : SDNode<"AArch64ISD::GLDNT1_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>,
+  : SDNode<"AArch64ISD::GLDNT1_INDEX_MERGE_ZERO", SDTypeProfile<1, 4,
+           [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>, SDTCisPtrTy<3>]>,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 // Unsigned gather loads.
 def AArch64gld1q_index_merge_zero
-  : SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>,
+  : SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4,
+           [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>, SDTCisPtrTy<3>]>,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
@@ -10941,8 +10967,10 @@ let AddedComplexity = 10 in {
 
 // Custom DAG nodes and isel rules to make a 64-byte block out of eight GPRs,
 // so that it can be used as input to inline asm, and vice versa.
-def LS64_BUILD : SDNode<"AArch64ISD::LS64_BUILD", SDTypeProfile<1, 8, []>>;
-def LS64_EXTRACT : SDNode<"AArch64ISD::LS64_EXTRACT", SDTypeProfile<1, 2, []>>;
+def LS64_BUILD : SDNode<"AArch64ISD::LS64_BUILD", SDTypeProfile<1, 8,
+           [SDTCisVT<0, i64x8>, SDTCisVT<1, i64>, SDTCisVT<2, i64>, SDTCisVT<3, i64>, SDTCisVT<4, i64>, SDTCisVT<5, i64>, SDTCisVT<6, i64>, SDTCisVT<7, i64>, SDTCisVT<8, i64>]>>;
+def LS64_EXTRACT : SDNode<"AArch64ISD::LS64_EXTRACT", SDTypeProfile<1, 2,
+           [SDTCisVT<0, i64>, SDTCisVT<1, i64x8>, SDTCisVT<2, i32>]>>;
 def : Pat<(i64x8 (LS64_BUILD GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3,
                              GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7)),
           (REG_SEQUENCE GPR64x8Class,
