@@ -2565,26 +2565,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         SimplifyDemandedFPClass(I, 1, RHSDemandedMask, KnownRHS, Depth + 1))
       return I;
 
-    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
-    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
-    if (ResultNotNan) {
-      KnownLHS.knownNot(fcNan);
-      KnownRHS.knownNot(fcNan);
-    }
-
     // nsz [+-]0 / x -> 0
     if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero) &&
-        (ResultNotNan || KnownRHS.isKnownNeverNaN()))
+        KnownRHS.isKnownNeverNaN())
       return ConstantFP::getZero(VTy);
 
-    if (KnownLHS.isKnownAlways(fcPosZero) &&
-        (ResultNotNan || KnownRHS.isKnownNeverNaN())) {
+    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
       // nnan +0 / x -> copysign(0, rhs)
       // TODO: -0 / x => copysign(0, fneg(rhs))
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
       Copysign->takeName(I);
       return Copysign;
     }
+
+    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
+    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
 
     if (!ResultNotInf &&
         ((ResultNotNan || (KnownLHS.isKnownNeverNaN() &&
@@ -2604,14 +2599,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return PoisonValue::get(VTy);
 
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
+    Known.knownNot(~DemandedMask);
 
-    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
-    if (Constant *SingleVal =
-            getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+    if (Constant *SingleVal = getFPClassConstant(VTy, Known.KnownFPClasses,
+                                                 /*IsCanonicalizing=*/true))
       return SingleVal;
 
-    FastMathFlags InferredFMF =
-        inferFastMathValueFlags(FMF, ValidResults, {KnownLHS, KnownRHS});
+    FastMathFlags InferredFMF = inferFastMathValueFlags(
+        FMF, Known.KnownFPClasses, {KnownLHS, KnownRHS});
     if (InferredFMF != FMF) {
       I->setFastMathFlags(InferredFMF);
       return I;
