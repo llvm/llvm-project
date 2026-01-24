@@ -1,5 +1,6 @@
+// RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -verify %s
 // RUN: cp %s %t
-// RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -fixit -verify %t
+// RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -fixit %t
 // RUN: %clang_cc1 -x c++ -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -Werror %t
 
 struct [[gsl::Owner]] MyObj {
