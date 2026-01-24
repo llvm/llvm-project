@@ -154,8 +154,10 @@ public:
   void addPostRegAlloc(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMWM) const;
   void addPreEmitRegAlloc(PassManagerWrapper &PMW) const;
+  Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
   Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
+  Error addFastRegAlloc(PassManagerWrapper &PMW) const;
   void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
   void addPostBBSections(PassManagerWrapper &PMW) const;
@@ -815,7 +817,8 @@ static bool mustPreserveGV(const GlobalValue &GV) {
 }
 
 void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
-  AAM.registerFunctionAnalysis<AMDGPUAA>();
+  if (EnableAMDGPUAliasAnalysis)
+    AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
 static Expected<ScanOptions>
