@@ -29,7 +29,7 @@ __isl_give TYPE *FN(isl_stream_read,TYPE_BASE)(__isl_keep isl_stream *s)
 
 	dom = isl_set_universe(isl_space_params_alloc(s->ctx, 0));
 	if (next_is_tuple(s)) {
-		dom = read_map_tuple(s, dom, isl_dim_param, v, 1, 0);
+		dom = read_map_tuple(s, dom, isl_dim_param, v, 0);
 		if (isl_stream_eat(s, ISL_TOKEN_TO))
 			goto error;
 	}

@@ -250,6 +250,13 @@ WebAssembly Support
 AVR Support
 ^^^^^^^^^^^
 
+SystemZ Support
+^^^^^^^^^^^^^^^
+
+- Add support for `#pragma export` for z/OS.  This is a pragma used to export functions and variables
+  with external linkage from shared libraries.  It provides compatibility with the IBM XL C/C++
+  compiler.
+
 DWARF Support in Clang
 ----------------------
 
@@ -294,6 +301,8 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support for ``transparent`` clause in task and taskloop directives.
+- Added support for ``use_device_ptr`` clause to accept an optional
+  ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^

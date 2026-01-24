@@ -3018,6 +3018,55 @@ class ClangObject:
         return self._as_parameter_
 
 
+### Completion Chunk Kinds ###
+class CompletionChunkKind(BaseEnumeration):
+    """
+    Describes a single piece of text within a code-completion string.
+    """
+
+    def __str__(self) -> str:
+        """
+        Converts enum value to string in the old camelCase format.
+        This is a temporary measure that will be changed in the future release
+        to return string in ALL_CAPS format, like for other enums.
+        """
+
+        warnings.warn(
+            "String representation of 'CompletionChunkKind' will be "
+            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
+            "match other enums. 'CompletionChunkKind's can be "
+            "compared to one another without conversion to string.",
+            DeprecationWarning,
+        )
+        # Remove underscores
+        components = self.name.split("_")
+        # Upper-camel case each split component
+        components = [component.lower().capitalize() for component in components]
+        return "".join(components)
+
+    OPTIONAL = 0
+    TYPED_TEXT = 1
+    TEXT = 2
+    PLACEHOLDER = 3
+    INFORMATIVE = 4
+    CURRENT_PARAMETER = 5
+    LEFT_PAREN = 6
+    RIGHT_PAREN = 7
+    LEFT_BRACKET = 8
+    RIGHT_BRACKET = 9
+    LEFT_BRACE = 10
+    RIGHT_BRACE = 11
+    LEFT_ANGLE = 12
+    RIGHT_ANGLE = 13
+    COMMA = 14
+    RESULT_TYPE = 15
+    COLON = 16
+    SEMI_COLON = 17
+    EQUAL = 18
+    HORIZONTAL_SPACE = 19
+    VERTICAL_SPACE = 20
+
+
 class _CXUnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
@@ -3099,54 +3148,6 @@ class CompletionChunk:
 
     def isKindResultType(self) -> bool:
         return self.kind == CompletionChunkKind.RESULT_TYPE
-
-### Completion Chunk Kinds ###
-class CompletionChunkKind(BaseEnumeration):
-    """
-    Describes a single piece of text within a code-completion string.
-    """
-
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionChunkKind' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionChunkKind's can be "
-            "compared to one another without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
-
-    OPTIONAL = 0
-    TYPED_TEXT = 1
-    TEXT = 2
-    PLACEHOLDER = 3
-    INFORMATIVE = 4
-    CURRENT_PARAMETER = 5
-    LEFT_PAREN = 6
-    RIGHT_PAREN = 7
-    LEFT_BRACKET = 8
-    RIGHT_BRACKET = 9
-    LEFT_BRACE = 10
-    RIGHT_BRACE = 11
-    LEFT_ANGLE = 12
-    RIGHT_ANGLE = 13
-    COMMA = 14
-    RESULT_TYPE = 15
-    COLON = 16
-    SEMI_COLON = 17
-    EQUAL = 18
-    HORIZONTAL_SPACE = 19
-    VERTICAL_SPACE = 20
 
 
 class CompletionString(ClangObject):

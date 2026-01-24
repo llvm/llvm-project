@@ -380,6 +380,10 @@ public:
     return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
   }
 
+  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
+  }
+
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
   // operations.
   mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
@@ -677,6 +681,15 @@ public:
     cir::ConstantOp poison =
         getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
     return createVecShuffle(loc, vec1, poison, mask);
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy, Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(*this, loc,
+                                            this->getStringAttr(str), resTy,
+                                            std::forward<Operands>(op)...)
+        .getResult();
   }
 };
 
