@@ -58,7 +58,7 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
 
-// ROCM-PATH: "{{.*/Inputs/rocm/lib/libamdhip64.so}}"
+// ROCM-PATH: "{{.*/Inputs/rocm/lib/libamdhip64.so}}" "-L[[HIPRT:.*/Inputs/rocm/lib]]"
 // ROCM-RPATH: "-rpath" "{{.*/Inputs/rocm/lib}}"
 // ROCM-RPATH-CANONICAL: "-rpath" "{{.*/rocm/lib}}"
 // ROCM-REL: "{{.*/opt/rocm-3.10.0/lib/libamdhip64.so}}"
