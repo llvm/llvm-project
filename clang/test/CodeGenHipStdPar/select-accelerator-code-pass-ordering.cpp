@@ -7,7 +7,7 @@
 // HIPSTDPAR-PRE: Running pass: EntryExitInstrumenterPass
 // HIPSTDPAR-PRE-NEXT: Running pass: EntryExitInstrumenterPass
 // HIPSTDPAR-PRE-NOT: Running pass: HipStdParAcceleratorCodeSelectionPass
-// HIPSTDPAR-PRE-NEXT: Running pass: AMDGPUExpandFeaturePredicatesPass
+// HIPSTDPAR-PRE-NEXT: Running pass: AlwaysInlinerPass
 
 // Ensure Pass HipStdParAcceleratorCodeSelectionPass is invoked in PostLink.
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -mllvm -amdgpu-enable-hipstdpar -fcuda-is-device -fdebug-pass-manager -emit-llvm \

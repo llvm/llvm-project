@@ -11,9 +11,6 @@
 //       externally initialised bool global, and load from it to provide the
 //       condition to a br (abstract target)
 
-//.
-// AMDGCNSPIRV: @llvm.amdgcn.has.gfx10-insts = external addrspace(1) externally_initialized constant i1
-//.
 // AMDGCN-GFX900-LABEL: define dso_local void @foo(
 // AMDGCN-GFX900-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-GFX900-NEXT:  [[ENTRY:.*:]]
@@ -28,8 +25,8 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx10-insts, align 1
-// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
+// AMDGCNSPIRV-NEXT:    [[LLVM_AMDGCN_HAS_GFX10_INSTS:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[LLVM_AMDGCN_HAS_GFX10_INSTS]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
