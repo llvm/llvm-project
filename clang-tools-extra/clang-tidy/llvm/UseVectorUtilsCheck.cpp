@@ -9,6 +9,7 @@
 #include "UseVectorUtilsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -73,14 +74,16 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
   //       ^replace~^   ^----remove-----^   ^
   //                                      remove
   // ```
+  const SourceManager &SM = *Result.SourceManager;
+  const SourceLocation InnerLParenEnd = Lexer::getLocForEndOfToken(
+      InnerCall->getCallee()->getEndLoc(), 0, SM, getLangOpts());
   Diag << FixItHint::CreateReplacement(
               OuterCallee->getNameInfo().getSourceRange(), ReplacementFuncName)
        << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-              InnerCall->getBeginLoc(), InnerCall->getArg(0)->getBeginLoc()))
+              InnerCall->getBeginLoc(), InnerLParenEnd.getLocWithOffset(1)))
        << FixItHint::CreateRemoval(InnerCall->getRParenLoc());
 
   // Add include for `SmallVectorExtras.h` if needed.
-  const SourceManager &SM = *Result.SourceManager;
   if (auto IncludeFixit = Inserter.createIncludeInsertion(
           SM.getFileID(OuterCall->getBeginLoc()),
           "llvm/ADT/SmallVectorExtras.h"))

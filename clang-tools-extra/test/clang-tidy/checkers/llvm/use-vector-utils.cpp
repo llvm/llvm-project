@@ -57,6 +57,21 @@ void test_map_range() {
   auto result_global = ::llvm::to_vector(::llvm::map_range(vec, transform));
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use 'map_to_vector'
   // CHECK-FIXES: auto result_global = ::llvm::map_to_vector(vec, transform);
+
+  // Check that comments between `to_vector(` and `map_range(` are preserved.
+  auto result_comment1 = llvm::to_vector(/*keep_me*/ llvm::map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result_comment1 = llvm::map_to_vector(/*keep_me*/ vec, transform);
+
+  // Check that comments between `to_vector<9>(` and `map_range(` are preserved.
+  auto result_comment2 = llvm::to_vector<9>(/*keep_me*/ llvm::map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result_comment2 = llvm::map_to_vector<9>(/*keep_me*/ vec, transform);
+
+  // Check that comments inside `map_range(` are also preserved.
+  auto result_comment3 = llvm::to_vector(llvm::map_range(/*keep_me*/ vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result_comment3 = llvm::map_to_vector(/*keep_me*/ vec, transform);
 }
 
 void test_filter_range() {
