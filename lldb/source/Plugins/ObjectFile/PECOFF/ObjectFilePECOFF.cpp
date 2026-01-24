@@ -449,12 +449,12 @@ bool ObjectFilePECOFF::ParseHeader() {
     m_data_nsp->SetByteOrder(eByteOrderLittle);
     lldb::offset_t offset = 0;
 
-    if (ParseDOSHeader(*m_data_nsp.get(), m_dos_header)) {
+    if (ParseDOSHeader(*m_data_nsp, m_dos_header)) {
       offset = m_dos_header.e_lfanew;
       uint32_t pe_signature = m_data_nsp->GetU32(&offset);
       if (pe_signature != IMAGE_NT_SIGNATURE)
         return false;
-      if (ParseCOFFHeader(*m_data_nsp.get(), &offset, m_coff_header)) {
+      if (ParseCOFFHeader(*m_data_nsp, &offset, m_coff_header)) {
         if (m_coff_header.hdrsize > 0)
           ParseCOFFOptionalHeader(&offset);
         ParseSectionHeaders(offset);
@@ -695,7 +695,7 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
     return {};
 
   if (m_data_nsp->ValidOffsetForDataOfSize(offset, size))
-    return DataExtractor(*m_data_nsp.get(), offset, size);
+    return DataExtractor(*m_data_nsp, offset, size);
 
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;

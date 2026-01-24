@@ -496,7 +496,7 @@ size_t ObjectFile::GetData(lldb::offset_t offset, size_t length,
                            DataExtractor &data) const {
   // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there as the back mmap buffer will be shared with shared pointers.
-  return data.SetData(*m_data_nsp.get(), offset, length);
+  return data.SetData(*m_data_nsp, offset, length);
 }
 
 size_t ObjectFile::CopyData(lldb::offset_t offset, size_t length,
