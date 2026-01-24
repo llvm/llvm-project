@@ -4656,12 +4656,7 @@ libc_math_function(
 libc_math_function(
     name = "logf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
+        ":__support_math_logf",
     ],
 )
 
