@@ -1,10 +1,10 @@
 // Based on clang/test/CodeGenCUDA/kernel-stub-name.cu.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s \
-// RUN:   -x cuda -o %t.cir
+// RUN:   -I%S/../inputs/ -x cuda -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
-#include "../inputs/cuda.h"
+#include "cuda.h"
 
 // CHECK: cir.func {{.*}} @__device_stub__ckernel()
 // CHECK-NEXT:   cir.return
