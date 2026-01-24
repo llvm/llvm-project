@@ -13,6 +13,7 @@
 #include "llvm/Analysis/DominanceFrontierImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
@@ -78,6 +79,18 @@ public:
   void releaseMemory() override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
+class MachineDominanceFrontierAnalysis
+    : public AnalysisInfoMixin<MachineDominanceFrontierAnalysis> {
+  friend AnalysisInfoMixin<MachineDominanceFrontierAnalysis>;
+  static AnalysisKey Key;
+  MachineDominanceFrontier MDF;
+
+public:
+  using Result = const MachineDominanceFrontier &;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
 
 } // end namespace llvm

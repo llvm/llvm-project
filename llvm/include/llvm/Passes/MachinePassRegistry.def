@@ -73,6 +73,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
                           MachineBranchProbabilityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-cycles", MachineCycleAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-dom-frontier", MachineDominanceFrontierAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-dom-tree", MachineDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
@@ -91,8 +92,6 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
 // LazyMachineBlockFrequencyInfoAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("machine-dom-frontier",
-// MachineDominanceFrontierAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
 // MachinePostDominatorTreeAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-region-info",

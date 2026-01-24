@@ -50,3 +50,12 @@ void MachineDominanceFrontier::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
+
+AnalysisKey MachineDominanceFrontierAnalysis::Key;
+
+MachineDominanceFrontierAnalysis::Result
+MachineDominanceFrontierAnalysis::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &) {
+  MDF.runOnMachineFunction(MF);
+  return MDF;
+}
