@@ -4120,40 +4120,40 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // result. Note that this includes VPInstruction where some opcodes may
       // produce a vector, to preserve existing behavior as VPInstructions model
       // aspects not directly mapped to existing IR instructions.
-      switch (R.getVPRecipeID()) {
-      case VPRecipeBase::VPDerivedIVSC:
-      case VPRecipeBase::VPScalarIVStepsSC:
-      case VPRecipeBase::VPReplicateSC:
-      case VPRecipeBase::VPInstructionSC:
-      case VPRecipeBase::VPCanonicalIVPHISC:
-      case VPRecipeBase::VPVectorPointerSC:
-      case VPRecipeBase::VPVectorEndPointerSC:
-      case VPRecipeBase::VPExpandSCEVSC:
-      case VPRecipeBase::VPEVLBasedIVPHISC:
-      case VPRecipeBase::VPPredInstPHISC:
-      case VPRecipeBase::VPBranchOnMaskSC:
+      switch (R.getVPDefID()) {
+      case VPDef::VPDerivedIVSC:
+      case VPDef::VPScalarIVStepsSC:
+      case VPDef::VPReplicateSC:
+      case VPDef::VPInstructionSC:
+      case VPDef::VPCanonicalIVPHISC:
+      case VPDef::VPVectorPointerSC:
+      case VPDef::VPVectorEndPointerSC:
+      case VPDef::VPExpandSCEVSC:
+      case VPDef::VPEVLBasedIVPHISC:
+      case VPDef::VPPredInstPHISC:
+      case VPDef::VPBranchOnMaskSC:
         continue;
-      case VPRecipeBase::VPReductionSC:
-      case VPRecipeBase::VPActiveLaneMaskPHISC:
-      case VPRecipeBase::VPWidenCallSC:
-      case VPRecipeBase::VPWidenCanonicalIVSC:
-      case VPRecipeBase::VPWidenCastSC:
-      case VPRecipeBase::VPWidenGEPSC:
-      case VPRecipeBase::VPWidenIntrinsicSC:
-      case VPRecipeBase::VPWidenSC:
-      case VPRecipeBase::VPBlendSC:
-      case VPRecipeBase::VPFirstOrderRecurrencePHISC:
-      case VPRecipeBase::VPHistogramSC:
-      case VPRecipeBase::VPWidenPHISC:
-      case VPRecipeBase::VPWidenIntOrFpInductionSC:
-      case VPRecipeBase::VPWidenPointerInductionSC:
-      case VPRecipeBase::VPReductionPHISC:
-      case VPRecipeBase::VPInterleaveEVLSC:
-      case VPRecipeBase::VPInterleaveSC:
-      case VPRecipeBase::VPWidenLoadEVLSC:
-      case VPRecipeBase::VPWidenLoadSC:
-      case VPRecipeBase::VPWidenStoreEVLSC:
-      case VPRecipeBase::VPWidenStoreSC:
+      case VPDef::VPReductionSC:
+      case VPDef::VPActiveLaneMaskPHISC:
+      case VPDef::VPWidenCallSC:
+      case VPDef::VPWidenCanonicalIVSC:
+      case VPDef::VPWidenCastSC:
+      case VPDef::VPWidenGEPSC:
+      case VPDef::VPWidenIntrinsicSC:
+      case VPDef::VPWidenSC:
+      case VPDef::VPBlendSC:
+      case VPDef::VPFirstOrderRecurrencePHISC:
+      case VPDef::VPHistogramSC:
+      case VPDef::VPWidenPHISC:
+      case VPDef::VPWidenIntOrFpInductionSC:
+      case VPDef::VPWidenPointerInductionSC:
+      case VPDef::VPReductionPHISC:
+      case VPDef::VPInterleaveEVLSC:
+      case VPDef::VPInterleaveSC:
+      case VPDef::VPWidenLoadEVLSC:
+      case VPDef::VPWidenLoadSC:
+      case VPDef::VPWidenStoreEVLSC:
+      case VPDef::VPWidenStoreSC:
         break;
       default:
         llvm_unreachable("unhandled recipe");
