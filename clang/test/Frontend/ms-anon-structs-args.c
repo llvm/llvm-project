@@ -6,13 +6,11 @@
 
 // Test that multiple occurrences are handled
 // RUN: %clang_cc1 -triple powerpc-ibm-aix -fms-anonymous-structs -fms-anonymous-structs %s -fsyntax-only 2>&1 | \
-// RUN:     FileCheck --check-prefix=MULTI-OK %s --allow-empty
-// MULTI-OK-NOT: error: unknown argument
+// RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty
 
 // Test with other MS-related options
 // RUN: %clang_cc1 -triple powerpc-ibm-aix -fms-extensions -fms-anonymous-structs %s -fsyntax-only 2>&1 | \
-// RUN:     FileCheck --check-prefix=WITH-MS-EXT %s --allow-empty
-// WITH-MS-EXT-NOT: error: unknown argument
+// RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty
 
 // Test rejection of the unsupported negative form.
 // RUN: not %clang_cc1 -triple powerpc-ibm-aix -fno-ms-anonymous-structs %s -fsyntax-only 2>&1 | \

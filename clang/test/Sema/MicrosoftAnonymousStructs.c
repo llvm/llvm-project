@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
-// RUN: -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-anonymous-structs
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-anonymous-structs
 // RUN: %clang_cc1 -triple powerpc-ibm-aix %s -fsyntax-only -Wno-unused-value \
-// RUN: -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-anonymous-structs
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-anonymous-structs
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
-// RUN: -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-extensions
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-extensions
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
-// RUN: -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-compatibility
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-compatibility
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
-// RUN: -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis
 
 struct union_mem {
   long g;
