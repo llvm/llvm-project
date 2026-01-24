@@ -358,6 +358,68 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  // Only 0/0, Inf/Inf produce NaN.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
+      (KnownLHS.isKnownNeverLogicalZero(Mode) ||
+       KnownRHS.isKnownNeverLogicalZero(Mode))) {
+    Known.knownNot(fcNan);
+  }
+
+  // xor sign bit.
+  // X / -0.0 is -Inf (or NaN).
+  // +X / +X is +X
+  if ((KnownLHS.isKnownNever(fcNegative) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcNegative);
+
+  if ((KnownLHS.isKnownNever(fcPositive) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcPositive);
+
+  // 0 / x => 0 or nan
+  if (KnownLHS.isKnownAlways(fcZero))
+    Known.knownNot(fcSubnormal | fcNormal | fcInf);
+
+  // x / 0 => nan or inf
+  if (KnownRHS.isKnownAlways(fcZero))
+    Known.knownNot(fcFinite);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  // X / X is always exactly 1.0 or a NaN.
+  KnownFPClass Known(fcNan | fcPosNormal);
+
+  if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+  else if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
+}
+KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  // X % X is always exactly [+-]0.0 or a NaN.
+  KnownFPClass Known(fcNan | fcZero);
+
+  if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+  else if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
                                const KnownFPClass &KnownRHS,
                                const KnownFPClass &KnownAddend,
