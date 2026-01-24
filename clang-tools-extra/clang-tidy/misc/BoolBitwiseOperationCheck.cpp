@@ -174,14 +174,15 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     return true;
   };
 
+  if (!CanApplyFixIt) {
+    DiagEmitterForStrictMode();
+    return;
+  }
+
   const auto MaybeTokenRange =
       getOperatorTokenRangeForFixIt(BinOp, SM, Ctx.getLangOpts());
   if (!MaybeTokenRange) {
     IgnoreMacros || DiagEmitterForStrictMode();
-    return;
-  }
-  if (!CanApplyFixIt) {
-    DiagEmitterForStrictMode();
     return;
   }
   const CharSourceRange TokenRange = *MaybeTokenRange;
@@ -268,8 +269,6 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
   assert(BinOp);
-  if (!BinOp)
-    std::terminate();
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
