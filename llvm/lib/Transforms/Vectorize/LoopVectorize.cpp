@@ -7323,17 +7323,6 @@ static VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   return nullptr;
 }
 
-/// Match FindIV result: select(icmp ne ReducedIV, Sentinel), ReducedIV, Start.
-template <typename Op0_t, typename Op1_t>
-static bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV,
-                              Op1_t Start) {
-  using namespace VPlanPatternMatch;
-  return match(VPI, m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
-                                            m_ComputeReductionResult(ReducedIV),
-                                            m_VPValue()),
-                             m_ComputeReductionResult(ReducedIV), Start));
-}
-
 // If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
 // epilog loop, fix the reduction's scalar PHI node by adding the incoming value
 // from the main vector loop.
