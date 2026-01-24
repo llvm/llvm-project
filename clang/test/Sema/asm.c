@@ -53,7 +53,6 @@ void test3(void) {
   // Raw string literals should be accepted (they're ordinary strings)
   asm(R"(nop)");
 
-
 void test4(const volatile void *addr)
 {
     asm ("nop" : : "r"(*addr)); /* expected-error {{invalid type 'const volatile void' in asm input for constraint 'r'}}
