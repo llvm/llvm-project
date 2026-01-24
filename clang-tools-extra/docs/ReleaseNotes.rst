@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`misc-scope-reduction
+  <clang-tidy/checks/misc/scope-reduction>` check.
+
+  Detects local variables in function whose scopes can be minimized.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
