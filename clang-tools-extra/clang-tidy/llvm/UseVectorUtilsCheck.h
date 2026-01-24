@@ -16,7 +16,8 @@ namespace clang::tidy::llvm_check {
 
 /// Finds calls to `llvm::to_vector(llvm::map_range(...))` and
 /// `llvm::to_vector(llvm::make_filter_range(...))` that can be replaced with
-/// `llvm::map_to_vector` and `llvm::filter_to_vector` from `SmallVectorExtras.h`.
+/// `llvm::map_to_vector` and `llvm::filter_to_vector` from
+/// `SmallVectorExtras.h`.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/llvm/use-vector-utils.html
@@ -38,4 +39,3 @@ private:
 } // namespace clang::tidy::llvm_check
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_USEVECTORUTILSCHECK_H
-

@@ -31,28 +31,25 @@ void UseVectorUtilsCheck::registerPPCallbacks(const SourceManager &SM,
 void UseVectorUtilsCheck::registerMatchers(MatchFinder *Finder) {
   // Match `llvm::to_vector(llvm::map_range(X, F))`.
   Finder->addMatcher(
-      callExpr(
-          callee(functionDecl(hasName("::llvm::to_vector"))),
-          hasArgument(
-              0, callExpr(callee(functionDecl(hasName("::llvm::map_range"))))
-                     .bind("inner_call")))
+      callExpr(callee(functionDecl(hasName("::llvm::to_vector"))),
+               hasArgument(0, callExpr(callee(functionDecl(
+                                           hasName("::llvm::map_range"))))
+                                  .bind("inner_call")))
           .bind("map_range_call"),
       this);
 
   // Match `llvm::to_vector(llvm::make_filter_range(X, Pred))`.
   Finder->addMatcher(
-      callExpr(
-          callee(functionDecl(hasName("::llvm::to_vector"))),
-          hasArgument(0, callExpr(callee(functionDecl(
-                                      hasName("::llvm::make_filter_range"))))
-                             .bind("inner_call")))
+      callExpr(callee(functionDecl(hasName("::llvm::to_vector"))),
+               hasArgument(0, callExpr(callee(functionDecl(hasName(
+                                           "::llvm::make_filter_range"))))
+                                  .bind("inner_call")))
           .bind("filter_range_call"),
       this);
 }
 
 void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MapRangeCall =
-      Result.Nodes.getNodeAs<CallExpr>("map_range_call");
+  const auto *MapRangeCall = Result.Nodes.getNodeAs<CallExpr>("map_range_call");
   const auto *FilterRangeCall =
       Result.Nodes.getNodeAs<CallExpr>("filter_range_call");
   if (!MapRangeCall && !FilterRangeCall)
@@ -96,9 +93,9 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Build the replacement: Replace the whole expression with the new function
   // and the arguments from the inner call.
-  auto Diag = diag(OuterCall->getBeginLoc(),
-                   "use '%0' instead of '%1(%2(...))'")
-              << ReplacementFunc << ToVectorFunc << InnerFuncName;
+  auto Diag =
+      diag(OuterCall->getBeginLoc(), "use '%0' instead of '%1(%2(...))'")
+      << ReplacementFunc << ToVectorFunc << InnerFuncName;
 
   // Get the range argument.
   const SourceRange RangeArgRange = InnerCall->getArg(0)->getSourceRange();
@@ -116,7 +113,8 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
   const std::string Replacement =
       (ReplacementFunc + "(" + RangeArgText + ", " + FuncArgText + ")").str();
 
-  Diag << FixItHint::CreateReplacement(OuterCall->getSourceRange(), Replacement);
+  Diag << FixItHint::CreateReplacement(OuterCall->getSourceRange(),
+                                       Replacement);
 
   // Add include for `SmallVectorExtras.h` if needed.
   if (auto IncludeFixit = Inserter.createIncludeInsertion(
