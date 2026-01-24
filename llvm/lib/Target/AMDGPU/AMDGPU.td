@@ -529,9 +529,7 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
-def FeatureD16Writes32BitVgpr : SubtargetFeature<"d16-write-vgpr32",
-  "EnableD16Writes32BitVgpr",
-  "true",
+defm D16Writes32BitVgpr : AMDGPUSubtargetFeature<"d16-write-vgpr32",
   "D16 instructions potentially have 32-bit data dependencies"
 >;
 
@@ -959,9 +957,7 @@ defm MadMacF32Insts : AMDGPUSubtargetFeature<"mad-mac-f32-insts",
   "Has v_mad_f32/v_mac_f32/v_madak_f32/v_madmk_f32 instructions"
 >;
 
-def FeatureDsSrc2Insts : SubtargetFeature<"ds-src2-insts",
-  "HasDsSrc2Insts",
-  "true",
+defm DsSrc2Insts : AMDGPUSubtargetFeature<"ds-src2-insts",
   "Has ds_*_src2 instructions"
 >;
 
@@ -1094,12 +1090,6 @@ def FeatureMaxPrivateElementSize4 : FeatureMaxPrivateElementSize<4>;
 def FeatureMaxPrivateElementSize8 : FeatureMaxPrivateElementSize<8>;
 def FeatureMaxPrivateElementSize16 : FeatureMaxPrivateElementSize<16>;
 
-def FeatureDumpCode : SubtargetFeature <"DumpCode",
-  "DumpCode",
-  "true",
-  "Dump MachineInstrs in the CodeEmitter"
->;
-
 def FeatureDumpCodeLower : SubtargetFeature <"dumpcode",
   "DumpCode",
   "true",
@@ -1153,8 +1143,8 @@ def FeatureEnablePRTStrictNull : SubtargetFeature<"enable-prt-strict-null",
 // FIXME: moveToVALU should be able to handle converting addr64 MUBUF
 // instructions.
 
-def FeatureFlatForGlobal : SubtargetFeature<"flat-for-global",
-  "FlatForGlobal",
+def FeatureUseFlatForGlobal : SubtargetFeature<"flat-for-global",
+  "UseFlatForGlobal",
   "true",
   "Force to generate flat instruction for global"
 >;
@@ -2388,8 +2378,6 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
 def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
                                                 "!Subtarget->d16PreservesUnusedBits()">;
 
-def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
 def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 
@@ -2465,15 +2453,13 @@ def HasAtomicDsCondSubClampInsts :
 def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
-def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
-  AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
-def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
+def HasFlatScratchEnabled : Predicate<"Subtarget->hasFlatScratchEnabled()">;
 
-def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
+def NotHasFlatScratchEnabled : Predicate<"!Subtarget->hasFlatScratchEnabled()">;
 
 def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 

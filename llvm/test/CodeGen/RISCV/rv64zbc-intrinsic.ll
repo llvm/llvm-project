@@ -36,3 +36,32 @@ define signext i32 @clmul32r_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
   %tmp = call i32 @llvm.riscv.clmulr.i32(i32 %a, i32 %b)
   ret i32 %tmp
 }
+
+define i64 @llvm_clmulr_i64(i64 %a, i64 %b) nounwind {
+; RV64ZBC-LABEL: llvm_clmulr_i64:
+; RV64ZBC:       # %bb.0:
+; RV64ZBC-NEXT:    clmulr a0, a0, a1
+; RV64ZBC-NEXT:    ret
+  %tmp1 = zext i64 %a to i128
+  %tmp2 = zext i64 %b to i128
+  %tmp3 = call i128 @llvm.clmul.i128(i128 %tmp1, i128 %tmp2)
+  %tmp4 = lshr i128 %tmp3, 63
+  %tmp5 = trunc i128 %tmp4 to i64
+  ret i64 %tmp5
+}
+
+define i32 @llvm_clmulr_i32(i32 %a, i32 %b) nounwind {
+; RV64ZBC-LABEL: llvm_clmulr_i32:
+; RV64ZBC:       # %bb.0:
+; RV64ZBC-NEXT:    slli a1, a1, 32
+; RV64ZBC-NEXT:    slli a0, a0, 32
+; RV64ZBC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-NEXT:    srli a0, a0, 31
+; RV64ZBC-NEXT:    ret
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i32 %b to i64
+  %tmp3 = call i64 @llvm.clmul.i64(i64 %tmp1, i64 %tmp2)
+  %tmp4 = lshr i64 %tmp3, 31
+  %tmp5 = trunc i64 %tmp4 to i32
+  ret i32 %tmp5
+}

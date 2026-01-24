@@ -64,6 +64,7 @@
   X(LDSMisalignedBug)                                                          \
   X(UnalignedBufferAccess)                                                     \
   X(UnalignedScratchAccess)                                                    \
+  X(RealTrue16Insts)                                                           \
   X(UserSGPRInit16Bug)
 
 // Features with both member and getter.
@@ -71,7 +72,6 @@
   X(1_5xVGPRs)                                                                 \
   X(1024AddressableVGPRs)                                                      \
   X(45BitNumRecordsBufferResource)                                             \
-  X(AutoWaitcntBeforeBarrier)                                                  \
   X(64BitLiterals)                                                             \
   X(A16)                                                                       \
   X(AddMinMaxInsts)                                                            \
@@ -95,15 +95,22 @@
   X(AtomicFMinFMaxF64FlatInsts)                                                \
   X(AtomicFMinFMaxF64GlobalInsts)                                              \
   X(AtomicGlobalPkAddBF16Inst)                                                 \
+  X(AutoWaitcntBeforeBarrier)                                                  \
   X(BackOffBarrier)                                                            \
+  X(BF16ConversionInsts)                                                       \
+  X(BF16PackedInsts)                                                           \
+  X(BF16TransInsts)                                                            \
+  X(BF8ConversionScaleInsts)                                                   \
   X(BitOp3Insts)                                                               \
   X(BVHDualAndBVH8Insts)                                                       \
   X(Clusters)                                                                  \
   X(CubeInsts)                                                                 \
   X(CvtFP8VOP1Bug)                                                             \
   X(CvtNormInsts)                                                              \
+  X(CvtPkF16F32Inst)                                                           \
   X(CvtPkNormVOP2Insts)                                                        \
   X(CvtPkNormVOP3Insts)                                                        \
+  X(D16Writes32BitVgpr)                                                        \
   X(DefaultComponentBroadcast)                                                 \
   X(DefaultComponentZero)                                                      \
   X(DLInsts)                                                                   \
@@ -124,8 +131,11 @@
   X(DPP)                                                                       \
   X(DPP8)                                                                      \
   X(DPPSrc1SGPR)                                                               \
+  X(DsSrc2Insts)                                                               \
   X(EmulatedSystemScopeAtomics)                                                \
   X(ExtendedImageInsts)                                                        \
+  X(F16BF16ToFP6BF6ConversionScaleInsts)                                       \
+  X(F32ToF16BF16ConversionSRInsts)                                             \
   X(FlatAddressSpace)                                                          \
   X(FlatAtomicFaddF32Inst)                                                     \
   X(FlatBufferGlobalAtomicFaddF64Inst)                                         \
@@ -138,8 +148,11 @@
   X(FmacF64Inst)                                                               \
   X(FmaMixBF16Insts)                                                           \
   X(FmaMixInsts)                                                               \
+  X(FP4ConversionScaleInsts)                                                   \
   X(FP64)                                                                      \
+  X(FP6BF6ConversionScaleInsts)                                                \
   X(FP8ConversionInsts)                                                        \
+  X(FP8ConversionScaleInsts)                                                   \
   X(FP8E5M3Insts)                                                              \
   X(FP8Insts)                                                                  \
   X(FullRate64Ops)                                                             \
@@ -168,6 +181,7 @@
   X(LerpInst)                                                                  \
   X(LshlAddU64Inst)                                                            \
   X(MADIntraFwdBug)                                                            \
+  X(MadMixInsts)                                                               \
   X(MadU32Inst)                                                                \
   X(MAIInsts)                                                                  \
   X(McastLoadInsts)                                                            \
@@ -230,6 +244,8 @@
   X(TensorCvtLutInsts)                                                         \
   X(TransposeLoadF4F6Insts)                                                    \
   X(TrapHandler)                                                               \
+  X(TrigReducedRange)                                                          \
+  X(True16BitInsts)                                                            \
   X(UnalignedAccessMode)                                                       \
   X(UnalignedDSAccess)                                                         \
   X(UnpackedD16VMem)                                                           \
@@ -288,45 +304,43 @@ protected:
   unsigned MaxPrivateElementSize = 0;
 
   // Dynamically set bits that enable features.
-  bool FlatForGlobal = false;
-  bool SupportsXNACK = false;
-
-  // This should not be used directly. 'TargetID' tracks the dynamic settings
-  // for XNACK.
-  bool EnableXNACK = false;
-
-  bool EnableTgSplit = false;
-  bool EnableCuMode = false;
-  bool EnablePreciseMemory = false;
-
-  // Used as options.
-  bool EnableLoadStoreOpt = false;
-  bool EnableUnsafeDSOffsetFolding = false;
-  bool EnableSIScheduler = false;
-  bool EnableDS128 = false;
-  bool EnablePRTStrictNull = false;
-  bool DumpCode = false;
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
+  bool ScalarizeGlobal = false;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
-  bool SupportsSRAMECC = false;
-  bool DynamicVGPR = false;
-  bool DynamicVGPRBlockSize32 = false;
-  bool RequiresAlignVGPR = false;
 
+  //===--------------------------------------------------------------------===//
+  /// Controlled by subtarget features defined in AMDGPU.td
+  //===--------------------------------------------------------------------===//
+  bool DumpCode = false;
+  bool EnableCuMode = false;
+  bool EnableDS128 = false;
+  bool EnableFlatScratch = false;
+  bool EnableLoadStoreOpt = false;
+  bool EnablePreciseMemory = false;
+  bool EnablePRTStrictNull = false;
+  bool EnableRealTrue16Insts = false;
+  bool EnableSIScheduler = false;
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
   bool EnableSRAMECC = false;
-
-  bool EnableFlatScratch = false;
-  bool ScalarizeGlobal = false;
+  bool EnableTgSplit = false;
+  bool EnableUnsafeDSOffsetFolding = false;
+  bool EnableXNACK = false;
+  bool RequiresAlignVGPR = false;
   bool RequiresCOV6 = false;
-  bool UseBlockVGPROpsForCSR = false;
-
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool SupportsSRAMECC = false;
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for XNACK.
+  bool SupportsXNACK = false;
   bool UseAddPC64Inst = false;
+  bool UseBlockVGPROpsForCSR = false;
+  bool UseFlatForGlobal = false;
 
 #define DECL_HAS_MEMBER(Name) bool Has##Name = false;
   GCN_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
@@ -429,7 +443,8 @@ public:
   int getLDSBankCount() const { return LDSBankCount; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
-    return (ForBufferRSrc || !enableFlatScratch()) ? MaxPrivateElementSize : 16;
+    return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
+                                                       : 16;
   }
 
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -541,7 +556,7 @@ public:
     return getGeneration() >= AMDGPUSubtarget::GFX10;
   }
 
-  bool useFlatForGlobal() const { return FlatForGlobal; }
+  bool useFlatForGlobal() const { return UseFlatForGlobal; }
 
   /// \returns If target supports ds_read/write_b128 and user enables generation
   /// of ds_read/write_b128.
@@ -594,8 +609,8 @@ public:
 
   bool hasFlatScratchSVSMode() const { return HasGFX940Insts || HasGFX11Insts; }
 
-  bool enableFlatScratch() const {
-    return flatScratchIsArchitected() ||
+  bool hasFlatScratchEnabled() const {
+    return hasArchitectedFlatScratch() ||
            (EnableFlatScratch && hasFlatScratchInsts());
   }
 
@@ -931,10 +946,6 @@ public:
   bool flatScratchIsPointer() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
-
-  /// \returns true if the flat_scratch register is initialized by the HW.
-  /// In this case it is readonly.
-  bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8
@@ -1272,6 +1283,16 @@ public:
     return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
             getGeneration() == AMDGPUSubtarget::GFX12) ||
            isWave32();
+  }
+
+  /// Return true if real (non-fake) variants of True16 instructions using
+  /// 16-bit registers should be code-generated. Fake True16 instructions are
+  /// identical to non-fake ones except that they take 32-bit registers as
+  /// operands and always use their low halves.
+  // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
+  // supported and the support for fake True16 instructions is removed.
+  bool useRealTrue16Insts() const {
+    return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 };
 
