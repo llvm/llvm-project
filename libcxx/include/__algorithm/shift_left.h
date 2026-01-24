@@ -32,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
 __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0, "__n must be greater than or equal to 0");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "__n must be greater than or equal to 0");
 
   if (__n == 0) {
     _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
