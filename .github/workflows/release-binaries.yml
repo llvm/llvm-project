@@ -71,8 +71,6 @@ jobs:
       with:
         python-version: '3.14'
 
-    - name: Checkout LLVM
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - name: Install Windows dependencies
       if: runner.os == 'Windows'
@@ -87,12 +85,14 @@ jobs:
         find /c/vcpkg -iname '*ssl*'
 
     - name: Install Dependencies
-      shell: bash
-      env:
-        OPENSSL_DIR: /c/vcpkg/installed/arm64-windows/
+      #shell: bash
+      #env:
+      #  OPENSSL_DIR: /c/vcpkg/installed/arm64-windows/
       run: |
         pip -vvv install --require-hashes -r ./llvm/utils/git/requirements.txt
 
+    - name: Checkout LLVM
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - name: Check Permissions
       if: github.event_name != 'pull_request'
       env:
