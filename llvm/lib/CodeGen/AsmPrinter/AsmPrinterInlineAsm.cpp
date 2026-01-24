@@ -68,12 +68,12 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
   return BufNum;
 }
 
-
 /// EmitInlineAsm - Emit a blob of inline asm to the output streamer.
 void AsmPrinter::emitInlineAsm(StringRef Str, const TargetMachine &TM,
                                const MDNode *LocMDNode,
                                const MachineInstr *MI) {
-  const MCSubtargetInfo &STI = MI ? getSubtargetInfo() : *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &STI =
+      MI ? getSubtargetInfo() : *TM.getMCSubtargetInfo();
   const MCTargetOptions &MCOptions = TM.Options.MCOptions;
   InlineAsm::AsmDialect Dialect =
       MI ? MI->getInlineAsmDialect()
