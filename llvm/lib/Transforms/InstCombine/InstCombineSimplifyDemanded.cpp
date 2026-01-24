@@ -2209,9 +2209,9 @@ static Value *simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC,
     return &I;
 
   Known = KnownFPClass::fptrunc(KnownSrc);
+  Known.knownNot(~DemandedMask);
 
-  FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
-  return getFPClassConstant(I.getType(), ValidResults,
+  return getFPClassConstant(I.getType(), Known.KnownFPClasses,
                             /*IsCanonicalizing=*/true);
 }
 
