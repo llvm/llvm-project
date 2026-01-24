@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
@@ -238,6 +239,7 @@ public:
 
   void init() {
     declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
 
     registerTransformOps<
 #define GET_OP_LIST
