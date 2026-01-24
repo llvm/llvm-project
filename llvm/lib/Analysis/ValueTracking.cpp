@@ -1010,10 +1010,11 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
   Value *A, *B;
   if (Depth < MaxAnalysisRecursionDepth &&
       match(Cond, m_LogicalOp(m_Value(A), m_Value(B)))) {
+    SimplifyQuery CtxQ = SQ.getWithInstruction(cast<Instruction>(Cond));
     KnownBits Known2(Known.getBitWidth());
     KnownBits Known3(Known.getBitWidth());
-    computeKnownBitsFromCond(V, A, Known2, SQ, Invert, Depth + 1);
-    computeKnownBitsFromCond(V, B, Known3, SQ, Invert, Depth + 1);
+    computeKnownBitsFromCond(V, A, Known2, CtxQ, Invert, Depth + 1);
+    computeKnownBitsFromCond(V, B, Known3, CtxQ, Invert, Depth + 1);
     if (Invert ? match(Cond, m_LogicalOr(m_Value(), m_Value()))
                : match(Cond, m_LogicalAnd(m_Value(), m_Value())))
       Known2 = Known2.unionWith(Known3);
@@ -1043,8 +1044,10 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
     return;
   }
 
-  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A))))
-    computeKnownBitsFromCond(V, A, Known, SQ, !Invert, Depth + 1);
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A)))) {
+    SimplifyQuery CtxQ = SQ.getWithInstruction(cast<Instruction>(Cond));
+    computeKnownBitsFromCond(V, A, Known, CtxQ, !Invert, Depth + 1);
+  }
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -1189,7 +1192,6 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
   bool IsAnd = false;
   bool HasKnownOne = !KnownLHS.One.isZero() || !KnownRHS.One.isZero();
   Value *X = nullptr, *Y = nullptr;
-  SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(I));
 
   switch (I->getOpcode()) {
   case Instruction::And:
@@ -1241,7 +1243,7 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
        match(I, m_c_BinOp(m_Value(X), m_Sub(m_Deferred(X), m_Value(Y)))) ||
        match(I, m_c_BinOp(m_Value(X), m_Sub(m_Value(Y), m_Deferred(X)))))) {
     KnownBits KnownY(BitWidth);
-    computeKnownBits(Y, DemandedElts, KnownY, CtxQ, Depth + 1);
+    computeKnownBits(Y, DemandedElts, KnownY, Q, Depth + 1);
     if (KnownY.countMinTrailingOnes() > 0) {
       if (IsAnd)
         KnownOut.Zero.setBit(0);
@@ -1285,11 +1287,11 @@ KnownBits llvm::analyzeKnownBitsFromAndXorOr(const Operator *I,
                                              const KnownBits &KnownRHS,
                                              const SimplifyQuery &SQ,
                                              unsigned Depth) {
-  SimplifyQuery CtxQ = SQ.getWithInstruction(dyn_cast<Instruction>(I));
   auto *FVTy = dyn_cast<FixedVectorType>(I->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, CtxQ,
+
+  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, SQ,
                                   Depth);
 }
 
@@ -2547,7 +2549,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   }
 
   if (const Operator *I = dyn_cast<Operator>(V)) {
-    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(I));
+    SimplifyQuery CtxQ = Q.getWithInstruction(Depth ? dyn_cast<Instruction>(I) : Q.CxtI);
     computeKnownBitsFromOperator(I, DemandedElts, Known, CtxQ, Depth);
   }
   else if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
