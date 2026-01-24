@@ -2091,7 +2091,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                              cir::RecordType::RecordKind::Struct);
 
     mlir::Value call =
-        emitIntrinsicCallOp(builder, loc, intrinsicName, resRecord);
+        builder.emitIntrinsicCallOp(loc, intrinsicName, resRecord);
     mlir::Value rand =
         cir::ExtractMemberOp::create(builder, loc, randTy, call, 0);
     builder.CIRBaseBuilderTy::createStore(loc, rand, ops[0]);
@@ -2328,9 +2328,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     const StringRef intrinsicName =
         (builtinID == X86::BI__shiftleft128) ? "fshl" : "fshr";
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               intrinsicName, i64Ty,
-                               mlir::ValueRange{ops[0], ops[1], ops[2]});
+    return builder.emitIntrinsicCallOp(
+        getLoc(expr->getExprLoc()), intrinsicName, i64Ty,
+        mlir::ValueRange{ops[0], ops[1], ops[2]});
   }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:
