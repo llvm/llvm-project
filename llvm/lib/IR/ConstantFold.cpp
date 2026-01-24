@@ -90,7 +90,7 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   // Handle ConstantFP -> Constant{Int, FP}
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
     // Handle half <-> bfloat
-    if (DestTy->isFloatingPointTy()) {
+    if (!isa<VectorType>(SrcTy) && DestTy->isFloatingPointTy()) {
       APInt Val = FP->getValueAPF().bitcastToAPInt();
       APFloat ResultFP(DestTy->getFltSemantics(), Val);
       return ConstantFP::get(DestTy->getContext(), ResultFP);
