@@ -66,11 +66,14 @@ public:
   /// function calls `InferIntRangeInterface` to provide values for block
   /// arguments or tries to reduce the range on loop induction variables with
   /// known bounds.
-  void
-  visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
-                               ValueRange successorInputs,
-                               ArrayRef<IntegerValueRangeLattice *> argLattices,
-                               unsigned firstIndex) override;
+  void visitNonControlFlowArguments(
+      Operation *op, const RegionSuccessor &successor,
+      ValueRange successorInputs,
+      ArrayRef<IntegerValueRangeLattice *> argLattices) override;
+
+  void visitNonControlFlowArguments(
+      Operation *op, Region *const region, ValueRange successorInputs,
+      ArrayRef<IntegerValueRangeLattice *> argLattices) override;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without

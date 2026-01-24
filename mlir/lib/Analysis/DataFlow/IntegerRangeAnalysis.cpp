@@ -139,11 +139,75 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
     Operation *op, const RegionSuccessor &successor, ValueRange successorInputs,
-    ArrayRef<IntegerValueRangeLattice *> argLattices, unsigned firstIndex) {
+    ArrayRef<IntegerValueRangeLattice *> argLattices) {
+  /// Given a lower bound, upper bound, or step from a LoopLikeInterface return
+  /// the lower/upper bound for that result if possible.
+  auto getLoopBoundFromFold = [&](OpFoldResult loopBound, Type boundType,
+                                  Block *block, bool getUpper) {
+    unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
+    if (auto attr = dyn_cast<Attribute>(loopBound)) {
+      if (auto bound = dyn_cast<IntegerAttr>(attr))
+        return bound.getValue();
+    } else if (auto value = llvm::dyn_cast<Value>(loopBound)) {
+      const IntegerValueRangeLattice *lattice =
+          getLatticeElementFor(getProgramPointBefore(block), value);
+      if (lattice != nullptr && !lattice->getValue().isUninitialized())
+        return getUpper ? lattice->getValue().getValue().smax()
+                        : lattice->getValue().getValue().smin();
+    }
+    // Given the results of getConstant{Lower,Upper}Bound()
+    // or getConstantStep() on a LoopLikeInterface return the lower/upper
+    // bound
+    return getUpper ? APInt::getSignedMaxValue(width)
+                    : APInt::getSignedMinValue(width);
+  };
+
+  // Infer bounds for loop arguments that have static bounds
+  if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
+    // This shouldn't be returning nullopt if there are indunction variables.
+    SmallVector<OpFoldResult> lowerBounds = *loop.getLoopLowerBounds();
+    SmallVector<OpFoldResult> upperBounds = *loop.getLoopUpperBounds();
+    SmallVector<OpFoldResult> steps = *loop.getLoopSteps();
+    for (auto [iv, lowerBound, upperBound, step, ivEntry] : llvm::zip_equal(
+             successorInputs, lowerBounds, upperBounds, steps, argLattices)) {
+      Block *block = iv.getParentBlock();
+      APInt min = getLoopBoundFromFold(lowerBound, iv.getType(), block,
+                                       /*getUpper=*/false);
+      APInt max = getLoopBoundFromFold(upperBound, iv.getType(), block,
+                                       /*getUpper=*/true);
+      // Assume positivity for uniscoverable steps by way of getUpper = true.
+      APInt stepVal =
+          getLoopBoundFromFold(step, iv.getType(), block, /*getUpper=*/true);
+
+      if (stepVal.isNegative()) {
+        std::swap(min, max);
+      } else {
+        // Correct the upper bound by subtracting 1 so that it becomes a <=
+        // bound, because loops do not generally include their upper bound.
+        max -= 1;
+      }
+
+      // If we infer the lower bound to be larger than the upper bound, the
+      // resulting range is meaningless and should not be used in further
+      // inferences.
+      if (max.sge(min)) {
+        auto ivRange = ConstantIntRanges::fromSigned(min, max);
+        propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
+      }
+    }
+    return;
+  }
+
+  return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
+      op, successor, successorInputs, argLattices);
+}
+
+void IntegerRangeAnalysis::visitNonControlFlowArguments(
+    Operation *op, Region *const region, ValueRange successorInputs,
+    ArrayRef<IntegerValueRangeLattice *> argLattices) {
   if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
     LDBG() << "Inferring ranges for "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
-
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
       return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
     });
@@ -152,7 +216,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       auto arg = dyn_cast<BlockArgument>(v);
       if (!arg)
         return;
-      if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
+      if (!llvm::is_contained(region->getArguments(), arg))
         return;
 
       LDBG() << "Inferred range " << attrs;
@@ -179,72 +243,4 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
     return;
   }
-
-  /// Given a lower bound, upper bound, or step from a LoopLikeInterface return
-  /// the lower/upper bound for that result if possible.
-  auto getLoopBoundFromFold = [&](OpFoldResult loopBound, Type boundType,
-                                  Block *block, bool getUpper) {
-    unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
-    if (auto attr = dyn_cast<Attribute>(loopBound)) {
-      if (auto bound = dyn_cast<IntegerAttr>(attr))
-        return bound.getValue();
-    } else if (auto value = llvm::dyn_cast<Value>(loopBound)) {
-      const IntegerValueRangeLattice *lattice =
-          getLatticeElementFor(getProgramPointBefore(block), value);
-      if (lattice != nullptr && !lattice->getValue().isUninitialized())
-        return getUpper ? lattice->getValue().getValue().smax()
-                        : lattice->getValue().getValue().smin();
-    }
-    // Given the results of getConstant{Lower,Upper}Bound()
-    // or getConstantStep() on a LoopLikeInterface return the lower/upper
-    // bound
-    return getUpper ? APInt::getSignedMaxValue(width)
-                    : APInt::getSignedMinValue(width);
-  };
-
-  // Infer bounds for loop arguments that have static bounds
-  if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
-    std::optional<llvm::SmallVector<Value>> maybeIvs =
-        loop.getLoopInductionVars();
-    if (!maybeIvs) {
-      return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
-          op, successor, successorInputs, argLattices, firstIndex);
-    }
-    // This shouldn't be returning nullopt if there are indunction variables.
-    SmallVector<OpFoldResult> lowerBounds = *loop.getLoopLowerBounds();
-    SmallVector<OpFoldResult> upperBounds = *loop.getLoopUpperBounds();
-    SmallVector<OpFoldResult> steps = *loop.getLoopSteps();
-    for (auto [iv, lowerBound, upperBound, step] :
-         llvm::zip_equal(*maybeIvs, lowerBounds, upperBounds, steps)) {
-      Block *block = iv.getParentBlock();
-      APInt min = getLoopBoundFromFold(lowerBound, iv.getType(), block,
-                                       /*getUpper=*/false);
-      APInt max = getLoopBoundFromFold(upperBound, iv.getType(), block,
-                                       /*getUpper=*/true);
-      // Assume positivity for uniscoverable steps by way of getUpper = true.
-      APInt stepVal =
-          getLoopBoundFromFold(step, iv.getType(), block, /*getUpper=*/true);
-
-      if (stepVal.isNegative()) {
-        std::swap(min, max);
-      } else {
-        // Correct the upper bound by subtracting 1 so that it becomes a <=
-        // bound, because loops do not generally include their upper bound.
-        max -= 1;
-      }
-
-      // If we infer the lower bound to be larger than the upper bound, the
-      // resulting range is meaningless and should not be used in further
-      // inferences.
-      if (max.sge(min)) {
-        IntegerValueRangeLattice *ivEntry = getLatticeElement(iv);
-        auto ivRange = ConstantIntRanges::fromSigned(min, max);
-        propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
-      }
-    }
-    return;
-  }
-
-  return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-      op, successor, successorInputs, argLattices, firstIndex);
 }

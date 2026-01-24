@@ -215,8 +215,15 @@ protected:
   /// of loops).
   virtual void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs, ArrayRef<AbstractSparseLattice *> argLattices,
-      unsigned firstIndex) = 0;
+      ValueRange successorInputs,
+      ArrayRef<AbstractSparseLattice *> argLattices) = 0;
+
+  /// Given an operation with region non-control-flow, the lattices of the entry
+  /// block arguments, compute the lattice values for block arguments.(ex. the
+  /// block argument of gpu.launch).
+  virtual void visitNonControlFlowArgumentsImpl(
+      Operation *op, Region *const region, ValueRange arguments,
+      ArrayRef<AbstractSparseLattice *> argLattices) = 0;
 
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
@@ -325,16 +332,21 @@ public:
   /// operands, and a region successor, compute the lattice values for block
   /// arguments that are not accounted for by the branching control flow (ex.
   /// the bounds of loops). By default, this method marks all such lattice
-  /// elements as having reached a pessimistic fixpoint. `firstIndex` is the
-  /// index of the first element of `argLattices` that is set by control-flow.
+  /// elements as having reached a pessimistic fixpoint.
   virtual void visitNonControlFlowArguments(Operation *op,
                                             const RegionSuccessor &successor,
                                             ValueRange successorInputs,
-                                            ArrayRef<StateT *> argLattices,
-                                            unsigned firstIndex) {
-    setAllToEntryStates(argLattices.take_front(firstIndex));
-    setAllToEntryStates(
-        argLattices.drop_front(firstIndex + successorInputs.size()));
+                                            ArrayRef<StateT *> argLattices) {
+    setAllToEntryStates(argLattices);
+  }
+
+  /// Given an operation with region non-control-flow, the lattices of the entry
+  /// block arguments, compute the lattice values for block arguments.(ex. the
+  /// block argument of gpu.launch).
+  virtual void visitNonControlFlowArguments(Operation *op, Region *const region,
+                                            ValueRange successorInputs,
+                                            ArrayRef<StateT *> argLattices) {
+    setAllToEntryStates(argLattices);
   }
 
 protected:
@@ -385,14 +397,23 @@ private:
   }
   void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs, ArrayRef<AbstractSparseLattice *> argLattices,
-      unsigned firstIndex) override {
+      ValueRange successorInputs,
+      ArrayRef<AbstractSparseLattice *> argLattices) override {
     visitNonControlFlowArguments(
         op, successor, successorInputs,
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
-         argLattices.size()},
-        firstIndex);
+         argLattices.size()});
   }
+
+  virtual void visitNonControlFlowArgumentsImpl(
+      Operation *op, Region *const region, ValueRange successorInputs,
+      ArrayRef<AbstractSparseLattice *> argLattices) override {
+    visitNonControlFlowArguments(
+        op, region, successorInputs,
+        {reinterpret_cast<StateT *const *>(argLattices.begin()),
+         argLattices.size()});
+  }
+
   void setToEntryState(AbstractSparseLattice *lattice) override {
     return setToEntryState(reinterpret_cast<StateT *>(lattice));
   }
