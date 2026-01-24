@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseVectorUtilsCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -75,12 +75,16 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
   //                                      remove
   // ```
   const SourceManager &SM = *Result.SourceManager;
-  const SourceLocation InnerLParenEnd = Lexer::getLocForEndOfToken(
-      InnerCall->getCallee()->getEndLoc(), 0, SM, getLangOpts());
+  const std::optional<Token> InnerLParen =
+      utils::lexer::findNextTokenSkippingComments(
+          InnerCall->getCallee()->getEndLoc(), SM, getLangOpts());
+  if (!InnerLParen || InnerLParen->isNot(tok::l_paren))
+    return; // Unexpected token, possibly a macro?
+
   Diag << FixItHint::CreateReplacement(
               OuterCallee->getNameInfo().getSourceRange(), ReplacementFuncName)
        << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-              InnerCall->getBeginLoc(), InnerLParenEnd.getLocWithOffset(1)))
+              InnerCall->getBeginLoc(), InnerLParen->getEndLoc()))
        << FixItHint::CreateRemoval(InnerCall->getRParenLoc());
 
   // Add include for `SmallVectorExtras.h` if needed.

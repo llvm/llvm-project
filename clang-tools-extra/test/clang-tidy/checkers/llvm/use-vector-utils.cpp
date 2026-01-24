@@ -77,6 +77,16 @@ void test_map_range() {
   auto result_comment4 = llvm::to_vector</*keep_me*/ 7>(llvm::map_range(vec, transform));
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'map_to_vector'
   // CHECK-FIXES: auto result_comment4 = llvm::map_to_vector</*keep_me*/ 7>(vec, transform);
+
+  // Check that whitespace between callee and `(` is handled correctly.
+  auto result_whitespace1 = llvm::to_vector(llvm::map_range  (vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result_whitespace1 = llvm::map_to_vector(vec, transform);
+
+  // Check that comments between callee and `(` are handled correctly.
+  auto result_whitespace2 = llvm::to_vector(llvm::map_range /*weird but ok*/ (vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result_whitespace2 = llvm::map_to_vector(vec, transform);
 }
 
 void test_filter_range() {
@@ -103,6 +113,18 @@ void test_inside_llvm_namespace() {
 }
 
 } // namespace llvm
+
+// Check that an empty macro between callee and `(` is handled.
+void test_macro() {
+  llvm::SmallVector<int> vec;
+
+#define EMPTY
+  // No fix-it when a macro appears between callee and `(`.
+  auto result = llvm::to_vector(llvm::map_range EMPTY (vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'map_to_vector'
+
+#undef EMPTY
+}
 
 void test_negative() {
   llvm::SmallVector<int> vec;
