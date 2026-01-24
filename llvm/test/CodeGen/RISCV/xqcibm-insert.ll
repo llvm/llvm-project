@@ -401,3 +401,31 @@ define i32 @bseti_i32_10(i32 %a) nounwind {
   %or = or i32 %a, 1024
   ret i32 %or
 }
+
+define i1 @no_insbi_known_bits(i32 %arg) {
+; RV32I-LABEL: no_insbi_known_bits:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: no_insbi_known_bits:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    qc.insbi a0, -1, 7, 24
+; RV32IXQCIBM-NEXT:    qc.extu a0, a0, 7, 24
+; RV32IXQCIBM-NEXT:    addi a0, a0, -127
+; RV32IXQCIBM-NEXT:    seqz a0, a0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: no_insbi_known_bits:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, -1, 7, 24
+; RV32IXQCIBMZBS-NEXT:    qc.extu a0, a0, 7, 24
+; RV32IXQCIBMZBS-NEXT:    addi a0, a0, -127
+; RV32IXQCIBMZBS-NEXT:    seqz a0, a0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %a = or i32 %arg, 2147483647
+  %b = call i32 @llvm.bswap.i32(i32 %a)
+  %and = and i32 %b, 127
+  %res = icmp eq i32 %and, 127
+  ret i1 %res
+}
