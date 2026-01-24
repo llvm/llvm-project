@@ -3331,7 +3331,7 @@ def fms_anonymous_structs
     : Flag<["-"], "fms-anonymous-structs">,
       Visibility<[CC1Option]>,
       MarshallingInfoFlag<LangOpts<"MSAnonymousStructs">>,
-      ImpliedByAnyOf<[fms_extensions.KeyPath, fms_compatibility.KeyPath]>,
+      ImpliedByAnyOf<[fms_extensions.KeyPath]>,
       HelpText<"Enable Microsoft anonymous struct/union extension.">;
 defm asm_blocks : BoolFOption<"asm-blocks",
   LangOpts<"AsmBlocks">, Default<fms_extensions.KeyPath>,
