@@ -1652,38 +1652,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    // Insert in a block that dominates all selects, and where Cond and SrcVec
-    // are defined.
-    BasicBlock *InsertBB = Selects.front()->getParent();
-    for (SelectInst *Sel : drop_begin(Selects))
-      InsertBB = DT.findNearestCommonDominator(InsertBB, Sel->getParent());
-    if (!InsertBB)
-      continue;
+    Instruction *InsertPt = BC->getNextNode();
 
-    BasicBlock::iterator InsertPt = InsertBB->getFirstInsertionPt();
-    if (InsertPt == InsertBB->end())
-      continue;
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
+      if (DT.dominates(BC, CondInst))
+        InsertPt = CondInst->getNextNode();
 
-    auto ProcessDef = [&](Value *V) -> bool {
-      auto *DefI = dyn_cast<Instruction>(V);
-      if (!DefI || DefI->getParent() != InsertBB)
-        return true;
-
-      auto AfterDefOpt = DefI->getInsertionPointAfterDef();
-      if (!AfterDefOpt)
-        return false;
-
-      BasicBlock::iterator AfterDefIt = *AfterDefOpt;
-      if (InsertPt->comesBefore(&*AfterDefIt))
-        InsertPt = AfterDefIt;
-
-      return true;
-    };
-
-    if (!ProcessDef(Cond) || !ProcessDef(SrcVec))
-      continue;
-
-    Builder.SetInsertPoint(InsertBB, InsertPt);
+    Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
