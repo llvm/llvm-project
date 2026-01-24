@@ -233,9 +233,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
-                                DenormalMode Mode) {
+// Handle known sign bit and nan cases for fadd.
+static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
+                              const KnownFPClass &KnownRHS, DenormalMode Mode) {
   KnownFPClass Known;
 
   // Adding positive and negative infinity produces NaN.
@@ -246,7 +246,7 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
 
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
       KnownRHS.cannotBeOrderedLessThanZero()) {
-    Known.knownNot(OrderedLessThanZeroMask);
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
 
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
@@ -256,13 +256,21 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
 
   if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
       KnownRHS.cannotBeOrderedGreaterThanZero()) {
-    Known.knownNot(OrderedGreaterThanZeroMask);
+    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
 
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
       Known.knownNot(fcZero);
   }
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, Mode);
 
   // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
   if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
@@ -348,6 +356,26 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
     Known.knownNot(fcNan);
 
   return Known;
+}
+
+KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
+                               const KnownFPClass &KnownRHS,
+                               const KnownFPClass &KnownAddend,
+                               DenormalMode Mode) {
+  KnownFPClass Mul = fmul(KnownLHS, KnownRHS, Mode);
+
+  // FMA differs from the base fmul + fadd handling only in the treatment of -0
+  // results.
+  //
+  // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
+  // unlike for a separate fadd.
+  return fadd_impl(Mul, KnownAddend, Mode);
+}
+
+KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
+                                      const KnownFPClass &KnownAddend,
+                                      DenormalMode Mode) {
+  return fadd_impl(square(KnownSquared, Mode), KnownAddend, Mode);
 }
 
 KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
