@@ -470,6 +470,7 @@ public:
     switch (cast<MCSpecifierExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
+    case RISCV::S_CALL_PLT:
     case ELF::R_RISCV_CALL_PLT:
       return true;
     }
