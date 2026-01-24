@@ -4813,12 +4813,11 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i64,     7 }
    };
 
-  if (auto *VT = dyn_cast<VectorType>(Val)) {
-      if (VT->isScalableTy()) {
-          return TTI::TCC_Expensive;
-      }
-  }
   assert(Val->isVectorTy() && "This must be a vector type");
+  auto *VT = cast<VectorType>(Val);
+  if (VT->isScalableTy())
+    return X86TargetLowering::CW_Invalid;
+
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
 

@@ -1,4 +1,3 @@
-; REQUIRES: x86-registered-target
 ; RUN: opt -O2 -S < %s
 ; This test triggers a crash in X86 TTI with scalable vectors
 
