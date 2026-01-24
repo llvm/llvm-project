@@ -410,6 +410,11 @@ struct MachineSMEABI : public MachineFunctionPass {
                            unsigned Marker, StringRef RemarkName,
                            StringRef SaveName) const;
 
+  void emitError(const Twine &Message) {
+    LLVMContext &Context = MF->getFunction().getContext();
+    Context.emitError(MF->getName() + ": " + Message);
+  }
+
   /// Save live physical registers to virtual registers.
   PhysRegSave createPhysRegSave(LiveRegs PhysLiveRegs, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI, DebugLoc DL);
@@ -884,7 +889,8 @@ void MachineSMEABI::restorePhyRegSave(const PhysRegSave &RegSave,
 void MachineSMEABI::addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
                                   CallingConv::ID ExpectedCC) {
   RTLIB::LibcallImpl LCImpl = LLI->getLibcallImpl(LC);
-  assert(LCImpl != RTLIB::Unsupported && "Expected SME routines to exist.");
+  if (LCImpl == RTLIB::Unsupported)
+    emitError("Can't lower SME ABI (SME routines unsupported)");
   CallingConv::ID CC = LLI->getLibcallImplCallingConv(LCImpl);
   assert(CC == ExpectedCC && "Unexpected calling convention for SME rountine");
   StringRef SymbolName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
