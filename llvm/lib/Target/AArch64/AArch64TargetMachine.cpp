@@ -227,6 +227,12 @@ static cl::opt<bool>
                             cl::desc("Enable new lowering for the SME ABI"),
                             cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableSRLTSubregToRegMitigation(
+    "aarch64-srlt-mitigate-sr2r",
+    cl::desc("Enable SUBREG_TO_REG mitigation by adding 'implicit-def' for "
+             "super-regs when using Subreg Liveness Tracking"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -268,6 +274,7 @@ LLVMInitializeAArch64Target() {
   initializeKCFIPass(PR);
   initializeSMEABIPass(PR);
   initializeMachineSMEABIPass(PR);
+  initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
@@ -462,7 +469,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
+        EnableSRLTSubregToRegMitigation);
   }
 
   if (IsStreaming && !I->hasSME())
@@ -550,6 +558,7 @@ public:
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   void addPreRegAlloc() override;
+  void addPostRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -813,6 +822,11 @@ void AArch64PassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
+}
+
+void AArch64PassConfig::addPostRewrite() {
+  if (EnableSRLTSubregToRegMitigation)
+    addPass(createAArch64SRLTDefineSuperRegsPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

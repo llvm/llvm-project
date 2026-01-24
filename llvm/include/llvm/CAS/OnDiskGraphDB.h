@@ -17,8 +17,10 @@
 #define LLVM_CAS_ONDISKGRAPHDB_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include <atomic>
 
 namespace llvm::cas::ondisk {
 
@@ -338,6 +340,10 @@ public:
   /// \param Hasher is the hashing function used for objects inside CAS.
   Error validate(bool Deep, HashingFuncT Hasher) const;
 
+  /// Checks that \p ID exists in the index. It is allowed to not have data
+  /// associated with it.
+  LLVM_ABI_FOR_TEST Error validateObjectID(ObjectID ID);
+
   /// How to fault-in nodes if an upstream database is used.
   enum class FaultInPolicy {
     /// Copy only the requested node.
@@ -365,6 +371,7 @@ public:
   LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        OnDiskGraphDB *UpstreamDB = nullptr,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   LLVM_ABI_FOR_TEST ~OnDiskGraphDB();
@@ -441,7 +448,7 @@ private:
   // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                 OnDiskDataAllocator DataPool, OnDiskGraphDB *UpstreamDB,
-                FaultInPolicy Policy);
+                FaultInPolicy Policy, std::shared_ptr<OnDiskCASLogger> Logger);
 
   /// Mapping from hash to object reference.
   ///
@@ -464,6 +471,9 @@ private:
 
   /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;
+
+  /// Debug Logger.
+  std::shared_ptr<OnDiskCASLogger> Logger;
 };
 
 } // namespace llvm::cas::ondisk

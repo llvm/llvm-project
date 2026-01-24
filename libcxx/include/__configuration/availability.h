@@ -304,4 +304,11 @@
 #  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
 #endif
 
+// Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
+#  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
+#    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 _LIBCPP_HIDE_FROM_ABI
+#  endif
+
 #endif // _LIBCPP___CONFIGURATION_AVAILABILITY_H

@@ -16,6 +16,12 @@
 typedef void *omp_depend_t;
 typedef unsigned long omp_event_handle_t;
 
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
 void foo() {}
 
 struct S1 {
@@ -157,6 +163,41 @@ T tmain(T argc, T *argv) {
 
 enum Enum {};
 
+#ifdef OMP60
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
+template <int C>
+void TestTaskLoopImpex() {
+#pragma omp taskloop transparent(C)
+  for (int i = 0; i < 10; ++i) {}
+}
+
+enum class TaskType {
+  TypeA,
+  TypeB,
+  TypeC
+};
+
+template <typename T>
+class TransparentTemplate {
+public:
+  void TestTaskImport() {
+    #pragma omp task transparent(omp_import)
+    {
+      T temp;
+    }
+  }
+  void TestTaskLoopImpex() {
+    #pragma omp taskloop transparent(omp_impex)
+    for (int i = 0; i < 10; ++i) {}
+  }
+};
+#endif
+
 int main(int argc, char **argv) {
   long x;
   int b = argc, c, d, e, f, g;
@@ -164,6 +205,9 @@ int main(int argc, char **argv) {
   int arr[10], arr1[argc];
   omp_depend_t y;
   omp_event_handle_t evt;
+#ifdef OMP60
+  omp_impex_t v = omp_import;
+#endif
 #pragma omp threadprivate(a)
   Enum ee;
 // CHECK: Enum ee;
@@ -205,12 +249,56 @@ int main(int argc, char **argv) {
 #pragma omp task threadset(omp_pool)
 #pragma omp task threadset(omp_team)
   foo();
+
+#pragma omp task transparent(omp_not_impex)
+#pragma omp task transparent(omp_import)
+#pragma omp task transparent(omp_export)
+#pragma omp task transparent(omp_impex)
+#pragma omp task transparent(omp_import)
+#pragma omp task transparent(v)
+#pragma omp task transparent(v ? omp_import : omp_export)
+#pragma omp task transparent(omp_import + 0)
+#pragma omp task transparent((v))
+  foo();
+
+  TestTaskLoopImpex<1>();
+
+  TaskType task = TaskType::TypeA;
+#pragma omp task transparent(task)
+  foo();
 #endif
+
+  // CHECK60: #pragma omp taskloop transparent(C)
+  // CHECK60: #pragma omp taskloop transparent(1)
+  // CHECK60: #pragma omp task transparent(omp_import)
+  // CHECK60: #pragma omp taskloop transparent(omp_impex)
+  // CHECK60: #pragma omp task transparent(omp_import)
   // CHECK60: #pragma omp task threadset(omp_pool)
   // CHECK60: #pragma omp task threadset(omp_team)
   // CHECK60-NEXT: foo();
+  // CHECK60: #pragma omp task transparent(omp_not_impex)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_export)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_impex)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import)
+  // CHECK60-NEXT: #pragma omp task transparent(v)
+  // CHECK60-NEXT: #pragma omp task transparent(v ? omp_import : omp_export)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import + 0)
+  // CHECK60-NEXT: #pragma omp task transparent((v))
+  // CHECK60-NEXT: foo();
+  // CHECK60: #pragma omp task transparent(task)
+  // CHECK60-NEXT: foo();
+
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
+
+#ifdef OMP60
+void TestTaskTransparent() {
+  TransparentTemplate<int> obj;
+  obj.TestTaskImport();
+  obj.TestTaskLoopImpex();
+}
+#endif
 
 extern template int S<int>::TS;
 extern template long S<long>::TS;

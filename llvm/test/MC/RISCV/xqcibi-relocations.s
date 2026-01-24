@@ -91,12 +91,14 @@ qc.e.bgeui s2, 24, same_section
 # OBJ: qc.beqi t1, 0xa, 0x42 <same_section_extern+0x16>
 # OBJ-NEXT: j 0x3e <same_section_extern+0x12>
 # OBJ-NEXT: R_RISCV_JAL undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX *ABS*{{$}}
 qc.bnei t1, 10, undef
 
 # ASM: qc.e.bgeui s0, 40, undef
 # OBJ-NEXT: qc.e.bltui s0, 0x28, 0x4c <same_section_extern+0x20>
 # OBJ-NEXT: j 0x48 <same_section_extern+0x1c>
 # OBJ-NEXT: R_RISCV_JAL undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX *ABS*{{$}}
 qc.e.bgeui s0, 40, undef
 
 .section .text.second, "ax", @progbits

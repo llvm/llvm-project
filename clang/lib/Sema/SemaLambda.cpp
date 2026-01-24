@@ -235,10 +235,10 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
   if (!LSI->GLTemplateParameterList && !LSI->TemplateParams.empty()) {
     LSI->GLTemplateParameterList = TemplateParameterList::Create(
         SemaRef.Context,
-        /*Template kw loc*/ SourceLocation(),
+        /*Begin loc of the lambda expression*/ LSI->IntroducerRange.getBegin(),
         /*L angle loc*/ LSI->ExplicitTemplateParamsRange.getBegin(),
         LSI->TemplateParams,
-        /*R angle loc*/LSI->ExplicitTemplateParamsRange.getEnd(),
+        /*R angle loc*/ LSI->ExplicitTemplateParamsRange.getEnd(),
         LSI->RequiresClause.get());
   }
   return LSI->GLTemplateParameterList;
@@ -2165,7 +2165,12 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   // set as CurContext seems more faithful to the source.
   TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
-  PopExpressionEvaluationContext();
+  {
+    // TreeTransform of immediate functions may call getCurLambda, which
+    // requires both the paired LSI and the lambda DeclContext.
+    ContextRAII SavedContext(*this, CallOperator, /*NewThisContext=*/false);
+    PopExpressionEvaluationContext();
+  }
 
   sema::AnalysisBasedWarnings::Policy WP =
       AnalysisWarnings.getPolicyInEffectAt(EndLoc);

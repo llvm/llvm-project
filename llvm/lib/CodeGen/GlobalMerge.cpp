@@ -200,7 +200,6 @@ public:
     Opt.MaxOffset = GlobalMergeMaxOffset;
     Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
     Opt.MergeConstAggressive = GlobalMergeAllConst;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
@@ -212,7 +211,6 @@ public:
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
     Opt.MergeConstAggressive = MergeConstAggressive;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
   bool doInitialization(Module &M) override {
@@ -267,8 +265,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   llvm::stable_sort(
       Globals, [&DL](const GlobalVariable *GV1, const GlobalVariable *GV2) {
         // We don't support scalable global variables.
-        return DL.getTypeAllocSize(GV1->getValueType()).getFixedValue() <
-               DL.getTypeAllocSize(GV2->getValueType()).getFixedValue();
+        return GV1->getGlobalSize(DL) < GV2->getGlobalSize(DL);
       });
 
   // If we want to just blindly group all globals together, do so.
@@ -729,6 +726,16 @@ bool GlobalMergeImpl::run(Module &M) {
     // the globals occupy the same number of tag granules (i.e. `size_a / 16 ==
     // size_b / 16`).
     if (GV.isTagged())
+      continue;
+
+    // Don't merge globals with metadata other than !dbg, as this is essentially
+    // equivalent to adding metadata to an existing global, which is not
+    // necessarily a correct transformation depending on the specific metadata's
+    // semantics. We will later use copyMetadata() to copy metadata from
+    // component globals to the combined global, which only knows how to do this
+    // correctly for !dbg (and !type, but by this point LowerTypeTests will have
+    // already run).
+    if (GV.hasMetadataOtherThanDebugLoc())
       continue;
 
     Type *Ty = GV.getValueType();

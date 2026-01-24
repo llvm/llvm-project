@@ -27,8 +27,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def spawn_and_wait(self, program, delay):
         time.sleep(delay)
         proc = self.spawn(program=program)
-        # Wait for either the process to exit or the event to be set
+        start_time = time.time()
+        # Wait for either the process to exit or the event to be set.
         while proc.poll() is None and not self.spawn_event.is_set():
+            elapsed = time.time() - start_time
+            if elapsed >= self.DEFAULT_TIMEOUT:
+                break
             time.sleep(0.1)
         proc.kill()
         proc.wait()
@@ -90,7 +94,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             if self.spawn_thread.is_alive():
                 self.spawn_thread.join(timeout=10)
 
-    def test_attach_with_missing_debuggerId_or_targetId(self):
+    def test_attach_with_missing_session_debugger(self):
         """
         Test that attaching with only one of debuggerId/targetId specified
         fails with the expected error message.
@@ -98,14 +102,15 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adapter()
 
         # Test with only targetId specified (no debuggerId)
-        resp = self.attach(targetId=99999, waitForResponse=True)
+        session = {"targetId": 99999}
+        resp = self.attach(session=session, waitForResponse=True)
         self.assertFalse(resp["success"])
         self.assertIn(
-            "Both 'debuggerId' and 'targetId' must be specified together",
+            "missing value at arguments.session.debuggerId",
             resp["body"]["error"]["format"],
         )
 
-    def test_attach_with_invalid_debuggerId_and_targetId(self):
+    def test_attach_with_invalid_session(self):
         """
         Test that attaching with both debuggerId and targetId specified but
         invalid fails with an appropriate error message.
@@ -115,7 +120,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Attach with both debuggerId=9999 and targetId=99999 (both invalid).
         # Since debugger ID 9999 likely doesn't exist in the global registry,
         # we expect a validation error.
-        resp = self.attach(debuggerId=9999, targetId=99999, waitForResponse=True)
+        session = {"debuggerId": 9999, "targetId": 9999}
+        resp = self.attach(session=session, waitForResponse=True)
         self.assertFalse(resp["success"])
         error_msg = resp["body"]["error"]["format"]
         # Either error is acceptable - both indicate the debugger reuse
