@@ -248,7 +248,7 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
       KnownRHS.cannotBeOrderedLessThanZero()) {
     Known.knownNot(OrderedLessThanZeroMask);
 
-    // This can't underflow if of of the operands is known normal.
+    // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
       Known.knownNot(fcZero);
@@ -258,7 +258,7 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
       KnownRHS.cannotBeOrderedGreaterThanZero()) {
     Known.knownNot(OrderedGreaterThanZeroMask);
 
-    // This can't underflow if of of the operands is known normal.
+    // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
       Known.knownNot(fcZero);
