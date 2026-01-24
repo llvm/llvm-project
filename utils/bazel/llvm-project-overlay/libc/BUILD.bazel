@@ -3483,6 +3483,7 @@ libc_support_library(
     name = "__support_math_tan",
     hdrs = ["src/__support/math/tan.h"],
     deps = [
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",

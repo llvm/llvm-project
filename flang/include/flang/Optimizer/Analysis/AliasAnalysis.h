@@ -12,7 +12,9 @@
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 
 namespace fir {
@@ -234,6 +236,32 @@ private:
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.
   static bool isRecordWithPointerComponent(mlir::Type ty);
+
+  /// Return the symbol table nearest to the given operation.
+  /// If a SymbolTable has not been cached in symTabMap,
+  /// it will be created, which may be expensive.
+  const mlir::SymbolTable *getNearestSymbolTable(mlir::Operation *from);
+
+  /// Return true if the given symbol may correspond to a Fortran variable
+  /// with a TARGET attribute. 'from' is used to find the nearest
+  /// SymbolTable (by calling getNearestSymbolTable()).
+  bool symbolMayHaveTargetAttr(mlir::SymbolRefAttr symbol,
+                               mlir::Operation *from);
+
+  /// A map between operations with OpTrait::SymbolTable
+  /// and the SymbolTable objects associated with them.
+  /// TODO: it might be better to initialize just a single SymbolTable
+  /// during fir::AliasAnalysis construction, e.g. by giving
+  /// the constructor the operation from which the nearest SymbolTable
+  /// should be looked up. This implies that the users will have to
+  /// specify proper operation (e.g. 'module') so that the discovered
+  /// SymbolTable contains all the symbols that may appear during
+  /// the aliasing queries through the constructed AliasAnalysis
+  /// entity. On ther other hand, this approach may be too expensive
+  /// for the clients that create AliasAnalysis on the fly for just
+  /// a few values that are likely not globals.
+  /// We can have both modes for different clients.
+  llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

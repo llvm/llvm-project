@@ -174,6 +174,34 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
   p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
+/// Returns true if the given box value may be absent.
+/// The given value must have BaseBoxType.
+static bool mayBeAbsentBox(mlir::Value val) {
+  assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
+  while (val) {
+    mlir::Operation *defOp = val.getDefiningOp();
+    if (!defOp)
+      return true;
+
+    if (auto varIface = mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
+      return varIface.isOptional();
+
+    // Check for fir.embox and fir.rebox before checking for
+    // FortranObjectViewOpInterface, which they support.
+    // A box created by fir.embox/rebox cannot be absent.
+    if (mlir::isa<fir::ReboxOp, fir::EmboxOp, fir::LoadOp>(defOp))
+      return false;
+
+    if (auto viewIface =
+            mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp)) {
+      val = viewIface.getViewSource(mlir::cast<mlir::OpResult>(val));
+      continue;
+    }
+    break;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
@@ -1128,6 +1156,15 @@ std::optional<std::int64_t> fir::BoxAddrOp::getViewOffset(mlir::OpResult) {
   return 0;
 }
 
+mlir::Speculation::Speculatability fir::BoxAddrOp::getSpeculatability() {
+  // Do not speculate fir.box_addr with BoxProcType and BoxCharType
+  // inputs.
+  if (!mlir::isa<fir::BaseBoxType>(getVal().getType()))
+    return mlir::Speculation::NotSpeculatable;
+  return mayBeAbsentBox(getVal()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // BoxCharLenOp
 //===----------------------------------------------------------------------===//
@@ -1150,6 +1187,11 @@ mlir::Type fir::BoxDimsOp::getTupleType() {
   llvm::SmallVector<mlir::Type> triple{
       getResult(0).getType(), getResult(1).getType(), getResult(2).getType()};
   return mlir::TupleType::get(getContext(), triple);
+}
+
+mlir::Speculation::Speculatability fir::BoxDimsOp::getSpeculatability() {
+  return mayBeAbsentBox(getVal()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1628,6 +1670,22 @@ llvm::LogicalResult fir::ConvertOp::verify() {
     return mlir::success();
   return emitOpError("invalid type conversion")
          << getValue().getType() << " / " << getType();
+}
+
+mlir::Speculation::Speculatability fir::ConvertOp::getSpeculatability() {
+  // fir.convert is speculatable, in general. The only concern may be
+  // converting from or/and to floating point types, which may trigger
+  // some FP exceptions. Disallow speculating such converts for the time being.
+  // Also disallow speculation for converts to/from non-FIR types, except
+  // for some builtin types.
+  auto canSpeculateType = [](mlir::Type ty) {
+    if (fir::isa_fir_type(ty) || fir::isa_integer(ty))
+      return true;
+    return false;
+  };
+  return (canSpeculateType(getValue().getType()) && canSpeculateType(getType()))
+             ? mlir::Speculation::Speculatable
+             : mlir::Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2119,6 +2177,12 @@ std::optional<std::int64_t> fir::EmboxOp::getViewOffset(mlir::OpResult) {
   if (!getSlice())
     return 0;
   return std::nullopt;
+}
+
+mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
+  return (getSourceBox() && mayBeAbsentBox(getSourceBox()))
+             ? mlir::Speculation::NotSpeculatable
+             : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3415,6 +3479,11 @@ std::optional<std::int64_t> fir::ReboxOp::getViewOffset(mlir::OpResult) {
   if (!getSlice())
     return 0;
   return std::nullopt;
+}
+
+mlir::Speculation::Speculatability fir::ReboxOp::getSpeculatability() {
+  return mayBeAbsentBox(getBox()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
