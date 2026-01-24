@@ -3496,6 +3496,7 @@ libc_support_library(
     name = "__support_math_tanf",
     hdrs = ["src/__support/math/tanf.h"],
     deps = [
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
