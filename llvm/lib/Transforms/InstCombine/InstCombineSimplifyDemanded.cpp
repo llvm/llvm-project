@@ -3070,6 +3070,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return Copysign;
       }
 
+      FastMathFlags InferredFMF =
+          inferFastMathValueFlags(FMF, Known.KnownFPClasses, KnownSrc);
+      if (InferredFMF != FMF) {
+        CI->dropUBImplyingAttrsAndMetadata();
+        CI->setFastMathFlags(InferredFMF);
+        return CI;
+      }
+
       return nullptr;
     }
     case Intrinsic::fptrunc_round:
