@@ -54,9 +54,11 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
           Results.try_emplace(("::std::" + Name).str(), Replacer);
       };
 
-  // Single range algorithms.
+  // Single range algorithms. One per line, keep sorted.
+  // clang-format off
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(SingleSig),
-               {"adjacent_find",
+               {"accumulate",
+                "adjacent_find",
                 "all_of",
                 "any_of",
                 "binary_search",
@@ -85,6 +87,7 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
                 "uninitialized_copy",
                 "unique",
                 "upper_bound"});
+  // clang-format on
 
   // Two range algorithms.
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(TwoSig),
