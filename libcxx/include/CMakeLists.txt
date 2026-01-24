@@ -669,6 +669,7 @@ set(files
   __pstl/cpu_algos/transform_reduce.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
+  __pstl/index_iterator.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h

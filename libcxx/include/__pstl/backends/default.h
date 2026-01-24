@@ -14,6 +14,7 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
+#include <__algorithm/is_sorted_until.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/not_fn.h>
@@ -23,6 +24,7 @@
 #include <__iterator/next.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
+#include <__pstl/index_iterator.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -57,6 +59,7 @@ namespace __pstl {
 // - all_of
 // - none_of
 // - is_partitioned
+// - is_sorted_until
 //
 // for_each family
 // ---------------
@@ -178,6 +181,35 @@ struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
     ++__first;
     using _NoneOf = __dispatch<__none_of, __current_configuration, _ExecutionPolicy>;
     return _NoneOf()(__policy, std::move(__first), std::move(__last), __pred);
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_sorted_until<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using _DifferenceType    = typename std::iterator_traits<_ForwardIterator>::difference_type;
+      using _IndexIteratorType = __index_iterator<_DifferenceType>;
+
+      _DifferenceType __n = __last - __first;
+      if (__n <= 1)
+        return __last; // Sorted by definition
+
+      _IndexIteratorType __index_first{_DifferenceType{}};
+      _IndexIteratorType __index_last{__n - 1};
+
+      using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
+      auto __res    = _FindIf()(__policy, __index_first, __index_last, [&](_DifferenceType __index) -> bool {
+        return __comp(*(__first + __index + 1), *(__first + __index));
+      });
+      if (!__res)
+        return nullopt;
+      return __first + *(*__res) + 1;
+    } else {
+      return std::is_sorted_until(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
+    }
   }
 };
 

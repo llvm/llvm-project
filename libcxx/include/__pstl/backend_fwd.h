@@ -297,6 +297,11 @@ struct __reduce;
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
 //                       _Tp __init, _BinaryOperation __op) const noexcept;
 
+struct __is_sorted_until;
+// template <class _Policy, class _ForwardIterator, class _Comp>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
+
 template <class _Backend, class _ExecutionPolicy>
 struct __is_sorted;
 // template <class _Policy, class _ForwardIterator, class _Comp>

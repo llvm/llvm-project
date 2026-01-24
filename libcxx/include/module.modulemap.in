@@ -2356,6 +2356,7 @@ module std [system] {
     }
     module dispatch           { header "__pstl/dispatch.h" }
     module handle_exception   { header "__pstl/handle_exception.h" }
+    module index_iterator     { header "__pstl/index_iterator.h" }
   }
 
   // Miscellaneous modules for top-level headers
