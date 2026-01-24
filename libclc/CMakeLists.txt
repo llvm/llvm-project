@@ -117,7 +117,7 @@ else()
     PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 
   # Setup the paths where libclc runtimes should be stored. By default, in an
-  # in-tree build we place the libraries in clang's resource driectory.
+  # in-tree build we place the libraries in clang's resource directory.
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
   cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
 
