@@ -60,9 +60,13 @@
 #include "math/expm1f.h"
 #include "math/expm1f16.h"
 #include "math/f16fma.h"
+<<<<<<< HEAD
 #include "math/f16fmal.h"
 #include "math/f16sqrt.h"
 #include "math/f16sqrtl.h"
+=======
+#include "math/f16fmaf128.h"
+>>>>>>> a01ef8ee0824 (edited files)
 #include "math/frexpf.h"
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"

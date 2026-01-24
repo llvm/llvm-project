@@ -10,8 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_F16FMAF128_H
 
 #include "include/llvm-libc-macros/float128-macros.h"
+#include "include/llvm-libc-macros/float16-macros.h"
+#include "include/llvm-libc-types/float128.h"
+#include "include/llvm-libc-types/float16.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/common.h"
@@ -29,6 +33,7 @@ LIBC_INLINE static float16 f16fmaf128(float128 x, float128 y, float128 z) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
+#endif // LIBC_TYPES_HAS_FLOAT16
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_F16FMAF128_H
