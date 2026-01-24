@@ -354,6 +354,64 @@ public:
   void print(AsmPrinter &printer);
 };
 
+class DynamicOpTrait {
+public:
+  virtual LogicalResult verifyTrait(Operation *op) const { return success(); };
+  virtual LogicalResult verifyRegionTrait(Operation *op) const {
+    return success();
+  };
+
+  virtual TypeID getTypeID() const = 0;
+  virtual ~DynamicOpTrait() = default;
+};
+
+class DynamicOpTraitList {
+public:
+  void insert(std::unique_ptr<DynamicOpTrait> trait) {
+    traits.try_emplace(trait->getTypeID(), std::move(trait));
+  }
+
+  bool contains(TypeID id) const { return traits.contains(id); }
+
+  LogicalResult verifyTraits(Operation *op) const {
+    for (const auto &[_, trait] : traits) {
+      if (failed(trait->verifyTrait(op)))
+        return failure();
+    }
+    return success();
+  }
+
+  LogicalResult verifyRegionTraits(Operation *op) const {
+    for (const auto &[_, trait] : traits) {
+      if (failed(trait->verifyRegionTrait(op)))
+        return failure();
+    }
+    return success();
+  }
+
+private:
+  DenseMap<TypeID, std::unique_ptr<DynamicOpTrait>> traits;
+};
+
+template <template <typename T> class Trait>
+class DynamicOpTraitImpl : public DynamicOpTrait {
+public:
+  TypeID getTypeID() const override { return TypeID::get<Trait>(); }
+};
+
+namespace DynamicOpTraits {
+
+class IsTerminator : public DynamicOpTraitImpl<OpTrait::IsTerminator> {
+public:
+  LogicalResult verifyTrait(Operation *op) const override {
+    return OpTrait::impl::verifyIsTerminator(op);
+  }
+};
+
+class NoTerminator : public DynamicOpTraitImpl<OpTrait::NoTerminator> {};
+
+} // namespace DynamicOpTraits
+
 //===----------------------------------------------------------------------===//
 // Dynamic operation
 //===----------------------------------------------------------------------===//
@@ -437,6 +495,10 @@ public:
     populateDefaultAttrsFn = std::move(populateDefaultAttrs);
   }
 
+  void addTrait(std::unique_ptr<DynamicOpTrait> trait) {
+    traits.insert(std::move(trait));
+  }
+
   LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
                          SmallVectorImpl<OpFoldResult> &results) final {
     return foldHookFn(op, attrs, results);
@@ -445,7 +507,7 @@ public:
                                    MLIRContext *context) final {
     getCanonicalizationPatternsFn(set, context);
   }
-  bool hasTrait(TypeID id) final { return false; }
+  bool hasTrait(TypeID id) final { return traits.contains(id); }
   OperationName::ParseAssemblyFn getParseAssemblyFn() final {
     return [&](OpAsmParser &parser, OperationState &state) {
       return parseFn(parser, state);
@@ -459,9 +521,12 @@ public:
                      StringRef name) final {
     printFn(op, printer, name);
   }
-  LogicalResult verifyInvariants(Operation *op) final { return verifyFn(op); }
+  LogicalResult verifyInvariants(Operation *op) final {
+    return failure(failed(traits.verifyTraits(op)) || failed(verifyFn(op)));
+  }
   LogicalResult verifyRegionInvariants(Operation *op) final {
-    return verifyRegionFn(op);
+    return failure(failed(traits.verifyRegionTraits(op)) ||
+                   failed(verifyRegionFn(op)));
   }
 
   /// Implementation for properties (unsupported right now here).
@@ -494,7 +559,9 @@ public:
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
-  bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
+  bool compareProperties(OpaqueProperties, OpaqueProperties) final {
+    return false;
+  }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
 
 private:
@@ -518,6 +585,7 @@ private:
   OperationName::FoldHookFn foldHookFn;
   GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
   OperationName::PopulateDefaultAttrsFn populateDefaultAttrsFn;
+  DynamicOpTraitList traits;
 
   friend ExtensibleDialect;
 };
