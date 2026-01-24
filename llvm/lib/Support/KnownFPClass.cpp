@@ -279,6 +279,12 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  return fadd(KnownLHS, fneg(KnownRHS), Mode);
+}
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
