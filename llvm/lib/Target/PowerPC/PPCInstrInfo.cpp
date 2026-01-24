@@ -1643,8 +1643,9 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 
   BuildMI(MBB, MI, dl, get(OpCode), DestReg)
-    .addReg(FirstReg).addReg(SecondReg)
-    .addReg(Cond[1].getReg(), 0, SubIdx);
+      .addReg(FirstReg)
+      .addReg(SecondReg)
+      .addReg(Cond[1].getReg(), {}, SubIdx);
 }
 
 static unsigned getCRBitValue(unsigned CRBit) {
@@ -3004,17 +3005,31 @@ bool PPCInstrInfo::shouldClusterMemOps(
 unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (Opcode == PPC::INLINEASM || Opcode == PPC::INLINEASM_BR) {
+  switch (Opcode) {
+  case PPC::INLINEASM:
+  case PPC::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
-  } else if (Opcode == TargetOpcode::STACKMAP) {
+  }
+  case TargetOpcode::STACKMAP: {
     StackMapOpers Opers(&MI);
     return Opers.getNumPatchBytes();
-  } else if (Opcode == TargetOpcode::PATCHPOINT) {
+  }
+  case TargetOpcode::PATCHPOINT: {
     PatchPointOpers Opers(&MI);
     return Opers.getNumPatchBytes();
-  } else {
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+    return Num * 4;
+  }
+  default:
     return get(Opcode).getSize();
   }
 }

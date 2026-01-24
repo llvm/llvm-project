@@ -9,6 +9,7 @@
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 
 target triple = "dxil-pc-shadermodel6.7-library"
+%dx.types.fouri32 = type { i32, i32, i32, i32 }
 
 ; Test the indiviual ops that they have the same Shader Wave flag at the
 ; function level to ensure that each op is setting it accordingly
@@ -94,5 +95,12 @@ define void @wave_active_countbits(i1 %expr) {
 entry:
   ; CHECK: Function wave_active_countbits : [[WAVE_FLAG]]
   %0 = call i32 @llvm.dx.wave.active.countbits(i1 %expr)
+  ret void
+}
+
+define void @wave_active_ballot(i1 %expr) {
+entry:
+  ; CHECK: Function wave_active_ballot : [[WAVE_FLAG]]
+  %0 = call %dx.types.fouri32 @llvm.dx.wave.ballot(i1 %expr)
   ret void
 }

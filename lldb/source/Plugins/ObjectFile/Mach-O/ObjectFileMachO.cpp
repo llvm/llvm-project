@@ -1058,7 +1058,7 @@ bool ObjectFileMachO::ParseHeader() {
 
     ModuleSpecList all_specs;
     ModuleSpec base_spec;
-    GetAllArchSpecs(m_header, *m_data_nsp.get(),
+    GetAllArchSpecs(m_header, *m_data_nsp,
                     MachHeaderSizeFromMagic(m_header.magic), base_spec,
                     all_specs);
 
@@ -2493,9 +2493,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       exports_trie_load_command.dataoff += linkedit_slide;
     }
 
-    nlist_data.SetData(*m_data_nsp.get(), symtab_load_command.symoff,
+    nlist_data.SetData(*m_data_nsp, symtab_load_command.symoff,
                        nlist_data_byte_size);
-    strtab_data.SetData(*m_data_nsp.get(), symtab_load_command.stroff,
+    strtab_data.SetData(*m_data_nsp, symtab_load_command.stroff,
                         strtab_data_byte_size);
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
@@ -2503,21 +2503,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     lldbassert(!((dyld_info.export_size > 0)
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
-      dyld_trie_data.SetData(*m_data_nsp.get(), dyld_info.export_off,
+      dyld_trie_data.SetData(*m_data_nsp, dyld_info.export_off,
                              dyld_info.export_size);
     } else if (exports_trie_load_command.datasize > 0) {
-      dyld_trie_data.SetData(*m_data_nsp.get(),
-                             exports_trie_load_command.dataoff,
+      dyld_trie_data.SetData(*m_data_nsp, exports_trie_load_command.dataoff,
                              exports_trie_load_command.datasize);
     }
 
     if (dysymtab.nindirectsyms != 0) {
-      indirect_symbol_index_data.SetData(*m_data_nsp.get(),
-                                         dysymtab.indirectsymoff,
+      indirect_symbol_index_data.SetData(*m_data_nsp, dysymtab.indirectsymoff,
                                          dysymtab.nindirectsyms * 4);
     }
     if (function_starts_load_command.cmd) {
-      function_starts_data.SetData(*m_data_nsp.get(),
+      function_starts_data.SetData(*m_data_nsp,
                                    function_starts_load_command.dataoff,
                                    function_starts_load_command.datasize);
     }
@@ -4570,7 +4568,7 @@ void ObjectFileMachO::Dump(Stream *s) {
     *s << ", file = '" << m_file;
     ModuleSpecList all_specs;
     ModuleSpec base_spec;
-    GetAllArchSpecs(m_header, *m_data_nsp.get(),
+    GetAllArchSpecs(m_header, *m_data_nsp,
                     MachHeaderSizeFromMagic(m_header.magic), base_spec,
                     all_specs);
     for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
@@ -4878,7 +4876,7 @@ UUID ObjectFileMachO::GetUUID() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    return GetUUID(m_header, *m_data_nsp.get(), offset);
+    return GetUUID(m_header, *m_data_nsp, offset);
   }
   return UUID();
 }
@@ -5549,8 +5547,7 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
         m_thread_context_offsets.GetEntryAtIndex(idx);
     if (thread_context_file_range) {
 
-      DataExtractor data(*m_data_nsp.get(),
-                         thread_context_file_range->GetRangeBase(),
+      DataExtractor data(*m_data_nsp, thread_context_file_range->GetRangeBase(),
                          thread_context_file_range->GetByteSize());
 
       switch (m_header.cputype) {
@@ -5722,7 +5719,7 @@ ArchSpec ObjectFileMachO::GetArchitecture() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    return GetArchitecture(module_sp, m_header, *m_data_nsp.get(),
+    return GetArchitecture(module_sp, m_header, *m_data_nsp,
                            MachHeaderSizeFromMagic(m_header.magic));
   }
   return arch;
@@ -5893,16 +5890,14 @@ static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
 llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
   if (!m_min_os_version)
     m_min_os_version = FindMinimumVersionInfo(
-        *m_data_nsp.get(), MachHeaderSizeFromMagic(m_header.magic),
-        m_header.ncmds);
+        *m_data_nsp, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_min_os_version;
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
   if (!m_sdk_versions)
     m_sdk_versions = FindMinimumVersionInfo(
-        *m_data_nsp.get(), MachHeaderSizeFromMagic(m_header.magic),
-        m_header.ncmds);
+        *m_data_nsp, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_sdk_versions;
 }
 
