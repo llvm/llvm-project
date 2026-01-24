@@ -97,6 +97,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-use-vector-utils
+  <clang-tidy/checks/llvm/use-vector-utils>` check.
+
+  Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
+  ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
+  ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

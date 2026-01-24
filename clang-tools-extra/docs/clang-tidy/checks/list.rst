@@ -258,6 +258,7 @@ Clang-Tidy Checks
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
+   :doc:`llvm-use-vector-utils <llvm/use-vector-utils>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
