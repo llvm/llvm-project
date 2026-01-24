@@ -246,8 +246,6 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
                 Result.Context->getLangOpts()));
       } else {
         assert(ReverseDescriptor && "Couldn't find forward argument");
-        if (!ReverseDescriptor)
-          return;
         ArgNode.push_back('R');
         ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode);
         assert(ArgExpr && "Couldn't find forward or reverse argument");

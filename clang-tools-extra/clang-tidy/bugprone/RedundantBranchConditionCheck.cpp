@@ -135,9 +135,8 @@ void RedundantBranchConditionCheck::check(
     if (OtherSide && OtherSide->HasSideEffects(*Result.Context)) {
       const SourceLocation BeforeOtherSide =
           OtherSide->getBeginLoc().getLocWithOffset(-1);
-      const auto NextToken = utils::lexer::findNextTokenSkippingComments(
-          OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts());
-      if (NextToken) {
+      if (const auto NextToken = utils::lexer::findNextTokenSkippingComments(
+              OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts())) {
         const SourceLocation AfterOtherSide = NextToken->getLocation();
         Diag << FixItHint::CreateRemoval(
                     CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
@@ -168,9 +167,9 @@ void RedundantBranchConditionCheck::check(
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
     } else {
-      const auto NextToken = utils::lexer::findNextTokenSkippingComments(
-          CondOp->getLHS()->getEndLoc(), *Result.SourceManager, getLangOpts());
-      if (NextToken) {
+      if (const auto NextToken = utils::lexer::findNextTokenSkippingComments(
+              CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
+              getLangOpts())) {
         const SourceLocation AfterLHS = NextToken->getLocation();
         Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
             AfterLHS, CondOp->getRHS()->getEndLoc()));
