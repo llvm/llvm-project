@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/math/sinhfcoshf_utils.h"
+#include "sinhfcoshf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -14,11 +14,11 @@
 #include "src/__support/math/sinhf.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace shared {
-using math::sinhf;
-} // namespace shared
 
+using math::sinhf;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SHARED_MATH_SINHF_H
