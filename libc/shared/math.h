@@ -84,6 +84,7 @@
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
+#include "math/sqrtf16.h"
 #include "math/tan.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
