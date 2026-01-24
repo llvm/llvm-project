@@ -215,7 +215,7 @@ void python_generator::print_callback(ParmVarDecl *param, int arg)
 	QualType type = param->getOriginalType();
 	const FunctionProtoType *fn = extract_prototype(type);
 	QualType return_type = fn->getReturnType();
-	unsigned n_arg = fn->getNumParams();
+	unsigned n_arg = fn->getNumArgs();
 
 	printf("        exc_info = [None]\n");
 	printf("        fn = CFUNCTYPE(");
@@ -224,7 +224,7 @@ void python_generator::print_callback(ParmVarDecl *param, int arg)
 	else
 		printf("c_void_p");
 	for (unsigned i = 0; i < n_arg - 1; ++i) {
-		if (!is_isl_type(fn->getParamType(i)))
+		if (!is_isl_type(fn->getArgType(i)))
 			die("Argument has non-isl type");
 		printf(", c_void_p");
 	}
@@ -238,11 +238,11 @@ void python_generator::print_callback(ParmVarDecl *param, int arg)
 	printf("):\n");
 	for (unsigned i = 0; i < n_arg - 1; ++i) {
 		string arg_type;
-		arg_type = type2python(extract_type(fn->getParamType(i)));
+		arg_type = type2python(extract_type(fn->getArgType(i)));
 		printf("            cb_arg%d = %s(ctx=arg0.ctx, ptr=",
 			i, arg_type.c_str());
 		if (!callback_takes_argument(param, i))
-			print_copy(fn->getParamType(i));
+			print_copy(fn->getArgType(i));
 		printf("(cb_arg%d))\n", i);
 	}
 	printf("            try:\n");

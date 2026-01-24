@@ -974,25 +974,19 @@ static int parse_str_option(struct isl_arg *decl, char **arg,
 	return 0;
 }
 
-int isl_arg_str_list_append(int *n, const char ***list, const char *s)
-{
-	const char **new_list;
-
-	new_list = realloc(*list, (*n + 1) * sizeof(char *));
-	if (!new_list)
-		return -1;
-	*list = new_list;
-	new_list[*n] = strdup(s);
-	return isl_stat_non_null(new_list[(*n)++]);
-}
-
-static int arg_str_list_append(struct isl_arg *decl, void *opt,
+static int isl_arg_str_list_append(struct isl_arg *decl, void *opt,
 	const char *s)
 {
 	int *n = (int *)(((char *) opt) + decl->u.str_list.offset_n);
-	const char ***list = (const char ***)(((char *) opt) + decl->offset);
+	char **list = *(char ***)(((char *) opt) + decl->offset);
 
-	return isl_arg_str_list_append(n, list, s);
+	list = realloc(list, (*n + 1) * sizeof(char *));
+	if (!list)
+		return -1;
+	*(char ***)(((char *) opt) + decl->offset) = list;
+	list[*n] = strdup(s);
+	(*n)++;
+	return 0;
 }
 
 static int parse_str_list_option(struct isl_arg *decl, char **arg,
@@ -1006,12 +1000,12 @@ static int parse_str_list_option(struct isl_arg *decl, char **arg,
 		return 0;
 
 	if (has_argument) {
-		arg_str_list_append(decl, opt, s);
+		isl_arg_str_list_append(decl, opt, s);
 		return 1;
 	}
 
 	if (arg[1]) {
-		arg_str_list_append(decl, opt, arg[1]);
+		isl_arg_str_list_append(decl, opt, arg[1]);
 		return 2;
 	}
 
