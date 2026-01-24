@@ -585,10 +585,17 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 /// where the client will ask if E can be computed shifted right by 64-bits. If
 /// this succeeds, getShiftedValue() will be called to produce the value.
 bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
-                                          bool IsLeftShift, Instruction *CxtI) {
-  // We can always evaluate immediate constants.
-  if (match(V, m_ImmConstant()))
-    return true;
+                                          unsigned ShiftOp, Instruction *CxtI) {
+  // We can always evaluate immediate constants shifted left. For right shifts,
+  // the constant must be a multiple of 2^NumBits to avoid losing information.
+  if (match(V, m_ImmConstant())) {
+    if (ShiftOp == Instruction::Shl)
+      return true;
+    const APInt *C;
+    if (match(V, m_APIntAllowPoison(C)))
+      return C->countr_zero() >= NumBits;
+    return false;
+  }
 
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return false;
@@ -603,19 +610,20 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   case Instruction::Or:
   case Instruction::Xor:
     // Bitwise operators can all arbitrarily be arbitrarily evaluated shifted.
-    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, I) &&
-           canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, I);
+    return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
+           canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
 
   case Instruction::Shl:
   case Instruction::LShr:
-    return canEvaluateShiftedShift(NumBits, IsLeftShift, I, *this, CxtI);
+    return canEvaluateShiftedShift(NumBits, ShiftOp == Instruction::Shl, I,
+                                   *this, CxtI);
 
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
     Value *TrueVal = SI->getTrueValue();
     Value *FalseVal = SI->getFalseValue();
-    return canEvaluateShifted(TrueVal, NumBits, IsLeftShift, SI) &&
-           canEvaluateShifted(FalseVal, NumBits, IsLeftShift, SI);
+    return canEvaluateShifted(TrueVal, NumBits, ShiftOp, SI) &&
+           canEvaluateShifted(FalseVal, NumBits, ShiftOp, SI);
   }
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
@@ -623,19 +631,20 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
     // instructions with a single use.
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!canEvaluateShifted(IncValue, NumBits, IsLeftShift, PN))
+      if (!canEvaluateShifted(IncValue, NumBits, ShiftOp, PN))
         return false;
     return true;
   }
   case Instruction::Mul: {
     const APInt *MulConst;
     // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
-    return !IsLeftShift && match(I->getOperand(1), m_APInt(MulConst)) &&
+    return ShiftOp != Instruction::Shl &&
+           match(I->getOperand(1), m_APInt(MulConst)) &&
            MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
   }
   case Instruction::Add: {
     bool CanHandleAdd = false;
-    if (IsLeftShift)
+    if (ShiftOp == Instruction::Shl)
       CanHandleAdd = cast<BinaryOperator>(I)->hasNoSignedWrap();
     else {
       const APInt *C;
@@ -643,8 +652,8 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
         CanHandleAdd = C->countr_zero() >= NumBits;
     }
     if (CanHandleAdd)
-      return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, I) &&
-             canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, I);
+      return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
+             canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
 
     return false;
   }
@@ -717,13 +726,14 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
 /// When canEvaluateShifted() returns true for an expression, this function
 /// inserts the new computation that produces the shifted value.
 Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
-                                         bool isLeftShift) {
+                                         unsigned ShiftOp) {
   // We can always evaluate constants shifted.
   if (Constant *C = dyn_cast<Constant>(V)) {
-    if (isLeftShift)
+    if (ShiftOp == Instruction::Shl)
       return Builder.CreateShl(C, NumBits);
     else
-      return Builder.CreateAShr(C, NumBits);
+      return Builder.CreateBinOp((Instruction::BinaryOps)ShiftOp, C,
+                                 ConstantInt::get(C->getType(), NumBits));
   }
 
   Instruction *I = cast<Instruction>(V);
@@ -735,25 +745,27 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
   case Instruction::Or:
   case Instruction::Xor:
     // Bitwise operators can all arbitrarily be arbitrarily evaluated shifted.
-    I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, isLeftShift));
-    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift));
+    I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, ShiftOp));
+    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, ShiftOp));
     return I;
 
   case Instruction::Shl:
   case Instruction::LShr: {
     auto *OBO = dyn_cast<OverflowingBinaryOperator>(I);
 
-    if (!isLeftShift && OBO && OBO->hasNoSignedWrap() &&
-        match(I->getOperand(1), m_SpecificInt(NumBits)))
-      return I->getOperand(0);
+    if (OBO && match(I->getOperand(1), m_SpecificInt(NumBits))) {
+      if ((ShiftOp == Instruction::AShr && OBO->hasNoSignedWrap()) ||
+          (ShiftOp == Instruction::LShr && OBO->hasNoUnsignedWrap()))
+        return I->getOperand(0);
+    }
 
-    return foldShiftedShift(cast<BinaryOperator>(I), NumBits, isLeftShift,
-                            Builder);
+    return foldShiftedShift(cast<BinaryOperator>(I), NumBits,
+                            ShiftOp == Instruction::Shl, Builder);
   }
 
   case Instruction::Select:
-    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift));
-    I->setOperand(2, getShiftedValue(I->getOperand(2), NumBits, isLeftShift));
+    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, ShiftOp));
+    I->setOperand(2, getShiftedValue(I->getOperand(2), NumBits, ShiftOp));
     return I;
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
@@ -762,11 +774,11 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
     PHINode *PN = cast<PHINode>(I);
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
       PN->setIncomingValue(
-          i, getShiftedValue(PN->getIncomingValue(i), NumBits, isLeftShift));
+          i, getShiftedValue(PN->getIncomingValue(i), NumBits, ShiftOp));
     return PN;
   }
   case Instruction::Mul: {
-    assert(!isLeftShift && "Unexpected shift direction!");
+    assert(ShiftOp != Instruction::Shl && "Unexpected shift direction!");
     auto *Neg = BinaryOperator::CreateNeg(I->getOperand(0));
     InsertNewInstWith(Neg, I->getIterator());
     unsigned TypeWidth = I->getType()->getScalarSizeInBits();
@@ -777,8 +789,8 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
     return InsertNewInstWith(And, I->getIterator());
   }
   case Instruction::Add: {
-    I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, isLeftShift));
-    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift));
+    I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, ShiftOp));
+    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, ShiftOp));
     return I;
   }
   }
@@ -851,14 +863,14 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   // See if we can propagate this shift into the input, this covers the trivial
   // cast of lshr(shl(x,c1),c2) as well as other more complex cases.
   if (I.getOpcode() != Instruction::AShr &&
-      canEvaluateShifted(Op0, Op1C->getZExtValue(), IsLeftShift, &I)) {
+      canEvaluateShifted(Op0, Op1C->getZExtValue(), I.getOpcode(), &I)) {
     LLVM_DEBUG(
         dbgs() << "ICE: GetShiftedValue propagating shift through expression"
                   " to eliminate shift:\n  IN: "
                << *Op0 << "\n  SH: " << I << "\n");
 
     return replaceInstUsesWith(
-        I, getShiftedValue(Op0, Op1C->getZExtValue(), IsLeftShift));
+        I, getShiftedValue(Op0, Op1C->getZExtValue(), I.getOpcode()));
   }
 
   if (Instruction *FoldedShift = foldBinOpIntoSelectOrPhi(I))

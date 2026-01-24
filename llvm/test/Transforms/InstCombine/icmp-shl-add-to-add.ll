@@ -168,3 +168,45 @@ define <2 x i1> @shl_add_const_eq_vec_non_splat(<2 x i64> %v0, <2 x i64> %v3) {
   %v6 = icmp eq <2 x i64> %v1, %v5
   ret <2 x i1> %v6
 }
+
+; Test: Commutative (shl on the right side).
+define i1 @shl_add_const_eq_commutative(i64 %v0, i64 %v3) {
+; CHECK-LABEL: @shl_add_const_eq_commutative(
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V0:%.*]], [[V5]]
+; CHECK-NEXT:    ret i1 [[V6]]
+;
+  %v1 = shl nsw i64 %v0, 5
+  %v4 = shl nsw i64 %v3, 5
+  %v5 = add nsw i64 %v4, 32
+  %v6 = icmp eq i64 %v5, %v1
+  ret i1 %v6
+}
+
+; Test: Variable shift amount with nuw (Logical)
+define i1 @icmp_shl_var_amount_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_var_amount_nuw(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i32 [[Y1:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nuw i32 %x, 5
+  %shly = shl nuw i32 %y, 5
+  %add = add nuw i32 %shly, 32
+  %cmp = icmp eq i32 %shlx, %add
+  ret i1 %cmp
+}
+
+; Test: Variable shift amount with nsw (Arithmetic)
+define i1 @icmp_shl_var_amount_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_var_amount_nsw(
+; CHECK-NEXT:    [[Y:%.*]] = add nsw i32 [[Y1:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nsw i32 %x, 5
+  %shly = shl nsw i32 %y, 5
+  %add = add nsw i32 %shly, 32
+  %cmp = icmp eq i32 %shlx, %add
+  ret i1 %cmp
+}

@@ -448,9 +448,9 @@ private:
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
 
-  bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
+  bool canEvaluateShifted(Value *V, unsigned NumBits, unsigned ShiftOp,
                           Instruction *CxtI);
-  Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift);
+  Value *getShiftedValue(Value *V, unsigned NumBits, unsigned ShiftOp);
 
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
