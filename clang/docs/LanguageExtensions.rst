@@ -5445,11 +5445,12 @@ The boolean interpretation of the predicate values returned by the builtins:
 When invoked while compiling for a concrete target, the builtins are evaluated
 early by Clang, and never produce any CodeGen effects / have no observable
 side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
-which is an abstract target, a series of predicate values are implicitly
-created. These predicates get resolved when finalizing the compilation process
-for a concrete target, and shall reflect the latter's identity and features.
-Thus, it is possible to author high-level code, in e.g. HIP, that is target
-adaptive in a dynamic fashion, contrary to macro based mechanisms.
+which is an abstract target, a series of specialization constants are implicitly
+created, in correspondence with the predicates. These predicates get resolved
+when finalizing the compilation process for a concrete target, and shall reflect
+the latter's identity and features. Thus, it is possible to author high-level
+code, in e.g. HIP, that is target adaptive in a dynamic fashion, contrary to
+macro based mechanisms.
 
 __builtin_amdgcn_ballot_w{32,64}
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
