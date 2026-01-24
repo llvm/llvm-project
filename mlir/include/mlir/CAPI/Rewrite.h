@@ -32,6 +32,7 @@ DEFINE_C_API_PTR_METHODS(MlirConversionPattern, const mlir::ConversionPattern)
 DEFINE_C_API_PTR_METHODS(MlirTypeConverter, mlir::TypeConverter)
 DEFINE_C_API_PTR_METHODS(MlirConversionPatternRewriter,
                          mlir::ConversionPatternRewriter)
+DEFINE_C_API_PTR_METHODS(MlirConversionConfig, mlir::ConversionConfig)
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 DEFINE_C_API_PTR_METHODS(MlirPDLPatternModule, mlir::PDLPatternModule)
@@ -39,4 +40,4 @@ DEFINE_C_API_PTR_METHODS(MlirPDLResultList, mlir::PDLResultList)
 DEFINE_C_API_PTR_METHODS(MlirPDLValue, const mlir::PDLValue)
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
-#endif // MLIR_CAPIREWRITER_H
+#endif // MLIR_CAPI_REWRITE_H

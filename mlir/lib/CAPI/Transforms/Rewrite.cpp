@@ -446,7 +446,7 @@ mlirApplyPartialConversion(MlirOperation op, MlirConversionTarget target,
                            MlirFrozenRewritePatternSet patterns,
                            MlirConversionConfig config) {
   return wrap(mlir::applyPartialConversion(unwrap(op), *unwrap(target),
-                                           *unwrap(patterns)));
+                                           *unwrap(patterns), *unwrap(config)));
 }
 
 MlirLogicalResult mlirApplyFullConversion(MlirOperation op,
@@ -454,7 +454,58 @@ MlirLogicalResult mlirApplyFullConversion(MlirOperation op,
                                           MlirFrozenRewritePatternSet patterns,
                                           MlirConversionConfig config) {
   return wrap(mlir::applyFullConversion(unwrap(op), *unwrap(target),
-                                        *unwrap(patterns)));
+                                        *unwrap(patterns), *unwrap(config)));
+}
+
+//===----------------------------------------------------------------------===//
+/// ConversionConfig API
+//===----------------------------------------------------------------------===//
+
+MlirConversionConfig mlirConversionConfigCreate(void) {
+  return wrap(new mlir::ConversionConfig());
+}
+
+void mlirConversionConfigDestroy(MlirConversionConfig config) {
+  delete unwrap(config);
+}
+
+void mlirConversionConfigSetFoldingMode(MlirConversionConfig config,
+                                        MlirDialectConversionFoldingMode mode) {
+  mlir::DialectConversionFoldingMode cppMode;
+  switch (mode) {
+  case MLIR_DIALECT_CONVERSION_FOLDING_MODE_NEVER:
+    cppMode = mlir::DialectConversionFoldingMode::Never;
+    break;
+  case MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS:
+    cppMode = mlir::DialectConversionFoldingMode::BeforePatterns;
+    break;
+  case MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS:
+    cppMode = mlir::DialectConversionFoldingMode::AfterPatterns;
+    break;
+  }
+  unwrap(config)->foldingMode = cppMode;
+}
+
+MlirDialectConversionFoldingMode
+mlirConversionConfigGetFoldingMode(MlirConversionConfig config) {
+  switch (unwrap(config)->foldingMode) {
+  case mlir::DialectConversionFoldingMode::Never:
+    return MLIR_DIALECT_CONVERSION_FOLDING_MODE_NEVER;
+  case mlir::DialectConversionFoldingMode::BeforePatterns:
+    return MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS;
+  case mlir::DialectConversionFoldingMode::AfterPatterns:
+    return MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS;
+  }
+}
+
+void mlirConversionConfigEnableBuildMaterializations(
+    MlirConversionConfig config, bool enable) {
+  unwrap(config)->buildMaterializations = enable;
+}
+
+bool mlirConversionConfigIsBuildMaterializationsEnabled(
+    MlirConversionConfig config) {
+  return unwrap(config)->buildMaterializations;
 }
 
 //===----------------------------------------------------------------------===//

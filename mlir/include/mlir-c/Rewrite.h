@@ -439,6 +439,41 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyFullConversion(
     MlirFrozenRewritePatternSet patterns, MlirConversionConfig config);
 
 //===----------------------------------------------------------------------===//
+/// ConversionConfig API
+//===----------------------------------------------------------------------===//
+
+/// Create a default ConversionConfig.
+MLIR_CAPI_EXPORTED MlirConversionConfig mlirConversionConfigCreate(void);
+
+/// Destroy the given ConversionConfig.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigDestroy(MlirConversionConfig config);
+
+typedef enum {
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_NEVER,
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS,
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS,
+} MlirDialectConversionFoldingMode;
+
+/// Set the folding mode for the given ConversionConfig.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigSetFoldingMode(MlirConversionConfig config,
+                                   MlirDialectConversionFoldingMode mode);
+
+/// Get the folding mode for the given ConversionConfig.
+MLIR_CAPI_EXPORTED MlirDialectConversionFoldingMode
+mlirConversionConfigGetFoldingMode(MlirConversionConfig config);
+
+/// Enable or disable building materializations during conversion.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigEnableBuildMaterializations(MlirConversionConfig config,
+                                                bool enable);
+
+/// Check if building materializations during conversion is enabled.
+MLIR_CAPI_EXPORTED bool
+mlirConversionConfigIsBuildMaterializationsEnabled(MlirConversionConfig config);
+
+//===----------------------------------------------------------------------===//
 /// PatternRewriter API
 //===----------------------------------------------------------------------===//
 
