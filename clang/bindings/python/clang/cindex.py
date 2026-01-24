@@ -3283,8 +3283,26 @@ class CodeCompletionResults(ClangObject):
     def __del__(self) -> None:
         conf.lib.clang_disposeCodeCompleteResults(self)
 
+    def __len__(self) -> int:
+        return self.ptr.contents.numResults
+
+    def __getitem__(self, key: int) -> CodeCompletionResult:
+        if len(self) <= key:
+            raise IndexError
+
+        return self.ptr.contents.results[key]
+
     @property
     def results(self) -> CCRStructure:
+        warnings.warn(
+            "Access to 'CodeCompletionResult's through "
+            "'CodeCompletionResults.results' will be removed in a future release."
+            "Existing uses of 'CodeCompletionResults.results' should be changed "
+            "to directly use 'CodeCompletionResults': it nows supports '__len__' "
+            "and '__getitem__', so it can be used the same as "
+            "'CodeCompletionResults.results'.",
+            DeprecationWarning,
+        )
         return self.ptr.contents
 
     @property

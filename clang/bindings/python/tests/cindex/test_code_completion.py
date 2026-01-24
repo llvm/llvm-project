@@ -14,7 +14,7 @@ class TestCodeCompletion(unittest.TestCase):
         self.assertIsNotNone(cr)
         self.assertEqual(len(cr.diagnostics), 0)
 
-        completions = [str(c) for c in cr.results]
+        completions = [str(c) for c in cr]
 
         for c in expected:
             self.assertIn(c, completions)
