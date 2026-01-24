@@ -107,7 +107,8 @@ struct SimplifyQuery {
 
   SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
-    Copy.CxtI = I;
+    if (I)
+      Copy.CxtI = I;
     return Copy;
   }
   SimplifyQuery getWithoutUndef() const {
