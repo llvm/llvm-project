@@ -220,21 +220,6 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 ///}
 
 #if defined(__SPIRV__)
-
-uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope) {
-  uint32_t Old;
-  while (true) {
-    Old = atomic::load(Address, Ordering, MemScope);
-    if (Old >= Val) {
-      if (atomic::cas(Address, Old, 0u, Ordering, Ordering, MemScope))
-        break;
-    } else if (atomic::cas(Address, Old, Old + 1, Ordering, Ordering, MemScope))
-      break;
-  }
-  return Old;
-}
-
 void namedBarrierInit() { __builtin_trap(); } // TODO
 void namedBarrier() { __builtin_trap(); }     // TODO
 void fenceTeam(atomic::OrderingTy Ordering) {

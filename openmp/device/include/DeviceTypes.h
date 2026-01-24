@@ -136,8 +136,7 @@ using __kmpc_impl_lanemask_t = LaneMaskTy;
 // Since function pointers are passed as regular void * pointers it is
 // necessary to annotate them with proper address space to avoid casting
 // errors during compilation.
-const uint32_t ProgramAS = 9;
-using FnPtrTy = __attribute__((address_space(ProgramAS))) void *;
+using FnPtrTy = __attribute__((address_space(9))) void *;
 #else
 using FnPtrTy = void *;
 #endif
