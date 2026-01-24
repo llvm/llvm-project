@@ -167,3 +167,7 @@ View construct_but_return_other(const MyObj& in [[clang::noescape]]) {
   MyObj other;
   return other;
 }
+
+int* return_spaced_brackets(int* p [ [clang::noescape] /*some comment*/ ]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  return p; // expected-note {{returned here}}
+}

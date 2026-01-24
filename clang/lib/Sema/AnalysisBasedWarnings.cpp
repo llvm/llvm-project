@@ -2930,11 +2930,40 @@ public:
   void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                const Expr *EscapeExpr) override {
     const auto *Attr = ParmWithNoescape->getAttr<NoEscapeAttr>();
+    SourceRange RemovalRange = Attr->getRange();
+
+    // For [[clang::noescape]], Attr->getRange() only covers the inner
+    // 'clang::noescape' part. Extend to include the '[[' and ']]' brackets.
+    if (Attr->isStandardAttributeSyntax()) {
+      const SourceManager &SM = S.getSourceManager();
+      const LangOptions &LO = S.getLangOpts();
+
+      auto SecondOpen = Lexer::findPreviousToken(
+          Attr->getRange().getBegin(), SM, LO, /*IncludeComments=*/false);
+      auto FirstOpen =
+          SecondOpen && SecondOpen->is(tok::l_square)
+              ? Lexer::findPreviousToken(SecondOpen->getLocation(), SM, LO,
+                                         /*IncludeComments=*/false)
+              : std::nullopt;
+
+      auto FirstClose = Lexer::findNextToken(Attr->getRange().getEnd(), SM, LO,
+                                             /*IncludeComments=*/false);
+      auto SecondClose =
+          FirstClose && FirstClose->is(tok::r_square)
+              ? Lexer::findNextToken(FirstClose->getLocation(), SM, LO,
+                                     /*IncludeComments=*/false)
+              : std::nullopt;
+
+      if ((FirstOpen && FirstOpen->is(tok::l_square)) &&
+          (SecondClose && SecondClose->is(tok::r_square)))
+        RemovalRange = {FirstOpen->getLocation(), SecondClose->getLocation()};
+    }
 
     S.Diag(ParmWithNoescape->getBeginLoc(),
            diag::warn_lifetime_safety_noescape_escapes)
         << ParmWithNoescape->getSourceRange()
-        << FixItHint::CreateRemoval(Attr->getRange());
+        << FixItHint::CreateRemoval(RemovalRange);
+
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
