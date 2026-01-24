@@ -1158,8 +1158,8 @@ static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
 /// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
 ///        ComputeReductionResult(ReducedIV), Start.
 static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
-  return cast_or_null<VPInstruction>(
-      findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
+  return cast<VPInstruction>(
+      vputils::findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         return VPI &&
                matchFindIVResult(VPI, m_Specific(BackedgeVal), m_VPValue());
