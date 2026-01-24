@@ -982,6 +982,10 @@ struct ConvertXeVMToLLVMPass
       RewritePatternSet vectorPatterns(&getContext());
       vectorPatterns.add<HandleVectorExtractPattern>(&getContext());
       GreedyRewriteConfig config{};
+      // folding can remove ops with temporary attributes used to
+      // represent LLVM metadata, so disable it here.
+      // Effectively just this single pattern is applied without any
+      // op folding patterns from dialects.
       config.enableFolding(false);
       if (failed(applyPatternsGreedily(getOperation(),
                                        std::move(vectorPatterns), config)))
