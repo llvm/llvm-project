@@ -136,7 +136,7 @@ using __kmpc_impl_lanemask_t = LaneMaskTy;
 // Since function pointers are passed as regular void * pointers it is
 // necessary to annotate them with proper address space to avoid casting
 // errors during compilation.
-using FnPtrTy = __attribute__((address_space(9))) void *;
+using FnPtrTy = void [[clang::address_space(9)]] *;
 #else
 using FnPtrTy = void *;
 #endif
