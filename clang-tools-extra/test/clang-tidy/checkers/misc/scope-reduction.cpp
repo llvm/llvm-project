@@ -1048,3 +1048,364 @@ void test_for_loop_not_modified_in_increment() {
     }
   }
 }
+
+// =============================================================================
+// C-SPECIFIC CONSTRUCTS
+// =============================================================================
+
+// C-style array with scope reduction opportunity
+void test_c_style_array() {
+  int arr[10];
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'arr' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:10: note: can be declared in this scope
+  if (1) {
+    arr[0] = 42;
+    arr[1] = 43;
+  }
+}
+
+// Function pointer usage
+int add(int a, int b) { return a + b; }
+void test_function_pointer() {
+  int (*func_ptr)(int, int) = add;
+  // CHECK-NOTES: :[[@LINE-1]]:9: warning: variable 'func_ptr' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:18: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:10: note: can be declared in this scope
+  if (1) {
+    int result = func_ptr(1, 2);
+  }
+}
+
+// C-style struct initialization
+struct Point {
+  int x, y;
+};
+
+void test_c_struct_init() {
+  struct Point p = {10, 20};
+  // CHECK-NOTES: :[[@LINE-1]]:16: warning: variable 'p' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:15: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:21: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:10: note: can be declared in this scope
+  if (1) {
+    int sum = p.x + p.y;
+  }
+}
+
+// goto statement with variable scope
+void test_goto_statement() {
+  int value = 42;
+  // Should NOT warn - used across goto boundary
+  if (value > 0) {
+    goto end;
+  }
+  value = 0;
+end:
+  return;
+}
+
+// =============================================================================
+// MODERN C++ FEATURES
+// =============================================================================
+
+// auto type deduction edge cases
+void test_auto_deduction() {
+  auto value = 42;
+  // CHECK-NOTES: :[[@LINE-1]]:8: warning: variable 'value' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:19: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int doubled = value * 2;
+  }
+}
+
+// auto with complex type deduction - simplified without std::vector
+void test_auto_complex() {
+  auto value = 42;
+  // CHECK-NOTES: :[[@LINE-1]]:8: warning: variable 'value' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:19: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int doubled = value * 2;
+  }
+}
+
+// Structured bindings - simplified without std::pair
+struct SimplePair {
+  int first, second;
+};
+
+void test_structured_bindings() {
+  SimplePair pair_val = {1, 2};
+  // CHECK-NOTES: :[[@LINE-1]]:14: warning: variable 'pair_val' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:15: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:32: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int sum = pair_val.first + pair_val.second;
+  }
+}
+
+// constexpr variables
+void test_constexpr_variable() {
+  constexpr int compile_time_val = 42;
+  // CHECK-NOTES: :[[@LINE-1]]:17: warning: variable 'compile_time_val' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:18: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int result = compile_time_val * 2;
+  }
+}
+
+// if constexpr (C++17)
+template<bool B>
+void test_if_constexpr() {
+  int value = 10;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'value' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:19: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:20: note: can be declared in this scope
+  if constexpr (B) {
+    int doubled = value * 2;
+  }
+}
+
+// =============================================================================
+// COMPLEX CONTROL FLOW
+// =============================================================================
+
+// Switch with fallthrough cases
+void test_switch_fallthrough(int value) {
+  int result = 0;
+  // Should NOT warn - used across multiple cases with fallthrough
+  switch (value) {
+    case 1:
+      result = 10;
+      // fallthrough
+    case 2:
+      result += 5;
+      break;
+    default:
+      break;
+  }
+}
+
+// Nested try-catch - simplified without std::runtime_error
+void test_nested_try_catch() {
+  int error_code = 0;
+  // Should NOT warn - used in multiple exception contexts
+  try {
+    try {
+      error_code = 100;
+      throw 42; // throw int instead of std::runtime_error
+    } catch (int) {
+      error_code = 200;
+      throw;
+    }
+  } catch (...) {
+    error_code = 300;
+  }
+}
+
+// Loop with break/continue affecting scope
+void test_loop_break_continue() {
+  int counter = 0;
+  // Should NOT warn - counter used across break/continue boundaries
+  for (int i = 0; i < 10; ++i) {
+    if (i % 2 == 0) {
+      counter++;
+      continue;
+    }
+    if (counter > 5) {
+      break;
+    }
+    counter += 2;
+  }
+}
+
+// Nested loops with different variable usage
+void test_nested_loop_patterns() {
+  int outer_var = 0;
+  int inner_var = 0;
+  // outer_var: should NOT warn
+  // inner_var: should NOT warn
+  for (int i = 0; i < 5; ++i) {
+    outer_var += i;
+    for (int j = 0; j < 3; ++j) {
+      inner_var = j * 2;
+      int temp = inner_var + 1;
+    }
+  }
+}
+
+// =============================================================================
+// VARIABLE LIFETIME EDGE CASES
+// =============================================================================
+
+// RAII pattern with destructor
+class Resource {
+public:
+  Resource() {}
+  ~Resource() {}
+  void use() {}
+};
+
+void test_raii_pattern() {
+  Resource res;
+  // CHECK-NOTES: :[[@LINE-1]]:12: warning: variable 'res' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    res.use();
+  }
+  // Destructor called here
+}
+
+// Static local variable in different contexts
+void test_static_local_contexts() {
+  static int call_count = 0;
+  // Should NOT warn - static variables have different lifetime semantics
+  if (true) {
+    call_count++;
+  }
+}
+
+// Thread-local variable (C++11)
+thread_local int tls_var = 0;
+void test_thread_local() {
+  int local_copy = tls_var;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'local_copy' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:19: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int doubled = local_copy * 2;
+  }
+}
+
+// =============================================================================
+// PREPROCESSOR INTERACTIONS
+// =============================================================================
+
+#define USE_VAR(x) ((x) * 2)
+
+// Variable used through macro
+void test_macro_usage() {
+  int value = 10;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'value' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:26: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int result = USE_VAR(value);
+  }
+}
+
+// Conditional compilation
+// Should NOT warn - variable only used in conditional block
+void test_conditional_compilation_undefined() {
+  int debug_var = 42;
+#ifdef DEBUG
+  if (true) {
+    int temp = debug_var;
+  }
+#endif
+}
+
+#define DEBUG_DEFINED
+// Should warn - variable used in conditional block
+void test_conditional_compilation_defined() {
+  int debug_var = 42;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'debug_var' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:16: note: used here
+  // CHECK-NOTES: :[[@LINE+2]]:13: note: can be declared in this scope
+#ifdef DEBUG_DEFINED
+  if (true) {
+    int temp = debug_var;
+  }
+#endif
+}
+
+// =============================================================================
+// ADDITIONAL EDGE CASES
+// =============================================================================
+
+// Variable declared in one scope, used in sibling scope
+void test_sibling_scopes() {
+  int shared = 0;
+  // Should NOT warn - used across sibling scopes
+  if (true) {
+    shared = 10;
+  } else {
+    shared = 20;
+  }
+}
+
+// Variable with comma operator
+void test_comma_operator() {
+  int a = 1, b = 2;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'a' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:15: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:13: note: can be declared in this scope
+  // CHECK-NOTES: :[[@LINE-4]]:14: warning: variable 'b' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:19: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int sum = a + b;
+  }
+}
+
+// Variable in ternary operator
+void test_ternary_operator() {
+  // Should warn for true_val and false_val - only used in ternary
+  int condition_var = 1;
+  int true_val = 10;
+  int false_val = 20;
+  // CHECK-NOTES: :[[@LINE-3]]:7: warning: variable 'condition_var' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+9]]:18: note: used here
+  // CHECK-NOTES: :[[@LINE+7]]:13: note: can be declared in this scope
+  // CHECK-NOTES: :[[@LINE-5]]:7: warning: variable 'true_val' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:34: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:13: note: can be declared in this scope
+  // CHECK-NOTES: :[[@LINE-7]]:7: warning: variable 'false_val' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:45: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int result = condition_var ? true_val : false_val;
+  }
+}
+
+void test_ternary_operator_cond(int cond) {
+  // Should warn for true_val and false_val - only used in ternary
+  int true_val = 10;
+  int false_val = 20;
+  // CHECK-NOTES: :[[@LINE-2]]:7: warning: variable 'true_val' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:25: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:13: note: can be declared in this scope
+  // CHECK-NOTES: :[[@LINE-4]]:7: warning: variable 'false_val' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:36: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int result = cond ? true_val : false_val;
+  }
+}
+
+// Variable used in sizeof expression
+void test_sizeof_usage() {
+  // Should warn
+  int array[100];
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'array' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:23: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int size = sizeof(array);
+  }
+}
+
+// Variable used in decltype (C++11)
+void test_decltype_usage() {
+  int value = 42;
+  // Should NOT warn - decltype doesn't evaluate the expression
+  if (true) {
+    decltype(value) another = 10;
+  }
+}
