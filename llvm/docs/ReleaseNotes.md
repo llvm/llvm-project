@@ -120,6 +120,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
