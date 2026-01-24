@@ -630,10 +630,10 @@ gpu.module @test_kernel {
 // -----
 gpu.module @test_kernel {
   // CHECK-LABEL: unroll_store_matrix
-  gpu.func @unroll_store_matrix(%value: vector<32x32xf32>, %arg0 : memref<32768xi8, 3>) {
+  gpu.func @unroll_store_matrix(%value: vector<1x32xf32>, %arg0 : memref<32768xi8, 3>) {
     %mdesc = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
-    // CHECK-COUNT-8:  xegpu.store_matrix {{.*}} : vector<8x16xf32>, !xegpu.mem_desc<64x128xf32>, index, index
-    xegpu.store_matrix %value, %mdesc[0, 0] {layout = #xegpu.layout<inst_data = [8, 16]>} : vector<32x32xf32>, !xegpu.mem_desc<64x128xf32>
+    // CHECK-COUNT-2:  xegpu.store_matrix {{.*}} : vector<1x16xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    xegpu.store_matrix %value, %mdesc[0, 0] {layout = #xegpu.layout<inst_data = [1, 16]>} : vector<1x32xf32>, !xegpu.mem_desc<64x128xf32>
     gpu.return
   }
 }
