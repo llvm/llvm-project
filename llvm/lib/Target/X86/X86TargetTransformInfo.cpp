@@ -4802,6 +4802,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
+
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
                                                unsigned Index, const Value *Op0,
