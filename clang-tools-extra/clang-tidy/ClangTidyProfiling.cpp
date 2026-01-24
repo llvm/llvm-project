@@ -43,11 +43,11 @@ void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS,
 }
 
 void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
-                                     llvm::TimerGroup &TG,
-                                     const StorageParams &Storage) {
+                                     llvm::TimerGroup &TG) {
+  assert(Storage && "We should have a filename.");
   OS << "{\n";
-  OS << R"("file": ")" << Storage.SourceFilename << "\",\n";
-  OS << R"("timestamp": ")" << Storage.Timestamp << "\",\n";
+  OS << R"("file": ")" << Storage->SourceFilename << "\",\n";
+  OS << R"("timestamp": ")" << Storage->Timestamp << "\",\n";
   OS << "\"profile\": {\n";
   TG.printJSONValues(OS, "");
   OS << "\n}\n";
@@ -55,10 +55,9 @@ void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
   OS.flush();
 }
 
-void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG,
-                                          const StorageParams &Storage) {
-  assert(this->Storage && "We should have a filename.");
-  llvm::SmallString<256> OutputDirectory(Storage.StoreFilename);
+void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG) {
+  assert(Storage && "We should have a filename.");
+  llvm::SmallString<256> OutputDirectory(Storage->StoreFilename);
   llvm::sys::path::remove_filename(OutputDirectory);
   if (const std::error_code EC =
           llvm::sys::fs::create_directories(OutputDirectory)) {
@@ -68,14 +67,14 @@ void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG,
   }
 
   std::error_code EC;
-  llvm::raw_fd_ostream OS(Storage.StoreFilename, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(Storage->StoreFilename, EC, llvm::sys::fs::OF_None);
   if (EC) {
-    llvm::errs() << "Error opening output file '" << Storage.StoreFilename
+    llvm::errs() << "Error opening output file '" << Storage->StoreFilename
                  << "': " << EC.message() << "\n";
     return;
   }
 
-  printAsJSON(OS, TG, Storage);
+  printAsJSON(OS, TG);
 }
 
 ClangTidyProfiling::ClangTidyProfiling(std::optional<StorageParams> Storage)
@@ -86,7 +85,7 @@ ClangTidyProfiling::~ClangTidyProfiling() {
   if (!Storage)
     printUserFriendlyTable(llvm::errs(), TG);
   else
-    storeProfileData(TG, *Storage);
+    storeProfileData(TG);
 }
 
 } // namespace clang::tidy

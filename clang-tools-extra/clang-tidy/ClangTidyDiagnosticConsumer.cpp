@@ -607,14 +607,14 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
 llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
   if (!HeaderFilter)
     HeaderFilter = std::make_unique<llvm::Regex>(
-        StringRef(Context.getOptions().HeaderFilterRegex.value_or("")));
+        Context.getOptions().HeaderFilterRegex.value_or(""));
   return HeaderFilter.get();
 }
 
 llvm::Regex *ClangTidyDiagnosticConsumer::getExcludeHeaderFilter() {
   if (!ExcludeHeaderFilter)
     ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
-        StringRef(Context.getOptions().ExcludeHeaderFilterRegex.value_or("")));
+        Context.getOptions().ExcludeHeaderFilterRegex.value_or(""));
   return ExcludeHeaderFilter.get();
 }
 
