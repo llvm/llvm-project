@@ -748,7 +748,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitConstructorBody(args);
     } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
                funcDecl->hasAttr<CUDAGlobalAttr>()) {
-      getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
+      // TODO(cir): Emit device stub body with kernel launch runtime calls
+      // (emitDeviceStub). For now, emit an empty stub.
+      assert(!cir::MissingFeatures::cudaSupport());
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       // The lambda static invoker function is special, because it forwards or
