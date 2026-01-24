@@ -531,6 +531,7 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
               | getInternalReadRegState(!FirstCopy), SubIdx)
       .addReg(FromReg, 0, SubIdx);
 
+  CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
@@ -550,6 +551,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     // The full vreg is copied.
     MachineInstr *CopyMI =
         BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    CopyMI->setFlag(MachineInstr::LRSplit);
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 

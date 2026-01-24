@@ -23,9 +23,7 @@ define <16 x double> @test(ptr %x, double %v, double %a) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x double> [[TMP14]], <16 x double> [[TMP15]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 10, i32 11, i32 12, i32 13, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <16 x double> [[TMP16]], <16 x double> [[TMP20]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 12, i32 13, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <16 x double> [[TMP21]], <16 x double> [[TMP20]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x double> [[TMP19]], <16 x double> [[TMP20]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x double> [[TMP16]], <16 x double> [[TMP20]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <16 x double> [[TMP5]], [[TMP17]]
 ; CHECK-NEXT:    ret <16 x double> [[TMP18]]
 ;

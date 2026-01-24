@@ -93,115 +93,115 @@ declare dso_local spir_func noundef nofpclass(nan inf) <2 x float> @_Z23__spirv_
 define weak_odr dso_local spir_kernel void @foo(float %1, float %2) {
 entry:
   %addRes = fadd float %1,  %2
-  store volatile float %addRes, float* @G_addRes
+  store volatile float %addRes, ptr @G_addRes
   ; CHECK: %[[#subRes]] = OpFSub
   %subRes = fsub nnan float %1,  %2
-  store volatile float %subRes, float* @G_subRes
+  store volatile float %subRes, ptr @G_subRes
   ; CHECK: %[[#mulRes]] = OpFMul
   %mulRes = fmul ninf float %1,  %2
-  store volatile float %mulRes, float* @G_mulRes
+  store volatile float %mulRes, ptr @G_mulRes
   ; CHECK: %[[#divRes]] = OpFDiv
   %divRes = fdiv nsz float %1,  %2
-  store volatile float %divRes, float* @G_divRes
+  store volatile float %divRes, ptr @G_divRes
   ; CHECK: %[[#remRes]] = OpFRem
   %remRes = frem arcp float %1,  %2
-  store volatile float %remRes, float* @G_remRes
+  store volatile float %remRes, ptr @G_remRes
   ; CHECK: %[[#negRes]] = OpFNegate
   %negRes = fneg fast float %1
-  store volatile float %negRes, float* @G_negRes
+  store volatile float %negRes, ptr @G_negRes
   ; CHECK: %[[#oeqRes]] = OpFOrdEqual
   %oeqRes = fcmp nnan ninf oeq float %1,  %2
-  store volatile i1 %oeqRes, i1* @G_oeqRes
+  store volatile i1 %oeqRes, ptr @G_oeqRes
   %oneRes = fcmp one float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %oneRes, i1* @G_oneRes
+  store volatile i1 %oneRes, ptr @G_oneRes
   ; CHECK: %[[#oltRes]] = OpFOrdLessThan
   %oltRes = fcmp nnan olt float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %oltRes, i1* @G_oltRes
+  store volatile i1 %oltRes, ptr @G_oltRes
   ; CHECK: %[[#ogtRes]] = OpFOrdGreaterThan
   %ogtRes = fcmp ninf ogt float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ogtRes, i1* @G_ogtRes
+  store volatile i1 %ogtRes, ptr @G_ogtRes
   ; CHECK: %[[#oleRes]] = OpFOrdLessThanEqual
   %oleRes = fcmp nsz ole float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %oleRes, i1* @G_oleRes
+  store volatile i1 %oleRes, ptr @G_oleRes
   ; CHECK: %[[#ogeRes]] = OpFOrdGreaterThanEqual
   %ogeRes = fcmp arcp oge float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ogeRes, i1* @G_ogeRes
+  store volatile i1 %ogeRes, ptr @G_ogeRes
   ; CHECK: %[[#ordRes]] = OpOrdered
   %ordRes = fcmp fast ord float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ordRes, i1* @G_ordRes
+  store volatile i1 %ordRes, ptr @G_ordRes
   ; CHECK: %[[#ueqRes]] = OpFUnordEqual
   %ueqRes = fcmp nnan ninf ueq float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ueqRes, i1* @G_ueqRes
+  store volatile i1 %ueqRes, ptr @G_ueqRes
   %uneRes = fcmp une float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %uneRes, i1* @G_uneRes
+  store volatile i1 %uneRes, ptr @G_uneRes
   %ultRes = fcmp ult float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ultRes, i1* @G_ultRes
+  store volatile i1 %ultRes, ptr @G_ultRes
   %ugtRes = fcmp ugt float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ugtRes, i1* @G_ugtRes
+  store volatile i1 %ugtRes, ptr @G_ugtRes
   %uleRes = fcmp ule float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %uleRes, i1* @G_uleRes
+  store volatile i1 %uleRes, ptr @G_uleRes
   %ugeRes = fcmp uge float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %ugeRes, i1* @G_ugeRes
+  store volatile i1 %ugeRes, ptr @G_ugeRes
   %unoRes = fcmp uno float %1,  %2, !spirv.Decorations !3
-  store volatile i1 %unoRes, i1* @G_unoRes
+  store volatile i1 %unoRes, ptr @G_unoRes
   %modRes = call spir_func float @_Z4fmodff(float %1, float %2)
-  store volatile float %modRes, float* @G_modRes
+  store volatile float %modRes, ptr @G_modRes
   ; CHECK: %[[#maxRes]] = OpExtInst %[[#]] %[[#]] fmax
   %maxRes = tail call fast spir_func noundef nofpclass(nan inf) float @_Z16__spirv_ocl_fmaxff(float noundef nofpclass(nan inf) %1, float noundef nofpclass(nan inf) %2)
-  store volatile float %maxRes, float* @G_maxRes
+  store volatile float %maxRes, ptr @G_maxRes
    ; CHECK: %[[#maxCommonRes]] = OpExtInst %[[#]] %[[#]] fmax
    %maxCommonRes = tail call spir_func noundef float @_Z23__spirv_ocl_fmax_commonff(float noundef nofpclass(nan inf) %1, float noundef nofpclass(nan inf) %2)
-  store volatile float %maxCommonRes, float* @G_maxCommonRes
+  store volatile float %maxCommonRes, ptr @G_maxCommonRes
   ret void
 }
 
 define weak_odr dso_local spir_kernel void @fooV(<2 x float> %v1, <2 x float> %v2) {
   %addResV = fadd <2 x float> %v1,  %v2
-  store volatile <2 x float> %addResV, <2 x float>* @G_addResV
+  store volatile <2 x float> %addResV, ptr @G_addResV
   %subResV = fsub nnan <2 x float> %v1,  %v2
-  store volatile <2 x float> %subResV, <2 x float>* @G_subResV
+  store volatile <2 x float> %subResV, ptr @G_subResV
   %mulResV = fmul ninf <2 x float> %v1,  %v2
-  store volatile <2 x float> %mulResV, <2 x float>* @G_mulResV
+  store volatile <2 x float> %mulResV, ptr @G_mulResV
   %divResV = fdiv nsz <2 x float> %v1,  %v2
-  store volatile <2 x float> %divResV, <2 x float>* @G_divResV
+  store volatile <2 x float> %divResV, ptr @G_divResV
   %remResV = frem arcp <2 x float> %v1,  %v2
-  store volatile <2 x float> %remResV, <2 x float>* @G_remResV
+  store volatile <2 x float> %remResV, ptr @G_remResV
   %negResV = fneg fast <2 x float> %v1
-  store volatile <2 x float> %negResV, <2 x float>* @G_negResV
+  store volatile <2 x float> %negResV, ptr @G_negResV
   %oeqResV = fcmp nnan ninf oeq <2 x float> %v1,  %v2
-  store volatile <2 x i1> %oeqResV, <2 x i1>* @G_oeqResV
+  store volatile <2 x i1> %oeqResV, ptr @G_oeqResV
   %oneResV = fcmp one <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %oneResV, <2 x i1>* @G_oneResV
+  store volatile <2 x i1> %oneResV, ptr @G_oneResV
   %oltResV = fcmp nnan olt <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %oltResV, <2 x i1>* @G_oltResV
+  store volatile <2 x i1> %oltResV, ptr @G_oltResV
   %ogtResV = fcmp ninf ogt <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ogtResV, <2 x i1>* @G_ogtResV
+  store volatile <2 x i1> %ogtResV, ptr @G_ogtResV
   %oleResV = fcmp nsz ole <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %oleResV, <2 x i1>* @G_oleResV
+  store volatile <2 x i1> %oleResV, ptr @G_oleResV
   %ogeResV = fcmp arcp oge <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ogeResV, <2 x i1>* @G_ogeResV
+  store volatile <2 x i1> %ogeResV, ptr @G_ogeResV
   %ordResV = fcmp fast ord <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ordResV, <2 x i1>* @G_ordResV
+  store volatile <2 x i1> %ordResV, ptr @G_ordResV
   %ueqResV = fcmp nnan ninf ueq <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ueqResV, <2 x i1>* @G_ueqResV
+  store volatile <2 x i1> %ueqResV, ptr @G_ueqResV
   %uneResV = fcmp une <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %uneResV, <2 x i1>* @G_uneResV
+  store volatile <2 x i1> %uneResV, ptr @G_uneResV
   %ultResV = fcmp ult <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ultResV, <2 x i1>* @G_ultResV
+  store volatile <2 x i1> %ultResV, ptr @G_ultResV
   %ugtResV = fcmp ugt <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ugtResV, <2 x i1>* @G_ugtResV
+  store volatile <2 x i1> %ugtResV, ptr @G_ugtResV
   %uleResV = fcmp ule <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %uleResV, <2 x i1>* @G_uleResV
+  store volatile <2 x i1> %uleResV, ptr @G_uleResV
   %ugeResV = fcmp uge <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %ugeResV, <2 x i1>* @G_ugeResV
+  store volatile <2 x i1> %ugeResV, ptr @G_ugeResV
   %unoResV = fcmp uno <2 x float> %v1,  %v2, !spirv.Decorations !3
-  store volatile <2 x i1> %unoResV, <2 x i1>* @G_unoResV
+  store volatile <2 x i1> %unoResV, ptr @G_unoResV
   %modResV = call spir_func <2 x float> @_Z4fmodDv2_fDv2_f(<2 x float> %v1, <2 x float> %v2)
-  store volatile <2 x float> %modResV, <2 x float>* @G_modResV
+  store volatile <2 x float> %modResV, ptr @G_modResV
   %maxResV = tail call fast spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fmaxDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
-  store volatile <2 x float> %maxResV, <2 x float>* @G_maxResV
+  store volatile <2 x float> %maxResV, ptr @G_maxResV
    %maxCommonResV = tail call spir_func noundef <2 x float> @_Z23__spirv_ocl_fmax_commonDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
-  store volatile <2 x float> %maxCommonResV, <2 x float>* @G_maxCommonResV
+  store volatile <2 x float> %maxCommonResV, ptr @G_maxCommonResV
   ret void
 }
 

@@ -935,7 +935,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
       //   log(1 + x) = nextafter(x, -inf) for FE_DOWNWARD, or
       //                                       FE_TOWARDZERO and x > 0,
       //              = x                  otherwise.
-      if (x == 0.0)
+      if (x + x == 0.0)
         return x + x; // Handle FTZ/DAZ correctly.
 
       volatile float tp = 1.0f;
@@ -951,7 +951,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
         return FPBits_t(x_u + 1).get_val();
       }
 
-      return (x + x == 0.0) ? x + x : x;
+      return x;
     }
     x_dd = fputil::exact_add(1.0, x);
   }

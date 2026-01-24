@@ -1089,6 +1089,8 @@ struct Waitcnt {
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
   unsigned XCnt = ~0u;      // gfx1250.
+  unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
+  unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -1097,18 +1099,23 @@ struct Waitcnt {
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt)
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
+          unsigned VaVdst, unsigned VmVsrc)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt) {}
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
+        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u;
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
+           VaVdst != ~0u || VmVsrc != ~0u;
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
+
+  bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
 
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
@@ -1117,10 +1124,30 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt));
+        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
+        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
   }
 
   friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
+};
+
+/// Represents the hardware counter limits for different wait count types.
+struct HardwareLimits {
+  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
+  unsigned ExpcntMax;
+  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
+  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
+  unsigned SamplecntMax; // gfx12+ only.
+  unsigned BvhcntMax;    // gfx12+ only.
+  unsigned KmcntMax;     // gfx12+ only.
+  unsigned XcntMax;      // gfx1250.
+  unsigned VaVdstMax;    // gfx12+ expert mode only.
+  unsigned VmVsrcMax;    // gfx12+ expert mode only.
+
+  HardwareLimits() = default;
+
+  /// Initializes hardware limits from ISA version.
+  HardwareLimits(const IsaVersion &IV);
 };
 
 // The following methods are only meaningful on targets that support
@@ -1280,6 +1307,12 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI);
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
+
+/// \returns Maximum VaVdst value that can be encoded.
+unsigned getVaVdstBitMask();
+
+/// \returns Maximum VmVsrc value that can be encoded.
+unsigned getVmVsrcBitMask();
 
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);

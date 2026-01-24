@@ -351,6 +351,7 @@ def ROCDL_ClusterIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.id.x">;
 def ROCDL_ClusterIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.id.y">;
 def ROCDL_ClusterIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.id.z">;
 
+def ROCDL_WaveId : ROCDL_SpecialIdRegisterOp<"wave.id">;
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
 //===----------------------------------------------------------------------===//
@@ -804,8 +805,8 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
   }];
 }
 
-class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
-    [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6], ["signA", "signB", "reuseA","reuseB"]>,
+class ROCDL_WMMA_ModsABClamp_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
+    [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6, 7], ["signA", "signB", "reuseA","reuseB", "clamp"]>,
   Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
              LLVM_ScalarOrVectorOf<AB>:$a,
@@ -813,7 +814,8 @@ class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp
              LLVM_ScalarOrVectorOf<AB>:$b,
              LLVM_ScalarOrVectorOf<CD>:$c,
              DefaultValuedAttr<I1Attr, "0">:$reuseA,
-             DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
+             DefaultValuedAttr<I1Attr, "0">:$reuseB,
+             DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
@@ -906,7 +908,7 @@ def ROCDL_wmma_f16_16x16x128_fp8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x1
 def ROCDL_wmma_f16_16x16x128_fp8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.fp8_bf8", AnyInteger, F16>;
 def ROCDL_wmma_f16_16x16x128_bf8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.bf8_fp8", AnyInteger, F16>;
 def ROCDL_wmma_f16_16x16x128_bf8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.bf8_bf8", AnyInteger, F16>;
-def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_WMMA_ModsAB_IntrOp<"wmma.i32.16x16x64.iu8", AnyInteger, AnyInteger>;
+def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_WMMA_ModsABClamp_IntrOp<"wmma.i32.16x16x64.iu8", AnyInteger, AnyInteger>;
 
 // Scaled wmma intrinsics (available from gfx1250)
 def ROCDL_wmma_scale_f32_16x16x128_f8f6f4   : ROCDL_WMMA_Scale_IntrOp<"wmma.scale.f32.16x16x128.f8f6f4", AnyInteger, F32, I32>;
@@ -1063,12 +1065,12 @@ foreach bitsVal = [8, 32, 64, 128] in {
 foreach bitsVal = [8, 32, 64, 128] in {
   defvar bitsStr = "b" # !cast<string>(bitsVal);
   def ROCDL_ClusterLoadAsyncToLDS # !toupper(bitsStr) # Op :
-    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3, 4], ["offset", "cpol", "mask"]> {
+    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "cpol"]> {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                    I32Attr:$offset,
                    I32Attr:$cpol,
-                   I32Attr:$mask);
+                   I32:$mask);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,` $cpol `,` $mask
@@ -1297,7 +1299,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 
 def ROCDL_GlobalPrefetchOp :
   ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
@@ -1315,7 +1317,7 @@ def ROCDL_GlobalPrefetchOp :
 
 def ROCDL_FlatPrefetchOp :
   ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
@@ -2139,6 +2141,7 @@ def ROCDLExp : ROCDL_Math_IntrOp<"exp">;
 def ROCDLExp2 : ROCDL_Math_IntrOp<"exp2">;
 def ROCDLLog : ROCDL_Math_IntrOp<"log">;
 def ROCDLSqrt : ROCDL_Math_IntrOp<"sqrt">;
+def ROCDLRsq : ROCDL_Math_IntrOp<"rsq">;
 
 //===----------------------------------------------------------------------===//
 // ROCDL target attribute.
