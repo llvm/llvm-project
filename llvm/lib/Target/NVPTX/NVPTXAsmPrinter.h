@@ -189,6 +189,10 @@ private:
   const MCExpr *lowerConstantForGV(const Constant *CV,
                                    bool ProcessingGeneric) const;
   void printMCExpr(const MCExpr &Expr, raw_ostream &OS) const;
+  /// Emit a blob of inline asm to the output streamer.
+  void emitInlineAsm(StringRef Str, const TargetMachine &TM,
+                     const MDNode *LocMDNode = nullptr,
+                     const MachineInstr *MI = nullptr) override;
 
 protected:
   bool doInitialization(Module &M) override;
