@@ -5146,6 +5146,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         DenormalMode Mode =
             F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
+        if (KnownNotFromFlags & fcNan) {
+          KnownSrc.knownNot(fcNan);
+          KnownAddend.knownNot(fcNan);
+        }
+
+        if (KnownNotFromFlags & fcInf) {
+          KnownSrc.knownNot(fcInf);
+          KnownAddend.knownNot(fcInf);
+        }
+
         Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
         break;
       }
@@ -5156,6 +5166,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                             InterestedClasses, KnownSrc[I], Q, Depth + 1);
         if (KnownSrc[I].isUnknown())
           return;
+
+        if (KnownNotFromFlags & fcNan)
+          KnownSrc[I].knownNot(fcNan);
+        if (KnownNotFromFlags & fcInf)
+          KnownSrc[I].knownNot(fcInf);
       }
 
       const Function *F = II->getFunction();
@@ -5622,6 +5637,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
                           Q, Depth + 1);
     }
+
+    // TODO: Improve accuracy in unfused FMA pattern. We can prove an additional
+    // not-nan if the addend is known-not negative infinity if the multiply is
+    // known-not infinity.
 
     computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                         Q, Depth + 1);
