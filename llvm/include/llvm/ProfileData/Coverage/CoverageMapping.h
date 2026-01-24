@@ -398,7 +398,7 @@ struct CountedRegion : public CounterMappingRegion {
     return (this->viewLoc() == RHS.viewLoc());
   }
 
-  void merge(const CountedRegion &RHS, MergeStrategy Strategy);
+  LLVM_ABI void merge(const CountedRegion &RHS, MergeStrategy Strategy);
 
   /// Returns comparable rank value in selecting a better Record for merging.
   auto getMergeRank(MergeStrategy Strategy) const {
@@ -513,7 +513,7 @@ public:
 
   // This may invalidate IndependencePairs
   // MCDCRecord &operator+=(const MCDCRecord &RHS);
-  void merge(MCDCRecord &&RHS, MergeStrategy Strategy);
+  LLVM_ABI void merge(MCDCRecord &&RHS, MergeStrategy Strategy);
 
   void commit() { findIndependencePairs(); }
 
