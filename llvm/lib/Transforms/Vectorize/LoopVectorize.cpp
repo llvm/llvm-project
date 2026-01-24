@@ -8746,9 +8746,20 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
-      RecurKind MinMaxKind;
       bool IsSigned =
           RecurrenceDescriptor::isSignedRecurrenceKind(RecurrenceKind);
+
+      // When the selected IV value (aka MinOrMax) occurs multiple times,
+      // finding the first occurrence corresponds to having a strict comparison
+      // for updating the running MinOrMax, whereas finding the last occurrence
+      // corresponds to having a non-strict comparison. In both cases, the
+      // iteration when this condition was last true is the desired result. When
+      // reducing the vector of partial MinOrMax's after the loop, if the same
+      // MinOrMax occurs multiple times, the first occurrence (i.e., strict
+      // comparison) is found using a SMin/UMin reduction of the associated
+      // IV's, and the last occurrence (i.e., non-strict comparison) can be
+      // found using SMax/UMax.
+      RecurKind MinMaxKind;
       if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RecurrenceKind))
         MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
       else

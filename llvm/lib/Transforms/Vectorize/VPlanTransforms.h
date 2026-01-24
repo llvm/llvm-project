@@ -168,8 +168,9 @@ struct VPlanTransforms {
                                         const TargetLibraryInfo &TLI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
-  /// min/max reductions used by FindLastIV and FindFirstIV reductions are
-  /// supported. Otherwise return false.
+  /// strict and non-strict min/max reductions used by FindLastIV reductions are
+  /// supported, corresponding to computing the first and last argmin/argmax,
+  /// respectively. Otherwise return false.
   static bool handleMultiUseReductions(VPlan &Plan,
                                        OptimizationRemarkEmitter *ORE,
                                        Loop *TheLoop);

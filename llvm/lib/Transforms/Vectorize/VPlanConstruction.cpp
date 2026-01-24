@@ -1405,15 +1405,18 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   return true;
 }
 
-/// For argmin/argmax reductions with strict predicates, convert the existing
-/// FindLastIV reduction to a new UMin reduction of a wide canonical IV. If the
-/// original IV was not canonical, a new canonical wide IV is added, and the
-/// final result is scaled back to the original IV.
-static bool handleFirstArgMinOrMax(VPlan &Plan,
-                                   VPReductionPHIRecipe *MinOrMaxPhiR,
-                                   VPReductionPHIRecipe *FindLastIVPhiR,
-                                   VPWidenIntOrFpInductionRecipe *WideIV,
-                                   VPInstruction *MinOrMaxResult) {
+/// For an argmin/argmax reduction with strict predicate \p MinOrMaxPhiR,
+/// convert the FindLastIV reduction \p FindLastIVPhiR of induction \p WideIV to
+/// a new UMin reduction of a wide canonical IV. If the original IV was not
+/// canonical, a new canonical wide IV is added, and the final result is scaled
+/// back to the original IV. \p MinOrMaxResult computes the final value of \p
+/// MinOrMaxPhiR and \p FindIVSelect, \p FindIVCmp, \p FindIVRdxResult compute
+/// the final value of \p FindLastIVPhiR.
+static bool handleFirstArgMinOrMax(
+    VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
+    VPReductionPHIRecipe *FindLastIVPhiR, VPWidenIntOrFpInductionRecipe *WideIV,
+    VPInstruction *MinOrMaxResult, VPInstruction *FindIVSelect,
+    VPRecipeBase *FindIVCmp, VPInstruction *FindIVRdxResult) {
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
   if (Ty != VPTypeAnalysis(Plan).inferScalarType(WideIV))
@@ -1423,6 +1426,9 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
   // guaranteed to not wrap for all lanes that are active in the vector loop.
   auto *FindIVSelectR = cast<VPSingleDefRecipe>(
       FindLastIVPhiR->getBackedgeValue()->getDefiningRecipe());
+  assert(
+      match(FindIVSelectR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
+      "backedge value must be a select");
   if (!WideIV->isCanonical()) {
     VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
     VPIRValue *One = Plan.getConstantInt(Ty, 1);
@@ -1434,34 +1440,26 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
     WidenCanIV->insertBefore(WideIV);
 
     // Update the select to use the wide canonical IV.
-    assert(
-        match(FindIVSelectR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
-        "backedge value must be a select");
-    WideIV->replaceUsesWithIf(WidenCanIV,
-                              [FindIVSelectR](const VPUser &U, unsigned) {
-                                return FindIVSelectR == &U;
-                              });
+    assert(FindIVSelectR->getOperand(1) == WideIV ^
+               FindIVSelectR->getOperand(2) == WideIV &&
+           "WideIV must be either the second or third operand");
+    FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
+                              WidenCanIV);
   }
 
   // Create the new UMin reduction recipe to track the minimum index.
   assert(!FindLastIVPhiR->isInLoop() && !FindLastIVPhiR->isOrdered() &&
          "inloop and ordered reductions not supported");
-  VPValue *MaxIV =
-      Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
          "FindIV reduction must not be scaled");
+  VPValue *MaxIV =
+      Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
   ReductionStyle Style = RdxUnordered{1};
   auto *FirstIdxPhiR = new VPReductionPHIRecipe(
       dyn_cast_or_null<PHINode>(FindLastIVPhiR->getUnderlyingValue()),
       RecurKind::UMin, *MaxIV, *FindIVSelectR, Style,
       FindLastIVPhiR->hasUsesOutsideReductionChain());
   FirstIdxPhiR->insertBefore(FindLastIVPhiR);
-
-  VPInstruction *FindLastIVResult =
-      findUserOf<VPInstruction::ComputeFindIVResult>(
-          FindLastIVPhiR->getBackedgeValue());
-  MinOrMaxResult->moveBefore(*FindLastIVResult->getParent(),
-                             FindLastIVResult->getIterator());
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:
@@ -1477,35 +1475,38 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
   //     the loop was always false, due to being strict; return the start value
   //     in that case.
   //
-  // The original reductions need adjusting:
   // For example, this transforms two independent constructs
-  // vp<%min.result> = compute-reduction-result ir<%min.val.next>
-  // vp<%find.iv.result> = compute-find-iv-result ir<0>, ir<Sentinel>,
-  //                                              vp<%min.idx.next>
+  // vp<%min.result> = compute-reduction-result (min/max) ir<%min.val.next>
+  // vp<%iv.rdx> = compute-reduction-result (smax) vp<%min.idx.next>
+  // vp<%cmp> = icmp ne vp<%iv.rdx>, ir<Sentinel>
+  // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
+  //
+  // where vp<%min.idx.next> selects an IV with start value of 20.
   //
   // into:
-  //  vp<%min.result> = compute-reduction-result ir<%min.val.next>
+  //  vp<%min.result> = compute-reduction-result (min/max) ir<%min.val.next>
   //  vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<%min.result>
   //  vp<%final.min.idx> = select vp<%final.min.cmp>, ir<%min.idx.next>,
   //                              ir<MaxUInt>
-  //  vp<%final.can.iv> = compute-reduction-result vp<%final.min.idx>
-  //  vp<%scaled.result.iv> = DERIVED-IV ir<20> + vp<%final.can.iv> *
-  //                                                        ir<1>
+  //  vp<%final.can.iv> = compute-reduction-result (umin) vp<%final.min.idx>
+  //  vp<%cmp> = icmp ne vp<%final.can.iv>, ir<Sentinel>
+  //  vp<%iv.rdx.result> = select vp<%cmp>, vp<%final.can.iv>, ir<0>
+  //  vp<%scaled.result.iv> = DERIVED-IV ir<20> + vp<%iv.rdx.result> * ir<1>
   //  vp<%always.false> = icmp eq vp<%min.result>, ir<%sentinel.min.start>
   //  vp<%final.result> = select vp<%always.false>, ir<%original.start>,
   //                             vp<%scaled.result.iv>
 
-  VPBuilder Builder(FindLastIVResult);
+  VPBuilder Builder(FindIVRdxResult);
   VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
   auto *FinalMinOrMaxCmp =
       Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
-  VPValue *LastIVExiting = FindLastIVResult->getOperand(2);
+  VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
   auto *FinalIVSelect =
       Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxIV);
   VPIRFlags RdxFlags(RecurKind::UMin, false, false, FastMathFlags());
   VPSingleDefRecipe *FinalCanIV = Builder.createNaryOp(
       VPInstruction::ComputeReductionResult, {FinalIVSelect}, RdxFlags,
-      FindLastIVResult->getDebugLoc());
+      FindIVRdxResult->getDebugLoc());
 
   // If we used a new wide canonical IV convert the reduction result back to the
   // original IV scale before the final select.
@@ -1519,15 +1520,20 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
     FinalCanIV = DerivedIVRecipe;
   }
 
-  // If the final min/max value matches the start value, the condition in the
+  // If the final min/max value matches its start value, the condition in the
   // loop was always false, i.e. no induction value has been selected. If that's
-  // the case, use the original start value.
+  // the case, set the result of the IV reduction to its start value.
   VPValue *AlwaysFalse = Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxResult,
                                             MinOrMaxPhiR->getStartValue());
   VPValue *FinalIV = Builder.createSelect(
-      AlwaysFalse, FindLastIVResult->getOperand(0), FinalCanIV);
+      AlwaysFalse, FindIVSelect->getOperand(2), FinalCanIV);
   FindLastIVPhiR->replaceAllUsesWith(FirstIdxPhiR);
-  FindLastIVResult->replaceAllUsesWith(FinalIV);
+  FindIVSelect->replaceAllUsesWith(FinalIV);
+
+  // Erase the old FindIV result pattern which is now dead.
+  FindIVSelect->eraseFromParent();
+  FindIVCmp->eraseFromParent();
+  FindIVRdxResult->eraseFromParent();
   FindLastIVPhiR->eraseFromParent();
   return true;
 }
@@ -1651,14 +1657,23 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
     }
 
-    // For strict predicates, use a UMin reduction to find the minimum index.
-    // Canonical IVs (0, 1, 2, ...) are guaranteed not to wrap in the vector
-    // loop, so UMin can always be used.
+    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
+    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
+    assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
+           "both results must be computed in the same block");
+    // Reducing to a scalar min or max value is placed right before reducing to
+    // its scalar iteration, in order to generate instructions that use both
+    // their operands.
+    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
+                               FindIVRdxResult->getIterator());
+
     bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
     if (IsStrictPredicate) {
       return handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
                                     cast<VPWidenIntOrFpInductionRecipe>(IVOp),
-                                    MinOrMaxResult);
+                                    MinOrMaxResult, FindIVSelect, FindIVCmp,
+                                    FindIVRdxResult);
     }
 
     // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
@@ -1684,15 +1699,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
     // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
     //
-    // Find the FindIV result pattern.
-    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
-    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
-    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
-    assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
-           "both results must be computed in the same block");
-    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
-                               FindIVRdxResult->getIterator());
-
     VPBuilder B(FindIVRdxResult);
     VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinOrMaxCmp =
