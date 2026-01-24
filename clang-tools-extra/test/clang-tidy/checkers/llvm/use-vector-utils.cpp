@@ -47,23 +47,27 @@ void test_map_range() {
   llvm::SmallVector<int> vec;
 
   auto result = llvm::to_vector(llvm::map_range(vec, transform));
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::map_to_vector' instead of 'llvm::to_vector(llvm::map_range(...))'
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::map_to_vector'
   // CHECK-FIXES: auto result = llvm::map_to_vector(vec, transform);
 
   auto result_sized = llvm::to_vector<4>(llvm::map_range(vec, transform));
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'llvm::map_to_vector<4>' instead of 'llvm::to_vector<4>(llvm::map_range(...))'
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'llvm::map_to_vector'
   // CHECK-FIXES: auto result_sized = llvm::map_to_vector<4>(vec, transform);
+
+  auto result_global = ::llvm::to_vector(::llvm::map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use '::llvm::map_to_vector'
+  // CHECK-FIXES: auto result_global = ::llvm::map_to_vector(vec, transform);
 }
 
 void test_filter_range() {
   llvm::SmallVector<int> vec;
 
   auto result = llvm::to_vector(llvm::make_filter_range(vec, is_even));
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::filter_to_vector' instead of 'llvm::to_vector(llvm::make_filter_range(...))'
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::filter_to_vector'
   // CHECK-FIXES: auto result = llvm::filter_to_vector(vec, is_even);
 
   auto result_sized = llvm::to_vector<6>(llvm::make_filter_range(vec, is_even));
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'llvm::filter_to_vector<6>' instead of 'llvm::to_vector<6>(llvm::make_filter_range(...))'
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'llvm::filter_to_vector'
   // CHECK-FIXES: auto result_sized = llvm::filter_to_vector<6>(vec, is_even);
 }
 
@@ -74,8 +78,8 @@ void test_inside_llvm_namespace() {
 
   // Unprefixed calls inside the `llvm` namespace should also be detected.
   auto result = to_vector(map_range(vec, transform));
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::map_to_vector' instead of 'llvm::to_vector(llvm::map_range(...))'
-  // CHECK-FIXES: auto result = llvm::map_to_vector(vec, transform);
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result = map_to_vector(vec, transform);
 }
 
 } // namespace llvm
