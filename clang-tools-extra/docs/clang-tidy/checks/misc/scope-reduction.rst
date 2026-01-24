@@ -40,33 +40,6 @@ Examples:
       }
     }
 
-Limitations
------------
-
-This check cannot currently detect when a variable's previous value affects
-subsequent iterations, resulting in false positives in some cases. This can
-be addressed by implementing a pattern matcher that recognizes this
-accumulator pattern across loop iterations or by using Clang's built-in
-Lifetime analysis.
-
-.. code-block:: cpp
-
-    void test_while_loop() {
-      // falsely detects 'counter' can be moved to smaller scope
-      int counter = 0;
-      while (true) {
-        counter++;
-        if (counter > 10) break;
-      }
-    }
-
-    void test_for_loop_reuse() {
-      int temp = 0; // falsely detects 'temp' can be moved to smaller scope
-      for (int i = 0; i<10; i++) {
-        temp += i;
-      }
-    }
-
 References
 ----------
 
