@@ -582,6 +582,66 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   return Result;
 }
 
+/// Creates a cast chain to convert Val to DstTy for load/store promotions.
+///
+/// \param DL      Module Data Layout.
+/// \param Builder IRBuilder to insert instructions with.
+/// \param Val     Value to be casted.
+/// \param DstTy   Destination type for the cast.
+/// \return the final value in the created cast chain.
+template <typename FolderTy, typename InserterTy>
+static Value *createLoadStoreCastChain(const DataLayout &DL,
+                                       IRBuilder<FolderTy, InserterTy> &Builder,
+                                       Value *Val, Type *DstTy) {
+  const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
+                                                   Type *PtrTy) -> Value * {
+    assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
+    const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
+    if (!PtrTy->isVectorTy())
+      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
+    const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
+    // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need
+    // to first cast the ptr vector to <2 x i64>.
+    assert((Size % NumPtrElts == 0) && "Vector size not divisble");
+    Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
+    return Builder.CreateBitOrPointerCast(
+        Val, FixedVectorType::get(EltTy, NumPtrElts));
+  };
+
+  {
+    // If we are casting between a vector of pointers and either a pointer or
+    // a vector of pointers with a different number of elements, we need an
+    // additional intermediate cast. Examples:
+    //   <2 x ptr addrspace(5)> -> ptr
+    //     => <2 x ptr addrspace(5)> -> <2 x i32> -> i64 -> ptr
+    //   ptr -> <2 x ptr addrspace(5)>
+    //     => ptr -> i64 -> <2 x i32> -> <2 x ptr addrspace(5)>
+    //   <4 x ptr addrspace(5)> -> <2 x ptr>
+    //     => <4 x ptr addrspace(5)> -> <4 x i32> -> <2 x i64> -> <2 x ptr>
+    //   <2 x ptr> -> <4 x ptr addrspace(5)>
+    //     => <2 x ptr> -> <2 x i64> -> <4 x i32> -> <4 x ptr addrspace(5)>
+    // Where the first conversion in each chain is the conversion done here
+    // and the rest are done after this block.
+    Type *ValTy = Val->getType();
+    bool ValIsPtrVec =
+        ValTy->isVectorTy() && ValTy->getScalarType()->isPointerTy();
+    bool DstIsPtrVec =
+        DstTy->isVectorTy() && DstTy->getScalarType()->isPointerTy();
+    if (((ValIsPtrVec || DstIsPtrVec) &&
+         (DstTy->isPointerTy() || ValTy->isPointerTy())) ||
+        (ValIsPtrVec && DstIsPtrVec &&
+         cast<VectorType>(DstTy)->getElementCount() !=
+             cast<VectorType>(ValTy)->getElementCount()))
+      Val = CreateTempPtrIntCast(Val, ValTy);
+  }
+
+  if (DstTy->isPtrOrPtrVectorTy())
+    Val = CreateTempPtrIntCast(Val, DstTy);
+  else if (Val->getType()->isPtrOrPtrVectorTy())
+    Val = CreateTempPtrIntCast(Val, Val->getType());
+  return Builder.CreateBitOrPointerCast(Val, DstTy);
+}
+
 /// Promotes a single user of the alloca to a vector form.
 ///
 /// \param Inst           Instruction to be promoted.
@@ -606,21 +666,6 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         InstSimplifyFolder(DL));
   Builder.SetInsertPoint(Inst);
 
-  const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
-                                                   Type *PtrTy) -> Value * {
-    assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
-    const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
-    if (!PtrTy->isVectorTy())
-      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
-    const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
-    // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need to
-    // first cast the ptr vector to <2 x i64>.
-    assert((Size % NumPtrElts == 0) && "Vector size not divisble");
-    Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
-    return Builder.CreateBitOrPointerCast(
-        Val, FixedVectorType::get(EltTy, NumPtrElts));
-  };
-
   Type *VecEltTy = AA.Vector.Ty->getElementType();
 
   switch (Inst->getOpcode()) {
@@ -634,12 +679,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
       if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        if (AccessTy->isPtrOrPtrVectorTy())
-          CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
-        else if (CurVal->getType()->isPtrOrPtrVectorTy())
-          CurVal = CreateTempPtrIntCast(CurVal, CurVal->getType());
-        Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, AccessTy);
-        Inst->replaceAllUsesWith(NewVal);
+        Inst->replaceAllUsesWith(
+            createLoadStoreCastChain(DL, Builder, CurVal, AccessTy));
         return nullptr;
       }
     }
@@ -689,13 +730,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             SubVec, Builder.CreateExtractElement(CurVal, CurIdx), K);
       }
 
-      if (AccessTy->isPtrOrPtrVectorTy())
-        SubVec = CreateTempPtrIntCast(SubVec, AccessTy);
-      else if (SubVecTy->isPtrOrPtrVectorTy())
-        SubVec = CreateTempPtrIntCast(SubVec, SubVecTy);
-
-      SubVec = Builder.CreateBitOrPointerCast(SubVec, AccessTy);
-      Inst->replaceAllUsesWith(SubVec);
+      Inst->replaceAllUsesWith(
+          createLoadStoreCastChain(DL, Builder, SubVec, AccessTy));
       return nullptr;
     }
 
@@ -719,15 +755,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        if (AccessTy->isPtrOrPtrVectorTy())
-          Val = CreateTempPtrIntCast(Val, AccessTy);
-        else if (AA.Vector.Ty->isPtrOrPtrVectorTy())
-          Val = CreateTempPtrIntCast(Val, AA.Vector.Ty);
-        return Builder.CreateBitOrPointerCast(Val, AA.Vector.Ty);
-      }
-    }
+    if (Constant *CI = dyn_cast<Constant>(Index))
+      if (CI->isZeroValue() && AccessSize == VecStoreSize)
+        return createLoadStoreCastChain(DL, Builder, Val, AA.Vector.Ty);
 
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
@@ -738,13 +768,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
-      if (SubVecTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, SubVecTy);
-      else if (AccessTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, AccessTy);
-
-      Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
-
+      Val = createLoadStoreCastChain(DL, Builder, Val, SubVecTy);
       Value *CurVec = GetCurVal();
       for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
            K < NumElts; ++K) {

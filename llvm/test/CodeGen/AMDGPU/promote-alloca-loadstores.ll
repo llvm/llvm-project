@@ -9,9 +9,9 @@ define amdgpu_kernel void @test_overwrite(i64 %val, i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x i64> [[STACK]], i64 43, i32 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP:%.*]], label [[END:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PROMOTEALLOCA1:%.*]] = phi <3 x i64> [ [[TMP3:%.*]], [[LOOP]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i64> [[PROMOTEALLOCA1]], i64 68, i32 0
+; CHECK-NEXT:    [[PROMOTEALLOCA2:%.*]] = phi <3 x i64> [ [[TMP3:%.*]], [[LOOP]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA2]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i64> [[PROMOTEALLOCA2]], i64 68, i32 0
 ; CHECK-NEXT:    [[TMP3]] = insertelement <3 x i64> [[TMP2]], i64 32, i32 0
 ; CHECK-NEXT:    [[LOOP_CC:%.*]] = icmp ne i64 [[TMP1]], 68
 ; CHECK-NEXT:    br i1 [[LOOP_CC]], label [[LOOP]], label [[END]]
@@ -67,9 +67,9 @@ define amdgpu_kernel void @test_no_overwrite(i64 %val, i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x i64> [[STACK]], i64 43, i32 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP:%.*]], label [[END:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PROMOTEALLOCA1:%.*]] = phi <3 x i64> [ [[TMP2:%.*]], [[LOOP]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 0
-; CHECK-NEXT:    [[TMP2]] = insertelement <3 x i64> [[PROMOTEALLOCA1]], i64 32, i32 1
+; CHECK-NEXT:    [[PROMOTEALLOCA2:%.*]] = phi <3 x i64> [ [[TMP2:%.*]], [[LOOP]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA2]], i32 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <3 x i64> [[PROMOTEALLOCA2]], i64 32, i32 1
 ; CHECK-NEXT:    [[LOOP_CC:%.*]] = icmp ne i64 [[TMP1]], 32
 ; CHECK-NEXT:    br i1 [[LOOP_CC]], label [[LOOP]], label [[END]]
 ; CHECK:       end:
@@ -189,6 +189,47 @@ entry:
   store <2 x ptr addrspace(3)> %arg, ptr addrspace(5) %alloca, align 8
   %tmp = load <2 x ptr addrspace(3)>, ptr addrspace(5) %alloca, align 8
   %tmp.full = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca, align 8
+  ret void
+}
+
+define void @alloca_load_store_ptr_ptrvec(ptr %arg) {
+; CHECK-LABEL: define void @alloca_load_store_ptr_ptrvec
+; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <2 x ptr addrspace(3)> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i32> [[TMP1]] to <2 x ptr addrspace(3)>
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca <2 x ptr addrspace(3)>, align 8, addrspace(5)
+  store ptr %arg, ptr addrspace(5) %alloca, align 8
+  %tmp = load ptr, ptr addrspace(5) %alloca, align 8
+  ret void
+}
+
+define void @alloca_load_store_diff_size_ptrvecs(<2 x ptr> %arg1, <4 x ptr addrspace(3)> %arg2) {
+; CHECK-LABEL: define void @alloca_load_store_diff_size_ptrvecs
+; CHECK-SAME: (<2 x ptr> [[ARG1:%.*]], <4 x ptr addrspace(3)> [[ARG2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA2:%.*]] = freeze <2 x ptr> poison
+; CHECK-NEXT:    [[ALLOCA1:%.*]] = freeze <4 x ptr addrspace(3)> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr> [[ARG1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <4 x i32> [[TMP1]] to <4 x ptr addrspace(3)>
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[ARG2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i64> [[TMP4]] to <2 x ptr>
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca1 = alloca <4 x ptr addrspace(3)>, align 8, addrspace(5)
+  %alloca2 = alloca <2 x ptr>, align 8, addrspace(5)
+  store <2 x ptr> %arg1, ptr addrspace(5) %alloca1, align 8
+  store <4 x ptr addrspace(3)> %arg2, ptr addrspace(5) %alloca2, align 8
+  %tmp1 = load <2 x ptr>, ptr addrspace(5) %alloca1, align 8
+  %tmp2 = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca2, align 8
   ret void
 }
 
