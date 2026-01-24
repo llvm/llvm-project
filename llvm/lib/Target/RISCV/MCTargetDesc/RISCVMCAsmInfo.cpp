@@ -58,3 +58,16 @@ void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
   if (HasSpecifier)
     OS << ')';
 }
+
+RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
+  CodePointerSize = 4;
+  PrivateGlobalPrefix = "L";
+  PrivateLabelPrefix = "L";
+  SeparatorString = "%%";
+  CommentString = ";";
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
+  Data16bitsDirective = "\t.half\t";
+  Data32bitsDirective = "\t.word\t";
+}

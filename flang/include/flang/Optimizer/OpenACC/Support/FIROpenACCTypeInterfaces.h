@@ -52,6 +52,8 @@ struct OpenACCPointerLikeModel
   bool genStore(mlir::Type pointer, mlir::OpBuilder &builder,
                 mlir::Location loc, mlir::Value valueToStore,
                 mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+  bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
 };
 
 template <typename T>
@@ -86,7 +88,24 @@ struct OpenACCMappableModel
                                   bool &needsDestroy) const;
 
   bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
-                              mlir::Location loc, mlir::Value privatized) const;
+                              mlir::Location loc, mlir::Value privatized,
+                              mlir::ValueRange bounds) const;
+
+  bool generateCopy(mlir::Type type, mlir::OpBuilder &mlirBuilder,
+                    mlir::Location loc,
+                    mlir::TypedValue<mlir::acc::MappableType> source,
+                    mlir::TypedValue<mlir::acc::MappableType> dest,
+                    mlir::ValueRange bounds) const;
+
+  bool generateCombiner(mlir::Type type, mlir::OpBuilder &mlirBuilder,
+                        mlir::Location loc,
+                        mlir::TypedValue<mlir::acc::MappableType> dest,
+                        mlir::TypedValue<mlir::acc::MappableType> source,
+                        mlir::ValueRange bounds,
+                        mlir::acc::ReductionOperator op,
+                        mlir::Attribute fastmathFlags) const;
+
+  bool isDeviceData(mlir::Type type, mlir::Value var) const;
 };
 
 } // namespace fir::acc

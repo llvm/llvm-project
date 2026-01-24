@@ -240,8 +240,8 @@ define i32 @pointer_iv_mixed(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP12]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[VECTOR_GEP]], ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP5]], 3
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 3
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
@@ -311,8 +311,8 @@ define void @phi_used_in_vector_compare_and_scalar_indvar_update_and_store(ptr %
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x ptr> [[VECTOR_GEP]], zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> zeroinitializer, ptr align 2 [[TMP7]], <vscale x 2 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:

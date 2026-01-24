@@ -119,6 +119,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_TRAP_ON_RAISE_FP_EXCEPT")
   endif()
 
+  if(LIBC_CONF_WCTYPE_MODE)
+    list(APPEND config_options "-DLIBC_CONF_WCTYPE_MODE=${LIBC_CONF_WCTYPE_MODE}")
+  endif()
+
   if(LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT)
     list(APPEND config_options "-DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}")
   endif()

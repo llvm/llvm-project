@@ -5506,7 +5506,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::ThreadLimit &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
-  bool isDependClauseOccured{false};
+  bool isDependClauseOccurred{false};
   int targetCount{0}, targetSyncCount{0};
   const auto &dir{std::get<parser::OmpDirectiveName>(x.v.t)};
   std::set<const Symbol *> objectSymbolList;
@@ -5551,7 +5551,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               }
             },
             [&](const parser::OmpClause::Depend &dependClause) {
-              isDependClauseOccured = true;
+              isDependClauseOccurred = true;
             },
             [&](const parser::OmpClause::Destroy &destroyClause) {
               const auto &interopVar{
@@ -5585,7 +5585,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     context_.Say(GetContext().directiveSource,
         "Each interop-type may be specified at most once."_err_en_US);
   }
-  if (isDependClauseOccured && !targetSyncCount) {
+  if (isDependClauseOccurred && !targetSyncCount) {
     context_.Say(GetContext().directiveSource,
         "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
   }

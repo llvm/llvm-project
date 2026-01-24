@@ -505,6 +505,9 @@ LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety
 
 LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
 
+// TODO: Remove flag and default to end-of-TU analysis for lifetime safety after performance validation.
+LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Experimental lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
+
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
 #undef LANGOPT

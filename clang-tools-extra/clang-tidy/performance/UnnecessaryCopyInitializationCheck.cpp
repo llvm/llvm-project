@@ -93,8 +93,8 @@ AST_MATCHER_FUNCTION_P(StatementMatcher,
       // Access through dereference, typically used for `operator[]`: `(*a)[3]`.
       unaryOperator(hasOperatorName("*"), hasUnaryOperand(ReceiverExpr)));
   const auto ReceiverType =
-      hasCanonicalType(recordType(hasDeclaration(namedDecl(
-          unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
+      hasCanonicalType(recordType(hasDeclaration(namedDecl(unless(
+          matchers::matchesAnyListedRegexName(ExcludedContainerTypes))))));
 
   return expr(
       anyOf(cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
@@ -246,7 +246,7 @@ void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
                                            unless(hasDeclaration(namedDecl(
                                                hasName("::std::function")))))),
                                        unless(hasDeclaration(namedDecl(
-                                           matchers::matchesAnyListedName(
+                                           matchers::matchesAnyListedRegexName(
                                                AllowedTypes)))))),
                                    unless(isImplicit()),
                                    hasInitializer(traverse(

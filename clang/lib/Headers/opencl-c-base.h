@@ -20,6 +20,13 @@
 #define __opencl_subgroup_builtins 1
 #endif
 
+#if defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||         \
+    (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+// Internal feature macro to provide depth image builtins.
+#define __opencl_depth_image_builtins 1
+#endif // defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||
+       // (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+
 // built-in scalar data types:
 
 /**
