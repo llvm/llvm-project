@@ -244,6 +244,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool Is32Bit = Subtarget.is32Bit();
   bool CallsEHReturn = MF->callsEHReturn();
 
   CallingConv::ID CC = F.getCallingConv();
@@ -274,7 +275,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_RT_AllRegs_AVX_SaveList;
     return CSR_64_RT_AllRegs_SaveList;
   case CallingConv::PreserveNone:
-    return CSR_64_NoneRegs_SaveList;
+    return Is32Bit ? CSR_32_NoneRegs_SaveList : CSR_64_NoneRegs_SaveList;
   case CallingConv::CXX_FAST_TLS:
     if (Is64Bit)
       return MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR() ?
