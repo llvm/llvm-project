@@ -704,8 +704,6 @@ void VPlanTransforms::createHeaderPhiRecipes(
   };
 
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);

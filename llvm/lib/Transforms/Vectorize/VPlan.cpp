@@ -874,8 +874,6 @@ void VPRegionBlock::dissolveToCFGLoop() {
   }
 
   VPBlockBase *Preheader = getSinglePredecessor();
-  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-
   VPBlockUtils::disconnectBlocks(Preheader, this);
 
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry))

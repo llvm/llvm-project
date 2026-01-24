@@ -172,8 +172,7 @@ public:
 
   /// Returns true if this VPValue is defined by a recipe.
   bool hasDefiningRecipe() const {
-    return SubclassID == VPVRecipeSC ||
-           (SubclassID == VPValueSC && getDefiningRecipe());
+    return SubclassID == VPVRecipeValueSC;
   }
 
   /// Returns true if the VPValue is defined outside any loop.

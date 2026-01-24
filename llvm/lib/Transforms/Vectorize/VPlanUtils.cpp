@@ -148,6 +148,15 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return SE.getCouldNotCompute();
   }
 
+  if (auto *RV = dyn_cast<VPRegionValue>(V)) {
+    assert(RV == RV->getDefiningRegion()->getCanonicalIV());
+    if (!L)
+      return SE.getCouldNotCompute();
+    const SCEV *Start = SE.getZero(RV->getDefiningRegion()->getCanonicalIVType());
+    return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                            SCEV::FlagAnyWrap);
+  }
+
   // Helper to create SCEVs for binary and unary operations.
   auto CreateSCEV =
       [&](ArrayRef<VPValue *> Ops,
@@ -249,14 +258,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
           .Case<VPExpandSCEVRecipe>(
               [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-          .Case<VPCanonicalIVPHIRecipe>([&SE, &PSE,
-                                         L](const VPCanonicalIVPHIRecipe *R) {
-            if (!L)
-              return SE.getCouldNotCompute();
-            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-            return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
-                                    SCEV::FlagAnyWrap);
-          })
           .Case<VPWidenIntOrFpInductionRecipe>(
               [&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
                 const SCEV *Step =
@@ -349,7 +350,7 @@ static bool preservesUniformity(unsigned Opcode) {
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
   // A live-in must be uniform across the scope of VPlan.
-  if (isa<VPIRValue, VPSymbolicValue>(VPV))
+  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
@@ -374,7 +375,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
+  if (isa<VPVectorPointerRecipe,
           VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
