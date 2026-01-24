@@ -72,6 +72,11 @@ void test_map_range() {
   auto result_comment3 = llvm::to_vector(llvm::map_range(/*keep_me*/ vec, transform));
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'map_to_vector'
   // CHECK-FIXES: auto result_comment3 = llvm::map_to_vector(/*keep_me*/ vec, transform);
+
+  // Check that comments inside explicit template argument are preserved.
+  auto result_comment4 = llvm::to_vector</*keep_me*/ 7>(llvm::map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'map_to_vector'
+  // CHECK-FIXES: auto result_comment4 = llvm::map_to_vector</*keep_me*/ 7>(vec, transform);
 }
 
 void test_filter_range() {
