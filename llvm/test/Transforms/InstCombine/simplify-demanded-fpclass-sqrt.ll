@@ -163,9 +163,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_maybe_ninf(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[X:%.*]]) {
 ; CHECK-NEXT:    [[MAYBE_NINF:%.*]] = call nofpclass(nan pinf sub norm) float @func()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0xFFF0000000000000
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[SELECT]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %maybe.ninf = call nofpclass(pinf norm sub nan) float @func()
   %select = select i1 %cond, float %x, float %maybe.ninf
@@ -178,9 +176,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_maybe_nnorm(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[X:%.*]]) {
 ; CHECK-NEXT:    [[MAYBE_NNORM:%.*]] = call nofpclass(nan inf sub pnorm) float @func()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[MAYBE_NNORM]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[SELECT]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %maybe.nnorm = call nofpclass(inf pnorm sub nan) float @func()
   %select = select i1 %cond, float %x, float %maybe.nnorm
@@ -193,9 +189,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_maybe_nsub(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[X:%.*]]) {
 ; CHECK-NEXT:    [[MAYBE_NSUB:%.*]] = call nofpclass(nan inf psub norm) float @func()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[MAYBE_NSUB]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[SELECT]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %maybe.nsub = call nofpclass(inf norm psub nan) float @func()
   %select = select i1 %cond, float %x, float %maybe.nsub

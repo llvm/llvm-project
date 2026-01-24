@@ -112,8 +112,7 @@ define nofpclass(inf norm sub zero) float @ret_only_nan_results_square(float nou
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan_results_square(float noundef %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan_results_square(
 ; CHECK-SAME: float noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[X]]
-; CHECK-NEXT:    ret float [[MUL]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %mul = fmul float %x, %x
   ret float %mul
@@ -885,8 +884,7 @@ define nofpclass(inf norm sub zero) float @ret_only_nan_results_fmul(float %x, f
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan_results_fmul(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan_results_fmul(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    ret float [[MUL]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %mul = fmul float %x, %y
   ret float %mul

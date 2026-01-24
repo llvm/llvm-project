@@ -67,8 +67,7 @@ define nofpclass(inf norm sub zero qnan) float @ret_only_snan(float %x, float %y
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.maximumnum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %result = call float @llvm.maximumnum.f32(float %x, float %y)
   ret float %result

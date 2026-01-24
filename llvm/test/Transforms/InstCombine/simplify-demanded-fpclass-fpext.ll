@@ -36,8 +36,7 @@ define nofpclass(inf norm sub zero qnan) float @ret_only_snan__fpext(half %x) {
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan__fpext(half %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan__fpext(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[X]] to float
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %result = fpext half %x to float
   ret float %result
