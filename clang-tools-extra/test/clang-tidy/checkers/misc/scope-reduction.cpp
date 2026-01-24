@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-scope-reduction %t -- --
+// RUN: %check_clang_tidy -std=c++17 %s misc-scope-reduction %t -- --
 
 // Variable can be moved to smaller scope (if-block)
 void test_if_scope() {
