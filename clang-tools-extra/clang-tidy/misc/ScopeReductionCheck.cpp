@@ -231,34 +231,21 @@ void ScopeReductionCheck::check(
       }
 
       // Step 6: Check if this use is inside a loop
-      const Stmt *Current = Use;
+      auto &Parents = Result.Context->getParentMapContext();
+
+      // Check if use is in any type of loop and get the specific loop
       const Stmt *ContainingLoop = nullptr;
-
-      while (Current) {
-        auto CurrentParents =
-            Result.Context->getParentMapContext().getParents(*Current);
-        if (CurrentParents.empty())
-          break;
-
-        const Stmt *Parent = CurrentParents[0].get<Stmt>();
-        if (!Parent) {
-          // Try to get Decl parent and continue from there
-          if (const auto *DeclParent = CurrentParents[0].get<Decl>()) {
-            auto DeclParentNodes =
-                Result.Context->getParentMapContext().getParents(*DeclParent);
-            if (!DeclParentNodes.empty())
-              Parent = DeclParentNodes[0].get<Stmt>();
-          }
-          if (!Parent)
-            break;
-        }
-
-        if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
-            isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
-          ContainingLoop = Parent;
-          break;
-        }
-        Current = Parent;
+      if (const auto *ForLoop = findAncestorOfType<ForStmt>(Use, Parents)) {
+        ContainingLoop = ForLoop;
+      } else if (const auto *WhileLoop =
+                     findAncestorOfType<WhileStmt>(Use, Parents)) {
+        ContainingLoop = WhileLoop;
+      } else if (const auto *DoLoop =
+                     findAncestorOfType<DoStmt>(Use, Parents)) {
+        ContainingLoop = DoLoop;
+      } else if (const auto *RangeLoop =
+                     findAncestorOfType<CXXForRangeStmt>(Use, Parents)) {
+        ContainingLoop = RangeLoop;
       }
 
       // If use is in a loop, check if suggested scope is inside that loop
@@ -294,29 +281,13 @@ void ScopeReductionCheck::check(
     bool UsesInSwitch = false;
 
     for (const auto *Use : Uses) {
-      const Stmt *Current = Use;
-      const SwitchCase *ContainingCase = nullptr;
+      // Find containing switch case using helper
+      const SwitchCase *ContainingCase = findContainingSwitchCase(Use, Parents);
 
-      // Walk up to find containing case label
-      while (Current) {
-        auto ParentNodes = Parents.getParents(*Current);
-        if (ParentNodes.empty())
-          break;
-
-        const Stmt *Parent = ParentNodes[0].get<Stmt>();
-        if (!Parent)
-          break;
-
-        if (const auto *CaseStmt = dyn_cast<SwitchCase>(Parent)) {
-          ContainingCase = CaseStmt;
-          UsesInSwitch = true;
-          break;
-        }
-        Current = Parent;
-      }
-
-      if (ContainingCase)
+      if (ContainingCase) {
         CaseLabels.insert(ContainingCase);
+        UsesInSwitch = true;
+      }
     }
 
     // If uses span multiple case labels, skip analysis
@@ -386,33 +357,9 @@ void ScopeReductionCheck::check(
   bool AllUsesInSameForLoop = true;
 
   for (const auto *Use : Uses) {
-    const ForStmt *ContainingForLoop = nullptr;
-    const Stmt *Current = Use;
-
-    // Walk up the AST to find a containing ForStmt
-    while (Current) {
-      auto ParentNodes = Parents.getParents(*Current);
-      if (ParentNodes.empty())
-        break;
-
-      if (const auto *FS = ParentNodes[0].get<ForStmt>()) {
-        ContainingForLoop = FS;
-        break;
-      }
-
-      const Stmt *Parent = ParentNodes[0].get<Stmt>();
-      if (!Parent) {
-        // Handle Decl parents like we do in the existing logic
-        if (const auto *DeclParent = ParentNodes[0].get<Decl>()) {
-          auto DeclParentNodes = Parents.getParents(*DeclParent);
-          if (!DeclParentNodes.empty())
-            Parent = DeclParentNodes[0].get<Stmt>();
-        }
-        if (!Parent)
-          break;
-      }
-      Current = Parent;
-    }
+    // Find containing for-loop using helper
+    const ForStmt *ContainingForLoop =
+        findAncestorOfType<ForStmt>(Use, Parents);
 
     if (!ContainingForLoop) {
       AllUsesInSameForLoop = false;
@@ -536,3 +483,45 @@ void ScopeReductionCheck::emitUsageNotes(
 }
 
 } // namespace clang::tidy::misc
+
+template <typename T>
+const T *clang::tidy::misc::ScopeReductionCheck::findAncestorOfType(
+    const Stmt *Start, ParentMapContext &Parents) {
+  const Stmt *Current = Start;
+  while (Current) {
+    auto ParentNodes = Parents.getParents(*Current);
+    if (ParentNodes.empty())
+      break;
+
+    const Stmt *Parent = ParentNodes[0].get<Stmt>();
+    if (!Parent) {
+      // Try to get Decl parent and continue from there
+      if (const auto *DeclParent = ParentNodes[0].get<Decl>()) {
+        auto DeclParentNodes = Parents.getParents(*DeclParent);
+        if (!DeclParentNodes.empty())
+          Parent = DeclParentNodes[0].get<Stmt>();
+      }
+      if (!Parent)
+        break;
+    }
+
+    if (const auto *Result = dyn_cast<T>(Parent))
+      return Result;
+    Current = Parent;
+  }
+  return nullptr;
+}
+
+bool clang::tidy::misc::ScopeReductionCheck::isInLoop(
+    const Stmt *Use, ParentMapContext &Parents) {
+  return findAncestorOfType<ForStmt>(Use, Parents) ||
+         findAncestorOfType<WhileStmt>(Use, Parents) ||
+         findAncestorOfType<DoStmt>(Use, Parents) ||
+         findAncestorOfType<CXXForRangeStmt>(Use, Parents);
+}
+
+const clang::SwitchCase *
+clang::tidy::misc::ScopeReductionCheck::findContainingSwitchCase(
+    const Stmt *Use, ParentMapContext &Parents) {
+  return findAncestorOfType<clang::SwitchCase>(Use, Parents);
+}

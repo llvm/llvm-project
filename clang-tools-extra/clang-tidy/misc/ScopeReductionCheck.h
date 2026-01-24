@@ -34,6 +34,19 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
+  /// Find the first ancestor of the specified type by walking up the AST.
+  /// Returns nullptr if no ancestor of the specified type is found.
+  template <typename T>
+  const T *findAncestorOfType(const Stmt *Start, ParentMapContext &Parents);
+
+  /// Check if a statement is inside any type of loop.
+  bool isInLoop(const Stmt *Use, ParentMapContext &Parents);
+
+  /// Find the containing switch case for a statement.
+  /// Returns nullptr if not inside a switch case.
+  const clang::SwitchCase *findContainingSwitchCase(const Stmt *Use,
+                                                    ParentMapContext &Parents);
+
   /// Emit diagnostic notes showing where the variable is used.
   /// Limits output to avoid excessive noise in diagnostics.
   void emitUsageNotes(const llvm::SmallVector<const DeclRefExpr *, 8> &Uses);
