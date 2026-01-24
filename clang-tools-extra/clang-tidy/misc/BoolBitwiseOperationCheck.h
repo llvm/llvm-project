@@ -34,7 +34,8 @@ public:
 
   void emitWarningAndChangeOperatorsIfPossible(
       const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
-      const clang::SourceManager &SM, clang::ASTContext &Ctx);
+      const clang::SourceManager &SM, clang::ASTContext &Ctx,
+      bool CanApplyFixIt);
 
 private:
   bool UnsafeMode;

@@ -40,10 +40,23 @@ static bool isBitwiseOperation(StringRef Value) {
                             Value);
 }
 
-static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
-  assert(BinOp->isCompoundAssignmentOp());
-  const Expr *LHS = BinOp->getLHS()->IgnoreImpCasts();
-  return isa<DeclRefExpr, MemberExpr>(LHS) ? LHS : nullptr;
+static std::optional<CharSourceRange>
+getOperatorTokenRangeForFixIt(const BinaryOperator *BinOp,
+                              const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  SourceLocation Loc = BinOp->getOperatorLoc();
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return std::nullopt;
+
+  Loc = SM.getSpellingLoc(Loc);
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return std::nullopt;
+
+  CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
+  if (TokenRange.isInvalid())
+    return std::nullopt;
+
+  return TokenRange;
 }
 
 /// Checks if all leaf nodes in a bitwise expression satisfy a given condition.
@@ -98,6 +111,11 @@ AST_MATCHER_P(Expr, hasAllLeavesOfBitwiseSatisfying,
   return leavesOfBitwiseSatisfy(&Node, Condition);
 }
 
+AST_MATCHER_P(Expr, hasSideEffects, bool, IncludePossibleEffects) {
+  auto &Ctx = Finder->getASTContext();
+  return Node.HasSideEffects(Ctx, IncludePossibleEffects);
+}
+
 } // namespace
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
@@ -116,17 +134,33 @@ void BoolBitwiseOperationCheck::storeOptions(
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
-  Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("|", "&", "|=", "&="),
-                     optionally(hasParent(binaryOperator().bind("p"))),
-                     allOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves)))
-          .bind("binOp"),
-      this);
+  auto NonVolatile = ignoringImpCasts(unless(hasType(isVolatileQualified())));
+
+  auto FixItMatcher = binaryOperator(
+      // Both operands must be non-volatile at the top level.
+      hasOperands(NonVolatile, NonVolatile),
+      hasRHS(unless(hasSideEffects(/*IncludePossibleEffects=*/!UnsafeMode))),
+      anyOf(
+          // Non-compound assignments: no additional LHS
+          // restriction needed.
+          hasAnyOperatorName("|", "&"),
+          // Compound assignments ('|=' / '&='): require a simple
+          // LHS so that we can safely duplicate it on the RHS.
+          allOf(hasAnyOperatorName("|=", "&="),
+                hasLHS(ignoringImpCasts(anyOf(declRefExpr(), memberExpr()))))));
+
+  auto BaseMatcher = binaryOperator(
+      hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
+      hasRHS(BooleanLeaves), optionally(hasParent(binaryOperator().bind("p"))),
+      optionally(FixItMatcher.bind("fixit")));
+
+  Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
-    const clang::SourceManager &SM, clang::ASTContext &Ctx) {
+    const clang::SourceManager &SM, clang::ASTContext &Ctx,
+    bool CanApplyFixIt) {
   auto DiagEmitter = [BinOp, this] {
     return diag(BinOp->getOperatorLoc(),
                 "use logical operator '%0' for boolean semantics instead of "
@@ -140,42 +174,17 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     return true;
   };
 
-  const bool HasVolatileOperand = llvm::any_of(
-      std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
-        return E->IgnoreImpCasts()
-            ->getType()
-            .isVolatileQualified();
-      });
-  if (HasVolatileOperand) {
+  const auto MaybeTokenRange =
+      getOperatorTokenRangeForFixIt(BinOp, SM, Ctx.getLangOpts());
+  if (!MaybeTokenRange) {
+    IgnoreMacros || DiagEmitterForStrictMode();
+    return;
+  }
+  if (!CanApplyFixIt) {
     DiagEmitterForStrictMode();
     return;
   }
-
-  const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
-      Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
-  if (HasSideEffects) {
-    DiagEmitterForStrictMode();
-    return;
-  }
-
-  SourceLocation Loc = BinOp->getOperatorLoc();
-
-  if (Loc.isInvalid() || Loc.isMacroID()) {
-    IgnoreMacros || DiagEmitterForStrictMode();
-    return;
-  }
-
-  Loc = SM.getSpellingLoc(Loc);
-  if (Loc.isInvalid() || Loc.isMacroID()) {
-    IgnoreMacros || DiagEmitterForStrictMode();
-    return;
-  }
-
-  const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
-  if (TokenRange.isInvalid()) {
-    IgnoreMacros || DiagEmitterForStrictMode();
-    return;
-  }
+  const CharSourceRange TokenRange = *MaybeTokenRange;
 
   const StringRef FixSpelling =
       translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
@@ -187,11 +196,9 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
   FixItHint InsertEqual;
   if (BinOp->isCompoundAssignmentOp()) {
-    const auto *LHS = getAcceptableCompoundsLHS(BinOp);
-    if (!LHS) {
-      DiagEmitterForStrictMode();
-      return;
-    }
+    const Expr *LHS = BinOp->getLHS()->IgnoreImpCasts();
+    // the matcher ensures that `LHS` is a simple
+    // declaration or member expression suitable for duplication.
     const SourceLocation LocLHS = LHS->getEndLoc();
     if (LocLHS.isInvalid() || LocLHS.isMacroID()) {
       IgnoreMacros || DiagEmitterForStrictMode();
@@ -259,12 +266,17 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
+  const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
   assert(BinOp);
+  if (!BinOp)
+    std::terminate();
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
-  emitWarningAndChangeOperatorsIfPossible(BinOp, Parent, SM, Ctx);
+  const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
+  emitWarningAndChangeOperatorsIfPossible(BinOp, Parent, SM, Ctx,
+                                          CanApplyFixIt);
 }
 
 } // namespace clang::tidy::misc

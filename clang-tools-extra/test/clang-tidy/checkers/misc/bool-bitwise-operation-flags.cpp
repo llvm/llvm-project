@@ -219,10 +219,9 @@ bool test_invalid_fixit_flag_check_long_chains_mixed(unsigned Flags, bool Bool1,
     Deprecated = (Bool1 | Bool2) & (Flags & 0xFFFFFFF8) & Bool3 & Bool4;
     // CHECK-FIXES: Deprecated = (Bool1 || Bool2) & (Flags & 0xFFFFFFF8) & Bool3 & Bool4;
 
-    // TODO: this is invalid fixit, unfortunately
     // Long chain starting with boolean, flag operation in the middle and mixed operators
     Deprecated = Deprecated & Bool1 & Bool2 | (Flags & 0xFFFFFFF8) | (Bool3 & Bool4);
-    // CHECK-FIXES: Deprecated = Deprecated && Bool1 && Bool2 | (Flags & 0xFFFFFFF8) | (Bool3 && Bool4);
+    // CHECK-FIXES: Deprecated = (Deprecated && Bool1 && Bool2) | (Flags & 0xFFFFFFF8) | (Bool3 && Bool4);
 
     // Long chain with compound assignment and mixed operators
     Deprecated &= Bool1 & Bool2 | (Flags & 0xFFFFFFF8) & Bool3;
