@@ -644,28 +644,6 @@ class OpenMP_HostEvalClauseSkip<
 def OpenMP_HostEvalClause : OpenMP_HostEvalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// V5.2: [9.8.1.1]: `inbranch` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_InbranchClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false>
-    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins UnitAttr:$inbranch);
-
-  let optAssemblyFormat = [{
-    `inbranch` $inbranch
-  }];
-
-  let description = [{
-    The `inbranch` clause indicates that the generated SIMD function variant
-    is intended for use in conditional branches.
-  }];
-}
-def OpenMP_InbranchClause : OpenMP_InbranchClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
 // V5.2: [3.4] `if` clause
 //===----------------------------------------------------------------------===//
 
@@ -686,6 +664,28 @@ class OpenMP_IfClauseSkip<
 }
 
 def OpenMP_IfClause : OpenMP_IfClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.1]: `inbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_InbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$inbranch);
+
+  let optAssemblyFormat = [{
+    `inbranch` $inbranch
+  }];
+
+  let description = [{
+    The `inbranch` clause indicates that the generated SIMD function variant
+    is intended for use in conditional branches.
+  }];
+}
+def OpenMP_InbranchClause : OpenMP_InbranchClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.5.10] `in_reduction` clause
