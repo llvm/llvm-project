@@ -187,8 +187,8 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
 
     // Otherwise, we can't reason about the data-flow.
     return visitNonControlFlowArgumentsImpl(
-        block->getParentOp(), block->getParent(), block->getParent()->getArguments(),
-        argLattices);
+        block->getParentOp(), block->getParent(),
+        block->getParent()->getArguments(), argLattices);
   }
 
   // Iterate over the predecessors of the non-entry block.

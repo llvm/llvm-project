@@ -215,7 +215,7 @@ protected:
   /// of loops).
   virtual void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs,
+      ValueRange noSuccessorInputs,
       ArrayRef<AbstractSparseLattice *> argLattices) = 0;
 
   /// Given an operation with region non-control-flow, the lattices of the entry
@@ -397,19 +397,19 @@ private:
   }
   void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs,
+      ValueRange noSuccessorInputs,
       ArrayRef<AbstractSparseLattice *> argLattices) override {
     visitNonControlFlowArguments(
-        op, successor, successorInputs,
+        op, successor, noSuccessorInputs,
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
          argLattices.size()});
   }
 
   virtual void visitNonControlFlowArgumentsImpl(
-      Operation *op, Region *const region, ValueRange successorInputs,
+      Operation *op, Region *const region, ValueRange arguments,
       ArrayRef<AbstractSparseLattice *> argLattices) override {
     visitNonControlFlowArguments(
-        op, region, successorInputs,
+        op, region, arguments,
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
          argLattices.size()});
   }
