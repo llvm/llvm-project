@@ -31,23 +31,12 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
-template <typename... Operands>
-static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, const StringRef str,
-                                       const mlir::Type &resTy,
-                                       Operands &&...op) {
-  return cir::LLVMIntrinsicCallOp::create(builder, loc,
-                                          builder.getStringAttr(str), resTy,
-                                          std::forward<Operands>(op)...)
-      .getResult();
-}
-
 // Generate vscale * scalingFactor
 static mlir::Value genVscaleTimesFactor(mlir::Location loc,
                                         CIRGenBuilderTy builder,
                                         mlir::Type cirTy,
                                         int32_t scalingFactor) {
-  mlir::Value vscale = emitIntrinsicCallOp(builder, loc, "vscale", cirTy);
+  mlir::Value vscale = builder.emitIntrinsicCallOp(loc, "vscale", cirTy);
   return builder.createNUWAMul(loc, vscale,
                                builder.getUInt64(scalingFactor, loc));
 }
@@ -240,8 +229,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
     auto retTy = convertType(expr->getType());
 
-    auto call = emitIntrinsicCallOp(builder, loc, llvmIntrName, retTy,
-                                    mlir::ValueRange{ops});
+    auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
+                                            mlir::ValueRange{ops});
     if (call.getType() == retTy)
       return call;
 
