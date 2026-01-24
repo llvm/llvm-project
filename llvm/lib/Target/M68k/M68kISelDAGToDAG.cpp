@@ -172,8 +172,15 @@ struct M68kISelAddressMode {
 
 namespace {
 
+// Helper type used by isSafeStoreLoad. Used to determine if
+// it is safe to fold a load and store into a single operation.
 struct CallSeqChainInfo {
+  // The nearest callseq_{start/end} (or lowered equivalent)
+  // in the chain of the load or store currently being analyzed.
   SDNode *Node = nullptr;
+  // True when a TokenFactor introduces a dependency on more than one
+  // chain with a callseq_{start/end} (or lowered equivalent) to the load
+  // or store currently being analyzed
   bool Multiple = false;
 };
 
@@ -189,10 +196,9 @@ static bool isCallSeqNode(const SDNode *N) {
 }
 
 static CallSeqChainInfo getCallSeqChainInfo(SDValue Chain) {
-  SmallVector<SDValue, 8> Worklist;
+  SmallVector<SDValue, 8> Worklist = {Chain};
   SmallPtrSet<SDNode *, 16> Visited;
   SDNode *Found = nullptr;
-  Worklist.push_back(Chain);
 
   while (!Worklist.empty()) {
     SDNode *CN = Worklist.pop_back_val().getNode();
@@ -200,11 +206,10 @@ static CallSeqChainInfo getCallSeqChainInfo(SDValue Chain) {
       continue;
 
     if (isCallSeqNode(CN)) {
-      if (!Found) {
+      if (!Found)
         Found = CN;
-      } else if (Found != CN) {
+      else if (Found != CN)
         return CallSeqChainInfo{nullptr, true};
-      }
     }
 
     if (CN->getOpcode() == ISD::TokenFactor) {
@@ -214,7 +219,7 @@ static CallSeqChainInfo getCallSeqChainInfo(SDValue Chain) {
       continue;
     }
 
-    for (const SDValue &Op : CN->op_values())
+    for (const SDValue &Op : CN->op_values()) {
       if (Op.getValueType() == MVT::Other) {
         if (Worklist.size() == 8) {
           // We can't actually evaluate all branches,
@@ -224,6 +229,7 @@ static CallSeqChainInfo getCallSeqChainInfo(SDValue Chain) {
         Worklist.push_back(Op);
         break;
       }
+    }
   }
 
   return CallSeqChainInfo{Found, false};
