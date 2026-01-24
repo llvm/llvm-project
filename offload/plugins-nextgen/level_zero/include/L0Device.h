@@ -275,6 +275,8 @@ public:
   const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
 
+  const char *getArchCStr() const;
+
   const std::string_view getZeId() const { return zeId; }
   const char *getZeIdCStr() const { return zeId.c_str(); }
 
@@ -554,9 +556,10 @@ public:
                             TargetAllocTy Kind) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
+  /// This plugin does nothing to lock buffers. Do not return an error, just
+  /// return the same pointer as the device pointer.
   Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN,
-                         "dataLockImpl not supported");
+    return HstPtr;
   }
   Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
 

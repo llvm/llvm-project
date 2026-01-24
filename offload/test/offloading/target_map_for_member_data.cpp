@@ -3,6 +3,7 @@
 // clang-format on
 
 // REQUIRES: libomptarget-debug
+// XFAIL: intelgpu
 
 struct DataTy {
   float a;

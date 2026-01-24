@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s
 
 ; CHECK: %preserve_me = phi float [ %{{[0-9]+}}, %atomicrmw.shared ], [ %loaded.private, %atomicrmw.private ], [ %{{[0-9]+}}, %atomicrmw.global ]
 ; CHECK: ret float %preserve_me

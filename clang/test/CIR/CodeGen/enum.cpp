@@ -13,7 +13,7 @@ int f() {
 }
 
 // CHECK: cir.func{{.*}} @_Z1fv
-// CHECK:    cir.const #cir.int<1> : !u32i
+// CHECK:    cir.const #cir.int<1> : !s32i
 
 namespace test {
   using enum Numbers;
@@ -24,4 +24,4 @@ int f2() {
 }
 
 // CHECK: cir.func{{.*}} @_Z2f2v
-// CHECK:    cir.const #cir.int<2> : !u32i
+// CHECK:    cir.const #cir.int<2> : !s32i

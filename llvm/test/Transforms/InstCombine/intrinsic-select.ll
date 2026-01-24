@@ -426,3 +426,109 @@ define { <4 x float>, <4 x float> } @test_select_of_sincos_intrinsic_operand(<4 
   %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %s)
   ret { <4 x float>, <4 x float> } %result
 }
+
+define i8 @test_select_rotate_left(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_left(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], i8 2, i8 -1
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %s = select i1 %0, i8 1, i8 -1
+  %ret = call i8 @llvm.fshl.i8(i8 %s, i8 %s, i8 1)
+  ret i8 %ret
+}
+
+define i8 @test_select_rotate_left_multiuser(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_left_multiuser(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP0:%.*]], i8 1, i8 -1
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[S]], i8 [[S]], i8 1)
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %s = select i1 %0, i8 1, i8 -1
+  %ret = call i8 @llvm.fshl.i8(i8 %s, i8 %s, i8 1)
+  call void @use(i8 %s)
+  ret i8 %ret
+}
+
+define <2 x i8> @test_select_rotate_left_splat(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_left_splat(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], <2 x i8> splat (i8 2), <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %s = select i1 %0, <2 x i8> <i8 1, i8 1>, <2 x i8> <i8 -1, i8 -1>
+  %ret = call <2 x i8> @llvm.fshl.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 1, i8 1>)
+  ret <2 x i8> %ret
+}
+
+define <2 x i8> @test_select_rotate_left_splat_poison(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_left_splat_poison(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], <2 x i8> <i8 2, i8 poison>, <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %s = select i1 %0, <2 x i8> <i8 1, i8 poison>, <2 x i8> <i8 -1, i8 -1>
+  %ret = call <2 x i8> @llvm.fshl.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 1, i8 1>)
+  ret <2 x i8> %ret
+}
+
+define <2 x i8> @test_select_rotate_left_non_splat(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_left_non_splat(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], <2 x i8> <i8 2, i8 4>, <2 x i8> <i8 -1, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %s = select i1 %0, <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 -1, i8 -2>
+  %ret = call <2 x i8> @llvm.fshl.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 1, i8 1>)
+  ret <2 x i8> %ret
+}
+
+define i8 @test_select_rotate_right(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_right(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], i8 2, i8 -1
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %s = select i1 %0, i8 1, i8 -1
+  %ret = call i8 @llvm.fshr.i8(i8 %s, i8 %s, i8 7)
+  ret i8 %ret
+}
+
+define i8 @test_select_rotate_right_multiuser(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_right_multiuser(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP0:%.*]], i8 1, i8 -1
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[S]], i8 [[S]], i8 1)
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %s = select i1 %0, i8 1, i8 -1
+  %ret = call i8 @llvm.fshr.i8(i8 %s, i8 %s, i8 7)
+  call void @use(i8 %s)
+  ret i8 %ret
+}
+
+define <2 x i8> @test_select_rotate_right_splat(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_right_splat(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], <2 x i8> splat (i8 2), <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %s = select i1 %0, <2 x i8> <i8 1, i8 1>, <2 x i8> <i8 -1, i8 -1>
+  %ret = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 7, i8 7>)
+  ret <2 x i8> %ret
+}
+
+define <2 x i8> @test_select_rotate_right_splat_poison(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_right_splat_poison(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], <2 x i8> <i8 2, i8 poison>, <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %s = select i1 %0, <2 x i8> <i8 1, i8 poison>, <2 x i8> <i8 -1, i8 -1>
+  %ret = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 7, i8 7>)
+  ret <2 x i8> %ret
+}
+
+define <2 x i8> @test_select_rotate_right_non_splat(i1 %0) {
+; CHECK-LABEL: @test_select_rotate_right_non_splat(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP0:%.*]], <2 x i8> <i8 2, i8 4>, <2 x i8> <i8 -1, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %s = select i1 %0, <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 -1, i8 -2>
+  %ret = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 7, i8 7>)
+  ret <2 x i8> %ret
+}

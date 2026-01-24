@@ -228,7 +228,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<vector::MultiDimReductionOp>(op))
     return getTileShape(op->getOpOperand(0));
 
-  if (isa<vector::TransposeOp, vector::BroadcastOp>(op))
+  if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
+          vector::ConstantMaskOp, vector::CreateMaskOp>(op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;
@@ -415,14 +416,14 @@ void XeGPUBlockingPass::runOnOperation() {
     // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
       std::string name = xegpu::getTemporaryLayoutName(opr);
-      if (op->hasAttrOfType<xegpu::LayoutAttr>(name))
+      if (op->hasAttrOfType<xegpu::DistributeLayoutAttr>(name))
         op->removeAttr(name);
     }
 
     // Update the layout attributes per result.
     for (OpResult result : op->getOpResults()) {
       std::string name = xegpu::getTemporaryLayoutName(result);
-      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
+      if (auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))
           xegpu::setDistributeLayoutAttr(result, layout.dropInstData());

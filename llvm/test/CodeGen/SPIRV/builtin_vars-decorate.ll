@@ -94,23 +94,23 @@
 define spir_kernel void @_Z1wv() {
 entry:
   %r1 = tail call spir_func i64 @get_global_linear_id()
-  store i64 %r1, i64* @G_r1
+  store i64 %r1, ptr @G_r1
   %r2 = tail call spir_func i64 @get_local_linear_id()
-  store i64 %r2, i64* @G_r2
+  store i64 %r2, ptr @G_r2
   %r3 = tail call spir_func i32 @get_work_dim()
-  store i32 %r3, i32* @G_r3
+  store i32 %r3, ptr @G_r3
   %r4 = tail call spir_func i32 @get_sub_group_size()
-  store i32 %r4, i32* @G_r4
+  store i32 %r4, ptr @G_r4
   %r5 = tail call spir_func i32 @get_max_sub_group_size()
-  store i32 %r5, i32* @G_r5
+  store i32 %r5, ptr @G_r5
   %r6 = tail call spir_func i32 @get_num_sub_groups()
-  store i32 %r6, i32* @G_r6
+  store i32 %r6, ptr @G_r6
   %r7 = tail call spir_func i32 @get_enqueued_num_sub_groups()
-  store i32 %r7, i32* @G_r7
+  store i32 %r7, ptr @G_r7
   %r8 = tail call spir_func i32 @get_sub_group_id()
-  store i32 %r8, i32* @G_r8
+  store i32 %r8, ptr @G_r8
   %r9 = tail call spir_func i32 @get_sub_group_local_id()
-  store i32 %r9, i32* @G_r9
+  store i32 %r9, ptr @G_r9
   ret void
 }
 

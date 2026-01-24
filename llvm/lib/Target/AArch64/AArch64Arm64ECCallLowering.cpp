@@ -75,7 +75,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
-  int cfguard_module_flag = 0;
+  ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
   Constant *GuardFnCFGlobal = nullptr;
@@ -758,7 +758,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 
   // Load the global symbol as a pointer to the check function.
   Value *GuardFn;
-  if (cfguard_module_flag == 2 && !CB->hasFnAttr("guard_nocf"))
+  if ((CFGuardModuleFlag == ControlFlowGuardMode::Enabled) &&
+      !CB->hasFnAttr("guard_nocf"))
     GuardFn = GuardFnCFGlobal;
   else
     GuardFn = GuardFnGlobal;
@@ -794,9 +795,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   M = &Mod;
 
   // Check if this module has the cfguard flag and read its value.
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("cfguard")))
-    cfguard_module_flag = MD->getZExtValue();
+  CFGuardModuleFlag = M->getControlFlowGuardMode();
 
   PtrTy = PointerType::getUnqual(M->getContext());
   I64Ty = Type::getInt64Ty(M->getContext());

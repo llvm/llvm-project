@@ -1122,11 +1122,15 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "CodeViewGHash", 1);
   }
   if (CodeGenOpts.ControlFlowGuard) {
-    // Function ID tables and checks for Control Flow Guard (cfguard=2).
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 2);
+    // Function ID tables and checks for Control Flow Guard.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard",
+        static_cast<unsigned>(llvm::ControlFlowGuardMode::Enabled));
   } else if (CodeGenOpts.ControlFlowGuardNoChecks) {
-    // Function ID tables for Control Flow Guard (cfguard=1).
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 1);
+    // Function ID tables for Control Flow Guard.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard",
+        static_cast<unsigned>(llvm::ControlFlowGuardMode::TableOnly));
   }
   if (CodeGenOpts.EHContGuard) {
     // Function ID tables for EH Continuation Guard.
@@ -1759,6 +1763,12 @@ void CodeGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
   getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
                     diag::err_codegen_unsupported)
       << Msg << S->getSourceRange();
+}
+
+void CodeGenModule::ErrorUnsupported(const Stmt *S, llvm::StringRef Type) {
+  getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
+                    diag::err_codegen_unsupported)
+      << Type << S->getSourceRange();
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the

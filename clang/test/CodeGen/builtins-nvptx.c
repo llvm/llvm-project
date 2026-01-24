@@ -272,6 +272,27 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
   __syncthreads();
 }
 
+__device__ int nvvm_bar0_reductions(int i) {
+  // CHECK-LABEL: nvvm_bar0_reductions
+
+  int ret = 0;
+  // CHECK: %[[NE:[0-9]+]] = icmp ne i32 %{{[0-9]+}}, 0
+  // CHECK: %[[AND:[0-9]+]] = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 0, i1 %[[NE]])
+  // CHECK: zext i1 %[[AND]] to i32
+  ret += __nvvm_bar0_and(i);
+
+  // CHECK: %[[NE:[0-9]+]] = icmp ne i32 %{{[0-9]+}}, 0
+  // CHECK: %[[OR:[0-9]+]] = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 0, i1 %[[NE]])
+  // CHECK: zext i1 %[[OR]] to i32
+  ret += __nvvm_bar0_or(i);
+
+  // CHECK: %[[NE:[0-9]+]] = icmp ne i32 %{{[0-9]+}}, 0
+  // CHECK: %[[POPC:[0-9]+]] = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %[[NE]])
+  ret += __nvvm_bar0_popc(i);
+
+  return ret;
+}
+
 __device__ int di;
 __shared__ int si;
 __device__ long dl;

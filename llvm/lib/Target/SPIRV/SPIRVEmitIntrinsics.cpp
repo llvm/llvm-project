@@ -220,7 +220,7 @@ class SPIRVEmitIntrinsics
   //    Parameters:
   //      ElementType: the type of the elements stored in the parent array.
   //      Offset: the Value* containing the byte offset into the array.
-  // Return true if an error occured during the walk, false otherwise.
+  // Return true if an error occurred during the walk, false otherwise.
   bool walkLogicalAccessChain(
       GetElementPtrInst &GEP,
       const std::function<void(Type *PointedType, uint64_t Index)>
@@ -2044,6 +2044,19 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   MachineMemOperand::Flags Flags =
       TLI->getStoreMemOperandFlags(I, CurrF->getDataLayout());
   auto *PtrOp = I.getPointerOperand();
+
+  if (I.getValueOperand()->getType()->isAggregateType()) {
+    // It is possible that what used to be an ExtractValueInst has been replaced
+    // with a call to the spv_extractv intrinsic, and that said call hasn't
+    // had its return type replaced with i32 during the dedicated pass (because
+    // it was emitted later); we have to handle this here, because IRTranslator
+    // cannot deal with multi-register types at the moment.
+    CallBase *CB = dyn_cast<CallBase>(I.getValueOperand());
+    assert(CB && CB->getIntrinsicID() == Intrinsic::spv_extractv &&
+           "Unexpected argument of aggregate type, should be spv_extractv!");
+    CB->mutateType(B.getInt32Ty());
+  }
+
   auto *NewI = B.CreateIntrinsic(
       Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
       {I.getValueOperand(), PtrOp, B.getInt16(Flags),

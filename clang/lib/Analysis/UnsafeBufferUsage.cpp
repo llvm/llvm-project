@@ -29,7 +29,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstddef>
@@ -129,10 +128,10 @@ public:
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
   MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
-                         bool FindAll, bool ignoreUnevaluatedContext,
+                         bool FindAll, bool IgnoreUnevaluatedContext,
                          const UnsafeBufferUsageHandler &NewHandler)
       : Matcher(&Matcher), FindAll(FindAll), Matches(false),
-        ignoreUnevaluatedContext(ignoreUnevaluatedContext),
+        IgnoreUnevaluatedContext(IgnoreUnevaluatedContext),
         ActiveASTContext(&Context), Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
@@ -170,7 +169,7 @@ public:
 
   bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
     // These are unevaluated, except the result expression.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
     return DynamicRecursiveASTVisitor::TraverseGenericSelectionExpr(Node);
   }
@@ -178,7 +177,7 @@ public:
   bool
   TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
@@ -186,7 +185,7 @@ public:
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
                                  bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
         Node, TraverseQualifier);
@@ -195,7 +194,7 @@ public:
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
                                bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
         Node, TraverseQualifier);
@@ -203,14 +202,14 @@ public:
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXNoexceptExpr(Node);
   }
 
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
@@ -248,7 +247,7 @@ private:
   // When true, finds all matches. When false, finds the first match and stops.
   const bool FindAll;
   bool Matches;
-  bool ignoreUnevaluatedContext;
+  bool IgnoreUnevaluatedContext;
   ASTContext *ActiveASTContext;
   const UnsafeBufferUsageHandler *Handler;
 };
@@ -267,7 +266,7 @@ forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/true, Handler);
+                                 /*IgnoreUnevaluatedContext=*/true, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -275,7 +274,7 @@ static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/false, Handler);
+                                 /*IgnoreUnevaluatedContext=*/false, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -668,7 +667,8 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
 }
 
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
-                                 const ASTContext &Ctx) {
+                                 const ASTContext &Ctx,
+                                 const bool IgnoreStaticSizedArrays) {
   // FIXME: Proper solution:
   //  - refactor Sema::CheckArrayAccess
   //    - split safe/OOB/unknown decision logic from diagnostics emitting code
@@ -688,6 +688,12 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     limit = SLiteral->getLength() + 1;
   } else {
     return false;
+  }
+
+  if (IgnoreStaticSizedArrays) {
+    // If we made it here, it means a size was found for the var being accessed
+    // (either string literal or array). If it's fixed size, we can ignore it.
+    return true;
   }
 
   Expr::EvalResult EVResult;
@@ -756,6 +762,9 @@ static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  // Strip CXXDefaultArgExpr before check:
+  if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
+    Ptr = DefaultArgE->getExpr();
   Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
@@ -768,6 +777,14 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
     if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
+  }
+
+  // Functions known to return properly null terminated strings.
+  static const llvm::StringSet<> NullTermFunctions = {"strerror"};
+  if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+    const FunctionDecl *F = CE->getDirectCallee();
+    if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
+      return true;
   }
   return false;
 }
@@ -1558,6 +1575,7 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     const auto *ASE = dyn_cast<ArraySubscriptExpr>(S);
     if (!ASE)
@@ -1568,7 +1586,10 @@ public:
     const auto *Idx = dyn_cast<IntegerLiteral>(ASE->getIdx());
     bool IsSafeIndex = (Idx && Idx->getValue().isZero()) ||
                        isa<ArrayInitIndexExpr>(ASE->getIdx());
-    if (IsSafeIndex || isSafeArraySubscript(*ASE, Ctx))
+    if (IsSafeIndex ||
+        isSafeArraySubscript(
+            *ASE, Ctx,
+            Handler->ignoreUnsafeBufferInStaticSizedArray(S->getBeginLoc())))
       return false;
     Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
     return true;
@@ -2221,17 +2242,41 @@ public:
         });
     const Expr *UnsafeArg;
 
-    if (AnyAttr && !IsPrintf &&
-        (CE->getNumArgs() >= static_cast<unsigned>(Attr->getFirstArg()))) {
-      // for scanf-like functions, any format argument is considered unsafe:
+    if (!AnyAttr)
+      return false;
+
+    // FormatAttribute indexes are 1-based:
+    unsigned FmtIdx = Attr->getFormatIdx() - 1;
+    std::optional<unsigned> FmtArgIdx = Attr->getFirstArg() - 1;
+
+    if (isa<CXXMemberCallExpr>(CE)) {
+      // For CXX member calls, attribute parameters are specified as if there is
+      // an implicit "this".  The implicit "this" is invisible through CallExpr
+      // `CE`. (What makes it even less ergonomic is that the
+      //  implicit "this" is visible through CallExpr `CE` for CXX operator
+      //  calls!)
+      --FmtIdx;
+      --*FmtArgIdx;
+    } else if (CE->getStmtClass() != Stmt::CallExprClass &&
+               !isa<CXXOperatorCallExpr>(CE))
+      return false; // Ignore unsupported CallExpr subclasses
+    if (*FmtArgIdx >= CE->getNumArgs())
+      // Format arguments are allowed to be absent when variadic parameter is
+      // used.  So we need to check if those arguments exist. Moreover, when
+      // variadic parameter is NOT used, `Attr->getFirstArg()` could be an
+      // out-of-bound value. E.g.,
+      // clang does not complain about `__attribute__((__format__(__printf__, 2,
+      // 99))) void f(int, char *);`.
+      FmtArgIdx = std::nullopt;
+
+    if (AnyAttr && !IsPrintf && FmtArgIdx) {
+      // For scanf-like functions, any format argument is considered unsafe:
       Result.addNode(Tag, DynTypedNode::create(*CE));
       return true;
     }
+    // For printf-like functions:
     if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
-                       Ctx, CE, UnsafeArg,
-                       // FormatAttribute indexes are 1-based:
-                       /* FmtIdx= */ Attr->getFormatIdx() - 1,
-                       /* FmtArgIdx= */ Attr->getFirstArg() - 1)) {
+                       Ctx, CE, UnsafeArg, FmtIdx, FmtArgIdx)) {
       Result.addNode(Tag, DynTypedNode::create(*CE));
       Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
       return true;
@@ -2852,6 +2897,10 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
       return false;
     }
     bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInStaticSizedArray(
+        const SourceLocation &Loc) const override {
       return false;
     }
     std::string getUnsafeBufferUsageAttributeTextAt(
@@ -3638,7 +3687,7 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
 //   1. Add the `[[clang::unsafe_buffer_usage]]` attribute to each declaration
 //   of 'F';
 //   2. Create a declaration of "NewF" next to each declaration of `F`;
-//   3. Create a definition of "F" (as its' original definition is now belongs
+//   3. Create a definition of "F" (as its original definition is now belongs
 //      to "NewF") next to its original definition.  The body of the creating
 //      definition calls to "NewF".
 //
@@ -4170,7 +4219,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const FixitStrategy &S,
   }
 
   // `FixItsForVariable` now contains only variables that can be
-  // fixed. A variable can be fixed if its' declaration and all Fixables
+  // fixed. A variable can be fixed if its declaration and all Fixables
   // associated to it can all be fixed.
 
   // To further remove from `FixItsForVariable` variables whose group mates
@@ -4241,7 +4290,7 @@ getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
 
 //  Manages variable groups:
 class VariableGroupsManagerImpl : public VariableGroupsManager {
-  const std::vector<VarGrpTy> Groups;
+  const std::vector<VarGrpTy> &Groups;
   const std::map<const VarDecl *, unsigned> &VarGrpMap;
   const llvm::SetVector<const VarDecl *> &GrpsUnionForParms;
 
@@ -4560,6 +4609,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   SmallVector<Stmt *> Stmts;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Consteval functions are free of UB by the spec, so we don't need to
+    // visit them or produce diagnostics.
+    if (FD->isConsteval())
+      return;
     // We do not want to visit a Lambda expression defined inside a method
     // independently. Instead, it should be visited along with the outer method.
     // FIXME: do we want to do the same thing for `BlockDecl`s?

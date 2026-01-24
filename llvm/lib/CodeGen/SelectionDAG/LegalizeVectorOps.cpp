@@ -1157,6 +1157,14 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
+    if (SDValue Expanded = TLI.expandCLMUL(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {
@@ -2256,7 +2264,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   // converted to their none strict counterpart.
   assert(!Node->isStrictFPOpcode() && "Unexpected strict fp operation!");
 
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported)
     return false;
 

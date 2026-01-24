@@ -91,18 +91,6 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
   llvm_unreachable("Unknown lane kind");
 }
 
-VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
-    : SubclassID(SC), UnderlyingVal(UV), Def(Def) {
-  if (Def)
-    Def->addDefinedValue(this);
-}
-
-VPValue::~VPValue() {
-  assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (VPDef *Def = getDefiningRecipe())
-    Def->removeDefinedValue(this);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
   if (const VPRecipeBase *R = getDefiningRecipe())
@@ -129,11 +117,35 @@ void VPDef::dump() const {
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  return cast_or_null<VPRecipeBase>(Def);
+  auto *DefValue = dyn_cast<VPRecipeValue>(this);
+  if (!DefValue)
+    return nullptr;
+  return cast<VPRecipeBase>(DefValue->Def);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  return cast_or_null<VPRecipeBase>(Def);
+  auto *DefValue = dyn_cast<VPRecipeValue>(this);
+  if (!DefValue)
+    return nullptr;
+  return cast<VPRecipeBase>(DefValue->Def);
+}
+
+Value *VPValue::getLiveInIRValue() const {
+  return cast<VPIRValue>(this)->getValue();
+}
+
+Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
+
+VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
+    : VPValue(VPVRecipeValueSC, UV), Def(Def) {
+  assert(Def && "VPRecipeValue requires a defining recipe");
+  Def->addDefinedValue(this);
+}
+
+VPRecipeValue::~VPRecipeValue() {
+  assert(Users.empty() &&
+         "trying to delete a VPRecipeValue with remaining users");
+  Def->removeDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
@@ -229,8 +241,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
-  if (Def->isLiveIn())
-    return Def->getLiveInIRValue();
+  if (isa<VPIRValue, VPSymbolicValue>(Def))
+    return Def->getUnderlyingValue();
 
   if (hasScalarValue(Def, Lane))
     return Data.VPV2Scalars[Def][Lane.mapToCacheIndex(VF)];
@@ -262,8 +274,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
-    assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def) ||
-            !vputils::onlyFirstLaneUsed(Def) ||
+    assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
+            hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
              Data.VPV2Scalars[Def].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "
@@ -284,7 +296,6 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   };
 
   if (!hasScalarValue(Def, {0})) {
-    assert(Def->isLiveIn() && "expected a live-in");
     Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B);
@@ -866,7 +877,7 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-  VPValue DummyValue;
+  VPSymbolicValue DummyValue;
 
   for (auto *VPB : CreatedBlocks) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
@@ -1053,7 +1064,7 @@ void VPlan::printLiveIns(raw_ostream &O) const {
 
   O << "\n";
   if (TripCount) {
-    if (TripCount->isLiveIn())
+    if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);
     O << " = original trip-count";
@@ -1169,20 +1180,17 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPValue *OldLiveIn : getLiveIns()) {
-    Old2NewVPValues[OldLiveIn] =
-        NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
-  }
+  for (VPIRValue *OldLiveIn : getLiveIns())
+    Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPValue();
+    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
-  if (TripCount && TripCount->isLiveIn())
-    Old2NewVPValues[TripCount] =
-        NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
+  if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
+    Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1448,9 +1456,9 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // First assign the base name for V.
   const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
-  // Integer or FP constants with different types will result in he same string
+  // Integer or FP constants with different types will result in the same string
   // due to stripping types.
-  if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
+  if (isa<VPIRValue>(V) && isa<ConstantInt, ConstantFP>(UV))
     return;
 
   // If it is already used by C > 0 other VPValues, increase the version counter
@@ -1727,10 +1735,10 @@ bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
 
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
-  if (!V->isLiveIn())
-    return {};
+  if (auto *IRV = dyn_cast<VPIRValue>(V))
+    return TTI::getOperandInfo(IRV->getValue());
 
-  return TTI::getOperandInfo(V->getLiveInIRValue());
+  return {};
 }
 
 InstructionCost VPCostContext::getScalarizationOverhead(
@@ -1758,7 +1766,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   SmallPtrSet<const VPValue *, 4> UniqueOperands;
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
-    if (Op->isLiveIn() ||
+    if (isa<VPIRValue>(Op) ||
         (!AlwaysIncludeReplicatingR &&
          isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
         (isa<VPReplicateRecipe>(Op) &&

@@ -12,6 +12,7 @@ unittest("CASTests") {
     "BuiltinUnifiedCASDatabasesTest.cpp",
     "CASTestConfig.cpp",
     "ObjectStoreTest.cpp",
+    "OnDiskCASLoggerTest.cpp",
     "UnifiedOnDiskCacheTest.cpp",
   ]
 

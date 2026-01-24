@@ -172,6 +172,10 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
+
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
