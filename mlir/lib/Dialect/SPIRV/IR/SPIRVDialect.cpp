@@ -186,6 +186,13 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
     }
+    if (!isa<ScalarType>(t.getElementType())) {
+      parser.emitError(typeLoc,
+                       "vector element type has to be SPIR-V compatible "
+                       "integer, float or boolean but found ")
+          << t.getElementType();
+      return Type();
+    }
     if (t.getNumElements() > 4) {
       parser.emitError(
           typeLoc, "vector length has to be less than or equal to 4 but found ")
