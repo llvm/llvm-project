@@ -1280,7 +1280,6 @@ add_header_library(
     .sincosf_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
