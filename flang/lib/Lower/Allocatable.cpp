@@ -336,9 +336,18 @@ private:
     const Fortran::semantics::Symbol &getSymbol() const {
       return unwrapSymbol(getAllocObj());
     }
+    // Check if this allocation uses array bounds (F2023 feature)
+    bool hasArrayBounds() const {
+      const auto &shapeSpecArrayList{
+          std::get<Fortran::parser::AllocateShapeSpecArrayList>(alloc.t)};
+      return std::holds_alternative<Fortran::parser::AllocateShapeSpecArray>(
+          shapeSpecArrayList.u);
+    }
     const std::list<Fortran::parser::AllocateShapeSpec> &getShapeSpecs() const {
       return std::get<std::list<Fortran::parser::AllocateShapeSpec>>((std::get<Fortran::parser::AllocateShapeSpecArrayList>(alloc.t)).u);
-      // return std::get<std::list<Fortran::parser::AllocateShapeSpec>>(alloc.t);
+    }
+    const Fortran::parser::AllocateShapeSpecArray &getShapeSpecArrays() const {
+      return std::get<Fortran::parser::AllocateShapeSpecArray>((std::get<Fortran::parser::AllocateShapeSpecArrayList>(alloc.t)).u);
     }
   };
 
@@ -395,11 +404,17 @@ private:
   }
 
   static bool lowerBoundsAreOnes(const Allocation &alloc) {
-    for (const Fortran::parser::AllocateShapeSpec &shapeSpec :
-         alloc.getShapeSpecs())
-      if (std::get<0>(shapeSpec.t))
-        return false;
-    return true;
+    if(!alloc.hasArrayBounds()) {    
+      for (const Fortran::parser::AllocateShapeSpec &shapeSpec :
+          alloc.getShapeSpecs())
+        if (std::get<0>(shapeSpec.t))
+          return false;
+      return true;
+    }
+    else {
+      printf("UNIMPLEMENTED 1, hardcoding true for my case which doesn't use lower bounds\n");
+      return true;
+    }
   }
 
   /// Build name for the fir::allocmem generated for alloc.
@@ -417,30 +432,37 @@ private:
     mlir::Type idxTy = builder.getIndexType();
     bool lBoundsAreOnes = lowerBoundsAreOnes(alloc);
     mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-    for (const Fortran::parser::AllocateShapeSpec &shapeSpec :
-         alloc.getShapeSpecs()) {
-      mlir::Value lb;
-      if (!lBoundsAreOnes) {
-        if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
-                std::get<0>(shapeSpec.t)) {
-          lb = fir::getBase(converter.genExprValue(
-              loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
-          lb = builder.createConvert(loc, idxTy, lb);
-        } else {
-          lb = one;
+    if(!alloc.hasArrayBounds()) {
+      for (const Fortran::parser::AllocateShapeSpec &shapeSpec :
+          alloc.getShapeSpecs()) {
+        mlir::Value lb;
+        if (!lBoundsAreOnes) {
+          if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
+                  std::get<0>(shapeSpec.t)) {
+            lb = fir::getBase(converter.genExprValue(
+                loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
+            lb = builder.createConvert(loc, idxTy, lb);
+          } else {
+            lb = one;
+          }
+          lbounds.emplace_back(lb);
         }
-        lbounds.emplace_back(lb);
+        mlir::Value ub = fir::getBase(converter.genExprValue(
+            loc, Fortran::semantics::GetExpr(std::get<1>(shapeSpec.t)), stmtCtx));
+        ub = builder.createConvert(loc, idxTy, ub);
+        if (lb) {
+          mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, ub, lb);
+          extents.emplace_back(
+              mlir::arith::AddIOp::create(builder, loc, diff, one));
+        } else {
+          extents.emplace_back(ub);
+        }
       }
-      mlir::Value ub = fir::getBase(converter.genExprValue(
-          loc, Fortran::semantics::GetExpr(std::get<1>(shapeSpec.t)), stmtCtx));
-      ub = builder.createConvert(loc, idxTy, ub);
-      if (lb) {
-        mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, ub, lb);
-        extents.emplace_back(
-            mlir::arith::AddIOp::create(builder, loc, diff, one));
-      } else {
-        extents.emplace_back(ub);
-      }
+    }
+    else {
+      printf("IMPLEMENTING 2\n");
+      const auto &array{alloc.getShapeSpecArrays()};
+      
     }
     fir::factory::genInlinedAllocation(builder, loc, box, lbounds, extents,
                                        lenParams, mangleAlloc(alloc),
@@ -587,42 +609,47 @@ private:
     mlir::Type idxTy = builder.getIndexType();
     mlir::Type i32Ty = builder.getIntegerType(32);
     Fortran::lower::StatementContext stmtCtx;
-    for (const auto &iter : llvm::enumerate(alloc.getShapeSpecs())) {
-      mlir::Value lb;
-      const auto &bounds = iter.value().t;
-      if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
-              std::get<0>(bounds))
-        lb = fir::getBase(converter.genExprValue(
-            loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
-      else
-        lb = builder.createIntegerConstant(loc, idxTy, 1);
-      mlir::Value ub = fir::getBase(converter.genExprValue(
-          loc, Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx));
-      mlir::Value dimIndex =
-          builder.createIntegerConstant(loc, i32Ty, iter.index());
-      // Runtime call
-      genRuntimeSetBounds(builder, loc, box, dimIndex, lb, ub);
-    }
-    if (sourceExpr && sourceExpr->Rank() > 0 &&
-        alloc.getShapeSpecs().size() == 0) {
-      // If the alloc object does not have shape list, get the bounds from the
-      // source expression.
-      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      const auto *sourceBox = sourceExv.getBoxOf<fir::BoxValue>();
-      assert(sourceBox && "source expression should be lowered to one box");
-      for (int i = 0; i < sourceExpr->Rank(); ++i) {
-        auto dimVal = builder.createIntegerConstant(loc, idxTy, i);
-        auto dimInfo = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
-                                              sourceBox->getAddr(), dimVal);
-        mlir::Value lb =
-            fir::factory::readLowerBound(builder, loc, sourceExv, i, one);
-        mlir::Value extent = dimInfo.getResult(1);
-        mlir::Value ub = mlir::arith::SubIOp::create(
-            builder, loc, mlir::arith::AddIOp::create(builder, loc, extent, lb),
-            one);
-        mlir::Value dimIndex = builder.createIntegerConstant(loc, i32Ty, i);
+    if(!alloc.hasArrayBounds()) {
+      for (const auto &iter : llvm::enumerate(alloc.getShapeSpecs())) {
+        mlir::Value lb;
+        const auto &bounds = iter.value().t;
+        if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
+                std::get<0>(bounds))
+          lb = fir::getBase(converter.genExprValue(
+              loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
+        else
+          lb = builder.createIntegerConstant(loc, idxTy, 1);
+        mlir::Value ub = fir::getBase(converter.genExprValue(
+            loc, Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx));
+        mlir::Value dimIndex =
+            builder.createIntegerConstant(loc, i32Ty, iter.index());
+        // Runtime call
         genRuntimeSetBounds(builder, loc, box, dimIndex, lb, ub);
       }
+      if (sourceExpr && sourceExpr->Rank() > 0 &&
+          alloc.getShapeSpecs().size() == 0) {
+        // If the alloc object does not have shape list, get the bounds from the
+        // source expression.
+        mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+        const auto *sourceBox = sourceExv.getBoxOf<fir::BoxValue>();
+        assert(sourceBox && "source expression should be lowered to one box");
+        for (int i = 0; i < sourceExpr->Rank(); ++i) {
+          auto dimVal = builder.createIntegerConstant(loc, idxTy, i);
+          auto dimInfo = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                                sourceBox->getAddr(), dimVal);
+          mlir::Value lb =
+              fir::factory::readLowerBound(builder, loc, sourceExv, i, one);
+          mlir::Value extent = dimInfo.getResult(1);
+          mlir::Value ub = mlir::arith::SubIOp::create(
+              builder, loc, mlir::arith::AddIOp::create(builder, loc, extent, lb),
+              one);
+          mlir::Value dimIndex = builder.createIntegerConstant(loc, i32Ty, i);
+          genRuntimeSetBounds(builder, loc, box, dimIndex, lb, ub);
+        }
+      }
+    }
+    else {
+      printf("UNIMPLEMENTED 3\n");
     }
   }
 

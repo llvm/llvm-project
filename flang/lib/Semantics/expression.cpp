@@ -4506,70 +4506,96 @@ static void rank1IntArrayToBoundExprs(evaluate::FoldingContext& foldingContext_,
   return;
 }
 
-MaybeExpr ExpressionAnalyzer::Analyze(const parser::Allocation &x) {
-  const int rank1Arrays = countRank1Arrays(x);
-  if(rank1Arrays == 0) {
+// Everything comes in as an 
+// AllocateShapeSpecArrayList -> AllocateShapeSpecList at the root of the relevant tree,
+// with the assumption that it's a misparse if there is a rank-1 array in at least one of the 
+// bounds. So correct the misparse by rewriting from 
+// AllocateShapeSpecArrayList -> AllocateShapeSpecList to 
+// AllocateShapeSpecArrayList -> AllocateShapeSpecArray.
+// This is necessary, otherwise semantic analysis will fail since AllocateShapeSpec contains
+// a BoundExpr which is just a ScalarIntExpr. We need to place the expression(s) in an
+// AllocateShapeSpecArray because that is typed as a pair of BoundsExpr, which is a
+// (more general) IntExpr. So it will still cover the case of having a scalar broadcast
+// to a rank-1 integer array. 
+// In short, if there is at least 1 rank-1 integer array, rewrite this part of the tree
+// to avoid the ScalarIntExpr semantic check and instead pass through the IntExpr semantic 
+// check. Since we cannot clone nodes in a tree, we will handle both cases in Lower, both
+// cases being AllocateShapeSpecList and AllocateShapeSpecArray.
+
+// AllocateShapeSpecList isn't explicitly in the dump, but can be inferred from multiple AllocateShapeSpecs.
+// | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
+// | | | Allocation
+// | | | | AllocateObject -> Name = 'arr'
+// | | | | AllocateShapeSpecArrayList -> AllocateShapeSpec
+// | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
+// | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
+// | | | | AllocateShapeSpec
+// | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
+// | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
+// | | | Allocation
+// | | | | AllocateObject -> Name = 'arr'
+// | | | | AllocateShapeSpecArrayList -> AllocateShapeSpec
+// | | | | | Scalar -> Integer -> Expr -> ArrayConstructor -> AcSpec
+// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
+// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
+// | | | | | Scalar -> Integer -> Expr -> ArrayConstructor -> AcSpec
+// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
+// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
+// We can decide that a misparsed AllocateShapeSpecList is supposed to be 
+// Aan AllocateShapeSpecArray if the list is 1 entry long AND either of the expressions
+// is a rank-1 array. 
+// ...existing code...
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &x) {
+  auto &shapeSpecList{
+    std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
+  if(shapeSpecList.size() != 1) {
     return std::nullopt;
   }
-  auto &shapeSpecList{
-    std::get<std::list<parser::AllocateShapeSpec>>(
-        (std::get<parser::AllocateShapeSpecArrayList>(x.t)).u)};
-  const auto &shapeSpec{shapeSpecList.front()};
-  const auto &lowerBoundOpt = std::get<0>(shapeSpec.t);
+
+  bool foundArray = false;
   
-  std::vector<std::optional<parser::BoundExpr>> lowerBoundOptExprs;
-  std::vector<parser::BoundExpr> lowerBoundExprs;
-  std::vector<parser::BoundExpr> upperBoundExprs;
-  // only upper bound was provided, and rank1Arrays is not 0, so
-  // it must be a rank-1 integer array (and rank1Arrays == 1)
-  if(!lowerBoundOpt) {
-    const auto &exprUpper = parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t));
-    rank1IntArrayToBoundExprs(foldingContext_, upperBoundExprs, exprUpper);
-    // fill lowerBoundOptExprs with empty optional, same size as upperBoundExprs
-    for(size_t i = 0; i < upperBoundExprs.size(); i++) {
-      lowerBoundOptExprs.push_back(std::optional<parser::BoundExpr>{});
+  // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
+  const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
+  const auto &upperBoundExpr{parser::UnwrapRef<parser::Expr>(upperBound)};
+  
+  if(MaybeExpr analyzedExpr = Analyze(upperBoundExpr)) {
+    if(analyzedExpr->Rank() == 1) {
+      foundArray = true;
     }
   }
-  else if (rank1Arrays == 1) { // && lowerBoundOpt
-    // we don't know which one is the intArray and which is the scalar integer.
-    // since we know we have rank1Arrays == 1, we only need to check one type
-    // to determine everything 
-    auto &exprLower = parser::UnwrapRef<parser::Expr>(*lowerBoundOpt);
-    auto &exprUpper = parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t));
-    if(isRank1Array(exprLower)) { // exprLower is array, exprUpper is scalar
-      rank1IntArrayToBoundExprs(foldingContext_, lowerBoundExprs, exprLower);
-      scalarToBoundExprs(upperBoundExprs, exprUpper, lowerBoundExprs.size());
-    }
-    else { //exprLower is scalar, exprUpper is array
-      rank1IntArrayToBoundExprs(foldingContext_, upperBoundExprs, exprUpper);
-      scalarToBoundExprs(lowerBoundExprs, exprLower, upperBoundExprs.size());
-    }
-    for(size_t i = 0; i < lowerBoundExprs.size(); i++) {
-      lowerBoundOptExprs.push_back(std::move(lowerBoundExprs[i]));
-    }
+  
+  // Check lower bound if it exists
+  const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
+  if(lowerBoundOpt) {
+    const auto &lowerBoundExpr = parser::UnwrapRef<parser::Expr>(*lowerBoundOpt);
+    if(MaybeExpr analyzedExpr = Analyze(lowerBoundExpr)) {
+      if(analyzedExpr->Rank() == 1) {
+        foundArray = true;
+      }
+    }  
   }
-  else { // both are arrays
-    auto &exprLower = parser::UnwrapRef<parser::Expr>(*lowerBoundOpt);
-    auto &exprUpper = parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t));
-    rank1IntArrayToBoundExprs(foldingContext_, lowerBoundExprs, exprLower);
-    rank1IntArrayToBoundExprs(foldingContext_, upperBoundExprs, exprUpper);
-    for(size_t i = 0; i < lowerBoundExprs.size(); i++) {
-      lowerBoundOptExprs.push_back(std::move(lowerBoundExprs[i]));
+
+  // Regardless of underlying types, grab BOTH the expressions and wrap in
+  // IntExpr, even if one ended up being a scalar.
+  if(foundArray) {
+    // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
+    auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
+    parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};
+    
+    // Handle optional lower bound
+    std::optional<parser::IntExpr> lowerIntExpr;
+    if(lowerBoundOpt) {
+      auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBoundOpt)};
+      lowerIntExpr = std::move(mutableLowerBound.thing);
     }
+    
+    // Create the AllocateShapeSpecArray and replace the variant
+    parser::AllocateShapeSpecArray boundsExpr{
+        std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
+    auto &mutableArrayList{const_cast<parser::AllocateShapeSpecArrayList&>(x)};
+    mutableArrayList.u = std::move(boundsExpr);
   }
-  std::list<parser::AllocateShapeSpec> newShapeSpecs;
-  for(int i = 0; i < upperBoundExprs.size(); i++) {
-      // Create new AllocateShapeSpec with optional lower bound and upper bound
-      parser::AllocateShapeSpec newSpec = 
-          std::make_tuple(
-            std::move(lowerBoundOptExprs[i]),  
-            std::move(upperBoundExprs[i]));
-      newShapeSpecs.push_back(std::move(newSpec));
-  }
-  // Replace the original list with expanded specs
-  auto &mutableShapeSpecList{const_cast<std::list<parser::AllocateShapeSpec>&>(shapeSpecList)};
-  mutableShapeSpecList.clear();
-  mutableShapeSpecList.splice(mutableShapeSpecList.end(), newShapeSpecs);
+
   return std::nullopt;
 }
 
