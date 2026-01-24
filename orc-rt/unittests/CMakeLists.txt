@@ -2,13 +2,13 @@ add_custom_target(OrcRTUnitTests)
 set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "orc-rt/Tests")
 
 if (NOT TARGET llvm_gtest)
-  message(WARNING "orc-rt unittests disabled due to GTest being unavailable; "
+    message(WARNING "orc-rt unittests disabled due to GTest being unavailable; "
                   "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
+    return ()
 endif ()
 
 function(add_orc_rt_unittest test_dirname)
-  add_unittest(OrcRTUnitTests ${test_dirname} ${ARGN})
+    add_unittest(OrcRTUnitTests ${test_dirname} ${ARGN})
 endfunction()
 
 add_orc_rt_unittest(CoreTests
@@ -16,6 +16,7 @@ add_orc_rt_unittest(CoreTests
   BitmaskEnumTest.cpp
   CallableTraitsHelperTest.cpp
   EndianTest.cpp
+  CommandLineTest.cpp
   ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp
