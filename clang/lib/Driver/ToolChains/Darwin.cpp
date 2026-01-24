@@ -1180,7 +1180,11 @@ Tool *MachO::buildAssembler() const {
 DarwinClang::DarwinClang(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : Darwin(D, Triple, Args), GCCInstallation(D) {
-  GCCInstallation.init(Triple, Args);
+  llvm::Triple GCCTriple = Triple;
+  // Compensate for wrong arch in ToolChain::ComputeLLVMTriple()
+  if (GCCTriple.getArchName() == "arm64")
+    GCCTriple.setArchName("aarch64");
+  GCCInstallation.init(GCCTriple, Args);
   if (GCCInstallation.isValid()) {
     StringRef LibDir = GCCInstallation.getParentLibPath();
     StringRef TripleStr = GCCInstallation.getTriple().str();
