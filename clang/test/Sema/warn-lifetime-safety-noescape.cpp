@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -verify %s
 // RUN: cp %s %t
 // RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -fixit %t
 // RUN: %clang_cc1 -x c++ -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -Werror %t
