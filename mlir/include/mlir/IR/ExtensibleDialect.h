@@ -354,6 +354,7 @@ public:
   void print(AsmPrinter &printer);
 };
 
+/// Base class of traits for dynamic-defined operations.
 class DynamicOpTrait {
 public:
   virtual LogicalResult verifyTrait(Operation *op) const { return success(); };
@@ -361,14 +362,18 @@ public:
     return success();
   };
 
+  /// Returns the TypeID of the trait.
+  /// It must be equal to the TypeID of corresponding static trait
+  /// which will be used in `hasTrait(TypeID)`.
   virtual TypeID getTypeID() const = 0;
   virtual ~DynamicOpTrait() = default;
 };
 
+/// This class holds a list of traits for dynamic-defined operations.
 class DynamicOpTraitList {
 public:
-  void insert(std::unique_ptr<DynamicOpTrait> trait) {
-    traits.try_emplace(trait->getTypeID(), std::move(trait));
+  bool insert(std::unique_ptr<DynamicOpTrait> trait) {
+    return traits.try_emplace(trait->getTypeID(), std::move(trait)).second;
   }
 
   bool contains(TypeID id) const { return traits.contains(id); }
@@ -495,8 +500,9 @@ public:
     populateDefaultAttrsFn = std::move(populateDefaultAttrs);
   }
 
-  void addTrait(std::unique_ptr<DynamicOpTrait> trait) {
-    traits.insert(std::move(trait));
+  /// Attach a trait to this dynamic-defined op.
+  bool addTrait(std::unique_ptr<DynamicOpTrait> trait) {
+    return traits.insert(std::move(trait));
   }
 
   LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
