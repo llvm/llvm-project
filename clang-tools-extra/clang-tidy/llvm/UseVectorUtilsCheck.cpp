@@ -9,7 +9,6 @@
 #include "UseVectorUtilsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -41,18 +40,6 @@ void UseVectorUtilsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-// Returns the original qualifier spelling (e.g., `llvm::` or `::llvm::`) for
-// the diagnostic message.
-static StringRef getQualifierSpelling(const DeclRefExpr *DeclRef,
-                                      const MatchFinder::MatchResult &Result) {
-  if (const auto QualifierLoc = DeclRef->getQualifierLoc()) {
-    return Lexer::getSourceText(
-        CharSourceRange::getTokenRange(QualifierLoc.getSourceRange()),
-        *Result.SourceManager, Result.Context->getLangOpts());
-  }
-  return "";
-}
-
 void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *OuterCall = Result.Nodes.getNodeAs<CallExpr>("outer_call");
   assert(OuterCall);
@@ -62,11 +49,9 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *OuterCallee =
       cast<DeclRefExpr>(OuterCall->getCallee()->IgnoreImplicit());
-  const auto *InnerCallee =
-      cast<DeclRefExpr>(InnerCall->getCallee()->IgnoreImplicit());
 
   const StringRef InnerFuncName =
-      cast<NamedDecl>(InnerCallee->getDecl())->getName();
+      cast<NamedDecl>(InnerCall->getCalleeDecl())->getName();
 
   // Determine the replacement function name (unqualified).
   const llvm::SmallDenseMap<StringRef, StringRef, 2>
@@ -78,17 +63,15 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
       InnerFuncNameToReplacementFuncName.lookup(InnerFuncName);
   assert(!ReplacementFuncName.empty() && "Unhandled function?");
 
-  auto Diag = diag(OuterCall->getBeginLoc(), "use '%0%1'")
-              << getQualifierSpelling(OuterCallee, Result)
-              << ReplacementFuncName;
+  auto Diag = diag(OuterCall->getBeginLoc(), "use '%0'") << ReplacementFuncName;
 
-  // Replace only the unqualified function name, preserving qualifier and
-  // template arguments.
-  const auto InnerCallUntilFirstArg = CharSourceRange::getCharRange(
-      InnerCall->getBeginLoc(), InnerCall->getArg(0)->getBeginLoc());
+  // Replace the outer function name (preserving qualifier and template args),
+  // and then remove the inner call's callee and opening paren and closing
+  // paren.
   Diag << FixItHint::CreateReplacement(
               OuterCallee->getNameInfo().getSourceRange(), ReplacementFuncName)
-       << FixItHint::CreateRemoval(InnerCallUntilFirstArg)
+       << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+              InnerCall->getBeginLoc(), InnerCall->getArg(0)->getBeginLoc()))
        << FixItHint::CreateRemoval(InnerCall->getRParenLoc());
 
   // Add include for `SmallVectorExtras.h` if needed.
