@@ -3479,6 +3479,19 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_tan",
+    hdrs = ["src/__support/math/tan.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -5146,11 +5159,7 @@ libc_math_function(
 libc_math_function(
     name = "tan",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_range_reduction_double",
-        ":__support_sincos_eval",
+        ":__support_math_tan",
     ],
 )
 

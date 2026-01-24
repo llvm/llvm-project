@@ -524,7 +524,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
 // or reduce our dependence on the global registry, so we can remove this
 // function. It can easily be missed when new intrinsics are added.
 
-// Most SPIR-V instrinsics are considered to have side-effects in their tablegen
+// Most SPIR-V intrinsics are considered to have side-effects in their tablegen
 // definition because they are referenced in the global registry. This is a list
 // of intrinsics that have no side effects other than their references in the
 // global registry.
