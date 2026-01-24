@@ -890,7 +890,7 @@ void MachineSMEABI::addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
                                   CallingConv::ID ExpectedCC) {
   RTLIB::LibcallImpl LCImpl = LLI->getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported)
-    emitError("Can't lower SME ABI (SME routines unsupported)");
+    emitError("cannot lower SME ABI (SME routines unsupported)");
   CallingConv::ID CC = LLI->getLibcallImplCallingConv(LCImpl);
   StringRef SymbolName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
   if (CC != ExpectedCC)
