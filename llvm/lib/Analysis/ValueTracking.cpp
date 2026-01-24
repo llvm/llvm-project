@@ -5888,27 +5888,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           const fltSemantics &FltSem =
               Op->getType()->getScalarType()->getFltSemantics();
 
-          if (KnownSrc.isKnownNever(fcNegative))
-            Known.knownNot(fcNegative);
-          else {
-            if (F &&
-                KnownSrc.isKnownNeverLogicalNegZero(F->getDenormalMode(FltSem)))
-              Known.knownNot(fcNegZero);
-            if (KnownSrc.isKnownNever(fcNegInf))
-              Known.knownNot(fcNegInf);
-          }
-
-          if (KnownSrc.isKnownNever(fcPositive))
-            Known.knownNot(fcPositive);
-          else {
-            if (F &&
-                KnownSrc.isKnownNeverLogicalPosZero(F->getDenormalMode(FltSem)))
-              Known.knownNot(fcPosZero);
-            if (KnownSrc.isKnownNever(fcPosInf))
-              Known.knownNot(fcPosInf);
-          }
-
-          Known.propagateNaN(KnownSrc);
+          DenormalMode Mode =
+              F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+          Known = KnownFPClass::frexp_mant(KnownSrc, Mode);
           return;
         }
         default:
