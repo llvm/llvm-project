@@ -1345,7 +1345,7 @@ public:
   /// the call target is an alias.
   Function *getCalledFunction() const {
     if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
-      if (F->getValueType() == getFunctionType())
+      if (F->getFunctionType() == getFunctionType())
         return F;
     return nullptr;
   }

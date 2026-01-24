@@ -20,6 +20,7 @@
 #define LLVM_CODEGEN_MACHINEINSTRBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -39,10 +40,14 @@ namespace llvm {
 class MCInstrDesc;
 class MDNode;
 
-namespace RegState {
-
-// Keep this in sync with the table in MIRLangRef.rst.
-enum {
+/// Flags to represent properties of register accesses.
+///
+/// These used to be represented with `unsigned`, but the underlying type of
+/// this enum class is `uint16_t` because these flags are serialized into 2-byte
+/// fields in the GlobalISel table emitters.
+///
+/// Keep this in sync with the table in MIRLangReg.rst
+enum class RegState : uint16_t {
   /// No Specific Flags
   NoFlags = 0x0,
   // Reserved value, to detect if someone is passing `true` rather than this
@@ -67,48 +72,49 @@ enum {
   InternalRead = 0x100,
   /// Register that may be renamed.
   Renamable = 0x200,
+
+  LLVM_MARK_AS_BITMASK_ENUM(Renamable),
+
   // Combinations of above flags
   DefineNoRead = Define | Undef,
   ImplicitDefine = Implicit | Define,
   ImplicitKill = Implicit | Kill
 };
 
-} // end namespace RegState
-
-constexpr unsigned getDefRegState(bool B) {
+constexpr RegState getDefRegState(bool B) {
   return B ? RegState::Define : RegState::NoFlags;
 }
-constexpr unsigned getImplRegState(bool B) {
+constexpr RegState getImplRegState(bool B) {
   return B ? RegState::Implicit : RegState::NoFlags;
 }
-constexpr unsigned getKillRegState(bool B) {
+constexpr RegState getKillRegState(bool B) {
   return B ? RegState::Kill : RegState::NoFlags;
 }
-constexpr unsigned getDeadRegState(bool B) {
+constexpr RegState getDeadRegState(bool B) {
   return B ? RegState::Dead : RegState::NoFlags;
 }
-constexpr unsigned getUndefRegState(bool B) {
+constexpr RegState getUndefRegState(bool B) {
   return B ? RegState::Undef : RegState::NoFlags;
 }
-constexpr unsigned getEarlyClobberRegState(bool B) {
+constexpr RegState getEarlyClobberRegState(bool B) {
   return B ? RegState::EarlyClobber : RegState::NoFlags;
 }
-constexpr unsigned getDebugRegState(bool B) {
+constexpr RegState getDebugRegState(bool B) {
   return B ? RegState::Debug : RegState::NoFlags;
 }
-constexpr unsigned getInternalReadRegState(bool B) {
+constexpr RegState getInternalReadRegState(bool B) {
   return B ? RegState::InternalRead : RegState::NoFlags;
 }
-constexpr unsigned getRenamableRegState(bool B) {
+constexpr RegState getRenamableRegState(bool B) {
   return B ? RegState::Renamable : RegState::NoFlags;
 }
 
-constexpr bool hasRegState(unsigned Value, unsigned Test) {
+constexpr bool hasRegState(RegState Value, RegState Test) {
   return (Value & Test) == Test;
 }
 
 /// Get all register state flags from machine operand \p RegOp.
-inline unsigned getRegState(const MachineOperand &RegOp) {
+inline RegState getRegState(const MachineOperand &RegOp) {
   assert(RegOp.isReg() && "Not a register operand");
   return getDefRegState(RegOp.isDef()) | getImplRegState(RegOp.isImplicit()) |
          getKillRegState(RegOp.isKill()) | getDeadRegState(RegOp.isDead()) |
@@ -190,7 +196,7 @@ public:
   Register getReg(unsigned Idx) const { return MI->getOperand(Idx).getReg(); }
 
   /// Add a new virtual register operand.
-  const MachineInstrBuilder &addReg(Register RegNo, unsigned Flags = 0,
+  const MachineInstrBuilder &addReg(Register RegNo, RegState Flags = {},
                                     unsigned SubReg = 0) const {
     assert(!hasRegState(Flags, RegState::_Reserved) &&
            "Passing in 'true' to addReg is forbidden! Use enums instead.");
@@ -209,14 +215,14 @@ public:
   }
 
   /// Add a virtual register definition operand.
-  const MachineInstrBuilder &addDef(Register RegNo, unsigned Flags = 0,
+  const MachineInstrBuilder &addDef(Register RegNo, RegState Flags = {},
                                     unsigned SubReg = 0) const {
     return addReg(RegNo, Flags | RegState::Define, SubReg);
   }
 
   /// Add a virtual register use operand. It is an error for Flags to contain
   /// `RegState::Define` when calling this function.
-  const MachineInstrBuilder &addUse(Register RegNo, unsigned Flags = 0,
+  const MachineInstrBuilder &addUse(Register RegNo, RegState Flags = {},
                                     unsigned SubReg = 0) const {
     assert(!hasRegState(Flags, RegState::Define) &&
            "Misleading addUse defines register, use addReg instead.");

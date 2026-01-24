@@ -4,6 +4,7 @@
 # RUN: llvm-mc -n -filetype=obj -triple=x86_64 -o shared.o shared.s
 # RUN: ld.lld -shared shared.o -o a.so
 # RUN: llvm-mc -n -filetype=obj -triple=x86_64 -o a.o a.s
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 -o b.o b.s
 
 #--- shared.s
 .globl test_shared
@@ -159,3 +160,46 @@ test_local:
 # MULTIPLE-DAG: live symbol: a.o:(test_section_offset)
 # MULTIPLE-DAG: live symbol: a.o:(test_section_offset_within_symbol)
 # MULTIPLE-NOT: live symbol
+
+#--- b.s
+## --why-live='*' skips symbol at index 0 and section symbols.
+# RUN: ld.lld b.o --threads=1 --gc-sections --why-live="*" | FileCheck %s --check-prefix=STAR --match-full-lines
+# STAR-NOT:  {{.}}
+# STAR:      live symbol: b.o:(_start) (entry point)
+# STAR-NEXT: live symbol: b.o:(b.s) (no section)
+# STAR-NEXT: live symbol: b.o:(str1)
+# STAR-NEXT: >>> referenced by: b.o:(.alloc)
+# STAR-NEXT: >>> referenced by: b.o:(.text)
+# STAR-NEXT: >>> contained  live symbol: b.o:(_start) (entry point)
+# STAR-NEXT: live symbol: b.o:(note1)
+# STAR-NEXT: >>> in live section: b.o:(.note.1) (reserved)
+# STAR-NEXT: live symbol: b.o:(__FRAME_END__)
+# STAR-NEXT: >>> in live section: b.o:(.eh_frame) (exception handling frame)
+# STAR-NOT:  {{.}}
+
+## STT_FILE symbol
+.file "b.s"
+
+.text
+.globl _start
+_start:
+  call .alloc
+
+.section .alloc,"a"
+  lea str1(%rip), %rax
+
+.section .nonalloc
+  .long .nonalloc
+
+.section .note.1,"a",@note
+note1:
+
+## GCC crtendS.o has such a local symbol relative to an explicit .eh_frame
+## section.
+.section .eh_frame,"a"
+__FRAME_END__:
+  .long 0
+
+.section .rodata.str1.1,"aMS",@progbits,1
+str1:
+  .asciz "str1"
