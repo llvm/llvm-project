@@ -29,4 +29,3 @@ Transforms to:
   auto v2 = llvm::filter_to_vector(container, pred);
   auto v3 = llvm::map_to_vector<4>(container, func);
   auto v4 = llvm::filter_to_vector<4>(container, pred);
-
