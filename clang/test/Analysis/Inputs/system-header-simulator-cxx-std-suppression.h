@@ -142,5 +142,40 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t) {
 }
 
 #endif // __has_feature(cxx_decltype)
+
+// Mock for __uninitialized_construct_buf_dispatch::__ucr suppression.
+// std::stable_sort uses _Temporary_buffer which calls
+// __uninitialized_construct_buf_dispatch::__ucr internally.
+// The analyzer seems to lose track of initialization state in __ucr's complex
+// move semantics, leading to false positives.
+namespace __uninitialized_construct_buf_dispatch_impl {
+template <bool>
+struct __uninitialized_construct_buf_dispatch {
+  template <typename _Pointer, typename _ForwardIterator>
+  static _Pointer __ucr(_Pointer __first, _ForwardIterator __last) {
+    // Fake error trigger.
+    int z = 0;
+    z = 5/z;
+    return __first;
+  }
+};
+} // namespace __uninitialized_construct_buf_dispatch_impl
+
+template <typename _RandomAccessIterator>
+void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+  // Calls __ucr internally, matching real STL implementation.
+  __uninitialized_construct_buf_dispatch_impl::
+      __uninitialized_construct_buf_dispatch<false>::__ucr(__first, __last);
 }
+
+template <typename _BidirectionalIterator>
+void inplace_merge(_BidirectionalIterator __first,
+                   _BidirectionalIterator __middle,
+                   _BidirectionalIterator __last) {
+  // Also uses _Temporary_buffer which calls __ucr internally.
+  __uninitialized_construct_buf_dispatch_impl::
+      __uninitialized_construct_buf_dispatch<false>::__ucr(__first, __middle);
+}
+
+} // namespace std
 

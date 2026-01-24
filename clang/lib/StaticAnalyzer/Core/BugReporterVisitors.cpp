@@ -3305,6 +3305,22 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
+      // Suppress false positives in std::stable_sort and std::inplace_merge.
+      // The analyzer reports uninitialized values in the
+      // __uninitialized_construct_buf_dispatch::__ucr method used by those
+      // algorithms due to complex move semantics with placement new.
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        if (FD->getName() == "__ucr") {
+          if (const auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent())) {
+            if (RD->getName().starts_with(
+                    "__uninitialized_construct_buf_dispatch")) {
+              BR.markInvalid(getTag(), nullptr);
+              return;
+            }
+          }
+        }
+      }
+
       for (const LocationContext *LCtx = N->getLocationContext(); LCtx;
            LCtx = LCtx->getParent()) {
         const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
