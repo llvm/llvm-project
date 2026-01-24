@@ -292,7 +292,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
   //   Foo(Bar{1, 2}) => true
   //   Foo(1) => false
   //   Foo{1} => false
-  auto HasListIntializedArgument = [](const CXXConstructExpr *CE) {
+  auto HasListInitializedArgument = [](const CXXConstructExpr *CE) {
     for (const auto *Arg : CE->arguments()) {
       Arg = Arg->IgnoreImplicit();
 
@@ -348,7 +348,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     //   std::make_smart_ptr<S2>(std::vector<int>({1}));
     //   std::make_smart_ptr<S3>(S2{1, 2}, 3);
     if (const auto *CE = New->getConstructExpr()) {
-      if (HasListIntializedArgument(CE))
+      if (HasListInitializedArgument(CE))
         return false;
     }
     if (ArraySizeExpr.empty()) {
@@ -370,7 +370,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
       if (NewConstruct->isStdInitListInitialization() ||
-          HasListIntializedArgument(NewConstruct)) {
+          HasListInitializedArgument(NewConstruct)) {
         // FIXME: Add fixes for direct initialization with the initializer-list
         // constructor. Similar to the above CallInit case, the type has to be
         // specified explicitly in the fixes.

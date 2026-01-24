@@ -201,7 +201,7 @@ use omp_lib
   enddo
 
   !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
-  !$omp do linear(ref(b))
+  !$omp do linear(b: val)
   do i = 1, N
      a = 3.14
   enddo
@@ -408,7 +408,7 @@ use omp_lib
 
   !ERROR: At most one PROC_BIND clause can appear on the PARALLEL DO directive
   !ERROR: A modifier may not be specified in a LINEAR clause on the PARALLEL DO directive
-  !$omp parallel do proc_bind(master) proc_bind(close) linear(val(b))
+  !$omp parallel do proc_bind(master) proc_bind(close) linear(b: val)
   do i = 1, N
      a = 3.14
   enddo

@@ -1,6 +1,6 @@
 ;; Generate ELF attributes from llc.
 
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV32XQCCMP %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqccmp %s -o - | FileCheck --check-prefix=RV32XQCCMP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xqcia %s -o - | FileCheck --check-prefix=RV32XQCIA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xqciac %s -o - | FileCheck --check-prefix=RV32XQCIAC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xqcibi %s -o - | FileCheck --check-prefix=RV32XQCIBI %s
@@ -20,7 +20,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+xqcisls %s -o - | FileCheck --check-prefix=RV32XQCISLS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
 
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV64XQCCMP %s
+; RUN: llc -mtriple=riscv64 -mattr=+xqccmp %s -o - | FileCheck --check-prefix=RV64XQCCMP %s
 
 ; RV32XQCCMP: .attribute 5, "rv32i2p1_c2p0_zca1p0_xqccmp0p3"
 ; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p7"

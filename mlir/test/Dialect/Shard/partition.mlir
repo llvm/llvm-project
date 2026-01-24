@@ -14,8 +14,9 @@ func.func @return_sharding(
   %sharded = shard.shard %arg0 to %ssharded  : tensor<2xf32>
   // CHECK-NEXT: [[vsharding:%.*]] = shard.sharding @grid_1d split_axes = {{\[\[}}0]] : !shard.sharding
   %r = shard.get_sharding %sharded : tensor<2xf32> -> !shard.sharding
+  %sharded_r = shard.shard %sharded to %ssharded annotate_for_users : tensor<2xf32>
   // CHECK-NEXT: return [[ARG]], [[vsharding]] : tensor<1xf32>, !shard.sharding
-  return %sharded, %r : tensor<2xf32>, !shard.sharding
+  return %sharded_r, %r : tensor<2xf32>, !shard.sharding
 }
 
 // CHECK-LABEL: func @full_replication
@@ -44,7 +45,7 @@ func.func @sharding_triplet(
   %ssharded_0 = shard.sharding @grid_1d split_axes = [[0]] : !shard.sharding
   %sharded_0 = shard.shard %sharded to %ssharded_0  annotate_for_users : tensor<2xf32>
   %ssharded_1 = shard.sharding @grid_1d split_axes = [[]] : !shard.sharding
-  %sharded_1 = shard.shard %sharded_0 to %ssharded_1  : tensor<2xf32>
+  %sharded_1 = shard.shard %sharded_0 to %ssharded_1 annotate_for_users : tensor<2xf32>
   // CHECK: return %[[ALL_GATHER]] : tensor<2xf32>
   return %sharded_1 : tensor<2xf32>
 }
@@ -197,9 +198,10 @@ func.func @incomplete_sharding(
   // CHECK: %[[RES:.*]] = tosa.sigmoid %[[ARG]] : (tensor<4x16xf32>) -> tensor<4x16xf32>
   %1 = tosa.sigmoid %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
   %s2 = shard.sharding @grid_1d split_axes = [[0]] : !shard.sharding
-  %2 = shard.shard %1 to %s2  : tensor<8x16xf32>
+  %2 = shard.shard %1 to %s2 : tensor<8x16xf32>
+  %3 = shard.shard %2 to %s2 annotate_for_users : tensor<8x16xf32>
   // CHECK: return %[[RES]] : tensor<4x16xf32>
-  return %2 : tensor<8x16xf32>
+  return %3 : tensor<8x16xf32>
 }
 
 shard.grid @grid_1d_4(shape = 4)
@@ -301,7 +303,8 @@ func.func @test_reduce_1d(%arg0: tensor<6x6xi32>) -> (tensor<6xi32>) {
   %sharding = shard.sharding @grid split_axes = [[0]] : !shard.sharding
   %sharded = shard.shard %arg0 to %sharding annotate_for_users : tensor<6x6xi32>
   %4 = tensor.empty() : tensor<6xi32>
-  %sharded_out = shard.shard %4 to %sharding : tensor<6xi32>
+  %sharded_4 = shard.shard %4 to %sharding : tensor<6xi32>
+  %sharded_out = shard.shard %sharded_4 to %sharding annotate_for_users : tensor<6xi32>
   %sharded_in = shard.shard %sharded to %sharding annotate_for_users : tensor<6x6xi32>
   // CHECK: %[[reduced:.*]] = linalg.reduce ins(%arg0 : tensor<3x6xi32>)
   %reduced = linalg.reduce ins(%sharded_in : tensor<6x6xi32>) outs(%sharded_out : tensor<6xi32>) dimensions = [1] 
