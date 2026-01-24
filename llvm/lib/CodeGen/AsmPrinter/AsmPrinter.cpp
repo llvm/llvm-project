@@ -581,10 +581,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
-    emitInlineAsm(
-        M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
-        TM.Options.MCOptions, nullptr,
-        InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
+    emitInlineAsm(M.getModuleInlineAsm() + "\n", TM);
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
