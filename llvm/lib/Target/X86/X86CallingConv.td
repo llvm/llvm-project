@@ -1032,6 +1032,13 @@ def CC_Intel_OCL_BI : CallingConv<[
   CCDelegateTo<CC_X86_32_C>
 ]>;
 
+// See CC_X86_64_Preserve_None.
+def CC_X86_32_Preserve_None : CallingConv<[
+  CCIfType<[i8, i16], CCPromoteToType<i32>>,
+  CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX, EDI, ESI]>>,
+  CCDelegateTo<CC_X86_32_C>
+]>;
+
 def CC_X86_64_Preserve_None : CallingConv<[
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
@@ -1072,6 +1079,7 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin32()", CCIfRegCallv4<CCDelegateTo<CC_X86_32_RegCallv4_Win>>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_32_RegCall>>,
+  CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_32_Preserve_None>>,
 
   // Otherwise, drop to normal X86-32 CC
   CCDelegateTo<CC_X86_32_C>

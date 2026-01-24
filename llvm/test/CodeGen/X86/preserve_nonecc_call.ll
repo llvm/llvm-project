@@ -53,11 +53,8 @@ define void @caller1(ptr %a) {
 ; X32-NEXT:    .cfi_offset %esi, -16
 ; X32-NEXT:    .cfi_offset %edi, -12
 ; X32-NEXT:    .cfi_offset %ebx, -8
-; X32-NEXT:    pushl {{[0-9]+}}(%esp)
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    calll callee@PLT
-; X32-NEXT:    addl $4, %esp
-; X32-NEXT:    .cfi_adjust_cfa_offset -4
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 12
 ; X32-NEXT:    popl %edi
@@ -112,16 +109,16 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ;
 ; X32-LABEL: callee_with_many_param:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl {{[0-9]+}}(%esp)
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl {{[0-9]+}}(%esp)
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl {{[0-9]+}}(%esp)
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl {{[0-9]+}}(%esp)
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl {{[0-9]+}}(%esp)
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    .cfi_offset %ebp, -8
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl %esi, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %edi, %edx
+; X32-NEXT:    movl %ebp, %ecx
+; X32-NEXT:    movl %ebx, %edi
 ; X32-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X32-NEXT:    .cfi_adjust_cfa_offset 4
 ; X32-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -157,8 +154,10 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; X32-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X32-NEXT:    .cfi_adjust_cfa_offset 4
 ; X32-NEXT:    calll callee_with_many_param2@PLT
-; X32-NEXT:    addl $88, %esp
-; X32-NEXT:    .cfi_adjust_cfa_offset -88
+; X32-NEXT:    addl $68, %esp
+; X32-NEXT:    .cfi_adjust_cfa_offset -68
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
   %ret = call preserve_nonecc i64 @callee_with_many_param2(i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12)
   ret i64 %ret
@@ -218,6 +217,11 @@ define i64 @caller3() {
 ; X32-NEXT:    .cfi_offset %esi, -16
 ; X32-NEXT:    .cfi_offset %edi, -12
 ; X32-NEXT:    .cfi_offset %ebx, -8
+; X32-NEXT:    movl $1, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    movl $2, %ecx
+; X32-NEXT:    xorl %edi, %edi
+; X32-NEXT:    movl $3, %esi
 ; X32-NEXT:    pushl $0
 ; X32-NEXT:    .cfi_adjust_cfa_offset 4
 ; X32-NEXT:    pushl $12
@@ -256,19 +260,9 @@ define i64 @caller3() {
 ; X32-NEXT:    .cfi_adjust_cfa_offset 4
 ; X32-NEXT:    pushl $0
 ; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl $3
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl $0
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl $2
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl $0
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
-; X32-NEXT:    pushl $1
-; X32-NEXT:    .cfi_adjust_cfa_offset 4
 ; X32-NEXT:    calll callee_with_many_param@PLT
-; X32-NEXT:    addl $96, %esp
-; X32-NEXT:    .cfi_adjust_cfa_offset -96
+; X32-NEXT:    addl $76, %esp
+; X32-NEXT:    .cfi_adjust_cfa_offset -76
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 12
 ; X32-NEXT:    popl %edi
@@ -295,7 +289,18 @@ define preserve_nonecc void @entry(ptr %r12, ptr %r13, ptr %r14, ptr %r15) {
 ;
 ; X32-LABEL: entry:
 ; X32:       # %bb.0:
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    .cfi_offset %ebp, -8
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    movl %eax, %ebp
 ; X32-NEXT:    calll boring@PLT
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl %ebx, %edx
+; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    jmp continuation@PLT # TAILCALL
   call void @boring()
   musttail call preserve_nonecc void @continuation(ptr %r12, ptr %r13, ptr %r14, ptr %r15)

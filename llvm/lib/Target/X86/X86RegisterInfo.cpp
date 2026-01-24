@@ -387,6 +387,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool Is32Bit = Subtarget.is32Bit();
 
   switch (CC) {
   case CallingConv::GHC:
@@ -403,7 +404,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_RT_AllRegs_AVX_RegMask;
     return CSR_64_RT_AllRegs_RegMask;
   case CallingConv::PreserveNone:
-    return CSR_64_NoneRegs_RegMask;
+    return Is32Bit ? CSR_32_NoneRegs_RegMask : CSR_64_NoneRegs_RegMask;
   case CallingConv::CXX_FAST_TLS:
     if (Is64Bit)
       return CSR_64_TLS_Darwin_RegMask;
