@@ -397,8 +397,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
     DataBufferSP buffer_sp = MapFileDataWritable(*file, length, file_offset);
     if (!buffer_sp)
       return nullptr;
-    extractor_sp = std::make_shared<DataExtractor>();
-    extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
+    extractor_sp = std::make_shared<DataExtractor>(buffer_sp);
     data_offset = 0;
     mapped_writable = true;
   }
