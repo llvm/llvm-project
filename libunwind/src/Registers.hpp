@@ -1893,7 +1893,7 @@ public:
     uint64_t value = _registers.__pc;
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
     // Note the value of the PC was signed to its address in the register state
-    // but everyone else expects it to be sign by the SP, so convert on return.
+    // but everyone else expects it to be signed by the SP, so convert on return.
     value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
                                               ptrauth_key_return_address,
                                               &_registers.__pc,
@@ -3715,21 +3715,21 @@ inline void Registers_sparc::setRegister(int regNum, uint32_t value) {
 inline bool Registers_sparc::validFloatRegister(int) const { return false; }
 
 inline double Registers_sparc::getFloatRegister(int) const {
-  _LIBUNWIND_ABORT("no Sparc float registers");
+  _LIBUNWIND_ABORT("no sparc float registers");
 }
 
 inline void Registers_sparc::setFloatRegister(int, double) {
-  _LIBUNWIND_ABORT("no Sparc float registers");
+  _LIBUNWIND_ABORT("no sparc float registers");
 }
 
 inline bool Registers_sparc::validVectorRegister(int) const { return false; }
 
 inline v128 Registers_sparc::getVectorRegister(int) const {
-  _LIBUNWIND_ABORT("no Sparc vector registers");
+  _LIBUNWIND_ABORT("no sparc vector registers");
 }
 
 inline void Registers_sparc::setVectorRegister(int, v128) {
-  _LIBUNWIND_ABORT("no Sparc vector registers");
+  _LIBUNWIND_ABORT("no sparc vector registers");
 }
 
 inline const char *Registers_sparc::getRegisterName(int regNum) {
