@@ -1,0 +1,103 @@
+// RUN: %check_clang_tidy %s llvm-use-vector-utils %t
+
+// CHECK-FIXES: #include "llvm/ADT/SmallVectorExtras.h"
+
+namespace llvm {
+
+template <typename T> class SmallVector {};
+
+template <typename RangeT>
+SmallVector<int> to_vector(RangeT &&Range);
+
+template <unsigned Size, typename RangeT>
+SmallVector<int> to_vector(RangeT &&Range);
+
+template <typename Out, typename RangeT>
+SmallVector<Out> to_vector_of(RangeT &&Range);
+
+template <typename Out, unsigned Size, typename RangeT>
+SmallVector<Out> to_vector_of(RangeT &&Range);
+
+template <typename ContainerT, typename FuncT>
+struct mapped_range {};
+
+template <typename ContainerT, typename FuncT>
+mapped_range<ContainerT, FuncT> map_range(ContainerT &&C, FuncT &&F);
+
+// Hypothetical 3-arg overload (for future-proofing).
+template <typename ContainerT, typename FuncT, typename ExtraT>
+mapped_range<ContainerT, FuncT> map_range(ContainerT &&C, FuncT &&F, ExtraT &&E);
+
+template <typename ContainerT, typename PredT>
+struct filter_range {};
+
+template <typename ContainerT, typename PredT>
+filter_range<ContainerT, PredT> make_filter_range(ContainerT &&C, PredT &&P);
+
+// Hypothetical 3-arg overload (for future-proofing).
+template <typename ContainerT, typename PredT, typename ExtraT>
+filter_range<ContainerT, PredT> make_filter_range(ContainerT &&C, PredT &&P, ExtraT &&E);
+
+} // namespace llvm
+
+int transform(int x);
+bool is_even(int x);
+
+void test_map_range() {
+  llvm::SmallVector<int> vec;
+
+  auto result = llvm::to_vector(llvm::map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::map_to_vector' instead of 'llvm::to_vector(llvm::map_range(...))'
+  // CHECK-FIXES: auto result = llvm::map_to_vector(vec, transform);
+
+  auto result_sized = llvm::to_vector<4>(llvm::map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'llvm::map_to_vector<4>' instead of 'llvm::to_vector<4>(llvm::map_range(...))'
+  // CHECK-FIXES: auto result_sized = llvm::map_to_vector<4>(vec, transform);
+}
+
+void test_filter_range() {
+  llvm::SmallVector<int> vec;
+
+  auto result = llvm::to_vector(llvm::make_filter_range(vec, is_even));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::filter_to_vector' instead of 'llvm::to_vector(llvm::make_filter_range(...))'
+  // CHECK-FIXES: auto result = llvm::filter_to_vector(vec, is_even);
+
+  auto result_sized = llvm::to_vector<6>(llvm::make_filter_range(vec, is_even));
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'llvm::filter_to_vector<6>' instead of 'llvm::to_vector<6>(llvm::make_filter_range(...))'
+  // CHECK-FIXES: auto result_sized = llvm::filter_to_vector<6>(vec, is_even);
+}
+
+namespace llvm {
+
+void test_inside_llvm_namespace() {
+  SmallVector<int> vec;
+
+  // Unprefixed calls inside the `llvm` namespace should also be detected.
+  auto result = to_vector(map_range(vec, transform));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use 'llvm::map_to_vector' instead of 'llvm::to_vector(llvm::map_range(...))'
+  // CHECK-FIXES: auto result = llvm::map_to_vector(vec, transform);
+}
+
+} // namespace llvm
+
+void test_negative() {
+  llvm::SmallVector<int> vec;
+
+  // `to_vector` without inner `map_range`/`make_filter_range` should not trigger.
+  auto result1 = llvm::to_vector(vec);
+  auto result2 = llvm::to_vector<4>(vec);
+
+  // Direct use of `map_range`/`make_filter_range` without `to_vector` should not trigger.
+  auto mapped = llvm::map_range(vec, transform);
+  auto filtered = llvm::make_filter_range(vec, is_even);
+
+  // `to_vector_of` variants should not trigger (no `map_to_vector_of` exists).
+  auto result3 = llvm::to_vector_of<long>(llvm::map_range(vec, transform));
+  auto result4 = llvm::to_vector_of<long, 4>(llvm::map_range(vec, transform));
+  auto result5 = llvm::to_vector_of<long>(llvm::make_filter_range(vec, is_even));
+  auto result6 = llvm::to_vector_of<long, 4>(llvm::make_filter_range(vec, is_even));
+
+  // Hypothetical 3-arg overloads should not trigger.
+  auto result7 = llvm::to_vector(llvm::map_range(vec, transform, 0));
+  auto result8 = llvm::to_vector(llvm::make_filter_range(vec, is_even, 0));
+}
