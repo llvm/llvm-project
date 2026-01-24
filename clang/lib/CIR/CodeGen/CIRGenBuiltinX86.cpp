@@ -787,8 +787,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI_m_prefetchw:
     return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()), "x86.rdtsc",
-                               builder.getUInt64Ty());
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "x86.rdtsc",
+                                       builder.getUInt64Ty());
   case X86::BI__builtin_ia32_rdtscp: {
     mlir::Location loc = getLoc(expr->getExprLoc());
 
@@ -797,8 +797,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         &getMLIRContext(), {builder.getUInt64Ty(), builder.getUInt32Ty()},
         /*packed=*/false, /*padded*/ false,
         cir::RecordType::RecordKind::Struct);
-    mlir::Value call =
-        emitIntrinsicCallOp(builder, loc, "x86.rdtscp", recordTy);
+    mlir::Value call = builder.emitIntrinsicCallOp(loc, "x86.rdtscp", recordTy);
 
     // Aux (i32) -> store to pointer arg ops[0]
     mlir::Value aux = cir::ExtractMemberOp::create(
