@@ -358,8 +358,7 @@ void ScopeReductionCheck::check(
 
   for (const auto *Use : Uses) {
     // Find containing for-loop using helper
-    const auto *ContainingForLoop =
-        findAncestorOfType<ForStmt>(Use, Parents);
+    const auto *ContainingForLoop = findAncestorOfType<ForStmt>(Use, Parents);
 
     if (!ContainingForLoop) {
       AllUsesInSameForLoop = false;
