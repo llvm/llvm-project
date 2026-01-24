@@ -566,6 +566,9 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   interface.getEffects(effects);
 
   for (const MemoryEffects::EffectInstance &effect : effects) {
+    // MemAlloc and MemFree are not mod-ref effects.
+    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
 
     // Check for an alias between the effect and our memory location.
     AliasResult aliasResult = AliasResult::MayAlias;
