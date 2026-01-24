@@ -26,15 +26,10 @@
 //   bool HasXXX = false;                      // member declaration
 //   bool hasXXX() const { return HasXXX; }    // getter
 //
-// AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY: Features with member only
-//   bool EnableXXX = false;                   // member declaration only
-//
 // To add a new simple feature:
 //   1. Add X(FeatureName) to the appropriate macro below
 //   2. Remove the manual bool HasFeatureName declaration from protected section
 //   3. If using AMDGPU_SUBTARGET_HAS_FEATURE, also remove the manual getter
-//   4. If using AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY, also remove the
-//      manual getter
 //
 // Note: The features are ordered alphabetically for convenience. Unlike
 // GCNSubtarget.h, we do not use TableGen-generated features here. We
@@ -49,12 +44,7 @@
   X(Inv2PiInlineImm)                                                           \
   X(MadMacF32Insts)                                                            \
   X(SDWA)                                                                      \
-  X(True16BitInsts)                                                            \
   X(VOP3PInsts)
-
-#define AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY(X)                         \
-  X(RealTrue16Insts)                                                           \
-  X(D16Writes32BitVgpr)
 
 namespace llvm {
 
@@ -95,11 +85,6 @@ protected:
   AMDGPU_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
 #undef DECL_HAS_MEMBER
 #undef AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY
-
-#define DECL_ENABLE_MEMBER(Name) bool Enable##Name = false;
-  AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY(DECL_ENABLE_MEMBER)
-#undef DECL_ENABLE_MEMBER
-#undef AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY
 
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
@@ -237,16 +222,6 @@ public:
   AMDGPU_SUBTARGET_HAS_FEATURE(DECL_HAS_GETTER)
 #undef DECL_HAS_GETTER
 #undef AMDGPU_SUBTARGET_HAS_FEATURE
-
-  /// Return true if real (non-fake) variants of True16 instructions using
-  /// 16-bit registers should be code-generated. Fake True16 instructions are
-  /// identical to non-fake ones except that they take 32-bit registers as
-  /// operands and always use their low halves.
-  // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
-  // supported and the support for fake True16 instructions is removed.
-  bool useRealTrue16Insts() const;
-
-  bool hasD16Writes32BitVgpr() const;
 
   bool hasMulI24() const {
     return HasMulI24;
