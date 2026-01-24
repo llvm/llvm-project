@@ -261,13 +261,6 @@ class MockGDBServerResponder:
             return self.qRegisterInfo(regnum)
         if packet == "k":
             return self.k()
-        if packet[0:2] == "_M":
-            size_str, permissions = packet[2:].split(",")
-            size = int(size_str, 16)
-            return self._M(size, permissions)
-        if packet[0:2] == "_m":
-            addr = int(packet[2:], 16)
-            return self._m(addr)
 
         return self.other(packet)
 
@@ -415,12 +408,6 @@ class MockGDBServerResponder:
 
     def k(self):
         return ["W01", self.RESPONSE_DISCONNECT]
-
-    def _M(self, size, permissions):
-        return ""
-
-    def _m(self, addr):
-        return ""
 
     """
     Raised when we receive a packet for which there is no default action.
