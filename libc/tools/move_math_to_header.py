@@ -228,7 +228,7 @@ def extract_cmake_depends(cmake_content: str, func_name: str) -> list:
     return deps
 
 
-def update_generic_cmake(cmake_path: Path, func_name: str) -> str:
+def update_generic_cmake(cmake_path: Path, func_name: str, extra_depends: list) -> str:
     """Update the generic CMakeLists.txt to simplify the entrypoint."""
     content = read_file(cmake_path)
 
@@ -253,6 +253,9 @@ def update_generic_cmake(cmake_path: Path, func_name: str) -> str:
                 end = i + 1
                 break
 
+    new_depends = [f"libc.src.__support.math.{func_name}"] + extra_depends
+    deps_str = "\n    ".join(sorted(new_depends))
+
     # Create new simplified block
     new_block = f"""add_entrypoint_object(
   {func_name}
@@ -261,7 +264,7 @@ def update_generic_cmake(cmake_path: Path, func_name: str) -> str:
   HDRS
     ../{func_name}.h
   DEPENDS
-    libc.src.__support.math.{func_name}
+    {deps_str}
 )"""
 
     return content[:start] + new_block + content[end:]
@@ -478,8 +481,17 @@ def migrate_function(func_name: str, root: Path, dry_run: bool = False) -> None:
 
     generic_cmake = root / "libc" / "src" / "math" / "generic" / "CMakeLists.txt"
     cmake_content = read_file(generic_cmake)
+
     deps = extract_cmake_depends(cmake_content, func_name)
-    updated_generic_cmake = update_generic_cmake(generic_cmake, func_name)
+    # "libc.src.errno.errno" stays in generic_cmake and does not go not in support_cmake.
+    extra_depends = []
+    if "libc.src.errno.errno" in deps:
+        extra_depends.append("libc.src.errno.errno")
+        deps.remove("libc.src.errno.errno")
+
+    updated_generic_cmake = update_generic_cmake(
+        generic_cmake, func_name, extra_depends
+    )
     print(f"  Updating: {generic_cmake}")
     if not dry_run:
         write_file(generic_cmake, updated_generic_cmake)
