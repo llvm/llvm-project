@@ -619,7 +619,7 @@ define nofpclass(pinf nan) half @ret_no_pinf_or_nan_results__lhs_known_non_inf(i
 define nofpclass(inf nan) half @ret_no_inf_or_nan_results__lhs_known_non_inf(i1 %cond, half %x, half nofpclass(inf) %y) {
 ; CHECK-LABEL: define nofpclass(nan inf) half @ret_no_inf_or_nan_results__lhs_known_non_inf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half nofpclass(inf) [[Y:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
@@ -1057,8 +1057,7 @@ define nofpclass(inf norm sub zero) half @ret_only_nan_results_fdiv(half %x, hal
 define nofpclass(inf norm sub zero snan) half @ret_only_qnan_results_fdiv(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan_results_fdiv(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[X]], [[Y]]
-; CHECK-NEXT:    ret half [[DIV]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %div = fdiv half %x, %y
   ret half %div
@@ -1514,7 +1513,7 @@ define nofpclass(nan inf norm zero) half @sub_result_demands_norm_source_lhs(i1 
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call half @returns_norm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %norm = call half @returns_norm()
@@ -1528,7 +1527,7 @@ define nofpclass(nan inf norm zero) half @sub_result_demands_norm_source_rhs(i1 
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call half @returns_norm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %norm = call half @returns_norm()
@@ -1640,7 +1639,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_pnorm_lhs(i1 %co
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call half @returns_pnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PNORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %pnorm = call half @returns_pnorm()
@@ -1654,7 +1653,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_nnorm_lhs(i1 %co
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call half @returns_nnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NNORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %nnorm = call half @returns_nnorm()
@@ -1668,7 +1667,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_psub_lhs(i1 %con
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call half @returns_psub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PSUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %psub = call half @returns_psub()
@@ -1682,7 +1681,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_nsub_lhs(i1 %con
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %nsub = call half @returns_nsub()
@@ -1696,7 +1695,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_pnorm_rhs(i1 %co
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call half @returns_pnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PNORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %pnorm = call half @returns_pnorm()
@@ -1710,7 +1709,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_nnorm_rhs(i1 %co
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call half @returns_nnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NNORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %nnorm = call half @returns_nnorm()
@@ -1724,7 +1723,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_psub_rhs(i1 %con
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call half @returns_psub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PSUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %psub = call half @returns_psub()
@@ -1738,7 +1737,7 @@ define nofpclass(inf nan zero nnorm) half @pnorm_result_demands_nsub_rhs(i1 %con
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %nsub = call half @returns_nsub()
@@ -1752,7 +1751,7 @@ define nofpclass(inf nan zero pnorm) half @nnorm_result_demands_pnorm_lhs(i1 %co
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call half @returns_pnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PNORM]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %pnorm = call half @returns_pnorm()
@@ -1852,7 +1851,7 @@ define nofpclass(nan inf sub zero) half @norm_result_demands_sub_source_lhs(i1 %
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call half @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %sub = call half @returns_sub()
@@ -1866,7 +1865,7 @@ define nofpclass(nan inf sub zero) half @norm_result_demands_sub_source_rhs(i1 %
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call half @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %sub = call half @returns_sub()
@@ -1880,7 +1879,7 @@ define nofpclass(inf nan norm zero) half @sub_result_demands_sub_lhs(i1 %cond, h
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call half @returns_sub()
 ; CHECK-NEXT:    [[SUB_OR_UNKNOWN:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[SUB_OR_UNKNOWN]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[SUB_OR_UNKNOWN]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %sub = call half @returns_sub()
@@ -1894,7 +1893,7 @@ define nofpclass(inf nan norm zero) half @sub_result_demands_sub_rhs(i1 %cond, h
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call half @returns_sub()
 ; CHECK-NEXT:    [[SUB_OR_UNKNOWN:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[UNKNOWN1]], [[SUB_OR_UNKNOWN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SUB_OR_UNKNOWN]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %sub = call half @returns_sub()
