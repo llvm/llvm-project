@@ -539,9 +539,9 @@ define amdgpu_kernel void @combine_with_extract_other_uses(
 ; CHECK-OPT-LABEL: define amdgpu_kernel void @combine_with_extract_other_uses(
 ; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT2:%.*]], <2 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
+; CHECK-OPT-NEXT:    [[BYTES:%.*]] = bitcast <2 x i32> [[SRC]] to <8 x i8>
 ; CHECK-OPT-NEXT:    [[TMP8:%.*]] = select i1 [[COND]], <2 x i32> [[SRC]], <2 x i32> zeroinitializer
 ; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <2 x i32> [[TMP8]] to <8 x i8>
-; CHECK-OPT-NEXT:    [[BYTES:%.*]] = bitcast <2 x i32> [[SRC]] to <8 x i8>
 ; CHECK-OPT-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[BYTES]], i64 0
 ; CHECK-OPT-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[BYTES]], i64 1
 ; CHECK-OPT-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[BYTES]], i64 2
