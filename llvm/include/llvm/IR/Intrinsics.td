@@ -1029,6 +1029,11 @@ def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                                       [IntrNoMerge]>;
 
+def int_structured_gep
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                            [LLVMMatchType<0>, llvm_vararg_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
+
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
@@ -2843,12 +2848,12 @@ def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_vector_splice_left
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+                            [IntrNoMem, IntrSpeculatable]>;
 
 def int_vector_splice_right
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+                            [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],

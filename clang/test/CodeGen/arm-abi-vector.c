@@ -177,11 +177,11 @@ double varargs_vec_19c(int fixed, ...) {
 
 double test_19c(__char19 *in) {
 // CHECK: test_19c
-// CHECK: call arm_aapcscc double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr dead_on_return noundef {{%.*}})
+// CHECK: call arm_aapcscc double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef dead_on_return {{%.*}})
 // APCS-GNU: test_19c
-// APCS-GNU: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr dead_on_return noundef {{%.*}})
+// APCS-GNU: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef dead_on_return {{%.*}})
 // ANDROID: test_19c
-// ANDROID: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr dead_on_return noundef {{%.*}})
+// ANDROID: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef dead_on_return {{%.*}})
   return varargs_vec_19c(19, *in);
 }
 
