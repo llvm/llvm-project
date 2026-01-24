@@ -20,6 +20,7 @@
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__utility/empty.h>
@@ -398,11 +399,10 @@ struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
     if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
       if (__first == __last)
         return true; // Empty, sorted by definition
-      _ForwardIterator __first2 = __first;
-      ++__first2; // __first2 = __first + 1
+      _ForwardIterator __first2 = std::next(__first);
       if (__first2 == __last)
         return true; // Only one element, sorted by definition
-      --__last;      // __last = __last - 1
+      --__last;      // Make two iterator ranges: [__first, __first + n - 1) and [__first + 1, __first + n)
       using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
       using _Ref             = __iterator_reference<_ForwardIterator>;
       return _TransformReduce()(
