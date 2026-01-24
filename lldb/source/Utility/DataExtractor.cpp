@@ -1050,3 +1050,16 @@ void DataExtractor::Checksum(llvm::SmallVectorImpl<uint8_t> &dest,
   dest.clear();
   dest.append(result.begin(), result.end());
 }
+
+DataExtractorSP DataExtractor::GetSubsetExtractorSP(offset_t offset,
+                                                    offset_t length) {
+  DataExtractorSP new_sp = std::make_shared<DataExtractor>(
+      GetSharedDataBuffer(), GetByteOrder(), GetAddressByteSize());
+  new_sp->SetData(GetSharedDataBuffer(), GetSharedDataOffset() + offset,
+                  length);
+  return new_sp;
+}
+
+DataExtractorSP DataExtractor::GetSubsetExtractorSP(offset_t offset) {
+  return GetSubsetExtractorSP(offset, GetByteSize() - offset);
+}

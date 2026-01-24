@@ -249,8 +249,7 @@ add_entrypoint_object(
   HDRS
     ../dfmaf128.h
   DEPENDS
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.dfmaf128
 )
 
 add_entrypoint_object(
@@ -486,16 +485,8 @@ add_entrypoint_object(
   HDRS
     ../tan.h
   DEPENDS
-    libc.src.__support.math.range_reduction_double
-    libc.hdr.errno_macros
+    libc.src.__support.math.tan
     libc.src.errno.errno
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.macros.optimization
 )
 
 add_entrypoint_object(
@@ -5131,8 +5122,7 @@ add_entrypoint_object(
   HDRS
     ../f16fmal.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.fma
+    libc.src.__support.math.f16fmal
 )
 
 add_entrypoint_object(

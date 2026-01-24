@@ -2878,6 +2878,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16fmal",
+    hdrs = ["src/__support/math/f16fmal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_frexpf128",
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
@@ -2995,6 +3006,16 @@ libc_support_library(
     hdrs = ["src/__support/math/llogbf.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogb",
+    hdrs = ["src/__support/math/llogb.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -3349,11 +3370,11 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_llogb",
-    hdrs = ["src/__support/math/llogb.h"],
+    name = "__support_math_dfmaf128",
+    hdrs = ["src/__support/math/dfmaf128.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_manipulation_functions",
+        ":__support_fputil_fma",
         ":__support_macros_config",
     ],
 )
@@ -3465,6 +3486,19 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_tan",
+    hdrs = ["src/__support/math/tan.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
     ],
 )
 
@@ -3980,7 +4014,8 @@ libc_math_function(
 libc_math_function(
     name = "dfmaf128",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_dfmaf128",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -4171,7 +4206,7 @@ libc_math_function(
 libc_math_function(
     name = "f16fmal",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_f16fmal",
     ],
 )
 
@@ -5139,11 +5174,7 @@ libc_math_function(
 libc_math_function(
     name = "tan",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_range_reduction_double",
-        ":__support_sincos_eval",
+        ":__support_math_tan",
     ],
 )
 

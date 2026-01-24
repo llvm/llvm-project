@@ -726,15 +726,18 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
   // If this is a load-store pair from a stack slot to a stack slot, we
   // might be able to perform the stack-move optimization just as we do for
   // memcpys from an alloca to an alloca.
-  if (performStackMoveOptzn(LI, SI, SI->getPointerOperand(),
-                            LI->getPointerOperand(), DL.getTypeStoreSize(T),
-                            BAA)) {
-    // Avoid invalidating the iterator.
-    BBI = SI->getNextNode()->getIterator();
-    eraseInstruction(SI);
-    eraseInstruction(LI);
-    ++NumMemCpyInstr;
-    return true;
+  if (auto *DestAlloca = dyn_cast<AllocaInst>(SI->getPointerOperand())) {
+    if (auto *SrcAlloca = dyn_cast<AllocaInst>(LI->getPointerOperand())) {
+      if (performStackMoveOptzn(LI, SI, DestAlloca, SrcAlloca,
+                                DL.getTypeStoreSize(T), BAA)) {
+        // Avoid invalidating the iterator.
+        BBI = SI->getNextNode()->getIterator();
+        eraseInstruction(SI);
+        eraseInstruction(LI);
+        ++NumMemCpyInstr;
+        return true;
+      }
+    }
   }
 
   return false;
@@ -1494,24 +1497,11 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 // transformation only because we restrict the scope of this optimization to
 // allocas that aren't captured.
 bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
-                                          Value *DestPtr, Value *SrcPtr,
-                                          TypeSize Size, BatchAAResults &BAA) {
+                                          AllocaInst *DestAlloca,
+                                          AllocaInst *SrcAlloca, TypeSize Size,
+                                          BatchAAResults &BAA) {
   LLVM_DEBUG(dbgs() << "Stack Move: Attempting to optimize:\n"
                     << *Store << "\n");
-
-  AllocaInst *DestAlloca = dyn_cast<AllocaInst>(getUnderlyingObject(DestPtr));
-  if (!DestAlloca)
-    return false;
-
-  AllocaInst *SrcAlloca = dyn_cast<AllocaInst>(getUnderlyingObject(SrcPtr));
-  if (!SrcAlloca)
-    return false;
-
-  // Explicitly don't handle degenerate case of a partial copy within one
-  // alloca. It would always fail the dominator check later anyways, and
-  // possibly the modref checks also.
-  if (SrcAlloca == DestAlloca)
-    return false;
 
   // Make sure the two allocas are in the same address space.
   if (SrcAlloca->getAddressSpace() != DestAlloca->getAddressSpace()) {
@@ -1519,22 +1509,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
   }
 
-  if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
-    return false;
-
   // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getDataLayout();
-
-  auto DestOffset = DestPtr->getPointerOffsetFrom(DestAlloca, DL);
-  if (!DestOffset)
-    return false;
-
-  auto SrcOffset = SrcPtr->getPointerOffsetFrom(SrcAlloca, DL);
-  if (!SrcOffset || *SrcOffset < *DestOffset || *SrcOffset < 0)
-    return false;
-  // Offset difference must preserve dest alloca's alignment.
-  if ((*SrcOffset - *DestOffset) % DestAlloca->getAlign().value() != 0)
-    return false;
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
   if (!SrcSize || !DestSize)
@@ -1542,11 +1518,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (*SrcSize != *DestSize)
     if (!SrcSize->isFixed() || !DestSize->isFixed())
       return false;
-  // Check that copy covers entirety of dest alloca.
-  if (Size != *DestSize || *DestOffset != 0) {
+  if (Size != *DestSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
   }
+
+  if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
+    return false;
 
   // Check if it will be legal to combine allocas without breaking dominator.
   bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
@@ -1711,13 +1689,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // Merge the two allocas.
-  Value *NewDestPtr = SrcAlloca;
-  if (*SrcOffset != *DestOffset) {
-    IRBuilder<> Builder(DestAlloca);
-    NewDestPtr = Builder.CreateInBoundsPtrAdd(
-        SrcAlloca, Builder.getInt64(*SrcOffset - *DestOffset));
-  }
-  DestAlloca->replaceAllUsesWith(NewDestPtr);
+  DestAlloca->replaceAllUsesWith(SrcAlloca);
   eraseInstruction(DestAlloca);
 
   // Drop metadata on the source alloca.
@@ -1788,7 +1760,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     return false;
 
   // If copying from a constant, try to turn the memcpy into a memset.
-  if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(M->getSource())))
+  if (auto *GV = dyn_cast<GlobalVariable>(M->getSource()))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
       if (Value *ByteVal = isBytewiseValue(GV->getInitializer(),
                                            M->getDataLayout())) {
@@ -1874,10 +1846,16 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // If the transfer is from a stack slot to a stack slot, then we may be able
   // to perform the stack-move optimization. See the comments in
   // performStackMoveOptzn() for more details.
+  auto *DestAlloca = dyn_cast<AllocaInst>(M->getDest());
+  if (!DestAlloca)
+    return false;
+  auto *SrcAlloca = dyn_cast<AllocaInst>(M->getSource());
+  if (!SrcAlloca)
+    return false;
   ConstantInt *Len = dyn_cast<ConstantInt>(M->getLength());
   if (Len == nullptr)
     return false;
-  if (performStackMoveOptzn(M, M, M->getDest(), M->getSource(),
+  if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
                             TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
     BBI = M->getNextNode()->getIterator();

@@ -279,6 +279,12 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  return fadd(KnownLHS, fneg(KnownRHS), Mode);
+}
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
@@ -420,6 +426,20 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
   if (!Known.isKnownNeverNaN())
     Known.SignBit = std::nullopt;
 
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // Sign should be preserved
+  // TODO: Handle cannot be ordered greater than zero
+  if (KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+
+  Known.propagateNaN(KnownSrc, true);
+
+  // Infinity needs a range check.
   return Known;
 }
 

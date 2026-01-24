@@ -4608,6 +4608,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
@@ -4616,8 +4618,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     Form = Arithmetic;
     break;
 
