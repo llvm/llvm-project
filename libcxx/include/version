@@ -564,7 +564,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_queue                      202502L
 # define __cpp_lib_constrained_equality                 202411L
 // # define __cpp_lib_copyable_function                    202306L
-// # define __cpp_lib_debugging                            202311L
+# if _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_AVAILABILITY_HAS_DEBUGGING)
+#   define __cpp_lib_debugging                          202311L
+# endif
 // # define __cpp_lib_default_template_type_for_algorithm_values 202403L
 // # define __cpp_lib_format_path                          202403L
 // # define __cpp_lib_freestanding_algorithm               202311L

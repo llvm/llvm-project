@@ -1220,6 +1220,11 @@ module std [system] {
     export *
   }
 
+  module debugging {
+    header "debugging"
+    export *
+  }
+
   module deque {
     module fwd { header "__fwd/deque.h" }
 

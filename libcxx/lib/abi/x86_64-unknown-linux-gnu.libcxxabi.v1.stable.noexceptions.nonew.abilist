@@ -583,6 +583,7 @@
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__breakpointEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__do_nothingEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__get_sp_mutEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__next_primeEm', 'type': 'FUNC'}
@@ -1175,6 +1176,7 @@
 {'is_defined': True, 'name': '_ZNSt3__119__thread_local_dataEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__119is_debugger_presentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__120__atomic_wait_nativeILm4EEEvPKvS2_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__120__get_collation_nameEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi', 'type': 'FUNC'}

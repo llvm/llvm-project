@@ -492,7 +492,8 @@ feature_test_macros = [
                 # "c++26": 202403, # P2810R4: is_debugger_present is_replaceable
             },
             "headers": ["debugging"],
-            "unimplemented": True,
+            "test_suite_guard": "TEST_STD_VER >= 26 && defined(_LIBCPP_AVAILABILITY_HAS_DEBUGGING)",
+            "libcxx_guard": "_LIBCPP_STD_VER >= 26 && defined(_LIBCPP_AVAILABILITY_HAS_DEBUGGING)",
         },
         {
             "name": "__cpp_lib_default_template_type_for_algorithm_values",

@@ -1,0 +1,76 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_DEBUGGING
+#define _LIBCPP_DEBUGGING
+
+/*
+// all freestanding
+namespace std {
+  // [debugging.utility], utility
+  void breakpoint() noexcept;
+  void breakpoint_if_debugging() noexcept;
+  bool is_debugger_present() noexcept;
+}
+*/
+
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
+
+#  include <__config>
+#  include <version>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+namespace __gnu_cxx {
+// This should be changed to non-zero by debuggers when they attach and back to zero when they detach:
+// - If the value is positive, std::breakpoint() will use it as the argument to std::raise, so it should be a valid
+// signal number, e.g. SIGABRT or SIGTRAP.
+// - If the value is negative, std::breakpoint() will use a target-specific trap.
+extern volatile int debugger_signal_for_breakpoint;
+} // namespace __gnu_cxx
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+#  if _LIBCPP_STD_VER >= 26
+
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept;
+
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void breakpoint() noexcept {
+  if (__gnu_cxx::debugger_signal_for_breakpoint >= 0)
+    std::raise(__gnu_cxx::debugger_signal_for_breakpoint);
+
+#    if __has_builtin(__builtin_debugtrap)
+  __builtin_debugtrap();
+#    elif defined(_MSC_VER)
+  __debugbreak();
+#    else
+  __breakpoint();
+#    endif
+}
+
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_OVERRIDABLE_FUNC_VIS bool
+is_debugger_present() noexcept;
+
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void
+breakpoint_if_debugging() noexcept {
+  if (is_debugger_present())
+    breakpoint();
+}
+
+#  endif
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+
+#endif // _LIBCPP_DEBUGGING

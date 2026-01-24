@@ -48,9 +48,6 @@ module;
 // into thinking that libc++ provides the header.
 //
 #ifndef _WIN32
-#  if __has_include(<debugging>)
-#    error "please update the header information for <debugging> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<debugging>)
 #  if __has_include(<generator>)
 #    error "please update the header information for <generator> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<generator>)
