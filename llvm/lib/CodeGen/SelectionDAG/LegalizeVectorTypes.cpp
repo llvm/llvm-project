@@ -7702,8 +7702,31 @@ SDValue DAGTypeLegalizer::WidenVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_EXTEND_VECTOR_INREG(SDNode *N) {
-  SDValue InOp = GetWidenedVector(N->getOperand(0));
-  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), InOp);
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+
+  // Widen the input as requested by the legalizer.
+  SDValue WideInOp = GetWidenedVector(N->getOperand(0));
+  EVT WideInVT = WideInOp.getValueType();
+
+  // Simple case: if widened input is still smaller than or equal to result,
+  // just use it directly.
+  if (WideInVT.getSizeInBits() <= ResVT.getSizeInBits())
+    return DAG.getNode(N->getOpcode(), DL, ResVT, WideInOp);
+
+  // EXTEND_VECTOR_INREG requires input bits <= result bits.
+  // If widening makes the input larger than the original result, widen the
+  // result to match, then extract back down.
+  EVT ResEltVT = ResVT.getVectorElementType();
+  unsigned EltBits = ResEltVT.getSizeInBits();
+  assert((WideInVT.getSizeInBits() % EltBits) == 0 &&
+         "Widened input size must be a multiple of result element size");
+
+  unsigned WideNumElts = WideInVT.getSizeInBits() / EltBits;
+  EVT WideResVT = EVT::getVectorVT(*DAG.getContext(), ResEltVT, WideNumElts);
+
+  SDValue WideRes = DAG.getNode(N->getOpcode(), DL, WideResVT, WideInOp);
+  return DAG.getExtractSubvector(DL, ResVT, WideRes, 0);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {

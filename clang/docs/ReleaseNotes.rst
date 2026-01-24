@@ -196,6 +196,8 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Initial support for gfx1310
+
 NVPTX Support
 ^^^^^^^^^^^^^^
 
