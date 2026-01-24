@@ -203,7 +203,8 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      llvm::StringRef mapperIdNameRef = "") const;
+      llvm::StringRef mapperIdNameRef = "",
+      bool isMotionModifier = false) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
