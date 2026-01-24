@@ -1,4 +1,4 @@
-; RUN: opt -O2 -S < %s
+; RUN: opt -passes=print<cost-model> -disable-output < %s
 ; This test triggers a crash in X86 TTI with scalable vectors
 
 target triple = "x86_64-unknown-linux-gnu"
