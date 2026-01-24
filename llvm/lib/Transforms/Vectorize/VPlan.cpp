@@ -52,6 +52,10 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -107,27 +111,25 @@ void VPValue::dump() const {
   dbgs() << "\n";
 }
 
-void VPDef::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this);
-  VPSlotTracker SlotTracker(
-      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
+void VPRecipeBase::dump() const {
+  VPSlotTracker SlotTracker(getParent() ? getParent()->getPlan() : nullptr);
   print(dbgs(), "", SlotTracker);
   dbgs() << "\n";
 }
 #endif
 
+#if !defined(NDEBUG)
+bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
+#endif
+
 VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
-    return nullptr;
-  return cast<VPRecipeBase>(DefValue->Def);
+  return DefValue ? DefValue->Def : nullptr;
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
-    return nullptr;
-  return cast<VPRecipeBase>(DefValue->Def);
+  return DefValue ? DefValue->Def : nullptr;
 }
 
 Value *VPValue::getLiveInIRValue() const {
@@ -136,7 +138,7 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
+VPRecipeValue::VPRecipeValue(VPRecipeBase *Def, Value *UV)
     : VPValue(VPVRecipeValueSC, UV), Def(Def) {
   assert(Def && "VPRecipeValue requires a defining recipe");
   Def->addDefinedValue(this);
@@ -1692,17 +1694,33 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  if (!OrigAverageTripCount)
-    return;
-  // Calculate number of iterations in unrolled loop.
-  unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-  // Calculate number of iterations for remainder loop.
-  unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
-
+  unsigned AverageVectorTripCount = 0;
+  unsigned RemainderAverageTripCount = 0;
+  auto EC = VectorLoop->getLoopPreheader()->getParent()->getEntryCount();
+  auto IsProfiled = EC && EC->getCount();
+  if (!OrigAverageTripCount) {
+    if (!IsProfiled)
+      return;
+    auto &SE = *PSE.getSE();
+    AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
+    if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
+      return;
+    if (Plan.getScalarPreheader()->hasPredecessors())
+      RemainderAverageTripCount =
+          SE.getSmallConstantTripCount(OrigLoop) % EstimatedVFxUF;
+    // Setting to 1 should be sufficient to generate the correct branch weights.
+    OrigLoopInvocationWeight = 1;
+  } else {
+    // Calculate number of iterations in unrolled loop.
+    AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+  }
   if (HeaderVPBB) {
     setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
                               OrigLoopInvocationWeight);
   }
+
   if (Plan.getScalarPreheader()->hasPredecessors()) {
     setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
                               OrigLoopInvocationWeight);

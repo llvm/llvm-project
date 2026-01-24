@@ -370,13 +370,17 @@ public:
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+  Value *getIRStackGuard(IRBuilderBase &IRB,
+                         const LibcallLoweringInfo &Libcalls) const override;
 
-  void insertSSPDeclarations(Module &M) const override;
+  void
+  insertSSPDeclarations(Module &M,
+                        const LibcallLoweringInfo &Libcalls) const override;
 
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const override;
+  Value *getSafeStackPointerLocation(
+      IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
