@@ -7,9 +7,9 @@
 // things happens:
 //    1) for gfx900 we emit an empty kernel (concrete target, lacks feature)
 //    2) for gfx1010 we emit a call to trap (concrete target, has feature)
-//    3) for AMDGCNSPIRV we emit llvm.amdgcn.has.gfx10-insts as a constant
-//       externally initialised bool global, and load from it to provide the
-//       condition to a br (abstract target)
+//    3) for AMDGCNSPIRV we emit a boolean specialisation constant, via a call
+//       to __spirv_SpecConstant, with the id of UINT32_MAX, and the boolean
+//       value of false, which will yield an OpSpecConstantFalse in SPIR-V
 
 // AMDGCN-GFX900-LABEL: define dso_local void @foo(
 // AMDGCN-GFX900-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -25,8 +25,8 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[LLVM_AMDGCN_HAS_GFX10_INSTS:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
-// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[LLVM_AMDGCN_HAS_GFX10_INSTS]], false
+// AMDGCNSPIRV-NEXT:    [[HAS_GFX10_INSTS_:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[HAS_GFX10_INSTS_]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
@@ -39,9 +39,9 @@ void foo() {
         return __builtin_trap();
 }
 //.
-// AMDGCN-GFX900: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dpp,+gfx8-insts,+gfx9-insts,+lerp-inst,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+wavefrontsize64" }
+// AMDGCN-GFX900: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" }
 //.
-// AMDGCN-GFX1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1010" "target-features"="+16-bit-insts,+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dpp,+gfx10-insts,+gfx8-insts,+gfx9-insts,+lerp-inst,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+wavefrontsize32" }
+// AMDGCN-GFX1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1010" }
 // AMDGCN-GFX1010: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 //.
 // AMDGCNSPIRV: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-trans-insts,+bf8-cvt-scale-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot13-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp4-cvt-scale-insts,+fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+fp8-cvt-scale-insts,+fp8-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+gfx950-insts,+gws,+image-insts,+mai-insts,+permlane16-swap,+permlane32-swap,+prng-inst,+s-memrealtime,+s-memtime-inst,+setprio-inc-wg-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+vmem-to-lds-load-insts,+wavefrontsize32,+wavefrontsize64" }
