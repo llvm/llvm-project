@@ -22,8 +22,6 @@ MODULE_ANALYSIS("amdgpu-argument-usage", AMDGPUArgumentUsageAnalysis())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("amdgpu-expand-feature-predicates",
-            AMDGPUExpandFeaturePredicatesPass(*this))
 MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
