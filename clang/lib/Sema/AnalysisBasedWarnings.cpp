@@ -2929,10 +2929,12 @@ public:
 
   void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                const Expr *EscapeExpr) override {
+    const auto *Attr = ParmWithNoescape->getAttr<NoEscapeAttr>();
+
     S.Diag(ParmWithNoescape->getBeginLoc(),
            diag::warn_lifetime_safety_noescape_escapes)
-        << ParmWithNoescape->getSourceRange();
-
+        << ParmWithNoescape->getSourceRange()
+        << FixItHint::CreateRemoval(Attr->getRange());
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();

@@ -204,7 +204,7 @@ public:
   void reportNoescapeViolations() {
     if (!Reporter)
       return;
-    for (const auto &[PVD, EscapeExpr] : NoescapeWarningsMap)
+    for (auto [PVD, EscapeExpr] : NoescapeWarningsMap)
       Reporter->reportNoescapeViolation(PVD, EscapeExpr);
   }
 
