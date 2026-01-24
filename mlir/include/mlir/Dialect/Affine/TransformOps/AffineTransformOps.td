@@ -104,6 +104,8 @@ def SuperVectorizeOp
     To make its usage easier, it ignores inputs which are children of an affine.for op (itself excluded),
     this way the matcher can be simpler.
 
+    This operation may generate operations from the vector dialect.
+
     Example:
     ```
     %0 = transform.structured.match ops{["affine.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
@@ -123,6 +125,7 @@ def SuperVectorizeOp
           (`vectorize_reductions` `=` $vectorize_reductions^)? 
           attr-dict `:` type($target)
   }];
+  let hasVerifier = 1;
 }
 
 #endif // Affine_TRANSFORM_OPS

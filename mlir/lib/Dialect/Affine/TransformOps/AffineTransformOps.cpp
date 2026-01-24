@@ -152,18 +152,26 @@ void SimplifyBoundedAffineOpsOp::getEffects(
   modifiesPayload(effects);
 }
 
+//===----------------------------------------------------------------------===//
+// SimplifyMinMaxAffineOpsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SuperVectorizeOp::verify() {
+  if (getFastestVaryingPattern().has_value()) {
+    if (getFastestVaryingPattern()->size() != getVectorSizes().size())
+      return emitOpError()
+             << "fastest varying pattern specified with different size than "
+                "the vector size";
+  }
+  return success();
+}
+
 DiagnosedSilenceableFailure
 SuperVectorizeOp::apply(transform::TransformRewriter &rewriter,
                         TransformResults &results, TransformState &state) {
   ArrayRef<int64_t> fastestVaryingPattern;
-  if (getFastestVaryingPattern().has_value()) {
-    if (getFastestVaryingPattern()->size() != getVectorSizes().size())
-      return emitSilenceableFailure(
-          getLoc(),
-          "Fastest varying pattern specified with different size than "
-          "the vector size.");
+  if (getFastestVaryingPattern().has_value())
     fastestVaryingPattern = getFastestVaryingPattern().value();
-  }
 
   for (Operation *target : state.getPayloadOps(getTarget()))
     if (!target->getParentOfType<affine::AffineForOp>())
