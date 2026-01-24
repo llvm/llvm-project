@@ -470,3 +470,30 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 
   return Known;
 }
+
+KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc,
+                                      DenormalMode Mode) {
+  KnownFPClass Known;
+  Known.knownNot(fcSubnormal);
+
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+  else {
+    if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+      Known.knownNot(fcNegZero);
+    if (KnownSrc.isKnownNever(fcNegInf))
+      Known.knownNot(fcNegInf);
+  }
+
+  if (KnownSrc.isKnownNever(fcPositive))
+    Known.knownNot(fcPositive);
+  else {
+    if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+      Known.knownNot(fcPosZero);
+    if (KnownSrc.isKnownNever(fcPosInf))
+      Known.knownNot(fcPosInf);
+  }
+
+  Known.propagateNaN(KnownSrc);
+  return Known;
+}
