@@ -2761,20 +2761,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
       }
 
-      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
-      if (Constant *SingleVal =
-              getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
-        return SingleVal;
-
-      FastMathFlags InferredFMF =
-          inferFastMathValueFlags(FMF, ValidResults, KnownSrc);
-      if (InferredFMF != FMF) {
-        CI->dropUBImplyingAttrsAndMetadata();
-        CI->setFastMathFlags(InferredFMF);
-        return I;
-      }
-
-      break;
+      return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
+                                           {KnownSrc});
     }
     case Intrinsic::maximum:
     case Intrinsic::minimum:
@@ -3138,9 +3126,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         // isn't a nan.
         // Otherwise, we also need to avoid denormal inputs to drop the
         // canonicalize.
-        if ((KnownSrc.isKnownNeverNaN() || (DemandedMask & fcNan) == fcNone) &&
-            (Mode == DenormalMode::getIEEE() ||
-             KnownSrc.isKnownNeverSubnormal()))
+        if (KnownSrc.isKnownNeverNaN() && (Mode == DenormalMode::getIEEE() ||
+                                           KnownSrc.isKnownNeverSubnormal()))
           return CI->getArgOperand(0);
 
         return nullptr;
