@@ -13,8 +13,10 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -80,6 +82,127 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
                           ArrayRef<OpFoldResult> offsets,
                           ArrayRef<OpFoldResult> sizes) const {
     return getTiledImplementation(op, b, offsets, sizes);
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConcatOpTiling
+//===----------------------------------------------------------------------===//
+//
+// Tiling implementation for tensor.concat.
+//
+// The concatenation dimension is not tiled because a tile along that axis
+// could span multiple input tensors, requiring non-contiguous (strided) slices
+// from each contributing input. All other dimensions can be tiled freely since
+// they produce contiguous slices from each input tensor.
+//
+//===----------------------------------------------------------------------===//
+
+struct ConcatOpTiling
+    : public TilingInterface::ExternalModel<ConcatOpTiling, ConcatOp> {
+
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    auto concatOp = cast<ConcatOp>(op);
+    return SmallVector<utils::IteratorType>(concatOp.getRank(),
+                                            utils::IteratorType::parallel);
+  }
+
+  SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
+    ReifiedRankedShapedTypeDims reifiedShapes;
+    (void)reifyResultShapes(b, op, reifiedShapes);
+    OpFoldResult zero = b.getIndexAttr(0);
+    OpFoldResult one = b.getIndexAttr(1);
+
+    SmallVector<Range> loopBounds(reifiedShapes[0].size(), {zero, one, one});
+    for (const auto &ub : enumerate(reifiedShapes[0]))
+      loopBounds[ub.index()].size = ub.value();
+    return loopBounds;
+  }
+
+  FailureOr<TilingResult>
+  getTiledImplementation(Operation *op, OpBuilder &b,
+                         ArrayRef<OpFoldResult> offsets,
+                         ArrayRef<OpFoldResult> sizes) const {
+    auto concatOp = cast<ConcatOp>(op);
+    Location loc = concatOp.getLoc();
+    int64_t concatDim = concatOp.getDim();
+
+    // Check offset first (doesn't create ops) to fail fast.
+    if (!isZeroInteger(offsets[concatDim]))
+      return failure();
+
+    // Get the full size of the concat dimension from the result.
+    OpFoldResult concatDimSize =
+        tensor::getMixedSize(b, loc, concatOp.getResult(), concatDim);
+
+    // Verify that the tile size equals the full concat dimension size.
+    FailureOr<bool> maybeEqual =
+        ValueBoundsConstraintSet::areEqual(sizes[concatDim], concatDimSize);
+    if (failed(maybeEqual) || !maybeEqual.value())
+      return failure();
+    int64_t rank = concatOp.getRank();
+    OpFoldResult one = b.getIndexAttr(1);
+
+    SmallVector<Operation *> generatedSlices;
+    SmallVector<Value> tiledInputs;
+    tiledInputs.reserve(concatOp.getNumOperands());
+
+    // Slice each input tensor on all non-concat dimensions.
+    for (Value input : concatOp.getInputs()) {
+      SmallVector<OpFoldResult> inputOffsets(rank);
+      SmallVector<OpFoldResult> inputSizes(rank);
+      SmallVector<OpFoldResult> inputStrides(rank, one);
+
+      for (int64_t dim = 0; dim < rank; ++dim) {
+        if (dim == concatDim) {
+          // Keep the full extent of the concat dimension for each input.
+          inputOffsets[dim] = b.getIndexAttr(0);
+          inputSizes[dim] = tensor::getMixedSize(b, loc, input, dim);
+        } else {
+          // Apply tile offsets and sizes on non-concat dimensions.
+          inputOffsets[dim] = offsets[dim];
+          inputSizes[dim] = sizes[dim];
+        }
+      }
+
+      auto extractSlice = tensor::ExtractSliceOp::create(
+          b, loc, input, inputOffsets, inputSizes, inputStrides);
+      generatedSlices.push_back(extractSlice);
+      tiledInputs.push_back(extractSlice.getResult());
+    }
+
+    // Create the tiled concat operation.
+    auto tiledConcat = ConcatOp::create(b, loc, concatDim, tiledInputs);
+
+    return TilingResult{{tiledConcat.getOperation()},
+                        {tiledConcat.getResult()},
+                        generatedSlices};
+  }
+
+  LogicalResult
+  getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
+                        ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes,
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
+    // For concat, the result tile position is the same as the iteration
+    // domain tile since we're directly mapping iteration space to output.
+    resultOffsets.assign(offsets.begin(), offsets.end());
+    resultSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+
+  LogicalResult getIterationDomainTileFromResultTile(
+      Operation *op, OpBuilder &b, unsigned resultNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
+      SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
+    // For concat, the iteration domain is the same as the result domain.
+    // This is a 1-to-1 mapping since the result shape equals the iteration
+    // domain.
+    iterDomainOffsets.assign(offsets.begin(), offsets.end());
+    iterDomainSizes.assign(sizes.begin(), sizes.end());
+    return success();
   }
 };
 
@@ -312,5 +435,6 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+    tensor::ConcatOp::attachInterface<ConcatOpTiling>(*ctx);
   });
 }
