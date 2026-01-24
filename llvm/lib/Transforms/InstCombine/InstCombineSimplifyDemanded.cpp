@@ -2533,11 +2533,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       Value *IsInfOrZeroOrNan = Builder.CreateOr(IsInfOrNan, IsZeroOrNan);
 
-      return Builder.CreateSelectFMF(
+      return Builder.CreateSelectFMFWithUnknownProfile(
           IsInfOrZeroOrNan, ConstantFP::getQNaN(VTy),
           ConstantFP::get(
               VTy, APFloat::getOne(VTy->getScalarType()->getFltSemantics())),
-          FMF);
+          FMF, DEBUG_TYPE);
     }
 
     Type *EltTy = VTy->getScalarType();
