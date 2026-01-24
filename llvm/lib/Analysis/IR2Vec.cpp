@@ -515,9 +515,9 @@ Error readVocabularyFromFile(StringRef VocabFilePath, VocabMap &OpcVocab,
 } // anonymous namespace
 
 /// Generate VocabStorage from vocabulary maps.
-VocabStorage Vocabulary::buildVocabStorage(VocabMap &OpcVocab,
-                                           VocabMap &TypeVocab,
-                                           VocabMap &ArgVocab) {
+VocabStorage Vocabulary::buildVocabStorage(const VocabMap &OpcVocab,
+                                           const VocabMap &TypeVocab,
+                                           const VocabMap &ArgVocab) {
 
   // Helper for handling missing entities in the vocabulary.
   // Currently, we use a zero vector. In the future, we will throw an error to

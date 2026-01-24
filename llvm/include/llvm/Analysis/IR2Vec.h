@@ -527,8 +527,9 @@ private:
   using VocabMap = std::map<std::string, Embedding>;
 
   /// Generate VocabStorage from vocabulary maps.
-  static VocabStorage buildVocabStorage(VocabMap &OpcVocab, VocabMap &TypeVocab,
-                                        VocabMap &ArgVocab);
+  static VocabStorage buildVocabStorage(const VocabMap &OpcVocab,
+                                        const VocabMap &TypeVocab,
+                                        const VocabMap &ArgVocab);
 };
 
 /// Embedder provides the interface to generate embeddings (vector
