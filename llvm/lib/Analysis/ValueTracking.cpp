@@ -5131,21 +5131,39 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & fcNegative) == fcNone)
         break;
 
-      if (II->getArgOperand(0) != II->getArgOperand(1) ||
-          !isGuaranteedNotToBeUndef(II->getArgOperand(0), Q.AC, Q.CxtI, Q.DT,
-                                    Depth + 1))
+      if (II->getArgOperand(0) == II->getArgOperand(1) &&
+          isGuaranteedNotToBeUndef(II->getArgOperand(0), Q.AC, Q.CxtI, Q.DT,
+                                   Depth + 1)) {
+        KnownFPClass KnownSrc, KnownAddend;
+        computeKnownFPClass(II->getArgOperand(2), DemandedElts,
+                            InterestedClasses, KnownAddend, Q, Depth + 1);
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Q, Depth + 1);
+
+        const Function *F = II->getFunction();
+        const fltSemantics &FltSem =
+            II->getType()->getScalarType()->getFltSemantics();
+        DenormalMode Mode =
+            F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+
+        Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
         break;
+      }
 
-      // The multiply cannot be -0 and therefore the add can't be -0
-      Known.knownNot(fcNegZero);
+      KnownFPClass KnownSrc[3];
+      for (int I = 0; I != 3; ++I) {
+        computeKnownFPClass(II->getArgOperand(I), DemandedElts,
+                            InterestedClasses, KnownSrc[I], Q, Depth + 1);
+        if (KnownSrc[I].isUnknown())
+          return;
+      }
 
-      // x * x + y is non-negative if y is non-negative.
-      KnownFPClass KnownAddend;
-      computeKnownFPClass(II->getArgOperand(2), DemandedElts, InterestedClasses,
-                          KnownAddend, Q, Depth + 1);
-
-      if (KnownAddend.cannotBeOrderedLessThanZero())
-        Known.knownNot(fcNegative);
+      const Function *F = II->getFunction();
+      const fltSemantics &FltSem =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
       break;
     }
     case Intrinsic::sqrt:
