@@ -80,6 +80,12 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
     endforeach()
   endif()
 
+  cmake_path( GET clang_exe PARENT_PATH CLANG_PARENT_PATH )
+  cmake_path( GET CLANG_PARENT_PATH PARENT_PATH CLANG_GRANDPARENT_PATH )
+  cmake_path( APPEND LIBCLC_CLANG_RESOURCE_INCLUDE_DIR ${CLANG_GRANDPARENT_PATH}
+    lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}
+    include)
+
   # Setup the paths where libclc runtimes should be stored.
   set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
   set( LIBCLC_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/clc )
@@ -106,9 +112,12 @@ else()
     get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
 
+  include(GetClangResourceDir)
+  get_clang_resource_dir(LIBCLC_CLANG_RESOURCE_INCLUDE_DIR
+    PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
+
   # Setup the paths where libclc runtimes should be stored. By default, in an
   # in-tree build we place the libraries in clang's resource driectory.
-  include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
   cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
 
@@ -411,7 +420,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
       # Error on undefined macros
       -Werror=undef
-      -fdiscard-value-names
+      -fdiscard-value-names -nostdinc
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -453,16 +462,18 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       LIB_FILES ${clc_lib_files}
     )
 
-    list( APPEND build_flags
-      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
+    set( opencl_build_flags ${build_flags}
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
+      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
+      # Ensure clang's opencl-c-base.h is found before CPATH directories.
+      -I${LIBCLC_CLANG_RESOURCE_INCLUDE_DIR}
     )
 
     add_libclc_builtin_set(
       ARCH ${ARCH}
       ARCH_SUFFIX ${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${build_flags}
+      COMPILE_FLAGS ${opencl_build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${opencl_lib_files}
       ALIASES ${${d}_aliases}
