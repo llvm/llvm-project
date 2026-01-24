@@ -4996,7 +4996,7 @@ libc_math_function(
 libc_math_function(
     name = "sinhf16",
     additional_deps = [
-        ":__support_math_expxf16_utils",
+        ":__support_math_sinhf16",
     ],
 )
 
