@@ -892,11 +892,11 @@ void MachineSMEABI::addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
   if (LCImpl == RTLIB::Unsupported)
     emitError("cannot lower SME ABI (SME routines unsupported)");
   CallingConv::ID CC = LLI->getLibcallImplCallingConv(LCImpl);
-  StringRef SymbolName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+  StringRef ImplName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
   if (CC != ExpectedCC)
-    emitError("invalid calling convention for SME routine: '" + SymbolName + "'");
-  // FIXME: This assumes the SymbolName StringRef is null-terminated.
-  MIB.addExternalSymbol(SymbolName.data());
+    emitError("invalid calling convention for SME routine: '" + ImplName + "'");
+  // FIXME: This assumes the ImplName StringRef is null-terminated.
+  MIB.addExternalSymbol(ImplName.data());
   MIB.addRegMask(TRI->getCallPreservedMask(*MF, CC));
 }
 
