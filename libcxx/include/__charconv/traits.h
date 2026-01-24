@@ -113,31 +113,10 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
 };
 #  endif
 
-template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool
-__mul_overflowed(unsigned char __a, _Tp __b, unsigned char& __r) {
-  auto __c = __a * __b;
-  __r      = __c;
-  return __c > numeric_limits<unsigned char>::max();
-}
-
-template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool
-__mul_overflowed(unsigned short __a, _Tp __b, unsigned short& __r) {
-  auto __c = __a * __b;
-  __r      = __c;
-  return __c > numeric_limits<unsigned short>::max();
-}
-
-template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool __mul_overflowed(_Tp __a, _Tp __b, _Tp& __r) {
-  static_assert(is_unsigned<_Tp>::value, "");
-  return __builtin_mul_overflow(__a, __b, std::addressof(__r));
-}
-
 template <typename _Tp, typename _Up>
-inline _LIBCPP_HIDE_FROM_ABI bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r) {
-  return __itoa::__mul_overflowed(__a, static_cast<_Tp>(__b), __r);
+_LIBCPP_HIDE_FROM_ABI bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r) {
+  static_assert(is_unsigned<_Tp>::value);
+  return __builtin_mul_overflow(__a, static_cast<_Tp>(__b), std::addressof(__r));
 }
 
 template <typename _Tp>

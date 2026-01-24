@@ -152,6 +152,9 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   MCInst BTIjc;
   BC->MIB->createBTI(BTIjc, BTIKind::JC);
   BB->addInstruction(BTIjc);
+  BC->MIB->setRAState(BTIjc, true);
+  ASSERT_NE(BTIjc.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(BTIjc), 1u);
   auto II = BB->begin();
   ASSERT_EQ(II->getOpcode(), AArch64::HINT);
   ASSERT_EQ(II->getOperand(0).getImm(), 38);
@@ -159,6 +162,9 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
 
   MCInst BTIj;
   BC->MIB->createBTI(BTIj, BTIKind::J);
+  BC->MIB->setRAState(BTIj, false);
+  ASSERT_NE(BTIj.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(BTIj), 1u);
   II = BB->addInstruction(BTIj);
   ASSERT_EQ(II->getOpcode(), AArch64::HINT);
   ASSERT_EQ(II->getOperand(0).getImm(), 36);
@@ -206,6 +212,11 @@ TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
   BB->addInstruction(Inst);
   // BR x16 needs BTI c or BTI j. We prefer adding a BTI c.
   MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  // Adding an annotation to the call, to check if param numbers are calculated
+  // correctly. Could be any other annotation as well.
+  BC->MIB->setRAState(CallInst, false);
+  ASSERT_NE(CallInst.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(CallInst), 1u);
   auto II = BB->begin();
   ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
   BC->MIB->insertBTI(*BB, CallInst);
@@ -223,6 +234,9 @@ TEST_P(MCPlusBuilderTester, AArch64_insertBTI_1) {
   BB->addInstruction(BTIc);
   // BR x16 needs BTI c or BTI j. We have a BTI c, no change is needed.
   MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->setRAState(CallInst, true);
+  ASSERT_NE(CallInst.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(CallInst), 1u);
   auto II = BB->begin();
   ASSERT_TRUE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
   BC->MIB->insertBTI(*BB, CallInst);

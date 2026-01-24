@@ -118,7 +118,7 @@ define float @fmin_fmin_zero_mismatch(float %x) {
 }
 
 ; max(max(x, -0.0), -0.0) --> max(x, -0.0)
-define float @fmax_fmax_zero_mismatch(float %x) {
+define float @fmax_fmax_zero_mismatch(float noundef %x) {
 ; CHECK-LABEL: @fmax_fmax_zero_mismatch(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], float [[X]], float -0.000000e+00
@@ -470,3 +470,19 @@ define float @pr64937_preserve_min_idiom(float %a) {
   %res = fmul nnan float %sel, 6.553600e+04
   ret float %res
 }
+
+define float @minnum_shared_op_mixed(float %x) {
+; CHECK-LABEL: @minnum_shared_op_mixed(
+; CHECK-NEXT:    [[M0:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[F:%.*]] = call float @llvm.fma.f32(float [[X]], float 0.000000e+00, float [[X]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minnum.f32(float [[F]], float [[M0]])
+; CHECK-NEXT:    ret float [[M2]]
+;
+  %m0 = call float @llvm.minnum.f32(float %x, float 0.000000e+00)
+  %f = call float @llvm.fma.f32(float %x, float 0.000000e+00, float %x)
+  %m2 = call float @llvm.minnum.f32(float %f, float %m0)
+  ret float %m2
+}
+
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.fma.f32(float, float, float)

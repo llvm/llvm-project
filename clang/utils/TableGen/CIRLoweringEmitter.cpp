@@ -20,6 +20,8 @@ using namespace llvm;
 using namespace clang;
 
 namespace {
+std::vector<std::string> CXXABILoweringPatterns;
+std::vector<std::string> CXXABILoweringPatternsList;
 std::vector<std::string> LLVMLoweringPatterns;
 std::vector<std::string> LLVMLoweringPatternsList;
 
@@ -45,11 +47,48 @@ std::string GetOpCppClassName(const Record *OpRecord) {
   return CppClassName.str();
 }
 
+std::string GetOpABILoweringPatternName(llvm::StringRef OpName) {
+  std::string Name = "CIR";
+  Name += OpName;
+  Name += "ABILowering";
+  return Name;
+}
+
 std::string GetOpLLVMLoweringPatternName(llvm::StringRef OpName) {
   std::string Name = "CIRToLLVM";
   Name += OpName;
   Name += "Lowering";
   return Name;
+}
+
+void GenerateABILoweringPattern(llvm::StringRef OpName,
+                                llvm::StringRef PatternName) {
+  std::string CodeBuffer;
+  llvm::raw_string_ostream Code(CodeBuffer);
+
+  Code << "class " << PatternName
+       << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
+  Code << "  [[maybe_unused]] mlir::DataLayout *dataLayout;\n";
+  Code << "  [[maybe_unused]] cir::LowerModule *lowerModule;\n";
+  Code << "\n";
+
+  Code << "public:\n";
+  Code << "  " << PatternName
+       << "(mlir::MLIRContext *context, const mlir::TypeConverter "
+          "&typeConverter, mlir::DataLayout &dataLayout, cir::LowerModule "
+          "&lowerModule)\n";
+  Code << "    : OpConversionPattern<cir::" << OpName
+       << ">(typeConverter, context), dataLayout(&dataLayout), "
+          "lowerModule(&lowerModule) {}\n";
+  Code << "\n";
+
+  Code << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
+       << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+          "const override;\n";
+
+  Code << "};\n";
+
+  CXXABILoweringPatterns.push_back(std::move(CodeBuffer));
 }
 
 void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
@@ -103,6 +142,12 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 void Generate(const Record *OpRecord) {
   std::string OpName = GetOpCppClassName(OpRecord);
 
+  if (OpRecord->getValueAsBit("hasCXXABILowering")) {
+    std::string PatternName = GetOpABILoweringPatternName(OpName);
+    GenerateABILoweringPattern(OpName, PatternName);
+    CXXABILoweringPatternsList.push_back(std::move(PatternName));
+  }
+
   if (OpRecord->getValueAsBit("hasLLVMLowering")) {
     std::string PatternName = GetOpLLVMLoweringPatternName(OpName);
     bool IsRecursive = OpRecord->getValueAsBit("isLLVMLoweringRecursive");
@@ -120,6 +165,11 @@ void clang::EmitCIRLowering(const llvm::RecordKeeper &RK,
   emitSourceFileHeader("Lowering patterns for CIR operations", OS);
   for (const auto *OpRecord : RK.getAllDerivedDefinitions("CIR_Op"))
     Generate(OpRecord);
+
+  OS << "#ifdef GET_ABI_LOWERING_PATTERNS\n"
+     << llvm::join(CXXABILoweringPatterns, "\n") << "#endif\n\n";
+  OS << "#ifdef GET_ABI_LOWERING_PATTERNS_LIST\n"
+     << llvm::join(CXXABILoweringPatternsList, ",\n") << "\n#endif\n\n";
 
   OS << "#ifdef GET_LLVM_LOWERING_PATTERNS\n"
      << llvm::join(LLVMLoweringPatterns, "\n") << "#endif\n\n";

@@ -352,10 +352,10 @@ namespace llvm {
     bool shouldInlineQuadwordAtomics() const;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
     Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
                                         AtomicRMWInst *AI, Value *AlignedAddr,
