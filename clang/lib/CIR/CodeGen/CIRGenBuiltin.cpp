@@ -1873,12 +1873,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       // CIR dialect operations may have no results, no values will be returned
       // even if it executes successfully.
       if (!v)
-        return RValue::get(nullptr);
+        return RValue::getIgnored();
 
       switch (evalKind) {
       case cir::TEK_Scalar:
         if (mlir::isa<cir::VoidType>(v.getType()))
-          return RValue::get(nullptr);
+          return RValue::getIgnored();
         return RValue::get(v);
       case cir::TEK_Aggregate:
         cgm.errorNYI(e->getSourceRange(),
