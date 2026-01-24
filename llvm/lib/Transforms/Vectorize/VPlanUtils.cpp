@@ -554,6 +554,38 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   return UncountableCondition;
 }
 
+VPSingleDefRecipe *vputils::getSingleScalarClone(VPSingleDefRecipe *R) {
+  return TypeSwitch<VPSingleDefRecipe *, VPSingleDefRecipe *>(R)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCallRecipe, VPReplicateRecipe>(
+          [](auto *I) {
+            assert(I->getUnderlyingValue() &&
+                   "Cannot clone recipe without underlying value");
+            return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                         /*IsSingleScalar*/ true,
+                                         /*Mask*/ nullptr, /*Flags*/ *I,
+                                         /*Metadata*/ *I, I->getDebugLoc());
+          })
+      .Case<VPWidenGEPRecipe>([](auto *I) {
+        assert(I->getUnderlyingValue() &&
+               "Cannot clone recipe without underlying value");
+        // WidenGEP does not have metadata.
+        return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                     /*IsSingleScalar*/ true, /*Mask*/ nullptr,
+                                     /*Flags*/ *I, /*Metadata*/ {},
+                                     I->getDebugLoc());
+      })
+      .Case<VPWidenCastRecipe>([](auto *I) {
+        return new VPInstructionWithType(
+            I->getOpcode(), I->operands(), I->getResultType(),
+            /*Flags*/ *I, /*Metadata*/ *I, I->getDebugLoc());
+      })
+      .Default([](auto *I) {
+        assert(isa<VPScalarIVStepsRecipe>(I) &&
+               "Don't know how to convert to single-scalar");
+        return I->clone();
+      });
+}
+
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
                             const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
