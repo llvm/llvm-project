@@ -112,26 +112,9 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
 // CHECK:   op = AttrSizedResultsOp(variadic1=variadic1, non_variadic=non_variadic, variadic2=variadic2, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
-// CHECK-LABEL: class AttributedOpAdaptor(_ods_OpAdaptor):
-// CHECK:   OPERATION_NAME = "test.attributed_op"
-// CHECK:   @builtins.property
-// CHECK:   def i32attr(self) -> _ods_ir.IntegerAttr:
-// CHECK:     return self.attributes["i32attr"]
-// CHECK:   @builtins.property
-// CHECK:   def optionalF32Attr(self) -> _Optional[_ods_ir.FloatAttr]:
-// CHECK:     if "optionalF32Attr" not in self.attributes:
-// CHECK:       return None
-// CHECK:     return self.attributes["optionalF32Attr"]
-// CHECK:   @builtins.property
-// CHECK:   def unitAttr(self) -> bool:
-// CHECK:     return "unitAttr" in self.attributes
-// CHECK:   @builtins.property
-// CHECK:   def in_(self) -> _ods_ir.IntegerAttr:
-// CHECK:     return self.attributes["in"]
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK-LABEL: class AttributedOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.attributed_op"
-// CHECK: Adaptor = AttributedOpAdaptor
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def AttributedOp : TestOp<"attributed_op"> {
@@ -175,6 +158,23 @@ def AttributedOp : TestOp<"attributed_op"> {
   let arguments = (ins I32Attr:$i32attr, OptionalAttr<F32Attr>:$optionalF32Attr,
                    UnitAttr:$unitAttr, I32Attr:$in);
 }
+// CHECK: @_ods_cext.register_op_adaptor(AttributedOp)
+// CHECK-LABEL: class AttributedOpAdaptor(_ods_OpAdaptor):
+// CHECK:   OPERATION_NAME = "test.attributed_op"
+// CHECK:   @builtins.property
+// CHECK:   def i32attr(self) -> _ods_ir.IntegerAttr:
+// CHECK:     return self.attributes["i32attr"]
+// CHECK:   @builtins.property
+// CHECK:   def optionalF32Attr(self) -> _Optional[_ods_ir.FloatAttr]:
+// CHECK:     if "optionalF32Attr" not in self.attributes:
+// CHECK:       return None
+// CHECK:     return self.attributes["optionalF32Attr"]
+// CHECK:   @builtins.property
+// CHECK:   def unitAttr(self) -> bool:
+// CHECK:     return "unitAttr" in self.attributes
+// CHECK:   @builtins.property
+// CHECK:   def in_(self) -> _ods_ir.IntegerAttr:
+// CHECK:     return self.attributes["in"]
 
 // CHECK: def attributed_op(i32attr, in_, *, optional_f32_attr=None, unit_attr=None, loc=None, ip=None) -> AttributedOp:
 // CHECK:     return AttributedOp(i32attr=i32attr, in_=in_, optionalF32Attr=optional_f32_attr, unitAttr=unit_attr, loc=loc, ip=ip)
@@ -383,18 +383,9 @@ def MissingNamesOp : TestOp<"missing_names"> {
 // CHECK: def missing_names(i32, _gen_res_1, i64, _gen_arg_0, f32, _gen_arg_2, *, loc=None, ip=None) -> _ods_ir.OpResultList:
 // CHECK:   return MissingNamesOp(i32=i32, _gen_res_1=_gen_res_1, i64=i64, _gen_arg_0=_gen_arg_0, f32=f32, _gen_arg_2=_gen_arg_2, loc=loc, ip=ip).results
 
-// CHECK-LABEL: class OneOptionalOperandOpAdaptor(_ods_OpAdaptor):
-// CHECK:   OPERATION_NAME = "test.one_optional_operand"
-// CHECK:   @builtins.property
-// CHECK:   def non_optional(self) -> _ods_ir.Value:
-// CHECK:     return self.operands[0]
-// CHECK:   @builtins.property
-// CHECK:   def optional(self) -> _Optional[_ods_ir.Value]:
-// CHECK:     return None if len(self.operands) < 2 else self.operands[1]
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK-LABEL: class OneOptionalOperandOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.one_optional_operand"
-// CHECK: Adaptor = OneOptionalOperandOpAdaptor
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
@@ -420,23 +411,22 @@ def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
   // CHECK: def optional(self) -> _Optional[_ods_ir.Value]:
   // CHECK:   return None if len(self.operation.operands) < 2 else self.operation.operands[1]
 }
+// CHECK: @_ods_cext.register_op_adaptor(OneOptionalOperandOp)
+// CHECK-LABEL: class OneOptionalOperandOpAdaptor(_ods_OpAdaptor):
+// CHECK:   OPERATION_NAME = "test.one_optional_operand"
+// CHECK:   @builtins.property
+// CHECK:   def non_optional(self) -> _ods_ir.Value:
+// CHECK:     return self.operands[0]
+// CHECK:   @builtins.property
+// CHECK:   def optional(self) -> _Optional[_ods_ir.Value]:
+// CHECK:     return None if len(self.operands) < 2 else self.operands[1]
 
 // CHECK: def one_optional_operand(non_optional, *, optional=None, loc=None, ip=None) -> OneOptionalOperandOp:
 // CHECK:   return OneOptionalOperandOp(non_optional=non_optional, optional=optional, loc=loc, ip=ip)
 
-// CHECK-LABEL: class OneVariadicOperandOpAdaptor(_ods_OpAdaptor):
-// CHECK:   OPERATION_NAME = "test.one_variadic_operand"
-// CHECK:   @builtins.property
-// CHECK:   def non_variadic(self) -> _ods_ir.Value:
-// CHECK:     return self.operands[0]
-// CHECK:   @builtins.property
-// CHECK:   def variadic(self) -> _ods_ir.OpOperandList:
-// CHECK:     _ods_variadic_group_length = len(self.operands) - 2 + 1
-// CHECK:     return self.operands[1:1 + _ods_variadic_group_length]
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK-LABEL: class OneVariadicOperandOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.one_variadic_operand"
-// CHECK: Adaptor = OneVariadicOperandOpAdaptor
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
@@ -463,6 +453,16 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
   // CHECK:   return self.operation.operands[1:1 + _ods_variadic_group_length]
   let arguments = (ins AnyType:$non_variadic, Variadic<AnyType>:$variadic);
 }
+// CHECK: @_ods_cext.register_op_adaptor(OneVariadicOperandOp)
+// CHECK-LABEL: class OneVariadicOperandOpAdaptor(_ods_OpAdaptor):
+// CHECK:   OPERATION_NAME = "test.one_variadic_operand"
+// CHECK:   @builtins.property
+// CHECK:   def non_variadic(self) -> _ods_ir.Value:
+// CHECK:     return self.operands[0]
+// CHECK:   @builtins.property
+// CHECK:   def variadic(self) -> _ods_ir.OpOperandList:
+// CHECK:     _ods_variadic_group_length = len(self.operands) - 2 + 1
+// CHECK:     return self.operands[1:1 + _ods_variadic_group_length]
 
 // CHECK: def one_variadic_operand(non_variadic, variadic, *, loc=None, ip=None) -> OneVariadicOperandOp:
 // CHECK:   return OneVariadicOperandOp(non_variadic=non_variadic, variadic=variadic, loc=loc, ip=ip)

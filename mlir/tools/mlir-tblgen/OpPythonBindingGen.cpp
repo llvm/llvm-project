@@ -70,13 +70,13 @@ constexpr const char *opClassTemplate = R"Py(
 @_ods_cext.register_operation(_Dialect)
 class {0}(_ods_ir.OpView):{2}
   OPERATION_NAME = "{1}"
-  Adaptor = {0}Adaptor
 )Py";
 
 /// Template for operation class:
 ///   {0} is the Python class name;
 ///   {1} is the operation name。
 constexpr const char *opAdaptorClassTemplate = R"Py(
+@_ods_cext.register_op_adaptor({0})
 class {0}Adaptor(_ods_OpAdaptor):
   OPERATION_NAME = "{1}"
 )Py";
@@ -1277,11 +1277,6 @@ static void emitAdaptorOperandAccessors(const Operator &op, raw_ostream &os) {
 
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op, raw_ostream &os) {
-  os << formatv(opAdaptorClassTemplate, op.getCppClassName(),
-                op.getOperationName());
-  emitAdaptorOperandAccessors(op, os);
-  emitAdaptorAttributeAccessors(op, os);
-
   os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName(),
                 makeDocStringForOp(op));
 
@@ -1299,6 +1294,12 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
   emitAttributeAccessors(op, os);
   emitResultAccessors(op, os);
   emitRegionAccessors(op, os);
+
+  os << formatv(opAdaptorClassTemplate, op.getCppClassName(),
+                op.getOperationName());
+  emitAdaptorOperandAccessors(op, os);
+  emitAdaptorAttributeAccessors(op, os);
+
   emitValueBuilder(op, functionArgs, os);
 }
 
