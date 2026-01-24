@@ -1151,6 +1151,19 @@ static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
       cast<VPSingleDefRecipe>(SelR));
 }
 
+/// Find and return the final select instruction of the FindIV result pattern
+/// for the given \p BackedgeVal:
+/// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
+///        ComputeReductionResult(ReducedIV), Start.
+static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
+  return cast<VPInstruction>(
+      vputils::findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        return VPI &&
+               matchFindIVResult(VPI, m_Specific(BackedgeVal), m_VPValue());
+      }));
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinOrMaxCompareValue =
       [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
@@ -1524,14 +1537,10 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
     // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
     //
-    // Find the ComputeReductionResult with minmax kind for FindIV.
-    auto *FindIVRdxResult = cast<VPInstruction>(findUserOf(
-        FindIVPhiR->getBackedgeValue(),
-        m_VPInstruction<VPInstruction::ComputeReductionResult>(m_VPValue())));
-    // Find the icmp -> select pattern wrapping the reduction result.
-    auto *FindIVCmp = findUserOf<Instruction::ICmp>(FindIVRdxResult);
-    [[maybe_unused]] auto *FindIVSelect =
-        findUserOf<Instruction::Select>(FindIVCmp);
+    // Find the FindIV result pattern.
+    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
+    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
     assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
     MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
