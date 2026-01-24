@@ -188,23 +188,23 @@ public:
 /// VPValues defined by a VPRegionBlock, like the canonical IV.
 struct VPRegionValue : public VPValue {
   VPRegionBlock *DefiningRegion;
+  Type *Ty;
 
-  VPRegionValue(VPRegionBlock *Region) : VPValue(VPValue::VPRegionValueSC) {
-    DefiningRegion = Region;
-  }
+  VPRegionValue(Type *Ty, VPRegionBlock *Region)
+      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty) {}
 
   ~VPRegionValue() override = default;
 
   /// Returns the region that defines this value.
   VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
 
+  /// Returns the type of the VPRegionValue.
+  Type *getType() const { return Ty; }
+
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() == VPValue::VPRegionValueSC;
   }
 };
-
-typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
-typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
 LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
                                           const VPRecipeBase &R);

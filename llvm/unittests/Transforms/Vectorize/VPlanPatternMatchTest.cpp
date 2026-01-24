@@ -30,6 +30,14 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("");
   VPBuilder Builder(VPBB);
 
+<<<<<<< HEAD
+=======
+  IntegerType *I64Ty = IntegerType::get(C, 64);
+  VPIRValue *StartV = Plan.getConstantInt(I64Ty, 0);
+  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DebugLoc());
+  Builder.insert(CanonicalIVPHI);
+
+>>>>>>> origin/main
   VPValue *Inc = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
   VPValue *VF = &Plan.getVF();
   VPValue *Steps = Builder.createScalarIVSteps(Instruction::Add, nullptr, CanIV,

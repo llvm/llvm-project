@@ -26,19 +26,20 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vp<[[CIV:%.*]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CIV:%.*]]> = CANONICAL-INDUCTION ir<0>, vp<[[INDEXNEXT:%.*]]>
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<[[DATAPHI:%.*]]> = phi ir<-1>, vp<[[DATASELECT:%.*]]>
 ; CHECK-NEXT:     WIDEN-PHI vp<[[MASKPHI:%.*]]> = phi [ ir<false>, vector.ph ], [ vp<[[MASKSELECT:%.*]]>, vector.body ]
 ; CHECK-NEXT:     vp<[[STEPS:%.*]]> = SCALAR-STEPS vp<[[CIV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     CLONE ir<[[LDADDR:%.*]]> = getelementptr inbounds ir<%data>, vp<[[STEPS:%.*]]>
+; CHECK-NEXT:     CLONE ir<[[LDADDR:%.*]]> = getelementptr inbounds ir<%data>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VPTR:%.*]]> = vector-pointer inbounds ir<[[LDADDR]]>
 ; CHECK-NEXT:     WIDEN ir<[[LD:%.*]]> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<[[SELECTCMP:%.*]]> = icmp slt ir<%a>, ir<[[LD]]>
 ; CHECK-NEXT:     EMIT vp<[[ANYOF:%.*]]> = any-of ir<[[SELECTCMP]]>
 ; CHECK-NEXT:     EMIT vp<[[MASKSELECT]]> = select vp<[[ANYOF]]>, ir<[[SELECTCMP]]>, vp<[[MASKPHI]]>
 ; CHECK-NEXT:     EMIT vp<[[DATASELECT]]> = select vp<[[ANYOF]]>, ir<[[LD]]>, ir<[[DATAPHI]]>
-; CHECK-NEXT:     EMIT vp<[[INDEXNEXT]]> = add nuw vp<[[CIV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[INDEXNEXT:%.*]]> = add nuw vp<[[CIV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[INDEXNEXT]]>, vp<[[VECTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

@@ -6,67 +6,34 @@
 declare void @init(ptr)
 
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
-; CHECK: multi_exiting_to_different_exits_live_in_exit_values
-; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
-; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: Live-in ir<128> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
-; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
-; CHECK-EMPTY:
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
-; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
-; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.split
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.split:
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<e2>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<e2>:
-; CHECK-NEXT:  IR %p2 = phi i64 [ 1, %loop.latch ] (extra operand: ir<1> from middle.block)
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.early.exit:
-; CHECK-NEXT: Successor(s): ir-bb<e1>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<e1>:
-; CHECK-NEXT:   IR %p1 = phi i64 [ 0, %loop.header ] (extra operand: ir<0> from vector.early.exit)
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: ir-bb<loop.header>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
-; CHECK:      No successors
-; CHECK-NEXT: }
+; CHECK-LABEL: define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [128 x i32], align 4
+; CHECK-NEXT:    call void @init(ptr [[SRC]])
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 10)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[E2:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    br label %[[E1:.*]]
+; CHECK:       [[E1]]:
+; CHECK-NEXT:    ret i64 0
+; CHECK:       [[E2]]:
+; CHECK-NEXT:    ret i64 1
+;
 entry:
   %src = alloca [128 x i32]
   call void @init(ptr %src)
@@ -94,63 +61,33 @@ e2:
 }
 
 define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
-; CHECK: multi_exiting_to_same_exit_live_in_exit_values
-; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
-; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: Live-in ir<128> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
-; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
-; CHECK-EMPTY:
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
-; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
-; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.split
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.split:
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.early.exit:
-; CHECK-NEXT: Successor(s): ir-bb<exit>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from vector.early.exit)
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: ir-bb<loop.header>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
-; CHECK:      No successors
-; CHECK-NEXT: }
+; CHECK-LABEL: define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [128 x i32], align 4
+; CHECK-NEXT:    call void @init(ptr [[SRC]])
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 10)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 0, %[[VECTOR_EARLY_EXIT]] ], [ 1, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[P]]
+;
 
 entry:
   %src = alloca [128 x i32]
@@ -175,63 +112,33 @@ exit:
 }
 
 define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
-; CHECK: multi_exiting_to_same_exit_live_in_exit_values_2
-; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
-; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: Live-in ir<128> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
-; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
-; CHECK-EMPTY:
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
-; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
-; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.split
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.split:
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.early.exit:
-; CHECK-NEXT: Successor(s): ir-bb<exit>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from vector.early.exit)
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: ir-bb<loop.header>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
-; CHECK:      No successors
-; CHECK-NEXT: }
+; CHECK-LABEL: define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [128 x i32], align 4
+; CHECK-NEXT:    call void @init(ptr [[SRC]])
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 10)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 0, %[[VECTOR_EARLY_EXIT]] ], [ 1, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[P]]
+;
 
 entry:
   %src = alloca [128 x i32]
@@ -257,3 +164,10 @@ exit:
 ; uselistorder directives
   uselistorder label %exit, { 1, 0 }
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+;.

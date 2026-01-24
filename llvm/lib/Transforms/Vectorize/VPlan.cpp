@@ -867,9 +867,9 @@ void VPRegionBlock::dissolveToCFGLoop() {
     }
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
-            .createScalarPhi(
-                {Plan.getConstantInt(CanIVInfo->getType(), 0), CanIVInc},
-                CanIVInfo->getDebugLoc(), "index");
+            .createScalarPhi({Plan.getConstantInt(CanIVInfo->getType(), 0),
+                              CanIVInc},
+                             CanIVInfo->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
 

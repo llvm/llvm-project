@@ -705,6 +705,10 @@ void VPlanTransforms::createHeaderPhiRecipes(
 
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
     auto *PhiR = cast<VPPhi>(&R);
+    // Skip phis without underlying instructions (e.g., the canonical IV created
+    // by addCanonicalIVRecipes).
+    if (!PhiR->getUnderlyingValue())
+      continue;
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);

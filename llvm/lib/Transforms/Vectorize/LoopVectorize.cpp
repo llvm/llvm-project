@@ -9388,13 +9388,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  // When vectorizing the epilogue loop, the canonical induction needs to be
-  // adjusted by the value after the main vector loop. Find the resume value
+  // When vectorizing the epilogue loop, the canonical induction needs to start
+  // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. It must be the first phi in the
-  // loop preheader. Use the value to increment the canonical IV, and update all
-  // users in the loop region to use the adjusted value.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue
-  // loop.
+  // loop preheader. Set it as the start value for the canonical IV.
   using namespace llvm::PatternMatch;
   PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
   for (Value *Inc : EPResumeVal->incoming_values()) {
@@ -9420,16 +9417,16 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPValue *IV = VectorLoop->getCanonicalIV();
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
-                  return isa<VPScalarIVStepsRecipe>(U) ||
-                         isa<VPDerivedIVRecipe>(U) ||
-                         cast<VPRecipeBase>(U)->isScalarCast() ||
-                         cast<VPInstruction>(U)->getOpcode() ==
-                             Instruction::Add;
+                  if (isa<VPScalarIVStepsRecipe>(U) || isa<VPDerivedIVRecipe>(U))
+                    return true;
+                  auto *R = cast<VPRecipeBase>(U);
+                  return R->isScalarCast() ||
+                         cast<VPInstruction>(R)->getOpcode() == Instruction::Add;
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  auto *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
   IV->replaceAllUsesWith(Add);
   Add->setOperand(0, IV);
 

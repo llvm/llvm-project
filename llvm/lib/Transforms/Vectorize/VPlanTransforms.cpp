@@ -3296,22 +3296,19 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 
   // Replace CanonicalIVInc with EVL-PHI increment.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  VPValue *Backedge = CanonicalIV->getIncomingValue(1);
-  if (match(Backedge,
-            m_c_Add(m_Specific(CanonicalIV), m_Specific(&Plan.getVFxUF())))) {
-    Backedge->replaceAllUsesWith(EVLIncrement);
-
-    // Remove unused phi and increment.
-    VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
-    CanonicalIVIncrement->eraseFromParent();
-    CanonicalIV->eraseFromParent();
+  for (VPUser *U : make_early_inc_range(CanonicalIV->users())) {
+    if (match(U, m_c_Add(m_Specific(CanonicalIV), m_Specific(&Plan.getVFxUF())))) {
+      auto *R = cast<VPInstruction>(U);
+      R->replaceAllUsesWith(EVLIncrement);
+      R->eraseFromParent();
+    }
   }
 
   // Replace the use of VectorTripCount in the latch-exiting block.
   // Before: (branch-on-cond (icmp eq EVLIVInc, VectorTripCount))
   // After: (branch-on-cond icmp eq AVLNext, 0)
   VPBasicBlock *LatchExiting =
-      HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
+      HeaderVPBB->getPredecessors()[1]->getExitingBasicBlock();
   auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
   if (match(LatchExitingBr, m_BranchOnCond(m_True())))
     return;

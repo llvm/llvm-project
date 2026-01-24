@@ -4131,18 +4131,17 @@ class VPCanonicalIVInfo {
   /// VPRegionValue for the canonical IV. The allocation is managed by
   /// VPCanonicalIVInfo.
   std::unique_ptr<VPRegionValue> CanIV;
-  Type *Ty = nullptr;
   bool HasNUW = true;
   DebugLoc DL = DebugLoc::getUnknown();
 
 public:
   VPCanonicalIVInfo(Type *Ty, DebugLoc DL, VPRegionBlock *Region,
                     bool HasNUW = true)
-      : CanIV(std::make_unique<VPRegionValue>(Region)), Ty(Ty), HasNUW(HasNUW),
+      : CanIV(std::make_unique<VPRegionValue>(Ty, Region)), HasNUW(HasNUW),
         DL(DL) {}
 
   VPRegionValue *getVPValue() { return CanIV.get(); }
-  Type *getType() const { return Ty; }
+  Type *getType() const { return CanIV->getType(); }
   DebugLoc getDebugLoc() const { return DL; }
   bool hasNUW() const { return HasNUW; }
   void clearNUW() { HasNUW = false; }
