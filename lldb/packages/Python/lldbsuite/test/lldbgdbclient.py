@@ -32,7 +32,7 @@ class GDBRemoteTestBase(TestBase):
         self.server.stop()
         TestBase.tearDown(self)
 
-    def createTarget(self, yaml_path, triple=""):
+    def createTarget(self, yaml_path):
         """
         Create a target by auto-generating the object based on the given yaml
         instructions.
@@ -43,7 +43,7 @@ class GDBRemoteTestBase(TestBase):
         yaml_base, ext = os.path.splitext(yaml_path)
         obj_path = self.getBuildArtifact(yaml_base)
         self.yaml2obj(yaml_path, obj_path)
-        return self.dbg.CreateTargetWithFileAndTargetTriple(obj_path, triple)
+        return self.dbg.CreateTarget(obj_path)
 
     def connect(self, target, plugin="gdb-remote"):
         """
