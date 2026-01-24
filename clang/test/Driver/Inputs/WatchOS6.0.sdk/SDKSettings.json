@@ -1,4 +1,18 @@
-{"Version":"6.0", "CanonicalName": "watchos6.0", "MaximumDeploymentTarget": "6.0.99",
- "SupportedTargets": {
-   "watchos": {"Archs": ["armv7k", "arm64_32"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "watchos", "LLVMTargetTripleEnvironment": ""}
-}}
+{
+  "CanonicalName": "watchos6.0",
+  "Version": "6.0",
+  "IsBaseSDK": "YES",
+  "DisplayName": "watchOS 6.0",
+  "MinimalDisplayName": "6.0",
+  "SupportedTargets": {
+    "watchos": {
+      "Archs": ["armv7k", "arm64_32"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "watchos", "LLVMTargetTripleEnvironment": "",
+      "BuildVersionPlatformID": "4",
+      "DefaultDeploymentTarget": "6.0",
+      "MinimumDeploymentTarget": "2.0", "MaximumDeploymentTarget": "6.0.99",
+      "ValidDeploymentTargets": ["2.0", "2.1", "2.2", "3.0", "3.1", "3.2", "4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0"]
+    }
+  },
+  "DefaultDeploymentTarget": "6.0",
+  "MaximumDeploymentTarget": "6.0.99"
+}
