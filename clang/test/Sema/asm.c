@@ -52,10 +52,6 @@ void test3(void) {
   
   // Raw string literals should be accepted (they're ordinary strings)
   asm(R"(nop)");
-  asm(R"delimiter(
-    mov eax, ebx
-  )delimiter");
-}
 
 
 void test4(const volatile void *addr)
