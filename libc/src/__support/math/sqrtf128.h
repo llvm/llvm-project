@@ -1,4 +1,5 @@
-//===-- Implementation header of sqrtf128 function -------------------------------===//
+//===-- Implementation header of sqrtf128 function
+//-------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +10,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF128_H
 
-#include "src/math/sqrtf128.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -17,6 +17,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/uint128.h"
+#include "src/math/sqrtf128.h"
 
 // Compute sqrtf128 with correct rounding for all rounding modes using integer
 // arithmetic by Alexei Sibidanov (sibid@uvic.ca):
@@ -54,7 +55,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace math{ 
+namespace math {
 
 using FPBits = fputil::FPBits<float128>;
 
@@ -277,7 +278,7 @@ LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
 
 } // anonymous namespace
 
-static float128 sqrtf128 (float128 x) {
+static float128 sqrtf128(float128 x) {
   using FPBits = fputil::FPBits<float128>;
   // Get rounding mode.
   uint32_t rm = fputil::get_round();
