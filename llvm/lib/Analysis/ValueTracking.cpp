@@ -330,7 +330,8 @@ static unsigned ComputeNumSignBits(const Value *V, const SimplifyQuery &Q,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return ComputeNumSignBits(V, DemandedElts, Q, Depth);
+  SimplifyQuery CtxQ = Q.getWithInstruction(Depth ? dyn_cast<Instruction>(V) : Q.CxtI);
+  return ComputeNumSignBits(V, DemandedElts, CtxQ, Depth);
 }
 
 unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
@@ -1025,7 +1026,7 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
   }
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Cond)) {
-    computeKnownBitsFromICmpCond(V, Cmp, Known, SQ.getWithInstruction(Cmp), Invert);
+    computeKnownBitsFromICmpCond(V, Cmp, Known, SQ, Invert);
     return;
   }
 
@@ -1171,15 +1172,14 @@ static void computeKnownBitsFromShiftOperator(
     const Operator *I, const APInt &DemandedElts, KnownBits &Known,
     KnownBits &Known2, const SimplifyQuery &Q, unsigned Depth,
     function_ref<KnownBits(const KnownBits &, const KnownBits &, bool)> KF) {
-  SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(I));
-  computeKnownBits(I->getOperand(0), DemandedElts, Known2, CtxQ, Depth + 1);
-  computeKnownBits(I->getOperand(1), DemandedElts, Known, CtxQ, Depth + 1);
+  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
+  computeKnownBits(I->getOperand(1), DemandedElts, Known, Q, Depth + 1);
   // To limit compile-time impact, only query isKnownNonZero() if we know at
   // least something about the shift amount.
   bool ShAmtNonZero =
       Known.isNonZero() ||
       (Known.getMaxValue().ult(Known.getBitWidth()) &&
-       isKnownNonZero(I->getOperand(1), DemandedElts, CtxQ, Depth + 1));
+       isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth + 1));
   Known = KF(Known2, Known, ShAmtNonZero);
 }
 
@@ -1264,12 +1264,11 @@ static KnownBits computeKnownBitsForHorizontalOperation(
                                       DemandedElts, DemandedEltsLHS,
                                       DemandedEltsRHS);
 
-  SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(I));
   const auto ComputeForSingleOpFunc =
-      [Depth, &CtxQ, KnownBitsFunc](const Value *Op, APInt &DemandedEltsOp) {
+      [Depth, &Q, KnownBitsFunc](const Value *Op, APInt &DemandedEltsOp) {
         return KnownBitsFunc(
-            computeKnownBits(Op, DemandedEltsOp, CtxQ, Depth + 1),
-            computeKnownBits(Op, DemandedEltsOp << 1, CtxQ, Depth + 1));
+            computeKnownBits(Op, DemandedEltsOp, Q, Depth + 1),
+            computeKnownBits(Op, DemandedEltsOp << 1, Q, Depth + 1));
       };
 
   if (DemandedEltsRHS.isZero())
@@ -1290,8 +1289,8 @@ KnownBits llvm::analyzeKnownBitsFromAndXorOr(const Operator *I,
   auto *FVTy = dyn_cast<FixedVectorType>(I->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-
-  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, SQ,
+  SimplifyQuery CtxQ = SQ.getWithInstruction(Depth ? dyn_cast<Instruction>(I) : SQ.CxtI);
+  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, CtxQ,
                                   Depth);
 }
 
@@ -3767,7 +3766,8 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
 
   if (const auto *I = dyn_cast<Operator>(V))
     if (isKnownNonZeroFromOperator(
-            I, DemandedElts, Q.getWithInstruction(dyn_cast<Instruction>(I)),
+            I, DemandedElts,
+            Q.getWithInstruction(Depth ? dyn_cast<Instruction>(I) : Q.CxtI),
             Depth))
       return true;
 
@@ -3946,8 +3946,8 @@ static bool isNonEqualMul(const Value *V1, const Value *V2,
                           const APInt &DemandedElts, const SimplifyQuery &Q,
                           unsigned Depth) {
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
-    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(OBO));
     const APInt *C;
+    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(OBO));
     return match(OBO, m_Mul(m_Specific(V1), m_APInt(C))) &&
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
            !C->isZero() && !C->isOne() &&
@@ -3962,8 +3962,8 @@ static bool isNonEqualShl(const Value *V1, const Value *V2,
                           const APInt &DemandedElts, const SimplifyQuery &Q,
                           unsigned Depth) {
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
-    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(OBO));
     const APInt *C;
+    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(OBO));
     return match(OBO, m_Shl(m_Specific(V1), m_APInt(C))) &&
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
            !C->isZero() && isKnownNonZero(V1, DemandedElts, CtxQ, Depth + 1);
@@ -4936,7 +4936,8 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
+  SimplifyQuery CtxQ = Q.getWithInstruction(Depth ? dyn_cast<Instruction>(V) : Q.CxtI);
+  computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, CtxQ, Depth);
 }
 
 static void computeKnownFPClassForFPTrunc(const Operator *Op,
@@ -4945,14 +4946,13 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
                                           KnownFPClass &Known,
                                           const SimplifyQuery &Q,
                                           unsigned Depth) {
-  SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(Op));
   if ((InterestedClasses &
        (KnownFPClass::OrderedLessThanZeroMask | fcNan)) == fcNone)
     return;
 
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
-                      KnownSrc, CtxQ, Depth + 1);
+                      KnownSrc, Q, Depth + 1);
   Known = KnownFPClass::fptrunc(KnownSrc);
 }
 
