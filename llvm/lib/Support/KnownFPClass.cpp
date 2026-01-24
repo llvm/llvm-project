@@ -245,12 +245,24 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
     Known.knownNot(fcNan);
 
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
-      KnownRHS.cannotBeOrderedLessThanZero())
+      KnownRHS.cannotBeOrderedLessThanZero()) {
     Known.knownNot(OrderedLessThanZeroMask);
 
+    // This can't underflow if one of the operands is known normal.
+    if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
+        KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
+      Known.knownNot(fcZero);
+  }
+
   if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
-      KnownRHS.cannotBeOrderedGreaterThanZero())
+      KnownRHS.cannotBeOrderedGreaterThanZero()) {
     Known.knownNot(OrderedGreaterThanZeroMask);
+
+    // This can't underflow if one of the operands is known normal.
+    if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
+        KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
+      Known.knownNot(fcZero);
+  }
 
   // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
   if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
