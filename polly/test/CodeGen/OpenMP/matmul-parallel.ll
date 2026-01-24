@@ -5,7 +5,6 @@
 ; Parallelization of detected matrix-multiplication.
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-windows-msvc19.16.27034"
 
 define i32 @foo(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C) {
 entry:
@@ -52,66 +51,42 @@ for.body8:
 }
 
 
-; AST:          // 1st level tiling - Tiles
+; AST:      // 1st level tiling - Tiles
+; AST-NEXT: #pragma minimal dependence distance: 1
+; AST-NEXT: for (int c0 = 0; c0 <= 1; c0 += 1)
+; AST-NEXT:   #pragma minimal dependence distance: 1
+; AST-NEXT:   for (int c1 = 0; c1 <= 1; c1 += 1) {
+; AST-NEXT:     #pragma omp parallel for
+; AST-NEXT:     for (int c3 = 768 * c0; c3 <= 768 * c0 + 767; c3 += 1)
+; AST-NEXT:       #pragma simd
+; AST-NEXT:       for (int c4 = 1024 * c1; c4 <= min(1535, 1024 * c1 + 1023); c4 += 1)
+; AST-NEXT:         CopyStmt_0(0, c3, c4);
 ; AST-NEXT:     #pragma minimal dependence distance: 1
-; AST-NEXT:     for (int c1 = 0; c1 <= 2; c1 += 1) {
+; AST-NEXT:     for (int c2 = 0; c2 <= 31; c2 += 1) {
 ; AST-NEXT:       #pragma omp parallel for
-; AST-NEXT:       for (int c3 = 0; c3 <= 1535; c3 += 1)
+; AST-NEXT:       for (int c6 = 48 * c2; c6 <= 48 * c2 + 47; c6 += 1)
 ; AST-NEXT:         #pragma simd
-; AST-NEXT:         for (int c4 = 512 * c1; c4 <= 512 * c1 + 511; c4 += 1)
-; AST-NEXT:           CopyStmt_0(0, c3, c4);
-; AST-NEXT:       #pragma minimal dependence distance: 1
-; AST-NEXT:       for (int c2 = 0; c2 <= 15; c2 += 1) {
-; AST-NEXT:         #pragma omp parallel for
-; AST-NEXT:         for (int c6 = 96 * c2; c6 <= 96 * c2 + 95; c6 += 1)
-; AST-NEXT:           #pragma simd
-; AST-NEXT:           for (int c7 = 512 * c1; c7 <= 512 * c1 + 511; c7 += 1)
-; AST-NEXT:             CopyStmt_1(0, c1, c2, c6, c7);
-; AST-NEXT:         // 1st level tiling - Points
-; AST-NEXT:         // Register tiling - Tiles
-; AST-NEXT:         #pragma omp parallel for
-; AST-NEXT:         for (int c3 = 0; c3 <= 191; c3 += 1)
-; AST-NEXT:           for (int c4 = 0; c4 <= 23; c4 += 1)
-; AST-NEXT:             #pragma minimal dependence distance: 1
-; AST-NEXT:             for (int c5 = 0; c5 <= 511; c5 += 1) {
-; AST-NEXT:               // Loop Vectorizer Disabled
-; AST-NEXT:               // Register tiling - Points
-; AST-NEXT:               {
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 1, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 2, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 4, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 5, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 6, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4, 8 * c3 + 7, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 1, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 2, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 4, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 5, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 6, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 1, 8 * c3 + 7, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 1, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 2, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 4, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 5, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 6, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 2, 8 * c3 + 7, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 1, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 2, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 3, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 4, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 5, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 6, 512 * c1 + c5);
-; AST-NEXT:                 Stmt_for_body8(96 * c2 + 4 * c4 + 3, 8 * c3 + 7, 512 * c1 + c5);
-; AST-NEXT:               }
+; AST-NEXT:         for (int c7 = 1024 * c1; c7 <= min(1535, 1024 * c1 + 1023); c7 += 1)
+; AST-NEXT:           CopyStmt_1(c0, c1, c2, c6, c7);
+; AST-NEXT:       // 1st level tiling - Points
+; AST-NEXT:       // Register tiling - Tiles
+; AST-NEXT:       #pragma omp parallel for
+; AST-NEXT:       for (int c3 = 0; c3 <= 255; c3 += 1)
+; AST-NEXT:         for (int c4 = 0; c4 <= 23; c4 += 1)
+; AST-NEXT:           #pragma minimal dependence distance: 1
+; AST-NEXT:           for (int c5 = 0; c5 <= min(1023, -1024 * c1 + 1535); c5 += 1) {
+; AST-NEXT:             // Loop Vectorizer Disabled
+; AST-NEXT:             // Register tiling - Points
+; AST-NEXT:             {
+; AST-NEXT:               Stmt_for_body8(48 * c2 + 2 * c4, 768 * c0 + 3 * c3, 1024 * c1 + c5);
+; AST-NEXT:               Stmt_for_body8(48 * c2 + 2 * c4, 768 * c0 + 3 * c3 + 1, 1024 * c1 + c5);
+; AST-NEXT:               Stmt_for_body8(48 * c2 + 2 * c4, 768 * c0 + 3 * c3 + 2, 1024 * c1 + c5);
+; AST-NEXT:               Stmt_for_body8(48 * c2 + 2 * c4 + 1, 768 * c0 + 3 * c3, 1024 * c1 + c5);
+; AST-NEXT:               Stmt_for_body8(48 * c2 + 2 * c4 + 1, 768 * c0 + 3 * c3 + 1, 1024 * c1 + c5);
+; AST-NEXT:               Stmt_for_body8(48 * c2 + 2 * c4 + 1, 768 * c0 + 3 * c3 + 2, 1024 * c1 + c5);
 ; AST-NEXT:             }
-; AST-NEXT:       }
+; AST-NEXT:           }
 ; AST-NEXT:     }
+; AST-NEXT:   }
 
 ; CODEGEN: subfunc
