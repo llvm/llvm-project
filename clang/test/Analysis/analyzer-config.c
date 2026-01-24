@@ -24,7 +24,7 @@
 // CHECK-NEXT: cfg-expand-default-aggr-inits = false
 // CHECK-NEXT: cfg-implicit-dtors = true
 // CHECK-NEXT: cfg-lifetime = false
-// CHECK-NEXT: cfg-loopexit = false
+// CHECK-NEXT: cfg-loopexit = true
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
@@ -139,6 +139,6 @@
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
 // CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = true
 // CHECK-NEXT: unix.Stream:Pedantic = false
-// CHECK-NEXT: unroll-loops = false
+// CHECK-NEXT: unroll-loops = true
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false
