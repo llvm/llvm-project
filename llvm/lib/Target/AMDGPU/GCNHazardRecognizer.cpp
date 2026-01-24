@@ -3498,8 +3498,9 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     // This is expected to be a very short walk within the same block.
     SmallVector<MachineInstr *> ToErase;
     unsigned Found = 0;
-    for (MachineBasicBlock::reverse_iterator It = MI->getReverseIterator(),
-                                             End = MI->getParent()->rend();
+    for (MachineBasicBlock::reverse_instr_iterator
+             It = MI->getReverseIterator(),
+             End = MI->getParent()->instr_rend();
          Found < WaitInstrs.size() && It != End; ++It) {
       MachineInstr *WaitMI = &*It;
       // Find next wait instruction.
