@@ -457,6 +457,8 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
   unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
   APInt PreservedPtrMask = TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+  if (PreservedPtrMask.isZero())
+    return false;
   APInt ChangedPtrBits = computeMaxChangedPtrBits(LogicOP, Mask, DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
