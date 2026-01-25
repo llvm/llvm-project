@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   MIRParser
   Passes
+  Plugins
   Remarks
   ScalarOpts
   SelectionDAG

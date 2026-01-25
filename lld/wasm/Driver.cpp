@@ -1105,7 +1105,7 @@ static void processStubLibraries() {
       // the names of the stub imports
       for (auto [name, deps]: stub_file->symbolDependencies) {
         auto* sym = symtab->find(name);
-        if (sym && sym->isUndefined()) {
+        if (sym && sym->isUndefined() && sym->isUsedInRegularObj) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {
           if (sym && sym->traced)

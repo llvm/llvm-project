@@ -518,6 +518,20 @@ int FunctionComparator::cmpConstants(const Constant *L,
     const auto *REquiv = cast<DSOLocalEquivalent>(R);
     return cmpGlobalValues(LEquiv->getGlobalValue(), REquiv->getGlobalValue());
   }
+  case Value::ConstantPtrAuthVal: {
+    // Handle authenticated pointer constants produced by ConstantPtrAuth::get.
+    const ConstantPtrAuth *LPA = cast<ConstantPtrAuth>(L);
+    const ConstantPtrAuth *RPA = cast<ConstantPtrAuth>(R);
+    if (int Res = cmpConstants(LPA->getPointer(), RPA->getPointer()))
+      return Res;
+    if (int Res = cmpConstants(LPA->getKey(), RPA->getKey()))
+      return Res;
+    if (int Res =
+            cmpConstants(LPA->getDiscriminator(), RPA->getDiscriminator()))
+      return Res;
+    return cmpConstants(LPA->getAddrDiscriminator(),
+                        RPA->getAddrDiscriminator());
+  }
   default: // Unknown constant, abort.
     LLVM_DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
     llvm_unreachable("Constant ValueID not recognized.");

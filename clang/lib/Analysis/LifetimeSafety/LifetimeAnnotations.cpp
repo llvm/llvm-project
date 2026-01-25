@@ -52,23 +52,116 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
+/// Check if a function has a lifetimebound attribute on its function type
+/// (which represents the implicit 'this' parameter for methods).
+/// Returns the attribute if found, nullptr otherwise.
+static const LifetimeBoundAttr *
+getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
+  // Walk through the type layers looking for a lifetimebound attribute.
+  TypeLoc TL = TSI.getTypeLoc();
+  while (true) {
+    auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
+    if (!ATL)
+      break;
+    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
+      return LBAttr;
+    TL = ATL.getModifiedLoc();
+  }
+  return nullptr;
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return false;
-  // Don't declare this variable in the second operand of the for-statement;
-  // GCC miscompiles that by ending its lifetime before evaluating the
-  // third operand. See gcc.gnu.org/PR86769.
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    if (ATL.getAttrAs<clang::LifetimeBoundAttr>())
+  // Attribute merging doesn't work well with attributes on function types (like
+  // 'this' param). We need to check all redeclarations.
+  for (const FunctionDecl *Redecl : FD->redecls()) {
+    const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
+    if (TSI && getLifetimeBoundAttrFromFunctionType(*TSI))
       return true;
   }
-
   return isNormalAssignmentOperator(FD);
+}
+
+bool isInStlNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  if (!DC)
+    return false;
+  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+    if (const IdentifierInfo *II = ND->getIdentifier()) {
+      StringRef Name = II->getName();
+      if (Name.size() >= 2 && Name.front() == '_' &&
+          (Name[1] == '_' || isUppercase(Name[1])))
+        return true;
+    }
+  return DC->isStdNamespace();
+}
+
+bool isPointerLikeType(QualType QT) {
+  return isGslPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
+}
+
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
+  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
+    if (isGslPointerType(Conv->getConversionType()) &&
+        Callee->getParent()->hasAttr<OwnerAttr>())
+      return true;
+  if (!isInStlNamespace(Callee->getParent()))
+    return false;
+  if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
+      !isGslOwnerType(Callee->getFunctionObjectParameterType()))
+    return false;
+  if (isPointerLikeType(Callee->getReturnType())) {
+    if (!Callee->getIdentifier())
+      return false;
+    return llvm::StringSwitch<bool>(Callee->getName())
+        .Cases(
+            {// Begin and end iterators.
+             "begin", "end", "rbegin", "rend", "cbegin", "cend", "crbegin",
+             "crend",
+             // Inner pointer getters.
+             "c_str", "data", "get",
+             // Map and set types.
+             "find", "equal_range", "lower_bound", "upper_bound"},
+            true)
+        .Default(false);
+  }
+  if (Callee->getReturnType()->isReferenceType()) {
+    if (!Callee->getIdentifier()) {
+      auto OO = Callee->getOverloadedOperator();
+      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+        return false;
+      return OO == OverloadedOperatorKind::OO_Subscript ||
+             OO == OverloadedOperatorKind::OO_Star;
+    }
+    return llvm::StringSwitch<bool>(Callee->getName())
+        .Cases({"front", "back", "at", "top", "value"}, true)
+        .Default(false);
+  }
+  return false;
+}
+
+bool shouldTrackFirstArgument(const FunctionDecl *FD) {
+  if (!FD->getIdentifier() || FD->getNumParams() != 1)
+    return false;
+  const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
+  if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
+    return false;
+  if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
+    return false;
+  if (FD->getReturnType()->isPointerType() ||
+      isGslPointerType(FD->getReturnType())) {
+    return llvm::StringSwitch<bool>(FD->getName())
+        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
+        .Cases({"end", "rend", "cend", "crend"}, true)
+        .Case("data", true)
+        .Default(false);
+  }
+  if (FD->getReturnType()->isReferenceType()) {
+    return llvm::StringSwitch<bool>(FD->getName())
+        .Cases({"get", "any_cast"}, true)
+        .Default(false);
+  }
+  return false;
 }
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {

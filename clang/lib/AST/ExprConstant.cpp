@@ -2407,9 +2407,11 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant, unless we're
-      // evaluating a value for use only in name mangling.
-      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
-        // FIXME: Diagnostic!
+      // evaluating a value for use only in name mangling, and unless it's a
+      // static local. For the latter case, we'd still need to evaluate the
+      // constant expression in case we're inside a (inlined) function.
+      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>() &&
+          !Var->isStaticLocal())
         return false;
 
       // In CUDA/HIP device compilation, only device side variables have
@@ -4633,8 +4635,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     std::tie(Frame, Depth) =
         Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
     if (!Frame) {
-      Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
-        << AK << LVal.Base.is<const ValueDecl*>();
+      Info.FFDiag(E, diag::note_constexpr_access_uninit, 1)
+          << AK << /*Indeterminate=*/false << E->getSourceRange();
       NoteLValueLocation(Info, LVal.Base);
       return CompleteObject();
     }
@@ -12278,6 +12280,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvaluateFpBinOpExpr =
+      [&](llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                                     std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
+        APValue A, B;
+        if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+            !EvaluateAsRValue(Info, E->getArg(1), B))
+          return false;
+
+        assert(A.isVector() && B.isVector());
+        assert(A.getVectorLength() == B.getVectorLength());
+
+        std::optional<APSInt> RoundingMode;
+        if (E->getNumArgs() == 3) {
+          APSInt Imm;
+          if (!EvaluateInteger(E->getArg(2), Imm, Info))
+            return false;
+          RoundingMode = Imm;
+        }
+
+        unsigned NumElems = A.getVectorLength();
+        SmallVector<APValue, 4> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
+          const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
+          if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
+              EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+            return false;
+          ResultElements.push_back(APValue(Fn(EltA, EltB, RoundingMode)));
+        }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
   auto EvalSelectScalar = [&](unsigned Len) -> bool {
     APSInt Mask;
     APValue AVal, WVal;
@@ -12384,6 +12422,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
 
     return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cvtmask2b128:
+  case clang::X86::BI__builtin_ia32_cvtmask2b256:
+  case clang::X86::BI__builtin_ia32_cvtmask2b512:
+  case clang::X86::BI__builtin_ia32_cvtmask2w128:
+  case clang::X86::BI__builtin_ia32_cvtmask2w256:
+  case clang::X86::BI__builtin_ia32_cvtmask2w512:
+  case clang::X86::BI__builtin_ia32_cvtmask2d128:
+  case clang::X86::BI__builtin_ia32_cvtmask2d256:
+  case clang::X86::BI__builtin_ia32_cvtmask2d512:
+  case clang::X86::BI__builtin_ia32_cvtmask2q128:
+  case clang::X86::BI__builtin_ia32_cvtmask2q256:
+  case clang::X86::BI__builtin_ia32_cvtmask2q512: {
+    assert(E->getNumArgs() == 1);
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info))
+      return false;
+
+    QualType VecTy = E->getType();
+    const VectorType *VT = VecTy->castAs<VectorType>();
+    unsigned VectorLen = VT->getNumElements();
+    QualType ElemTy = VT->getElementType();
+    unsigned ElemWidth = Info.Ctx.getTypeSize(ElemTy);
+
+    SmallVector<APValue, 16> Elems;
+    for (unsigned I = 0; I != VectorLen; ++I) {
+      bool BitSet = Mask[I];
+      APSInt ElemVal(ElemWidth, /*isUnsigned=*/false);
+      if (BitSet) {
+        ElemVal.setAllBits();
+      }
+      Elems.push_back(APValue(ElemVal));
+    }
+    return Success(APValue(Elems.data(), VectorLen), E);
   }
 
   case X86::BI__builtin_ia32_extracti32x4_256_mask:
@@ -12592,12 +12665,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_packuswb256:
   case X86::BI__builtin_ia32_packuswb512:
     return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
-      unsigned DstBits = Src.getBitWidth() / 2;
-      if (Src.isNegative())
-        return APInt::getZero(DstBits);
-      if (Src.isIntN(DstBits))
-        return APInt((Src).trunc(DstBits));
-      return APInt::getAllOnes(DstBits);
+      return APSInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
   case clang::X86::BI__builtin_ia32_selectss_128:
     return EvalSelectScalar(4);
@@ -14310,6 +14378,38 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
 
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
@@ -18687,12 +18787,15 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     if (!Result.isInt()) {
       // Allow casts of address-of-label differences if they are no-ops
-      // or narrowing.  (The narrowing case isn't actually guaranteed to
+      // or narrowing, if the result is at least 32 bits wide.
+      // (The narrowing case isn't actually guaranteed to
       // be constant-evaluatable except in some narrow cases which are hard
       // to detect here.  We let it through on the assumption the user knows
       // what they are doing.)
-      if (Result.isAddrLabelDiff())
-        return Info.Ctx.getTypeSize(DestType) <= Info.Ctx.getTypeSize(SrcType);
+      if (Result.isAddrLabelDiff()) {
+        unsigned DestBits = Info.Ctx.getTypeSize(DestType);
+        return DestBits >= 32 && DestBits <= Info.Ctx.getTypeSize(SrcType);
+      }
       // Only allow casts of lvalues if they are lossless.
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }

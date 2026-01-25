@@ -948,7 +948,7 @@ void test_read_exec(global ulong* out) {
   *out = __builtin_amdgcn_read_exec();
 }
 
-// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1){{.*}} #[[$NOUNWIND_READONLY:[0-9]+]]
+// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_lo(
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ballot.i32(i1 true)
@@ -956,7 +956,7 @@ void test_read_exec_lo(global uint* out) {
   *out = __builtin_amdgcn_read_exec_lo();
 }
 
-// CHECK: declare i32 @llvm.amdgcn.ballot.i32(i1){{.*}} #[[$NOUNWIND_READONLY:[0-9]+]]
+// CHECK: declare i32 @llvm.amdgcn.ballot.i32(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_hi(
 // CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 true)
@@ -1299,4 +1299,4 @@ void test_set_fpenv(unsigned long env) {
 
 // CHECK-DAG: [[$GRID_RANGE]] = !{i32 1, i32 0}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
-// CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }
+// CHECK-DAG: attributes #[[$NOUNWIND_READONLY_NOPOISON]] = { convergent mustprogress nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }

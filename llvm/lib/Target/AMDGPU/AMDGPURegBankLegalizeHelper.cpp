@@ -684,10 +684,12 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   assert(MRI.getType(Dst) == V2S16);
   unsigned Opc = MI.getOpcode();
+  unsigned NumOps = MI.getNumOperands();
   auto Flags = MI.getFlags();
 
-  if (MI.getNumOperands() == 2) {
-    auto [Op1Lo, Op1Hi] = unpackAExtTruncS16(MI.getOperand(1).getReg());
+  auto [Op1Lo, Op1Hi] = unpackAExtTruncS16(MI.getOperand(1).getReg());
+
+  if (NumOps == 2) {
     auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo}, Flags);
     auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi}, Flags);
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
@@ -695,11 +697,20 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
     return true;
   }
 
-  assert(MI.getNumOperands() == 3);
-  auto [Op1Lo, Op1Hi] = unpackAExtTruncS16(MI.getOperand(1).getReg());
   auto [Op2Lo, Op2Hi] = unpackAExtTruncS16(MI.getOperand(2).getReg());
-  auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo}, Flags);
-  auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi}, Flags);
+
+  if (NumOps == 3) {
+    auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo}, Flags);
+    auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi}, Flags);
+    B.buildMergeLikeInstr(Dst, {Lo, Hi});
+    MI.eraseFromParent();
+    return true;
+  }
+
+  assert(NumOps == 4);
+  auto [Op3Lo, Op3Hi] = unpackAExtTruncS16(MI.getOperand(3).getReg());
+  auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo, Op3Lo}, Flags);
+  auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi, Op3Hi}, Flags);
   B.buildMergeLikeInstr(Dst, {Lo, Hi});
   MI.eraseFromParent();
   return true;
@@ -938,6 +949,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32ZExt:
   case UniInVgprS32:
   case Vgpr32:
+  case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
     return LLT::scalar(32);
@@ -971,6 +983,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(2, 16);
   case SgprV2S32:
   case VgprV2S32:
+  case UniInVgprV2S32:
     return LLT::fixed_vector(2, 32);
   case SgprV4S32:
   case SgprV4S32_WF:
@@ -1074,6 +1087,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprS32:
   case UniInVgprS64:
   case UniInVgprV2S16:
+  case UniInVgprV2S32:
   case UniInVgprV4S32:
   case UniInVgprB32:
   case UniInVgprB64:
@@ -1108,6 +1122,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB128:
   case VgprB256:
   case VgprB512:
+  case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
     return VgprRB;
@@ -1209,6 +1224,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprS32:
     case UniInVgprS64:
     case UniInVgprV2S16:
+    case UniInVgprV2S32:
     case UniInVgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);
@@ -1392,6 +1408,13 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(RB == SgprRB);
       auto Zext = B.buildZExt({SgprRB, S32}, Reg);
       Op.setReg(Zext.getReg(0));
+      break;
+    }
+    case Vgpr32AExt: {
+      assert(Ty.getSizeInBits() < 32);
+      assert(RB == VgprRB);
+      auto Aext = B.buildAnyExt({VgprRB, S32}, Reg);
+      Op.setReg(Aext.getReg(0));
       break;
     }
     case Vgpr32SExt: {

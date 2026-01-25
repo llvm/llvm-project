@@ -73,6 +73,9 @@ struct GPUFuncOpLoweringOptions {
   /// The attribute name to to set block size. Null if no attribute should be
   /// used.
   StringAttr kernelBlockSizeAttributeName;
+  /// The attribute name to to set cluster size. Null if no attribute should be
+  /// used.
+  StringAttr kernelClusterSizeAttributeName;
 
   /// The calling convention to use for kernel functions.
   LLVM::CConv kernelCallingConvention = LLVM::CConv::C;
@@ -93,6 +96,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
         workgroupAddrSpace(options.workgroupAddrSpace),
         kernelAttributeName(options.kernelAttributeName),
         kernelBlockSizeAttributeName(options.kernelBlockSizeAttributeName),
+        kernelClusterSizeAttributeName(options.kernelClusterSizeAttributeName),
         kernelCallingConvention(options.kernelCallingConvention),
         nonKernelCallingConvention(options.nonKernelCallingConvention),
         encodeWorkgroupAttributionsAsArguments(
@@ -114,6 +118,9 @@ private:
   /// The attribute name to to set block size. Null if no attribute should be
   /// used.
   StringAttr kernelBlockSizeAttributeName;
+  /// The attribute name to to set cluster size. Null if no attribute should be
+  /// used.
+  StringAttr kernelClusterSizeAttributeName;
 
   /// The calling convention to use for kernel functions
   LLVM::CConv kernelCallingConvention;

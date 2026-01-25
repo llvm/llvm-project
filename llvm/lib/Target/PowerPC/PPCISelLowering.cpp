@@ -11234,14 +11234,14 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Opcode;
     unsigned Subx;
     if (HiLo == 0) {
-      Opcode = PPC::DMXXINSTDMR512;
+      Opcode = PPCISD::INST512;
       Subx = PPC::sub_wacc_lo;
     } else {
-      Opcode = PPC::DMXXINSTDMR512_HI;
+      Opcode = PPCISD::INST512HI;
       Subx = PPC::sub_wacc_hi;
     }
-    SDValue Ops[] = {Op.getOperand(2), Op.getOperand(3)};
-    SDValue Wacc = SDValue(DAG.getMachineNode(Opcode, dl, MVT::v512i1, Ops), 0);
+    SDValue Wacc = DAG.getNode(Opcode, dl, MVT::v512i1, Op.getOperand(2),
+                               Op.getOperand(3));
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
     return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
                                       Op.getOperand(1), Wacc, SubReg),
@@ -11271,9 +11271,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
     SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
-    SDValue Ops[] = {Op.getOperand(2), P};
-    SDValue DMRRowp = SDValue(
-        DAG.getMachineNode(PPC::DMXXINSTDMR256, dl, MVT::v256i1, Ops), 0);
+    SDValue DMRRowp =
+        DAG.getNode(PPCISD::INST256, dl, MVT::v256i1, Op.getOperand(2), P);
     return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
                                       Op.getOperand(1), DMRRowp, SubReg),
                    0);
@@ -11508,6 +11507,16 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::ppc_mma_disassemble_dmr: {
     return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
+  }
+  case Intrinsic::ppc_amo_stwat:
+  case Intrinsic::ppc_amo_stdat: {
+    SDLoc dl(Op);
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(ArgStart + 1);
+    SDValue Val = Op.getOperand(ArgStart + 2);
+    SDValue FC = Op.getOperand(ArgStart + 3);
+
+    return DAG.getNode(PPCISD::STAT, dl, MVT::Other, Chain, Val, Ptr, FC);
   }
   default:
     break;
@@ -12012,13 +12021,11 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Loads[0],
-                                Loads[1]),
-             0);
+  SDValue Lo =
+      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[0], Loads[1]);
   SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                Loads[2], Loads[3]),
-             0);
+  SDValue Hi =
+      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[2], Loads[3]);
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
   const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
@@ -12032,12 +12039,10 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
 
   // Handle Loads for V2048i1 which represents a dmr pair.
   SDValue DmrPValue;
-  SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1,
-                                    Loads[4], Loads[5]),
-                 0);
-  SDValue Dmr1Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                    Loads[6], Loads[7]),
-                 0);
+  SDValue Dmr1Lo =
+      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[4], Loads[5]);
+  SDValue Dmr1Hi =
+      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[6], Loads[7]);
   const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
   SDValue Dmr1Value = SDValue(
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
@@ -12057,13 +12062,11 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
 SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
                                          const SDLoc &dl,
                                          SelectionDAG &DAG) const {
-  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Pairs[0],
-                                Pairs[1]),
-             0);
+  SDValue Lo =
+      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Pairs[0], Pairs[1]);
   SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                Pairs[2], Pairs[3]),
-             0);
+  SDValue Hi =
+      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Pairs[2], Pairs[3]);
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
 
@@ -14594,7 +14597,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(*BB, MI, DL,
             MI.getOpcode() == PPC::LQX_PSEUDO ? TII->get(PPC::LQ)
                                               : TII->get(PPC::STQ))
-        .addReg(Val, MI.getOpcode() == PPC::LQX_PSEUDO ? RegState::Define : 0)
+        .addReg(Val, getDefRegState(MI.getOpcode() == PPC::LQX_PSEUDO))
         .addImm(0)
         .addReg(Ptr);
   } else if (MI.getOpcode() == PPC::LWAT_PSEUDO ||
@@ -14632,6 +14635,32 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
         .addReg(PairResult, 0, PPC::sub_gp8_x0);
     if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64, 0, PPC::sub_32);
+    else
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64);
+  } else if (MI.getOpcode() == PPC::LWAT_COND_PSEUDO ||
+             MI.getOpcode() == PPC::LDAT_COND_PSEUDO) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register PtrReg = MI.getOperand(1).getReg();
+    unsigned FC = MI.getOperand(2).getImm();
+    bool IsLwat_Cond = MI.getOpcode() == PPC::LWAT_COND_PSEUDO;
+
+    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
+
+    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(IsLwat_Cond ? PPC::LWAT : PPC::LDAT),
+            PairResult)
+        .addReg(Pair)
+        .addReg(PtrReg)
+        .addImm(FC);
+    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
+        .addReg(PairResult, 0, PPC::sub_gp8_x0);
+    if (IsLwat_Cond)
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
           .addReg(Result64, 0, PPC::sub_32);
     else
@@ -20263,7 +20292,7 @@ bool PPCTargetLowering::shouldInlineQuadwordAtomics() const {
 }
 
 TargetLowering::AtomicExpansionKind
-PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+PPCTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
@@ -20282,7 +20311,8 @@ PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *AI) const {
   unsigned Size = AI->getNewValOperand()->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;

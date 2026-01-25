@@ -10,6 +10,7 @@
 #define FORTRAN_PARSER_PARSE_TREE_VISITOR_H_
 
 #include "parse-tree.h"
+#include "tools.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/visit.h"
 #include <cstddef>
@@ -55,6 +56,13 @@ struct ParseTreeVisitorLookupScope {
   Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
       mutator.Post(x);
+    }
+  }
+
+  template <typename A, typename VM>
+  static void WalkSource(A &x, VM &visitorOrMutator) {
+    if constexpr (HasSource<A>::value) {
+      Walk(x.source, visitorOrMutator);
     }
   }
 
@@ -168,12 +176,14 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<EmptyTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       visitor.Post(x);
     }
   }
   template <typename A, typename M>
   static std::enable_if_t<EmptyTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       mutator.Post(x);
     }
   }
@@ -181,6 +191,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<TupleTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.t, visitor);
       visitor.Post(x);
     }
@@ -188,6 +199,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<TupleTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.t, mutator);
       mutator.Post(x);
     }
@@ -196,6 +208,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<UnionTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.u, visitor);
       visitor.Post(x);
     }
@@ -203,6 +216,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<UnionTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.u, mutator);
       mutator.Post(x);
     }
@@ -211,6 +225,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<WrapperTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.v, visitor);
       visitor.Post(x);
     }
@@ -218,6 +233,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<WrapperTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.v, mutator);
       mutator.Post(x);
     }
@@ -226,6 +242,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<ConstraintTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.thing, visitor);
       visitor.Post(x);
     }
@@ -233,6 +250,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<ConstraintTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.thing, mutator);
       mutator.Post(x);
     }
@@ -296,20 +314,6 @@ struct ParseTreeVisitorLookupScope {
     }
   }
 
-  template <typename V> static void Walk(const AcSpec &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.type, visitor);
-      Walk(x.values, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(AcSpec &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.type, mutator);
-      Walk(x.values, mutator);
-      mutator.Post(x);
-    }
-  }
   template <typename V> static void Walk(const ArrayElement &x, V &visitor) {
     if (visitor.Pre(x)) {
       Walk(x.base, visitor);
@@ -325,37 +329,6 @@ struct ParseTreeVisitorLookupScope {
     }
   }
   template <typename V>
-  static void Walk(const CharSelector::LengthAndKind &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.length, visitor);
-      Walk(x.kind, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(CharSelector::LengthAndKind &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.length, mutator);
-      Walk(x.kind, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const CaseValueRange::Range &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.lower, visitor);
-      Walk(x.upper, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(CaseValueRange::Range &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.lower, mutator);
-      Walk(x.upper, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
   static void Walk(const CoindexedNamedObject &x, V &visitor) {
     if (visitor.Pre(x)) {
       Walk(x.base, visitor);
@@ -367,102 +340,6 @@ struct ParseTreeVisitorLookupScope {
     if (mutator.Pre(x)) {
       Walk(x.base, mutator);
       Walk(x.imageSelector, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const DeclarationTypeSpec::Class &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.derived, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(DeclarationTypeSpec::Class &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.derived, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const DeclarationTypeSpec::Type &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.derived, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(DeclarationTypeSpec::Type &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.derived, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V> static void Walk(const ImportStmt &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.names, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(ImportStmt &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.names, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const IntrinsicTypeSpec::Character &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.selector, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(IntrinsicTypeSpec::Character &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.selector, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const IntrinsicTypeSpec::Complex &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.kind, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(IntrinsicTypeSpec::Complex &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.kind, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const IntrinsicTypeSpec::Logical &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.kind, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(IntrinsicTypeSpec::Logical &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.kind, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const IntrinsicTypeSpec::Real &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.kind, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(IntrinsicTypeSpec::Real &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.kind, mutator);
       mutator.Post(x);
     }
   }
@@ -483,18 +360,6 @@ struct ParseTreeVisitorLookupScope {
       Walk(x.lower, mutator);
       Walk(x.upper, mutator);
       Walk(x.step, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V> static void Walk(const CommonStmt &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.blocks, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(CommonStmt &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.blocks, mutator);
       mutator.Post(x);
     }
   }
@@ -568,35 +433,6 @@ struct ParseTreeVisitorLookupScope {
         x, mutator);
   }
 
-  template <typename V> static void Walk(const Designator &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.u, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(Designator &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.u, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const FunctionReference &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.v, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(FunctionReference &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.v, mutator);
-      mutator.Post(x);
-    }
-  }
   template <typename V> static void Walk(const CallStmt &x, V &visitor) {
     if (visitor.Pre(x)) {
       Walk(x.source, visitor);
@@ -644,22 +480,6 @@ struct ParseTreeVisitorLookupScope {
       Walk(x.format, mutator);
       Walk(x.controls, mutator);
       Walk(x.items, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const SignedIntLiteralConstant &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.t, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(SignedIntLiteralConstant &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.t, mutator);
       mutator.Post(x);
     }
   }
@@ -868,33 +688,6 @@ struct ParseTreeVisitorLookupScope {
       Walk(x.width, mutator);
       Walk(x.digits, mutator);
       Walk(x.exponentWidth, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const CompilerDirective &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.u, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(CompilerDirective &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.u, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const CompilerDirective::Unrecognized &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(CompilerDirective::Unrecognized &x, M &mutator) {
-    if (mutator.Pre(x)) {
       mutator.Post(x);
     }
   }

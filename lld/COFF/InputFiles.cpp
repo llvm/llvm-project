@@ -1380,6 +1380,7 @@ BitcodeFile *BitcodeFile::create(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                                utostr(offsetInArchive)));
 
   std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(mbref));
+  obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
   return make<BitcodeFile>(ctx.getSymtab(getMachineType(obj.get())), mb, obj,
                            lazy);
 }

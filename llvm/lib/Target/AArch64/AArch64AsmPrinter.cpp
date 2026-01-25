@@ -28,6 +28,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -73,6 +74,14 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "AArch64AsmPrinter"
+
+// Doesn't count FPR128 ZCZ instructions which are handled
+// by TableGen pattern matching
+STATISTIC(NumZCZeroingInstrsFPR,
+          "Number of zero-cycle FPR zeroing instructions expanded from "
+          "canonical pseudo instructions");
+
 enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
 static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
     "aarch64-ptrauth-auth-checks", cl::Hidden,
@@ -81,8 +90,6 @@ static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
                clEnumValN(Trap, "trap", "trap on failure")),
     cl::desc("Check pointer authentication auth/resign failures"),
     cl::init(Default));
-
-#define DEBUG_TYPE "asm-printer"
 
 namespace {
 
@@ -95,7 +102,7 @@ class AArch64AsmPrinter : public AsmPrinter {
   unsigned InstsEmitted;
 #endif
   bool EnableImportCallOptimization = false;
-  DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
+  MapVector<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
       SectionToImportedFunctionCalls;
   unsigned PAuthIFuncNextUniqueID = 1;
 
@@ -769,10 +776,12 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
 
   const Triple &TT = TM.getTargetTriple();
   assert(TT.isOSBinFormatELF());
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TM.getTarget().createMCSubtargetInfo(TT, "", ""));
-  assert(STI && "Unable to create subtarget info");
-  this->STI = static_cast<const AArch64Subtarget *>(&*STI);
+  // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
+  // space.
+  auto STI = std::make_unique<AArch64Subtarget>(
+      TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
+      true);
+  this->STI = STI.get();
 
   MCSymbol *HwasanTagMismatchV1Sym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch");
@@ -1930,6 +1939,7 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
       MOVI.addOperand(MCOperand::createReg(DestReg));
       MOVI.addOperand(MCOperand::createImm(0));
       EmitToStreamer(*OutStreamer, MOVI);
+      ++NumZCZeroingInstrsFPR;
     } else if (STI->hasZeroCycleZeroingFPR128()) {
       // Convert H/S/D register to corresponding Q register
       const AArch64RegisterInfo *TRI = STI->getRegisterInfo();
@@ -1950,6 +1960,7 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
       MOVI.addOperand(MCOperand::createReg(DestReg));
       MOVI.addOperand(MCOperand::createImm(0));
       EmitToStreamer(*OutStreamer, MOVI);
+      ++NumZCZeroingInstrsFPR;
     } else {
       emitFMov0AsFMov(MI, DestReg);
     }
@@ -2504,10 +2515,12 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   if (KeyID != AArch64PACKey::DA)
     return nullptr;
 
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TM.getTarget().createMCSubtargetInfo(TT, "", ""));
-  assert(STI && "Unable to create subtarget info");
-  this->STI = static_cast<const AArch64Subtarget *>(&*STI);
+  // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
+  // space.
+  auto STI = std::make_unique<AArch64Subtarget>(
+      TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
+      true);
+  this->STI = STI.get();
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);
@@ -3049,7 +3062,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 #ifndef NDEBUG
   InstsEmitted = 0;
-  auto CheckMISize = make_scope_exit([&]() {
+  llvm::scope_exit CheckMISize([&]() {
     assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
   });
 #endif

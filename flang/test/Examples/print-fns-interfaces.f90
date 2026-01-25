@@ -2,7 +2,7 @@
 ! (It should only count definitions, which will appear elsewhere for interfaced functions/subroutines)
 ! This requires that the examples are built (LLVM_BUILD_EXAMPLES=ON) to access flangPrintFunctionNames.so
 
-! REQUIRES: plugins, examples, shell
+! REQUIRES: plugins, examples
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangPrintFunctionNames%pluginext -plugin print-fns %s 2>&1 | FileCheck %s
 

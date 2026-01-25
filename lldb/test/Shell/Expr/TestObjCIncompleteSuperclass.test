@@ -1,0 +1,60 @@
+# In this test we compile with -gmodules but delete the ModuleCache.
+# When LLDB tries to find a definition for NSObject (the Foo's super-class)
+# it will fail to do so. LLDB should handle this situation gracefully.
+# A super-class definition is required when laying out Obj-C types.
+#
+# XFAIL: *
+# REQUIRES: system-darwin
+#
+# RUN: split-file %s %t
+#
+# RUN: %clang_host %t/main.m -c -g -gmodules -fmodules -fcxx-modules \
+# RUN:             -fmodule-map-file=%t/module.modulemap \
+# RUN:             -fmodules-cache-path=%t/ModuleCache -o %t/main.o
+#
+# RUN: %clang_host %t/module.m -c -g -gmodules -fmodules -fcxx-modules \
+# RUN:             -fmodule-map-file=%t/module.modulemap \
+# RUN:             -fmodules-cache-path=%t/ModuleCache -o %t/module.o
+#
+# RUN: %clang_host %t/*.o -framework Foundation -o %t.out
+#
+# RUN: rm -r %t/ModuleCache
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/commands.input %t.out -o exit 2>&1 | FileCheck %s
+
+#--- main.m
+@import foo;
+
+int main() {
+    Foo *f = [Foo new];
+
+    __builtin_debugtrap();
+}
+
+#--- module.m
+
+#import "module.h"
+
+@implementation Foo
+@end
+
+#--- module.h
+
+#import <Foundation/Foundation.h>
+
+@interface Foo : NSObject
+@end
+
+#--- module.modulemap
+module foo {
+  header "module.h"
+  export *
+}
+
+#--- commands.input
+
+run
+expression *f
+
+# CHECK: (lldb) expression *f

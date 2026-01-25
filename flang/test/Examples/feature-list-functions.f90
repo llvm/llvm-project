@@ -1,5 +1,5 @@
 ! UNSUPPORTED: system-windows
-! REQUIRES: plugins, shell, examples
+! REQUIRES: plugins, examples
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangFeatureList%pluginext \
 ! RUN:            -plugin feature-list %s 2>&1 | FileCheck %s

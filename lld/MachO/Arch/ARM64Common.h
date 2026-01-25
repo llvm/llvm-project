@@ -23,13 +23,13 @@ struct ARM64Common : TargetInfo {
 
   int64_t getEmbeddedAddend(MemoryBufferRef, uint64_t offset,
                             const llvm::MachO::relocation_info) const override;
-  void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
+  void relocateOne(uint8_t *loc, const Relocation &, uint64_t va,
                    uint64_t pc) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 16 * 1024; }
 
-  void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+  void handleDtraceReloc(const Symbol *sym, const Relocation &r,
                          uint8_t *loc) const override;
 };
 
@@ -42,7 +42,7 @@ inline uint64_t bitField(uint64_t value, int right, int width, int left) {
 // |           |                       imm26                       |
 // +-----------+---------------------------------------------------+
 
-inline void encodeBranch26(uint32_t *loc, const Reloc &r, uint32_t base,
+inline void encodeBranch26(uint32_t *loc, const Relocation &r, uint32_t base,
                            uint64_t va) {
   checkInt(loc, r, va, 28);
   // Since branch destinations are 4-byte aligned, the 2 least-
@@ -61,7 +61,7 @@ inline void encodeBranch26(uint32_t *loc, SymbolDiagnostic d, uint32_t base,
 // | |ilo|         |                immhi                |         |
 // +-+---+---------+-------------------------------------+---------+
 
-inline void encodePage21(uint32_t *loc, const Reloc &r, uint32_t base,
+inline void encodePage21(uint32_t *loc, const Relocation &r, uint32_t base,
                          uint64_t va) {
   checkInt(loc, r, va, 35);
   llvm::support::endian::write32le(loc, base | bitField(va, 12, 2, 29) |
@@ -75,7 +75,8 @@ inline void encodePage21(uint32_t *loc, SymbolDiagnostic d, uint32_t base,
                                             bitField(va, 14, 19, 5));
 }
 
-void reportUnalignedLdrStr(void *loc, const Reloc &, uint64_t va, int align);
+void reportUnalignedLdrStr(void *loc, const Relocation &, uint64_t va,
+                           int align);
 void reportUnalignedLdrStr(void *loc, SymbolDiagnostic, uint64_t va, int align);
 
 //                      21                   10

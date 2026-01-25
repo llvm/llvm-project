@@ -1131,6 +1131,7 @@ public:
       CI_HasMatchingInput = 0x08,  // This output operand has a matching input.
       CI_ImmediateConstant = 0x10, // This operand must be an immediate constant
       CI_EarlyClobber = 0x20,      // "&" output constraint (early clobber).
+      CI_OutputOperandBounds = 0x40, // Output operand bounds.
     };
     unsigned Flags;
     int TiedOperand;
@@ -1227,11 +1228,11 @@ public:
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
       ImmRange.Min = Min;
       ImmRange.Max = Max;
-      ImmRange.isConstrained = true;
+      Flags |= CI_OutputOperandBounds;
     }
     std::optional<std::pair<unsigned, unsigned>>
     getOutputOperandBounds() const {
-      return ImmRange.isConstrained
+      return (Flags & CI_OutputOperandBounds) != 0
                  ? std::make_pair(ImmRange.Min, ImmRange.Max)
                  : std::optional<std::pair<unsigned, unsigned>>();
     }

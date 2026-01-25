@@ -11,7 +11,7 @@
     unreachable
   }
 
-  attributes #0 = { "target-cpu"="gfx1100" "target-features"=",+wavefrontsize64,+cumode" "uniform-work-group-size"="false" }
+  attributes #0 = { "target-cpu"="gfx1100" "target-features"="+wavefrontsize64,+cumode" "uniform-work-group-size"="false" }
 ...
 ---
 name:            _amdgpu_ps_main

@@ -1,4 +1,4 @@
-! REQUIRES: plugins, examples, shell
+! REQUIRES: plugins, examples
 
 !RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 

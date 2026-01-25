@@ -155,9 +155,11 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
   unsigned NumEls = cast<FixedVectorType>(DstType)->getNumElements();
 
   // Create a vector of consecutive numbers from zero to VF.
+  // It's okay if the values wrap around.
   SmallVector<Constant *, 8> Indices;
   for (unsigned i = 0; i < NumEls; ++i)
-    Indices.push_back(ConstantInt::get(STy, i));
+    Indices.push_back(
+        ConstantInt::get(STy, i, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
 
   // Add the consecutive indices to the vector value.
   return ConstantVector::get(Indices);
@@ -1012,6 +1014,17 @@ Value *IRBuilderBase::CreateSelectWithUnknownProfile(Value *C, Value *True,
   return Ret;
 }
 
+Value *IRBuilderBase::CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                        Value *False,
+                                                        FMFSource FMFSource,
+                                                        StringRef PassName,
+                                                        const Twine &Name) {
+  Value *Ret = CreateSelectFMF(C, True, False, FMFSource, Name);
+  if (auto *SI = dyn_cast<SelectInst>(Ret))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, PassName);
+  return Ret;
+}
+
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
                                    const Twine &Name, Instruction *MDFrom) {
   return CreateSelectFMF(C, True, False, {}, Name, MDFrom);
@@ -1102,10 +1115,13 @@ Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
 
   if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
     Module *M = BB->getParent()->getParent();
-    Function *F =
-        Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_splice, VTy);
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M,
+        Imm >= 0 ? Intrinsic::vector_splice_left
+                 : Intrinsic::vector_splice_right,
+        VTy);
 
-    Value *Ops[] = {V1, V2, getInt32(Imm)};
+    Value *Ops[] = {V1, V2, getInt32(std::abs(Imm))};
     return Insert(CallInst::Create(F, Ops), Name);
   }
 
