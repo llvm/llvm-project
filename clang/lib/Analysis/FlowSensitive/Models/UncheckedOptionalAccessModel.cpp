@@ -338,13 +338,15 @@ auto isValueOrNotEqX() {
 }
 
 auto isZeroParamConstMemberCall() {
-  return cxxMemberCallExpr(
-      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), isConst(),
+      unless(hasAnyName("value", "has_value", "hasValue", "operator bool")))));
 }
 
 auto isZeroParamConstMemberOperatorCall() {
   return cxxOperatorCallExpr(
-      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+      callee(cxxMethodDecl(parameterCountIs(0), isConst(),
+                           unless(hasAnyName("operator*", "operator->")))));
 }
 
 auto isNonConstMemberCall() {
