@@ -3089,6 +3089,9 @@ class CompletionChunk:
             "will be removed in a future release."
         )
 
+        def __getattr__(self, _):
+            raise AttributeError(self.deprecation_message)
+
         def __getitem__(self, value: int):
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
