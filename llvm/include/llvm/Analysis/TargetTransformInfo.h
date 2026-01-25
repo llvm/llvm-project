@@ -700,7 +700,7 @@ public:
     /// Don't allow loop unrolling to simulate more than this number of
     /// iterations when checking full unroll profitability
     unsigned MaxIterationsCountToAnalyze;
-    /// Don't disable runtime unroll for the loops which were vectorized.
+    /// Disable runtime unrolling by default for vectorized loops.
     bool UnrollVectorizedLoop = false;
     /// Don't allow runtime unrolling if expanding the trip count takes more
     /// than SCEVExpansionBudget.
