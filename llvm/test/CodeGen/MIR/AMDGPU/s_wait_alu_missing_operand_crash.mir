@@ -1,4 +1,4 @@
-# RUN: ! llc -mtriple=amdgcn -run-pass=none %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: ! llc -mtriple=amdgcn -run-pass=none %s -filetype=null 2>&1 | FileCheck %s
 
 ---
 # CHECK: Bad machine code: Too few operands
