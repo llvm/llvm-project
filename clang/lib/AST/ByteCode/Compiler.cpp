@@ -7406,8 +7406,13 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
                                               const BinaryOperator *E) {
   assert(E->isComparisonOp());
   assert(!Initializing);
-  if (DiscardResult)
+if (DiscardResult) {
+    if (!this->discard(LHS))
+        return false;
+    if (!this->discard(RHS))
+        return false;
     return true;
+}
 
   PrimType ElemT;
   bool LHSIsComplex;
