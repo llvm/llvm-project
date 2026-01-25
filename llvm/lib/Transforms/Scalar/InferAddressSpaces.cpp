@@ -97,7 +97,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -112,7 +111,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -139,7 +137,6 @@
 #define DEBUG_TYPE "infer-address-spaces"
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 static cl::opt<bool> AssumeDefaultIsFlatAddressSpace(
     "assume-default-is-flat-addrspace", cl::init(false), cl::ReallyHidden,
@@ -433,32 +430,43 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   if (I2P->getType()->isVectorTy())
     return false;
 
-  Value *LogicalOp = I2P->getOperand(0);
-  Value *OldPtr, *Mask;
-  if (!match(LogicalOp,
-             m_c_BitwiseLogic(m_PtrToInt(m_Value(OldPtr)), m_Value(Mask))))
+  Operator *LogicOP = dyn_cast<Operator>(I2P->getOperand(0));
+  if (!LogicOP)
     return false;
 
-  Operator *AsCast = dyn_cast<AddrSpaceCastOperator>(OldPtr);
-  if (!AsCast)
+  if (LogicOP->getOpcode() != Instruction::Xor &&
+      LogicOP->getOpcode() != Instruction::Or &&
+      LogicOP->getOpcode() != Instruction::And)
+    return false;
+
+  Value *LHS = LogicOP->getOperand(0);
+  Value *Mask = LogicOP->getOperand(1);
+  Operator *P2I = dyn_cast<Operator>(LHS);
+  if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
+    std::swap(LHS, Mask);
+  P2I = dyn_cast<Operator>(LHS);
+  if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
+    return false;
+
+  Operator *ASCast = dyn_cast<Operator>(P2I->getOperand(0));
+  if (!ASCast || ASCast->getOpcode() != Instruction::AddrSpaceCast)
     return false;
 
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
-  unsigned DstAS = AsCast->getOperand(0)->getType()->getPointerAddressSpace();
+  unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
   std::optional<APInt> PreservedPtrMask =
       TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
   if (!PreservedPtrMask)
     return false;
 
-  APInt ChangedPtrBits =
-      computeMaxChangedPtrBits(cast<Operator>(LogicalOp), Mask, DL, &AC, DT);
+  APInt ChangedPtrBits = computeMaxChangedPtrBits(LogicOP, Mask, DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
   if (ChangedPtrBits.getBitWidth() != PreservedPtrMask->getBitWidth())
     return false;
 
   if (ChangedPtrBits.isSubsetOf(*PreservedPtrMask)) {
-    PtrIntCastPairs[I2P] = OldPtr;
+    PtrIntCastPairs[I2P] = P2I->getOperand(0);
     return true;
   }
 
