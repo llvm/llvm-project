@@ -440,6 +440,11 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// Optimize FindLast reductions selecting IVs by converting them to FindIV
+  /// reductions, if their IV range excludes a suitable sentinel value.
+  static void optimizeFindIVReductions(VPlan &Plan,
+                                       PredicatedScalarEvolution &PSE, Loop &L);
 };
 
 } // namespace llvm

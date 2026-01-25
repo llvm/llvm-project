@@ -5349,3 +5349,96 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     }
   }
 }
+
+void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
+                                               PredicatedScalarEvolution &PSE,
+                                               Loop &L) {
+  ScalarEvolution &SE = *PSE.getSE();
+  VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
+
+  // Helper lambda to check if the IV range excludes the sentinel value.
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool IsFindLast,
+                             bool Signed) -> std::optional<APInt> {
+    unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
+    APInt Sentinel =
+        IsFindLast
+            ? (Signed ? APInt::getSignedMinValue(BW) : APInt::getMinValue(BW))
+            : (Signed ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW));
+
+    ConstantRange IVRange =
+        Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
+    if (!IVRange.contains(Sentinel))
+      return Sentinel;
+    return std::nullopt;
+  };
+
+  for (VPRecipeBase &Phi :
+       make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
+
+    // Get the IV from the backedge value of the reduction phi.
+    // The backedge value should be a select between the phi and the IV.
+    VPValue *BackedgeVal = PhiR->getBackedgeValue();
+    VPValue *TrueVal, *FalseVal;
+    if (!match(BackedgeVal,
+               m_Select(m_VPValue(), m_VPValue(TrueVal), m_VPValue(FalseVal))))
+      continue;
+
+    // The non-phi operand of the select is the IV.
+    VPValue *IV = (TrueVal == PhiR) ? FalseVal : TrueVal;
+
+    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
+    const SCEV *Step;
+    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
+      continue;
+
+    // Determine direction from SCEV step.
+    // Positive step means FindLast (ascending), negative means FindFirst.
+    if (!SE.isKnownNonZero(Step))
+      continue;
+
+    bool IsFindLast = SE.isKnownPositive(Step);
+    bool UseSigned = true;
+    std::optional<APInt> SentinelVal = CheckSentinel(IVSCEV, IsFindLast, true);
+    if (!SentinelVal) {
+      SentinelVal = CheckSentinel(IVSCEV, IsFindLast, false);
+      if (!SentinelVal)
+        continue;
+      UseSigned = false;
+    }
+
+    VPInstruction *RdxResult = cast<VPInstruction>(vputils::findRecipe(
+        BackedgeVal,
+        match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
+
+    // Create the reduction result in the middle block using sentinel directly.
+    RecurKind MinMaxKind =
+        IsFindLast ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
+                   : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
+    VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                    FastMathFlags());
+    VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
+    DebugLoc ExitDL = RdxResult->getDebugLoc();
+    VPBuilder MiddleBuilder(RdxResult);
+    VPValue *ReducedIV =
+        MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
+                                   RdxResult->getOperand(0), Flags, ExitDL);
+    auto *Cmp =
+        MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
+    VPInstruction *NewRdxResult =
+        cast<VPInstruction>(MiddleBuilder.createSelect(
+            Cmp, ReducedIV, PhiR->getStartValue(), ExitDL));
+    RdxResult->replaceAllUsesWith(NewRdxResult);
+    RdxResult->eraseFromParent();
+
+    auto *NewPhiR = new VPReductionPHIRecipe(
+        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *Sentinel,
+        *BackedgeVal, RdxUnordered{1}, PhiR->hasUsesOutsideReductionChain());
+    NewPhiR->insertBefore(PhiR);
+    PhiR->replaceAllUsesWith(NewPhiR);
+    PhiR->eraseFromParent();
+  }
+}

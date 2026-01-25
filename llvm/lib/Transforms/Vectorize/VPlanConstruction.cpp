@@ -1482,8 +1482,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
+    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    VPInstruction *FindIVResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(
+            FindIVPhiR->getBackedgeValue());
+    if (!FindIVResult)
+      return false;
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    if (FindIVMinMaxKind != RecurKind::SMax &&
+        FindIVMinMaxKind != RecurKind::UMax)
       return false;
 
     // TODO: Support cases where IVOp is the IV increment.
