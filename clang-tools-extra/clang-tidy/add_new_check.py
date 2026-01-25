@@ -285,18 +285,15 @@ def add_release_notes(
 
         for line in lines:
             if not note_added:
-                match = lineMatcher.match(line)
-                match_next = nextSectionMatcher.match(line)
-                match_check = checkMatcher.match(line)
-                if match_check:
+                if match_check := checkMatcher.match(line):
                     last_check = match_check.group(1)
                     if last_check > check_name_dashes:
                         add_note_here = True
 
-                if match_next:
+                if nextSectionMatcher.match(line):
                     add_note_here = True
 
-                if match:
+                if lineMatcher.match(line):
                     header_found = True
                     f.write(line)
                     continue
@@ -481,7 +478,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
             if not os.path.isfile(check_file):
                 # Some checks aren't in a file based on the check name.
                 check_file = filename_from_module(dirname, check_name)
-                if not check_file or not os.path.isfile(check_file):
+                if not (check_file and os.path.isfile(check_file)):
                     return ""
 
         with io.open(check_file, encoding="utf8") as f:
@@ -504,9 +501,8 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         with io.open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
             content = doc.read()
-            match = re.search(".*:orphan:.*", content)
 
-            if match:
+            if match := re.search(".*:orphan:.*", content):
                 # Orphan page, don't list it.
                 return "", None
 
@@ -579,9 +575,6 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 )
         return ""
 
-    checks = map(format_link, doc_files)
-    checks_alias = map(format_link_alias, doc_files)
-
     print("Updating %s..." % filename)
     with io.open(filename, "w", encoding="utf8", newline="\n") as f:
         for line in lines:
@@ -589,12 +582,12 @@ def update_checks_list(clang_tidy_path: str) -> None:
             if line.strip() == ".. csv-table::":
                 # We dump the checkers
                 f.write('   :header: "Name", "Offers fixes"\n\n')
-                f.writelines(checks)
+                f.writelines(map(format_link, doc_files))
                 # and the aliases
                 f.write("\nCheck aliases\n-------------\n\n")
                 f.write(".. csv-table::\n")
                 f.write('   :header: "Name", "Redirect", "Offers fixes"\n\n')
-                f.writelines(checks_alias)
+                f.writelines(map(format_link_alias, doc_files))
                 break
 
 
