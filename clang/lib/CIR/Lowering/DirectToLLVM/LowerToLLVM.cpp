@@ -3236,10 +3236,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   /// corresponding `BlockTagOp` in `resolveBlockAddressOp`.
   LLVMBlockAddressInfo blockInfoAddr;
   mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<CIRToLLVMBlockAddressOpLowering>(
+  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMLabelOpLowering>(
       converter, patterns.getContext(), lowerModule.get(), dl, blockInfoAddr);
-  patterns.add<CIRToLLVMLabelOpLowering>(converter, patterns.getContext(),
-                                         lowerModule.get(), dl, blockInfoAddr);
 
   patterns.add<
 #define GET_LLVM_LOWERING_PATTERNS_LIST
