@@ -1230,7 +1230,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @powr_issue64870(float nofpclas
 ; CHECK-SAME: (float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[I1:%.*]] = tail call float @llvm.log2.f32(float [[I]])
+; CHECK-NEXT:    [[I1:%.*]] = tail call nnan float @llvm.log2.f32(float [[I]])
 ; CHECK-NEXT:    [[I2:%.*]] = fmul nnan float [[I1]], [[Y]]
 ; CHECK-NEXT:    [[I3:%.*]] = tail call nnan nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I2]])
 ; CHECK-NEXT:    [[I6:%.*]] = fcmp oeq float [[X]], 0.000000e+00
@@ -1265,7 +1265,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[ARG]])
+; CHECK-NEXT:    [[I3:%.*]] = tail call nnan float @llvm.log2.f32(float [[ARG]])
 ; CHECK-NEXT:    [[I5:%.*]] = fmul nnan float [[ARG1]], [[I3]]
 ; CHECK-NEXT:    [[I6:%.*]] = tail call nnan nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I5]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
