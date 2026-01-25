@@ -193,6 +193,9 @@ bool requiresImplicitDefaultDeclareMapper(
       if (component.attrs().test(semantics::Attr::ALLOCATABLE))
         return true;
 
+      if (component.attrs().test(semantics::Attr::POINTER))
+        continue;
+
       if (const semantics::DeclTypeSpec *declType = component.GetType())
         if (const auto *nested = declType->AsDerived())
           if (requiresMapper(*nested))
