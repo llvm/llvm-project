@@ -17,8 +17,8 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclBase.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
@@ -386,7 +386,8 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *decl) {
 // or a non-generic lambda call operator.
 inline bool isLambdaCallOperator(const CXXMethodDecl *MD) {
   const CXXRecordDecl *LambdaClass = MD->getParent();
-  if (!LambdaClass || !LambdaClass->isLambda()) return false;
+  if (!LambdaClass || !LambdaClass->isLambda())
+    return false;
   return MD->getOverloadedOperator() == OO_Call;
 }
 
@@ -2060,8 +2061,6 @@ bool CIRGenModule::mayBeEmittedEagerly(const ValueDecl *global) {
          "Only FunctionDecl and VarDecl should hit this path so far.");
   return true;
 }
-
-
 
 static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
                                  cir::CIRGlobalValueInterface gv) {
