@@ -4381,6 +4381,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
             Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
+          // If we're flowing into a use which doesn't care about the sign bit
+          // of zero, ensure the nsz flag is added to the min/max operation,
+          // even if it wasn't on the select.
+          BinIntrInst->setHasNoSignedZeros(true);
         }
         return replaceInstUsesWith(SI, BinIntr);
       }
@@ -4390,6 +4394,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
             Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
+          BinIntrInst->setHasNoSignedZeros(true);
         }
         return replaceInstUsesWith(SI, BinIntr);
       }

@@ -160,7 +160,7 @@ define i8 @t9(float %a) {
   ; Either operand could be NaN, but fast modifier applied.
 define i8 @t11(float %a, float %b) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[DOTV:%.*]] = call nnan ninf float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
+; CHECK-NEXT:    [[DOTV:%.*]] = call nnan ninf nsz float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[DOTV]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
@@ -174,7 +174,7 @@ define i8 @t11(float %a, float %b) {
 ; Either operand could be NaN, but nnan modifier applied.
 define i8 @t12(float %a, float %b) {
 ; CHECK-LABEL: @t12(
-; CHECK-NEXT:    [[DOTV:%.*]] = call nnan float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
+; CHECK-NEXT:    [[DOTV:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[DOTV]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
