@@ -1,4 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
+subroutine foo() bind(C,name='bar')
+end
 subroutine currency() bind(C,name='$')
 end
 !ERROR: Symbol has a BIND(C) name containing non-visible ASCII character(s)
