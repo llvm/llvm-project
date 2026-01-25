@@ -31,7 +31,7 @@ _LIBCPP_PUSH_MACROS
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
-#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+#  if _LIBCPP_HAS_EXCEPTIONS && _LIBCPP_HAS_RTTI && _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 
 namespace __cxxabiv1 {
 
@@ -113,7 +113,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _
 }
 
 #  if _LIBCPP_HAS_EXCEPTIONS
-#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+#    if _LIBCPP_HAS_RTTI && _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep& __e) _NOEXCEPT {
   using _Ep2 = __decay_t<_Ep>;
@@ -164,7 +164,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
     return std::__make_exception_ptr_via_throw(__e);
   }
 
-#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && !defined(_LIBCPP_CXX03_LANG)
+#    if _LIBCPP_HAS_RTTI && _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && !defined(_LIBCPP_CXX03_LANG)
   return std::__make_exception_ptr_explicit(__e);
 #    else
   return std::__make_exception_ptr_via_throw(__e);
