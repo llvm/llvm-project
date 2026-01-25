@@ -195,6 +195,7 @@ public:
   MatcherList(const MatcherList &RHS) = delete;
   MatcherList(MatcherList &&RHS) {
     splice_after(before_begin(), RHS);
+    Size = RHS.Size;
     RHS.Size = 0;
   }
   ~MatcherList() { clear(); }
