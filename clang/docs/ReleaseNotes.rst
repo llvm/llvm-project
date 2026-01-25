@@ -169,6 +169,7 @@ Bug Fixes in This Version
 -------------------------
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+- Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

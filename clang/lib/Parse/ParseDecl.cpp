@@ -4093,7 +4093,19 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
+        auto IsTypeSpecifier = [&]() {
+          if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Unspecified)
+            return true;
+
+          unsigned I = 1;
+          while (GetLookAheadToken(I).isOneOf(tok::kw_const, tok::kw_volatile,
+                                              tok::kw_restrict))
+            ++I;
+
+          return isKnownToBeTypeSpecifier(GetLookAheadToken(I));
+        };
+
+        if (IsTypeSpecifier()) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
           if (!isInvalid && !getLangOpts().C23)

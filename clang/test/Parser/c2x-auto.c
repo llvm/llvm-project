@@ -147,7 +147,7 @@ auto int b1 = 0; // c23-error {{illegal storage class on file-scoped variable}} 
 int auto b2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
                     c17-error {{illegal storage class on file-scoped variable}}
 
-void f() {
+void t1() {
   constexpr auto int c1 = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
                                 c17-error {{use of undeclared identifier 'constexpr'}}
 
@@ -156,4 +156,26 @@ void f() {
 
   auto int d1 = 0;
   int auto d2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}}
+}
+
+void t2() {
+  auto long long a1 = 0;
+  long auto long a2 = 0;
+  long long auto a3 = 0;
+
+  auto const long long b1 = 0;
+  long long const auto b2 = 0;
+  long long auto const b3 = 0;
+}
+
+void t3() {
+  const auto int a1 = 0;
+  auto const int a2 = 0;
+
+  volatile auto int a3 = 0;
+  auto volatile int a4 = 0;
+  auto volatile const int a5 = 0;
+  auto const volatile int a6 = 0;
+
+  auto restrict int a7 = 0; // expected-error {{restrict requires a pointer or reference ('int' is invalid}}
 }
