@@ -38,6 +38,8 @@ What's New in Libc++ 23.0.0?
 Implemented Papers
 ------------------
 
+- P2440R1 (partial): ``ranges::iota`` and ``ranges::shift_left`` are supported (`Github <https://llvm.org/PR105184>`__)
+
 Improvements and New Features
 -----------------------------
 
