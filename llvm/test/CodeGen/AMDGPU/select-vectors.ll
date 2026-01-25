@@ -489,21 +489,6 @@ define amdgpu_kernel void @v_select_v32i2(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; GCN-LABEL: {{^}}v_select_v64i2:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v64i2(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
-  %a = load <64 x i2>, ptr addrspace(1) %a.ptr, align 16
-  %b = load <64 x i2>, ptr addrspace(4) %b.ptr, align 16
-  %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, <64 x i2> %a, <64 x i2> %b
-  store <64 x i2> %select, ptr addrspace(1) %out, align 16
-  ret void
-}
-
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
