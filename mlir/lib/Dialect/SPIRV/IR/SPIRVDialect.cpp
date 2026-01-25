@@ -188,8 +188,7 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
     }
     if (!isa<ScalarType>(t.getElementType())) {
       parser.emitError(typeLoc,
-                       "vector element type has to be SPIR-V compatible "
-                       "integer, float or boolean but found ")
+                       "vector element type has to be SPIR-V scalar but found ")
           << t.getElementType();
       return Type();
     }

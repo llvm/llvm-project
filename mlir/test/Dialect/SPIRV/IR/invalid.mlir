@@ -41,3 +41,11 @@ func.func @aligned_store_non_power_of_two(%arg0 : f32) -> () {
   spirv.Store "Function" %0, %arg0 ["Aligned", 3] : f32
   return
 }
+
+// -----
+
+func.func @vector_with_non_spirv_scalar_element_type() -> () {
+  // expected-error@below {{vector element type has to be SPIR-V scalar but found 'index'}}
+  %0 = spirv.Variable : !spirv.ptr<vector<1xindex>, Function>
+  return
+}
