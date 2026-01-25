@@ -72,6 +72,11 @@ Clang Python Bindings Potentially Breaking Changes
   These representations will be changed in a future release to match other enums.
 - Remove ``completionChunkKindMap``. In this release, uses of ``completionChunkKindMap``
   need to be replaced by ``CompletionChunkKind``.
+- Move ``SPELLING_CACHE`` into ``CompletionChunk`` and change it to use
+  ``CompletionChunkKind`` instances as keys, instead of the enum values.
+  An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
+  ``__getitem__`` and ``__contains__``. It will be removed in a future release.
+  Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
 
 What's New in Clang |release|?
 ==============================
@@ -250,6 +255,13 @@ WebAssembly Support
 AVR Support
 ^^^^^^^^^^^
 
+SystemZ Support
+^^^^^^^^^^^^^^^
+
+- Add support for `#pragma export` for z/OS.  This is a pragma used to export functions and variables
+  with external linkage from shared libraries.  It provides compatibility with the IBM XL C/C++
+  compiler.
+
 DWARF Support in Clang
 ----------------------
 
@@ -294,6 +306,8 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support for ``transparent`` clause in task and taskloop directives.
+- Added support for ``use_device_ptr`` clause to accept an optional
+  ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^

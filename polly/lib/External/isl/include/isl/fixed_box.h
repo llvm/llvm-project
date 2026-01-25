@@ -31,6 +31,9 @@ __isl_give isl_multi_val *isl_fixed_box_get_size(__isl_keep isl_fixed_box *box);
 __isl_give isl_fixed_box *isl_fixed_box_copy(__isl_keep isl_fixed_box *box);
 __isl_null isl_fixed_box *isl_fixed_box_free(__isl_take isl_fixed_box *box);
 
+__isl_constructor
+__isl_give isl_fixed_box *isl_fixed_box_read_from_str(isl_ctx *ctx,
+	const char *str);
 __isl_give isl_printer *isl_printer_print_fixed_box(
 	__isl_take isl_printer *p, __isl_keep isl_fixed_box *box);
 __isl_give char *isl_fixed_box_to_str(__isl_keep isl_fixed_box *box);
