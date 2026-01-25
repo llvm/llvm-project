@@ -5870,12 +5870,23 @@ cc_library(
         ":Core",
         ":Debuginfod",
         ":Object",
+        ":Option",
+        ":ProfdataOptsTableGen",
         ":ProfileData",
         ":Support",
     ],
 )
 
-cc_binary(
+gentbl_cc_library(
+    name = "ProfdataOptsTableGen",
+    strip_include_prefix = "tools/llvm-profdata",
+    tbl_outs = {"tools/llvm-profdata/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-profdata/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
+llvm_driver_cc_binary(
     name = "llvm-profdata",
     stamp = 0,
     deps = [":llvm-profdata-lib"],
