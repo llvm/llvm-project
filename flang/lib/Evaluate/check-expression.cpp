@@ -299,8 +299,10 @@ public:
     return common::visit(common::visitors{
                              [&](const Triplet &t) { return (*this)(t); },
                              [&](const auto &y) {
-                               return y.value().Rank() == 0 &&
-                                   IsConstantExpr(y.value());
+                               const auto &v = y.value();
+                               return v.Rank() == 0 &&
+                                   !ContainsAnyImpliedDoIndex(v) &&
+                                   IsConstantExpr(v);
                              },
                          },
         x.u);
