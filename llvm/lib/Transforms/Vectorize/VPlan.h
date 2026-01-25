@@ -2602,7 +2602,7 @@ inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// The recurrence kind of the reduction.
   const RecurKind Kind;
 
@@ -2618,9 +2618,10 @@ public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        VPValue &BackedgeValue, ReductionStyle Style,
+                       const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
-        Kind(Kind), Style(Style),
+        VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
     addOperand(&BackedgeValue);
   }
@@ -2630,7 +2631,7 @@ public:
   VPReductionPHIRecipe *clone() override {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style,
+        *getOperand(0), *getBackedgeValue(), Style, *this,
         HasUsesOutsideReductionChain);
   }
 

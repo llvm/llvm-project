@@ -714,7 +714,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (State.VF.isScalar())
       return State.get(getOperand(0), true);
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    Builder.setFastMathFlags(getFastMathFlags());
+    if (hasFastMathFlags())
+      Builder.setFastMathFlags(getFastMathFlags());
     // If this start vector is scaled then it should produce a vector with fewer
     // elements than the VF.
     ElementCount VF = State.VF.divideCoefficientBy(

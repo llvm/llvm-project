@@ -8480,11 +8480,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = vputils::findHeaderMask(*Plan);
-      VPIRFlags Flags = PhiTy->isFloatingPointTy()
-                            ? VPIRFlags(RdxDesc.getFastMathFlags())
-                            : VPIRFlags();
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", Flags);
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", *PhiR);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
         return match(
@@ -8532,9 +8529,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                                {Start, NewVal, NewExitingVPV}, ExitDL);
     } else {
       FastMathFlags FMFs =
-          RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
-              ? RdxDesc.getFastMathFlags()
-              : FastMathFlags();
+          PhiR->hasFastMathFlags() ? PhiR->getFastMathFlags() : FastMathFlags();
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       FMFs);
       FinalReductionResult =
@@ -8622,20 +8617,20 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       continue;
     }
 
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
-      VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
+      VPValue *Iden = Plan->getOrAddLiveIn(getRecurrenceIdentity(
+          RK, PhiTy,
+          PhiR->hasFastMathFlags() ? PhiR->getFastMathFlags()
+                                   : FastMathFlags()));
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
-          {PhiR->getStartValue(), Iden, ScaleFactorVPV},
-          PhiTy->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
-                                     : FastMathFlags());
+          {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
       PhiR->setOperand(0, StartV);
     }
   }
