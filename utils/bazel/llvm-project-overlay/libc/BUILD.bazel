@@ -4973,7 +4973,6 @@ libc_math_function(
     name = "log2f",
     additional_deps = [
         ":__support_math_log2f",
-        ":errno",
     ],
 )
 

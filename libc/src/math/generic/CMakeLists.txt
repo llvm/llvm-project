@@ -1970,7 +1970,6 @@ add_entrypoint_object(
     ../log2f.h
   DEPENDS
     libc.src.__support.math.log2f
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

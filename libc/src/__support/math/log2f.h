@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG2F_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG2F_H
 
+#include "common_constants.h" // Lookup table for (1/f)
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -16,8 +17,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h"   // LIBC_UNLIKELY
-#include "common_constants.h" // Lookup table for (1/f)
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 // This is a correctly-rounded algorithm for log2(x) in single precision with
 // round-to-nearest, tie-to-even mode from the RLIBM project at:
@@ -58,7 +58,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float log2f(float x) {
+LIBC_INLINE float log2f(float x) {
   using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
 
