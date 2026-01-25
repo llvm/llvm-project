@@ -11,8 +11,10 @@
 #define MLIR_DIALECT_XEGPU_UTILS_XEGPULAYOUTUTILS_H_
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+
 namespace mlir {
 
 class VectorType;
@@ -30,47 +32,6 @@ class TensorDescType;
 } // namespace xegpu
 
 namespace xegpu {
-
-/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
-std::string getTemporaryLayoutName(const OpOperand &operand);
-
-/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
-std::string getTemporaryLayoutName(const OpResult result);
-
-/// Retrieves the DistributeLayoutAttr associated with a given Value. For
-/// TensorDescType values, the DistributeLayoutAttr is extracted from the
-/// TensorDescType itself. For other values, it is obtained from the attributes
-/// of the defining operation. Returns nullptr if no DistributeLayoutAttr is
-/// found.
-DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
-
-/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It
-/// will first check the operand_layout_{id} of the owner operation. If not
-/// found, it will check the operand itself and its defining op.
-DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
-
-/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
-/// user should use setAnchorLayout instead
-void setDistributeLayoutAttr(const OpResult &Result,
-                             const DistributeLayoutAttr layout);
-
-/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpOperand
-/// user should use setAnchorLayout instead
-void setDistributeLayoutAttr(const OpOperand &opr,
-                             const DistributeLayoutAttr layout);
-
-/// get and set distribute layout attribute for non-anchor operations
-/// (and offsets/masks of load/store ops before we get rid of their temp attrs)
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-DistributeLayoutAttr getTemporaryLayout(const T &operandOrResult);
-
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-void setTemporaryLayout(const T &operandOrResult,
-                        const DistributeLayoutAttr layout);
 
 /// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
 /// OpResult of of the given operation. If the operation contains regions, it is
@@ -124,7 +85,7 @@ DistributeLayoutAttr inferBitCastSourceLayout(DistributeLayoutAttr resLayout,
 
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
-DistributeLayoutAttr inferShapecastSourceLayout(DistributeLayoutAttr resLayout,
+DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
 
@@ -136,10 +97,10 @@ DistributeLayoutAttr inferShapecastSourceLayout(DistributeLayoutAttr resLayout,
 /// consumer's preferred layout. This minimizes data redistribution overhead.
 /// The SliceAttr for the result is then created based on the derived source
 /// layout and the specified reduction dimensions.
-SliceAttr
-reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
-                         SmallVector<int64_t> reductionDims,
-                         DistributeLayoutAttr consumerPreferredLayout);
+SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
+                                     ArrayRef<int64_t> srcShape,
+                                     DistributeLayoutAttr consumerLayout,
+                                     SmallVector<int64_t> reductionDims);
 
 /// Setup the result layout attribute for a bitcast operation based on element
 /// type bitwidths. This ensures the source layout can always be derived from
@@ -147,12 +108,14 @@ reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
 ///
 /// When casting from a narrower to a wider element type (srcElemTyBitWidth <
 /// resElemTyBitWidth), the result layout's innermost dimension data sizes
-/// (sg_data, inst_data, lane_data) are scaled up by the bitwidth ratio. This
+/// (inst_data, lane_data) are scaled up by the bitwidth ratio. This
 /// maintains the invariant that the source layout can be recovered by inverse
 /// scaling during layout inference.
-DistributeLayoutAttr bitCastLayoutSetupRule(DistributeLayoutAttr resLayout,
-                                            int resElemTyBitWidth,
-                                            int srcElemTyBitWidth);
+DistributeLayoutAttr
+bitCastSetupResultLayout(xegpu::LayoutKind layoutKind,
+                         ArrayRef<int64_t> srcShape,
+                         DistributeLayoutAttr consumerLayout,
+                         int resElemTyBitWidth, int srcElemTyBitWidth);
 
 } // namespace xegpu
 
