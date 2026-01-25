@@ -225,6 +225,7 @@ namespace nan {
                                                            // expected-note {{produces a NaN}}
 }
 
+#ifdef __SIZEOF_INT128__
 namespace ConvertToIntOverflow {
   // should not crash
   enum { E = (__uint128_t)-1. }; // ref-error {{expression is not an integral constant expression}} \
@@ -237,3 +238,4 @@ namespace ConvertToIntOverflow {
                                    // expected-error {{expression is not an integral constant expression}} \
                                    // expected-note {{outside the range of representable values of type}}
 }
+#endif
