@@ -7362,37 +7362,43 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   else
     return;
 
-  auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
-      vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
-  if (!EpiRedHeaderPhi) {
-    match(BackedgeVal,
-          VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
-                                      VPlanPatternMatch::m_VPValue(BackedgeVal),
-                                      VPlanPatternMatch::m_VPValue()));
-    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
-        vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
-  }
-
   Value *MainResumeValue;
-  if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
-    assert((VPI->getOpcode() == VPInstruction::Broadcast ||
-            VPI->getOpcode() == VPInstruction::ReductionStartVector) &&
-           "unexpected start recipe");
-    MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
-  } else
-    MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
-  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
-    [[maybe_unused]] Value *StartV =
-        EpiRedResult->getOperand(0)->getLiveInIRValue();
-    auto *Cmp = cast<ICmpInst>(MainResumeValue);
-    assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
-           "AnyOf expected to start with ICMP_NE");
-    assert(Cmp->getOperand(1) == StartV &&
-           "AnyOf expected to start by comparing main resume value to original "
-           "start value");
-    MainResumeValue = Cmp->getOperand(0);
-  } else if (IsFindIV) {
-    MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
+  if (match(BackedgeVal, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                             m_VPValue(Incoming), m_VPValue(), m_VPValue()))) {
+    MainResumeValue = Incoming->getUnderlyingValue();
+  } else {
+    auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+        vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+    if (!EpiRedHeaderPhi) {
+      match(BackedgeVal, VPlanPatternMatch::m_Select(
+                             VPlanPatternMatch::m_VPValue(),
+                             VPlanPatternMatch::m_VPValue(BackedgeVal),
+                             VPlanPatternMatch::m_VPValue()));
+      EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+          vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+    }
+
+    if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
+      assert((VPI->getOpcode() == VPInstruction::Broadcast ||
+              VPI->getOpcode() == VPInstruction::ReductionStartVector) &&
+             "unexpected start recipe");
+      MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
+    } else
+      MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
+    if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
+      [[maybe_unused]] Value *StartV =
+          EpiRedResult->getOperand(0)->getLiveInIRValue();
+      auto *Cmp = cast<ICmpInst>(MainResumeValue);
+      assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
+             "AnyOf expected to start with ICMP_NE");
+      assert(
+          Cmp->getOperand(1) == StartV &&
+          "AnyOf expected to start by comparing main resume value to original "
+          "start value");
+      MainResumeValue = Cmp->getOperand(0);
+    } else if (IsFindIV) {
+      MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
+    }
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
@@ -7467,6 +7473,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
   // Canonicalize EVL loops after regions are dissolved.
   VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  // Remove dead edges for single-iteration loops with BranchOnCond(true).
+  VPlanTransforms::removeBranchOnConst(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
