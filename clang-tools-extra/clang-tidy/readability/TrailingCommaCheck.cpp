@@ -112,6 +112,8 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   const std::optional<Token> LastTok =
       Lexer::findPreviousToken(Enum->getBraceRange().getEnd(),
                                *Result.SourceManager, getLangOpts(), false);
+  if (!LastTok)
+    return;
 
   emitDiag(LastTok->getLocation(), LastTok, DiagKind::Enum, Result, Policy);
 }
