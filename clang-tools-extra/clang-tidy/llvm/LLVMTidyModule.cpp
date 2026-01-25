@@ -19,6 +19,7 @@
 #include "TwineLocalCheck.h"
 #include "UseNewMLIROpBuilderCheck.h"
 #include "UseRangesCheck.h"
+#include "UseVectorUtilsCheck.h"
 
 namespace clang::tidy {
 namespace llvm_check {
@@ -45,6 +46,7 @@ public:
     CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
         "llvm-use-new-mlir-op-builder");
     CheckFactories.registerCheck<UseRangesCheck>("llvm-use-ranges");
+    CheckFactories.registerCheck<UseVectorUtilsCheck>("llvm-use-vector-utils");
   }
 
   ClangTidyOptions getModuleOptions() override {
