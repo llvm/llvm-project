@@ -3743,6 +3743,10 @@ namespace {
 const char JavaImportRegexPattern[] =
     "^[\t ]*import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;";
 
+const char JavaTypeDeclRegexPattern[] =
+    "^[\t ]*(public|private|protected|static|final|abstract|sealed|strictfp)?"
+    "[\t ]*(class|interface|enum|record|@interface)[\t ]+";
+
 } // anonymous namespace
 
 tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
@@ -3752,13 +3756,12 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
   unsigned Prev = 0;
   unsigned SearchFrom = 0;
   llvm::Regex ImportRegex(JavaImportRegexPattern);
+  llvm::Regex TypeDeclRegex(JavaTypeDeclRegexPattern);
   SmallVector<StringRef, 4> Matches;
   SmallVector<JavaImportDirective, 16> ImportsInBlock;
   SmallVector<StringRef> AssociatedCommentLines;
 
   bool FormattingOff = false;
-  bool InBlockComment = false;
-  bool InTextBlock = false;
 
   for (;;) {
     auto Pos = Code.find('\n', SearchFrom);
@@ -3771,33 +3774,23 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
     else if (isClangFormatOn(Trimmed))
       FormattingOff = false;
 
-    // Track block comments (/* ... */)
-    // Check if we're starting a block comment on this line
+    // Track block comments (/* ... */).
     bool IsBlockComment = false;
     if (Trimmed.starts_with("/*")) {
       IsBlockComment = true;
-      if (!Trimmed.contains("*/"))
-        InBlockComment = true;
+      // Only skip multi-line comments if we haven't started collecting imports yet.
+      // Comments between imports should be associated with the import below.
+      if (ImportsInBlock.empty()) {
+        Pos = Code.find("*/", SearchFrom + 2);
+      }
     }
-    // Check if we're ending a block comment that started on a previous line
-    if (InBlockComment && Trimmed.contains("*/")) {
-      InBlockComment = false;
-      IsBlockComment = true;
-    }
-    // If we're in a multi-line block comment (not the first or last line)
-    if (InBlockComment && !Trimmed.starts_with("/*"))
-      IsBlockComment = true;
 
-    // Track Java text blocks (""" ... """)
-    size_t Count = 0;
-    size_t StartPos = 0;
-    while ((StartPos = Trimmed.find("\"\"\"", StartPos)) != StringRef::npos) {
-      ++Count;
-      StartPos += 3;
+    // Check if we've encountered a type declaration - we're past imports.
+    if (!IsBlockComment && TypeDeclRegex.match(Trimmed)) {
+      break;
     }
-    if (Count % 2 == 1)
-      InTextBlock = !InTextBlock;
-    if (!IsBlockComment && !InTextBlock && ImportRegex.match(Line, &Matches)) {
+
+    if (!IsBlockComment && ImportRegex.match(Line, &Matches)) {
       if (FormattingOff) {
         // If at least one import line has formatting turned off, turn off
         // formatting entirely.

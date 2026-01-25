@@ -360,19 +360,23 @@ TEST_F(SortImportsTestJava, DoNotSortImportsInBlockComment) {
                  "import org.a;"));
 }
 
-TEST_F(SortImportsTestJava, DoNotSortImportsInTextBlock) {
-  EXPECT_EQ("String code = \"\"\"\n"
-            "    import org.c;\n"
-            "    \\\"\"\"\n"
-            "    import org.b;\n"
-            "\\\\\"\"\";\n"
-            "import org.a;",
-            sort("String code = \"\"\"\n"
-                 "    import org.c;\n"
-                 "    \\\"\"\"\n"
-                 "    import org.b;\n"
-                 "\\\\\"\"\";\n"
-                 "import org.a;"));
+TEST_F(SortImportsTestJava, StopAtClassDeclaration) {
+  EXPECT_EQ("import org.a;\n"
+            "\n"
+            "class Foo {\n"
+            "  String code = \"\"\"\n"
+            "      import org.c;\n"
+            "      import org.b;\n"
+            "  \"\"\";\n"
+            "}",
+            sort("import org.a;\n"
+                 "\n"
+                 "class Foo {\n"
+                 "  String code = \"\"\"\n"
+                 "      import org.c;\n"
+                 "      import org.b;\n"
+                 "  \"\"\";\n"
+                 "}"));
 }
 
 } // end namespace
