@@ -3466,12 +3466,41 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
       return nullptr;
     };
-    // Remove an assume if it is followed by an identical assume.
-    // TODO: Do we need this? Unless there are conflicting assumptions, the
-    // computeKnownBits(IIOperand) below here eliminates redundant assumes.
-    Instruction *Next = II->getNextNode();
-    if (match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
-      return RemoveConditionFromAssume(Next);
+
+    // Replace negated uses of the argument with false
+    if (Value *KnownFalse;
+        match(IIOperand,
+              m_Xor(m_Value(KnownFalse), m_Specific(Builder.getTrue()))) &&
+        KnownFalse->hasUseList() && !KnownFalse->hasOneUse()) {
+      bool RemovedUse = false;
+      for (auto &Use : make_early_inc_range(KnownFalse->uses())) {
+        if (auto *I = dyn_cast<Instruction>(Use.getUser());
+            I && isValidAssumeForContext(II, I, &DT)) {
+          Use = Builder.getFalse();
+          Worklist.add(I);
+          RemovedUse = true;
+        }
+      }
+
+      if (RemovedUse)
+        Worklist.handleUseCountDecrement(KnownFalse);
+    }
+
+    // Replace other uses of the argument with true
+    if (IIOperand->hasUseList() && !IIOperand->hasOneUse()) {
+      bool RemovedUse = false;
+      for (auto &Use : make_early_inc_range(IIOperand->uses())) {
+        if (auto *I = dyn_cast<Instruction>(Use.getUser());
+            I && isValidAssumeForContext(II, I, &DT)) {
+            Use = Builder.getTrue();
+            Worklist.add(I);
+          RemovedUse = true;
+        }
+      }
+
+      if (RemovedUse)
+        Worklist.handleUseCountDecrement(IIOperand);
+    }
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
@@ -3568,6 +3597,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %A)
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
+    Instruction *Next = II->getNextNode();
     if (EnableKnowledgeRetention &&
         match(IIOperand,
               m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&

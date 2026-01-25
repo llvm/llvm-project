@@ -10,6 +10,65 @@ declare void @llvm.assume(i1) #1
 
 ; Check that the assume has not been removed:
 
+define void @assume_extra_use(ptr %ptr, i1 %cond) {
+; CHECK-LABEL: @assume_extra_use(
+; CHECK-NEXT:    [[COND:%.*]] = xor i1 [[COND1:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+
+  %neg = xor i1 %cond, true
+  call void @llvm.assume(i1 %neg)
+  call void @use(i1 %cond)
+  call void @use(i1 %cond)
+  call void @use(i1 %neg)
+  call void @use(i1 %neg)
+  ret void
+}
+
+define i1 @assume_fold_load_store(ptr %in, ptr %out) {
+; CHECK-LABEL: @assume_fold_load_store(
+; CHECK-NEXT:    [[LOADED:%.*]] = load i1, ptr [[IN:%.*]], align 1
+; CHECK-NEXT:    [[NEG:%.*]] = xor i1 [[LOADED]], true
+; CHECK-NEXT:    store i1 true, ptr [[OUT:%.*]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
+; CHECK-NEXT:    ret i1 true
+;
+  %loaded = load i1, ptr %in, align 1
+  %neg = xor i1 %loaded, true
+  store i1 %neg, ptr %out, align 1
+  call void @llvm.assume(i1 %neg)
+  ret i1 %neg
+}
+
+define void @assume_fold_store(i8 %val, ptr %ptr) {
+; CHECK-LABEL: @assume_fold_store(
+; CHECK-NEXT:    [[NEG:%.*]] = icmp ult i8 [[VAL:%.*]], 6
+; CHECK-NEXT:    store i1 false, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ugt i8 %val, 5
+  store i1 %cmp, ptr %ptr, align 1
+  %neg = xor i1 %cmp, true
+  call void @llvm.assume(i1 %neg)
+  ret void
+}
+
+define void @drop_identical_assumes(i1 %cond) {
+; CHECK-LABEL: @drop_identical_assumes(
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND:%.*]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 %cond)
+  call void @llvm.assume(i1 %cond)
+  ret void
+}
+
 define i32 @align_to_bundle(ptr %a) #0 {
 ; DEFAULT-LABEL: @align_to_bundle(
 ; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
@@ -248,8 +307,7 @@ define i32 @icmp1(i32 %a) #0 {
 ; CHECK-LABEL: @icmp1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    ret i32 [[CONV]]
+; CHECK-NEXT:    ret i32 1
 ;
   %cmp = icmp sgt i32 %a, 5
   tail call void @llvm.assume(i1 %cmp)
@@ -276,7 +334,7 @@ define i1 @assume_not(i1 %cond) {
 ; CHECK-LABEL: @assume_not(
 ; CHECK-NEXT:    [[NOTCOND:%.*]] = xor i1 [[COND:%.*]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %notcond = xor i1 %cond, true
   call void @llvm.assume(i1 %notcond)
@@ -447,7 +505,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -489,7 +546,7 @@ define i1 @nonnull3A(ptr %a, i1 %control) {
 ; DEFAULT:       taken:
 ; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
 ; DEFAULT-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; DEFAULT-NEXT:    ret i1 [[CMP]]
+; DEFAULT-NEXT:    ret i1 true
 ; DEFAULT:       not_taken:
 ; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
 ; DEFAULT-NEXT:    ret i1 [[RVAL_2]]
@@ -1075,4 +1132,3 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
-

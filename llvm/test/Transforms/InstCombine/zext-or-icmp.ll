@@ -179,12 +179,9 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) "instcombine-
 ; CHECK-NEXT:    [[SUB17:%.*]] = sub i64 [[CONV16]], [[E:%.*]]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[SUB17]], 32
 ; CHECK-NEXT:    [[CONV18:%.*]] = ashr exact i64 [[SEXT]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[XOR]], [[CONV18]]
-; CHECK-NEXT:    [[TRUNC44:%.*]] = zext i1 [[CMP]] to i8
-; CHECK-NEXT:    [[INC:%.*]] = add i8 [[I162]], [[TRUNC44]]
-; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp slt i64 [[XOR]], [[CONV18]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TOBOOL23_NOT]])
-; CHECK-NEXT:    ret i8 [[INC]]
+; CHECK-NEXT:    ret i8 [[I162]]
 ;
   %b = icmp eq i32 %t0, 0
   %b2 = icmp eq i16 %insert, 0
@@ -242,7 +239,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    store i32 [[SROA38]], ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %for.cond
