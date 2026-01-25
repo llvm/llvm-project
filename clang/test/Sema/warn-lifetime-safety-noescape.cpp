@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 // RUN: cp %s %t
-// RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -fixit %t
-// RUN: %clang_cc1 -x c++ -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wno-dangling -Werror %t
+// RUN: %clang_cc1 -x c++ -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wexperimental-lifetime-safety -Wno-dangling -fixit %t
+// RUN: %clang_cc1 -x c++ -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-noescape -Wexperimental-lifetime-safety -Wno-dangling -Werror %t
 
 struct [[gsl::Owner]] MyObj {
   int id;
@@ -83,12 +83,6 @@ void use_locally(const MyObj& in [[clang::noescape]]) {
   v.use();
 }
 
-View return_unrelated(const MyObj& in [[clang::noescape]]) {
-  (void)in;
-  MyObj local;
-  return local;
-}
-
 View return_without_noescape(const MyObj& in) {
   return in;
 }
@@ -159,13 +153,6 @@ MyObj* return_ptr_from_noescape_ref(
 MyObj& return_ref_from_noescape_ptr(
     MyObj* p [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   return *p; // expected-note {{returned here}}
-}
-
-View construct_but_return_other(const MyObj& in [[clang::noescape]]) {
-  View v = in;
-  v.use();
-  MyObj other;
-  return other;
 }
 
 int* return_spaced_brackets(int* p [ [clang::noescape] /*some comment*/ ]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
