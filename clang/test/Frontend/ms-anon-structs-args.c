@@ -12,7 +12,13 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix -fms-extensions -fms-anonymous-structs %s -fsyntax-only 2>&1 | \
 // RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty
 
-// Test rejection of the unsupported negative form.
-// RUN: not %clang_cc1 -triple powerpc-ibm-aix -fno-ms-anonymous-structs %s -fsyntax-only 2>&1 | \
-// RUN:     FileCheck %s
-// CHECK: error: unknown argument: '-fno-ms-anonymous-structs'
+// Test that -fno-ms-anonymous-structs is accepted by CC1 without error.
+// RUN: %clang_cc1 -triple powerpc-ibm-aix -fno-ms-anonymous-structs %s -fsyntax-only 2>&1 | \
+// RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty
+
+// Test toggling between enable and disable (last one wins)
+// RUN: %clang_cc1 -triple powerpc-ibm-aix -fms-anonymous-structs -fno-ms-anonymous-structs %s -fsyntax-only 2>&1 | \
+// RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty
+
+// RUN: %clang_cc1 -triple powerpc-ibm-aix -fno-ms-anonymous-structs -fms-anonymous-structs %s -fsyntax-only 2>&1 | \
+// RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty

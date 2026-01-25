@@ -8,6 +8,25 @@
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-compatibility
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis
+// Test that explicit -fno-ms-anonymous-structs does not enable the feature
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
+// RUN:   -fno-ms-anonymous-structs
+// Test that explicit -fno-ms-anonymous-structs overrides -fms-anonymous-structs
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
+// RUN:   -fms-anonymous-structs -fno-ms-anonymous-structs
+// RUN: %clang_cc1 -triple powerpc-ibm-aix %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
+// RUN:   -fms-anonymous-structs -fno-ms-anonymous-structs
+// Test that explicit -fno-ms-anonymous-structs overrides -fms-extensions
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
+// RUN:   -fms-extensions -fno-ms-anonymous-structs
+// Test that explicit -fno-ms-anonymous-structs overrides -fms-compatibility
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
+// RUN:   -fms-compatibility -fno-ms-anonymous-structs
 
 struct union_mem {
   long g;
