@@ -1928,11 +1928,19 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     return getResult();
   }
 
-  Operation *container = getContainer().getDefiningOp();
-  OpFoldResult result = {};
+  Attribute containerAttr;
+  if (matchPattern(getContainer(), m_Constant(&containerAttr))) {
+    for (int64_t pos : getPosition()) {
+      containerAttr = extractElementAt(containerAttr, pos);
+      if (!containerAttr)
+        return nullptr;
+    }
+    return containerAttr;
+  }
+
+  Value container = getContainer();
   ArrayRef<int64_t> extractPos = getPosition();
-  bool switchedToInsertedValue = false;
-  while (auto insertValueOp = dyn_cast_if_present<InsertValueOp>(container)) {
+  while (auto insertValueOp = container.getDefiningOp<InsertValueOp>()) {
     ArrayRef<int64_t> insertPos = insertValueOp.getPosition();
     auto extractPosSize = extractPos.size();
     auto insertPosSize = insertPos.size();
@@ -1955,18 +1963,16 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     // In the above example, %4 is folded to %arg1.
     if (extractPosSize > insertPosSize &&
         extractPos.take_front(insertPosSize) == insertPos) {
-      container = insertValueOp.getValue().getDefiningOp();
+      container = insertValueOp.getValue();
       extractPos = extractPos.drop_front(insertPosSize);
-      switchedToInsertedValue = true;
       continue;
     }
 
     // Case 3: Try to continue the traversal with the container value.
-    unsigned min = std::min(extractPosSize, insertPosSize);
 
-    // If one is fully prefix of the other, stop propagating back as it will
-    // miss dependencies. For instance, %3 should not fold to %f0 in the
-    // following example:
+    // If extract position is a prefix of insert position, stop propagating back
+    // as it will miss dependencies. For instance, %3 should not fold to %f0 in
+    // the following example:
     // ```
     //   %1 = llvm.insertvalue %f0, %0[0, 0] :
     //     !llvm.array<4 x !llvm.array<4 x f32>>
@@ -1974,31 +1980,23 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     //     !llvm.array<4 x !llvm.array<4 x f32>>
     //   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
     // ```
-    if (extractPos.take_front(min) == insertPos.take_front(min))
-      return result;
+    if (insertPosSize > extractPosSize &&
+        extractPos == insertPos.take_front(extractPosSize))
+      break;
     // If neither a prefix, nor the exact position, we can extract out of the
     // value being inserted into. Moreover, we can try again if that operand
     // is itself an insertvalue expression.
-    if (!switchedToInsertedValue) {
-      // Do not swap out the container operand if we decided earlier to
-      // continue the traversal with the inserted value (Case 2).
-      getContainerMutable().assign(insertValueOp.getContainer());
-      result = getResult();
-    }
-    container = insertValueOp.getContainer().getDefiningOp();
+    container = insertValueOp.getContainer();
   }
-  if (!container)
-    return result;
 
-  Attribute containerAttr;
-  if (!matchPattern(container, m_Constant(&containerAttr)))
-    return nullptr;
-  for (int64_t pos : extractPos) {
-    containerAttr = extractElementAt(containerAttr, pos);
-    if (!containerAttr)
-      return nullptr;
-  }
-  return containerAttr;
+  // We failed to resolve past this container either because it is not an
+  // InsertValueOp, or it is an InsertValueOp that partially overlaps with the
+  // value being extracted. Update to read from this container instead.
+  if (container == getContainer())
+    return {};
+  setPosition(extractPos);
+  getContainerMutable().assign(container);
+  return getResult();
 }
 
 LogicalResult ExtractValueOp::verify() {
