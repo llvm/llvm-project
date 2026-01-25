@@ -4357,7 +4357,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
     // Canonicalize select of FP values where NaN and -0.0 are not valid as
     // minnum/maxnum intrinsics.
-    if (SIFPOp->hasNoNaNs() &&
+    if (FCmp && SIFPOp->hasNoNaNs() &&
+        // In order to preserve the nnan flag on the generated intrinsic call,
+        // the nnan flag must be present on both the compare *and* the select
+        // (for poison propagation reasons).
+        //
+        // Some targets don't have a floating point minimum/maximum instruction
+        // with the same semantics as our minnum/maxnum intrinsics. If the
+        // nnan+nsz flags are present on the intrinsic call, those targets can
+        // lower it to a select, or to a simpler instruction. If either flag is
+        // absent then they must lower it to a routine, or even worse, a
+        // libcall. That makes things way slower, and there are other reasons to
+        // avoid introducing libcalls where none previously existed (see
+        // https://github.com/llvm/llvm-project/issues/54554). So, if we can't
+        // preserve the nnan flag, don't bother with the transformation.
+        FCmp->hasNoNaNs() &&
         (SIFPOp->hasNoSignedZeros() ||
          (SIFPOp->hasOneUse() &&
           canIgnoreSignBitOfZero(*SIFPOp->use_begin())))) {
@@ -4366,7 +4380,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
-          BinIntrInst->setHasNoNaNs(FCmp->hasNoNaNs());
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
         }
         return replaceInstUsesWith(SI, BinIntr);
@@ -4376,7 +4389,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
-          BinIntrInst->setHasNoNaNs(FCmp->hasNoNaNs());
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
         }
         return replaceInstUsesWith(SI, BinIntr);
