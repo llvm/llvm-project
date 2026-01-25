@@ -7255,6 +7255,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
         ProfitableVFs.push_back(CurrentFactor);
     }
   }
+
 #ifndef NDEBUG
   // Select the optimal vectorization factor according to the legacy cost-model.
   // This is now only used to verify the decisions by the new VPlan-based
@@ -7262,7 +7263,6 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // stabilized.
   VectorizationFactor LegacyVF = selectVectorizationFactor();
   VPlan &BestPlan = getPlanFor(BestFactor.Width);
-
 
   // Pre-compute the cost and use it to check if BestPlan contains any
   // simplifications not accounted for in the legacy cost model. If that's the
@@ -7287,23 +7287,20 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                });
              });
   // If VPlan and legacy disagree in a known safe case, fallback to LegacyVF
-  if (BestFactor.Width != LegacyVF.Width &&
-      !BestPlan.hasEarlyExit() &&
-      Legal->getLAI()->getSymbolicStrides().empty() &&
-      !UsesEVLGatherScatter &&
-      !planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                            CostCtx, OrigLoop, BestFactor.Width) &&
-      !planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
-                                            CostCtx, OrigLoop, LegacyVF.Width)) {
-    LLVM_DEBUG(dbgs() << "LV: VPlan VF disagrees with Legacy VF, using Legacy VF\n");
+  if (BestFactor.Width != LegacyVF.Width && !BestPlan.hasEarlyExit() &&
+      Legal->getLAI()->getSymbolicStrides().empty() && !UsesEVLGatherScatter &&
+      !planContainsAdditionalSimplifications(
+          getPlanFor(BestFactor.Width), CostCtx, OrigLoop, BestFactor.Width) &&
+      !planContainsAdditionalSimplifications(
+          getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) {
+    LLVM_DEBUG(
+        dbgs() << "LV: VPlan VF disagrees with Legacy VF, using Legacy VF\n");
     BestFactor = LegacyVF;
   }
 
-
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
-         "when vectorizing, the scalar cost must be computed.");
+         "when vectorizing, the scalar cost must be computed.")
 #endif
-
 
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << BestFactor.Width << ".\n");
   return BestFactor;
