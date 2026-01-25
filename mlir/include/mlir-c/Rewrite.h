@@ -527,7 +527,7 @@ mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
 //===----------------------------------------------------------------------===//
 
 /// Create a TypeConverter.
-MLIR_CAPI_EXPORTED MlirTypeConverter mlirTypeConverterCreate();
+MLIR_CAPI_EXPORTED MlirTypeConverter mlirTypeConverterCreate(void);
 
 /// Destroy the given TypeConverter.
 MLIR_CAPI_EXPORTED void
