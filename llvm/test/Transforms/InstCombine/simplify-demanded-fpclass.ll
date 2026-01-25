@@ -1593,6 +1593,17 @@ define nofpclass(inf) float @ret_nofpclass_inf__arithmetic_fence_select_pinf_rhs
   ret float %fence
 }
 
+define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs(i1 %cond, float %x) {
+; CHECK-LABEL: define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[X]])
+; CHECK-NEXT:    ret float [[FENCE]]
+;
+  %select = select i1 %cond, float %x, float 0x7FF0000000000000
+  %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) %select)
+  ret float %fence
+}
+
 ; Can simplify to %x
 define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_pinf(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_pinf
