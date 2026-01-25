@@ -35,9 +35,6 @@ ELF Improvements
 * Added ``VersionNode`` lexer state for better version script parsing.
   This brings the lexer behavior closer to GNU ld.
   (`#174530 <https://github.com/llvm/llvm-project/pull/174530>`_)
-* ``-r``/``--emit-relocs``: Fixed a crash when processing relocation sections
-  that are placed before their relocated sections.
-  (`#156354 <https://github.com/llvm/llvm-project/pull/156354>`_)
 * Unversioned undefined symbols now use version index 0, aligning with
   GNU ld 2.46 behavior.
   (`#168189 <https://github.com/llvm/llvm-project/pull/168189>`_)
@@ -46,7 +43,6 @@ ELF Improvements
   (`#148920 <https://github.com/llvm/llvm-project/pull/148920>`_)
 * DTLTO now supports archive members and bitcode members of thin archives.
   (`#157043 <https://github.com/llvm/llvm-project/pull/157043>`_)
-  (`#149425 <https://github.com/llvm/llvm-project/pull/149425>`_)
 * For DTLTO, ``--thinlto-remote-compiler-prepend-arg=<arg>`` has been added to
   prepend an argument to the remote compiler's command line.
   (`#162456 <https://github.com/llvm/llvm-project/pull/162456>`_)
@@ -71,17 +67,6 @@ ELF Improvements
 * For ARM, fixed incorrect veneer generation for wraparound branches at
   the high end of the 32-bit address space branching to the low end.
   (`#165263 <https://github.com/llvm/llvm-project/pull/165263>`_)
-* For Hexagon, added range extension thunk support.
-  (`#111217 <https://github.com/llvm/llvm-project/pull/111217>`_)
-* For LoongArch, added GOT indirection to PC relative optimization in
-  normal or medium code model.
-  (`#123743 <https://github.com/llvm/llvm-project/pull/123743>`_)
-* For LoongArch, added support for relaxation during TLSDESC GD/LD to
-  IE/LE conversion to remove redundant NOPs.
-  (`#123730 <https://github.com/llvm/llvm-project/pull/123730>`_)
-* For LoongArch, the linker now checks that the relocation addend is zero
-  before applying relaxation to ``R_LARCH_GOT_PC_{HI20,LO12}``.
-  (`#151264 <https://github.com/llvm/llvm-project/pull/151264>`_)
 * For LoongArch, ``-r`` now synthesizes ``R_LARCH_ALIGN`` at input section
   start to preserve alignment information.
   (`#153935 <https://github.com/llvm/llvm-project/pull/153935>`_)
@@ -129,31 +114,15 @@ COFF Improvements
   (`#157476 <https://github.com/llvm/llvm-project/pull/157476>`_)
 * ``/summary`` now displays the size of all consumed inputs.
   (`#157284 <https://github.com/llvm/llvm-project/pull/157284>`_)
-* Added support for `Integrated Distributed ThinLTO <https://llvm.org/docs/DTLTO.html>`
-  (`#148594 <https://github.com/llvm/llvm-project/pull/148594>`_)
 * For DTLTO, ``-thinlto-remote-compiler-prepend-arg:<arg>`` has been added to
   prepend an argument to the remote compiler's command line.
   (`#162456 <https://github.com/llvm/llvm-project/pull/162456>`_)
 * Loop and SLP vectorize options are now passed to the LTO backend.
   (`#173041 <https://github.com/llvm/llvm-project/pull/173041>`_)
-* Fixed manifest UAC trustInfo namespace.
-  (`#165285 <https://github.com/llvm/llvm-project/pull/165285>`_)
-* Fixed AArch64 delayimport of sret arguments.
-  (`#163096 <https://github.com/llvm/llvm-project/pull/163096>`_)
-* Fixed ``tailMergeARM64`` delayload thunk 128 MB range limitation.
-  (`#161844 <https://github.com/llvm/llvm-project/pull/161844>`_)
-* Fixed symbol names for import thunks.
-  (`#160694 <https://github.com/llvm/llvm-project/pull/160694>`_)
 * Deduplicate common chunks when linking COFF files.
   (`#162553 <https://github.com/llvm/llvm-project/pull/162553>`_)
-* Aligned EC code ranges to page boundaries.
-  (`#168222 <https://github.com/llvm/llvm-project/pull/168222>`_)
 * Discard ``.llvmbc`` and ``.llvmcmd`` sections.
   (`#150897 <https://github.com/llvm/llvm-project/pull/150897>`_)
-* Fixed resolving symbols with ``/alternatename`` when the target is undefined.
-  (`#149496 <https://github.com/llvm/llvm-project/pull/149496>`_)
-* Fixed ``/wholearchive`` thin-archive member identifiers to be consistent.
-  (`#145487 <https://github.com/llvm/llvm-project/pull/145487>`_)
 * Prevent emitting relocations for discarded weak wrapped symbols.
   (`#156214 <https://github.com/llvm/llvm-project/pull/156214>`_)
 
