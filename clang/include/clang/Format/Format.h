@@ -3938,7 +3938,7 @@ struct FormatStyle {
   ///
   ///    -(void)method      vs.      - (void)method
   /// \endcode
-  /// \version 22
+  /// \version 23
   bool ObjCSpaceAfterMethodDeclarationPrefix;
 
   /// Add a space after ``@property`` in Objective-C, i.e. use
