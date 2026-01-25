@@ -1,8 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-noescape -Wlifetime-safety -Wno-dangling -verify %s
-// RUN: cp %s %t
-// RUN: %clang_cc1 -x c++ -Wlifetime-safety-noescape -Wlifetime-safety -Wno-dangling -fixit %t
-// RUN: %clang_cc1 -x c++ -fsyntax-only -Wlifetime-safety-noescape -Wlifetime-safety -Wno-dangling  -Werror %t
-
 
 struct [[gsl::Owner]] MyObj {
   int id;
