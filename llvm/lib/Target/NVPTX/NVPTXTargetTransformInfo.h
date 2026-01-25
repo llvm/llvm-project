@@ -183,10 +183,10 @@ public:
   APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
                                          unsigned DstAS) const override {
     if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
-      return {DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0};
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
     if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
         DstAS != llvm::ADDRESS_SPACE_SHARED)
-      return {DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0};
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
 
     // Address change within 4K size does not change the original address space
     // and is safe to perform address cast form SrcAS to DstAS.
