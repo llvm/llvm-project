@@ -939,7 +939,11 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
   }
-  OutStreamer->emitSyntaxDirective();
+
+  // TODO: Support prefixed registers for the Intel syntax.
+  const bool IntelSyntax = MAI->getAssemblerDialect() == InlineAsm::AD_Intel;
+  OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
+                                   IntelSyntax ? "noprefix" : "");
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.

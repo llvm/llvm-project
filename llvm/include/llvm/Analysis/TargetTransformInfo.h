@@ -1266,6 +1266,17 @@ public:
     OperandValueInfo getNoProps() const {
       return {Kind, OP_None};
     }
+
+    OperandValueInfo mergeWith(const OperandValueInfo OpInfoY) {
+      OperandValueKind MergeKind = OK_AnyValue;
+      if (isConstant() && OpInfoY.isConstant())
+        MergeKind = OK_NonUniformConstantValue;
+
+      OperandValueProperties MergeProp = OP_None;
+      if (Properties == OpInfoY.Properties)
+        MergeProp = Properties;
+      return {MergeKind, MergeProp};
+    }
   };
 
   /// \return the number of registers in the target-provided register class.
@@ -1441,6 +1452,10 @@ public:
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
+
+  /// Collect common data between two OperandValueInfo inputs
+  LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
+                                                     const Value *Y);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.

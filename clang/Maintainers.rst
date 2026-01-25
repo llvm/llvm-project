@@ -151,6 +151,10 @@ Clang static analyzer
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
 
+| Donát Nagy
+| donat.nagy\@ericsson.com (email), NagyDonat (GitHub), DonatNagyE (Discourse)
+
+
 Compiler options
 ~~~~~~~~~~~~~~~~
 | Jan Svoboda
@@ -175,6 +179,9 @@ Offloading driver
 ~~~~~~~~~~~~~~~~~
 | Joseph Huber
 | joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
+| Nick Sarnie
+| nick.sarnie\@intel.com (email), sarnex (GitHub)
 
 
 Driver parts not covered by someone else
