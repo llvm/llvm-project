@@ -763,6 +763,9 @@ module std [system] {
     module ranges_shift_left {
       header "__algorithm/ranges_shift_left.h"
     }
+    module ranges_shift_right {
+      header "__algorithm/ranges_shift_right.h"
+    }
     module ranges_shuffle {
       header "__algorithm/ranges_shuffle.h"
     }
