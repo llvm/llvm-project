@@ -17,7 +17,6 @@ import sys
 import textwrap
 from operator import methodcaller
 
-# FIXME Python 3.9: Replace typing.Tuple with builtins.tuple.
 from typing import Optional, Tuple, Match
 
 
