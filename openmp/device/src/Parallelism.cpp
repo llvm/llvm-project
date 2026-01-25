@@ -45,7 +45,9 @@ using namespace ompx;
 
 namespace {
 
-uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
+void handleStrictNumThreadsError() { __builtin_trap(); }
+
+uint32_t determineNumberOfThreads(int32_t NumThreadsClause, int32_t Strict) {
   uint32_t NThreadsICV =
       NumThreadsClause != -1 ? NumThreadsClause : icv::NThreads;
   uint32_t NumThreads = mapping::getMaxTeamThreads();
@@ -55,13 +57,16 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 
   // SPMD mode allows any number of threads, for generic mode we round down to a
   // multiple of WARPSIZE since it is legal to do so in OpenMP.
-  if (mapping::isSPMDMode())
-    return NumThreads;
+  if (!mapping::isSPMDMode()) {
+    if (NumThreads < mapping::getWarpSize())
+      NumThreads = 1;
+    else
+      NumThreads = (NumThreads & ~((uint32_t)mapping::getWarpSize() - 1));
+  }
 
-  if (NumThreads < mapping::getWarpSize())
-    NumThreads = 1;
-  else
-    NumThreads = (NumThreads & ~((uint32_t)mapping::getWarpSize() - 1));
+  if (NumThreadsClause != -1 && Strict &&
+      NumThreads != static_cast<uint32_t>(NumThreadsClause))
+    handleStrictNumThreadsError();
 
   return NumThreads;
 }
@@ -82,12 +87,11 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 
 extern "C" {
 
-[[clang::always_inline]] void __kmpc_parallel_spmd(IdentTy *ident,
-                                                   int32_t num_threads,
-                                                   void *fn, void **args,
-                                                   const int64_t nargs) {
+[[clang::always_inline]] void
+__kmpc_parallel_spmd(IdentTy *ident, int32_t num_threads, void *fn, void **args,
+                     const int64_t nargs, int32_t nt_strict) {
   uint32_t TId = mapping::getThreadIdInBlock();
-  uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  uint32_t NumThreads = determineNumberOfThreads(num_threads, nt_strict);
   uint32_t PTeamSize =
       NumThreads == mapping::getMaxTeamThreads() ? 0 : NumThreads;
   // Avoid the race between the read of the `icv::Level` above and the write
@@ -157,6 +161,11 @@ __kmpc_parallel_60(IdentTy *ident, int32_t, int32_t if_expr,
   // 3) nested parallel regions
   if (OMP_UNLIKELY(!if_expr || state::HasThreadState ||
                    (config::mayUseNestedParallelism() && icv::Level))) {
+    // OpenMP 6.0 12.1.2 requires the num_threads 'strict' modifier to also have
+    // effect when parallel execution is disabled by a corresponding if clause
+    // attached to the parallel directive.
+    if (nt_strict && num_threads > 1)
+      handleStrictNumThreadsError();
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
@@ -170,12 +179,12 @@ __kmpc_parallel_60(IdentTy *ident, int32_t, int32_t if_expr,
     // This was moved to its own routine so it could be called directly
     // in certain situations to avoid resource consumption of unused
     // logic in parallel_60.
-    __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs);
+    __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs, nt_strict);
 
     return;
   }
 
-  uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  uint32_t NumThreads = determineNumberOfThreads(num_threads, nt_strict);
   uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
   uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
 

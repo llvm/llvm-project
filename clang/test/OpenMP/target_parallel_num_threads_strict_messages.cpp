@@ -1,3 +1,9 @@
+// RUN: %clang_cc1 -DF1 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host-ppc.bc
+// RUN: %clang_cc1 -DF1 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-ppc.bc -o /dev/null
+// RUN: %clang_cc1 -DF2 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host-ppc.bc
+// RUN: %clang_cc1 -DF2 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-ppc.bc -o /dev/null
+// RUN: %clang_cc1 -DF3 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host-ppc.bc
+// RUN: %clang_cc1 -DF3 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-ppc.bc -o /dev/null
 // RUN: %clang_cc1 -DF1 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host-ppc.bc
 // RUN: %clang_cc1 -DF1 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-ppc.bc -o /dev/null
 // RUN: %clang_cc1 -DF2 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host-ppc.bc
@@ -20,9 +26,8 @@
 template<typename tx>
 tx ftemplate(int n) {
   tx a = 0;
-
 #ifdef TARGET
-  // expected-warning@+2 {{modifier 'strict' is currently not supported on a GPU for the 'num_threads' clause; modifier ignored}}
+  // expected-warning@+2 {{clause 'message' is currently not supported on a GPU; clause ignored}} expected-warning@+2 {{clause 'severity' is currently not supported on a GPU; clause ignored}}
 #endif
   #pragma omp parallel num_threads(strict: tx(20)) severity(fatal) message("msg")
   {
@@ -30,7 +35,7 @@ tx ftemplate(int n) {
 
   short b = 1;
 #ifdef TARGET
-  // expected-warning@+2 {{modifier 'strict' is currently not supported on a GPU for the 'num_threads' clause; modifier ignored}}
+  // expected-warning@+2 {{clause 'message' is currently not supported on a GPU; clause ignored}} expected-warning@+2 {{clause 'severity' is currently not supported on a GPU; clause ignored}}
 #endif
   #pragma omp parallel num_threads(strict: b) severity(warning) message("msg")
   {
@@ -46,14 +51,14 @@ static
 int fstatic(int n) {
 
 #ifdef TARGET
-  // expected-warning@+2 {{modifier 'strict' is currently not supported on a GPU for the 'num_threads' clause; modifier ignored}}
+  // expected-warning@+2 {{clause 'message' is currently not supported on a GPU; clause ignored}}
 #endif
   #pragma omp target parallel num_threads(strict: n) message("msg")
   {
   }
 
 #ifdef TARGET
-  // expected-warning@+2 {{modifier 'strict' is currently not supported on a GPU for the 'num_threads' clause; modifier ignored}}
+  // expected-warning@+2 {{clause 'severity' is currently not supported on a GPU; clause ignored}}
 #endif
   #pragma omp target parallel num_threads(strict: 32+n) severity(warning)
   {
@@ -71,7 +76,7 @@ struct S1 {
     int b = 1;
 
 #ifdef TARGET
-    // expected-warning@+2 {{modifier 'strict' is currently not supported on a GPU for the 'num_threads' clause; modifier ignored}}
+  // expected-warning@+2 {{clause 'message' is currently not supported on a GPU; clause ignored}} expected-warning@+2 {{clause 'severity' is currently not supported on a GPU; clause ignored}}
 #endif
     #pragma omp parallel num_threads(strict: n-b) severity(warning) message("msg")
     {
@@ -79,7 +84,7 @@ struct S1 {
     }
 
 #ifdef TARGET
-    // expected-warning@+2 {{modifier 'strict' is currently not supported on a GPU for the 'num_threads' clause; modifier ignored}}
+  // expected-warning@+2 {{clause 'severity' is currently not supported on a GPU; clause ignored}}
 #endif
     #pragma omp parallel num_threads(strict: 1024) severity(fatal)
     {

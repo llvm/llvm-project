@@ -925,13 +925,11 @@ void CGOpenMPRuntimeGPU::emitNumThreadsClause(
     SourceLocation SeverityLoc, const Expr *Message,
     SourceLocation MessageLoc) {
   if (Modifier == OMPC_NUMTHREADS_strict) {
-    CGM.getDiags().Report(Loc,
-                          diag::warn_omp_gpu_unsupported_modifier_for_clause)
-        << "strict" << getOpenMPClauseName(OMPC_num_threads);
-    return;
+    if (SeverityLoc.isValid())
+      emitSeverityClause(Severity, SeverityLoc);
+    if (MessageLoc.isValid())
+      emitMessageClause(CGF, Message, MessageLoc);
   }
-
-  // Nothing to do.
 }
 
 void CGOpenMPRuntimeGPU::emitNumTeamsClause(CodeGenFunction &CGF,
@@ -1238,9 +1236,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
   if (!CGF.HaveInsertPoint())
     return;
 
-  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond,
-                        NumThreads](CodeGenFunction &CGF,
-                                    PrePostActionTy &Action) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond, NumThreads,
+                        NumThreadsModifier](CodeGenFunction &CGF,
+                                            PrePostActionTy &Action) {
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
@@ -1291,8 +1289,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     else
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
-    // No strict prescriptiveness for the number of threads.
-    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, 0);
+    // Forward whether the strict modifier is specified.
+    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(
+        CGM.Int32Ty, NumThreadsModifier == OMPC_NUMTHREADS_strict);
 
     assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
