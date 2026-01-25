@@ -1002,7 +1002,6 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
            UR->getRegion() != Plan.getVectorLoopRegion();
   };
 
-  VPTypeAnalysis TypeInfo(Plan);
   Builder.setInsertPoint(LatchSplit, LatchSplit->begin());
   for (VPBlockBase *VPB : vp_depth_first_shallow(HeaderSplit)) {
     auto *VPBB = cast<VPBasicBlock>(VPB);
