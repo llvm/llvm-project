@@ -203,8 +203,11 @@ class LaunchFuncOp(LaunchFuncOp):
         block_size_x, block_size_y, block_size_z = map(
             _convert_literal_to_constant, block_size
         )
-        cluster_size_x, cluster_size_y, cluster_size_z = map(
-            _convert_literal_to_constant, cluster_size) if cluster_size else (None, None, None)
+        cluster_size_x, cluster_size_y, cluster_size_z = (
+            map(_convert_literal_to_constant, cluster_size)
+            if cluster_size
+            else (None, None, None)
+        )
 
         super().__init__(
             async_token,
