@@ -78,7 +78,7 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
   if (!ConstantOffset.isZero())
     return std::nullopt;
   APInt StrideBytes = VariableOffsets.front().second;
-  const uint64_t JumpTableSizeBytes = DL.getTypeAllocSize(GV->getValueType());
+  const uint64_t JumpTableSizeBytes = GV->getGlobalSize(DL);
   if (JumpTableSizeBytes % StrideBytes.getZExtValue() != 0)
     return std::nullopt;
   const uint64_t N = JumpTableSizeBytes / StrideBytes.getZExtValue();

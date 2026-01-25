@@ -21,14 +21,14 @@ set(ENV{TERM} "dumb")
 function(append_info name revision repository)
   if(revision)
     file(APPEND "${HEADER_FILE}.tmp"
-      "#define ${name}_REVISION \"${revision}\"\n")
+      "#define ${name}_REVISION R\"(${revision})\"\n")
   else()
     file(APPEND "${HEADER_FILE}.tmp"
       "#undef ${name}_REVISION\n")
   endif()
   if(repository)
     file(APPEND "${HEADER_FILE}.tmp"
-      "#define ${name}_REPOSITORY \"${repository}\"\n")
+      "#define ${name}_REPOSITORY R\"(${repository})\"\n")
   else()
     file(APPEND "${HEADER_FILE}.tmp"
       "#undef ${name}_REPOSITORY\n")

@@ -1686,6 +1686,8 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -3453,6 +3455,7 @@ cc_library(
         ":AffineDialect",
         ":ArithDialect",
         ":BufferizationDialect",
+        ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":DLTIDialect",
         ":DialectUtils",
@@ -3462,6 +3465,7 @@ cc_library(
         ":LinalgDialect",
         ":MPIDialect",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":SCFDialect",
         ":ShardDialect",
