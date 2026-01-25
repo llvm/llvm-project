@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRT_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRT_H
+
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
@@ -15,10 +19,14 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
+
 LIBC_INLINE static constexpr float16 f16sqrt(double x) {
   return fputil::sqrt<float16>(x);
 }
+
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF_H
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRT_H

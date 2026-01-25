@@ -10,5 +10,7 @@
 #include "src/__support/math/f16sqrt.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 LLVM_LIBC_FUNCTION(float16, f16sqrt, (double x)) { return math::f16sqrt(x); }
+
 } // namespace LIBC_NAMESPACE_DECL

@@ -2822,6 +2822,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16sqrt",
+    hdrs = ["src/__support/math/f16sqrt.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_generic_sqrt",
+        ":__support_macros_config",
+    ]
+)
+
+libc_support_library(
     name = "__support_math_inv_trigf_utils",
     hdrs = ["src/__support/math/inv_trigf_utils.h"],
     deps = [
@@ -3259,15 +3269,6 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
-    name = "__support_math_f16sqrt",
-    hdrs = ["src/__support/math/f16sqrt.h"],
-    deps = [
-        ":__support_common",
-        ":__support_fputil_generic_sqrt",
-        ":__support_macros_config",
-    ]
-)
 
 ############################### complex targets ################################
 
