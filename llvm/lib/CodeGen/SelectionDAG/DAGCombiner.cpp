@@ -23779,7 +23779,7 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
     return SDValue();
 
   // Step 2: Create a wide vector from the inserted source vector by appending
-  // undefined elements. This is the same size as our destination vector.
+  // poison elements. This is the same size as our destination vector.
   SDLoc DL(N);
   SmallVector<SDValue, 8> ConcatOps(ExtendRatio, DAG.getPOISON(SubVecVT));
   ConcatOps[0] = SubVec;
@@ -23896,7 +23896,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   EVT VT = InVec.getValueType();
   auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
 
-  // Insert into out-of-bounds element is undefined.
+  // Insert into out-of-bounds element is poison.
   if (IndexC && VT.isFixedLengthVector() &&
       IndexC->getZExtValue() >= VT.getVectorNumElements())
     return DAG.getPOISON(VT);
@@ -25021,7 +25021,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
   if (InVT1 != VT || InVT2 != VT) {
     if ((VTSize % InVT1Size == 0) && InVT1 == InVT2) {
       // If the output vector length is a multiple of both input lengths,
-      // we can concatenate them and pad the rest with undefs.
+      // we can concatenate them and pad the rest with poison.
       unsigned NumConcats = VTSize / InVT1Size;
       assert(NumConcats >= 2 && "Concat needs at least two inputs!");
       SmallVector<SDValue, 2> ConcatOps(NumConcats, DAG.getPOISON(InVT1));
@@ -25121,7 +25121,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
   InVT1 = VecIn1.getValueType();
 
   // If we already have a VecIn2, it should have the same type as VecIn1.
-  // If we don't, get an undef/zero vector of the appropriate type.
+  // If we don't, get an poison/zero vector of the appropriate type.
   VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getPOISON(InVT1);
   assert(InVT1 == VecIn2.getValueType() && "Unexpected second input type.");
 
@@ -26705,7 +26705,7 @@ static SDValue foldExtractSubvectorFromShuffleVector(EVT NarrowVT, SDValue Src,
   assert((NewOps.size() == 1 || NewOps.size() == 2) &&
          "Should end up with either one or two ops");
 
-  // If we ended up with only one operand, pad with an undef.
+  // If we ended up with only one operand, pad with poison.
   if (NewOps.size() == 1)
     NewOps.emplace_back(DAG.getPOISON(NarrowVT));
 
