@@ -9,14 +9,14 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define void @i8() {
 ; CHECK-NEON-LABEL: 'i8'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i8 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i8 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i8 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i8 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i8 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i8 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i8 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %3 = srem i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %4 = urem i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %7 = srem i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %8 = urem i8 undef, 2
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-MVE-LABEL: 'i8'
@@ -53,14 +53,14 @@ define void @i8() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8R-LABEL: 'i8'
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i8 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i8 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i8 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i8 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i8 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i8 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i8 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i8 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %1 = sdiv i8 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %2 = udiv i8 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i8 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i8 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %5 = sdiv i8 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %6 = udiv i8 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i8 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i8 undef, 2
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = sdiv i8 undef, undef
@@ -76,14 +76,14 @@ define void @i8() {
 
 define void @i16() {
 ; CHECK-NEON-LABEL: 'i16'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i16 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i16 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i16 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i16 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i16 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i16 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i16 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %3 = srem i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %4 = urem i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %7 = srem i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %8 = urem i16 undef, 2
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-MVE-LABEL: 'i16'
@@ -120,14 +120,14 @@ define void @i16() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8R-LABEL: 'i16'
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i16 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i16 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i16 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i16 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i16 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i16 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i16 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i16 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %1 = sdiv i16 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %2 = udiv i16 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i16 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i16 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %5 = sdiv i16 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %6 = udiv i16 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i16 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i16 undef, 2
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = sdiv i16 undef, undef
@@ -143,14 +143,14 @@ define void @i16() {
 
 define void @i32() {
 ; CHECK-NEON-LABEL: 'i32'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i32 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i32 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i32 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i32 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i32 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i32 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i32 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %3 = srem i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %4 = urem i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %7 = srem i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %8 = urem i32 undef, 2
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-MVE-LABEL: 'i32'
@@ -187,14 +187,14 @@ define void @i32() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8R-LABEL: 'i32'
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i32 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i32 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i32 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i32 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i32 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i32 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i32 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i32 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %1 = sdiv i32 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %2 = udiv i32 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i32 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i32 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %5 = sdiv i32 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %6 = udiv i32 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i32 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i32 undef, 2
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = sdiv i32 undef, undef
@@ -210,14 +210,14 @@ define void @i32() {
 
 define void @i64() {
 ; CHECK-NEON-LABEL: 'i64'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %1 = sdiv i64 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %2 = udiv i64 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i64 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i64 undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %5 = sdiv i64 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %6 = udiv i64 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i64 undef, 2
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %3 = srem i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %4 = urem i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %7 = srem i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %8 = urem i64 undef, 2
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-MVE-LABEL: 'i64'
@@ -254,14 +254,14 @@ define void @i64() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8R-LABEL: 'i64'
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i64 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i64 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i64 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i64 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i64 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i64 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i64 undef, 2
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i64 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %1 = sdiv i64 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = udiv i64 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %3 = srem i64 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %4 = urem i64 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %5 = sdiv i64 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %6 = udiv i64 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %7 = srem i64 undef, 2
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %8 = urem i64 undef, 2
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = sdiv i64 undef, undef

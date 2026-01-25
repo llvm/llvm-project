@@ -1058,9 +1058,13 @@ public:
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
     bool IsFloat = Ty->isFPOrFPVectorTy();
-    // Assume that floating point arithmetic operations cost twice as much as
-    // integer operations.
-    InstructionCost OpCost = (IsFloat ? 2 : 1);
+    InstructionCost OpCost;
+    if (IsFloat)
+      // Should update to Expensive? For now just want to modify integer costing
+      OpCost = 2;
+    else
+      OpCost = BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                             Opd2Info, Args, CxtI);
 
     if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       // The operation is legal. Assume it costs 1.

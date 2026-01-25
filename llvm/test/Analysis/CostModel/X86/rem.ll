@@ -13,60 +13,60 @@
 
 define i32 @srem() {
 ; SSE-LABEL: 'srem'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:1280 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:1600 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:3200 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:6400 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:1920 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:2240 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:4480 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:5120 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:10240 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, undef
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX-LABEL: 'srem'
-; AVX-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:1280 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:1600 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:3200 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:6400 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:1920 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:2240 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:4480 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:5120 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:10240 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, undef
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512-LABEL: 'srem'
-; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:1280 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:1600 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:3200 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:6400 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1920 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:2240 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:4480 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:5120 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:10240 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, undef
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %I64 = srem i64 undef, undef
@@ -94,60 +94,60 @@ define i32 @srem() {
 
 define i32 @urem() {
 ; SSE-LABEL: 'urem'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:1280 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:1600 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:3200 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, undef
-; SSE-NEXT:  Cost Model: Found costs of RThru:6400 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:1920 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:2240 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:4480 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:5120 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, undef
+; SSE-NEXT:  Cost Model: Found costs of RThru:10240 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, undef
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX-LABEL: 'urem'
-; AVX-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:1280 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:1600 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:3200 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, undef
-; AVX-NEXT:  Cost Model: Found costs of RThru:6400 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:1920 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:2240 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:4480 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:5120 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, undef
+; AVX-NEXT:  Cost Model: Found costs of RThru:10240 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, undef
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512-LABEL: 'urem'
-; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:1280 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:1600 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:3200 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:6400 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1920 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:2240 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:4480 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:2560 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:5120 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, undef
+; AVX512-NEXT:  Cost Model: Found costs of RThru:10240 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, undef
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %I64 = urem i64 undef, undef
@@ -175,171 +175,171 @@ define i32 @urem() {
 
 define i32 @srem_const() {
 ; SSE2-LABEL: 'srem_const'
-; SSE2-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; SSE2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; SSE2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; SSE2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; SSE2-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; SSE2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSSE3-LABEL: 'srem_const'
-; SSSE3-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; SSSE3-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE42-LABEL: 'srem_const'
-; SSE42-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; SSE42-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; SSE42-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; SSE42-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; SSE42-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; SSE42-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'srem_const'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'srem_const'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'srem_const'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'srem_const'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SLM-LABEL: 'srem_const'
-; SLM-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; SLM-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; SLM-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; SLM-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; SLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; SLM-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; SLM-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; SLM-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; SLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; SLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; SLM-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; SLM-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; GLM-LABEL: 'srem_const'
-; GLM-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; GLM-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
-; GLM-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; GLM-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; GLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; GLM-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
+; GLM-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; GLM-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; GLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; GLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; GLM-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; GLM-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
@@ -370,95 +370,95 @@ define i32 @srem_const() {
 
 define i32 @urem_const() {
 ; SSE-LABEL: 'urem_const'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, 7
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'urem_const'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, 7
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'urem_const'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, 7
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'urem_const'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'urem_const'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
@@ -489,95 +489,95 @@ define i32 @urem_const() {
 
 define i32 @srem_uniformconst() {
 ; SSE-LABEL: 'srem_uniformconst'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 7)
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'srem_uniformconst'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 7)
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'srem_uniformconst'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, 7
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 7)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'srem_uniformconst'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 7)
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'srem_uniformconst'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 7)
@@ -608,95 +608,95 @@ define i32 @srem_uniformconst() {
 
 define i32 @urem_uniformconst() {
 ; SSE-LABEL: 'urem_uniformconst'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, 7
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 7)
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 7)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'urem_uniformconst'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, 7
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 7)
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 7)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'urem_uniformconst'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, 7
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 7)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'urem_uniformconst'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 7)
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'urem_uniformconst'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 7)
@@ -1279,171 +1279,171 @@ define i32 @urem_uniformconstpow2() {
 
 define i32 @srem_constnegpow2() {
 ; SSE2-LABEL: 'srem_constnegpow2'
-; SSE2-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; SSE2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; SSE2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; SSE2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; SSE2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; SSE2-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; SSE2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; SSE2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSSE3-LABEL: 'srem_constnegpow2'
-; SSSE3-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; SSSE3-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE42-LABEL: 'srem_constnegpow2'
-; SSE42-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; SSE42-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; SSE42-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; SSE42-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; SSE42-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; SSE42-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; SSE42-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'srem_constnegpow2'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'srem_constnegpow2'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'srem_constnegpow2'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'srem_constnegpow2'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SLM-LABEL: 'srem_constnegpow2'
-; SLM-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; SLM-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; SLM-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; SLM-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; SLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; SLM-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; SLM-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; SLM-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; SLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; SLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; SLM-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; SLM-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; GLM-LABEL: 'srem_constnegpow2'
-; GLM-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; GLM-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
-; GLM-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; GLM-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; GLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; GLM-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
+; GLM-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; GLM-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; GLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; GLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; GLM-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; GLM-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; GLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
@@ -1474,95 +1474,95 @@ define i32 @srem_constnegpow2() {
 
 define i32 @urem_constnegpow2() {
 ; SSE-LABEL: 'urem_constnegpow2'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, -16
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'urem_constnegpow2'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, -16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'urem_constnegpow2'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, -16
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'urem_constnegpow2'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'urem_constnegpow2'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
@@ -1593,95 +1593,95 @@ define i32 @urem_constnegpow2() {
 
 define i32 @srem_uniformconstnegpow2() {
 ; SSE-LABEL: 'srem_uniformconstnegpow2'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'srem_uniformconstnegpow2'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'srem_uniformconstnegpow2'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'srem_uniformconstnegpow2'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'srem_uniformconstnegpow2'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = srem i8 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
@@ -1712,95 +1712,95 @@ define i32 @srem_uniformconstnegpow2() {
 
 define i32 @urem_uniformconstnegpow2() {
 ; SSE-LABEL: 'urem_uniformconstnegpow2'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, -16
-; SSE-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
+; SSE-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
+; SSE-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 -16)
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 -16)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 -16)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'urem_uniformconstnegpow2'
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, -16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 -16)
-; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 -16)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 -16)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'urem_uniformconstnegpow2'
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, -16
-; AVX2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:280 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:560 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1120 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 -16)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'urem_uniformconstnegpow2'
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'urem_uniformconstnegpow2'
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:480 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:960 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, splat (i32 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, splat (i32 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, splat (i32 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, splat (i16 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, splat (i16 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, splat (i16 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %I8 = urem i8 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, splat (i8 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, splat (i8 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, splat (i8 -16)
