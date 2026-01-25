@@ -284,6 +284,9 @@ void populateVectorInterleaveLoweringPatterns(RewritePatternSet &patterns,
 void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
                                                PatternBenefit benefit = 1);
 
+void populateVectorDeinterleaveToShufflePatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
+
 /// Populates the pattern set with the following patterns:
 ///
 /// [UnrollBitCastOp]
