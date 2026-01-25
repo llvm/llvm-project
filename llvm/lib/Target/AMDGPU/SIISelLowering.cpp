@@ -17029,6 +17029,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 
   bool isFloatingPoint = LHS.getValueType().isFloatingPoint();
   bool isInteger = LHS.getValueType().isInteger();
+
   // Handle simple floating-point and integer types only.
   if (!isFloatingPoint && !isInteger)
     return SDValue();
