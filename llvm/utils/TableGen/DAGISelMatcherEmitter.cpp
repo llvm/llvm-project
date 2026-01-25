@@ -84,7 +84,8 @@ class MatcherTableEmitter {
   }
 
 public:
-  MatcherTableEmitter(const Matcher *TheMatcher, const CodeGenDAGPatterns &cgp)
+  MatcherTableEmitter(const MatcherList &TheMatcher,
+                      const CodeGenDAGPatterns &cgp)
       : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {
     // Record the usage of ComplexPattern.
     MapVector<const ComplexPattern *, unsigned> ComplexPatternUsage;
@@ -94,26 +95,26 @@ public:
     MapVector<TreePattern *, unsigned> PredicateUsage;
 
     // Iterate the whole MatcherTable once and do some statistics.
-    std::function<void(const Matcher *)> Statistic = [&](const Matcher *N) {
-      while (N) {
-        if (auto *SM = dyn_cast<ScopeMatcher>(N))
-          for (unsigned I = 0; I < SM->getNumChildren(); I++)
-            Statistic(SM->getChild(I));
-        else if (auto *SOM = dyn_cast<SwitchOpcodeMatcher>(N))
-          for (unsigned I = 0; I < SOM->getNumCases(); I++)
-            Statistic(SOM->getCaseMatcher(I));
-        else if (auto *STM = dyn_cast<SwitchTypeMatcher>(N))
-          for (unsigned I = 0; I < STM->getNumCases(); I++)
-            Statistic(STM->getCaseMatcher(I));
-        else if (auto *CPM = dyn_cast<CheckComplexPatMatcher>(N))
-          ++ComplexPatternUsage[&CPM->getPattern()];
-        else if (auto *CPPM = dyn_cast<CheckPatternPredicateMatcher>(N))
-          ++PatternPredicateUsage[CPPM->getPredicate()];
-        else if (auto *PM = dyn_cast<CheckPredicateMatcher>(N))
-          ++PredicateUsage[PM->getPredicate().getOrigPatFragRecord()];
-        N = N->getNext();
-      }
-    };
+    std::function<void(const MatcherList &)> Statistic =
+        [&](const MatcherList &ML) {
+          for (const Matcher *N : ML) {
+            if (auto *SM = dyn_cast<ScopeMatcher>(N))
+              for (unsigned I = 0; I < SM->getNumChildren(); I++)
+                Statistic(SM->getChild(I));
+            else if (auto *SOM = dyn_cast<SwitchOpcodeMatcher>(N))
+              for (unsigned I = 0; I < SOM->getNumCases(); I++)
+                Statistic(SOM->getCaseMatcher(I));
+            else if (auto *STM = dyn_cast<SwitchTypeMatcher>(N))
+              for (unsigned I = 0; I < STM->getNumCases(); I++)
+                Statistic(STM->getCaseMatcher(I));
+            else if (auto *CPM = dyn_cast<CheckComplexPatMatcher>(N))
+              ++ComplexPatternUsage[&CPM->getPattern()];
+            else if (auto *CPPM = dyn_cast<CheckPatternPredicateMatcher>(N))
+              ++PatternPredicateUsage[CPPM->getPredicate()];
+            else if (auto *PM = dyn_cast<CheckPredicateMatcher>(N))
+              ++PredicateUsage[PM->getPredicate().getOrigPatFragRecord()];
+          }
+        };
     Statistic(TheMatcher);
 
     // Sort ComplexPatterns by usage.
@@ -169,10 +170,10 @@ public:
     }
   }
 
-  unsigned EmitMatcherList(const Matcher *N, const unsigned Indent,
+  unsigned EmitMatcherList(const MatcherList &ML, const unsigned Indent,
                            unsigned StartIdx, raw_ostream &OS);
 
-  unsigned SizeMatcherList(Matcher *N, raw_ostream &OS);
+  unsigned SizeMatcherList(MatcherList &ML, raw_ostream &OS);
 
   void EmitPredicateFunctions(raw_ostream &OS);
 
@@ -314,12 +315,11 @@ static std::string getIncludePath(const Record *R) {
 
 /// This function traverses the matcher tree and sizes all the nodes
 /// that are children of the three kinds of nodes that have them.
-unsigned MatcherTableEmitter::SizeMatcherList(Matcher *N, raw_ostream &OS) {
+unsigned MatcherTableEmitter::SizeMatcherList(MatcherList &ML,
+                                              raw_ostream &OS) {
   unsigned Size = 0;
-  while (N) {
+  for (Matcher *N : ML)
     Size += SizeMatcher(N, OS);
-    N = N->getNext();
-  }
   return Size;
 }
 
@@ -335,12 +335,11 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
   // and a trailing zero.
   case Matcher::Scope: {
     ScopeMatcher *SM = cast<ScopeMatcher>(N);
-    assert(SM->getNext() == nullptr && "Scope matcher should not have next");
     unsigned Size = 1; // Count the kind.
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
       const unsigned ChildSize = SizeMatcherList(SM->getChild(i), OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
-      SM->getChild(i)->setSize(ChildSize);
+      SM->getChild(i).setSize(ChildSize);
       Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
     }
     ++Size; // Count the zero sentinel.
@@ -358,17 +357,17 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
     else
       NumCases = cast<SwitchTypeMatcher>(N)->getNumCases();
     for (unsigned i = 0, e = NumCases; i != e; ++i) {
-      Matcher *Child;
+      MatcherList *Child;
       if (SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N)) {
-        Child = SOM->getCaseMatcher(i);
+        Child = &SOM->getCaseMatcher(i);
         Size += 2; // Count the child's opcode.
       } else {
-        Child = cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
+        Child = &cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
         Size += GetVBRSize(cast<SwitchTypeMatcher>(N)
                                ->getCaseType(i)
                                .SimpleTy); // Count the child's type.
       }
-      const unsigned ChildSize = SizeMatcherList(Child, OS);
+      const unsigned ChildSize = SizeMatcherList(*Child, OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       Child->setSize(ChildSize);
       Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
@@ -493,15 +492,15 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         }
       }
 
-      const Matcher *Child = SM->getChild(i);
-      unsigned ChildSize = Child->getSize();
+      const MatcherList &Child = SM->getChild(i);
+      unsigned ChildSize = Child.getSize();
       CurrentIdx += EmitVBRValue(ChildSize, OS);
       if (!OmitComments)
         OS << " // ->" << CurrentIdx + ChildSize;
       OS << '\n';
 
       ChildSize = EmitMatcherList(Child, Indent + 1, CurrentIdx, OS);
-      assert(ChildSize == Child->getSize() &&
+      assert(ChildSize == Child.getSize() &&
              "Emitted child size does not match calculated size");
       CurrentIdx += ChildSize;
     }
@@ -643,13 +642,13 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
     // For each case we emit the size, then the opcode, then the matcher.
     for (unsigned i = 0, e = NumCases; i != e; ++i) {
-      const Matcher *Child;
+      const MatcherList *Child;
       unsigned IdxSize;
       if (const SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N)) {
-        Child = SOM->getCaseMatcher(i);
+        Child = &SOM->getCaseMatcher(i);
         IdxSize = 2; // size of opcode in table is 2 bytes.
       } else {
-        Child = cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
+        Child = &cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
         IdxSize = GetVBRSize(
             cast<SwitchTypeMatcher>(N)
                 ->getCaseType(i)
@@ -676,7 +675,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OS << " // ->" << CurrentIdx + ChildSize;
       OS << '\n';
 
-      ChildSize = EmitMatcherList(Child, Indent + 1, CurrentIdx, OS);
+      ChildSize = EmitMatcherList(*Child, Indent + 1, CurrentIdx, OS);
       assert(ChildSize == Child->getSize() &&
              "Emitted child size does not match calculated size");
       CurrentIdx += ChildSize;
@@ -1187,21 +1186,17 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
 /// This function traverses the matcher tree and emits all the nodes.
 /// The nodes have already been sized.
-unsigned MatcherTableEmitter::EmitMatcherList(const Matcher *N,
+unsigned MatcherTableEmitter::EmitMatcherList(const MatcherList &ML,
                                               const unsigned Indent,
                                               unsigned CurrentIdx,
                                               raw_ostream &OS) {
   unsigned Size = 0;
-  while (N) {
+  for (const Matcher *N : ML) {
     if (!OmitComments)
       OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
     unsigned MatcherSize = EmitMatcher(N, Indent, CurrentIdx, OS);
     Size += MatcherSize;
     CurrentIdx += MatcherSize;
-
-    // If there are other nodes in this list, iterate to them, otherwise we're
-    // done.
-    N = N->getNext();
   }
   return Size;
 }
@@ -1483,8 +1478,8 @@ void MatcherTableEmitter::EmitHistogram(raw_ostream &OS) {
   OS << '\n';
 }
 
-void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
-                            raw_ostream &OS) {
+void llvm::EmitMatcherTable(MatcherList &TheMatcher,
+                            const CodeGenDAGPatterns &CGP, raw_ostream &OS) {
   OS << "#if defined(GET_DAGISEL_DECL) && defined(GET_DAGISEL_BODY)\n";
   OS << "#error GET_DAGISEL_DECL and GET_DAGISEL_BODY cannot be both defined, ";
   OS << "undef both for inline definitions\n";

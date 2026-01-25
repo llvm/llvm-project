@@ -22,101 +22,98 @@ using namespace llvm;
 
 /// ContractNodes - Turn multiple matcher node patterns like 'MoveChild+Record'
 /// into single compound nodes like RecordChild.
-static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
-                          const CodeGenDAGPatterns &CGP) {
-  std::unique_ptr<Matcher> *MatcherPtr = &InputMatcherPtr;
-  while (true) {
-    Matcher *N = MatcherPtr->get();
+static void ContractNodes(MatcherList &ML, const CodeGenDAGPatterns &CGP) {
+  auto P = ML.before_begin();
+  auto I = std::next(P);
+
+  while (I != ML.end()) {
+    Matcher *N = *I;
 
     // If we have a scope node, walk down all of the children.
     if (auto *Scope = dyn_cast<ScopeMatcher>(N)) {
-      for (unsigned i = 0, e = Scope->getNumChildren(); i != e; ++i) {
-        std::unique_ptr<Matcher> Child(Scope->takeChild(i));
-        ContractNodes(Child, CGP);
-        Scope->resetChild(i, Child.release());
-      }
+      for (unsigned i = 0, e = Scope->getNumChildren(); i != e; ++i)
+        ContractNodes(Scope->getChild(i), CGP);
       return;
     }
 
     // If we found a movechild node with a node that comes in a 'foochild' form,
     // transform it.
     if (MoveChildMatcher *MC = dyn_cast<MoveChildMatcher>(N)) {
+      Matcher *Next = *std::next(I);
       Matcher *New = nullptr;
-      if (RecordMatcher *RM = dyn_cast<RecordMatcher>(MC->getNext()))
+      if (RecordMatcher *RM = dyn_cast<RecordMatcher>(Next))
         if (MC->getChildNo() < 8) // Only have RecordChild0...7
           New = new RecordChildMatcher(MC->getChildNo(), RM->getWhatFor(),
                                        RM->getResultNo());
 
-      if (CheckTypeMatcher *CT = dyn_cast<CheckTypeMatcher>(MC->getNext()))
+      if (CheckTypeMatcher *CT = dyn_cast<CheckTypeMatcher>(Next))
         if (MC->getChildNo() < 8 && // Only have CheckChildType0...7
             CT->getResNo() == 0)    // CheckChildType checks res #0
           New = new CheckChildTypeMatcher(MC->getChildNo(), CT->getType());
 
-      if (CheckSameMatcher *CS = dyn_cast<CheckSameMatcher>(MC->getNext()))
+      if (CheckSameMatcher *CS = dyn_cast<CheckSameMatcher>(Next))
         if (MC->getChildNo() < 4) // Only have CheckChildSame0...3
           New =
               new CheckChildSameMatcher(MC->getChildNo(), CS->getMatchNumber());
 
-      if (CheckIntegerMatcher *CI =
-              dyn_cast<CheckIntegerMatcher>(MC->getNext()))
+      if (CheckIntegerMatcher *CI = dyn_cast<CheckIntegerMatcher>(Next))
         if (MC->getChildNo() < 5) // Only have CheckChildInteger0...4
           New = new CheckChildIntegerMatcher(MC->getChildNo(), CI->getValue());
 
-      if (auto *CCC = dyn_cast<CheckCondCodeMatcher>(MC->getNext()))
+      if (auto *CCC = dyn_cast<CheckCondCodeMatcher>(Next))
         if (MC->getChildNo() == 2) // Only have CheckChild2CondCode
           New = new CheckChild2CondCodeMatcher(CCC->getCondCodeName());
 
       if (New) {
-        // Insert the new node.
-        New->setNext(MatcherPtr->release());
-        MatcherPtr->reset(New);
-        // Remove the old one.
-        MC->setNext(MC->getNext()->takeNext());
+        // Erase the old node after the MoveChild.
+        ML.erase_after(I);
+        // Insert the new node before the MoveChild.
+        I = ML.insert_after(P, New);
         continue;
       }
     }
 
     // Turn MoveParent->MoveChild into MoveSibling.
-    if (auto *MP = dyn_cast<MoveParentMatcher>(N)) {
-      if (auto *MC = dyn_cast<MoveChildMatcher>(MP->getNext())) {
+    if (isa<MoveParentMatcher>(N)) {
+      auto J = std::next(I);
+      if (auto *MC = dyn_cast<MoveChildMatcher>(*J)) {
         auto *MS = new MoveSiblingMatcher(MC->getChildNo());
-        MS->setNext(MC->takeNext());
-        MatcherPtr->reset(MS);
+        I = ML.insert_after(P, MS);
+        // Erase the two old nodes.
+        ML.erase_after(I, std::next(J));
         continue;
       }
     }
 
     // Uncontract MoveSibling if it will help form other child operations.
     if (auto *MS = dyn_cast<MoveSiblingMatcher>(N)) {
-      if (auto *RM = dyn_cast<RecordMatcher>(MS->getNext())) {
+      auto J = std::next(I);
+      if (auto *RM = dyn_cast<RecordMatcher>(*J)) {
+        auto K = std::next(J);
         // Turn MoveSibling->Record->MoveParent into MoveParent->RecordChild.
-        if (auto *MP = dyn_cast<MoveParentMatcher>(RM->getNext())) {
+        if (isa<MoveParentMatcher>(*K)) {
           if (MS->getSiblingNo() < 8) { // Only have RecordChild0...7
-            auto *NewMP = new MoveParentMatcher();
             auto *NewRCM = new RecordChildMatcher(
                 MS->getSiblingNo(), RM->getWhatFor(), RM->getResultNo());
-            NewMP->setNext(NewRCM);
-            NewRCM->setNext(MP->takeNext());
-            MatcherPtr->reset(NewMP);
+            I = ML.erase_after(P, K);
+            ML.insert_after(I, NewRCM);
             continue;
           }
         }
 
         // Turn MoveSibling->Record->CheckType->MoveParent into
         // MoveParent->RecordChild->CheckChildType.
-        if (auto *CT = dyn_cast<CheckTypeMatcher>(RM->getNext())) {
-          if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+        if (auto *CT = dyn_cast<CheckTypeMatcher>(*K)) {
+          auto L = std::next(K);
+          if (isa<MoveParentMatcher>(*L)) {
             if (MS->getSiblingNo() < 8 && // Only have CheckChildType0...7
                 CT->getResNo() == 0) {    // CheckChildType checks res #0
-              auto *NewMP = new MoveParentMatcher();
               auto *NewRCM = new RecordChildMatcher(
                   MS->getSiblingNo(), RM->getWhatFor(), RM->getResultNo());
               auto *NewCCT =
                   new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
-              NewMP->setNext(NewRCM);
-              NewRCM->setNext(NewCCT);
-              NewCCT->setNext(MP->takeNext());
-              MatcherPtr->reset(NewMP);
+              I = ML.erase_after(P, L);
+              ML.insert_after(I, {NewRCM, NewCCT});
               continue;
             }
           }
@@ -125,16 +122,15 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 
       // Turn MoveSibling->CheckType->MoveParent into
       // MoveParent->CheckChildType.
-      if (auto *CT = dyn_cast<CheckTypeMatcher>(MS->getNext())) {
-        if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+      if (auto *CT = dyn_cast<CheckTypeMatcher>(*J)) {
+        auto K = std::next(J);
+        if (isa<MoveParentMatcher>(*K)) {
           if (MS->getSiblingNo() < 8 && // Only have CheckChildType0...7
               CT->getResNo() == 0) {    // CheckChildType checks res #0
-            auto *NewMP = new MoveParentMatcher();
             auto *NewCCT =
                 new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
-            NewMP->setNext(NewCCT);
-            NewCCT->setNext(MP->takeNext());
-            MatcherPtr->reset(NewMP);
+            I = ML.erase_after(P, K);
+            ML.insert_after(I, NewCCT);
             continue;
           }
         }
@@ -142,34 +138,31 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 
       // Turn MoveSibling->CheckInteger->MoveParent into
       // MoveParent->CheckChildInteger.
-      if (auto *CI = dyn_cast<CheckIntegerMatcher>(MS->getNext())) {
-        if (auto *MP = dyn_cast<MoveParentMatcher>(CI->getNext())) {
+      if (auto *CI = dyn_cast<CheckIntegerMatcher>(*J)) {
+        auto K = std::next(J);
+        if (isa<MoveParentMatcher>(*K)) {
           if (MS->getSiblingNo() < 5) { // Only have CheckChildInteger0...4
-            auto *NewMP = new MoveParentMatcher();
             auto *NewCCI = new CheckChildIntegerMatcher(MS->getSiblingNo(),
                                                         CI->getValue());
-            NewMP->setNext(NewCCI);
-            NewCCI->setNext(MP->takeNext());
-            MatcherPtr->reset(NewMP);
+            I = ML.erase_after(P, K);
+            ML.insert_after(I, NewCCI);
             continue;
           }
         }
 
         // Turn MoveSibling->CheckInteger->CheckType->MoveParent into
         // MoveParent->CheckChildInteger->CheckType.
-        if (auto *CT = dyn_cast<CheckTypeMatcher>(CI->getNext())) {
-          if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+        if (auto *CT = dyn_cast<CheckTypeMatcher>(*K)) {
+          auto L = std::next(K);
+          if (isa<MoveParentMatcher>(*L)) {
             if (MS->getSiblingNo() < 5 && // Only have CheckChildInteger0...4
                 CT->getResNo() == 0) {    // CheckChildType checks res #0
-              auto *NewMP = new MoveParentMatcher();
               auto *NewCCI = new CheckChildIntegerMatcher(MS->getSiblingNo(),
                                                           CI->getValue());
               auto *NewCCT =
                   new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
-              NewMP->setNext(NewCCI);
-              NewCCI->setNext(NewCCT);
-              NewCCT->setNext(MP->takeNext());
-              MatcherPtr->reset(NewMP);
+              I = ML.erase_after(P, L);
+              ML.insert_after(I, {NewCCI, NewCCT});
               continue;
             }
           }
@@ -178,15 +171,14 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 
       // Turn MoveSibling->CheckCondCode->MoveParent into
       // MoveParent->CheckChild2CondCode.
-      if (auto *CCC = dyn_cast<CheckCondCodeMatcher>(MS->getNext())) {
-        if (auto *MP = dyn_cast<MoveParentMatcher>(CCC->getNext())) {
+      if (auto *CCC = dyn_cast<CheckCondCodeMatcher>(*J)) {
+        auto K = std::next(J);
+        if (isa<MoveParentMatcher>(*K)) {
           if (MS->getSiblingNo() == 2) { // Only have CheckChild2CondCode
-            auto *NewMP = new MoveParentMatcher();
             auto *NewCCCC =
                 new CheckChild2CondCodeMatcher(CCC->getCondCodeName());
-            NewMP->setNext(NewCCCC);
-            NewCCCC->setNext(MP->takeNext());
-            MatcherPtr->reset(NewMP);
+            I = ML.erase_after(P, K);
+            ML.insert_after(I, NewCCCC);
             continue;
           }
         }
@@ -194,34 +186,31 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 
       // Turn MoveSibling->CheckSame->MoveParent into
       // MoveParent->CheckChildSame.
-      if (auto *CS = dyn_cast<CheckSameMatcher>(MS->getNext())) {
-        if (auto *MP = dyn_cast<MoveParentMatcher>(CS->getNext())) {
+      if (auto *CS = dyn_cast<CheckSameMatcher>(*J)) {
+        auto K = std::next(J);
+        if (isa<MoveParentMatcher>(*K)) {
           if (MS->getSiblingNo() < 4) { // Only have CheckChildSame0...3
-            auto *NewMP = new MoveParentMatcher();
             auto *NewCCS = new CheckChildSameMatcher(MS->getSiblingNo(),
                                                      CS->getMatchNumber());
-            NewMP->setNext(NewCCS);
-            NewCCS->setNext(MP->takeNext());
-            MatcherPtr->reset(NewMP);
+            I = ML.erase_after(P, K);
+            ML.insert_after(I, NewCCS);
             continue;
           }
         }
 
         // Turn MoveSibling->CheckSame->CheckType->MoveParent into
         // MoveParent->CheckChildSame->CheckChildType.
-        if (auto *CT = dyn_cast<CheckTypeMatcher>(CS->getNext())) {
-          if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+        if (auto *CT = dyn_cast<CheckTypeMatcher>(*K)) {
+          auto L = std::next(K);
+          if (isa<MoveParentMatcher>(*L)) {
             if (MS->getSiblingNo() < 4 && // Only have CheckChildSame0...3
                 CT->getResNo() == 0) {    // CheckChildType checks res #0
-              auto *NewMP = new MoveParentMatcher();
               auto *NewCCS = new CheckChildSameMatcher(MS->getSiblingNo(),
                                                        CS->getMatchNumber());
               auto *NewCCT =
                   new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
-              NewMP->setNext(NewCCS);
-              NewCCS->setNext(NewCCT);
-              NewCCT->setNext(MP->takeNext());
-              MatcherPtr->reset(NewMP);
+              I = ML.erase_after(P, L);
+              ML.insert_after(I, {NewCCS, NewCCT});
               continue;
             }
           }
@@ -229,23 +218,25 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
       }
 
       // Turn MoveSibling->MoveParent into MoveParent.
-      if (isa<MoveParentMatcher>(MS->getNext())) {
-        MatcherPtr->reset(MS->takeNext());
+      if (isa<MoveParentMatcher>(*J)) {
+        I = ML.erase_after(P, J);
         continue;
       }
     }
 
     // Zap movechild -> moveparent.
-    if (MoveChildMatcher *MC = dyn_cast<MoveChildMatcher>(N))
-      if (MoveParentMatcher *MP = dyn_cast<MoveParentMatcher>(MC->getNext())) {
-        MatcherPtr->reset(MP->takeNext());
+    if (isa<MoveChildMatcher>(N)) {
+      auto J = std::next(I);
+      if (isa<MoveParentMatcher>(*J)) {
+        I = ML.erase_after(P, std::next(J));
         continue;
       }
+    }
 
     // Turn EmitNode->CompleteMatch into MorphNodeTo if we can.
     if (EmitNodeMatcher *EN = dyn_cast<EmitNodeMatcher>(N)) {
-      if (CompleteMatchMatcher *CM =
-              dyn_cast<CompleteMatchMatcher>(EN->getNext())) {
+      auto J = std::next(I);
+      if (auto *CM = dyn_cast<CompleteMatchMatcher>(*J)) {
         // We can only use MorphNodeTo if the result values match up.
         unsigned RootResultFirst = EN->getFirstResultSlot();
         bool ResultsMatch = true;
@@ -284,10 +275,12 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
         if (ResultsMatch) {
           ArrayRef<ValueTypeByHwMode> VTs = EN->getVTList();
           ArrayRef<unsigned> Operands = EN->getOperandList();
-          MatcherPtr->reset(new MorphNodeToMatcher(
+          auto *MNT = new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
               EN->hasInGlue(), EN->hasOutGlue(), EN->hasMemRefs(),
-              EN->getNumFixedArityOperands(), Pattern));
+              EN->getNumFixedArityOperands(), Pattern);
+          ML.erase_after(P, std::next(J));
+          ML.insert_after(P, MNT);
           return;
         }
       }
@@ -297,39 +290,54 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
     // We prefer to do structural checks before type checks, as this opens
     // opportunities for factoring on targets like X86 where many operations are
     // valid on multiple types.
-    if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(N->getNext())) {
-      // Unlink the two nodes from the list.
-      Matcher *CheckType = MatcherPtr->release();
-      Matcher *CheckOpcode = CheckType->takeNext();
-      Matcher *Tail = CheckOpcode->takeNext();
-
-      // Relink them.
-      MatcherPtr->reset(CheckOpcode);
-      CheckOpcode->setNext(CheckType);
-      CheckType->setNext(Tail);
+    if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(*std::next(I))) {
+      ML.splice_after(P, ML, I);
+      // Restore I to the node after P.
+      I = std::next(P);
       continue;
     }
 
-    // No contractions were performed, go to next node.
-    MatcherPtr = &(MatcherPtr->get()->getNextPtr());
-
-    // If we reached the end of the chain, we're done.
-    if (!*MatcherPtr)
-      return;
+    // Move to next node.
+    P = I;
+    ++I;
   }
 }
 
 /// FindNodeWithKind - Scan a series of matchers looking for a matcher with a
 /// specified kind.  Return null if we didn't find one otherwise return the
 /// matcher.
-static Matcher *FindNodeWithKind(Matcher *M, Matcher::KindTy Kind) {
-  for (; M; M = M->getNext())
-    if (M->getKind() == Kind)
-      return M;
-  return nullptr;
+static std::pair<MatcherList::iterator, MatcherList::iterator>
+FindNodeWithKind(MatcherList &ML, Matcher::KindTy Kind) {
+  auto P = ML.before_begin();
+  auto I = std::next(P);
+  while (I != ML.end()) {
+    if (I->getKind() == Kind)
+      break;
+
+    P = I;
+    ++I;
+  }
+
+  return std::make_pair(P, I);
 }
 
-static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr);
+/// Return true if \p M is already the front, or if we can move \p M past
+/// all of the nodes before \p M.
+static bool canMoveToFront(const MatcherList &ML,
+                           MatcherList::const_iterator M) {
+  for (auto Other = ML.begin(); Other != ML.end(); ++Other) {
+    if (M == Other)
+      return true;
+
+    // We have to be able to move this node across the Other node.
+    if (!M->canMoveBeforeNode(*Other))
+      return false;
+  }
+
+  llvm_unreachable("M not part of list?");
+}
+
+static void FactorNodes(MatcherList &ML);
 
 /// Turn matches like this:
 ///   Scope
@@ -343,26 +351,30 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr);
 ///       ABC
 ///       XYZ
 ///
-static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
-  ScopeMatcher *Scope = cast<ScopeMatcher>(MatcherPtr.get());
+/// \p ML is a list that ends with a ScopeMatcher. \p Prev is the iterator
+/// before the ScopeMatcher in \p ML.
+static void FactorScope(MatcherList &ML, MatcherList::iterator Prev) {
+  ScopeMatcher *Scope = cast<ScopeMatcher>(*std::next(Prev));
 
-  SmallVectorImpl<Matcher *> &OptionsToMatch = Scope->getChildren();
+  SmallVectorImpl<MatcherList> &OptionsToMatch = Scope->getChildren();
 
   for (auto I = OptionsToMatch.begin(); I != OptionsToMatch.end();) {
-    // TODO: Store unique_ptr in ScopeMatcher.
+    assert(!I->empty());
     // Factor the subexpression.
-    std::unique_ptr<Matcher> Child(*I);
-    FactorNodes(Child);
+    FactorNodes(*I);
 
     // If the child is a ScopeMatcher we can just merge its contents.
-    if (auto *SM = dyn_cast<ScopeMatcher>(Child.get())) {
-      SmallVectorImpl<Matcher *> &Children = SM->getChildren();
-      *I++ = *Children.begin();
-      I = OptionsToMatch.insert(I, Children.begin() + 1, Children.end());
+    if (auto *SM = dyn_cast<ScopeMatcher>(I->front())) {
+      // Move the MatcherList to a temporary so we can overwrite the location
+      // in OptionsToMatch without deleting the ScopeMatcher.
+      MatcherList Tmp = std::move(*I);
+      SmallVectorImpl<MatcherList> &Children = SM->getChildren();
+      *I++ = std::move(Children.front());
+      I = OptionsToMatch.insert(I,
+                                std::make_move_iterator(Children.begin() + 1),
+                                std::make_move_iterator(Children.end()));
       I += Children.size() - 1;
-      Children.clear();
     } else {
-      Child.release();
       ++I;
     }
   }
@@ -380,33 +392,32 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     auto K = J;
 
     // Find the set of matchers that start with this node.
-    Matcher *Optn = *I;
+    Matcher *Optn = I->front();
 
     // See if the next option starts with the same matcher.  If the two
     // neighbors *do* start with the same matcher, we can factor the matcher out
     // of at least these two patterns.  See what the maximal set we can merge
     // together is.
-    SmallVector<Matcher *, 8> EqualMatchers;
-    EqualMatchers.push_back(Optn);
+    SmallVector<MatcherList, 8> EqualMatchers;
+    EqualMatchers.push_back(std::move(*I));
 
     // Factor all of the known-equal matchers after this one into the same
     // group.
-    while (J != E && (*J)->isEqual(Optn))
-      EqualMatchers.push_back(*J++);
+    while (J != E && J->front()->isEqual(Optn))
+      EqualMatchers.push_back(std::move(*J++));
 
     // If we found a non-equal matcher, see if it is contradictory with the
     // current node.  If so, we know that the ordering relation between the
     // current sets of nodes and this node don't matter.  Look past it to see if
     // we can merge anything else into this matching group.
     while (J != E) {
-      Matcher *ScanMatcher = *J;
+      Matcher *ScanMatcher = J->front();
 
       // If we found an entry that matches out matcher, merge it into the set to
       // handle.
       if (Optn->isEqual(ScanMatcher)) {
         // It is equal after all, add the option to EqualMatchers.
-        EqualMatchers.push_back(ScanMatcher);
-        ++J;
+        EqualMatchers.push_back(std::move(*J++));
         continue;
       }
 
@@ -414,7 +425,10 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
       // move it earlier in OptionsToMatch for the next iteration of the outer
       // loop. Then continue searching for equal or contradictory matchers.
       if (Optn->isContradictory(ScanMatcher)) {
-        *K++ = *J++;
+        if (J != K)
+          *K = std::move(*J);
+        ++J;
+        ++K;
         continue;
       }
 
@@ -422,12 +436,10 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
       // sequence.  If so, and if we can move it up, it might be contradictory
       // or the same as what we're looking for.  If so, reorder it.
       if (Optn->isSimplePredicateOrRecordNode()) {
-        Matcher *M2 = FindNodeWithKind(ScanMatcher, Optn->getKind());
-        if (M2 && M2 != ScanMatcher && M2->canMoveBefore(ScanMatcher) &&
+        auto [P, M2] = FindNodeWithKind(*J, Optn->getKind());
+        if (M2 != J->end() && *M2 != ScanMatcher && canMoveToFront(*J, M2) &&
             (M2->isEqual(Optn) || M2->isContradictory(Optn))) {
-          Matcher *MatcherWithoutM2 = ScanMatcher->unlinkNode(M2);
-          M2->setNext(MatcherWithoutM2);
-          *J = M2;
+          J->splice_after(J->before_begin(), *J, P);
           continue;
         }
       }
@@ -439,49 +451,51 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     if (J != E &&
         // Don't print if it's obvious nothing extract could be merged anyway.
         std::next(J) != E) {
-      LLVM_DEBUG(errs() << "Couldn't merge this:\n";
-                 Optn->print(errs(), indent(4)); errs() << "into this:\n";
-                 (*J)->print(errs(), indent(4));
-                 (*std::next(J))->printOne(errs());
-                 if (std::next(J, 2) != E)(*std::next(J, 2))->printOne(errs());
-                 errs() << "\n");
+      LLVM_DEBUG(
+          errs() << "Couldn't merge this:\n"; I->print(errs(), indent(4));
+          errs() << "into this:\n"; J->print(errs(), indent(4));
+          std::next(J)->front()->printOne(errs());
+          if (std::next(J, 2) != E) std::next(J, 2)->front()->printOne(errs());
+          errs() << "\n");
     }
 
     // If we removed any equal matchers, we may need to slide the rest of the
     // elements down for the next iteration of the outer loop.
     if (J != K)
-      E = std::copy(J, E, K);
+      E = std::move(J, E, K);
 
     // If we only found one option starting with this matcher, no factoring is
     // possible. Put the Matcher back in OptionsToMatch.
     if (EqualMatchers.size() == 1) {
-      *I = EqualMatchers[0];
+      *I = std::move(EqualMatchers[0]);
       continue;
     }
 
     // Factor these checks by pulling the first node off each entry and
     // discarding it.  Take the first one off the first entry to reuse.
-    Matcher *Shared = Optn;
-    Optn = Optn->takeNext();
-    EqualMatchers[0] = Optn;
+    MatcherList Shared;
+    Shared.splice_after(Shared.before_begin(), EqualMatchers[0],
+                        EqualMatchers[0].before_begin());
+    Optn = EqualMatchers[0].empty() ? nullptr : EqualMatchers[0].front();
 
     // Remove and delete the first node from the other matchers we're factoring.
     for (unsigned i = 1, e = EqualMatchers.size(); i != e; ++i) {
-      Matcher *Tmp = EqualMatchers[i]->takeNext();
-      delete EqualMatchers[i];
-      EqualMatchers[i] = Tmp;
+      EqualMatchers[i].pop_front();
+      Matcher *Tmp =
+          EqualMatchers[i].empty() ? nullptr : EqualMatchers[i].front();
       assert(!Optn == !Tmp && "Expected all to be null if any are null");
     }
 
-    if (EqualMatchers[0]) {
-      Shared->setNext(new ScopeMatcher(std::move(EqualMatchers)));
+    if (!EqualMatchers[0].empty()) {
+      Shared.insert_after(Shared.begin(),
+                          new ScopeMatcher(std::move(EqualMatchers)));
 
       // Recursively factor the newly created node.
-      FactorScope(Shared->getNextPtr());
+      FactorScope(Shared, Shared.begin());
     }
 
     // Put the new Matcher where we started in OptionsToMatch.
-    *I = Shared;
+    *I = std::move(Shared);
   }
 
   // Trim the array to match the updated end.
@@ -490,12 +504,14 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   // If we're down to a single pattern to match, then we don't need this scope
   // anymore.
   if (OptionsToMatch.size() == 1) {
-    MatcherPtr.reset(OptionsToMatch.pop_back_val());
+    MatcherList Tmp = std::move(OptionsToMatch[0]);
+    ML.erase_after(Prev);
+    ML.splice_after(Prev, Tmp);
     return;
   }
 
   if (OptionsToMatch.empty()) {
-    MatcherPtr.reset();
+    ML.erase_after(Prev);
     return;
   }
 
@@ -505,9 +521,9 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   // Check to see if all of the leading entries are now opcode checks.  If so,
   // we can convert this Scope to be a OpcodeSwitch instead.
   bool AllOpcodeChecks = true, AllTypeChecks = true;
-  for (Matcher *Optn : OptionsToMatch) {
+  for (MatcherList &Optn : OptionsToMatch) {
     // Check to see if this breaks a series of CheckOpcodeMatchers.
-    if (AllOpcodeChecks && !isa<CheckOpcodeMatcher>(Optn)) {
+    if (AllOpcodeChecks && !isa<CheckOpcodeMatcher>(Optn.front())) {
 #if 0
       if (i > 3) {
         errs() << "FAILING OPC #" << i << "\n";
@@ -519,8 +535,9 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
 
     // Check to see if this breaks a series of CheckTypeMatcher's.
     if (AllTypeChecks) {
-      CheckTypeMatcher *CTM = cast_or_null<CheckTypeMatcher>(
-          FindNodeWithKind(Optn, Matcher::CheckType));
+      auto [P, I] = FindNodeWithKind(Optn, Matcher::CheckType);
+      auto *CTM =
+          cast_or_null<CheckTypeMatcher>(I == Optn.end() ? nullptr : *I);
       if (!CTM || !CTM->getType().isSimple() ||
           // iPTR/cPTR checks could alias any other case without us knowing,
           // don't bother with them.
@@ -530,7 +547,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
           CTM->getResNo() != 0 ||
           // If the CheckType isn't at the start of the list, see if we can move
           // it there.
-          !CTM->canMoveBefore(Optn)) {
+          !canMoveToFront(Optn, I)) {
 #if 0
         if (i > 3 && AllTypeChecks) {
           errs() << "FAILING TYPE #" << i << "\n";
@@ -544,89 +561,93 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   // If all the options are CheckOpcode's, we can form the SwitchOpcode, woot.
   if (AllOpcodeChecks) {
     StringSet<> Opcodes;
-    SmallVector<std::pair<const SDNodeInfo *, Matcher *>, 8> Cases;
-    for (Matcher *Optn : OptionsToMatch) {
-      CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(Optn);
+    SmallVector<std::pair<const SDNodeInfo *, MatcherList>, 8> Cases;
+    for (MatcherList &Optn : OptionsToMatch) {
+      CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(Optn.front());
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      Cases.emplace_back(&COM->getOpcode(), COM->takeNext());
-      delete COM;
+      const SDNodeInfo &Opcode = COM->getOpcode();
+      Optn.erase_after(Optn.before_begin());
+      Cases.emplace_back(&Opcode, std::move(Optn));
     }
-    OptionsToMatch.clear();
 
-    MatcherPtr.reset(new SwitchOpcodeMatcher(std::move(Cases)));
+    ML.erase_after(Prev);
+    ML.insert_after(Prev, new SwitchOpcodeMatcher(std::move(Cases)));
     return;
   }
 
   // If all the options are CheckType's, we can form the SwitchType, woot.
   if (AllTypeChecks) {
     DenseMap<unsigned, unsigned> TypeEntry;
-    SmallVector<std::pair<MVT, Matcher *>, 8> Cases;
-    for (Matcher *Optn : OptionsToMatch) {
-      Matcher *M = FindNodeWithKind(Optn, Matcher::CheckType);
-      assert(M && isa<CheckTypeMatcher>(M) && "Unknown Matcher type");
+    SmallVector<std::pair<MVT, MatcherList>, 8> Cases;
+    for (MatcherList &Optn : OptionsToMatch) {
+      auto [P, I] = FindNodeWithKind(Optn, Matcher::CheckType);
+      assert(I != Optn.end() && isa<CheckTypeMatcher>(*I) &&
+             "Unknown Matcher type");
 
-      auto *CTM = cast<CheckTypeMatcher>(M);
-      Matcher *MatcherWithoutCTM = Optn->unlinkNode(CTM);
+      auto *CTM = cast<CheckTypeMatcher>(*I);
       MVT CTMTy = CTM->getType().getSimple();
-      delete CTM;
+      Optn.erase_after(P);
 
       unsigned &Entry = TypeEntry[CTMTy.SimpleTy];
       if (Entry != 0) {
         // If we have unfactored duplicate types, then we should factor them.
-        Matcher *PrevMatcher = Cases[Entry - 1].second;
-        if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(PrevMatcher)) {
-          SM->getChildren().push_back(MatcherWithoutCTM);
+        MatcherList &PrevMatcher = Cases[Entry - 1].second;
+        if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(PrevMatcher.front())) {
+          SM->getChildren().push_back(std::move(Optn));
           continue;
         }
 
-        SmallVector<Matcher *, 2> Entries = {PrevMatcher, MatcherWithoutCTM};
-        Cases[Entry - 1].second = new ScopeMatcher(std::move(Entries));
+        SmallVector<MatcherList, 2> Entries;
+        Entries.push_back(std::move(PrevMatcher));
+        Entries.push_back(std::move(Optn));
+        assert(Cases[Entry - 1].second.empty());
+        Cases[Entry - 1].second.insert_after(
+            Cases[Entry - 1].second.before_begin(),
+            new ScopeMatcher(std::move(Entries)));
         continue;
       }
 
       Entry = Cases.size() + 1;
-      Cases.emplace_back(CTMTy, MatcherWithoutCTM);
+      Cases.emplace_back(CTMTy, std::move(Optn));
     }
-    OptionsToMatch.clear();
+    ML.erase_after(Prev);
 
     // Make sure we recursively factor any scopes we may have created.
     for (auto &M : Cases) {
-      if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(M.second)) {
-        std::unique_ptr<Matcher> Scope(SM);
-        FactorScope(Scope);
-        M.second = Scope.release();
-        assert(M.second && "null matcher");
+      if (isa<ScopeMatcher>(M.second.front())) {
+        FactorScope(M.second, M.second.before_begin());
+        assert(!M.second.empty() && "empty matcher list");
       }
     }
 
     if (Cases.size() != 1) {
-      MatcherPtr.reset(new SwitchTypeMatcher(std::move(Cases)));
+      ML.insert_after(Prev, new SwitchTypeMatcher(std::move(Cases)));
     } else {
-      // If we factored and ended up with one case, create it now.
-      MatcherPtr.reset(new CheckTypeMatcher(Cases[0].first, 0));
-      MatcherPtr->setNext(Cases[0].second);
+      // If we factored and ended up with one case, insert a type check and
+      // splice the rest.
+      auto I = ML.insert_after(Prev, new CheckTypeMatcher(Cases[0].first, 0));
+      ML.splice_after(I, Cases[0].second);
     }
     return;
   }
 }
 
 /// Search a ScopeMatcher to factor with FactorScope.
-static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
-  // Look for a scope matcher. Iterates instead of recurses to reduce stack
-  // usage.
-  std::unique_ptr<Matcher> *MatcherPtr = &InputMatcherPtr;
-  do {
-    if (isa<ScopeMatcher>(*MatcherPtr))
-      return FactorScope(*MatcherPtr);
+static void FactorNodes(MatcherList &ML) {
+  auto P = ML.before_begin();
+  auto I = std::next(P);
 
-    // If this is not a scope matcher, go to the next node.
-    MatcherPtr = &(MatcherPtr->get()->getNextPtr());
-  } while (MatcherPtr->get());
+  while (I != ML.end()) {
+    if (isa<ScopeMatcher>(*I))
+      return FactorScope(ML, P);
+
+    P = I;
+    ++I;
+  }
 }
 
-void llvm::OptimizeMatcher(std::unique_ptr<Matcher> &MatcherPtr,
-                           const CodeGenDAGPatterns &CGP) {
-  ContractNodes(MatcherPtr, CGP);
-  FactorNodes(MatcherPtr);
+void llvm::OptimizeMatcher(MatcherList &ML, const CodeGenDAGPatterns &CGP) {
+  ContractNodes(ML, CGP);
+  FactorNodes(ML);
 }
