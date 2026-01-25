@@ -911,7 +911,8 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       // Try to use S_ADDK_I32 and S_MULK_I32.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
-          MI.getOpcode() == AMDGPU::S_MUL_I32) {
+          MI.getOpcode() == AMDGPU::S_MUL_I32 ||
+          MI.getOpcode() == AMDGPU::S_OR_B32) {
         const MachineOperand *Dest = &MI.getOperand(0);
         MachineOperand *Src0 = &MI.getOperand(1);
         MachineOperand *Src1 = &MI.getOperand(2);
@@ -931,16 +932,31 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MRI->setRegAllocationHint(Src0->getReg(), 0, Dest->getReg());
           continue;
         }
-
+        unsigned Opc;
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
           if (Src1->isImm() && isKImmOperand(*Src1)) {
-            unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ?
-              AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
+            unsigned NewOpc = 0;
+            int64_t ImmVal = Src1->getImm();
 
-            Src1->setImm(SignExtend64(Src1->getImm(), 32));
-            MI.setDesc(TII->get(Opc));
-            MI.tieOperands(0, 1);
-            Changed = true;
+            if (MI.getOpcode() == AMDGPU::S_OR_B32) {
+                uint32_t Imm = static_cast<uint32_t>(ImmVal);
+                if (MI.getFlag(MachineInstr::MIFlag::Disjoint)) {
+                    bool IsBitSetCandidate = isPowerOf2_32(Imm) && MI.findRegisterDefOperand(AMDGPU::SCC, nullptr)->isDead() && (llvm::countr_zero(Imm) != 0);
+                    if (!IsBitSetCandidate) {
+                        NewOpc = AMDGPU::S_ADDK_I32;
+                    }
+                }
+            } 
+            else {
+                NewOpc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ? AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
+            }
+
+            if (NewOpc) {
+                Src1->setImm(SignExtend64(ImmVal, 32));
+                MI.setDesc(TII->get(NewOpc));
+                MI.tieOperands(0, 1);
+                Changed = true;
+            }
           }
         }
       }
