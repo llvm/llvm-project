@@ -3426,6 +3426,11 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
   if (Depth == MaxAnalysisRecursionDepth)
     return false;
 
+  if (const CallBase *CB = dyn_cast<CallBase>(VInst)) {
+    FPClassTest NoFPClass = CB->getParamNoFPClass(U.getOperandNo());
+    DemandedMask &= ~NoFPClass;
+  }
+
   Value *NewVal;
 
   if (VInst->hasOneUse()) {
