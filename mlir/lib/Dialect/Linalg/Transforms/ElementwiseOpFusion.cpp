@@ -2307,8 +2307,12 @@ public:
       }
 
       // Create a constant scalar value from the splat constant.
-      Value scalarConstant =
-          arith::ConstantOp::create(rewriter, def->getLoc(), constantAttr);
+      Operation *scalarConstantOp = def->getDialect()->materializeConstant(
+          rewriter, constantAttr, constantAttr.getType(), def->getLoc());
+      if (!scalarConstantOp)
+        return rewriter.notifyMatchFailure(
+            genericOp, "failed to materialize scalar constant");
+      Value scalarConstant = scalarConstantOp->getResult(0);
 
       SmallVector<Value> outputOperands = genericOp.getOutputs();
       auto fusedOp =
