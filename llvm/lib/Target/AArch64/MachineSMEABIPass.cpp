@@ -305,6 +305,7 @@ struct MachineSMEABI : public MachineFunctionPass {
     AU.setPreservesCFG();
     AU.addRequired<EdgeBundlesWrapperLegacy>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -329,6 +330,9 @@ struct MachineSMEABI : public MachineFunctionPass {
   /// \p Forwards, otherwise, propagates backwards (from successors ->
   /// predecessors).
   void propagateDesiredStates(FunctionInfo &FnInfo, bool Forwards = true);
+
+  void addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
+                     CallingConv::ID ExpectedCC);
 
   void emitZT0SaveRestore(EmitContext &, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, bool IsSave);
@@ -406,6 +410,11 @@ struct MachineSMEABI : public MachineFunctionPass {
                            unsigned Marker, StringRef RemarkName,
                            StringRef SaveName) const;
 
+  void emitError(const Twine &Message) {
+    LLVMContext &Context = MF->getFunction().getContext();
+    Context.emitError(MF->getName() + ": " + Message);
+  }
+
   /// Save live physical registers to virtual registers.
   PhysRegSave createPhysRegSave(LiveRegs PhysLiveRegs, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI, DebugLoc DL);
@@ -420,7 +429,8 @@ private:
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
   const AArch64FunctionInfo *AFI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
+  const AArch64InstrInfo *TII = nullptr;
+  const LibcallLoweringInfo *LLI = nullptr;
 
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -876,11 +886,24 @@ void MachineSMEABI::restorePhyRegSave(const PhysRegSave &RegSave,
         .addReg(RegSave.X0Save);
 }
 
+void MachineSMEABI::addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
+                                  CallingConv::ID ExpectedCC) {
+  RTLIB::LibcallImpl LCImpl = LLI->getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    emitError("cannot lower SME ABI (SME routines unsupported)");
+  CallingConv::ID CC = LLI->getLibcallImplCallingConv(LCImpl);
+  StringRef ImplName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+  if (CC != ExpectedCC)
+    emitError("invalid calling convention for SME routine: '" + ImplName + "'");
+  // FIXME: This assumes the ImplName StringRef is null-terminated.
+  MIB.addExternalSymbol(ImplName.data());
+  MIB.addRegMask(TRI->getCallPreservedMask(*MF, CC));
+}
+
 void MachineSMEABI::emitRestoreLazySave(EmitContext &Context,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         LiveRegs PhysLiveRegs) {
-  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
   Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
   Register TPIDR2 = AArch64::X0;
@@ -901,11 +924,12 @@ void MachineSMEABI::emitRestoreLazySave(EmitContext &Context,
       .addImm(0)
       .addImm(0);
   // (Conditionally) restore ZA state.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::RestoreZAPseudo))
-      .addReg(TPIDR2EL0)
-      .addReg(TPIDR2)
-      .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_RESTORE))
-      .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+  auto RestoreZA = BuildMI(MBB, MBBI, DL, TII->get(AArch64::RestoreZAPseudo))
+                       .addReg(TPIDR2EL0)
+                       .addReg(TPIDR2);
+  addSMELibCall(
+      RestoreZA, RTLIB::SMEABI_TPIDR2_RESTORE,
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
   // Zero TPIDR2_EL0.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
@@ -989,7 +1013,6 @@ static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
 
 void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI) {
-  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   bool ZeroZA = AFI->getSMEFnAttrs().isNewZA();
@@ -1006,9 +1029,10 @@ void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
             .addReg(TPIDR2EL0)
             .addImm(ZeroZA)
-            .addImm(ZeroZT0)
-            .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
-            .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+            .addImm(ZeroZT0);
+    addSMELibCall(
+        CommitZASave, RTLIB::SMEABI_TPIDR2_SAVE,
+        CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
     if (ZeroZA)
       CommitZASave.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
     if (ZeroZT0)
@@ -1031,8 +1055,6 @@ void MachineSMEABI::emitFullZASaveRestore(EmitContext &Context,
                                           MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
                                           LiveRegs PhysLiveRegs, bool IsSave) {
-  auto *TLI = Subtarget->getTargetLowering();
-
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   if (IsSave)
@@ -1047,13 +1069,12 @@ void MachineSMEABI::emitFullZASaveRestore(EmitContext &Context,
       .addReg(Context.getAgnosticZABufferPtr(*MF));
 
   // Call __arm_sme_save/__arm_sme_restore.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-      .addReg(BufferPtr, RegState::Implicit)
-      .addExternalSymbol(TLI->getLibcallName(
-          IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE))
-      .addRegMask(TRI->getCallPreservedMask(
-          *MF,
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+  auto SaveRestoreZA = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+                           .addReg(BufferPtr, RegState::Implicit);
+  addSMELibCall(
+      SaveRestoreZA,
+      IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE,
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
 
   restorePhyRegSave(RegSave, MBB, MBBI, DL);
 }
@@ -1103,14 +1124,11 @@ void MachineSMEABI::emitAllocateFullZASaveBuffer(
 
   // Calculate the SME state size.
   {
-    auto *TLI = Subtarget->getTargetLowering();
-    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-        .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_SME_STATE_SIZE))
-        .addReg(AArch64::X0, RegState::ImplicitDefine)
-        .addRegMask(TRI->getCallPreservedMask(
-            *MF, CallingConv::
-                     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+    auto SMEStateSize = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+                            .addReg(AArch64::X0, RegState::ImplicitDefine);
+    addSMELibCall(
+        SMEStateSize, RTLIB::SMEABI_SME_STATE_SIZE,
+        CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), BufferSize)
         .addReg(AArch64::X0);
   }
@@ -1245,7 +1263,8 @@ INITIALIZE_PASS(MachineSMEABI, "aarch64-machine-sme-abi", "Machine SME ABI",
                 false, false)
 
 bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getSubtarget<AArch64Subtarget>().hasSME())
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget->hasSME())
     return false;
 
   AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -1257,8 +1276,9 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
 
   this->MF = &MF;
-  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  LLI = &getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+      *MF.getFunction().getParent(), *Subtarget);
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();

@@ -3492,6 +3492,22 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_tanf",
+    hdrs = ["src/__support/math/tanf.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction",
+        ":__support_sincosf_utils",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -5166,14 +5182,7 @@ libc_math_function(
 libc_math_function(
     name = "tanf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_range_reduction",
-        ":__support_sincosf_utils",
+        ":__support_math_tanf",
     ],
 )
 
