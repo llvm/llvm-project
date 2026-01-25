@@ -35,11 +35,11 @@ namespace logf16_internal {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
-static constexpr size_t N_LOGF16_EXCEPTS = 5;
+LIBC_INLINE_VAR constexpr size_t N_LOGF16_EXCEPTS = 5;
 #else
-static constexpr size_t N_LOGF16_EXCEPTS = 11;
+LIBC_INLINE_VAR constexpr size_t N_LOGF16_EXCEPTS = 11;
 #endif
-static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
     LOGF16_EXCEPTS = {{
 // (input, RZ output, RU offset, RD offset, RN offset)
 #ifndef LIBC_TARGET_CPU_HAS_FMA_FLOAT
