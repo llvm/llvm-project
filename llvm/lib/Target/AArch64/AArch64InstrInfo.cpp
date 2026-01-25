@@ -5063,6 +5063,15 @@ AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
   case AArch64::LDRDroX:
   case AArch64::LDRXroX:
   case AArch64::LDRQroX:
+  case AArch64::STRBroX:
+  case AArch64::STRBBroX:
+  case AArch64::STRHroX:
+  case AArch64::STRHHroX:
+  case AArch64::STRWroX:
+  case AArch64::STRSroX:
+  case AArch64::STRXroX:
+  case AArch64::STRDroX:
+  case AArch64::STRQroX:
     return MI.getOperand(4);
   }
 }

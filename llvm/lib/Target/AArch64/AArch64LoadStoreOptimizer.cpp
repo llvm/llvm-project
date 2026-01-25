@@ -513,7 +513,6 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
 }
 
 static unsigned getBaseAddressOpcode(unsigned Opc) {
-  // TODO: Add more index address stores.
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no base address equivalent!");
@@ -545,6 +544,24 @@ static unsigned getBaseAddressOpcode(unsigned Opc) {
     return AArch64::LDRXui;
   case AArch64::LDRQroX:
     return AArch64::LDRQui;
+  case AArch64::STRBroX:
+    return AArch64::STRBui;
+  case AArch64::STRBBroX:
+    return AArch64::STRBBui;
+  case AArch64::STRHroX:
+    return AArch64::STRHui;
+  case AArch64::STRHHroX:
+    return AArch64::STRHHui;
+  case AArch64::STRWroX:
+    return AArch64::STRWui;
+  case AArch64::STRSroX:
+    return AArch64::STRSui;
+  case AArch64::STRXroX:
+    return AArch64::STRXui;
+  case AArch64::STRDroX:
+    return AArch64::STRDui;
+  case AArch64::STRQroX:
+    return AArch64::STRQui;
   }
 }
 
@@ -805,29 +822,37 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   default:
     return false;
   // Scaled instructions.
-  // TODO: Add more index address stores.
   case AArch64::LDRBroX:
   case AArch64::LDRBBroX:
   case AArch64::LDRSBXroX:
   case AArch64::LDRSBWroX:
+  case AArch64::STRBroX:
+  case AArch64::STRBBroX:
     Scale = 1;
     return true;
   case AArch64::LDRHroX:
   case AArch64::LDRHHroX:
   case AArch64::LDRSHXroX:
   case AArch64::LDRSHWroX:
+  case AArch64::STRHroX:
+  case AArch64::STRHHroX:
     Scale = 2;
     return true;
   case AArch64::LDRWroX:
   case AArch64::LDRSroX:
   case AArch64::LDRSWroX:
+  case AArch64::STRWroX:
+  case AArch64::STRSroX:
     Scale = 4;
     return true;
   case AArch64::LDRDroX:
   case AArch64::LDRXroX:
+  case AArch64::STRDroX:
+  case AArch64::STRXroX:
     Scale = 8;
     return true;
   case AArch64::LDRQroX:
+  case AArch64::STRQroX:
     Scale = 16;
     return true;
   }
@@ -2712,8 +2737,8 @@ AArch64LoadStoreOpt::findMatchingConstOffsetBackward(
   MachineInstr &MemMI = *I;
   MachineBasicBlock::iterator MBBI = I;
 
-  // If the load is the first instruction in the block, there's obviously
-  // not any matching load or store.
+  // If the load or store is the first instruction in the block, there's
+  // obviously not any matching const-offset instruction to merge.
   if (MBBI == B)
     return E;
 
@@ -2979,6 +3004,15 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
   unsigned Offset;
   Update = findMatchingConstOffsetBackward(MBBI, LdStConstLimit, Offset);
   if (Update != E && (Offset & (Scale - 1)) == 0) {
+    // If the index register is the same as the register being stored, we
+    // cannot perform this optimization because the add instruction will
+    // overwrite the value in the index register before it is stored.
+    if (MI.mayStore()) {
+      Register IndexReg = AArch64InstrInfo::getLdStOffsetOp(MI).getReg();
+      Register StoreReg = getLdStRegOp(MI).getReg();
+      if (TRI->regsOverlap(IndexReg, StoreReg))
+        return false;
+    }
     // Merge the imm12 into the ld/st.
     MBBI = mergeConstOffsetInsn(MBBI, Update, Offset, Scale);
     return true;
@@ -3074,12 +3108,12 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   }
 
   // 5) Find a register assigned with a const value that can be combined with
-  // into the load or store. e.g.,
+  //    the load or store. e.g.,
   //        mov x8, #LargeImm   ; = a * (1<<12) + imm12
-  //        ldr x1, [x0, x8]
+  //        ldr x1, [x0, x8]    ; or str x1, [x0, x8]
   //        ; becomes
   //        add x8, x0, a * (1<<12)
-  //        ldr x1, [x8, imm12]
+  //        ldr x1, [x8, imm12] ; or str x1, [x8, imm12]
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
     int Scale;
