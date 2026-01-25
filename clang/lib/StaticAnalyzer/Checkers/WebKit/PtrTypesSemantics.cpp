@@ -508,6 +508,17 @@ public:
     if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
       if (FnDecl->isVirtualAsWritten())
         return false;
+      auto ReturnType = FnDecl->getReturnType();
+      if (auto *Type = ReturnType.getTypePtrOrNull()) {
+        if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
+          if (auto *Attr = AttrType->getAttr()) {
+            if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
+              if (AnnotateType->getAnnotation() == "webkit.nodelete")
+                return true;
+            }
+          }
+        }
+      }
     }
     return WithCachedResult(D, [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {

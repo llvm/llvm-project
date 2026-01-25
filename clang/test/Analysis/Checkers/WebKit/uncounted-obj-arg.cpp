@@ -389,6 +389,9 @@ public:
   unsigned trivial71() { return std::bit_cast<unsigned>(nullptr); }
   unsigned trivial72() { Number n { 5 }; return WTF::move(n).value(); }
 
+  unsigned [[clang::annotate_type("webkit.nodelete")]] nodelete1();
+  void [[clang::annotate_type("webkit.nodelete")]] nodelete2();
+
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
     s_RefCounted.ref();
@@ -580,6 +583,9 @@ public:
     getFieldTrivial().trivial69(); // no-warning
     getFieldTrivial().trivial70(); // no-warning
     getFieldTrivial().trivial71(); // no-warning
+
+    getFieldTrivial().nodelete1(); // no-warning
+    getFieldTrivial().nodelete2(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
