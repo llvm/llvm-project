@@ -386,8 +386,7 @@ define <2 x float> @select_fdiv(i1 %cond, <2 x float> %x, <2 x float> %y) {
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 2, i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 10, i32 2}
