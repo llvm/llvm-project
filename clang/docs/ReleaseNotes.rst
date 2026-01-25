@@ -159,6 +159,24 @@ Improvements to Clang's diagnostics
     int* p(int *in) { return in; }
                              ^~
 
+- Added ``-Wlifetime-safety-noescape`` to detect misuse of ``[[clang::noescape]]``
+  annotation where the parameter escapes through return. For example:
+
+  .. code-block:: c++
+
+    int* p(int *in [[clang::noescape]]) { return in; }
+
+  Clang will warn:
+
+  .. code-block:: c++
+
+    warning: parameter is marked [[clang::noescape]] but escapes
+    int* p(int *in [[clang::noescape]]) { return in; }
+           ^~~~~~~
+    note: returned here
+    int* p(int *in [[clang::noescape]]) { return in; }
+                                                 ^~
+
 Improvements to Clang's time-trace
 ----------------------------------
 
