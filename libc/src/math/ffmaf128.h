@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-float ffmaf128(float128 x, float128 y, float128 z);
+float128 ffmaf128(float128 x, float128 y, float128 z);
 
 } // namespace LIBC_NAMESPACE_DECL
 

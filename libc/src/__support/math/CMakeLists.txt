@@ -611,6 +611,15 @@ add_header_library(
 )
 
 add_header_library(
+  ffmaf128
+  HDRS
+    ffmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+
+add_header_library(
   inv_trigf_utils
   HDRS
     inv_trigf_utils.h
