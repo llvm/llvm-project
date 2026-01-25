@@ -302,6 +302,10 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Add deprecation warnings to ``CompletionChunk.isKind...`` methods.
+  These will be removed in a future release. Existing uses should be adapted
+  to directly compare equality of the ``CompletionChunk`` kind with
+  the corresponding ``CompletionChunkKind`` variant.
 
 OpenMP Support
 --------------
