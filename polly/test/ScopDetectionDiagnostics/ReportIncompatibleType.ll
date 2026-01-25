@@ -1,7 +1,7 @@
 ; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -pass-remarks-missed=polly-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: remark: /app/example.c:73:19: The following errors keep this region from being a Scop.
-; CHECK: remark: /app/example.c:73:19: Incompatible (non-fixed size) type
+; CHECK: remark: /app/example.c:73:19: Incompatible (non-fixed size) type: <vscale x 8 x half>
 ; CHECK: remark: /app/example.c:73:19: Invalid Scop candidate ends here.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"

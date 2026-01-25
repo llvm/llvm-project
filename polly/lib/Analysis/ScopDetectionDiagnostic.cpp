@@ -866,7 +866,7 @@ const DebugLoc &ReportIncompatibleType::getDebugLoc() const {
 }
 
 std::string ReportIncompatibleType::getEndUserMessage() const {
-  return "Incompatible (non-fixed size) type";
+  return "Incompatible (non-fixed size) type: " + *Ty;
 }
 
 bool ReportIncompatibleType::classof(const RejectReason *RR) {
