@@ -121,7 +121,7 @@ struct TestVectorContractionPrepareForMMTLowering
     return "test-vector-contraction-prepare-for-mmt-lowering";
   }
   StringRef getDescription() const final {
-    return "Test vector.contraction matmul canonicalization for MMT lowering.";
+    return "Test vector.contract matmul canonicalization for MMT lowering.";
   }
   TestVectorContractionPrepareForMMTLowering() = default;
 

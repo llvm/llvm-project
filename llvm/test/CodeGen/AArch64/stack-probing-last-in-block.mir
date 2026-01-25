@@ -96,7 +96,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $x9
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 1, 12
-  ; CHECK-NEXT:   frame-setup STRXui $xzr, $sp, 0
+  ; CHECK-NEXT:   $xzr = frame-setup LDRXui $sp, 0 :: (volatile load (s64))
   ; CHECK-NEXT:   $xzr = frame-setup SUBSXrx64 $sp, $x9, 24, implicit-def $nzcv
   ; CHECK-NEXT:   frame-setup Bcc 1, %bb.3, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
@@ -106,7 +106,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $wsp
   ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 3392, 0
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 200016
-  ; CHECK-NEXT:   frame-setup STRXui $xzr, $sp, 0
+  ; CHECK-NEXT:   $xzr = frame-setup LDRXui $sp, 0 :: (volatile load (s64))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop:
   ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)

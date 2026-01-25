@@ -34,7 +34,7 @@ class DAPTestCaseBase(TestBase):
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
-        log_file_path = self.getBuildArtifact("dap.txt")
+        log_file_path = self.getBuildArtifact("dap.log")
         self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,

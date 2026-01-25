@@ -741,7 +741,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
 
   // Make sure we deallocate the input string memory:
-  auto path_cleanup = llvm::make_scope_exit([process, path_addr] {
+  llvm::scope_exit path_cleanup([process, path_addr] {
     // Deallocate the buffer.
     process->DeallocateMemory(path_addr);
   });
@@ -768,7 +768,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   
   // Make sure we deallocate the result structure memory
-  auto return_cleanup = llvm::make_scope_exit([process, return_addr] {
+  llvm::scope_exit return_cleanup([process, return_addr] {
     // Deallocate the buffer
     process->DeallocateMemory(return_addr);
   });
@@ -872,10 +872,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // Make sure we clean up the args structure.  We can't reuse it because the
   // Platform lives longer than the process and the Platforms don't get a
   // signal to clean up cached data when a process goes away.
-  auto args_cleanup =
-      llvm::make_scope_exit([do_dlopen_function, &exe_ctx, func_args_addr] {
-        do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
-      });
+  llvm::scope_exit args_cleanup([do_dlopen_function, &exe_ctx, func_args_addr] {
+    do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
+  });
 
   // Now run the caller:
   EvaluateExpressionOptions options;

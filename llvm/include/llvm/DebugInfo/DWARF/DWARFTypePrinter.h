@@ -709,7 +709,7 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
   DieType FirstParamIfArtificial;
   OS << '(';
   EndedWithTemplate = false;
-  bool First = true;
+  ListSeparator LS;
   bool RealFirst = true;
   for (DieType P : D) {
     if (P.getTag() != dwarf::DW_TAG_formal_parameter &&
@@ -722,10 +722,7 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
       RealFirst = false;
       continue;
     }
-    if (!First) {
-      OS << ", ";
-    }
-    First = false;
+    OS << LS;
     if (P.getTag() == dwarf::DW_TAG_unspecified_parameters)
       OS << "...";
     else

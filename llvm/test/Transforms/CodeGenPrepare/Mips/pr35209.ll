@@ -1,7 +1,7 @@
 ; RUN: opt -S -mtriple=mips64-mti-linux-gnu -codegenprepare < %s | FileCheck %s
 
 ; Test that if an address that was sunk from a dominating bb, used in a
-; select that is erased along with its' trivally dead operand, that the
+; select that is erased along with its trivally dead operand, that the
 ; sunken address is not reused if the same address computation occurs
 ; after the select. Previously, this caused a ICE.
 

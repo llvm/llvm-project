@@ -1,72 +1,76 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! Test lowering of allocatables using runtime for allocate/deallcoate statements.
 ! CHECK-LABEL: _QPfooscalar
 subroutine fooscalar()
   ! Test lowering of local allocatable specification
   real, allocatable :: x
-  ! CHECK: %[[xAddrVar:.*]] = fir.alloca !fir.heap<f32> {{{.*}}uniq_name = "_QFfooscalarEx.addr"}
+  ! CHECK: %[[xAddrVar:.*]] = fir.alloca !fir.box<!fir.heap<f32>> {{{.*}}uniq_name = "_QFfooscalarEx"}
   ! CHECK: %[[nullAddr:.*]] = fir.zero_bits !fir.heap<f32>
-  ! CHECK: fir.store %[[nullAddr]] to %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
+  ! CHECK: %[[box:.*]] = fir.embox %[[nullAddr]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
+  ! CHECK: fir.store %[[box]] to %[[xAddrVar]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[xAddrVar]] {{{.*}}uniq_name = "_QFfooscalarEx"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
   ! Test allocation of local allocatables
   allocate(x)
   ! CHECK: %[[alloc:.*]] = fir.allocmem f32 {{{.*}}uniq_name = "_QFfooscalarEx.alloc"}
-  ! CHECK: fir.store %[[alloc]] to %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
+  ! CHECK: %[[box2:.*]] = fir.embox %[[alloc]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
+  ! CHECK: fir.store %[[box2]] to %[[decl]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 
   ! Test reading allocatable bounds and extents
   print *, x
-  ! CHECK: %[[xAddr1:.*]] = fir.load %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
-  ! CHECK: = fir.load %[[xAddr1]] : !fir.heap<f32>
+  ! CHECK: %[[xAddr1:.*]] = fir.load %[[decl]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[xAddr1]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  ! CHECK: = fir.load %[[addr]] : !fir.heap<f32>
 
   ! Test deallocation
   deallocate(x)
-  ! CHECK: %[[xAddr2:.*]] = fir.load %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
-  ! CHECK: fir.freemem %[[xAddr2]]
+  ! CHECK: %[[xAddr2:.*]] = fir.load %[[decl]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! CHECK: %[[addr2:.*]] = fir.box_addr %[[xAddr2]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  ! CHECK: fir.freemem %[[addr2]]
   ! CHECK: %[[nullAddr1:.*]] = fir.zero_bits !fir.heap<f32>
-  ! fir.store %[[nullAddr1]] to %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
+  ! CHECK: %[[box3:.*]] = fir.embox %[[nullAddr1]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
+  ! fir.store %[[box3]] to %[[decl]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 end subroutine
 
 ! CHECK-LABEL: _QPfoodim1
 subroutine foodim1()
   ! Test lowering of local allocatable specification
   real, allocatable :: x(:)
-  ! CHECK-DAG: %[[xAddrVar:.*]] = fir.alloca !fir.heap<!fir.array<?xf32>> {{{.*}}uniq_name = "_QFfoodim1Ex.addr"}
-  ! CHECK-DAG: %[[xLbVar:.*]] = fir.alloca index {{{.*}}uniq_name = "_QFfoodim1Ex.lb0"}
-  ! CHECK-DAG: %[[xExtVar:.*]] = fir.alloca index {{{.*}}uniq_name = "_QFfoodim1Ex.ext0"}
+  ! CHECK: %[[xAddrVar:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {{{.*}}uniq_name = "_QFfoodim1Ex"}
   ! CHECK: %[[nullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
-  ! CHECK: fir.store %[[nullAddr]] to %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+  ! CHECK: %[[box:.*]] = fir.embox %[[nullAddr]]
+  ! CHECK: fir.store %[[box]] to %[[xAddrVar]]
 
   ! Test allocation of local allocatables
   allocate(x(42:100))
-  ! CHECK-DAG: %[[c42:.*]] = fir.convert %c42{{.*}} : (i32) -> index
-  ! CHECK-DAG: %[[c100:.*]] = fir.convert %c100_i32 : (i32) -> index
-  ! CHECK-DAG: %[[diff:.*]] = arith.subi %[[c100]], %[[c42]] : index
+  ! CHECK: %[[c42:.*]] = fir.convert %c42{{.*}} : (i32) -> index
+  ! CHECK: %[[c100:.*]] = fir.convert %c100_i32 : (i32) -> index
+  ! CHECK: %[[diff:.*]] = arith.subi %[[c100]], %[[c42]] : index
   ! CHECK: %[[rawExtent:.*]] = arith.addi %[[diff]], %c1{{.*}} : index
   ! CHECK: %[[extentPositive:.*]] = arith.cmpi sgt, %[[rawExtent]], %c0{{.*}} : index
   ! CHECK: %[[extent:.*]] = arith.select %[[extentPositive]], %[[rawExtent]], %c0{{.*}} : index
   ! CHECK: %[[alloc:.*]] = fir.allocmem !fir.array<?xf32>, %[[extent]] {{{.*}}uniq_name = "_QFfoodim1Ex.alloc"}
-  ! CHECK-DAG: fir.store %[[alloc]] to %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-  ! CHECK-DAG: fir.store %[[extent]] to %[[xExtVar]] : !fir.ref<index>
-  ! CHECK-DAG: fir.store %[[c42]] to %[[xLbVar]] : !fir.ref<index>
+  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c42]], %[[extent]]
+  ! CHECK: %[[box2:.*]] = fir.embox %[[alloc]](%[[shape]])
+  ! CHECK: fir.store %[[box2]] to %{{.*}}
 
   ! Test reading allocatable bounds and extents
   print *, x(42)
-  ! CHECK-DAG: fir.load %[[xLbVar]] : !fir.ref<index>
-  ! CHECK-DAG: fir.load %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+  ! CHECK: %[[load:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  ! CHECK: hlfir.designate %[[load]] (%c42)
 
   deallocate(x)
-  ! CHECK: %[[xAddr1:.*]] = fir.load %{{.*}} : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-  ! CHECK: fir.freemem %[[xAddr1]]
-  ! CHECK: %[[nullAddr1:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
-  ! CHECK: fir.store %[[nullAddr1]] to %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+  ! CHECK: %[[load2:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load2]]
+  ! CHECK: fir.freemem %[[addr]]
 end subroutine
 
 ! CHECK-LABEL: _QPfoodim2
 subroutine foodim2()
   ! Test lowering of local allocatable specification
   real, allocatable :: x(:, :)
-  ! CHECK-DAG: fir.alloca !fir.heap<!fir.array<?x?xf32>> {{{.*}}uniq_name = "_QFfoodim2Ex.addr"}
+  ! CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>> {{{.*}}uniq_name = "_QFfoodim2Ex"}
 end subroutine
 
 ! test lowering of character allocatables. Focus is placed on the length handling
@@ -74,35 +78,36 @@ end subroutine
 subroutine char_deferred(n)
   integer :: n
   character(:), allocatable :: c
-  ! CHECK-DAG: %[[cAddrVar:.*]] = fir.alloca !fir.heap<!fir.char<1,?>> {{{.*}}uniq_name = "_QFchar_deferredEc.addr"}
-  ! CHECK-DAG: %[[cLenVar:.*]] = fir.alloca index {{{.*}}uniq_name = "_QFchar_deferredEc.len"}
+  ! CHECK: %[[cAddrVar:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFchar_deferredEc"}
   allocate(character(10):: c)
   ! CHECK: %[[c10:.]] = fir.convert %c10_i32 : (i32) -> index
-  ! CHECK: fir.allocmem !fir.char<1,?>(%[[c10]] : index) {{{.*}}uniq_name = "_QFchar_deferredEc.alloc"}
-  ! CHECK: fir.store %[[c10]] to %[[cLenVar]] : !fir.ref<index>
+  ! CHECK: %[[alloc:.*]] = fir.allocmem !fir.char<1,?>(%[[c10]] : index) {{{.*}}uniq_name = "_QFchar_deferredEc.alloc"}
+  ! CHECK: %[[box:.*]] = fir.embox %[[alloc]] typeparams %[[c10]]
+  ! CHECK: fir.store %[[box]] to %{{.*}}
   deallocate(c)
   ! CHECK: fir.freemem %{{.*}}
   allocate(character(n):: c)
-  ! CHECK: %[[n:.*]] = fir.load %arg0 : !fir.ref<i32>
+  ! CHECK: %[[n:.*]] = fir.load %{{.*}} : !fir.ref<i32>
   ! CHECK: %[[nPositive:.*]] = arith.cmpi sgt, %[[n]], %c0{{.*}} : i32
   ! CHECK: %[[ns:.*]] = arith.select %[[nPositive]], %[[n]], %c0{{.*}} : i32
   ! CHECK: %[[ni:.*]] = fir.convert %[[ns]] : (i32) -> index
-  ! CHECK: fir.allocmem !fir.char<1,?>(%[[ni]] : index) {{{.*}}uniq_name = "_QFchar_deferredEc.alloc"}
-  ! CHECK: fir.store %[[ni]] to %[[cLenVar]] : !fir.ref<index>
+  ! CHECK: %[[alloc2:.*]] = fir.allocmem !fir.char<1,?>(%[[ni]] : index)
+  ! CHECK: %[[box2:.*]] = fir.embox %[[alloc2]] typeparams %[[ni]]
+  ! CHECK: fir.store %[[box2]] to %{{.*}}
 
   call bar(c)
-  ! CHECK-DAG: %[[cLen:.*]] = fir.load %[[cLenVar]] : !fir.ref<index>
-  ! CHECK-DAG: %[[cAddr:.*]] = fir.load %[[cAddrVar]] : !fir.ref<!fir.heap<!fir.char<1,?>>>
-  ! CHECK: fir.emboxchar %[[cAddr]], %[[cLen]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[load:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]]
+  ! CHECK: %[[load2:.*]] = fir.load %{{.*}}
+  ! CHECK: %[[len:.*]] = fir.box_elesize %[[load2]]
+  ! CHECK: fir.emboxchar %[[addr]], %[[len]]
 end subroutine
 
 ! CHECK-LABEL: _QPchar_explicit_cst(
 subroutine char_explicit_cst(n)
   integer :: n
   character(10), allocatable :: c
-  ! CHECK-DAG: %[[cLen:.*]] = arith.constant 10 : index
-  ! CHECK-DAG: %[[cAddrVar:.*]] = fir.alloca !fir.heap<!fir.char<1,10>> {{{.*}}uniq_name = "_QFchar_explicit_cstEc.addr"}
-  ! CHECK-NOT: "_QFchar_explicit_cstEc.len"
+  ! CHECK: %[[cAddrVar:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,10>>> {{{.*}}uniq_name = "_QFchar_explicit_cstEc"}
   allocate(c)
   ! CHECK: fir.allocmem !fir.char<1,10> {{{.*}}uniq_name = "_QFchar_explicit_cstEc.alloc"}
   deallocate(c)
@@ -114,20 +119,21 @@ subroutine char_explicit_cst(n)
   allocate(character(10):: c)
   ! CHECK: fir.allocmem !fir.char<1,10> {{{.*}}uniq_name = "_QFchar_explicit_cstEc.alloc"}
   call bar(c)
-  ! CHECK: %[[cAddr:.*]] = fir.load %[[cAddrVar]] : !fir.ref<!fir.heap<!fir.char<1,10>>>
-  ! CHECK: fir.emboxchar %[[cAddr]], %[[cLen]] : (!fir.heap<!fir.char<1,10>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[load:.*]] = fir.load %{{.*}}
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]]
+  ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,10>>
+  ! CHECK: fir.emboxchar %[[cast]], %c10
 end subroutine
 
 ! CHECK-LABEL: _QPchar_explicit_dyn(
 subroutine char_explicit_dyn(l1, l2)
   integer :: l1, l2
   character(l1), allocatable :: c
-  ! CHECK: %[[l1:.*]] = fir.load %arg0 : !fir.ref<i32>
+  ! CHECK: %[[cAddrVar:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFchar_explicit_dynEc"}
+  ! CHECK: %[[l1:.*]] = fir.load %{{.*}} : !fir.ref<i32>
   ! CHECK: %[[c0_i32:.*]] = arith.constant 0 : i32
   ! CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[l1]], %[[c0_i32]] : i32
   ! CHECK: %[[cLen:.*]] = arith.select %[[cmp]], %[[l1]], %[[c0_i32]] : i32
-  ! CHECK: %[[cAddrVar:.*]] = fir.alloca !fir.heap<!fir.char<1,?>> {{{.*}}uniq_name = "_QFchar_explicit_dynEc.addr"}
-  ! CHECK-NOT: "_QFchar_explicit_dynEc.len"
   allocate(c)
   ! CHECK: %[[cLenCast1:.*]] = fir.convert %[[cLen]] : (i32) -> index
   ! CHECK: fir.allocmem !fir.char<1,?>(%[[cLenCast1]] : index) {{{.*}}uniq_name = "_QFchar_explicit_dynEc.alloc"}
@@ -142,9 +148,9 @@ subroutine char_explicit_dyn(l1, l2)
   ! CHECK: %[[cLenCast3:.*]] = fir.convert %[[cLen]] : (i32) -> index
   ! CHECK: fir.allocmem !fir.char<1,?>(%[[cLenCast3]] : index) {{{.*}}uniq_name = "_QFchar_explicit_dynEc.alloc"}
   call bar(c)
-  ! CHECK-DAG: %[[cLenCast4:.*]] = fir.convert %[[cLen]] : (i32) -> index
-  ! CHECK-DAG: %[[cAddr:.*]] = fir.load %[[cAddrVar]] : !fir.ref<!fir.heap<!fir.char<1,?>>>
-  ! CHECK: fir.emboxchar %[[cAddr]], %[[cLenCast4]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[load:.*]] = fir.load %{{.*}}
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]]
+  ! CHECK: fir.emboxchar %[[addr]], %[[cLen]]
 end subroutine
 
 ! CHECK-LABEL: _QPspecifiers(
@@ -155,16 +161,16 @@ subroutine specifiers
   character*30 :: mmm = "None"
   ! CHECK: fir.call @_FortranAAllocatableSetBounds
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
-  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.store [[RESULT]] to %{{.*}}
   ! CHECK: fir.if %{{[0-9]+}} {
   ! CHECK: fir.call @_FortranAAllocatableSetBounds
   ! CHECK: fir.call @_FortranAAllocatableSetBounds
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
-  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.store [[RESULT]] to %{{.*}}
   ! CHECK: fir.if %{{[0-9]+}} {
   ! CHECK: fir.call @_FortranAAllocatableSetBounds
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
-  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.store [[RESULT]] to %{{.*}}
   ! CHECK-NOT: fir.if %{{[0-9]+}} {
   ! CHECK-COUNT-2: }
   ! CHECK-NOT: }
@@ -178,13 +184,13 @@ subroutine specifiers
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
   allocate(jj1(3), jj2(3,3), jj3(3), stat=sss, errmsg=mmm)
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
-  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.store [[RESULT]] to %{{.*}}
   ! CHECK: fir.if %{{[0-9]+}} {
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
-  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.store [[RESULT]] to %{{.*}}
   ! CHECK: fir.if %{{[0-9]+}} {
   ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
-  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.store [[RESULT]] to %{{.*}}
   ! CHECK-NOT: fir.if %{{[0-9]+}} {
   ! CHECK-COUNT-2: }
   ! CHECK-NOT: }

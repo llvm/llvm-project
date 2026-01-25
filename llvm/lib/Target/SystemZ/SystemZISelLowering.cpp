@@ -842,6 +842,17 @@ bool SystemZTargetLowering::useSoftFloat() const {
   return Subtarget.hasSoftFloat();
 }
 
+MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                         CallingConv::ID CC,
+                                                         EVT VT) const {
+  // 128-bit single-element vector types are passed like other vectors,
+  // not like their element type.
+  if (VT.isVector() && VT.getSizeInBits() == 128 &&
+      VT.getVectorNumElements() == 1)
+    return MVT::v16i8;
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
+
 EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
                                               LLVMContext &, EVT VT) const {
   if (!VT.isVector())
@@ -1253,7 +1264,8 @@ SystemZTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+SystemZTargetLowering::shouldExpandAtomicRMWInIR(
+    const AtomicRMWInst *RMW) const {
   // Don't expand subword operations as they require special treatment.
   if (RMW->getType()->isIntegerTy(8) || RMW->getType()->isIntegerTy(16))
     return AtomicExpansionKind::None;
@@ -2353,9 +2365,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
         SlotVT = Outs[I].VT;
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+
+      MachinePointerInfo StackPtrInfo =
+          MachinePointerInfo::getFixedStack(MF, FI);
       MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, SpillSlot,
-                       MachinePointerInfo::getFixedStack(MF, FI)));
+          DAG.getStore(Chain, DL, ArgValue, SpillSlot, StackPtrInfo));
       // If the original argument was split (e.g. i128), we need
       // to store all parts of it here (and pass just one address).
       assert(Outs[I].PartOffset == 0);
@@ -2367,7 +2381,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                       DAG.getIntPtrConstant(PartOffset, DL));
         MemOpChains.push_back(
             DAG.getStore(Chain, DL, PartValue, Address,
-                         MachinePointerInfo::getFixedStack(MF, FI)));
+                         StackPtrInfo.getWithOffset(PartOffset)));
         assert(PartOffset && "Offset should be non-zero.");
         assert((PartOffset + PartValue.getValueType().getStoreSize() <=
                 SlotVT.getStoreSize()) && "Not enough space for argument part!");
@@ -6561,6 +6575,33 @@ SDValue SystemZTargetLowering::lowerSCALAR_TO_VECTOR(SDValue Op,
                      Op.getOperand(0), DAG.getConstant(0, DL, MVT::i32));
 }
 
+// Shift the lower 2 bytes of Op to the left in order to insert into the
+// upper 2 bytes of the FP register.
+static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::i64 &&
+         "Expexted to convert i64 to f16.");
+  SDLoc DL(Op);
+  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i64, Op,
+                             DAG.getConstant(48, DL, MVT::i64));
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f64, Shft);
+  SDValue F16Val =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+  return F16Val;
+}
+
+// Extract Op into GPR and shift the 2 f16 bytes to the right.
+static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::f16 &&
+         "Expected to convert f16 to i64.");
+  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f64);
+  SDValue In64 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f64,
+                                           SDValue(U32, 0), Op);
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i64, In64);
+  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i64, BCast,
+                             DAG.getConstant(48, DL, MVT::i32));
+  return Shft;
+}
+
 SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                                       SelectionDAG &DAG) const {
   // Handle insertions of floating-point values.
@@ -6949,33 +6990,6 @@ SDValue SystemZTargetLowering::lower_INT_TO_FP(SDValue Op,
   }
 
   return Op; // Legal
-}
-
-// Shift the lower 2 bytes of Op to the left in order to insert into the
-// upper 2 bytes of the FP register.
-static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
-  assert(Op.getSimpleValueType() == MVT::i64 &&
-         "Expexted to convert i64 to f16.");
-  SDLoc DL(Op);
-  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i64, Op,
-                             DAG.getConstant(48, DL, MVT::i64));
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f64, Shft);
-  SDValue F16Val =
-      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
-  return F16Val;
-}
-
-// Extract Op into GPR and shift the 2 f16 bytes to the right.
-static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
-  assert(Op.getSimpleValueType() == MVT::f16 &&
-         "Expected to convert f16 to i64.");
-  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f64);
-  SDValue In64 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f64,
-                                           SDValue(U32, 0), Op);
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i64, In64);
-  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i64, BCast,
-                             DAG.getConstant(48, DL, MVT::i32));
-  return Shft;
 }
 
 // Lower an f16 LOAD in case of no vector support.

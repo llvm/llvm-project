@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_CFGSTMTMAP_H
 
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 
@@ -22,19 +23,11 @@ class ParentMap;
 class Stmt;
 
 class CFGStmtMap {
-  ParentMap *PM;
-  void *M;
-
-  CFGStmtMap(ParentMap *pm, void *m) : PM(pm), M(m) {}
-  CFGStmtMap(const CFGStmtMap &) = delete;
-  CFGStmtMap &operator=(const CFGStmtMap &) = delete;
+  const ParentMap *PM;
+  llvm::DenseMap<const Stmt *, const CFGBlock *> M;
 
 public:
-  ~CFGStmtMap();
-
-  /// Returns a new CFGMap for the given CFG.  It is the caller's
-  /// responsibility to 'delete' this object when done using it.
-  static CFGStmtMap *Build(CFG* C, ParentMap *PM);
+  CFGStmtMap(const CFG &C, const ParentMap &PM);
 
   /// Returns the CFGBlock the specified Stmt* appears in.  For Stmt* that
   /// are terminators, the CFGBlock is the block they appear as a terminator,

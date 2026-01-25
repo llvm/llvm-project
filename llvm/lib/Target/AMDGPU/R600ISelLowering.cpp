@@ -2178,7 +2178,7 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 }
 
 TargetLowering::AtomicExpansionKind
-R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+R600TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:
@@ -2191,7 +2191,7 @@ R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
-    // instruction defintions appear to be missing.
+    // instruction definitions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getDataLayout();

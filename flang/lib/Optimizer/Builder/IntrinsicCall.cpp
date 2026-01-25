@@ -729,7 +729,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"show_descriptor",
      &I::genShowDescriptor,
-     {{{"d", asBox}}},
+     {{{"d", asInquired}}},
      /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
@@ -7891,11 +7891,42 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
 void IntrinsicLibrary::genShowDescriptor(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1 && "expected single argument for show_descriptor");
-  const mlir::Value descriptor = fir::getBase(args[0]);
+  const mlir::Value arg = fir::getBase(args[0]);
 
-  assert(fir::isa_box_type(descriptor.getType()) &&
-         "argument must have been lowered to box type");
-  fir::runtime::genShowDescriptor(builder, loc, descriptor);
+  // Use consistent !fir.ref<!fir.box<none>> argument type
+  auto targetType = fir::BoxType::get(builder.getNoneType());
+  auto targetRefType = fir::ReferenceType::get(targetType);
+
+  mlir::Value descrAddr = nullptr;
+  if (fir::isBoxAddress(arg.getType())) {
+    // If it's already a reference to a box, convert it to correct type and
+    // pass it directly
+    descrAddr = builder.createConvert(loc, targetRefType, arg);
+  } else {
+    // At this point, arg is either SSA descriptor or a non-descriptor entity.
+    // If necessary, wrap non-descriptor entity in a descriptor.
+    mlir::Value descriptor = nullptr;
+    if (fir::isa_box_type(arg.getType())) {
+      descriptor = arg;
+    } else if (fir::isa_ref_type(arg.getType())) {
+      // Note: here use full extended value args[0]
+      descriptor = builder.createBox(loc, args[0]);
+    } else {
+      // arg is a value (e.g. constant), spill it to a temporary
+      // because createBox expects a memory reference.
+      mlir::Value temp = builder.createTemporary(loc, arg.getType());
+      builder.createStoreWithConvert(loc, arg, temp);
+
+      // Note: here use full extended value args[0]
+      descriptor = builder.createBox(loc, fir::substBase(args[0], temp));
+    }
+
+    // Spill it to the stack
+    descrAddr = builder.createTemporary(loc, targetType);
+    builder.createStoreWithConvert(loc, descriptor, descrAddr);
+  }
+
+  fir::runtime::genShowDescriptor(builder, loc, descrAddr);
 }
 
 // SIGNAL
@@ -8056,12 +8087,14 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
 
 // TEAM_NUMBER
 fir::ExtendedValue
-IntrinsicLibrary::genTeamNumber(mlir::Type,
+IntrinsicLibrary::genTeamNumber(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 1);
-  return mif::TeamNumberOp::create(builder, loc,
-                                   /*team*/ fir::getBase(args[0]));
+
+  mlir::Value res = mif::TeamNumberOp::create(builder, loc,
+                                              /*team*/ fir::getBase(args[0]));
+  return builder.createConvert(loc, resultType, res);
 }
 
 // THIS_IMAGE

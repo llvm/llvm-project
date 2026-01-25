@@ -319,7 +319,5 @@ X86DynAllocaExpanderPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
