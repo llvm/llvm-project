@@ -730,6 +730,7 @@ enum class ObjCLabelType {
   MethodVarName,
   MethodVarType,
   PropertyName,
+  LayoutBitMap,
 };
 
 class CGObjCCommonMac : public CodeGen::CGObjCRuntime {
@@ -4097,6 +4098,9 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
   case ObjCLabelType::PropertyName:
     Label = "OBJC_PROP_NAME_ATTR_";
     break;
+  case ObjCLabelType::LayoutBitMap:
+    Label = "OBJC_LAYOUT_BITMAP_";
+    break;
   }
 
   bool NonFragile = ForceNonFragileABI || isNonFragileABI();
@@ -4118,6 +4122,9 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
   case ObjCLabelType::PropertyName:
     Section = NonFragile ? "__TEXT,__objc_methname,cstring_literals"
                          : "__TEXT,__cstring,cstring_literals";
+    break;
+  case ObjCLabelType::LayoutBitMap:
+    Section = "__TEXT,__cstring,cstring_literals";
     break;
   }
 
@@ -5470,7 +5477,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
   buffer.push_back(0);
 
   auto *Entry = CGObjC.CreateCStringLiteral(
-      reinterpret_cast<char *>(buffer.data()), ObjCLabelType::ClassName);
+      reinterpret_cast<char *>(buffer.data()), ObjCLabelType::LayoutBitMap);
   return getConstantGEP(CGM.getLLVMContext(), Entry, 0, 0);
 }
 
