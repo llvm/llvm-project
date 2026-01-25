@@ -17022,18 +17022,22 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   // Check if condition is a comparison.
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
+
   SDValue LHS = Cond.getOperand(0);
   SDValue RHS = Cond.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+
   bool isFloatingPoint = LHS.getValueType().isFloatingPoint();
   bool isInteger = LHS.getValueType().isInteger();
   // Handle simple floating-point and integer types only.
   if (!isFloatingPoint && !isInteger)
     return SDValue();
+
   bool isEquality = CC == (isFloatingPoint ? ISD::SETOEQ : ISD::SETEQ);
   bool isNonEquality = CC == (isFloatingPoint ? ISD::SETONE : ISD::SETNE);
   if (!isEquality && !isNonEquality)
     return SDValue();
+
   SDValue ArgVal, ConstVal;
   if ((isFloatingPoint && isa<ConstantFPSDNode>(RHS)) ||
       (isInteger && isa<ConstantSDNode>(RHS))) {
@@ -17046,6 +17050,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   } else {
     return SDValue();
   }
+
   // Skip optimization for inlinable immediates.
   if (isFloatingPoint) {
     const APFloat &Val = cast<ConstantFPSDNode>(ConstVal)->getValueAPF();
@@ -17056,12 +17061,14 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
             cast<ConstantSDNode>(ConstVal)->getSExtValue()))
       return SDValue();
   }
+
   // For equality and non-equality comparisons, patterns:
   // select (setcc x, const), const, y -> select (setcc x, const), x, y
   // select (setccinv x, const), y, const -> select (setccinv x, const), y, x
   if (!(isEquality && TrueVal == ConstVal) &&
       !(isNonEquality && FalseVal == ConstVal))
     return SDValue();
+
   SDValue SelectLHS = (isEquality && TrueVal == ConstVal) ? ArgVal : TrueVal;
   SDValue SelectRHS =
       (isNonEquality && FalseVal == ConstVal) ? ArgVal : FalseVal;
