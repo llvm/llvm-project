@@ -263,4 +263,5 @@
 "`LWG4139 <https://wg21.link/LWG4139>`__","§[time.zone.leap] recursive constraint in ``<=>``","Not Adopted Yet","|Complete|","20","`#118369 <https://github.com/llvm/llvm-project/issues/118369>`__",""
 "`LWG3456 <https://wg21.link/LWG3456>`__","Pattern used by ``std::from_chars`` is underspecified (option B)","Not Adopted Yet","|Complete|","20","`#118370 <https://github.com/llvm/llvm-project/issues/118370>`__",""
 "`LWG3882 <https://wg21.link/LWG3882>`__","``tuple`` relational operators have confused friendships","Not Adopted Yet","|Complete|","22","","The comparison operators are constrained harder than the proposed resolution. libstdc++ and MSVC STL do the same."
+"`LWG4510 <https://wg21.link/LWG4510>`__","Ambiguity of ``ranges::advance`` and ``ranges::next``","Not Adopted Yet","|Complete|","","`#175091 <https://github.com/llvm/llvm-project/issues/175091>`__",""
 "","","","","","",""
