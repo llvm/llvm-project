@@ -17051,8 +17051,6 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
 
-  if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
-    return V;
   if (SDValue V = combineOrAndToBitfieldInsert(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
@@ -17060,9 +17058,12 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
     return V;
 
-  if (DCI.isAfterLegalizeDAG())
+  if (DCI.isAfterLegalizeDAG()) {
+    if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
+    return V;
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
       return V;
+  }
 
   // Look for Or of CZERO_EQZ/NEZ with same condition which is the select idiom.
   // We may be able to pull a common operation out of the true and false value.
