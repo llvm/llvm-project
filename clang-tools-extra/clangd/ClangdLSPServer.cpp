@@ -731,9 +731,8 @@ void ClangdLSPServer::onSync(const NoParams &, Callback<std::nullptr_t> Reply) {
 void ClangdLSPServer::onDocumentDidOpen(
     const DidOpenTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
-  if (llvm::sys::fs::is_directory(File)) {
+  if (llvm::sys::fs::is_directory(File))
     return;
-  }
 
   const std::string &Contents = Params.textDocument.text;
 
@@ -1031,10 +1030,9 @@ flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
 void ClangdLSPServer::onDocumentSymbol(const DocumentSymbolParams &Params,
                                        Callback<llvm::json::Value> Reply) {
   URIForFile FileURI = Params.textDocument.uri;
-  if (llvm::sys::fs::is_directory(FileURI.file())) {
+  if (llvm::sys::fs::is_directory(FileURI.file()))
     return Reply(llvm::make_error<LSPError>("URI is a directory",
                                             ErrorCode::InvalidParams));
-  }
   Server->documentSymbols(
       Params.textDocument.uri.file(),
       [this, FileURI, Reply = std::move(Reply)](
