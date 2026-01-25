@@ -175,6 +175,29 @@ uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr) {
   return llvm::cast<IntegerAttr>(unwrap(attr)).getUInt();
 }
 
+unsigned mlirIntegerAttrGetValueBitWidth(MlirAttribute attr) {
+  return llvm::cast<IntegerAttr>(unwrap(attr)).getValue().getBitWidth();
+}
+
+unsigned mlirIntegerAttrGetValueNumWords(MlirAttribute attr) {
+  return llvm::cast<IntegerAttr>(unwrap(attr)).getValue().getNumWords();
+}
+
+void mlirIntegerAttrGetValueWords(MlirAttribute attr, uint64_t *words) {
+  const APInt &value = llvm::cast<IntegerAttr>(unwrap(attr)).getValue();
+  unsigned numWords = value.getNumWords();
+  const uint64_t *rawData = value.getRawData();
+  std::copy(rawData, rawData + numWords, words);
+}
+
+MlirAttribute mlirIntegerAttrGetFromWords(MlirType type, unsigned numWords,
+                                          const uint64_t *words) {
+  Type mlirType = unwrap(type);
+  unsigned bitWidth = mlirType.getIntOrFloatBitWidth();
+  APInt value(bitWidth, ArrayRef<uint64_t>(words, numWords));
+  return wrap(IntegerAttr::get(mlirType, value));
+}
+
 MlirTypeID mlirIntegerAttrGetTypeID(void) {
   return wrap(IntegerAttr::getTypeID());
 }
