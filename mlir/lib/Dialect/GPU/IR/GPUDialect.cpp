@@ -2526,6 +2526,7 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
     // Speculation should be safe as long as we inside structured control flow.
     return Speculation::Speculatable;
   }
+  llvm_unreachable("Unknown BroadcastType");
 }
 
 LogicalResult gpu::SubgroupBroadcastOp::verify() {
@@ -2541,6 +2542,7 @@ LogicalResult gpu::SubgroupBroadcastOp::verify() {
              << "lane must be specified for `specific_lane` broadcast";
     return success();
   }
+  llvm_unreachable("Unknown BroadcastType");
 }
 
 OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {
