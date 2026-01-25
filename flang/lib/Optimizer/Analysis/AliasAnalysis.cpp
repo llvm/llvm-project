@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -29,7 +30,7 @@ using namespace mlir;
 #define DEBUG_TYPE "fir-alias-analysis"
 
 llvm::cl::opt<bool> supportCrayPointers(
-    "funsafe-cray-pointers",
+    "unsafe-cray-pointers",
     llvm::cl::desc("Support Cray POINTERs that ALIAS with non-TARGET data"),
     llvm::cl::init(false));
 
@@ -74,11 +75,20 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
-static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
-  auto globalOpName =
-      mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
-  return fir::valueHasFirAttribute(
-      v, fir::GlobalOp::getTargetAttrName(globalOpName));
+bool fir::AliasAnalysis::symbolMayHaveTargetAttr(mlir::SymbolRefAttr symbol,
+                                                 mlir::Operation *from) {
+  assert(from);
+
+  // If we cannot find the nearest SymbolTable assume the worst.
+  const mlir::SymbolTable *symTab = getNearestSymbolTable(from);
+  if (!symTab)
+    return true;
+
+  if (auto globalOp = symTab->lookup<fir::GlobalOp>(symbol.getLeafReference()))
+    return globalOp.getTarget().value_or(false);
+
+  // If the symbol is not defined by fir.global assume the worst.
+  return true;
 }
 
 static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
@@ -468,7 +478,8 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
   fir::AliasAnalysis aliasAnalysis;
-  fir::AliasAnalysis::Source varSrc = aliasAnalysis.getSource(var);
+  fir::AliasAnalysis::Source varSrc =
+      aliasAnalysis.getSource(var, /*getLastInstantiationPoint=*/true);
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -498,6 +509,7 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // At that stage, it has been ruled out that local (including the saved ones)
   // and dummy cannot be indirectly accessed in the call.
   if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate &&
+      varSrc.kind != fir::AliasAnalysis::SourceKind::Argument &&
       !varSrc.isDummyArgument()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Global ||
         !isSavedLocal(varSrc))
@@ -523,19 +535,36 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
 /// flow analysis to come 2) Allocate and Free effects are considered
 /// modifying
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
-  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!interface) {
-    if (auto call = llvm::dyn_cast<fir::CallOp>(op))
-      return getCallModRef(call, location);
-    return ModRefResult::getModAndRef();
-  }
+  if (auto call = llvm::dyn_cast<fir::CallOp>(op))
+    return getCallModRef(call, location);
 
   // Build a ModRefResult by merging the behavior of the effects of this
   // operation.
+  ModRefResult result = ModRefResult::getNoModRef();
+  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
+    for (mlir::Region &region : op->getRegions()) {
+      result = result.merge(getModRef(region, location));
+      if (result.isModAndRef())
+        break;
+    }
+
+    // In MLIR, RecursiveMemoryEffects can be combined with
+    // MemoryEffectOpInterface to describe extra effects on top of the
+    // effects of the nested operations.  However, the presence of
+    // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
+    // implies the operation has no other memory effects than the one of its
+    // nested operations.
+    if (!interface)
+      return result;
+  }
+
+  if (!interface || result.isModAndRef())
+    return ModRefResult::getModAndRef();
+
   SmallVector<MemoryEffects::EffectInstance> effects;
   interface.getEffects(effects);
 
-  ModRefResult result = ModRefResult::getNoModRef();
   for (const MemoryEffects::EffectInstance &effect : effects) {
 
     // Check for an alias between the effect and our memory location.
@@ -563,22 +592,6 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
                                       mlir::Value location) {
   ModRefResult result = ModRefResult::getNoModRef();
   for (mlir::Operation &op : region.getOps()) {
-    if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
-      for (mlir::Region &subRegion : op.getRegions()) {
-        result = result.merge(getModRef(subRegion, location));
-        // Fast return is already mod and ref.
-        if (result.isModAndRef())
-          return result;
-      }
-      // In MLIR, RecursiveMemoryEffects can be combined with
-      // MemoryEffectOpInterface to describe extra effects on top of the
-      // effects of the nested operations.  However, the presence of
-      // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
-      // implies the operation has no other memory effects than the one of its
-      // nested operations.
-      if (!mlir::isa<mlir::MemoryEffectOpInterface>(op))
-        continue;
-    }
     result = result.merge(getModRef(&op, location));
     if (result.isModAndRef())
       return result;
@@ -674,6 +687,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             isCapturedInInternalProcedure |=
                 boxSrc.isCapturedInInternalProcedure;
 
+            if (getLastInstantiationPoint) {
+              if (!instantiationPoint)
+                instantiationPoint = boxSrc.origin.instantiationPoint;
+            } else {
+              instantiationPoint = boxSrc.origin.instantiationPoint;
+            }
+
             global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
             if (global) {
               type = SourceKind::Global;
@@ -705,19 +725,27 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           type = SourceKind::Indirect;
           breakFromLoop = true;
         })
-        .Case<fir::AddrOfOp>([&](auto op) {
+        .Case<fir::AddrOfOp, cuf::DeviceAddressOp>([&](auto op) {
           // Address of a global scope object.
           ty = v.getType();
           type = SourceKind::Global;
-
-          if (hasGlobalOpTargetAttr(v, op))
-            attributes.set(Attribute::Target);
-
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
           if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
-          global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
+
+          if constexpr (std::is_same_v<std::decay_t<decltype(op)>,
+                                       fir::AddrOfOp>)
+            global = op.getSymbol();
+          else if constexpr (std::is_same_v<std::decay_t<decltype(op)>,
+                                            cuf::DeviceAddressOp>)
+            global = op.getHostSymbol();
+          else
+            llvm_unreachable("unexpected operation");
+
+          if (symbolMayHaveTargetAttr(global, op))
+            attributes.set(Attribute::Target);
+
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
@@ -886,6 +914,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           attributes,
           approximateSource,
           isCapturedInInternalProcedure};
+}
+
+const mlir::SymbolTable *
+fir::AliasAnalysis::getNearestSymbolTable(mlir::Operation *from) {
+  assert(from);
+  Operation *symTabOp = mlir::SymbolTable::getNearestSymbolTable(from);
+  if (!symTabOp)
+    return nullptr;
+  auto it = symTabMap.find(symTabOp);
+  if (it != symTabMap.end())
+    return &it->second;
+  return &symTabMap.try_emplace(symTabOp, symTabOp).first->second;
 }
 
 } // namespace fir

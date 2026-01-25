@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOANS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,9 +30,27 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 /// variable.
 /// TODO: Model access paths of other types, e.g., s.field, heap and globals.
 struct AccessPath {
-  const clang::ValueDecl *D;
+private:
+  // An access path can be:
+  // - ValueDecl * , to represent the storage location corresponding to the
+  //   variable declared in ValueDecl.
+  // - MaterializeTemporaryExpr * , to represent the storage location of the
+  //   temporary object materialized via this MaterializeTemporaryExpr.
+  const llvm::PointerUnion<const clang::ValueDecl *,
+                           const clang::MaterializeTemporaryExpr *>
+      P;
 
-  AccessPath(const clang::ValueDecl *D) : D(D) {}
+public:
+  AccessPath(const clang::ValueDecl *D) : P(D) {}
+  AccessPath(const clang::MaterializeTemporaryExpr *MTE) : P(MTE) {}
+
+  const clang::ValueDecl *getAsValueDecl() const {
+    return P.dyn_cast<const clang::ValueDecl *>();
+  }
+
+  const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
+    return P.dyn_cast<const clang::MaterializeTemporaryExpr *>();
+  }
 };
 
 /// An abstract base class for a single "Loan" which represents lending a

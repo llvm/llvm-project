@@ -578,6 +578,8 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
   File->DependentLibraries = FOrErr->TheReader.getDependentLibraries();
   File->ComdatTable = FOrErr->TheReader.getComdatTable();
+  File->MbRef =
+      Object; // Save a memory buffer reference to an input file object.
 
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
     size_t Begin = File->Symbols.size();
@@ -595,6 +597,11 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   return std::move(File);
 }
 
+bool InputFile::Symbol::isLibcall(
+    const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
+  return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
+}
+
 StringRef InputFile::getName() const {
   return Mods[0].getModuleIdentifier();
 }
@@ -603,6 +610,8 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
   assert(Mods.size() == 1 && "Expect only one bitcode module");
   return Mods[0];
 }
+
+BitcodeModule &InputFile::getPrimaryBitcodeModule() { return Mods[0]; }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
@@ -638,11 +647,13 @@ LTO::~LTO() = default;
 // their partitions.
 void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                                ArrayRef<SymbolResolution> Res,
-                               unsigned Partition, bool InSummary) {
+                               unsigned Partition, bool InSummary,
+                               const Triple &TT) {
   llvm::TimeTraceScope timeScope("LTO add module to global resolution");
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
@@ -685,11 +696,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       GlobalRes.VisibleOutsideSummary = true;
     }
 
+    bool IsLibcall = Sym.isLibcall(Libcalls);
+
     // Set the partition to external if we know it is re-defined by the linker
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a
     // regular object, is referenced from llvm.compiler.used/llvm.used, or was
     // already recorded as being referenced from a different partition.
     if (Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
+        IsLibcall ||
         (GlobalRes.Partition != GlobalResolution::Unknown &&
          GlobalRes.Partition != Partition)) {
       GlobalRes.Partition = GlobalResolution::External;
@@ -700,7 +714,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // Flag as visible outside of summary if visible from a regular object or
     // from a module that does not have a summary.
     GlobalRes.VisibleOutsideSummary |=
-        (Res.VisibleToRegularObj || Sym.isUsed() || !InSummary);
+        (Res.VisibleToRegularObj || Sym.isUsed() || IsLibcall || !InSummary);
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
@@ -738,13 +752,19 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
   assert(ResI == Res.end());
 }
 
-Error LTO::add(std::unique_ptr<InputFile> Input,
+Error LTO::add(std::unique_ptr<InputFile> InputPtr,
                ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
+  llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
+  Expected<std::shared_ptr<InputFile>> InputOrErr =
+      addInput(std::move(InputPtr));
+  if (!InputOrErr)
+    return InputOrErr.takeError();
+  InputFile *Input = (*InputOrErr).get();
+
   if (Conf.ResolutionFile)
-    writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
+    writeToResolutionFile(*Conf.ResolutionFile, Input, Res);
 
   if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
     Triple InputTriple(Input->getTargetTriple());
@@ -793,11 +813,15 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     LTOMode = LTOK_UnifiedThin;
 
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
+  // If any of the modules inside of a input bitcode file was compiled with
+  // ThinLTO, we assume that the whole input file also was compiled with
+  // ThinLTO.
+  Input.IsThinLTO |= IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
                        IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
-                       LTOInfo->HasSummary);
+                       LTOInfo->HasSummary, Triple(Input.getTargetTriple()));
 
   if (IsThinLTO)
     return addThinLTO(BM, ModSyms, Res);
@@ -1203,6 +1227,11 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+  llvm::scope_exit CleanUp([this]() { cleanup(); });
+
+  if (Error EC = handleArchiveInputs())
+    return EC;
+
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
@@ -1296,7 +1325,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       // Don't do anything if no instance of this common was prevailing.
       continue;
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
-    if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
+    if (OldGV && OldGV->getGlobalSize(DL) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
       OldGV->setAlignment(I.second.Alignment);
@@ -1900,7 +1929,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
-  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (llvm::timeTraceProfilerEnabled())
       llvm::timeTraceProfilerEnd();
   });
@@ -2533,7 +2562,7 @@ public:
     if (Err)
       return std::move(*Err);
 
-    auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanPerJobFiles([&] {
       llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
@@ -2560,7 +2589,7 @@ public:
             BCError + "failed to generate distributor JSON script: " + JsonFile,
             inconvertibleErrorCode());
     }
-    auto CleanJson = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanJson([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });

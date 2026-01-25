@@ -109,7 +109,10 @@ void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
 void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   ensureHeadroom(Contents.size());
   assert(FragSpace >= Contents.size());
-  llvm::copy(Contents, getCurFragEnd());
+  // As this is performance-sensitive code, explicitly use std::memcpy.
+  // Optimization of std::copy to memmove is unreliable.
+  if (!Contents.empty())
+    std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
   CurFrag->FixedSize += Contents.size();
   FragSpace -= Contents.size();
 }
@@ -676,6 +679,10 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
   F->STI = STI;
+}
+
+void MCObjectStreamer::emitPrefAlign(Align Alignment) {
+  getCurrentSectionOnly()->ensurePreferredAlignment(Alignment);
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

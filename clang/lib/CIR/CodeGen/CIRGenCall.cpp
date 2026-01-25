@@ -110,10 +110,15 @@ static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
 }
 
 /// Construct the CIR attribute list of a function or call.
-void CIRGenModule::constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                                          mlir::NamedAttrList &attrs) {
+void CIRGenModule::constructAttributeList(llvm::StringRef name,
+                                          const CIRGenFunctionInfo &info,
+                                          CIRGenCalleeInfo calleeInfo,
+                                          mlir::NamedAttrList &attrs,
+                                          cir::CallingConv &callingConv,
+                                          cir::SideEffect &sideEffect,
+                                          bool attrOnCallSite, bool isThunk) {
   assert(!cir::MissingFeatures::opCallCallConv());
-  auto sideEffect = cir::SideEffect::All;
+  sideEffect = cir::SideEffect::All;
 
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
                                      calleeInfo.getCalleeFunctionProtoType());
@@ -317,9 +322,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   for (const CallArg &arg : args)
     argTypes.push_back(cgt.getASTContext().getCanonicalParamType(arg.ty));
 
-  CanQualType retType = fnType->getReturnType()
-                            ->getCanonicalTypeUnqualified()
-                            .getUnqualifiedType();
+  CanQualType retType = fnType->getReturnType()->getCanonicalTypeUnqualified();
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
@@ -381,10 +384,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
     argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  return arrangeCIRFunctionInfo(proto->getReturnType()
-                                    ->getCanonicalTypeUnqualified()
-                                    .getUnqualifiedType(),
-                                argTypes, required);
+  return arrangeCIRFunctionInfo(
+      proto->getReturnType()->getCanonicalTypeUnqualified(), argTypes,
+      required);
 }
 
 const CIRGenFunctionInfo &
@@ -634,7 +636,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   assert(!cir::MissingFeatures::opCallCallConv());
   assert(!cir::MissingFeatures::opCallAttrs());
-  cgm.constructAttributeList(callee.getAbstractInfo(), attrs);
+  cir::CallingConv callingConv;
+  cir::SideEffect sideEffect;
+  cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
+                             attrs, callingConv, sideEffect,
+                             /*attrOnCallSite=*/true, /*isThunk=*/false);
 
   cir::FuncType indirectFuncTy;
   mlir::Value indirectFuncVal;

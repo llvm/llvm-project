@@ -57,6 +57,7 @@ LLVM_ABI void initializeAssumptionCacheTrackerPass(PassRegistry &);
 LLVM_ABI void initializeAtomicExpandLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBasicBlockMatchingAndInferencePass(PassRegistry &);
 LLVM_ABI void initializeBasicBlockPathCloningPass(PassRegistry &);
+LLVM_ABI void initializeInsertCodePrefetchPass(PassRegistry &);
 LLVM_ABI void
 initializeBasicBlockSectionsProfileReaderWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBasicBlockSectionsPass(PassRegistry &);
@@ -103,6 +104,7 @@ LLVM_ABI void initializeDomPrinterWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDomViewerWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDominanceFrontierWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDominatorTreeWrapperPassPass(PassRegistry &);
+LLVM_ABI void initializeDummyCGSCCPassPass(PassRegistry &);
 LLVM_ABI void initializeDwarfEHPrepareLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeEarlyCSELegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeEarlyCSEMemSSALegacyPassPass(PassRegistry &);

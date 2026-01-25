@@ -68,14 +68,13 @@ define <2 x i16> @extract_2xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %
 ; GCN-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0xffff
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0x8000
-; GCN-NEXT:    v_mov_b32_e32 v4, 0xffff8000
+; GCN-NEXT:    v_mov_b32_e32 v4, 0xffff0000
+; GCN-NEXT:    v_bfrev_b32_e32 v5, 1
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v1, -1, v4, vcc
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v2
-; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v5, vcc
+; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   br i1 %c0, label %T, label %F
 
