@@ -554,7 +554,7 @@ def LifetimeSafetySuggestions
   }];
 }
 def LifetimeSafetyNoescape
-    : DiagGroup<"experimental-lifetime-safety-noescape"> {
+    : DiagGroup<"lifetime-safety-noescape"> {
   code Documentation = [{
     Detects misuse of [[clang::noescape]] annotation where the parameter escapes through return.
   }];
