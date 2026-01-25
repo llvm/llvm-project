@@ -16746,15 +16746,18 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       InstructionCost BVCost = 0;
       for (const auto &[BVE, Values] : ValuesToInsert) {
         APInt BVDemandedElts = APInt::getZero(BVE->getVectorFactor());
+        SmallVector<Value *> BVValues(BVE->getVectorFactor(),
+                                      PoisonValue::get(ScalarTy));
         for (Value *V : Values) {
           unsigned Pos = BVE->findLaneForValue(V);
+          BVValues[Pos] = V;
           BVDemandedElts.setBit(Pos);
         }
         auto *BVVecTy = getWidenedType(ScalarTy, BVE->getVectorFactor());
         BVCost += ::getScalarizationOverhead(
             *TTI, ScalarTy, BVVecTy, BVDemandedElts,
             /*Insert=*/true, /*Extract=*/false, CostKind,
-            BVDemandedElts.isAllOnes(), Values);
+            BVDemandedElts.isAllOnes(), BVValues);
       }
       if (ExtractsCost < BVCost) {
         LoadsExtractsCost += ExtractsCost;
