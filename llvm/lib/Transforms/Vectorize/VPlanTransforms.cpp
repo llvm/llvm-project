@@ -3196,9 +3196,9 @@ void VPlanTransforms::addExplicitVectorLength(
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  auto *CanonicalIV = LoopRegion->getCanonicalIV();
+  auto *CanonicalIV = cast<VPRegionValue>(LoopRegion->getCanonicalIV());
   auto &CanIVInfo = LoopRegion->getCanonicalIVInfo();
-  auto *CanIVTy = CanIVInfo.getType();
+  auto *CanIVTy = CanonicalIV->getType();
   VPValue *StartV = Plan.getOrAddLiveIn(ConstantInt::getNullValue(CanIVTy));
   auto *CanonicalIVIncrement = LoopRegion->getCanonicalIVIncrement();
 
@@ -5110,7 +5110,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  Type *CanIVTy = VectorLoop->getCanonicalIVInfo().getType();
+  Type *CanIVTy = VectorLoop->getCanonicalIVType();
   auto *Inc = cast<VPInstruction>(
       VectorLoop->getExitingBasicBlock()->getTerminator()->getOperand(0));
   VPBuilder PHBuilder(Plan.getVectorPreheader());

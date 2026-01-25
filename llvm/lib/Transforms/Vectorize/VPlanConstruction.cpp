@@ -1001,7 +1001,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
       VPBuilder(CheckBlockVPBB)
           .createNaryOp(
               VPInstruction::BranchOnCond, {CondVPV},
-              Plan.getVectorLoopRegion()->getCanonicalIVInfo().getDebugLoc());
+              Plan.getVectorLoopRegion()->getCanonicalIVDebugLoc());
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =

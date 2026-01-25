@@ -25,6 +25,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
@@ -189,9 +190,11 @@ public:
 struct VPRegionValue : public VPValue {
   VPRegionBlock *DefiningRegion;
   Type *Ty;
+  DebugLoc DL;
 
-  VPRegionValue(Type *Ty, VPRegionBlock *Region)
-      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty) {}
+  VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+        DL(DL) {}
 
   ~VPRegionValue() override = default;
 
@@ -200,6 +203,9 @@ struct VPRegionValue : public VPValue {
 
   /// Returns the type of the VPRegionValue.
   Type *getType() const { return Ty; }
+
+  /// Returns the debug location of the VPRegionValue.
+  DebugLoc getDebugLoc() const { return DL; }
 
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() == VPValue::VPRegionValueSC;

@@ -4132,17 +4132,14 @@ class VPCanonicalIVInfo {
   /// VPCanonicalIVInfo.
   std::unique_ptr<VPRegionValue> CanIV;
   bool HasNUW = true;
-  DebugLoc DL = DebugLoc::getUnknown();
 
 public:
   VPCanonicalIVInfo(Type *Ty, DebugLoc DL, VPRegionBlock *Region,
                     bool HasNUW = true)
-      : CanIV(std::make_unique<VPRegionValue>(Ty, Region)), HasNUW(HasNUW),
-        DL(DL) {}
+      : CanIV(std::make_unique<VPRegionValue>(Ty, DL, Region)), HasNUW(HasNUW) {
+  }
 
   VPRegionValue *getVPValue() { return CanIV.get(); }
-  Type *getType() const { return CanIV->getType(); }
-  DebugLoc getDebugLoc() const { return DL; }
   bool hasNUW() const { return HasNUW; }
   void clearNUW() { HasNUW = false; }
 };
@@ -4262,8 +4259,8 @@ public:
   void dissolveToCFGLoop();
 
   /// Get the canonical IV increment instruction. If the exiting terminator
-  /// is a BranchOnCount with an IV increment, return it. Otherwise, create
-  /// a new IV increment and return it.
+  /// is a BranchOnCount with an IV increment, return it. Otherwise, return
+  /// nullptr.
   VPInstruction *getCanonicalIVIncrement();
 
   /// Return the canonical induction variable of the region, null for
@@ -4271,11 +4268,13 @@ public:
   VPValue *getCanonicalIV() { return CanIVInfo->getVPValue(); }
   const VPValue *getCanonicalIV() const { return CanIVInfo->getVPValue(); }
 
-  Type *getCanonicalIVType() const { return CanIVInfo->getType(); }
+  Type *getCanonicalIVType() const { return CanIVInfo->getVPValue()->getType(); }
 
   const VPCanonicalIVInfo &getCanonicalIVInfo() const { return *CanIVInfo; }
 
-  DebugLoc getCanonicalIVDebugLoc() const { return CanIVInfo->getDebugLoc(); }
+  DebugLoc getCanonicalIVDebugLoc() const {
+    return CanIVInfo->getVPValue()->getDebugLoc();
+  }
   bool hasCanonicalIVNUW() const { return CanIVInfo->hasNUW(); }
   void clearCanonicalIVNUW() { CanIVInfo->clearNUW(); }
 };

@@ -740,12 +740,14 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
-  VPRegionBlock *NewRegion =
-      isReplicator()
-          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
-          : Plan.createLoopRegion(CanIVInfo->getType(),
-                                  CanIVInfo->getDebugLoc(), getName(), NewEntry,
-                                  NewExiting);
+  VPRegionBlock *NewRegion;
+  if (isReplicator()) {
+    NewRegion = Plan.createReplicateRegion(NewEntry, NewExiting, getName());
+  } else {
+    auto *CanIV = CanIVInfo->getVPValue();
+    NewRegion = Plan.createLoopRegion(CanIV->getType(), CanIV->getDebugLoc(),
+                                      getName(), NewEntry, NewExiting);
+  }
 
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
@@ -852,8 +854,8 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  VPValue *CanIV = getCanonicalIV();
-  if (CanIV && CanIV->getNumUsers() > 0) {
+  auto *CanIV = cast<VPRegionValue>(getCanonicalIV());
+  if (CanIV->getNumUsers() > 0) {
     VPlan &Plan = *getPlan();
     VPInstruction *CanIVInc = getCanonicalIVIncrement();
     // If the increment doesn't exist yet, create it.
@@ -863,13 +865,13 @@ void VPRegionBlock::dissolveToCFGLoop() {
           VPBuilder(ExitingTerm)
               .createOverflowingOp(Instruction::Add, {CanIV, &Plan.getVFxUF()},
                                    {CanIVInfo->hasNUW(), /* HasNSW */ false},
-                                   CanIVInfo->getDebugLoc(), "index.next");
+                                   CanIV->getDebugLoc(), "index.next");
     }
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
-            .createScalarPhi({Plan.getConstantInt(CanIVInfo->getType(), 0),
+            .createScalarPhi({Plan.getConstantInt(CanIV->getType(), 0),
                               CanIVInc},
-                             CanIVInfo->getDebugLoc(), "index");
+                             CanIV->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
 
@@ -889,17 +891,24 @@ VPInstruction *VPRegionBlock::getCanonicalIVIncrement() {
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
-
   auto *ExitingTerm = ExitingLatch->getTerminator();
   VPInstruction *CanIVInc = nullptr;
   if (match(ExitingTerm,
             m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
-    assert(match(CanIVInc,
-                 m_c_Add(m_CombineOr(m_Specific(CanIV),
-                                     m_c_Add(m_Specific(CanIV), m_LiveIn())),
-                         m_VPValue())) &&
-           "invalid existing IV increment");
+    // Matched.
+  } else if (VPValue *Cond = nullptr;
+             match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
+             match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
+                                        m_VPInstruction(CanIVInc),
+                                        m_VPValue()))) {
+    // Match branch-on-cond(icmp eq(increment, trip_count)) for epilogue loop.
   }
+  assert(
+      !CanIVInc ||
+      match(CanIVInc, m_c_Add(m_CombineOr(m_Specific(CanIV),
+                                          m_c_Add(m_Specific(CanIV), m_LiveIn())),
+                              m_VPValue())) &&
+          "invalid existing IV increment");
   return CanIVInc;
 }
 
