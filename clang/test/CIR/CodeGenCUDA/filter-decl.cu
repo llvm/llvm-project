@@ -32,6 +32,6 @@ __device__ void deviceonlyfunc(void) {}
 __host__ __device__ void hostdevicefunc(void) {}
 
 // __global__ kernel — both sides (stub on host, kernel on device)
-// CHECK-HOST: cir.func {{.*}} @__device_stub__globalfunc()
+// CHECK-HOST: cir.func {{.*}} @_Z25__device_stub__globalfuncv()
 // CHECK-DEVICE: cir.func {{.*}} @_Z10globalfuncv()
 __global__ void globalfunc(void) {}
