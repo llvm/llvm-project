@@ -187,11 +187,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::i32, MVT::i64})
         setOperationAction(Op, T, Custom);
 
-  if (Subtarget->hasRelaxedSIMD()) {
-    setOperationAction(
-        {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
-        {MVT::v4f32, MVT::v2f64}, Legal);
-  }
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 

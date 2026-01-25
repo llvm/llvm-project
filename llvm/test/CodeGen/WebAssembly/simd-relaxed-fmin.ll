@@ -10,8 +10,29 @@ define <4 x float> @test_minnum_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK:         .functype test_minnum_f32x4 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call fminf
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fminf
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    call fminf
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    call fminf
+; CHECK-NEXT:    f32x4.replace_lane 3
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %result
@@ -20,10 +41,119 @@ define <4 x float> @test_minnum_f32x4(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @test_minimumnum_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_minimumnum_f32x4:
 ; CHECK:         .functype test_minimumnum_f32x4 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f32, f32, f32, f32, f32, f32, f32, f32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.tee 6
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.tee 7
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 7
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.tee 8
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.lt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.lt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.lt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.lt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const -2147483648, -2147483648, -2147483648, -2147483648
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
+; CHECK-NEXT:    f32x4.eq
+; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %result
@@ -34,8 +164,17 @@ define <2 x double> @test_minnum_f64x2(<2 x double> %a, <2 x double> %b) {
 ; CHECK:         .functype test_minnum_f64x2 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call fmin
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmin
+; CHECK-NEXT:    f64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.minnum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %result
@@ -44,10 +183,69 @@ define <2 x double> @test_minnum_f64x2(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @test_minimumnum_f64x2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: test_minimumnum_f64x2:
 ; CHECK:         .functype test_minimumnum_f64x2 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f64, f64, f64, f64
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    f64x2.replace_lane 1
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f64.lt
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f64.lt
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    f64x2.replace_lane 1
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const -9223372036854775808, -9223372036854775808
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
+; CHECK-NEXT:    f64x2.eq
+; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %result
@@ -59,7 +257,7 @@ define <4 x float> @test_pmin_v4f32_olt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp olt <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -72,7 +270,7 @@ define <4 x float> @test_pmin_v4f32_ole(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ole <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -85,7 +283,7 @@ define <4 x float> @test_pmin_v4f32_ogt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -98,7 +296,7 @@ define <4 x float> @test_pmin_v4f32_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp oge <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -112,7 +310,7 @@ define <4 x float> @pmin_v4f32_fast_olt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast olt <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -126,7 +324,7 @@ define <4 x float> @test_pmin_v4f32_fast_ole(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ole <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -140,7 +338,7 @@ define <4 x float> @test_pmin_v4f32_fast_ogt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ogt <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -154,7 +352,7 @@ define <4 x float> @test_pmin_v4f32_fast_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast oge <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -167,7 +365,7 @@ define <4 x i32> @test_pmin_int_v4f32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_min
+; CHECK-NEXT:    f32x4.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %fx = bitcast <4 x i32> %x to <4 x float>
   %fy = bitcast <4 x i32> %y to <4 x float>
@@ -182,7 +380,7 @@ define <2 x double> @test_pmin_v2f64_olt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp olt <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -195,7 +393,7 @@ define <2 x double> @test_pmin_v2f64_ole(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ole <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -208,7 +406,7 @@ define <2 x double> @test_pmin_v2f64_ogt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -221,7 +419,7 @@ define <2 x double> @test_pmin_v2f64_oge(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp oge <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -235,7 +433,7 @@ define <2 x double> @pmin_v2f64_fast_olt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast olt <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -249,7 +447,7 @@ define <2 x double> @test_pmin_v2f64_fast_ole(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ole <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -263,7 +461,7 @@ define <2 x double> @test_pmin_v2f64_fast_ogt(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ogt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -277,7 +475,7 @@ define <2 x double> @test_pmin_v2f64_fast_oge(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast oge <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -290,7 +488,7 @@ define <2 x i64> @test_pmin_int_v2f64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_min
+; CHECK-NEXT:    f64x2.pmin
 ; CHECK-NEXT:    # fallthrough-return
   %fx = bitcast <2 x i64> %x to <2 x double>
   %fy = bitcast <2 x i64> %y to <2 x double>
