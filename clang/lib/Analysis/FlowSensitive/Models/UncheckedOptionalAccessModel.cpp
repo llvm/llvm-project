@@ -345,8 +345,7 @@ auto isZeroParamConstMemberCall() {
 
 auto isZeroParamConstMemberOperatorCall() {
   return cxxOperatorCallExpr(
-      callee(cxxMethodDecl(parameterCountIs(0), isConst(),
-                           unless(hasAnyName("operator*", "operator->")))));
+      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
 }
 
 auto isNonConstMemberCall() {
