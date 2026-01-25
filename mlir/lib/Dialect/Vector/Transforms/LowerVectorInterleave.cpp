@@ -148,6 +148,7 @@ public:
 private:
   int64_t targetRank = 1;
 };
+
 /// Rewrite vector.interleave op into an equivalent vector.shuffle op, when
 /// applicable: `sourceType` must be 1D and non-scalable.
 ///
@@ -181,6 +182,46 @@ struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
   }
 };
 
+/// Rewrite vector.deinterleave op into two equivalent vector.shuffle ops, when
+/// applicable: `sourceType` must be 1D and non-scalable.
+///
+/// Example:
+///
+/// ```mlir
+/// %evens, %odds = vector.deinterleave %arg0 : vector<4xi32> -> vector<2xi32>
+/// ```
+///
+/// Is rewritten into:
+///
+/// ```mlir
+/// %evens = vector.shuffle %arg0, %arg0 [0, 2] : vector<4xi32>, vector<4xi32>
+/// %odds = vector.shuffle %arg0, %arg0 [1, 3] : vector<4xi32>, vector<4xi32>
+/// ```
+struct DeinterleaveToShuffle final : OpRewritePattern<vector::DeinterleaveOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::DeinterleaveOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType sourceType = op.getSourceVectorType();
+    if (sourceType.getRank() != 1 || sourceType.isScalable()) {
+      return failure();
+    }
+
+    auto seq = llvm::seq<int64_t>(sourceType.getNumElements() / 2);
+    auto evenZip = llvm::map_to_vector(seq, [](int64_t i) { return i * 2; });
+    auto oddZip =
+        llvm::map_to_vector(evenZip, [](int64_t i) { return i + 1; });
+
+    Value evenResult = vector::ShuffleOp::create(
+        rewriter, op.getLoc(), op.getOperand(), op.getOperand(), evenZip);
+    Value oddResult = vector::ShuffleOp::create(
+        rewriter, op.getLoc(), op.getOperand(), op.getOperand(), oddZip);
+
+    rewriter.replaceOp(op, ValueRange{evenResult, oddResult});
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateVectorInterleaveLoweringPatterns(
@@ -192,4 +233,9 @@ void mlir::vector::populateVectorInterleaveLoweringPatterns(
 void mlir::vector::populateVectorInterleaveToShufflePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<InterleaveToShuffle>(patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateVectorDeinterleaveToShufflePatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<DeinterleaveToShuffle>(patterns.getContext(), benefit);
 }
