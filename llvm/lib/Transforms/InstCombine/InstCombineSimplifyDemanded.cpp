@@ -3130,6 +3130,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                            KnownSrc.isKnownNeverSubnormal()))
           return CI->getArgOperand(0);
 
+        FastMathFlags InferredFMF =
+            inferFastMathValueFlags(FMF, Known.KnownFPClasses, KnownSrc);
+        if (InferredFMF != FMF) {
+          CI->dropUBImplyingAttrsAndMetadata();
+          CI->setFastMathFlags(InferredFMF);
+          return CI;
+        }
+
         return nullptr;
       }
 
