@@ -1232,7 +1232,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @powr_issue64870(float nofpclas
 ; CHECK-NEXT:    [[I:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[I1:%.*]] = tail call float @llvm.log2.f32(float [[I]])
 ; CHECK-NEXT:    [[I2:%.*]] = fmul nnan float [[I1]], [[Y]]
-; CHECK-NEXT:    [[I3:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = tail call nnan nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I2]])
 ; CHECK-NEXT:    [[I6:%.*]] = fcmp oeq float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[I7:%.*]] = select i1 [[I6]], float 0.000000e+00, float [[I3]]
 ; CHECK-NEXT:    [[I8:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
@@ -1267,7 +1267,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[ARG]])
 ; CHECK-NEXT:    [[I5:%.*]] = fmul nnan float [[ARG1]], [[I3]]
-; CHECK-NEXT:    [[I6:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float noundef [[I5]])
+; CHECK-NEXT:    [[I6:%.*]] = tail call nnan nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I5]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[I12:%.*]] = select i1 [[TMP0]], float 0.000000e+00, float [[I6]]
 ; CHECK-NEXT:    ret float [[I12]]
@@ -1296,7 +1296,7 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-NEXT:    [[I:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG]])
 ; CHECK-NEXT:    [[I2:%.*]] = tail call float @llvm.log2.f32(float noundef [[I]])
 ; CHECK-NEXT:    [[I3:%.*]] = fmul nnan float [[I2]], [[ARG1]]
-; CHECK-NEXT:    [[I4:%.*]] = tail call noundef float @llvm.exp2.f32(float noundef [[I3]])
+; CHECK-NEXT:    [[I4:%.*]] = tail call nnan float @llvm.exp2.f32(float [[I3]])
 ; CHECK-NEXT:    [[I5:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG1]])
 ; CHECK-NEXT:    [[I6:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I5]])
 ; CHECK-NEXT:    [[I7:%.*]] = fcmp oeq float [[I6]], [[I5]]

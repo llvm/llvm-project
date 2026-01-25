@@ -2920,8 +2920,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Known = KnownFPClass::exp(KnownSrc);
       Known.knownNot(~DemandedMask);
 
-      return getFPClassConstant(VTy, Known.KnownFPClasses,
-                                /*IsCanonicalizing=*/true);
+      return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
+                                           KnownSrc);
     }
     case Intrinsic::log:
     case Intrinsic::log2:
