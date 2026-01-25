@@ -116,6 +116,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L,
                LIBC_NAMESPACE::shared::dfmal(0x0.p+0L, 0x0.p+0L, 0x0.p+0L));
+  EXPECT_FP_EQ(0x0p+0L,
+               LIBC_NAMESPACE::shared::ffmal(0x0.p+0L, 0x0.p+0L, 0x0.p+0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbl(0x1.p+0L));
 }
 
