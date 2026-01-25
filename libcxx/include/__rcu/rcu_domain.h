@@ -33,17 +33,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
-template <class _ThreadLocal>
+template <class _Tp>
 class __thread_local_owner {
   // todo put globals in experimental dylib
-  inline static thread_local map<const __thread_local_owner*, _ThreadLocal> __thread_local_instances;
+  inline static thread_local map<const __thread_local_owner*, _Tp> __thread_local_instances;
 
   // Keep track of all thread-local instances owned by this owner.
   // Only emplaced the first time a thread is trying to access its thread-local instance.
-  vector<atomic_ref<_ThreadLocal>> __owned_instances_;
+  vector<atomic_ref<_Tp>> __owned_instances_;
   mutex __mtx_;
 
-  void __register(_ThreadLocal& __obj) {
+  void __register(_Tp& __obj) {
     lock_guard<std::mutex> __lg(__mtx_);
     __owned_instances_.emplace_back(__obj);
   }
@@ -54,10 +54,10 @@ public:
   __thread_local_owner()                       = default;
   __thread_local_owner(__thread_local_owner&&) = delete;
 
-  atomic_ref<_ThreadLocal> __get_current_thread_instance() {
+  atomic_ref<_Tp> __get_current_thread_instance() {
     auto __it = __thread_local_instances.find(this);
     if (__it == __thread_local_instances.end()) {
-      auto [new_it, _] = __thread_local_instances.try_emplace(this, _ThreadLocal());
+      auto [new_it, _] = __thread_local_instances.try_emplace(this, _Tp());
       auto& __obj      = new_it->second;
       __register(__obj);
       return atomic_ref(__obj);
