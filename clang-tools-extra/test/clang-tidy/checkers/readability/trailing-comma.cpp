@@ -152,3 +152,10 @@ void nestedMultiLine() {
 ENUM(E1M, Xm, Ym);
 int macroArr[] = INIT;
 int a[] = { ITEMS };
+
+// Comma from macro should not trigger false positive
+#define COMMA ,
+int comma_from_macro[] = {
+    1
+    COMMA
+};

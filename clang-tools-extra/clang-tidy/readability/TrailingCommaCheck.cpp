@@ -138,10 +138,16 @@ void TrailingCommaCheck::checkInitListExpr(
   if (isa<PackExpansionExpr>(LastInit))
     return;
 
-  emitDiag(LastInit->getEndLoc(),
-           utils::lexer::findNextTokenSkippingComments(
-               LastInit->getEndLoc(), *Result.SourceManager, getLangOpts()),
-           DiagKind::InitList, Result, Policy);
+  const std::optional<Token> NextTok =
+      utils::lexer::findNextTokenSkippingComments(
+          LastInit->getEndLoc(), *Result.SourceManager, getLangOpts());
+
+  // If the next token is neither a comma nor closing brace, there might be
+  // a macro (e.g., #define COMMA ,) that we can't safely analyze.
+  if (NextTok && !NextTok->isOneOf(tok::comma, tok::r_brace))
+    return;
+
+  emitDiag(LastInit->getEndLoc(), NextTok, DiagKind::InitList, Result, Policy);
 }
 
 void TrailingCommaCheck::emitDiag(
