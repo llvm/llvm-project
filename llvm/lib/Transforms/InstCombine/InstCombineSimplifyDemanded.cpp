@@ -2204,11 +2204,11 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                             /*IsCanonicalizing=*/true);
 }
 
-static Value *simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC,
-                                                Instruction &I,
-                                                FPClassTest DemandedMask,
-                                                KnownFPClass &Known,
-                                                unsigned Depth) {
+static Value *
+simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
+                                  FastMathFlags FMF, FPClassTest DemandedMask,
+                                  KnownFPClass &Known, unsigned Depth) {
+
   FPClassTest SrcDemandedMask = DemandedMask;
 
   // Zero results may have been rounded from subnormal or normal sources.
@@ -2235,8 +2235,8 @@ static Value *simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC,
   Known = KnownFPClass::fptrunc(KnownSrc);
   Known.knownNot(~DemandedMask);
 
-  return getFPClassConstant(I.getType(), Known.KnownFPClasses,
-                            /*IsCanonicalizing=*/true);
+  return simplifyDemandedFPClassResult(&I, FMF, DemandedMask, Known,
+                                       {KnownSrc});
 }
 
 Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
@@ -2639,8 +2639,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return nullptr;
   }
   case Instruction::FPTrunc:
-    return simplifyDemandedUseFPClassFPTrunc(*this, *I, DemandedMask, Known,
-                                             Depth);
+    return simplifyDemandedUseFPClassFPTrunc(*this, *I, FMF, DemandedMask,
+                                             Known, Depth);
   case Instruction::FPExt: {
     FPClassTest SrcDemandedMask = DemandedMask;
 
@@ -3074,8 +3074,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return nullptr;
     }
     case Intrinsic::fptrunc_round:
-      return simplifyDemandedUseFPClassFPTrunc(*this, *CI, DemandedMask, Known,
-                                               Depth);
+      return simplifyDemandedUseFPClassFPTrunc(*this, *CI, FMF, DemandedMask,
+                                               Known, Depth);
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
