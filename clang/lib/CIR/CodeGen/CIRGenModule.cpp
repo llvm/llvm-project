@@ -18,6 +18,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
@@ -29,6 +30,7 @@
 #include "clang/CIR/MissingFeatures.h"
 
 #include "CIRGenFunctionInfo.h"
+#include "TargetInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -252,6 +254,10 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       return *theTargetCIRGenInfo;
     }
   }
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
   }
 }
 
@@ -368,6 +374,35 @@ void CIRGenModule::emitDeferred() {
   }
 }
 
+template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *decl) {
+  if (!decl)
+    return false;
+  if (auto *attr = decl->getAttr<AttrT>())
+    return attr->isImplicit();
+  return decl->isImplicit();
+}
+
+// This function returns true if M is a specialization, a template,
+// or a non-generic lambda call operator.
+inline bool isLambdaCallOperator(const CXXMethodDecl *MD) {
+  const CXXRecordDecl *LambdaClass = MD->getParent();
+  if (!LambdaClass || !LambdaClass->isLambda()) return false;
+  return MD->getOverloadedOperator() == OO_Call;
+}
+
+bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
+  assert(langOpts.CUDA && "Should not be called by non-CUDA languages");
+  // We need to emit host-side 'shadows' for all global
+  // device-side variables because the CUDA runtime needs their
+  // size and host-side address in order to provide access to
+  // their device-side incarnations.
+  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>() ||
+         global->hasAttr<CUDAConstantAttr>() ||
+         global->hasAttr<CUDASharedAttr>() ||
+         global->getType()->isCUDADeviceBuiltinSurfaceType() ||
+         global->getType()->isCUDADeviceBuiltinTextureType();
+}
+
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
     emitGlobalOpenACCDecl(cd);
@@ -381,6 +416,35 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // throughout this function.
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
+
+  // If this is CUDA, be selective about which declarations we emit.
+  // Non-constexpr non-lambda implicit host device functions are not emitted
+  // unless they are used on device side.
+  if (langOpts.CUDA) {
+    assert((isa<FunctionDecl>(global) || isa<VarDecl>(global)) &&
+           "Expected Variable or Function");
+    if (const auto *varDecl = dyn_cast<VarDecl>(global)) {
+      if (!shouldEmitCUDAGlobalVar(varDecl))
+        return;
+    } else if (langOpts.CUDAIsDevice) {
+      const auto *functionDecl = dyn_cast<FunctionDecl>(global);
+      if ((!global->hasAttr<CUDADeviceAttr>() ||
+           (langOpts.OffloadImplicitHostDeviceTemplates &&
+            hasImplicitAttr<CUDAHostAttr>(functionDecl) &&
+            hasImplicitAttr<CUDADeviceAttr>(functionDecl) &&
+            !functionDecl->isConstexpr() &&
+            !isLambdaCallOperator(functionDecl) &&
+            !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(
+                functionDecl))) &&
+          !global->hasAttr<CUDAGlobalAttr>() &&
+          !(langOpts.HIPStdPar && isa<FunctionDecl>(global) &&
+            !global->hasAttr<CUDAHostAttr>()))
+        return;
+      // Device-only functions are the only things we skip.
+    } else if (!global->hasAttr<CUDAHostAttr>() &&
+               global->hasAttr<CUDADeviceAttr>())
+      return;
+  }
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
     // Update deferred annotations with the latest declaration if the function
@@ -1996,6 +2060,8 @@ bool CIRGenModule::mayBeEmittedEagerly(const ValueDecl *global) {
          "Only FunctionDecl and VarDecl should hit this path so far.");
   return true;
 }
+
+
 
 static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
                                  cir::CIRGlobalValueInterface gv) {
