@@ -939,23 +939,27 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
             int64_t ImmVal = Src1->getImm();
 
             if (MI.getOpcode() == AMDGPU::S_OR_B32) {
-                uint32_t Imm = static_cast<uint32_t>(ImmVal);
-                if (MI.getFlag(MachineInstr::MIFlag::Disjoint)) {
-                    bool IsBitSetCandidate = isPowerOf2_32(Imm) && MI.findRegisterDefOperand(AMDGPU::SCC, nullptr)->isDead() && (llvm::countr_zero(Imm) != 0);
-                    if (!IsBitSetCandidate) {
-                        NewOpc = AMDGPU::S_ADDK_I32;
-                    }
+              uint32_t Imm = static_cast<uint32_t>(ImmVal);
+              if (MI.getFlag(MachineInstr::MIFlag::Disjoint)) {
+                bool IsBitSetCandidate =
+                    isPowerOf2_32(Imm) &&
+                    MI.findRegisterDefOperand(AMDGPU::SCC, nullptr)->isDead() &&
+                    (llvm::countr_zero(Imm) != 0);
+                if (!IsBitSetCandidate) {
+                  NewOpc = AMDGPU::S_ADDK_I32;
                 }
-            } 
-            else {
-                NewOpc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ? AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
+              }
+            } else {
+              NewOpc = (MI.getOpcode() == AMDGPU::S_ADD_I32)
+                           ? AMDGPU::S_ADDK_I32
+                           : AMDGPU::S_MULK_I32;
             }
 
             if (NewOpc) {
-                Src1->setImm(SignExtend64(ImmVal, 32));
-                MI.setDesc(TII->get(NewOpc));
-                MI.tieOperands(0, 1);
-                Changed = true;
+              Src1->setImm(SignExtend64(ImmVal, 32));
+              MI.setDesc(TII->get(NewOpc));
+              MI.tieOperands(0, 1);
+              Changed = true;
             }
           }
         }
