@@ -1270,3 +1270,19 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
 )
+
+add_header_library(
+  tanf
+  HDRS
+    tanf.h
+  DEPENDS
+    .range_reduction
+    .sincosf_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
