@@ -760,6 +760,9 @@ module std [system] {
       export std.functional.ranges_operations
       export std.algorithm.in_in_out_result
     }
+    module ranges_shift_left {
+      header "__algorithm/ranges_shift_left.h"
+    }
     module ranges_shuffle {
       header "__algorithm/ranges_shuffle.h"
     }
