@@ -401,6 +401,10 @@ private:
   /// @param Context The context of scop detection.
   bool isValidMemoryAccess(MemAccInst Inst, DetectionContext &Context) const;
 
+  /// Filter out types that we do not support.
+  bool isCompatibleType(Instruction *Inst, llvm::Type *Ty,
+                        DetectionContext &Context);
+
   /// Check if an instruction can be part of a Scop.
   ///
   /// @param Inst The instruction to check.
