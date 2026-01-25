@@ -424,6 +424,8 @@ static APInt computeMaxChangedPtrBits(const Operator *Op, const Value *Mask,
 bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
     const Operator *I2P, const DataLayout &DL) const {
   assert(I2P->getOpcode() == Instruction::IntToPtr);
+  // If I2P has been checked before and has the corresponding old pointer value,
+  // just return true.
   if (PtrIntCastPairs.count(I2P))
     return true;
 
@@ -454,19 +456,17 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
 
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
   unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
-  std::optional<APInt> PreservedPtrMask =
-      TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
-  if (!PreservedPtrMask)
-    return false;
-
+  APInt PreservedPtrMask = TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
   APInt ChangedPtrBits = computeMaxChangedPtrBits(LogicOP, Mask, DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
-  if (ChangedPtrBits.getBitWidth() != PreservedPtrMask->getBitWidth())
-    return false;
-
-  if (ChangedPtrBits.isSubsetOf(*PreservedPtrMask)) {
-    PtrIntCastPairs[I2P] = P2I->getOperand(0);
+  // The following pattern is not safe to cast address space.
+  //   %1 = ptrtoint ptr addrspace(3) %sp to i32
+  //   %2 = zext i32 %1 to i64
+  //   %gp = inttoptr i64 %2 to ptr
+  assert(ChangedPtrBits.getBitWidth() == PreservedPtrMask.getBitWidth());
+  if (ChangedPtrBits.isSubsetOf(PreservedPtrMask)) {
+    PtrIntCastPairs.insert({I2P, P2I->getOperand(0)});
     return true;
   }
 
@@ -940,9 +940,9 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
       return new AddrSpaceCastInst(Src, NewPtrType);
     }
     assert(isSafeToCastPtrIntPair(cast<Operator>(I), *DL));
-    auto *Src = I->getOperand(0);
-    IntToPtrInst *NewI2P = new IntToPtrInst(Src, NewPtrType);
-    return NewI2P;
+    AddrSpaceCastInst *AsCast = new AddrSpaceCastInst(I, NewPtrType);
+    AsCast->insertAfter(I);
+    return AsCast;
   }
   default:
     llvm_unreachable("Unexpected opcode");
@@ -983,9 +983,7 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
       return Src;
     }
     assert(isSafeToCastPtrIntPair(cast<Operator>(CE), *DL));
-    auto *Src = CE->getOperand(0);
-    return ConstantExpr::getIntToPtr(Src, TargetType);
-    // return ConstantExpr::getAddrSpaceCast(CE, TargetType);
+    return ConstantExpr::getAddrSpaceCast(CE, TargetType);
   }
 
   // Computes the operands of the new constant expression.

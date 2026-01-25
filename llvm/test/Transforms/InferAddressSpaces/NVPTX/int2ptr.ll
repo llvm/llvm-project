@@ -19,14 +19,35 @@ define void @test_smem_fail(ptr addrspace(3) %sp) {
   ret void
 }
 
+define void @test_smem_fail2(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_smem_fail2(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP1:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[GP:%.*]] = getelementptr i8, ptr [[GP1]], i32 8
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = xor i64 4095, [[A]]
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp1 = addrspacecast ptr addrspace(3) %sp to ptr
+  %gp = getelementptr i8, ptr %gp1, i32 8
+  %a = ptrtoint ptr %gp to i64
+  %b = xor i64 4095, %a
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
 define void @test_xor_smem(ptr addrspace(3) %sp) {
 ; CHECK-LABEL: define void @test_xor_smem(
 ; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = xor i64 4095, [[A]]
-; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
-; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(3) %sp to ptr
@@ -43,8 +64,9 @@ define void @test_xor_smem2(ptr addrspace(3) %sp) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = xor i64 [[A]], 4095
-; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
-; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(3) %sp to ptr
@@ -61,8 +83,9 @@ define void @test_or_smem(ptr addrspace(3) %sp) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = or i64 4095, [[A]]
-; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
-; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(3) %sp to ptr
@@ -97,8 +120,9 @@ define void @test_and_smem(ptr addrspace(3) %sp) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], -4096
-; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
-; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(3) %sp to ptr
@@ -133,8 +157,9 @@ define void @test_gmem(ptr addrspace(1) %sp) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(1) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = xor i64 7, [[A]]
-; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(1)
-; CHECK-NEXT:    store i16 0, ptr addrspace(1) [[GP2]], align 2
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(1)
+; CHECK-NEXT:    store i16 0, ptr addrspace(1) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(1) %sp to ptr
@@ -177,8 +202,9 @@ define void @test3(ptr addrspace(3) %sp) {
 ; CHECK-NEXT:    [[SHR4:%.*]] = and i64 [[AND3]], 112
 ; CHECK-NEXT:    [[OR5:%.*]] = or i64 [[OR]], [[SHR4]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[OR5]], [[T1]]
-; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[XOR]] to ptr addrspace(3)
-; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[XOR]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(3) %sp to ptr

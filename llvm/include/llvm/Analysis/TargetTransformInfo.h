@@ -578,8 +578,8 @@ public:
   ///   %b = xor i64 7, %a
   ///   %gp2 = inttoptr i64 %b to ptr
   ///   store i16 0, ptr %gp2, align 2
-  LLVM_ABI std::optional<APInt>
-  getAddrSpaceCastPreservedPtrMask(unsigned SrcAS, unsigned DstAS) const;
+  LLVM_ABI APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                  unsigned DstAS) const;
 
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.

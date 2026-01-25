@@ -180,14 +180,13 @@ public:
     }
   }
 
-  std::optional<APInt>
-  getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
-                                   unsigned DstAS) const override {
+  APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                         unsigned DstAS) const override {
     if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
-      return std::nullopt;
+      return {DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0};
     if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
         DstAS != llvm::ADDRESS_SPACE_SHARED)
-      return std::nullopt;
+      return {DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0};
 
     // Address change within 4K size does not change the original address space
     // and is safe to perform address cast form SrcAS to DstAS.

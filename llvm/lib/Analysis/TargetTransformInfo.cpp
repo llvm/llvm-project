@@ -339,9 +339,8 @@ KnownBits TargetTransformInfo::computeKnownBitsAddrSpaceCast(
   return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 }
 
-std::optional<APInt>
-TargetTransformInfo::getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
-                                                      unsigned DstAS) const {
+APInt TargetTransformInfo::getAddrSpaceCastPreservedPtrMask(
+    unsigned SrcAS, unsigned DstAS) const {
   return TTIImpl->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
 }
 
