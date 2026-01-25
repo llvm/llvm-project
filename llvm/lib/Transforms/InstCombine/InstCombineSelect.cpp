@@ -4357,21 +4357,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
     // Canonicalize select of FP values where NaN and -0.0 are not valid as
     // minnum/maxnum intrinsics.
-    if (FCmp && SIFPOp->hasNoNaNs() &&
-        // In order to preserve the nnan flag on the generated intrinsic call,
-        // the nnan flag must be present on both the compare *and* the select
-        // (for poison propagation reasons).
-        //
-        // Some targets don't have a floating point minimum/maximum instruction
-        // with the same semantics as our minnum/maxnum intrinsics. If the
-        // nnan+nsz flags are present on the intrinsic call, those targets can
-        // lower it to a select, or to a simpler instruction. If either flag is
-        // absent then they must lower it to a routine, or even worse, a
-        // libcall. That makes things way slower, and there are other reasons to
-        // avoid introducing libcalls where none previously existed (see
-        // https://github.com/llvm/llvm-project/issues/54554). So, if we can't
-        // preserve the nnan flag, don't bother with the transformation.
-        FCmp->hasNoNaNs() &&
+    //
+    // Note that the `nnan` flag is propagated from the comparison, not from the
+    // select. While it's technically possible to transform a `fcmp` + `select
+    // nnan` to a `minnum`/`maxnum` call *without* an `nnan`, that would be a
+    // pessimization in practice. Many targets can't map `minnum`/`maxnum` to a
+    // single instruction, and if they cannot prove the absence of NaN, must
+    // lower it to a routine or a libcall. There are additional reasons besides
+    // performance to avoid introducing libcalls where none existed before
+    // (https://github.com/llvm/llvm-project/issues/54554).
+    //
+    // As such, we want to ensure that the generated `minnum`/`maxnum` intrinsic
+    // has the `nnan nsz` flags, which allow it to be lowered *back* to a
+    // fcmp+select if that's the best way to express it on the target.
+    if (FCmp && FCmp->hasNoNaNs() &&
         (SIFPOp->hasNoSignedZeros() ||
          (SIFPOp->hasOneUse() &&
           canIgnoreSignBitOfZero(*SIFPOp->use_begin())))) {
@@ -4380,11 +4379,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
+          // `ninf` must be propagated from the comparison too, rather than the
+          // select: https://github.com/llvm/llvm-project/pull/136433
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
-          // If we're flowing into a use which doesn't care about the sign bit
-          // of zero, ensure the nsz flag is added to the min/max operation,
-          // even if it wasn't on the select.
+          // The `nsz` flag is a precondition, so let's ensure it's always added
+          // to the min/max operation, even if it wasn't on the select. This
+          // could happen if `canIgnoreSignBitOfZero` is true--for instance, if
+          // the select doesn't have `nsz`, but the result is being used in an
+          // operation that doesn't care about signed zero.
           BinIntrInst->setHasNoSignedZeros(true);
+          // As mentioned above, `nnan` is also a precondition, so we always set
+          // the flag.
+          BinIntrInst->setHasNoNaNs(true);
         }
         return replaceInstUsesWith(SI, BinIntr);
       }
@@ -4395,6 +4401,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
           BinIntrInst->setHasNoSignedZeros(true);
+          BinIntrInst->setHasNoNaNs(true);
         }
         return replaceInstUsesWith(SI, BinIntr);
       }

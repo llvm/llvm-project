@@ -224,9 +224,9 @@ define double @test_fcmp_select_maxnum(double %x) {
 ; CHECK-NEXT:    ret double [[SEL2]]
 ;
   %cmp1 = fcmp nnan ogt double %x, 1.0
-  %sel1 = select nnan nsz i1 %cmp1, double %x, double 1.0
+  %sel1 = select nsz i1 %cmp1, double %x, double 1.0
   %cmp2 = fcmp nnan olt double %sel1, 255.0
-  %sel2 = select nnan nsz i1 %cmp2, double %sel1, double 255.0
+  %sel2 = select nsz i1 %cmp2, double %sel1, double 255.0
   ret double %sel2
 }
 
