@@ -72,6 +72,11 @@ Clang Python Bindings Potentially Breaking Changes
   These representations will be changed in a future release to match other enums.
 - Remove ``completionChunkKindMap``. In this release, uses of ``completionChunkKindMap``
   need to be replaced by ``CompletionChunkKind``.
+- Move ``SPELLING_CACHE`` into ``CompletionChunk`` and change it to use
+  ``CompletionChunkKind`` instances as keys, instead of the enum values.
+  An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
+  ``__getitem__`` and ``__contains__``. It will be removed in a future release.
+  Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
 
 What's New in Clang |release|?
 ==============================

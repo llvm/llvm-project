@@ -1,7 +1,9 @@
 from clang.cindex import (
     AvailabilityKind,
+    CompletionChunk,
     CompletionChunkKind,
     CompletionString,
+    SPELLING_CACHE,
     TranslationUnit,
 )
 
@@ -214,3 +216,23 @@ void f(P x, Q y) {
         for value, old_str in value_to_old_str.items():
             new_kind = CompletionChunkKind.from_id(value)
             self.assertEqual(old_str, str(new_kind))
+
+    def test_spelling_cache_missing_attribute(self):
+        # Test that accessing missing attributes on SpellingCacheAlias raises
+        # during the transitionary period
+        with self.assertRaises(AttributeError, msg=SPELLING_CACHE.deprecation_message):
+            SPELLING_CACHE.keys()
+
+    def test_spelling_cache_alias(self):
+        kind_keys = list(CompletionChunk.SPELLING_CACHE)
+        self.assertEqual(len(kind_keys), 13)
+        for kind_key in kind_keys:
+            self.assertEqual(
+                SPELLING_CACHE[kind_key.value], CompletionChunk.SPELLING_CACHE[kind_key]
+            )
+
+    def test_spelling_cache_missing_attribute(self):
+        # Test that accessing missing attributes on SpellingCacheAlias raises
+        # during the transitionary period
+        with self.assertRaises(AttributeError, msg=SPELLING_CACHE.deprecation_message):
+            SPELLING_CACHE.keys()
