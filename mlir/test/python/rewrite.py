@@ -283,4 +283,13 @@ def testConversionPattern():
 
         apply_partial_conversion(module, target, frozen, config)
         assert module.operation.verify()
+
+        # CHECK: func.func @f(%arg0: i64) -> i64 {
+        # CHECK:     %0 = builtin.unrealized_conversion_cast %arg0 : i64 to !smt.int
+        # CHECK:     %c3 = smt.int.constant 3
+        # CHECK:     %1 = smt.int.add %0, %c3
+        # CHECK:     %2 = smt.int.mul %1, %c3
+        # CHECK:     %3 = builtin.unrealized_conversion_cast %2 : !smt.int to i64
+        # CHECK:     return %3 : i64
+        # CHECK: }
         print(module)
