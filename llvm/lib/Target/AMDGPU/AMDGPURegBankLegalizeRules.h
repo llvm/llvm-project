@@ -225,7 +225,11 @@ enum LoweringMethodID {
   S_BFE,
   V_BFE,
   VgprToVccCopy,
+  UniMAD64,
+  UniMul64,
+  DivSMulToMAD,
   SplitTo32,
+  SplitTo32Mul,
   ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
@@ -308,7 +312,7 @@ private:
 class RegBankLegalizeRules {
   const GCNSubtarget *ST;
   MachineRegisterInfo *MRI;
-  // Separate maps for G-opcodes and instrinsics since they are in different
+  // Separate maps for G-opcodes and intrinsics since they are in different
   // enums. Multiple opcodes can share same set of rules.
   // RulesAlias = map<Opcode, KeyOpcode>
   // Rules = map<KeyOpcode, SetOfRulesForOpcode>

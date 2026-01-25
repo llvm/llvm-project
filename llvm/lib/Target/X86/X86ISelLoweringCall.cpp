@@ -558,7 +558,9 @@ static Constant* SegmentOffset(IRBuilderBase &IRB,
       IRB.getPtrTy(AddressSpace));
 }
 
-Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
+Value *
+X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
+                                   const LibcallLoweringInfo &Libcalls) const {
   // glibc, bionic, and Fuchsia have a special slot for the stack guard in
   // tcbhead_t; use it instead of the usual global variable (see
   // sysdeps/{i386,x86_64}/nptl/tls.h)
@@ -602,16 +604,17 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
     return SegmentOffset(IRB, Offset, AddressSpace);
   }
-  return TargetLowering::getIRStackGuard(IRB);
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
-void X86TargetLowering::insertSSPDeclarations(Module &M) const {
+void X86TargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT provides functionalities for stack protection.
@@ -638,11 +641,11 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   if ((GuardMode == "tls" || GuardMode.empty()) &&
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
-Value *
-X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+Value *X86TargetLowering::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
   // definition of TLS_SLOT_SAFESTACK in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
@@ -659,7 +662,7 @@ X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
     return SegmentOffset(IRB, 0x18, getAddressSpace());
   }
 
-  return TargetLowering::getSafeStackPointerLocation(IRB);
+  return TargetLowering::getSafeStackPointerLocation(IRB, Libcalls);
 }
 
 //===----------------------------------------------------------------------===//

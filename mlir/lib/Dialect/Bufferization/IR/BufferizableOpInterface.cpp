@@ -125,6 +125,10 @@ SymbolTableCollection &BufferizationState::getSymbolTables() {
   return symbolTables;
 }
 
+SymbolTableCollection &BufferizationState::getSymbolTables() const {
+  return symbolTables;
+}
+
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
   assert(isRepetitiveRegion(region, options) && "expected repetitive region");
