@@ -3339,6 +3339,26 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_powf",
+    hdrs = ["src/__support/math/powf.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_fputil_triple_double",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
+        ":__support_math_exp10f",
+        ":__support_math_exp2f",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp",
     hdrs = ["src/__support/math/exp.h"],
     deps = [
@@ -5151,16 +5171,8 @@ libc_math_function(
 libc_math_function(
     name = "powf",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_sqrt",
-        ":__support_fputil_triple_double",
-        ":__support_macros_optimization",
-        ":__support_math_exp10f",
-        ":__support_math_common_constants",
-        ":__support_math_exp2f",
+        ":__support_math_powf",
+        ":errno",
     ],
 )
 
