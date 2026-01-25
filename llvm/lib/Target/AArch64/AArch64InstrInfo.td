@@ -1310,7 +1310,12 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
 def smullwithsignbits : PatFrag<(ops node:$l, node:$r), (mul node:$l, node:$r), [{
   return CurDAG->ComputeNumSignBits(N->getOperand(0)) > 32 &&
          CurDAG->ComputeNumSignBits(N->getOperand(1)) > 32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+     return VT->computeNumSignBits(MI.getOperand(1).getReg()) > 32 &&
+            VT->computeNumSignBits(MI.getOperand(2).getReg()) > 32;
+  }];
+}
 
 // Match "nnan" flagged calls to fminnum and fmmaxnum. Then semantically equivalent
 // to fmaximum/fminimum.
@@ -6062,7 +6067,7 @@ defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
-defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
+defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
