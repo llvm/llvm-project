@@ -2096,7 +2096,8 @@ static FPClassTest adjustDemandedMaskFromFlags(FPClassTest DemandedMask,
 
 /// Apply epilog fixups to a floating-point intrinsic. See if the result can
 /// fold to a constant, or apply fast math flags.
-static Value *simplifyDemandedFPClassResult(CallInst *FPOp, FastMathFlags FMF,
+static Value *simplifyDemandedFPClassResult(Instruction *FPOp,
+                                            FastMathFlags FMF,
                                             FPClassTest DemandedMask,
                                             KnownFPClass &Known,
                                             ArrayRef<KnownFPClass> KnownSrcs) {
@@ -2660,8 +2661,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
     Known.knownNot(~DemandedMask);
 
-    return getFPClassConstant(VTy, Known.KnownFPClasses,
-                              /*IsCanonicalizing=*/true);
+    return simplifyDemandedFPClassResult(I, FMF, DemandedMask, Known,
+                                         {KnownSrc});
   }
   case Instruction::Call: {
     CallInst *CI = cast<CallInst>(I);
