@@ -17060,7 +17060,7 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   if (DCI.isAfterLegalizeDAG()) {
     if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
-    return V;
+      return V;
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
       return V;
   }
