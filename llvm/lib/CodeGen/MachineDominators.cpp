@@ -100,7 +100,8 @@ char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
 
 bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
   if (F.empty()) {
-    assert(F.getProperties().hasFailedISel() && "Machine function should not be empty unless ISel failed.");
+    assert(F.getProperties().hasFailedISel() &&
+           "Machine function should not be empty unless ISel failed.");
     return false;
   }
 
