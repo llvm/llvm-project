@@ -1106,6 +1106,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
 float4 f16tof32(uint4);
 
 //===----------------------------------------------------------------------===//
+// f32tof16 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint f32tof16(float x)
+/// \brief Returns the float arg value converted to half in the low 16 bits of
+/// the uint return value
+/// \param x The float to be converted to half.
+///
+/// The return value is a uint containing the converted half value in the low
+/// 16 bits.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint f32tof16(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint2 f32tof16(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint3 f32tof16(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint4 f32tof16(float4);
+
+//===----------------------------------------------------------------------===//
 // firstbitlow builtins
 //===----------------------------------------------------------------------===//
 
