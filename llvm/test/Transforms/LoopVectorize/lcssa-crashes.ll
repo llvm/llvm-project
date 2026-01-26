@@ -89,6 +89,14 @@ define void @test3(ptr %p) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
 ; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 6, 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 7, 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 8, 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 9, 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP3]], i32 3
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P:%.*]], i64 0, i64 6
@@ -115,14 +123,6 @@ define void @test3(ptr %p) {
 ; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 6, 1
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 7, 1
-; CHECK-NEXT:    [[TMP21:%.*]] = add i32 8, 1
-; CHECK-NEXT:    [[TMP22:%.*]] = add i32 9, 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> poison, i32 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i32> [[TMP24]], i32 [[TMP21]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP22]], i32 3
 ; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> <i1 false, i1 false, i1 true, i1 true>, i1 false)
 ; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
 ; CHECK-NEXT:    [[INC46_LCSSA:%.*]] = extractelement <4 x i32> [[TMP11]], i64 [[LAST_ACTIVE_LANE]]

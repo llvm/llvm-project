@@ -2571,6 +2571,11 @@ static void licm(VPlan &Plan) {
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads),
       auto *Def = cast<VPSingleDefRecipe>(&R);
+      // TODO: Support sinking VPReplicateRecipe after ensuring replicateByVF
+      // handles sunk recipes correctly.
+      if (isa<VPReplicateRecipe>(Def))
+        continue;
+
       if (Def->getNumUsers() == 0)
         continue;
 

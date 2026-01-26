@@ -551,11 +551,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 
     // Look through buildvector to avoid unnecessary extracts.
     if (match(Op, m_BuildVector())) {
-      auto *BV = cast<VPInstruction>(Op);
-      if (BV->getNumOperands() > Lane.getKnownLane()) {
-        NewOps.push_back(BV->getOperand(Lane.getKnownLane()));
-        continue;
-      }
+      NewOps.push_back(
+          cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
+      continue;
     }
     VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
