@@ -3,9 +3,7 @@
 
 define i1 @clmul_zero(i8 %a) nounwind {
 ; CHECK-LABEL: @clmul_zero(
-; CHECK-NEXT:    [[CLMUL:%.*]] = call i8 @llvm.clmul.i8(i8 [[A:%.*]], i8 0)
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[CLMUL]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %clmul = call i8 @llvm.clmul.i8(i8 %a, i8 0)
   %r = icmp eq i8 %clmul, 1
@@ -14,10 +12,7 @@ define i1 @clmul_zero(i8 %a) nounwind {
 
 define i1 @clmul_low_bits(i8 %a) nounwind {
 ; CHECK-LABEL: @clmul_low_bits(
-; CHECK-NEXT:    [[CLMUL:%.*]] = call i8 @llvm.clmul.i8(i8 [[A:%.*]], i8 4)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[CLMUL]], 3
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %clmul = call i8 @llvm.clmul.i8(i8 %a, i8 4)
   %and = and i8 %clmul, 3
@@ -40,11 +35,7 @@ define i1 @clmul_low_bits_negative(i8 %a) nounwind {
 
 define i1 @clmul_high_bits(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: @clmul_high_bits(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[CLMUL:%.*]] = call i16 @llvm.clmul.i16(i16 [[ZEXT_A]], i16 [[ZEXT_B]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i16 [[CLMUL]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext_a = zext i8 %a to i16
   %zext_b = zext i8 %b to i16
@@ -59,8 +50,7 @@ define i1 @clmul_high_bits_boundary(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i16
 ; CHECK-NEXT:    [[CLMUL:%.*]] = call i16 @llvm.clmul.i16(i16 [[ZEXT_A]], i16 [[ZEXT_B]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[CLMUL]], 16384
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i16 [[CLMUL]], 16384
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext_a = zext i8 %a to i16
