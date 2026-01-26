@@ -439,4 +439,17 @@ namespace Discard {
   }
   static_assert((V(), true));
 
+  void test_discard_complex_comparison() {
+    _Complex int x = 1i;
+    (void)(x == 1i);
+    x == 1i;
+    (void)(x != 1i);
+  }
+
+  constexpr int test_side_effect() {
+    int k = 0;
+    (void)(1i == (++k, 1i));
+    return k;
+  }
+  static_assert(test_side_effect() == 1);
 }
