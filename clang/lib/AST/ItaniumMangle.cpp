@@ -4953,7 +4953,7 @@ recurse:
 
   case Expr::CXXReflectExprClass: {
     // TODO(Reflection): implement this after introducing std::meta::info
-    assert(false & "unimplemented");
+    assert(false && "unimplemented");
   }
 
   // FIXME: invent manglings for all these.
