@@ -2580,8 +2580,7 @@ static void licm(VPlan &Plan) {
         continue;
 
       VPBasicBlock *SinkBB = nullptr;
-      // Cannot sink the recipe if any user is defined in the same loop or in
-      // any nested inner loop region.
+      // Cannot sink the recipe if any user is defined in any loop region.
       if (any_of(Def->users(), [&SinkBB](VPUser *U) {
             auto *UserR = cast<VPRecipeBase>(U);
             VPBasicBlock *Parent = UserR->getParent();
