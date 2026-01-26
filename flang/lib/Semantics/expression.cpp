@@ -4553,14 +4553,26 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
   }
 
   bool foundArray = false;
+  int64_t ubSize = -1;
+  int64_t lbSize = -1;
+  int ubRank = 0;
+  int lbRank = 0;
   
   // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
   const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
   const auto &upperBoundExpr{upperBound.thing};
   
   if(MaybeExpr analyzedExpr = Analyze(upperBoundExpr)) {
-    if(analyzedExpr->Rank() == 1) {
+    ubRank = analyzedExpr->Rank();
+    if(ubRank == 1) {
       foundArray = true;
+      if (auto shape = GetShape(GetFoldingContext(), *analyzedExpr)) {
+        if (shape->size() == 1 && (*shape)[0]) {
+          if (auto extent = ToInt64(*(*shape)[0])) {
+            ubSize = *extent;
+          }
+        }
+      }
     }
   }
   
@@ -4569,15 +4581,30 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
   if(lowerBoundOpt) {
     const auto &lowerBoundExpr{lowerBoundOpt->thing};
     if(MaybeExpr analyzedExpr = Analyze(lowerBoundExpr)) {
-      if(analyzedExpr->Rank() == 1) {
+      lbRank = analyzedExpr->Rank();
+      if(lbRank == 1) {
         foundArray = true;
+        if (auto shape = GetShape(GetFoldingContext(), *analyzedExpr)) {
+          if (shape->size() == 1 && (*shape)[0]) {
+            if (auto extent = ToInt64(*(*shape)[0])) {
+              lbSize = *extent;
+            }
+          }
+        }
       }
     }  
   }
 
-  // Regardless of underlying types, grab BOTH the expressions and wrap in
-  // IntExpr, even if one ended up being a scalar.
   if(foundArray) {
+    // Check for size mismatch BEFORE the rewrite (when both are arrays)
+    if (ubRank == 1 && lbRank == 1 && ubSize > 0 && lbSize > 0 && ubSize != lbSize) {
+      Say("ALLOCATE bounds arrays must have the same size; "
+          "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
+          static_cast<std::intmax_t>(lbSize), 
+          static_cast<std::intmax_t>(ubSize));
+      return std::nullopt;
+    }
+    
     // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
     auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
     parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};
