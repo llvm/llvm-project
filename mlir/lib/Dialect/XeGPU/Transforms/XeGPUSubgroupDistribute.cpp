@@ -62,12 +62,7 @@ namespace {
 /// In certain cases, we may need to favor XeGPU specific distribution patterns
 /// over generic vector distribution patterns. In such cases, we can assign
 /// priorities to patterns.
-enum PatternHierarchy : unsigned {
-  Regular = 1,
-  AboveRegular = 2,
-  High = 3,
-  Highest = 4
-};
+enum PatternHierarchy : unsigned { Regular = 1, AboveRegular = 2 };
 
 /// Helper function to get  distributed vector type for a source vector type
 /// according to the lane_layout. We simply divide each dimension of tensor
@@ -1213,11 +1208,12 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
-// Sink SG-uniform ops. An op is uniform if any of the following is none
+// Sink SG-uniform ops. An op is uniform if none
 // of its operands/results has a distribution layout attribute.
 // Non-uniform vectors are handled by dedicated patterns.
-// This pattern must have a higher priority than distribution patterns,
-// because a distributable shape may be logically intended as uniform.
+// This pattern must have a higher priority than vector dialect distribution
+// patterns, because a distributable shape may be logically intended as
+// uniform (i.e., no layout), so we want to omit its distribution.
 struct SinkUniformOps final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
@@ -1241,7 +1237,7 @@ struct SinkUniformOps final : public gpu::WarpDistributionPattern {
                                            "The op result is not uniform.");
     }
 
-    // The op must have at least no layout-based operands or results.
+    // The op must have no layout-based operands or results.
     bool uniformValuesOnly =
         llvm::all_of(warpRegionPreYieldOp->getResults(), [](Value v) {
           return !xegpu::getDistributeLayoutAttr(v);
@@ -2111,11 +2107,9 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   // patterns. Therefore, assign higher benefit.
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
-           VectorInsertStridedSliceDistribution, VectorBroadcastDistribution>(
-          patterns.getContext(),
-          /*pattern benefit=*/PatternHierarchy::AboveRegular);
-  patterns.add<SinkUniformOps>(patterns.getContext(),
-                               /*pattern benefit=*/PatternHierarchy::High);
+           VectorInsertStridedSliceDistribution, VectorBroadcastDistribution,
+           SinkUniformOps>(patterns.getContext(),
+                           /*pattern benefit=*/PatternHierarchy::AboveRegular);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
