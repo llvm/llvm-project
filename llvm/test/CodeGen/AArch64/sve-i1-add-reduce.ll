@@ -13,6 +13,18 @@ entry:
   ret i8 %4
 }
 
+define i32 @uaddv_zexti8_nxv16i32(<vscale x 16 x i1> %v) {
+; CHECK-LABEL: uaddv_zexti8_nxv16i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+entry:
+  %3 = zext <vscale x 16 x i1> %v to <vscale x 16 x i32>
+  %4 = tail call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> %3)
+  ret i32 %4
+}
+
 define i8 @uaddv_zexti8_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti8_nxv8i1:
 ; CHECK:       // %bb.0: // %entry
@@ -35,6 +47,18 @@ entry:
   %3 = zext <vscale x 8 x i1> %v to <vscale x 8 x i16>
   %4 = tail call i16 @llvm.vector.reduce.add.nxv8i16(<vscale x 8 x i16> %3)
   ret i16 %4
+}
+
+define i32 @uaddv_zexti32_nxv8i1(<vscale x 8 x i1> %v) {
+; CHECK-LABEL: uaddv_zexti32_nxv8i1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cntp x0, p0, p0.h
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+entry:
+  %3 = zext <vscale x 8 x i1> %v to <vscale x 8 x i32>
+  %4 = tail call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> %3)
+  ret i32 %4
 }
 
 define i8 @uaddv_zexti8_nxv4i1(<vscale x 4 x i1> %v) {

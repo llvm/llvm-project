@@ -19458,19 +19458,44 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Concats);
 }
 
-// Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
-//   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
-//   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
-// If we have vectors larger than v16i8 we extract v16i8 vectors,
-// Follow the same steps above to get DOT instructions concatenate them
-// and generate vecreduce.add(concat_vector(DOT, DOT2, ..)).
+// Turn vecreduce.add(ZExt(predicate)) into cntp(predicate).
+static SDValue performVecReduceAddCntpCombine(SDNode *N, SelectionDAG &DAG,
+                                              const AArch64Subtarget *ST) {
+  SDValue Op = N->getOperand(0);
+  if (Op->getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue ZExtOp = Op->getOperand(0);
+  EVT VT = ZExtOp.getValueType();
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Cntp = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), ZExtOp,
+      ZExtOp);
+  return DAG.getZExtOrTrunc(Cntp, DL, N->getValueType(0));
+}
+
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
+  if (SDValue Result = performVecReduceAddCntpCombine(N, DAG, ST))
+    return Result;
+
   if (!ST->isNeonAvailable())
     return SDValue();
 
   if (!ST->hasDotProd())
     return performVecReduceAddCombineWithUADDLP(N, DAG);
+
+  // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
+  //   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
+  //   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
+  // If we have vectors larger than v16i8 we extract v16i8 vectors,
+  // Follow the same steps above to get DOT instructions concatenate them
+  // and generate vecreduce.add(concat_vector(DOT, DOT2, ..)).
 
   SDValue Op0 = N->getOperand(0);
   if (N->getValueType(0) != MVT::i32 || Op0.getValueType().isScalableVT() ||
