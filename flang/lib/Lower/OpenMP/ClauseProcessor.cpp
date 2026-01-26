@@ -418,10 +418,9 @@ bool ClauseProcessor::processInitializer(
             typeParams.push_back(lenValue);
           }
         }
-        auto declareOp =
-            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr,
-                                     typeParams, nullptr, nullptr, 0,
-                                     attributes);
+        auto declareOp = hlfir::DeclareOp::create(builder, loc, addr, name,
+                                                  nullptr, typeParams, nullptr,
+                                                  nullptr, 0, attributes);
         if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
         symMap.addVariableDefinition(*object.sym(), declareOp);

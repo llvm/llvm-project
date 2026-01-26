@@ -3799,8 +3799,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                   loc, converter, evalExpr, symTable, stmtCtx));
               // Optional load may be generated if we get a reference to the
               // reduction type.
-              if (auto refType =
-                      llvm::dyn_cast<fir::ReferenceType>(exprResult.getType())) {
+              if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                      exprResult.getType())) {
                 mlir::Type expectedType =
                     isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
                 if (expectedType == refType.getElementType())

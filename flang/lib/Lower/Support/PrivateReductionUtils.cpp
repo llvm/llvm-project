@@ -676,7 +676,8 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     bool isChar = fir::isa_char(innerTy);
     if (fir::isa_trivial(innerTy) || isDerived || isChar) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
-      // Character types in reductions are supported, but derived types are not yet.
+      // Character types in reductions are supported, but derived types are not
+      // yet.
       if (isDerived && (isReduction(kind) || scalarInitValue))
         TODO(loc, "Reduction of an unsupported boxed derived type");
       initAndCleanupBoxedScalar(boxTy, needsInitialization);
