@@ -1021,17 +1021,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
-    using Depend = omp::clause::Depend;
-    if (!std::holds_alternative<Depend::TaskDep>(clause.u)) {
-      TODO(converter.getCurrentLocation(),
-           "DEPEND clause with SINK or SOURCE is not supported yet");
-    }
-    auto &taskDep = std::get<Depend::TaskDep>(clause.u);
-    auto depType = std::get<clause::DependenceType>(taskDep.t);
-    auto &objects = std::get<omp::ObjectList>(taskDep.t);
+    auto depType = std::get<clause::DependenceType>(clause.t);
+    auto &objects = std::get<omp::ObjectList>(clause.t);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-    if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
+    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
       TODO(converter.getCurrentLocation(),
            "Support for iterator modifiers is not implemented yet");
     }
@@ -1720,6 +1714,34 @@ bool ClauseProcessor::processUseDevicePtr(
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.useDevicePtrVars, useDeviceSyms);
   return clauseFound;
+}
+
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        const auto &objects = clause.v;
+        if (!objects.empty())
+          genObjectList(objects, converter, result.uniformVars);
+      });
+}
+
+bool ClauseProcessor::processInbranch(
+    mlir::omp::InbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Inbranch>()) {
+    result.inbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNotinbranch(
+    mlir::omp::NotinbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Notinbranch>()) {
+    result.notinbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
 }
 
 } // namespace omp
