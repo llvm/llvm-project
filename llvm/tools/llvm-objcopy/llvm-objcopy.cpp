@@ -79,10 +79,11 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
 
   if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
-  else if (Is("llvm-extract-bundle-entry"))
+
+  if (Is("llvm-extract-bundle-entry"))
     return parseExtractBundleEntryOptions(Args, reportWarning);
-  else
-    return parseObjcopyOptions(Args, reportWarning);
+
+  return parseObjcopyOptions(Args, reportWarning);
 }
 
 /// The function executeObjcopyOnIHex does the dispatch based on the format

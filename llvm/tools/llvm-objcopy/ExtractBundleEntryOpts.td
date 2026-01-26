@@ -29,3 +29,10 @@ def help : Flag<["--"], "Help">,
                     "\nExample: file://dir1/dir2/hello_world#offset=133&size=14472 \n" 
                     " memory://1234#offset=0x20000&size=3000\n">;
 def h : Flag<["-"], "h">, Alias<help>;
+
+def version : Flag<["--"], "version">,
+              HelpText<"Print the version and exit">;
+
+def V : Flag<["-"], "V">,
+        Alias<version>,
+        HelpText<"Alias for --version">;
