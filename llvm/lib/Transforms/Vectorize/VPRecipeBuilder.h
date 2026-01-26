@@ -142,6 +142,16 @@ public:
                                           : std::make_optional(It->second);
   }
 
+  bool setScalingForReduction(const Instruction *ExitInst,
+                              unsigned ScaleFactor) {
+    auto It = ScaledReductionMap.find(ExitInst);
+    if (It != ScaledReductionMap.end()) {
+      It->second = ScaleFactor;
+      return true;
+    }
+    return false;
+  }
+
   /// Find all possible partial reductions in the loop and track all of those
   /// that are valid so recipes can be formed later.
   void collectScaledReductions(VFRange &Range);
@@ -154,7 +164,8 @@ public:
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
   VPRecipeBase *tryToCreatePartialReduction(VPInstruction *Reduction,
-                                            unsigned ScaleFactor);
+                                            unsigned ScaleFactor,
+                                            VFRange &Range);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

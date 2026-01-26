@@ -8251,8 +8251,16 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
       VPI->getOpcode() == Instruction::Store)
     return tryToWidenMemory(VPI, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(VPI, ScaleFactor.value());
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr)) {
+    auto *PartialReduceR =
+        tryToCreatePartialReduction(VPI, ScaleFactor.value(), Range);
+    if (PartialReduceR)
+      return PartialReduceR;
+    else {
+      // Set the scale factor for reduction start vector to 1.
+      setScalingForReduction(Instr, 1);
+    }
+  }
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8272,9 +8280,49 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   return tryToWiden(VPI);
 }
 
-VPRecipeBase *
-VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
-                                             unsigned ScaleFactor) {
+static VPExpressionRecipe *
+tryToCreateExtendedReduction(VPValue *BinOp, VPValue *Acc, VPCostContext &Ctx,
+                             VFRange &Range, Instruction *ReductionI,
+                             unsigned ScaleFactor, VPValue *Cond) {
+  Type *RedTy = Ctx.Types.inferScalarType(Acc);
+  unsigned ReductionOpcode = ReductionI->getOpcode();
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *A;
+  match(BinOp, m_ZExtOrSExt(m_VPValue(A)));
+  auto IsExtendedRedValidAndClampRange =
+      [&](unsigned Opcode, Instruction::CastOps ExtOpc, Type *SrcTy) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          InstructionCost ExtRedCost;
+          InstructionCost ExtCost =
+              cast<VPWidenCastRecipe>(BinOp)->computeCost(VF, Ctx);
+          InstructionCost RedCost =
+              Ctx.TTI.getArithmeticInstrCost(Opcode, SrcVecTy, Ctx.CostKind);
+          TargetTransformInfo::PartialReductionExtendKind ExtKind =
+              TargetTransformInfo::getPartialReductionExtendKind(ExtOpc);
+          ExtRedCost = Ctx.TTI.getPartialReductionCost(
+              Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
+              llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
+          return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
+        },
+        Range);
+  };
+  if (IsExtendedRedValidAndClampRange(
+          ReductionOpcode, cast<VPWidenCastRecipe>(BinOp)->getOpcode(),
+          Ctx.Types.inferScalarType(A))) {
+    auto *PartialReduceR = new VPReductionRecipe(
+        RecurKind::Add, FastMathFlags(), ReductionI, Acc, BinOp, Cond,
+        RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
+    return new VPExpressionRecipe(cast<VPWidenCastRecipe>(BinOp),
+                                  PartialReduceR);
+  }
+  return nullptr;
+}
+
+VPRecipeBase *VPRecipeBuilder::tryToCreatePartialReduction(
+    VPInstruction *Reduction, unsigned ScaleFactor, VFRange &Range) {
   assert(Reduction->getNumOperands() == 2 &&
          "Unexpected number of operands for partial reduction");
 
@@ -8283,8 +8331,15 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
   VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
   if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
       (isa<VPReductionRecipe>(BinOpRecipe) &&
-       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
+       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()) ||
+      isa<VPExpressionRecipe>(BinOp))
     std::swap(BinOp, Accumulator);
+  // This can be a widen recipe feeding as accumulator.
+  if (!(isa<VPReductionPHIRecipe>(Accumulator) ||
+        (isa<VPReductionRecipe>(Accumulator) &&
+         cast<VPReductionRecipe>(Accumulator)->isPartialReduction()) ||
+        isa<VPExpressionRecipe>(Accumulator)))
+    return nullptr;
 
   if (auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(Accumulator))
     RedPhiR->setVFScaleFactor(ScaleFactor);
@@ -8306,6 +8361,19 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
   VPValue *Cond = nullptr;
   if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
     Cond = getBlockInMask(Builder.getInsertBlock());
+
+  // Check if this can be converted to abstract expression recipe.
+  VPValue *A;
+  VPRecipeBase *Result = nullptr;
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, *CM.PSE.getSE(),
+                        OrigLoop);
+  // Check if this is extended reduction pattern.
+  using namespace llvm::VPlanPatternMatch;
+  if (match(BinOp, m_ZExtOrSExt(m_VPValue(A)))) {
+    auto *ExtRed = tryToCreateExtendedReduction(
+        BinOp, Accumulator, CostCtx, Range, ReductionI, ScaleFactor, Cond);
+    return ExtRed;
+  }
 
   return new VPReductionRecipe(
       RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
@@ -8699,8 +8767,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // with fewer lanes than the VF. So the operands of the select would have
     // different numbers of lanes. Partial reductions mask the input instead.
     auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
+    auto *ER =
+        dyn_cast<VPExpressionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        (!RR || !RR->isPartialReduction())) {
+        (!RR || !RR->isPartialReduction()) && !ER) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
