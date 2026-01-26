@@ -9,17 +9,15 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINF16_H
 
-
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
-#include "sincosf16_utils.h"
-
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -30,13 +28,14 @@ namespace sinf16_internal {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 LIBC_INLINE_VAR constexpr size_t N_EXCEPTS = 4;
 
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
-    // (input, RZ output, RU offset, RD offset, RN offset)
-    {0x2b45, 0x2b43, 1, 0, 1},
-    {0x585c, 0x3ba3, 1, 0, 1},
-    {0x5cb0, 0xbbff, 0, 1, 0},
-    {0x51f5, 0xb80f, 0, 1, 0},
-}};
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS>
+    SINF16_EXCEPTS{{
+        // (input, RZ output, RU offset, RD offset, RN offset)
+        {0x2b45, 0x2b43, 1, 0, 1},
+        {0x585c, 0x3ba3, 1, 0, 1},
+        {0x5cb0, 0xbbff, 0, 1, 0},
+        {0x51f5, 0xb80f, 0, 1, 0},
+    }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 } // namespace sinf16_internal
