@@ -20,12 +20,12 @@ without C++ exceptions).
 **Recoverable Errors**: Environmental issues that can be handled gracefully
 - File I/O failures, network issues, malformed input
 - Use `Error` and `Expected<T>` return types
-- Examples: `StringError`, `ExceptionError`
+- Examples: `StringError`, `MyCustomError`
 
 **Programmatic Errors**: Violations of API contracts or program invariants
 - Use assertions
 - Should terminate the program immediately
-- Examples: null pointer dereferences, invalid enum values
+- Examples: Unexpected null pointers, invalid enum values
 
 > **Important: Library Design Principles**
 >
@@ -33,7 +33,6 @@ without C++ exceptions).
 > `abort()`, or `std::terminate()` in response to recoverable errors. Libraries
 > should always return errors to their callers, allowing the application to decide
 > how to handle them.
-
 
 ## Core Error Types
 
@@ -142,21 +141,13 @@ Expected<Data> loadData(StringRef Path) {
 ```
 
 ### Error Consumption
-Always consume `Error` values. Use one of these patterns:
+Error values are most commonly passed up the stack (having interrupted whatever
+operation raised the error). Eventually errors must be consumed (failure to do
+so will trigger an assertion). Errors may be consumed using one of the
+following patterns:
 
 ```cpp
-// 1. Check and handle
-if (auto Err = mayFail()) {
-  handleError(std::move(Err));
-}
-
-// 2. Consume and ignore (explicit)
-consumeError(mayFail());
-
-// 3. Convert to string for logging
-logError(toString(mayFail()));
-
-// 4. Handle specific error types
+// 1. Handle specific error types
 handleAllErrors(mayFail(),
   [](const CustomError& CE) {
     // Handle CustomError
@@ -165,6 +156,26 @@ handleAllErrors(mayFail(),
     // Handle any other error
   }
 );
+
+// 2. Report errors to the Session:
+//    This should be done for Errors that cannot be passed further up the stack
+//    (e.g. the have reached the root of some thread)
+{
+  if (auto Err = mayFail())
+    S.reportError(std::move(Err));
+  // thread ends here.
+}
+
+// 3. Convert to string and log:
+//    This option may be used in contexts where a reference to the Session is
+//    not available.
+logError(toString(mayFail()));
+
+// 4  Consume and ignore (explicit)
+//    Errors can be explicitly consumed in cases where a failure is known to be
+//    benign.
+if (auto Err = tryPopulateFromOnDiskCache(...))
+  consumeError(std::move(Err)); // Error indicates cache unavailable. Benign.
 ```
 
 ## Exception Interoperability
