@@ -1,0 +1,37 @@
+# REQUIRES: asserts
+#
+# RUN: llc -mtriple=thumbv6m -start-before=machine-cp -debug -o - %s 2>%t | \
+# RUN:     FileCheck %s --check-prefix=OUTPUT
+# RUN: FileCheck %s --check-prefix=DEBUG < %t
+#
+# DEBUG: Estimated function size for f = 4 bytes
+#
+# OUTPUT:  mov r0, r1
+# OUTPUT:  bx lr
+
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv6m-unknown-none-eabi"
+
+  define i32 @f(i32 %x, i32 %y) {
+  entry:
+    ret i32 %y
+  }
+ 
+...
+---
+name:            f
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  localFrameSize:  0
+machineFunctionInfo:
+  isLRSpilled:     false
+body:             |
+  bb.0.entry:
+    liveins: $r1
+  
+    renamable $r0 = COPY $r1
+    tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
