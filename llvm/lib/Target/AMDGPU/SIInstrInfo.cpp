@@ -1372,6 +1372,24 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   }
 }
 
+std::optional<int64_t>
+SIInstrInfo::getImmOrMaterializedImm(MachineOperand &Op) const {
+  if (Op.isImm())
+    return Op.getImm();
+
+  if (!Op.isReg() || !Op.getReg().isVirtual())
+    return std::nullopt;
+  MachineRegisterInfo &MRI = Op.getParent()->getMF()->getRegInfo();
+  const MachineInstr *Def = MRI.getVRegDef(Op.getReg());
+  if (Def && Def->isMoveImmediate()) {
+    const MachineOperand &ImmSrc = Def->getOperand(1);
+    if (ImmSrc.isImm())
+      return extractSubregFromImm(ImmSrc.getImm(), Op.getSubReg());
+  }
+
+  return std::nullopt;
+}
+
 unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
 
   if (RI.isAGPRClass(DstRC))
