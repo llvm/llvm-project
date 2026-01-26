@@ -45,8 +45,8 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
 
   const std::optional<Token> PrevTok = utils::lexer::getPreviousToken(
       LocStart, Ctxt.getSourceManager(), Ctxt.getLangOpts());
-  if (!IsIfStmt &&
-      SM.getSpellingLineNumber(PrevTok->getLocation()) != SemicolonLine)
+  if (!PrevTok || (!IsIfStmt && SM.getSpellingLineNumber(
+                                    PrevTok->getLocation()) != SemicolonLine))
     return;
 
   const SourceLocation LocEnd = Semicolon->getEndLoc();
