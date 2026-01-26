@@ -1079,16 +1079,16 @@ multiclass VWholeLoadN<int l, bits<3> nf, string opcodestr, RegisterClass VRC> {
 
 let Predicates = [HasVInstructions] in {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
-def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
-                           "vsetvli", "$rd, $rs1, $vtypei">,
-                           Sched<[WriteVSETVLI, ReadVSETVLI]>;
-def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
-                             "vsetivli", "$rd, $uimm, $vtypei">,
-                             Sched<[WriteVSETIVLI]>;
+def VSETVLI : RVInstVSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
+                            "vsetvli", "$rd, $rs1, $vtypei">,
+              Sched<[WriteVSETVLI, ReadVSETVLI]>;
+def VSETIVLI : RVInstVSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
+                              "vsetivli", "$rd, $uimm, $vtypei">,
+               Sched<[WriteVSETIVLI]>;
 
-def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                         "vsetvl", "$rd, $rs1, $rs2">,
-                          Sched<[WriteVSETVL, ReadVSETVL, ReadVSETVL]>;
+def VSETVL : RVInstVSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                          "vsetvl", "$rd, $rs1, $rs2">,
+             Sched<[WriteVSETVL, ReadVSETVL, ReadVSETVL]>;
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
 
