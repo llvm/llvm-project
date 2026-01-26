@@ -2579,27 +2579,24 @@ static void licm(VPlan &Plan) {
       if (Def->getNumUsers() == 0)
         continue;
 
-      SmallPtrSet<VPBasicBlock *, 2> UserBBs;
+      VPBasicBlock *SinkBB = nullptr;
       // Cannot sink the recipe if any user is defined in the same loop or in
       // any nested inner loop region.
-      if (any_of(Def->users(), [&UserBBs](VPUser *U) {
+      if (any_of(Def->users(), [&SinkBB](VPUser *U) {
             auto *UserR = cast<VPRecipeBase>(U);
             VPBasicBlock *Parent = UserR->getParent();
             // TODO: If the user is a PHI node, we should check the block of
             // incoming value. Support PHI node users if needed.
             if (UserR->isPhi() || Parent->getEnclosingLoopRegion())
               return true;
-            // Collect the basic block of users.
-            UserBBs.insert(Parent);
+            // TODO: Support sinking when users are in multiple blocks.
+            if (SinkBB && SinkBB != Parent)
+              return true;
+            SinkBB = Parent;
             return false;
           }))
         continue;
 
-      // TODO: Support sinking when users are in multiple blocks.
-      if (UserBBs.size() != 1)
-        continue;
-
-      VPBasicBlock *SinkBB = *UserBBs.begin();
       // Only sink to dedicated exit blocks.
       if (SinkBB->getSinglePredecessor() != LoopRegion)
         continue;
@@ -2608,6 +2605,8 @@ static void licm(VPlan &Plan) {
       // conditional branches in vectorized loops are supported.
       assert(VPDT.properlyDominates(VPBB, SinkBB) &&
              "Defining block must dominate sink block");
+      // TODO: Clone the recipe if users are on multiple exit paths, instead of
+      // just moving.
       Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
     }
   }
