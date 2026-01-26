@@ -307,6 +307,9 @@ Python Binding Changes
   to directly compare equality of the ``CompletionChunk`` kind with
   the corresponding ``CompletionChunkKind`` variant.
 
+  Affected methods: ``isKindOptional``, ``isKindTypedText``, ``isKindPlaceHolder``,
+  ``isKindInformative`` and ``isKindResultType``.
+
 OpenMP Support
 --------------
 - Added support for ``transparent`` clause in task and taskloop directives.
