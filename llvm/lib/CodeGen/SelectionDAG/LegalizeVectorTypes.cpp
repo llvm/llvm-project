@@ -1242,6 +1242,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_STEP_VECTOR(N, Lo, Hi);
     break;
   case ISD::SIGN_EXTEND_INREG: SplitVecRes_InregOp(N, Lo, Hi); break;
+  case ISD::ATOMIC_LOAD:
+    SplitVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N), Lo, Hi);
+    break;
   case ISD::LOAD:
     SplitVecRes_LOAD(cast<LoadSDNode>(N), Lo, Hi);
     break;
@@ -2214,6 +2217,45 @@ void DAGTypeLegalizer::SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo,
     assert(N->getOpcode() == ISD::SPLAT_VECTOR && "Unexpected opcode");
     Hi = Lo;
   }
+}
+
+void DAGTypeLegalizer::SplitVecRes_VP_SPLAT(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  SDLoc dl(N);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(N->getValueType(0));
+  auto [MaskLo, MaskHi] = SplitMask(N->getOperand(1));
+  auto [EVLLo, EVLHi] = DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
+  Lo = DAG.getNode(N->getOpcode(), dl, LoVT, N->getOperand(0), MaskLo, EVLLo);
+  Hi = DAG.getNode(N->getOpcode(), dl, HiVT, N->getOperand(0), MaskHi, EVLHi);
+}
+
+void DAGTypeLegalizer::SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD, SDValue &Lo,
+                                               SDValue &Hi) {
+  SDLoc dl(LD);
+  EVT VT = LD->getValueType(0);
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+
+  SDValue Ch = LD->getChain();
+  SDValue Ptr = LD->getBasePtr();
+
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  EVT MemIntVT =
+      EVT::getIntegerVT(*DAG.getContext(), LD->getMemoryVT().getSizeInBits());
+  SDValue ALD = DAG.getAtomicLoad(LD->getExtensionType(), dl, MemIntVT, IntVT,
+                                  Ch, Ptr, LD->getMemOperand());
+
+  EVT LoIntVT = EVT::getIntegerVT(*DAG.getContext(), LoVT.getSizeInBits());
+  EVT HiIntVT = EVT::getIntegerVT(*DAG.getContext(), HiVT.getSizeInBits());
+  SDValue ExtractLo, ExtractHi;
+  SplitInteger(ALD, LoIntVT, HiIntVT, ExtractLo, ExtractHi);
+
+  Lo = DAG.getBitcast(LoVT, ExtractLo);
+  Hi = DAG.getBitcast(HiVT, ExtractHi);
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(LD, 1), ALD.getValue(1));
 }
 
 void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
