@@ -42,7 +42,7 @@ namespace vector {
 ///
 /// [ContractionOpToDotLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
-/// linearized `vector.extract` + `vector.reduce` + `vector.insert`.
+/// linearized `vector.extract` + `vector.reduction` + `vector.insert`.
 ///
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
