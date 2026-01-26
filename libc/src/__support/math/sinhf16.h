@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINHF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "expxf16_utils.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
@@ -157,5 +161,7 @@ static constexpr float16 sinhf16(float16 x) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINHF16_H
