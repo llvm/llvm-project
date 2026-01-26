@@ -196,7 +196,7 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
 template <>
 bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
     mlir::Operation *op, mlir::Operation *candidate) const {
-  // TODO: disallow moving operations, which have operands that are referenced
+  // Disallow moving operations, which have operands that are referenced
   // in the data operands (e.g. in [first]private() etc.) of the acc.loop.
   // For example:
   //   %17 = acc.private var(%16 : !fir.box<!fir.array<?xf32>>)
@@ -205,9 +205,22 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
   //   }
   // We cannot hoist %19 without violating assumptions that OpenACC
   // transformations rely on.
-  //
-  // Always return false in the initial implementation.
-  return false;
+
+  // In general, some movement out of acc.loop is allowed,
+  // so return true if candidate is nullptr.
+  if (!candidate)
+    return true;
+
+  auto loopOp = mlir::cast<mlir::acc::LoopOp>(op);
+  unsigned numDataOperands = loopOp.getNumDataOperands();
+  for (unsigned i = 0; i < numDataOperands; ++i) {
+    mlir::Value dataOperand = loopOp.getDataOperand(i);
+    return !llvm::any_of(candidate->getOperands(),
+                         [&](mlir::Value candidateOperand) {
+                           return dataOperand == candidateOperand;
+                         });
+  }
+  return true;
 }
 
 } // namespace fir::acc

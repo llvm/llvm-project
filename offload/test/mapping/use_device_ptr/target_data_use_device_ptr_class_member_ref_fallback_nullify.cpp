@@ -17,10 +17,8 @@ struct ST {
 
   void f2() {
     printf("%p\n", b); // CHECK:          0x[[#%x,ADDR:]]
-                       // FIXME: Update this with codegen changes for fb_nullify
 #pragma omp target data use_device_ptr(fb_nullify : b)
-    printf("%p\n", b); // EXPECTED-OFFLOAD-NEXT: (nil)
-                       // OFFLOAD-NEXT:   0x{{0*}}[[#ADDR]]
+    printf("%p\n", b); // OFFLOAD-NEXT:   (nil)
                        // NOOFFLOAD-NEXT: 0x{{0*}}[[#ADDR]]
   }
 };
