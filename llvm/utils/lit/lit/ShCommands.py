@@ -23,7 +23,7 @@ class Command:
             file.write(quoted)
 
             # For debugging / validation.
-            import ShUtil
+            import lit.ShUtil as ShUtil
 
             dequoted = list(ShUtil.ShLexer(quoted).lex())
             if dequoted != [arg]:

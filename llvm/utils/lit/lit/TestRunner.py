@@ -87,8 +87,7 @@ class ShellEnvironment(object):
 
     """Mutable shell environment containing things like CWD and env vars.
 
-    Environment variables are not implemented, but cwd tracking is. In addition,
-    we maintain a dir stack for pushd/popd.
+    In addition to env vars and cwd we maintain a dir stack for pushd/popd.
     """
 
     def __init__(self, cwd, env, umask=-1, ulimit=None):
