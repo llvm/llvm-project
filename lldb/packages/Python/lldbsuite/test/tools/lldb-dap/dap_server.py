@@ -454,7 +454,7 @@ class DebugCommunication(object):
             EOFError: End of stream detected.
         """
         assert (
-            threading.current_thread != self._recv_thread
+            threading.current_thread() != self._recv_thread
         ), "Must not be called from the _recv_thread"
 
         def process_until_match():
