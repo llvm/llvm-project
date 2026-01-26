@@ -7,7 +7,7 @@ define void @ptrtoaddr(ptr %in, ptr %out0, ptr %out1, ptr %out2, ptr %out3) {
 ; CHECK-LABEL: 'ptrtoaddr'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in to i64
-; CHECK-NEXT:    --> %p0 U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %in to i64) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr
 ;
   %p0 = ptrtoaddr ptr %in to i64
@@ -19,7 +19,7 @@ define void @ptrtoaddr_as1(ptr addrspace(1) %in, ptr %out0, ptr %out1, ptr %out2
 ; CHECK-LABEL: 'ptrtoaddr_as1'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_as1
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr addrspace(1) %in to i64
-; CHECK-NEXT:    --> %p0 U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr addrspace(1) %in to i64) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_as1
 ;
   %p0 = ptrtoaddr ptr addrspace(1) %in to i64
@@ -33,7 +33,7 @@ define void @ptrtoaddr_of_bitcast(ptr %in, ptr %out0) {
 ; CHECK-NEXT:    %in_casted = bitcast ptr %in to ptr
 ; CHECK-NEXT:    --> %in U: full-set S: full-set
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in_casted to i64
-; CHECK-NEXT:    --> %p0 U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %in to i64) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_bitcast
 ;
   %in_casted = bitcast ptr %in to ptr
@@ -46,7 +46,7 @@ define void @ptrtoaddr_of_nullptr(ptr %out0) {
 ; CHECK-LABEL: 'ptrtoaddr_of_nullptr'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_of_nullptr
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr null to i64
-; CHECK-NEXT:    --> %p0 U: [0,1) S: [0,1)
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_nullptr
 ;
   %p0 = ptrtoaddr ptr null to i64
@@ -60,7 +60,7 @@ define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
 ; CHECK-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; CHECK-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i64
-; CHECK-NEXT:    --> %p0 U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr (42 + %in) to i64) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep
 ;
   %in_adj = getelementptr inbounds i8, ptr %in, i64 42

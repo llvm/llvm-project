@@ -10,11 +10,12 @@
 #define LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-
+class RuntimeLibraryInfoWrapper;
 class TargetSubtargetInfo;
 class TargetMachine;
 
@@ -97,6 +98,8 @@ public:
     LoweringMap.clear();
   }
 
+  operator bool() const { return RTLCI != nullptr; }
+
   LLVM_ABI bool invalidate(Module &, const PreservedAnalyses &,
                            ModuleAnalysisManager::Invalidator &);
 
@@ -122,21 +125,24 @@ public:
 
 class LLVM_ABI LibcallLoweringInfoWrapper : public ImmutablePass {
   LibcallLoweringModuleAnalysisResult Result;
+  RuntimeLibraryInfoWrapper *RuntimeLibcallsWrapper = nullptr;
 
 public:
   static char ID;
   LibcallLoweringInfoWrapper();
 
   const LibcallLoweringInfo &
-  getLibcallLowering(const TargetSubtargetInfo &Subtarget) const {
-    return Result.getLibcallLowering(Subtarget);
+  getLibcallLowering(const Module &M, const TargetSubtargetInfo &Subtarget) {
+    return getResult(M).getLibcallLowering(Subtarget);
   }
 
-  const LibcallLoweringModuleAnalysisResult &getResult() const {
+  const LibcallLoweringModuleAnalysisResult &getResult(const Module &M) {
+    if (!Result)
+      Result.init(&RuntimeLibcallsWrapper->getRTLCI(M));
     return Result;
   }
 
-  bool doInitialization(Module &M) override;
+  void initializePass() override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
 };
