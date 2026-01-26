@@ -24431,6 +24431,11 @@ bool SLPVectorizerPass::vectorizeStores(
           }
           if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
             break;
+          // For the MaxRegVF, save RangeSizes to limit compile time
+          if (VF == MaxRegVF)
+            for (std::pair<unsigned, unsigned> &P : RangeSizes)
+              if (P.first != 0)
+                P.first = std::max(P.second, P.first);
         }
         // All values vectorized - exit.
         if (all_of(RangeSizes, IsVectorized))
