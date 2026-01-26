@@ -182,30 +182,27 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
   EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
 }
 
-
 TEST_F(PPDependencyDirectivesTest, Embed) {
   auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory("/source");
-  VFS->addFile("/source/inputs/jk.txt", 0, llvm::MemoryBuffer::getMemBuffer("jk"));
-  VFS->addFile(
-      "/source/inputs/single_byte.txt", 0,
-      llvm::MemoryBuffer::getMemBuffer("a"));
-  VFS->addFile(
-      "/source/inputs/single_byte1.txt", 0,
-      llvm::MemoryBuffer::getMemBuffer("b"));
+  VFS->addFile("/source/inputs/jk.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("jk"));
+  VFS->addFile("/source/inputs/single_byte.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("a"));
+  VFS->addFile("/source/inputs/single_byte1.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("b"));
   VFS->addFile(
       "/source/inc/head.h", 0,
       llvm::MemoryBuffer::getMemBuffer("#embed \"inputs/single_byte.txt\"\n"
                                        "extern int foo;\n"));
-  VFS->addFile("main.c", 0,
-               llvm::MemoryBuffer::getMemBuffer(
-                   "#include \"inc/head.h\"\n"
-                   "#if __has_embed(\"inputs/jk.txt\")\n"
-                   "const char arr[] =\n"
-                   "#embed \"inputs/single_byte1.txt\"\n"
-                   ";\n"
-                   "#endif\n"
-                   ));
+  VFS->addFile(
+      "main.c", 0,
+      llvm::MemoryBuffer::getMemBuffer("#include \"inc/head.h\"\n"
+                                       "#if __has_embed(\"inputs/jk.txt\")\n"
+                                       "const char arr[] =\n"
+                                       "#embed \"inputs/single_byte1.txt\"\n"
+                                       ";\n"
+                                       "#endif\n"));
   FileMgr.setVirtualFileSystem(VFS);
 
   OptionalFileEntryRef FE;
@@ -226,7 +223,6 @@ TEST_F(PPDependencyDirectivesTest, Embed) {
   PP.addPPCallbacks(std::make_unique<EmbedCollector>(PP, EmbeddedFiles));
   PP.EnterMainSourceFile();
   PP.LexTokensUntilEOF();
-
 
   SmallVector<StringRef> ExpectedEmbeds{
       "inputs/single_byte.txt",

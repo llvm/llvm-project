@@ -4124,7 +4124,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
     return;
 
   OptionalFileEntryRef MaybeFileRef =
-      this->LookupEmbedFile(Filename, isAngled, /*OpenFile=*/ true);
+      this->LookupEmbedFile(Filename, isAngled, /*OpenFile=*/true);
   if (!MaybeFileRef) {
     // could not find file
     if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
