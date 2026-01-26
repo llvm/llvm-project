@@ -33,42 +33,6 @@ namespace impl {
 ///{
 #ifdef __AMDGPU__
 
-uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope) {
-  // builtin_amdgcn_atomic_inc32 should expand to this switch when
-  // passed a runtime value, but does not do so yet. Workaround here.
-
-#define ScopeSwitch(ORDER)                                                     \
-  switch (MemScope) {                                                          \
-  case atomic::MemScopeTy::system:                                             \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "");                     \
-  case atomic::MemScopeTy::device:                                             \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "agent");                \
-  case atomic::MemScopeTy::workgroup:                                          \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "workgroup");            \
-  case atomic::MemScopeTy::wavefront:                                          \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "wavefront");            \
-  case atomic::MemScopeTy::single:                                             \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "singlethread");         \
-  }
-
-#define Case(ORDER)                                                            \
-  case ORDER:                                                                  \
-    ScopeSwitch(ORDER)
-
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-    Case(atomic::relaxed);
-    Case(atomic::acquire);
-    Case(atomic::release);
-    Case(atomic::acq_rel);
-    Case(atomic::seq_cst);
-#undef Case
-#undef ScopeSwitch
-  }
-}
-
 [[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
@@ -186,11 +150,6 @@ void setCriticalLock(omp_lock_t *Lock) {
 ///{
 #ifdef __NVPTX__
 
-uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope) {
-  return __nvvm_atom_inc_gen_ui(Address, Val);
-}
-
 void namedBarrierInit() {}
 
 void namedBarrier() {
@@ -282,11 +241,6 @@ void fence::team(atomic::OrderingTy Ordering) { impl::fenceTeam(Ordering); }
 void fence::kernel(atomic::OrderingTy Ordering) { impl::fenceKernel(Ordering); }
 
 void fence::system(atomic::OrderingTy Ordering) { impl::fenceSystem(Ordering); }
-
-uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
-                     atomic::MemScopeTy MemScope) {
-  return impl::atomicInc(Addr, V, Ordering, MemScope);
-}
 
 void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 

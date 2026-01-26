@@ -9,15 +9,15 @@ define void @foo() #0 {
 entry:
   %array01 = alloca [1 x i8], align 1
   %array02 = alloca [2 x i8], align 1
-; OUTLINE:  call void @__asan_set_shadow_f1(i64 %23, i64 4)
-; OUTLINE:  call void @__asan_set_shadow_01(i64 %24, i64 1)
-; OUTLINE:  call void @__asan_set_shadow_f2(i64 %25, i64 1)
-; OUTLINE:  call void @__asan_set_shadow_02(i64 %26, i64 1)
-; OUTLINE:  call void @__asan_set_shadow_f3(i64 %27, i64 1)
-; OUTLINE:  call void @__asan_stack_free_0(i64 %7, i64 64)
-; OUTLINE:  call void @__asan_set_shadow_00(i64 %55, i64 8)
-; INLINE:  store i64 -935919682371587599, ptr %24, align 1
-; INLINE:  store i64 -723401728380766731, ptr %52, align 1
+; OUTLINE:  call void @__asan_set_shadow_f1(i64 %{{.+}}, i64 4)
+; OUTLINE:  call void @__asan_set_shadow_01(i64 %{{.+}}, i64 1)
+; OUTLINE:  call void @__asan_set_shadow_f2(i64 %{{.+}}, i64 1)
+; OUTLINE:  call void @__asan_set_shadow_02(i64 %{{.+}}, i64 1)
+; OUTLINE:  call void @__asan_set_shadow_f3(i64 %{{.+}}, i64 1)
+; OUTLINE:  call void @__asan_stack_free_0(i64 %{{.+}}, i64 64)
+; OUTLINE:  call void @__asan_set_shadow_00(i64 %{{.+}}, i64 8)
+; INLINE:  store i64 -935919682371587599, ptr %{{.+}}, align 1
+; INLINE:  store i64 -723401728380766731, ptr %{{.+}}, align 1
   %arrayidx = getelementptr inbounds [1 x i8], ptr %array01, i64 0, i64 1
   store i8 1, ptr %arrayidx, align 1
   %arrayidx1 = getelementptr inbounds [2 x i8], ptr %array02, i64 0, i64 2

@@ -23,7 +23,6 @@ def SCFForLoopCanonicalization
 
 def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
   let summary = "Peel `for` loops at their upper bounds.";
-  let constructor = "mlir::createForLoopPeelingPass()";
   let options = [
     Option<"peelFront", "peel-front", "bool",
            /*default=*/"false",
@@ -39,12 +38,6 @@ def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
 def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
   let summary = "Specialize `for` loops for vectorization";
   let constructor = "mlir::createForLoopSpecializationPass()";
-}
-
-def SCFIfConditionPropagation : Pass<"scf-if-condition-propagation"> {
-  let summary = "Replace usages of if condition with true/false constants in "
-                "the conditional regions";
-  let dependentDialects = ["arith::ArithDialect"];
 }
 
 def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {

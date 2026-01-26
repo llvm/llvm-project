@@ -442,15 +442,8 @@ template <class T> struct has_CustomMappingTraits {
       is_detected<check, CustomMappingTraits<T>>::value;
 };
 
-// has_FlowTraits<int> will cause an error with some compilers because
-// it subclasses int.  Using this wrapper only instantiates the
-// real has_FlowTraits only if the template type is a class.
-template <typename T, bool Enabled = std::is_class_v<T>> class has_FlowTraits {
-public:
-  static constexpr bool value = false;
-};
-
-template <class T> struct has_FlowTraits<T, true> {
+// Test if flow is defined on type T.
+template <typename T> struct has_FlowTraits {
   template <class U> using check = decltype(&U::flow);
 
   static constexpr bool value = is_detected<check, T>::value;
@@ -459,8 +452,7 @@ template <class T> struct has_FlowTraits<T, true> {
 // Test if SequenceTraits<T> is defined on type T
 template <typename T>
 struct has_SequenceTraits
-    : public std::integral_constant<bool, has_SequenceMethodTraits<T>::value> {
-};
+    : public std::bool_constant<has_SequenceMethodTraits<T>::value> {};
 
 // Test if DocumentListTraits<T> is defined on type T
 template <class T> struct has_DocumentListTraits {
@@ -669,29 +661,27 @@ inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
 
 template <typename T, typename Context>
 struct missingTraits
-    : public std::integral_constant<bool,
-                                    !has_ScalarEnumerationTraits<T>::value &&
-                                        !has_ScalarBitSetTraits<T>::value &&
-                                        !has_ScalarTraits<T>::value &&
-                                        !has_BlockScalarTraits<T>::value &&
-                                        !has_TaggedScalarTraits<T>::value &&
-                                        !has_MappingTraits<T, Context>::value &&
-                                        !has_SequenceTraits<T>::value &&
-                                        !has_CustomMappingTraits<T>::value &&
-                                        !has_DocumentListTraits<T>::value &&
-                                        !has_PolymorphicTraits<T>::value> {};
+    : public std::bool_constant<
+          !has_ScalarEnumerationTraits<T>::value &&
+          !has_ScalarBitSetTraits<T>::value && !has_ScalarTraits<T>::value &&
+          !has_BlockScalarTraits<T>::value &&
+          !has_TaggedScalarTraits<T>::value &&
+          !has_MappingTraits<T, Context>::value &&
+          !has_SequenceTraits<T>::value && !has_CustomMappingTraits<T>::value &&
+          !has_DocumentListTraits<T>::value &&
+          !has_PolymorphicTraits<T>::value> {};
 
 template <typename T, typename Context>
 struct validatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                has_MappingValidateTraits<T, Context>::value> {
+};
 
 template <typename T, typename Context>
 struct unvalidatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    !has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                !has_MappingValidateTraits<T, Context>::value> {
+};
 
 // Base class for Input and Output.
 class LLVM_ABI IO {
@@ -715,7 +705,7 @@ public:
   virtual bool mapTag(StringRef Tag, bool Default = false) = 0;
   virtual void beginMapping() = 0;
   virtual void endMapping() = 0;
-  virtual bool preflightKey(const char *, bool, bool, bool &, void *&) = 0;
+  virtual bool preflightKey(StringRef, bool, bool, bool &, void *&) = 0;
   virtual void postflightKey(void *) = 0;
   virtual std::vector<StringRef> keys() = 0;
 
@@ -723,12 +713,12 @@ public:
   virtual void endFlowMapping() = 0;
 
   virtual void beginEnumScalar() = 0;
-  virtual bool matchEnumScalar(const char *, bool) = 0;
+  virtual bool matchEnumScalar(StringRef, bool) = 0;
   virtual bool matchEnumFallback() = 0;
   virtual void endEnumScalar() = 0;
 
   virtual bool beginBitSetScalar(bool &) = 0;
-  virtual bool bitSetMatch(const char *, bool) = 0;
+  virtual bool bitSetMatch(StringRef, bool) = 0;
   virtual void endBitSetScalar() = 0;
 
   virtual void scalarString(StringRef &, QuotingType) = 0;
@@ -741,8 +731,7 @@ public:
   virtual std::error_code error() = 0;
   virtual void setAllowUnknownKeys(bool Allow);
 
-  template <typename T>
-  void enumCase(T &Val, const char *Str, const T ConstVal) {
+  template <typename T> void enumCase(T &Val, StringRef Str, const T ConstVal) {
     if (matchEnumScalar(Str, outputting() && Val == ConstVal)) {
       Val = ConstVal;
     }
@@ -750,7 +739,7 @@ public:
 
   // allow anonymous enum values to be used with LLVM_YAML_STRONG_TYPEDEF
   template <typename T>
-  void enumCase(T &Val, const char *Str, const uint32_t ConstVal) {
+  void enumCase(T &Val, StringRef Str, const uint32_t ConstVal) {
     if (matchEnumScalar(Str, outputting() && Val == static_cast<T>(ConstVal))) {
       Val = ConstVal;
     }
@@ -767,7 +756,7 @@ public:
   }
 
   template <typename T>
-  void bitSetCase(T &Val, const char *Str, const T ConstVal) {
+  void bitSetCase(T &Val, StringRef Str, const T ConstVal) {
     if (bitSetMatch(Str, outputting() && (Val & ConstVal) == ConstVal)) {
       Val = static_cast<T>(Val | ConstVal);
     }
@@ -775,20 +764,20 @@ public:
 
   // allow anonymous enum values to be used with LLVM_YAML_STRONG_TYPEDEF
   template <typename T>
-  void bitSetCase(T &Val, const char *Str, const uint32_t ConstVal) {
+  void bitSetCase(T &Val, StringRef Str, const uint32_t ConstVal) {
     if (bitSetMatch(Str, outputting() && (Val & ConstVal) == ConstVal)) {
       Val = static_cast<T>(Val | ConstVal);
     }
   }
 
   template <typename T>
-  void maskedBitSetCase(T &Val, const char *Str, T ConstVal, T Mask) {
+  void maskedBitSetCase(T &Val, StringRef Str, T ConstVal, T Mask) {
     if (bitSetMatch(Str, outputting() && (Val & Mask) == ConstVal))
       Val = Val | ConstVal;
   }
 
   template <typename T>
-  void maskedBitSetCase(T &Val, const char *Str, uint32_t ConstVal,
+  void maskedBitSetCase(T &Val, StringRef Str, uint32_t ConstVal,
                         uint32_t Mask) {
     if (bitSetMatch(Str, outputting() && (Val & Mask) == ConstVal))
       Val = Val | ConstVal;
@@ -797,29 +786,29 @@ public:
   void *getContext() const;
   void setContext(void *);
 
-  template <typename T> void mapRequired(const char *Key, T &Val) {
+  template <typename T> void mapRequired(StringRef Key, T &Val) {
     EmptyContext Ctx;
     this->processKey(Key, Val, true, Ctx);
   }
 
   template <typename T, typename Context>
-  void mapRequired(const char *Key, T &Val, Context &Ctx) {
+  void mapRequired(StringRef Key, T &Val, Context &Ctx) {
     this->processKey(Key, Val, true, Ctx);
   }
 
-  template <typename T> void mapOptional(const char *Key, T &Val) {
+  template <typename T> void mapOptional(StringRef Key, T &Val) {
     EmptyContext Ctx;
     mapOptionalWithContext(Key, Val, Ctx);
   }
 
   template <typename T, typename DefaultT>
-  void mapOptional(const char *Key, T &Val, const DefaultT &Default) {
+  void mapOptional(StringRef Key, T &Val, const DefaultT &Default) {
     EmptyContext Ctx;
     mapOptionalWithContext(Key, Val, Default, Ctx);
   }
 
   template <typename T, typename Context>
-  void mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
+  void mapOptionalWithContext(StringRef Key, T &Val, Context &Ctx) {
     if constexpr (has_SequenceTraits<T>::value) {
       // omit key/value instead of outputting empty sequence
       if (this->canElideEmptySequence() && Val.begin() == Val.end())
@@ -829,14 +818,14 @@ public:
   }
 
   template <typename T, typename Context>
-  void mapOptionalWithContext(const char *Key, std::optional<T> &Val,
+  void mapOptionalWithContext(StringRef Key, std::optional<T> &Val,
                               Context &Ctx) {
     this->processKeyWithDefault(Key, Val, std::optional<T>(),
                                 /*Required=*/false, Ctx);
   }
 
   template <typename T, typename Context, typename DefaultT>
-  void mapOptionalWithContext(const char *Key, T &Val, const DefaultT &Default,
+  void mapOptionalWithContext(StringRef Key, T &Val, const DefaultT &Default,
                               Context &Ctx) {
     static_assert(std::is_convertible<DefaultT, T>::value,
                   "Default type must be implicitly convertible to value type!");
@@ -846,12 +835,12 @@ public:
 
 private:
   template <typename T, typename Context>
-  void processKeyWithDefault(const char *Key, std::optional<T> &Val,
+  void processKeyWithDefault(StringRef Key, std::optional<T> &Val,
                              const std::optional<T> &DefaultValue,
                              bool Required, Context &Ctx);
 
   template <typename T, typename Context>
-  void processKeyWithDefault(const char *Key, T &Val, const T &DefaultValue,
+  void processKeyWithDefault(StringRef Key, T &Val, const T &DefaultValue,
                              bool Required, Context &Ctx) {
     void *SaveInfo;
     bool UseDefault;
@@ -867,7 +856,7 @@ private:
   }
 
   template <typename T, typename Context>
-  void processKey(const char *Key, T &Val, bool Required, Context &Ctx) {
+  void processKey(StringRef Key, T &Val, bool Required, Context &Ctx) {
     void *SaveInfo;
     bool UseDefault;
     if (this->preflightKey(Key, Required, false, UseDefault, SaveInfo)) {
@@ -1342,7 +1331,7 @@ private:
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
   void endMapping() override;
-  bool preflightKey(const char *, bool, bool, bool &, void *&) override;
+  bool preflightKey(StringRef Key, bool, bool, bool &, void *&) override;
   void postflightKey(void *) override;
   std::vector<StringRef> keys() override;
   void beginFlowMapping() override;
@@ -1356,11 +1345,11 @@ private:
   void postflightFlowElement(void *) override;
   void endFlowSequence() override;
   void beginEnumScalar() override;
-  bool matchEnumScalar(const char *, bool) override;
+  bool matchEnumScalar(StringRef, bool) override;
   bool matchEnumFallback() override;
   void endEnumScalar() override;
   bool beginBitSetScalar(bool &) override;
-  bool bitSetMatch(const char *, bool) override;
+  bool bitSetMatch(StringRef, bool) override;
   void endBitSetScalar() override;
   void scalarString(StringRef &, QuotingType) override;
   void blockScalarString(StringRef &) override;
@@ -1493,7 +1482,7 @@ public:
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
   void endMapping() override;
-  bool preflightKey(const char *key, bool, bool, bool &, void *&) override;
+  bool preflightKey(StringRef Key, bool, bool, bool &, void *&) override;
   void postflightKey(void *) override;
   std::vector<StringRef> keys() override;
   void beginFlowMapping() override;
@@ -1507,11 +1496,11 @@ public:
   void postflightFlowElement(void *) override;
   void endFlowSequence() override;
   void beginEnumScalar() override;
-  bool matchEnumScalar(const char *, bool) override;
+  bool matchEnumScalar(StringRef, bool) override;
   bool matchEnumFallback() override;
   void endEnumScalar() override;
   bool beginBitSetScalar(bool &) override;
-  bool bitSetMatch(const char *, bool) override;
+  bool bitSetMatch(StringRef, bool) override;
   void endBitSetScalar() override;
   void scalarString(StringRef &, QuotingType) override;
   void blockScalarString(StringRef &) override;
@@ -1568,7 +1557,7 @@ private:
 };
 
 template <typename T, typename Context>
-void IO::processKeyWithDefault(const char *Key, std::optional<T> &Val,
+void IO::processKeyWithDefault(StringRef Key, std::optional<T> &Val,
                                const std::optional<T> &DefaultValue,
                                bool Required, Context &Ctx) {
   assert(!DefaultValue && "std::optional<T> shouldn't have a value!");
@@ -1932,12 +1921,12 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   using map_type = std::map<std::string, T>;
 
   static void inputOne(IO &io, StringRef key, map_type &v) {
-    io.mapRequired(key.str().c_str(), v[std::string(key)]);
+    io.mapRequired(key, v[std::string(key)]);
   }
 
   static void output(IO &io, map_type &v) {
     for (auto &p : v)
-      io.mapRequired(p.first.c_str(), p.second);
+      io.mapRequired(p.first, p.second);
   }
 };
 

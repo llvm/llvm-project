@@ -17,6 +17,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
+#include <unordered_set>
+
 namespace llvm {
 
 using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;

@@ -4,8 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s
 
-declare <vscale x 1 x i1> @llvm.riscv.vlm.nxv1i1(ptr, iXLen);
-
 define <vscale x 1 x i1> @intrinsic_vlm_v_nxv1i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
@@ -16,8 +14,6 @@ entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vlm.nxv1i1(ptr %0, iXLen %1)
   ret <vscale x 1 x i1> %a
 }
-
-declare <vscale x 2 x i1> @llvm.riscv.vlm.nxv2i1(ptr, iXLen);
 
 define <vscale x 2 x i1> @intrinsic_vlm_v_nxv2i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv2i1:
@@ -30,8 +26,6 @@ entry:
   ret <vscale x 2 x i1> %a
 }
 
-declare <vscale x 4 x i1> @llvm.riscv.vlm.nxv4i1(ptr, iXLen);
-
 define <vscale x 4 x i1> @intrinsic_vlm_v_nxv4i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
@@ -42,8 +36,6 @@ entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vlm.nxv4i1(ptr %0, iXLen %1)
   ret <vscale x 4 x i1> %a
 }
-
-declare <vscale x 8 x i1> @llvm.riscv.vlm.nxv8i1(ptr, iXLen);
 
 define <vscale x 8 x i1> @intrinsic_vlm_v_nxv8i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv8i1:
@@ -56,8 +48,6 @@ entry:
   ret <vscale x 8 x i1> %a
 }
 
-declare <vscale x 16 x i1> @llvm.riscv.vlm.nxv16i1(ptr, iXLen);
-
 define <vscale x 16 x i1> @intrinsic_vlm_v_nxv16i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
@@ -69,8 +59,6 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
-declare <vscale x 32 x i1> @llvm.riscv.vlm.nxv32i1(ptr, iXLen);
-
 define <vscale x 32 x i1> @intrinsic_vlm_v_nxv32i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
@@ -81,8 +69,6 @@ entry:
   %a = call <vscale x 32 x i1> @llvm.riscv.vlm.nxv32i1(ptr %0, iXLen %1)
   ret <vscale x 32 x i1> %a
 }
-
-declare <vscale x 64 x i1> @llvm.riscv.vlm.nxv64i1(ptr, iXLen);
 
 define <vscale x 64 x i1> @intrinsic_vlm_v_nxv64i1(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vlm_v_nxv64i1:

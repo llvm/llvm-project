@@ -297,10 +297,10 @@ public:
   /// set of function templates, returns NULL.
   TemplateDecl *getAsTemplateDecl(bool IgnoreDeduced = false) const;
 
-  /// Retrieves the underlying template declaration that
+  /// Retrieves the underlying template name that
   /// this template name refers to, along with the
   /// deduced default arguments, if any.
-  std::pair<TemplateDecl *, DefaultArguments>
+  std::pair<TemplateName, DefaultArguments>
   getTemplateDeclAndDefaultArgs() const;
 
   /// Retrieve the underlying, overloaded function template

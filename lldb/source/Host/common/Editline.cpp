@@ -1511,7 +1511,8 @@ Editline::Editline(const char *editline_name, FILE *input_file,
     : m_editor_status(EditorStatus::Complete), m_input_file(input_file),
       m_output_stream_sp(output_stream_sp), m_error_stream_sp(error_stream_sp),
       m_input_connection(fileno(input_file), false), m_color(color) {
-  assert(output_stream_sp && error_stream_sp);
+  assert(output_stream_sp && output_stream_sp->GetUnlockedFile().GetStream());
+  assert(error_stream_sp && output_stream_sp->GetUnlockedFile().GetStream());
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
@@ -1625,6 +1626,9 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   m_in_history = false;
   m_editor_status = EditorStatus::Editing;
   m_revert_cursor_index = -1;
+
+  lldbassert(m_output_stream_sp);
+  fprintf(m_locked_output->GetFile().GetStream(), "\r" ANSI_CLEAR_RIGHT);
 
   int count;
   auto input = el_wgets(m_editline, &count);

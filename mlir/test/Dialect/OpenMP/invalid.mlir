@@ -159,6 +159,29 @@ func.func @no_loops(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+func.func @collapse_size(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{collapse value is larger than the number of loops}}
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) collapse(4) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+func.func @tiles_length(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{op too few canonical loops for tile dimensions}}
+    omp.loop_nest (%iv) : index =  (%lb) to (%ub) step (%step) tiles(2, 4) {
+      omp.yield
+    }
+  }
+}
+
+
+// -----
+
 func.func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{expected '{'}}
   omp.wsloop nowait inclusive {
@@ -3011,14 +3034,6 @@ func.func @invalid_allocate_align_2(%arg0 : memref<i32>) -> () {
 }
 
 // -----
-func.func @invalid_allocate_allocator(%arg0 : memref<i32>) -> () {
-  // expected-error @below {{invalid clause value}}
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_small_cap_mem_alloc)
-
-  return
-}
-
-// -----
 func.func @invalid_workdistribute_empty_region() -> () {
   omp.teams {
     // expected-error @below {{region cannot be empty}}
@@ -3124,3 +3139,7 @@ func.func @invalid_workdistribute() -> () {
   }
   return
 }
+
+// -----
+// expected-error @+1 {{'omp.declare_simd' op must be nested inside a function}}
+omp.declare_simd

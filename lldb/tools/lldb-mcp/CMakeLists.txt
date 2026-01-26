@@ -6,6 +6,7 @@ add_lldb_tool(lldb-mcp
     Support
   LINK_LIBS
     liblldb
+    lldbInitialization
     lldbHost
     lldbProtocolMCP
   )

@@ -4,8 +4,8 @@
 ; the PostDominatorTree. Infinite loops are postdominated only by the virtual
 ; root, which causes them not to appear in regions in ScopDetection anymore.
 
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-allow-nonaffine-loops '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-allow-nonaffine-loops=false '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; void func (int param0, int N, int *A)
 ; {
@@ -19,12 +19,10 @@
 
 ; CHECK: remark: ReportLoopHasNoExit.c:7:7: Loop cannot be handled because it has no exit.
 
-
-
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @func(i32 %param0, i32 %N, ptr %A) #0 !dbg !6 {
+define void @func(i32 %param0, i32 %N, ptr %A) !dbg !6 {
 entry:
   %param0.addr = alloca i32, align 4
   %N.addr = alloca i32, align 4
@@ -80,10 +78,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

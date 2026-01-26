@@ -74,7 +74,7 @@
 ! CHECK-X86_64H-SAME: "-target-cpu" "x86-64" "-target-feature" "-rdrnd" "-target-feature" "-aes" "-target-feature" "-pclmul" "-target-feature" "-rtm" "-target-feature" "-fsgsbase"
 
 ! CHECK-RV64: "-fc1" "-triple" "riscv64-unknown-linux-gnu"
-! CHECK-RV64-SAME: "-target-cpu" "generic-rv64" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
+! CHECK-RV64-SAME: "-target-cpu" "generic-rv64" "-target-feature" "+i" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
 
 ! CHECK-AMDGPU: "-fc1" "-triple" "amdgcn-amd-amdhsa"
 ! CHECK-AMDGPU-SAME: "-target-cpu" "gfx908"

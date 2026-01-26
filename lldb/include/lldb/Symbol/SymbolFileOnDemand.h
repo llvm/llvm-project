@@ -127,7 +127,8 @@ public:
       lldb_private::SymbolContextList &sc_list) override;
 
   void Dump(lldb_private::Stream &s) override;
-  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
@@ -174,7 +175,8 @@ public:
   GetUnwindPlan(const Address &address,
                 const RegisterInfoResolver &resolver) override;
 
-  llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) override;
+  llvm::Expected<lldb::addr_t>
+  GetParameterStackSize(const Symbol &symbol) override;
 
   void PreloadSymbols() override;
 

@@ -430,15 +430,15 @@ class LLDBDAP(DAP):
             trace_response = self._await_response(trace_req_id)
             if not trace_response["success"]:
                 raise DebuggerException("failed to get stack frames")
+            stackframes = trace_response["body"]["stackFrames"]
+            addr = stackframes[0]["instructionPointerReference"]
             try:
-                stackframes = trace_response["body"]["stackFrames"]
                 path = stackframes[0]["source"]["path"]
-                addr = stackframes[0]["instructionPointerReference"]
-            except KeyError as e:
-                # Temporarily print the DAP log if this fails to aid debugging
-                # a buildbot failure that doesn't reproduce easily.
-                print(self.message_logger.text.getvalue(), file=sys.stderr)
-                raise e
+            except KeyError:
+                # We may have no path, e.g., if the module hasn't loaded or
+                # there's no debug info. If that's the case we won't have
+                # bound a source-location breakpoint here, so we can bail now.
+                return
 
             if any(
                 self._debugger_state.bp_addr_map.get(self.dex_id_to_dap_id[dex_bp_id])

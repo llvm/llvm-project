@@ -140,6 +140,12 @@ public:
 
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
+  /// Find the mangled name for a function
+  ///
+  /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
+  /// \returns The mangled name of the function (if available)
+  std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
+
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
 
@@ -157,7 +163,8 @@ public:
 
   PdbIndex &GetIndex() { return *m_index; };
 
-  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
 
   std::optional<llvm::codeview::TypeIndex>
   GetParentType(llvm::codeview::TypeIndex ti);
@@ -248,6 +255,8 @@ private:
                                       VariableList &variables);
   size_t ParseVariablesForBlock(PdbCompilandSymId block_id);
 
+  void CreateSimpleArgumentListTypes(llvm::codeview::TypeIndex arglist_ti);
+
   llvm::Expected<uint32_t> GetFileIndex(const CompilandIndexItem &cii,
                                         uint32_t file_id);
 
@@ -267,6 +276,20 @@ private:
 
   void CacheUdtDeclarations();
   llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
+
+  /// Find a symbol name at a specific address (`so`).
+  ///
+  /// \param[in] so The segment and offset where the symbol is located.
+  /// \param[in] function_type If the symbol is expected to be a function, this
+  ///     has to be the type of the function. It's used to strip the name of
+  ///     __cdecl functions on x86.
+  /// \returns The mangled symbol name if found, otherwise `std::nullopt`.
+  std::optional<llvm::StringRef> FindMangledSymbol(
+      SegmentOffset so,
+      llvm::codeview::TypeIndex function_type = llvm::codeview::TypeIndex());
+
+  llvm::StringRef StripMangledFunctionName(llvm::StringRef mangled,
+                                           PdbTypeSymId func_ty);
 
   llvm::BumpPtrAllocator m_allocator;
 

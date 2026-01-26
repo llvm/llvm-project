@@ -83,8 +83,6 @@ static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
 
-extern cl::opt<bool> IndexedCodeGenDataLazyLoading;
-
 static void exitWithError(Twine Message, StringRef Whence = "",
                           StringRef Hint = "") {
   WithColor::error();

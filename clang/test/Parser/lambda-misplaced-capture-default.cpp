@@ -36,3 +36,12 @@ template <typename... Args> void Test(Args... args) {
   [... xs = &args, &] {};  // expected-error {{capture default must be first}}
 }
 } // namespace misplaced_capture_default_pack
+
+namespace GH163498 {
+struct S {
+  template <class T> S(T) {}
+};
+void t() {
+  S s{[a(42), &] {}}; // expected-error {{capture default must be first}}
+}
+}

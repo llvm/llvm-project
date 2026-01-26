@@ -333,20 +333,21 @@ inline uint64_t get_execution_seed() {
 // for equality. For all the platforms we care about, this holds for integers
 // and pointers, but there are platforms where it doesn't and we would like to
 // support user-defined types which happen to satisfy this property.
-template <typename T> struct is_hashable_data
-  : std::integral_constant<bool, ((is_integral_or_enum<T>::value ||
-                                   std::is_pointer<T>::value) &&
-                                  64 % sizeof(T) == 0)> {};
+template <typename T>
+struct is_hashable_data : std::bool_constant<((is_integral_or_enum<T>::value ||
+                                               std::is_pointer<T>::value) &&
+                                              64 % sizeof(T) == 0)> {};
 
 // Special case std::pair to detect when both types are viable and when there
 // is no alignment-derived padding in the pair. This is a bit of a lie because
 // std::pair isn't truly POD, but it's close enough in all reasonable
 // implementations for our use case of hashing the underlying data.
-template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
-  : std::integral_constant<bool, (is_hashable_data<T>::value &&
-                                  is_hashable_data<U>::value &&
-                                  (sizeof(T) + sizeof(U)) ==
-                                   sizeof(std::pair<T, U>))> {};
+template <typename T, typename U>
+struct is_hashable_data<std::pair<T, U>>
+    : std::bool_constant<(is_hashable_data<T>::value &&
+                          is_hashable_data<U>::value &&
+                          (sizeof(T) + sizeof(U)) == sizeof(std::pair<T, U>))> {
+};
 
 /// Helper to get the hashable data representation for a type.
 template <typename T> auto get_hashable_data(const T &value) {

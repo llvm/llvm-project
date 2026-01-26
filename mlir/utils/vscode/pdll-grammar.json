@@ -102,7 +102,7 @@
     "argument_or_result_list": {
       "patterns": [
         {
-          "match": "\\b([aA-zZ_0-9]*)\\b\\s*:\\s*([aA-zZ_0-9]+)\\b(\\<([^\\>]+)\\>)?",
+          "match": "\\b([a-zA-Z_0-9]*)\\b\\s*:\\s*([a-zA-Z_0-9]+)\\b(\\<([^\\>]+)\\>)?",
           "captures": {
             "1": {
               "name": "variable.parameter.pdll"
@@ -116,7 +116,7 @@
           }
         },
         {
-          "match": "(\\(|\\>|,)\\s*([aA-zZ_0-9]+)\\b(\\<([^\\>]+)\\>)?\\s*(?=[^:])",
+          "match": "(\\(|\\>|,)\\s*([a-zA-Z_0-9]+)\\b(\\<([^\\>]+)\\>)?\\s*(?=[^:])",
           "captures": {
             "2": {
               "name": "entity.name.type.pdll"
@@ -131,7 +131,7 @@
     "user_constraint": {
       "patterns": [
         {
-          "begin": "\\b(Constraint)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?",
+          "begin": "\\b(Constraint)\\b\\s*(\\b[a-zA-Z_0-9]*\\b)?",
           "beginCaptures": {
             "1": {
               "name": "keyword.other.pdll"
@@ -188,7 +188,7 @@
     "user_rewrite": {
       "patterns": [
         {
-          "begin": "\\b(Rewrite)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?",
+          "begin": "\\b(Rewrite)\\b\\s*(\\b[a-zA-Z_0-9]*\\b)?",
           "beginCaptures": {
             "1": {
               "name": "keyword.other.pdll"
@@ -268,7 +268,7 @@
     "pattern": {
       "patterns": [
         {
-          "begin": "\\b(Pattern)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?\\s*(\\bwith\\b\\s*[^\\{]*)?\\s*({)",
+          "begin": "\\b(Pattern)\\b\\s*(\\b[a-zA-Z_0-9]*\\b)?\\s*(\\bwith\\b\\s*[^\\{]*)?\\s*({)",
           "beginCaptures": {
             "1": {
               "name": "keyword.other.pdll"
@@ -292,7 +292,7 @@
           "end": "(})"
         },
         {
-          "begin": "\\b(Pattern)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?\\s*(\\bwith\\b\\s*[^\\=]*)?\\s*(=>)",
+          "begin": "\\b(Pattern)\\b\\s*(\\b[a-zA-Z_0-9]*\\b)?\\s*(\\bwith\\b\\s*[^\\=]*)?\\s*(=>)",
           "beginCaptures": {
             "1": {
               "name": "keyword.other.pdll"
@@ -363,7 +363,7 @@
     "variable_definition": {
       "patterns": [
         {
-          "begin": "\\b([aA-zZ_0-9]*)\\b\\s*:\\s*\\[",
+          "begin": "\\b([a-zA-Z_0-9]*)\\b\\s*:\\s*\\[",
           "beginCaptures": {
             "1": {
               "name": "entity.name.variable.pdll"
@@ -377,7 +377,7 @@
           "end": "\\]"
         },
         {
-          "match": "\\b([aA-zZ_0-9]*)\\b\\s*:\\s*([aA-zZ_0-9]+(\\<([^\\>]+)\\>)?)",
+          "match": "\\b([a-zA-Z_0-9]*)\\b\\s*:\\s*([a-zA-Z_0-9]+(\\<([^\\>]+)\\>)?)",
           "captures": {
             "1": {
               "name": "entity.name.variable.pdll"

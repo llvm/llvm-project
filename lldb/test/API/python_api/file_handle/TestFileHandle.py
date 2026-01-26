@@ -2,7 +2,6 @@
 Test lldb Python API for file handles.
 """
 
-
 import os
 import io
 import re
@@ -111,10 +110,11 @@ class FileHandleTestCase(lldbtest.TestBase):
         super(FileHandleTestCase, self).setUp()
         self.out_filename = self.getBuildArtifact("output")
         self.in_filename = self.getBuildArtifact("input")
+        self.err_filename = self.getBuildArtifact("error")
 
     def tearDown(self):
         super(FileHandleTestCase, self).tearDown()
-        for name in (self.out_filename, self.in_filename):
+        for name in (self.out_filename, self.in_filename, self.err_filename):
             if os.path.exists(name):
                 os.unlink(name)
 
@@ -678,6 +678,52 @@ class FileHandleTestCase(lldbtest.TestBase):
             # will print out.
             lines = [x for x in f.read().strip().split() if x != "7"]
             self.assertEqual(lines, ["foobar"])
+
+    @skipIf(hostoslist=["windows"])
+    def test_stdout_file_interactive(self):
+        """Ensure when we read stdin from a file, outputs from python goes to the right I/O stream."""
+        with open(self.in_filename, "w") as f:
+            f.write(
+                "script --language python --\nvalue = 250 + 5\nprint(value)\nprint(vel)"
+            )
+
+        with open(self.out_filename, "w") as outf, open(
+            self.in_filename, "r"
+        ) as inf, open(self.err_filename, "w") as errf:
+            status = self.dbg.SetOutputFile(lldb.SBFile(outf))
+            self.assertSuccess(status)
+            status = self.dbg.SetErrorFile(lldb.SBFile(errf))
+            self.assertSuccess(status)
+            status = self.dbg.SetInputFile(lldb.SBFile(inf))
+            self.assertSuccess(status)
+            auto_handle_events = True
+            spawn_thread = False
+            num_errs = 0
+            quit_requested = False
+            stopped_for_crash = False
+            opts = lldb.SBCommandInterpreterRunOptions()
+            self.dbg.RunCommandInterpreter(
+                auto_handle_events,
+                spawn_thread,
+                opts,
+                num_errs,
+                quit_requested,
+                stopped_for_crash,
+            )
+            self.dbg.GetOutputFile().Flush()
+        expected_out_text = "255"
+        expected_err_text = "NameError"
+        # check stdout
+        with open(self.out_filename, "r") as f:
+            out_text = f.read()
+            self.assertIn(expected_out_text, out_text)
+            self.assertNotIn(expected_err_text, out_text)
+
+        # check stderr
+        with open(self.err_filename, "r") as f:
+            err_text = f.read()
+            self.assertIn(expected_err_text, err_text)
+            self.assertNotIn(expected_out_text, err_text)
 
     def test_identity(self):
         f = io.StringIO()

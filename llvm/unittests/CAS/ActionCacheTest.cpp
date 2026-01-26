@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace llvm::cas;
 
 TEST_P(CASTest, ActionCacheHit) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID;
@@ -36,7 +36,7 @@ TEST_P(CASTest, ActionCacheHit) {
 }
 
 TEST_P(CASTest, ActionCacheMiss) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID1, ID2;
@@ -59,7 +59,7 @@ TEST_P(CASTest, ActionCacheMiss) {
 }
 
 TEST_P(CASTest, ActionCacheRewrite) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID1, ID2;

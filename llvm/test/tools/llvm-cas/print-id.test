@@ -1,0 +1,13 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t/cas --make-blob --data %S/Inputs/oneline > %t/id
+
+# Confirm that the ID has the right prefix, is well-formed, and that there's
+# nothing else on the line.
+RUN: FileCheck %s --match-full-lines --strict-whitespace <%t/id
+CHECK:llvmcas://{{[a-z0-9]+}}
+
+# Confirm that there's a newline after.
+RUN: wc -l <%t/id | FileCheck %s -check-prefix=NEWLINE
+NEWLINE: 1

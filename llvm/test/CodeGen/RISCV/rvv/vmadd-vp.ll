@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <vscale x 1 x i8> @llvm.vp.mul.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i8> @llvm.vp.add.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1>, <vscale x 1 x i8>, <vscale x 1 x i8>, i32)
-declare <vscale x 1 x i8> @llvm.vp.select.nxv1i8(<vscale x 1 x i1>, <vscale x 1 x i8>, <vscale x 1 x i8>, i32)
-
 define <vscale x 1 x i8> @vmadd_vv_nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c,  <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -86,11 +81,6 @@ define <vscale x 1 x i8> @vmadd_vx_nxv1i8_ta(<vscale x 1 x i8> %a, i8 %b, <vscal
   %u = call <vscale x 1 x i8> @llvm.vp.select.nxv1i8(<vscale x 1 x i1> %m, <vscale x 1 x i8> %y, <vscale x 1 x i8> %a, i32 %evl)
   ret <vscale x 1 x i8> %u
 }
-
-declare <vscale x 2 x i8> @llvm.vp.mul.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i8> @llvm.vp.add.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x i8>, <vscale x 2 x i8>, i32)
-declare <vscale x 2 x i8> @llvm.vp.select.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x i8>, <vscale x 2 x i8>, i32)
 
 define <vscale x 2 x i8> @vmadd_vv_nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> %b, <vscale x 2 x i8> %c,  <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv2i8:
@@ -170,11 +160,6 @@ define <vscale x 2 x i8> @vmadd_vx_nxv2i8_ta(<vscale x 2 x i8> %a, i8 %b, <vscal
   ret <vscale x 2 x i8> %u
 }
 
-declare <vscale x 4 x i8> @llvm.vp.mul.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i8> @llvm.vp.add.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1>, <vscale x 4 x i8>, <vscale x 4 x i8>, i32)
-declare <vscale x 4 x i8> @llvm.vp.select.nxv4i8(<vscale x 4 x i1>, <vscale x 4 x i8>, <vscale x 4 x i8>, i32)
-
 define <vscale x 4 x i8> @vmadd_vv_nxv4i8(<vscale x 4 x i8> %a, <vscale x 4 x i8> %b, <vscale x 4 x i8> %c,  <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv4i8:
 ; CHECK:       # %bb.0:
@@ -252,11 +237,6 @@ define <vscale x 4 x i8> @vmadd_vx_nxv4i8_ta(<vscale x 4 x i8> %a, i8 %b, <vscal
   %u = call <vscale x 4 x i8> @llvm.vp.select.nxv4i8(<vscale x 4 x i1> %m, <vscale x 4 x i8> %y, <vscale x 4 x i8> %a, i32 %evl)
   ret <vscale x 4 x i8> %u
 }
-
-declare <vscale x 8 x i8> @llvm.vp.mul.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i8> @llvm.vp.add.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1>, <vscale x 8 x i8>, <vscale x 8 x i8>, i32)
-declare <vscale x 8 x i8> @llvm.vp.select.nxv8i8(<vscale x 8 x i1>, <vscale x 8 x i8>, <vscale x 8 x i8>, i32)
 
 define <vscale x 8 x i8> @vmadd_vv_nxv8i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c,  <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv8i8:
@@ -336,11 +316,6 @@ define <vscale x 8 x i8> @vmadd_vx_nxv8i8_ta(<vscale x 8 x i8> %a, i8 %b, <vscal
   ret <vscale x 8 x i8> %u
 }
 
-declare <vscale x 16 x i8> @llvm.vp.mul.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i8> @llvm.vp.add.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i8> @llvm.vp.merge.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
-declare <vscale x 16 x i8> @llvm.vp.select.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
-
 define <vscale x 16 x i8> @vmadd_vv_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c,  <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -419,11 +394,6 @@ define <vscale x 16 x i8> @vmadd_vx_nxv16i8_ta(<vscale x 16 x i8> %a, i8 %b, <vs
   ret <vscale x 16 x i8> %u
 }
 
-declare <vscale x 32 x i8> @llvm.vp.mul.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i1>, i32)
-declare <vscale x 32 x i8> @llvm.vp.add.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i1>, i32)
-declare <vscale x 32 x i8> @llvm.vp.merge.nxv32i8(<vscale x 32 x i1>, <vscale x 32 x i8>, <vscale x 32 x i8>, i32)
-declare <vscale x 32 x i8> @llvm.vp.select.nxv32i8(<vscale x 32 x i1>, <vscale x 32 x i8>, <vscale x 32 x i8>, i32)
-
 define <vscale x 32 x i8> @vmadd_vv_nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b, <vscale x 32 x i8> %c,  <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv32i8:
 ; CHECK:       # %bb.0:
@@ -501,11 +471,6 @@ define <vscale x 32 x i8> @vmadd_vx_nxv32i8_ta(<vscale x 32 x i8> %a, i8 %b, <vs
   %u = call <vscale x 32 x i8> @llvm.vp.select.nxv32i8(<vscale x 32 x i1> %m, <vscale x 32 x i8> %y, <vscale x 32 x i8> %a, i32 %evl)
   ret <vscale x 32 x i8> %u
 }
-
-declare <vscale x 64 x i8> @llvm.vp.mul.nxv64i8(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i1>, i32)
-declare <vscale x 64 x i8> @llvm.vp.add.nxv64i8(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i1>, i32)
-declare <vscale x 64 x i8> @llvm.vp.merge.nxv64i8(<vscale x 64 x i1>, <vscale x 64 x i8>, <vscale x 64 x i8>, i32)
-declare <vscale x 64 x i8> @llvm.vp.select.nxv64i8(<vscale x 64 x i1>, <vscale x 64 x i8>, <vscale x 64 x i8>, i32)
 
 define <vscale x 64 x i8> @vmadd_vv_nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b, <vscale x 64 x i8> %c,  <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv64i8:
@@ -588,11 +553,6 @@ define <vscale x 64 x i8> @vmadd_vx_nxv64i8_ta(<vscale x 64 x i8> %a, i8 %b, <vs
   ret <vscale x 64 x i8> %u
 }
 
-declare <vscale x 1 x i16> @llvm.vp.mul.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i16> @llvm.vp.add.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i16> @llvm.vp.merge.nxv1i16(<vscale x 1 x i1>, <vscale x 1 x i16>, <vscale x 1 x i16>, i32)
-declare <vscale x 1 x i16> @llvm.vp.select.nxv1i16(<vscale x 1 x i1>, <vscale x 1 x i16>, <vscale x 1 x i16>, i32)
-
 define <vscale x 1 x i16> @vmadd_vv_nxv1i16(<vscale x 1 x i16> %a, <vscale x 1 x i16> %b, <vscale x 1 x i16> %c,  <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv1i16:
 ; CHECK:       # %bb.0:
@@ -670,11 +630,6 @@ define <vscale x 1 x i16> @vmadd_vx_nxv1i16_ta(<vscale x 1 x i16> %a, i16 %b, <v
   %u = call <vscale x 1 x i16> @llvm.vp.select.nxv1i16(<vscale x 1 x i1> %m, <vscale x 1 x i16> %y, <vscale x 1 x i16> %a, i32 %evl)
   ret <vscale x 1 x i16> %u
 }
-
-declare <vscale x 2 x i16> @llvm.vp.mul.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i16> @llvm.vp.merge.nxv2i16(<vscale x 2 x i1>, <vscale x 2 x i16>, <vscale x 2 x i16>, i32)
-declare <vscale x 2 x i16> @llvm.vp.select.nxv2i16(<vscale x 2 x i1>, <vscale x 2 x i16>, <vscale x 2 x i16>, i32)
 
 define <vscale x 2 x i16> @vmadd_vv_nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, <vscale x 2 x i16> %c,  <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv2i16:
@@ -754,11 +709,6 @@ define <vscale x 2 x i16> @vmadd_vx_nxv2i16_ta(<vscale x 2 x i16> %a, i16 %b, <v
   ret <vscale x 2 x i16> %u
 }
 
-declare <vscale x 4 x i16> @llvm.vp.mul.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i16> @llvm.vp.add.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i16> @llvm.vp.merge.nxv4i16(<vscale x 4 x i1>, <vscale x 4 x i16>, <vscale x 4 x i16>, i32)
-declare <vscale x 4 x i16> @llvm.vp.select.nxv4i16(<vscale x 4 x i1>, <vscale x 4 x i16>, <vscale x 4 x i16>, i32)
-
 define <vscale x 4 x i16> @vmadd_vv_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c,  <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv4i16:
 ; CHECK:       # %bb.0:
@@ -836,11 +786,6 @@ define <vscale x 4 x i16> @vmadd_vx_nxv4i16_ta(<vscale x 4 x i16> %a, i16 %b, <v
   %u = call <vscale x 4 x i16> @llvm.vp.select.nxv4i16(<vscale x 4 x i1> %m, <vscale x 4 x i16> %y, <vscale x 4 x i16> %a, i32 %evl)
   ret <vscale x 4 x i16> %u
 }
-
-declare <vscale x 8 x i16> @llvm.vp.mul.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i16> @llvm.vp.add.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
-declare <vscale x 8 x i16> @llvm.vp.select.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
 
 define <vscale x 8 x i16> @vmadd_vv_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c,  <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv8i16:
@@ -920,11 +865,6 @@ define <vscale x 8 x i16> @vmadd_vx_nxv8i16_ta(<vscale x 8 x i16> %a, i16 %b, <v
   ret <vscale x 8 x i16> %u
 }
 
-declare <vscale x 16 x i16> @llvm.vp.mul.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i16> @llvm.vp.add.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i16> @llvm.vp.merge.nxv16i16(<vscale x 16 x i1>, <vscale x 16 x i16>, <vscale x 16 x i16>, i32)
-declare <vscale x 16 x i16> @llvm.vp.select.nxv16i16(<vscale x 16 x i1>, <vscale x 16 x i16>, <vscale x 16 x i16>, i32)
-
 define <vscale x 16 x i16> @vmadd_vv_nxv16i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %b, <vscale x 16 x i16> %c,  <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv16i16:
 ; CHECK:       # %bb.0:
@@ -1002,11 +942,6 @@ define <vscale x 16 x i16> @vmadd_vx_nxv16i16_ta(<vscale x 16 x i16> %a, i16 %b,
   %u = call <vscale x 16 x i16> @llvm.vp.select.nxv16i16(<vscale x 16 x i1> %m, <vscale x 16 x i16> %y, <vscale x 16 x i16> %a, i32 %evl)
   ret <vscale x 16 x i16> %u
 }
-
-declare <vscale x 32 x i16> @llvm.vp.mul.nxv32i16(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i1>, i32)
-declare <vscale x 32 x i16> @llvm.vp.add.nxv32i16(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i1>, i32)
-declare <vscale x 32 x i16> @llvm.vp.merge.nxv32i16(<vscale x 32 x i1>, <vscale x 32 x i16>, <vscale x 32 x i16>, i32)
-declare <vscale x 32 x i16> @llvm.vp.select.nxv32i16(<vscale x 32 x i1>, <vscale x 32 x i16>, <vscale x 32 x i16>, i32)
 
 define <vscale x 32 x i16> @vmadd_vv_nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, <vscale x 32 x i16> %c,  <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv32i16:
@@ -1089,11 +1024,6 @@ define <vscale x 32 x i16> @vmadd_vx_nxv32i16_ta(<vscale x 32 x i16> %a, i16 %b,
   ret <vscale x 32 x i16> %u
 }
 
-declare <vscale x 1 x i32> @llvm.vp.mul.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i32> @llvm.vp.add.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i32> @llvm.vp.merge.nxv1i32(<vscale x 1 x i1>, <vscale x 1 x i32>, <vscale x 1 x i32>, i32)
-declare <vscale x 1 x i32> @llvm.vp.select.nxv1i32(<vscale x 1 x i1>, <vscale x 1 x i32>, <vscale x 1 x i32>, i32)
-
 define <vscale x 1 x i32> @vmadd_vv_nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c,  <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv1i32:
 ; CHECK:       # %bb.0:
@@ -1171,11 +1101,6 @@ define <vscale x 1 x i32> @vmadd_vx_nxv1i32_ta(<vscale x 1 x i32> %a, i32 %b, <v
   %u = call <vscale x 1 x i32> @llvm.vp.select.nxv1i32(<vscale x 1 x i1> %m, <vscale x 1 x i32> %y, <vscale x 1 x i32> %a, i32 %evl)
   ret <vscale x 1 x i32> %u
 }
-
-declare <vscale x 2 x i32> @llvm.vp.mul.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1>, <vscale x 2 x i32>, <vscale x 2 x i32>, i32)
-declare <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1>, <vscale x 2 x i32>, <vscale x 2 x i32>, i32)
 
 define <vscale x 2 x i32> @vmadd_vv_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c,  <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv2i32:
@@ -1255,11 +1180,6 @@ define <vscale x 2 x i32> @vmadd_vx_nxv2i32_ta(<vscale x 2 x i32> %a, i32 %b, <v
   ret <vscale x 2 x i32> %u
 }
 
-declare <vscale x 4 x i32> @llvm.vp.mul.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>, i32)
-declare <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>, i32)
-
 define <vscale x 4 x i32> @vmadd_vv_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c,  <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv4i32:
 ; CHECK:       # %bb.0:
@@ -1338,11 +1258,6 @@ define <vscale x 4 x i32> @vmadd_vx_nxv4i32_ta(<vscale x 4 x i32> %a, i32 %b, <v
   ret <vscale x 4 x i32> %u
 }
 
-declare <vscale x 8 x i32> @llvm.vp.mul.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i32> @llvm.vp.add.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1>, <vscale x 8 x i32>, <vscale x 8 x i32>, i32)
-declare <vscale x 8 x i32> @llvm.vp.select.nxv8i32(<vscale x 8 x i1>, <vscale x 8 x i32>, <vscale x 8 x i32>, i32)
-
 define <vscale x 8 x i32> @vmadd_vv_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c,  <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv8i32:
 ; CHECK:       # %bb.0:
@@ -1420,11 +1335,6 @@ define <vscale x 8 x i32> @vmadd_vx_nxv8i32_ta(<vscale x 8 x i32> %a, i32 %b, <v
   %u = call <vscale x 8 x i32> @llvm.vp.select.nxv8i32(<vscale x 8 x i1> %m, <vscale x 8 x i32> %y, <vscale x 8 x i32> %a, i32 %evl)
   ret <vscale x 8 x i32> %u
 }
-
-declare <vscale x 16 x i32> @llvm.vp.mul.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i32> @llvm.vp.add.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i32> @llvm.vp.merge.nxv16i32(<vscale x 16 x i1>, <vscale x 16 x i32>, <vscale x 16 x i32>, i32)
-declare <vscale x 16 x i32> @llvm.vp.select.nxv16i32(<vscale x 16 x i1>, <vscale x 16 x i32>, <vscale x 16 x i32>, i32)
 
 define <vscale x 16 x i32> @vmadd_vv_nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b, <vscale x 16 x i32> %c,  <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv16i32:
@@ -1506,11 +1416,6 @@ define <vscale x 16 x i32> @vmadd_vx_nxv16i32_ta(<vscale x 16 x i32> %a, i32 %b,
   %u = call <vscale x 16 x i32> @llvm.vp.select.nxv16i32(<vscale x 16 x i1> %m, <vscale x 16 x i32> %y, <vscale x 16 x i32> %a, i32 %evl)
   ret <vscale x 16 x i32> %u
 }
-
-declare <vscale x 1 x i64> @llvm.vp.mul.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i64> @llvm.vp.add.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i64> @llvm.vp.merge.nxv1i64(<vscale x 1 x i1>, <vscale x 1 x i64>, <vscale x 1 x i64>, i32)
-declare <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1>, <vscale x 1 x i64>, <vscale x 1 x i64>, i32)
 
 define <vscale x 1 x i64> @vmadd_vv_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b, <vscale x 1 x i64> %c,  <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv1i64:
@@ -1634,11 +1539,6 @@ define <vscale x 1 x i64> @vmadd_vx_nxv1i64_ta(<vscale x 1 x i64> %a, i64 %b, <v
   ret <vscale x 1 x i64> %u
 }
 
-declare <vscale x 2 x i64> @llvm.vp.mul.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i64> @llvm.vp.add.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>, i32)
-declare <vscale x 2 x i64> @llvm.vp.select.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>, i32)
-
 define <vscale x 2 x i64> @vmadd_vv_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c,  <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -1761,11 +1661,6 @@ define <vscale x 2 x i64> @vmadd_vx_nxv2i64_ta(<vscale x 2 x i64> %a, i64 %b, <v
   ret <vscale x 2 x i64> %u
 }
 
-declare <vscale x 4 x i64> @llvm.vp.mul.nxv4i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i64> @llvm.vp.add.nxv4i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1>, <vscale x 4 x i64>, <vscale x 4 x i64>, i32)
-declare <vscale x 4 x i64> @llvm.vp.select.nxv4i64(<vscale x 4 x i1>, <vscale x 4 x i64>, <vscale x 4 x i64>, i32)
-
 define <vscale x 4 x i64> @vmadd_vv_nxv4i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b, <vscale x 4 x i64> %c,  <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv4i64:
 ; CHECK:       # %bb.0:
@@ -1887,11 +1782,6 @@ define <vscale x 4 x i64> @vmadd_vx_nxv4i64_ta(<vscale x 4 x i64> %a, i64 %b, <v
   %u = call <vscale x 4 x i64> @llvm.vp.select.nxv4i64(<vscale x 4 x i1> %m, <vscale x 4 x i64> %y, <vscale x 4 x i64> %a, i32 %evl)
   ret <vscale x 4 x i64> %u
 }
-
-declare <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i64> @llvm.vp.add.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1>, <vscale x 8 x i64>, <vscale x 8 x i64>, i32)
-declare <vscale x 8 x i64> @llvm.vp.select.nxv8i64(<vscale x 8 x i1>, <vscale x 8 x i64>, <vscale x 8 x i64>, i32)
 
 define <vscale x 8 x i64> @vmadd_vv_nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b, <vscale x 8 x i64> %c,  <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmadd_vv_nxv8i64:

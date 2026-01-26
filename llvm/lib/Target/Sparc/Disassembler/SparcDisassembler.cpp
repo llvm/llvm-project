@@ -36,7 +36,7 @@ class SparcDisassembler : public MCDisassembler {
 public:
   SparcDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~SparcDisassembler() = default;
+  ~SparcDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -154,14 +154,6 @@ static DecodeStatus DecodeIntRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static DecodeStatus DecodeI64RegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  return DecodeIntRegsRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-// This is used for the type "ptr_rc", which is either IntRegs or I64Regs
-// depending on SparcRegisterInfo::getPointerRegClass.
-static DecodeStatus DecodePointerLikeRegClass0(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
   return DecodeIntRegsRegisterClass(Inst, RegNo, Address, Decoder);

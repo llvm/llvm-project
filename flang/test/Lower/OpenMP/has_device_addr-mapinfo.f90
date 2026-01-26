@@ -17,7 +17,7 @@ end
 
 ! Check that the map.info for `a` only takes a single parameter.
 
-!CHECK-DAG: %[[MAP_A:[0-9]+]] = "omp.map.info"(%[[STORAGE_A:[0-9#]+]]) <{map_capture_type = #omp<variable_capture_kind(ByRef)>, map_type = 517 : ui64, name = "a", operandSegmentSizes = array<i32: 1, 0, 0, 0>, partial_map = false, var_type = !fir.box<!fir.array<?xi32>>}> : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.array<?xi32>>
-!CHECK-DAG: %[[MAP_T:[0-9]+]] = "omp.map.info"(%[[STORAGE_T:[0-9#]+]]) <{map_capture_type = #omp<variable_capture_kind(ByRef)>, map_type = 2 : ui64, name = "t", operandSegmentSizes = array<i32: 1, 0, 0, 0>, partial_map = false, var_type = i32}> : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK-DAG: %[[MAP_A:[0-9]+]] = "omp.map.info"(%[[STORAGE_A:[0-9#]+]]) <{map_capture_type = #omp<variable_capture_kind(ByRef)>, map_type = #omp<clause_map_flags to|always|implicit>, name = "a", operandSegmentSizes = array<i32: 1, 0, 0, 0>, partial_map = false, var_type = !fir.box<!fir.array<?xi32>>}> : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.array<?xi32>>
+!CHECK-DAG: %[[MAP_T:[0-9]+]] = "omp.map.info"(%[[STORAGE_T:[0-9#]+]]) <{map_capture_type = #omp<variable_capture_kind(ByRef)>, map_type = #omp<clause_map_flags from>, name = "t", operandSegmentSizes = array<i32: 1, 0, 0, 0>, partial_map = false, var_type = i32}> : (!fir.ref<i32>) -> !fir.ref<i32>
 
 !CHECK: "omp.target"(%[[MAP_A]], %[[MAP_T]])

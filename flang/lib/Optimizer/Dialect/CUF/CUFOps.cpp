@@ -333,7 +333,8 @@ void cuf::SharedMemoryOp::build(
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType),
         mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
-        /*offset=*/mlir::Value{});
+        /*offset=*/mlir::Value{}, /*alignment=*/mlir::IntegerAttr{},
+        /*isStatic=*/nullptr);
   result.addAttributes(attributes);
 }
 
@@ -343,17 +344,6 @@ void cuf::SharedMemoryOp::build(
 
 llvm::LogicalResult cuf::StreamCastOp::verify() {
   return checkStreamType(*this);
-}
-
-//===----------------------------------------------------------------------===//
-// SetAllocatorOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult cuf::SetAllocatorIndexOp::verify() {
-  if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBox().getType())))
-    return emitOpError(
-        "expect box to be a reference to class or box type value");
-  return mlir::success();
 }
 
 // Tablegen operators

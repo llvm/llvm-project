@@ -57,7 +57,7 @@ public:
 
     // If we didn't build x86, do not run the test.
     std::string Error;
-    TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 

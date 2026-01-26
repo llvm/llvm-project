@@ -23,8 +23,8 @@ int f2(int fst, ...) {
   va_list va;
   va_start(va, fst); // expected-note{{Initialized va_list}}
   va_end(va); // expected-note{{Ended va_list}}
-  return va_arg(va, int); // expected-warning{{va_arg() is called on an uninitialized va_list}}
-  // expected-note@-1{{va_arg() is called on an uninitialized va_list}}
+  return va_arg(va, int); // expected-warning{{va_arg() is called on an already released va_list}}
+  // expected-note@-1{{va_arg() is called on an already released va_list}}
 }
 
 void f3(int fst, ...) {
@@ -60,8 +60,8 @@ void f8(int *fst, ...) {
   va_list *y = &x;
   va_start(*y,fst); // expected-note{{Initialized va_list}}
   va_end(x); // expected-note{{Ended va_list}}
-  (void)va_arg(*y, int); //expected-warning{{va_arg() is called on an uninitialized va_list}}
-  // expected-note@-1{{va_arg() is called on an uninitialized va_list}}
+  (void)va_arg(*y, int); //expected-warning{{va_arg() is called on an already released va_list}}
+  // expected-note@-1{{va_arg() is called on an already released va_list}}
 }
 
 void reinitOk(int *fst, ...) {
@@ -82,8 +82,8 @@ void reinit3(int *fst, ...) {
   va_start(va, fst); // expected-note{{Initialized va_list}}
   (void)va_arg(va, int);
   va_end(va); // expected-note{{Ended va_list}}
-  (void)va_arg(va, int); //expected-warning{{va_arg() is called on an uninitialized va_list}}
-  // expected-note@-1{{va_arg() is called on an uninitialized va_list}}
+  (void)va_arg(va, int); //expected-warning{{va_arg() is called on an already released va_list}}
+  // expected-note@-1{{va_arg() is called on an already released va_list}}
 }
 
 void copyUnint(int fst, ...) {
@@ -102,8 +102,8 @@ void g2(int fst, ...) {
   va_list va;
   va_start(va, fst); // expected-note{{Initialized va_list}}
   va_end(va); // expected-note{{Ended va_list}}
-  va_end(va); // expected-warning{{va_end() is called on an uninitialized va_list}}
-  // expected-note@-1{{va_end() is called on an uninitialized va_list}}
+  va_end(va); // expected-warning{{va_end() is called on an already released va_list}}
+  // expected-note@-1{{va_end() is called on an already released va_list}}
 }
 
 void is_sink(int fst, ...) {
@@ -150,4 +150,17 @@ void va_copy_test(va_list arg) {
   va_list dst;
   va_copy(dst, arg);
   va_end(dst);
+}
+
+void all_state_changes(va_list unknown, int fst, ...) {
+  va_list va, va2;
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_copy(va, unknown); // expected-note{{Copied unknown contents into the va_list}}
+  va_end(va); // expected-note{{Ended va_list}}
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_copy(va, va2); // expected-note{{Copied uninitialized contents into the va_list}}
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_end(va); // expected-note{{Ended va_list}}
+  va_end(va); // expected-warning{{va_end() is called on an already released va_list}}
+  // expected-note@-1{{va_end() is called on an already released va_list}}
 }

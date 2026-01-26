@@ -182,12 +182,12 @@ template <typename T> struct dispatch_shared_info_template {
 #if KMP_USE_HIER_SCHED
   kmp_hier_t<T> *hier;
 #endif
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   // When linking with libhwloc, the ORDERED EPCC test slowsdown on big
   // machines (> 48 cores). Performance analysis showed that a cache thrash
   // was occurring and this padding helps alleviate the problem.
   char padding[64];
-#endif
+#endif // KMP_HWLOC_ENABLED
 };
 
 /* ------------------------------------------------------------------------ */

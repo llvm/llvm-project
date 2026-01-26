@@ -15,14 +15,14 @@ garbage collector.**  You must provide your own.
 Quick Start
 ============
 
-First, you should pick a collector strategy.  LLVM includes a number of built
-in ones, but you can also implement a loadable plugin with a custom definition.
+First, you should pick a collector strategy.  LLVM includes a number of built-in
+ones, but you can also implement a loadable plugin with a custom definition.
 Note that the collector strategy is a description of how LLVM should generate
 code such that it interacts with your collector and runtime, not a description
 of the collector itself.
 
 Next, mark your generated functions as using your chosen collector strategy.
-From c++, you can call:
+From C++, you can call:
 
 .. code-block:: c++
 
@@ -40,7 +40,7 @@ When generating LLVM IR for your functions, you will need to:
 
 * Use ``@llvm.gcread`` and/or ``@llvm.gcwrite`` in place of standard load and
   store instructions.  These intrinsics are used to represent load and store
-  barriers.  If you collector does not require such barriers, you can skip
+  barriers.  If your collector does not require such barriers, you can skip
   this step.
 
 * Use the memory allocation routines provided by your garbage collector's
@@ -49,7 +49,7 @@ When generating LLVM IR for your functions, you will need to:
 * If your collector requires them, generate type maps according to your
   runtime's binary interface.  LLVM is not involved in the process.  In
   particular, the LLVM type system is not suitable for conveying such
-  information though the compiler.
+  information through the compiler.
 
 * Insert any coordination code required for interacting with your collector.
   Many collectors require running application code to periodically check a
@@ -59,7 +59,7 @@ When generating LLVM IR for your functions, you will need to:
 You will need to identify roots (i.e. references to heap objects your collector
 needs to know about) in your generated IR, so that LLVM can encode them into
 your final stack maps.  Depending on the collector strategy chosen, this is
-accomplished by using either the ``@llvm.gcroot`` intrinsics or an
+accomplished by using either the ``@llvm.gcroot`` intrinsics or a
 ``gc.statepoint`` relocation sequence.
 
 Don't forget to create a root for each intermediate value that is generated when
@@ -142,11 +142,11 @@ Perl, Python, Lua, Ruby, other scripting languages, and more.
 
 Note that LLVM **does not itself provide a garbage collector** --- this should
 be part of your language's runtime library.  LLVM provides a framework for
-describing the garbage collectors requirements to the compiler.  In particular,
+describing the garbage collector's requirements to the compiler.  In particular,
 LLVM provides support for generating stack maps at call sites, polling for a
 safepoint, and emitting load and store barriers.  You can also extend LLVM -
 possibly through a loadable :ref:`code generation plugins <plugin>` - to
-generate code and data structures which conforms to the *binary interface*
+generate code and data structures which conform to the *binary interface*
 specified by the *runtime library*.  This is similar to the relationship between
 LLVM and DWARF debugging info, for example.  The difference primarily lies in
 the lack of an established standard in the domain of garbage collection --- thus
@@ -185,10 +185,10 @@ adequately addressed with other features of the IR and does not specify a
 particular binary interface.  On the plus side, this means that you should be
 able to integrate LLVM with an existing runtime.  On the other hand, it can
 have the effect of leaving a lot of work for the developer of a novel
-language.  We try to mitigate this by providing built in collector strategy
+language.  We try to mitigate this by providing built-in collector strategy
 descriptions that can work with many common collector designs and easy
 extension points.  If you don't already have a specific binary interface
-you need to support, we recommend trying to use one of these built in collector
+you need to support, we recommend trying to use one of these built-in collector
 strategies.
 
 .. _gc_intrinsics:
@@ -257,7 +257,7 @@ associated with the pointer, and **must** be a constant or global value
 address.  If your target collector uses tags, use a null pointer for metadata.
 
 A compiler which performs manual SSA construction **must** ensure that SSA
-values representing GC references are stored in to the alloca passed to the
+values representing GC references are stored into the alloca passed to the
 respective ``gcroot`` before every call site and reloaded after every call.
 A compiler which uses mem2reg to raise imperative code using ``alloca`` into
 SSA form need only add a call to ``@llvm.gcroot`` for those variables which
@@ -265,8 +265,8 @@ are pointers into the GC heap.
 
 It is also important to mark intermediate values with ``llvm.gcroot``.  For
 example, consider ``h(f(), g())``.  Beware leaking the result of ``f()`` in the
-case that ``g()`` triggers a collection.  Note, that stack variables must be
-initialized and marked with ``llvm.gcroot`` in function's prologue.
+case that ``g()`` triggers a collection.  Note that stack variables must be
+initialized and marked with ``llvm.gcroot`` in the function's prologue.
 
 The ``%metadata`` argument can be used to avoid requiring heap objects to have
 'isa' pointers or tag bits. [Appel89_, Goldberg91_, Tolmach94_] If specified,
@@ -388,10 +388,10 @@ greater performance impact since pointer reads are more frequent than writes.
 
 .. _builtin-gc-strategies:
 
-Built In GC Strategies
+Built-In GC Strategies
 ======================
 
-LLVM includes built in support for several varieties of garbage collectors.
+LLVM includes built-in support for several varieties of garbage collectors.
 
 The Shadow Stack GC
 ----------------------
@@ -481,17 +481,17 @@ data structure, but there are only 20 lines of meaningful code.)
   }
 
 
-The 'Erlang' and 'Ocaml' GCs
+The 'Erlang' and 'OCaml' GCs
 -----------------------------
 
 LLVM ships with two example collectors which leverage the ``gcroot``
 mechanisms.  To our knowledge, these are not actually used by any language
 runtime, but they do provide a reasonable starting point for someone interested
-in writing an ``gcroot`` compatible GC plugin.  In particular, these are the
-only in tree examples of how to produce a custom binary stack map format using
+in writing a ``gcroot`` compatible GC plugin.  In particular, these are the
+only in-tree examples of how to produce a custom binary stack map format using
 a ``gcroot`` strategy.
 
-As there names imply, the binary format produced is intended to model that
+As their names imply, the binary format produced is intended to model that
 used by the Erlang and OCaml compilers respectively.
 
 .. _statepoint_example_gc:
@@ -544,14 +544,14 @@ certain aspects like:
 Custom GC Strategies
 ====================
 
-If none of the built in GC strategy descriptions met your needs above, you will
+If none of the built-in GC strategy descriptions met your needs above, you will
 need to define a custom GCStrategy and possibly, a custom LLVM pass to perform
 lowering.  Your best example of where to start defining a custom GCStrategy
-would be to look at one of the built in strategies.
+would be to look at one of the built-in strategies.
 
 You may be able to structure this additional code as a loadable plugin library.
 Loadable plugins are sufficient if all you need is to enable a different
-combination of built in functionality, but if you need to provide a custom
+combination of built-in functionality, but if you need to provide a custom
 lowering pass, you will need to build a patched version of LLVM.  If you think
 you need a patched build, please ask for advice on llvm-dev.  There may be an
 easy way we can extend the support to make it work for your use case without
@@ -576,7 +576,7 @@ You should be able to leverage any existing collector library that includes the 
 #. A mechanism for identifying references in global locations (e.g. global
    variables).
 
-#. If you collector requires them, an LLVM IR implementation of your collectors
+#. If your collector requires them, an LLVM IR implementation of your collector's
    load and store barriers.  Note that since many collectors don't require
    barriers at all, LLVM defaults to lowering such barriers to normal loads
    and stores unless you arrange otherwise.
@@ -598,7 +598,7 @@ runtime library).  This can be accomplished in about 100 lines of code.
 This is not the appropriate place to implement a garbage collected heap or a
 garbage collector itself.  That code should exist in the language's runtime
 library.  The compiler plugin is responsible for generating code which conforms
-to the binary interface defined by library, most essentially the :ref:`stack map
+to the binary interface defined by the library, most essentially the :ref:`stack map
 <stack-map>`.
 
 To subclass ``llvm::GCStrategy`` and register it with the compiler:
@@ -850,11 +850,11 @@ Custom lowering of intrinsics
 ------------------------------
 
 For GCs which use barriers or unusual treatment of stack roots, the
-implementor is responsibly for providing a custom pass to lower the
+implementor is responsible for providing a custom pass to lower the
 intrinsics with the desired semantics.  If you have opted in to custom
 lowering of a particular intrinsic your pass **must** eliminate all
 instances of the corresponding intrinsic in functions which opt in to
-your GC.  The best example of such a pass is the ShadowStackGC and it's
+your GC.  The best example of such a pass is the ShadowStackGC and its
 ShadowStackGCLowering pass.
 
 There is currently no way to register such a custom lowering pass

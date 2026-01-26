@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -finclude-default-header -o - %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -finclude-default-header -x hlsl -verify -o - %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -x hlsl -verify -o - %s
 
-float4 main(float4 a : SV_Position) {
-// CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (float4)'
-// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:20 a 'float4':'vector<float, 4>'
-// CHECK-NEXT: HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <{{.*}}>
+float4 main(float4 a : A) : SV_Position {
+// expected-error@-1 {{semantic 'SV_Position' is unsupported in pixel shaders as output, requires one of the following: vertex input/output, pixel input}}
+  return a;
 }

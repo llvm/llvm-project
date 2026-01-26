@@ -1,4 +1,4 @@
-//===--- RedundantDeclarationCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -79,7 +79,7 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+  const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       D->getSourceRange().getEnd(), 0, SM, Result.Context->getLangOpts());
   {
     auto Diag = diag(D->getLocation(), "redundant %0 declaration") << D;

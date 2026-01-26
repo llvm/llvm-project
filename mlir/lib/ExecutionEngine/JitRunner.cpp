@@ -271,7 +271,7 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
   return Error::success();
 }
 template <typename Type>
-Error compileAndExecuteSingleReturnFunction(
+static Error compileAndExecuteSingleReturnFunction(
     Options &options, Operation *module, StringRef entryPoint,
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(

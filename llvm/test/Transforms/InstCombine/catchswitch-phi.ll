@@ -94,18 +94,17 @@ define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    [[CALL:%.*]] = invoke i32 @baz()
 ; CHECK-NEXT:            to label [[INVOKE_CONT1:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont1:
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CALL]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK-NEXT:    [[TOBOOL_INIT:%.*]] = icmp ne i32 [[CALL]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_INIT]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[AP_0:%.*]] = phi i8 [ 1, [[IF_THEN]] ], [ 0, [[INVOKE_CONT1]] ]
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    br label [[TRY_CONT:%.*]]
 ; CHECK:       catch.dispatch:
-; CHECK-NEXT:    [[AP_1:%.*]] = phi i8 [ [[AP_0]], [[IF_END]] ], [ 0, [[INVOKE_CONT]] ]
+; CHECK-NEXT:    [[AP_1:%.*]] = phi i1 [ [[TOBOOL_INIT]], [[IF_END]] ], [ false, [[INVOKE_CONT]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch.start] unwind label [[CATCH_DISPATCH1]]
 ; CHECK:       catch.start:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null]
@@ -116,11 +115,10 @@ define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    invoke void @llvm.wasm.rethrow() #[[ATTR0:[0-9]+]] [ "funclet"(token [[TMP1]]) ]
 ; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH1]]
 ; CHECK:       catch.dispatch1:
-; CHECK-NEXT:    [[AP_2:%.*]] = phi i8 [ [[AP_1]], [[CATCH_DISPATCH]] ], [ [[AP_1]], [[RETHROW]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TOBOOL1:%.*]] = phi i1 [ [[AP_1]], [[CATCH_DISPATCH]] ], [ [[AP_1]], [[RETHROW]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label %catch.start1] unwind to caller
 ; CHECK:       catch.start1:
 ; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [ptr null]
-; CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc i8 [[AP_2]] to i1
 ; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN1:%.*]], label [[IF_END1:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    br label [[IF_END1]]

@@ -1050,7 +1050,7 @@ public:
 /// Sparse codegen rule for position accesses.
 class SparseToPositionsConverter : public OpConversionPattern<ToPositionsOp> {
 public:
-  using OpAdaptor = typename ToPositionsOp::Adaptor;
+  using OpAdaptor = ToPositionsOp::Adaptor;
   using OpConversionPattern<ToPositionsOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToPositionsOp op, OneToNOpAdaptor adaptor,
@@ -1073,7 +1073,7 @@ public:
 class SparseToCoordinatesConverter
     : public OpConversionPattern<ToCoordinatesOp> {
 public:
-  using OpAdaptor = typename ToCoordinatesOp::Adaptor;
+  using OpAdaptor = ToCoordinatesOp::Adaptor;
   using OpConversionPattern<ToCoordinatesOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToCoordinatesOp op, OneToNOpAdaptor adaptor,
@@ -1099,7 +1099,7 @@ public:
 class SparseToCoordinatesBufferConverter
     : public OpConversionPattern<ToCoordinatesBufferOp> {
 public:
-  using OpAdaptor = typename ToCoordinatesBufferOp::Adaptor;
+  using OpAdaptor = ToCoordinatesBufferOp::Adaptor;
   using OpConversionPattern<ToCoordinatesBufferOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToCoordinatesBufferOp op, OneToNOpAdaptor adaptor,
@@ -1121,7 +1121,7 @@ public:
 /// Sparse codegen rule for value accesses.
 class SparseToValuesConverter : public OpConversionPattern<ToValuesOp> {
 public:
-  using OpAdaptor = typename ToValuesOp::Adaptor;
+  using OpAdaptor = ToValuesOp::Adaptor;
   using OpConversionPattern<ToValuesOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToValuesOp op, OneToNOpAdaptor adaptor,

@@ -1,10 +1,10 @@
 // RUN: mkdir -p %t.dir
 // RUN: cp %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %t.dir/modernize-concat-nested-namespaces.h
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++17 -check-suffix=NORMAL %s modernize-concat-nested-namespaces %t.dir/code -- -header-filter=".*" -- -I %t.dir
+// RUN: %check_clang_tidy -std=c++17 -check-suffix=NORMAL %s modernize-concat-nested-namespaces %t.dir/code -- -header-filter=".*" -- -I %t.dir
 // RUN: FileCheck -input-file=%t.dir/modernize-concat-nested-namespaces.h %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h -check-prefix=CHECK-FIXES
 // Restore header file and re-run with c++20:
 // RUN: cp %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %t.dir/modernize-concat-nested-namespaces.h
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++20 -check-suffixes=NORMAL,CPP20 %s modernize-concat-nested-namespaces %t.dir/code -- -header-filter=".*" -- -I %t.dir
+// RUN: %check_clang_tidy -std=c++20 -check-suffixes=NORMAL,CPP20 %s modernize-concat-nested-namespaces %t.dir/code -- -header-filter=".*" -- -I %t.dir
 // RUN: FileCheck -input-file=%t.dir/modernize-concat-nested-namespaces.h %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h -check-prefix=CHECK-FIXES
 
 #include "modernize-concat-nested-namespaces.h"
@@ -38,16 +38,16 @@ void t();
 namespace n9 {
 namespace n10 {
 // CHECK-MESSAGES-NORMAL-DAG: :[[@LINE-2]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES-NORMAL: namespace n9::n10
+// CHECK-FIXES-NORMAL: namespace n9::n10 {
 void t();
 } // namespace n10
 } // namespace n9
-// CHECK-FIXES-NORMAL: }
+// CHECK-FIXES-NORMAL: } // namespace n9::n10
 
 namespace n11 {
 namespace n12 {
 // CHECK-MESSAGES-NORMAL-DAG: :[[@LINE-2]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES-NORMAL: namespace n11::n12
+// CHECK-FIXES-NORMAL: namespace n11::n12 {
 namespace n13 {
 void t();
 }
@@ -71,7 +71,7 @@ namespace n18 {
 namespace n19 {
 namespace n20 {
 // CHECK-MESSAGES-NORMAL-DAG: :[[@LINE-3]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES-NORMAL: namespace n18::n19::n20
+// CHECK-FIXES-NORMAL: namespace n18::n19::n20 {
 void t();
 } // namespace n20
 } // namespace n19
@@ -94,11 +94,11 @@ namespace {
 namespace n24 {
 namespace n25 {
 // CHECK-MESSAGES-NORMAL-DAG: :[[@LINE-2]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES-NORMAL: namespace n24::n25
+// CHECK-FIXES-NORMAL: namespace n24::n25 {
 void t();
 } // namespace n25
 } // namespace n24
-// CHECK-FIXES-NORMAL: }
+// CHECK-FIXES-NORMAL: } // namespace n24::n25
 } // namespace
 } // namespace n23
 
@@ -136,7 +136,7 @@ void t();
 namespace n39 {
 namespace n40 {
 // CHECK-MESSAGES-NORMAL-DAG: :[[@LINE-2]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES-NORMAL: namespace n39::n40
+// CHECK-FIXES-NORMAL: namespace n39::n40 {
 #ifdef IEXIST
 void t() {}
 #endif
@@ -147,7 +147,7 @@ void t() {}
 namespace n41 {
 namespace n42 {
 // CHECK-MESSAGES-NORMAL-DAG: :[[@LINE-2]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES-NORMAL: namespace n41::n42
+// CHECK-FIXES-NORMAL: namespace n41::n42 {
 #ifdef IDONTEXIST
 void t() {}
 #endif

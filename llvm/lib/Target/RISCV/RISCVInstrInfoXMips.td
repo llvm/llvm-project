@@ -143,6 +143,13 @@ let Predicates = [HasVendorXMIPSEXECTL], DecoderNamespace = "XMIPS" in {
   def MIPS_PAUSE : MIPSExtInst_ri<0b000101, "mips.pause">;
 }
 
+let Predicates = [HasVendorXMIPSEXECTL] in {
+  // Intrinsics
+  def : Pat<(int_riscv_mips_pause), (MIPS_PAUSE)>;
+  def : Pat<(int_riscv_mips_ihb), (MIPS_IHB)>;
+  def : Pat<(int_riscv_mips_ehb), (MIPS_EHB)>;
+}
+
 let Predicates = [HasVendorXMIPSCBOP], DecoderNamespace = "XMIPS" in {
   def MIPS_PREF : Mips_prefetch_ri<(outs), (ins GPR:$rs1, uimm9:$imm9, uimm5:$hint),
                                     "mips.pref", "$hint, ${imm9}(${rs1})">,
@@ -168,7 +175,7 @@ def MIPS_CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
                  Sched<[]>;
 }
 
-let Predicates = [UseCCMovInsn] in {
+let Predicates = [UseMIPSCCMovInsn] in {
 def : Pat<(select (riscv_setne (XLenVT GPR:$rs2)),
                   (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
           (MIPS_CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;

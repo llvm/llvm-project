@@ -38,6 +38,10 @@ OPTIONS
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
 
+.. option:: --cg-profile
+
+ Display the callgraph profile section.
+
 .. option:: --decompress, -z
 
   Dump decompressed section content when used with ``-x`` or ``-p``.
@@ -62,10 +66,6 @@ OPTIONS
 .. option:: --dynamic-table, --dynamic, -d
 
  Display the dynamic table.
-
-.. option:: --cg-profile
-
- Display the callgraph profile section.
 
 .. option:: --histogram, -I
 
@@ -142,6 +142,10 @@ OPTIONS
 .. option:: --notes, -n
 
  Display all notes.
+
+.. option:: --offloading
+
+ Display list of HIP offload bundles.
 
 .. option:: --pretty-print
 

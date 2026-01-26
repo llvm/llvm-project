@@ -1639,7 +1639,7 @@ void MipsConstantIslands::prescanForConstants() {
           int64_t V = Literal.getImm();
           LLVM_DEBUG(dbgs() << "literal " << V << "\n");
           Type *Int32Ty = Type::getInt32Ty(MF->getFunction().getContext());
-          const Constant *C = ConstantInt::get(Int32Ty, V);
+          const Constant *C = ConstantInt::getSigned(Int32Ty, V);
           unsigned index = MCP->getConstantPoolIndex(C, Align(4));
           MI.getOperand(2).ChangeToImmediate(index);
           LLVM_DEBUG(dbgs() << "constant island constant " << MI << "\n");
@@ -1647,7 +1647,6 @@ void MipsConstantIslands::prescanForConstants() {
           MI.removeOperand(1);
           MI.removeOperand(1);
           MI.addOperand(MachineOperand::CreateCPI(index, 0));
-          MI.addOperand(MachineOperand::CreateImm(4));
         }
         break;
       }

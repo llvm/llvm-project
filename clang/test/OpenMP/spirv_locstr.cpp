@@ -4,7 +4,7 @@
 // expected-no-diagnostics
 
 // CHECK: @[[#LOC:]] = private unnamed_addr addrspace(1) constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
-// CHECK: = private unnamed_addr addrspace(1) constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{.*}}, ptr addrspacecast (ptr addrspace(1) @[[#LOC]] to ptr) }, align 8
+// CHECK: = private unnamed_addr addrspace(1) constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{.*}}, ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[#LOC]] to ptr addrspace(4)) }, align 8
 
 int main() {
   int ret = 0;

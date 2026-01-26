@@ -51,12 +51,21 @@ struct Argument {
   // If set, the debug location corresponding to the value.
   std::optional<RemarkLocation> Loc;
 
+  Argument() = default;
+  Argument(StringRef Key, StringRef Val) : Key(Key), Val(Val) {}
+
   /// Implement operator<< on Argument.
   LLVM_ABI void print(raw_ostream &OS) const;
-  /// Return the value of argument as int.
-  LLVM_ABI std::optional<int> getValAsInt() const;
-  /// Check if the argument value can be parsed as int.
-  LLVM_ABI bool isValInt() const;
+
+  /// Return the value of argument as an integer of type T.
+  template <typename T>
+  std::optional<T> getValAsInt(unsigned Radix = 10) const {
+    StringRef Str = Val;
+    T Res;
+    if (Str.consumeInteger<T>(Radix, Res) || !Str.empty())
+      return std::nullopt;
+    return Res;
+  }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -126,6 +135,10 @@ struct Remark {
 
   /// Return a message composed from the arguments as a string.
   LLVM_ABI std::string getArgsAsMsg() const;
+
+  /// Return the first argument with the specified key or nullptr if no such
+  /// argument was found.
+  LLVM_ABI Argument *getArgByKey(StringRef Key);
 
   /// Clone this remark to explicitly ask for a copy.
   Remark clone() const { return *this; }

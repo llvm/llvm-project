@@ -21,6 +21,9 @@ template <typename T> using Constant = __gpu_constant T;
 template <typename T> using Local = __gpu_local T;
 template <typename T> using Global = __gpu_local T;
 
+// See definition in OpenMP (omp.h.var/omp_lib.(F90|h).var)
+#define omp_invalid_device -2
+
 enum omp_proc_bind_t {
   omp_proc_bind_false = 0,
   omp_proc_bind_true = 1,
@@ -135,12 +138,6 @@ using CriticalNameTy = int32_t[8];
 struct omp_lock_t {
   void *Lock;
 };
-
-// see definition in openmp/runtime kmp.h
-typedef enum omp_severity_t {
-  severity_warning = 1,
-  severity_fatal = 2
-} omp_severity_t;
 
 using InterWarpCopyFnTy = void (*)(void *src, int32_t warp_num);
 using ShuffleReductFnTy = void (*)(void *rhsData, int16_t lane_id,

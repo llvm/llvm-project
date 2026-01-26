@@ -354,7 +354,7 @@
 # CHECK:         strheq  r0, [r0, -r0]
 0xb0 0x00 0x00 0x01
 
-# CHECK: rfedb	#4!
+# CHECK: rfedb	r2!
 0x14 0x0 0x32 0xf9
 
 # CHECK: stc2l	p0, c0, [r2], #-96

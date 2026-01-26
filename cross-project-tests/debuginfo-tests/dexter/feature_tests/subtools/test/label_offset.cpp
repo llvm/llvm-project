@@ -2,7 +2,7 @@
 //      Check that we can use label-relative line numbers.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -v -- %s | FileCheck --dump-input-context=999999999 %s
+// RUN: %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s
 //
 // CHECK: label_offset.cpp: (1.0000)
 

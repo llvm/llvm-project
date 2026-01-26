@@ -14,3 +14,11 @@ Examples:
   #include "Pterodactyl.h"    // OK, .h files tend not to have definitions.
   #include "Velociraptor.cpp" // Warning, filename is suspicious.
   #include_next <stdio.c>     // Warning, filename is suspicious.
+
+Options
+-------
+
+.. option::  IgnoredRegex
+
+   A regular expression for the file name to be ignored by the check. Default
+   is empty string.

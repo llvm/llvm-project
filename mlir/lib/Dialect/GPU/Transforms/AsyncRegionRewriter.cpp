@@ -143,8 +143,8 @@ private:
 };
 
 /// Erases `executeOp` and returns a clone with additional `results`.
-async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
-                                   ValueRange results) {
+static async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
+                                          ValueRange results) {
   // Add values to async.yield op.
   Operation *yieldOp = executeOp.getBody()->getTerminator();
   yieldOp->insertOperands(yieldOp->getNumOperands(), results);

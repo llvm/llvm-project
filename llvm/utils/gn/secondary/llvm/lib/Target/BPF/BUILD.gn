@@ -30,6 +30,12 @@ tablegen("BPFGenMCPseudoLowering") {
   td_file = "BPF.td"
 }
 
+tablegen("BPFGenSDNodeInfo") {
+  visibility = [ ":LLVMBPFCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "BPF.td"
+}
+
 tablegen("BPFGenRegisterBank") {
   visibility = [ ":LLVMBPFCodeGen" ]
   args = [ "-gen-register-bank" ]
@@ -43,6 +49,7 @@ static_library("LLVMBPFCodeGen") {
     ":BPFGenFastISel",
     ":BPFGenGlobalISel",
     ":BPFGenMCPseudoLowering",
+    ":BPFGenSDNodeInfo",
     ":BPFGenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
@@ -79,6 +86,7 @@ static_library("LLVMBPFCodeGen") {
     "BPFRegisterInfo.cpp",
     "BPFSelectionDAGInfo.cpp",
     "BPFSubtarget.cpp",
+    "BPFTargetLoweringObjectFile.cpp",
     "BPFTargetMachine.cpp",
     "BTFDebug.cpp",
     "GISel/BPFCallLowering.cpp",

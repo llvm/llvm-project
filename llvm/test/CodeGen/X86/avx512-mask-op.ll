@@ -2119,8 +2119,7 @@ define void @ktest_1(<8 x double> %in, ptr %base) {
 ; KNL-LABEL: ktest_1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
-; KNL-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
-; KNL-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
+; KNL-NEXT:    vcmpltpd 8(%rdi), %zmm0, %k0 {%k1}
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
 ; KNL-NEXT:    je LBB44_2
@@ -2152,8 +2151,7 @@ define void @ktest_1(<8 x double> %in, ptr %base) {
 ; AVX512BW-LABEL: ktest_1:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
-; AVX512BW-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
-; AVX512BW-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
+; AVX512BW-NEXT:    vcmpltpd 8(%rdi), %zmm0, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    je LBB44_2

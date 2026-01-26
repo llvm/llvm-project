@@ -38,7 +38,7 @@ struct Context {
 
     // If we didn't build x86, do not run the test.
     std::string Error;
-    const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget)
       return;
 
@@ -62,7 +62,7 @@ Context &getContext() {
 class X86MCSymbolizerTest : public MCSymbolizer {
 public:
   X86MCSymbolizerTest(MCContext &MC) : MCSymbolizer(MC, nullptr) {}
-  ~X86MCSymbolizerTest() {}
+  ~X86MCSymbolizerTest() override = default;
 
   struct OpInfo {
     int64_t Value = 0;

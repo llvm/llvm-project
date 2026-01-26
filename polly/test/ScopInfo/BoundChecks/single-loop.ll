@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=AST
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=AST
 ;
 ; This only works after the post-dominator tree has been fixed.
 ;
@@ -38,7 +38,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(i64 %n, ptr %A) #0 {
+define void @foo(i64 %n, ptr %A) {
 entry:
   br label %for.cond
 
@@ -51,7 +51,7 @@ for.body:                                         ; preds = %for.cond
   br i1 false, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  call void (...) @exception() #2
+  call void (...) @exception()
   unreachable
 
 if.end:                                           ; preds = %for.body
@@ -59,7 +59,7 @@ if.end:                                           ; preds = %for.body
   br i1 %cmp2, label %if.then.3, label %if.end.4
 
 if.then.3:                                        ; preds = %if.end
-  call void (...) @exception() #2
+  call void (...) @exception()
   unreachable
 
 if.end.4:                                         ; preds = %if.end
@@ -79,11 +79,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: noreturn
-declare void @exception(...) #1
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noreturn "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { noreturn nounwind }
+declare void @exception(...)
 
 !llvm.ident = !{!0}
 

@@ -36,12 +36,12 @@ test_memory_and_indirect_call_relocs:
   end_function
 
 # CHECK:    test_memory_and_indirect_call_relocs
-# CHECK:      42 90 88 80 80 80 80 80 80 80 00     i64.const 1040
-# CHECK:      29 03 98 88 80 80 80 80 80 80 80 00  i64.load  1048
+# CHECK:      42 90 80 84 80 80 80 80 80 80 00     i64.const 65552
+# CHECK:      29 03 98 80 84 80 80 80 80 80 80 00  i64.load  65560
 # CHECK:      42 81 80 80 80 80 80 80 80 80 00     i64.const 1
 # COMPRESS: test_memory_and_indirect_call_relocs
-# COMPRESS:   42 90 08                             i64.const 1040
-# COMPRESS:   29 03 98 08                          i64.load  1048
+# COMPRESS:   42 90 80 04                          i64.const 65552
+# COMPRESS:   29 03 98 80 04                       i64.load  65560
 # COMPRESS:   42 01                                i64.const 1
 
   .globl test_relative_relocs
@@ -56,11 +56,11 @@ test_relative_relocs:
   end_function
 
 # CHECK:    test_relative_relocs
-# CHECK:      42 90 88 80 80 80 80 80 80 80 00  i64.const 1040
+# CHECK:      42 90 80 84 80 80 80 80 80 80 00  i64.const 65552
 # CHECK:      42 81 80 80 80 80 80 80 80 80 00  i64.const 1
 # CHECK:      42 83 80 80 80 80 80 80 80 80 00  i64.const 3
 # COMPRESS: test_relative_relocs
-# COMPRESS:   42 90 08                          i64.const 1040
+# COMPRESS:   42 90 80 04                       i64.const 65552
 # COMPRESS:   42 01                             i64.const 1
 # COMPRESS:   42 03                             i64.const 3
 

@@ -43,6 +43,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
 
@@ -256,7 +257,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
               TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst)->getReg()),
           *MRI));
       auto *Def = getVRegSubRegDef(CombOldVGPR, *MRI);
-      DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
+      DPPInst.addReg(CombOldVGPR.Reg, getUndefRegState(!Def),
                      CombOldVGPR.SubReg);
       ++NumOperands;
     } else if (TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
@@ -722,7 +723,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     }
 
     if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal) &&
-        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *ST)) {
+        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
       LLVM_DEBUG(dbgs() << "  " << OrigMI
                         << "  failed: not valid 64-bit DPP control value\n");
       break;

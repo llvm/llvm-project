@@ -30,22 +30,23 @@ struct ManualMapEntry {
   const char *MemInstStr;
   uint16_t Strategy;
 };
+} // namespace
 
 // List of instructions requiring explicitly aligned memory.
-const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
-                               "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
+static constexpr const char *ExplicitAlign[] = {
+    "MOVDQA", "MOVAPS", "MOVAPD", "MOVNTPS", "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
-const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
-                                 "PCMPESTRM", "PCMPESTRI", "PCMPISTRM",
-                                 "PCMPISTRI"};
+static constexpr const char *ExplicitUnalign[] = {
+    "MOVDQU",    "MOVUPS",    "MOVUPD",   "PCMPESTRM",
+    "PCMPESTRI", "PCMPISTRM", "PCMPISTRI"};
 
-const ManualMapEntry ManualMapSet[] = {
+static const ManualMapEntry ManualMapSet[] = {
 #define ENTRY(REG, MEM, FLAGS) {#REG, #MEM, FLAGS},
 #include "X86ManualFoldTables.def"
 };
 
-const std::set<StringRef> NoFoldSet = {
+static const std::set<StringRef> NoFoldSet = {
 #define NOFOLD(INSN) #INSN,
 #include "X86ManualFoldTables.def"
 };
@@ -62,6 +63,7 @@ static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
   });
 }
 
+namespace {
 class X86FoldTablesEmitter {
   const RecordKeeper &Records;
   const CodeGenTarget Target;
@@ -173,9 +175,8 @@ class X86FoldTablesEmitter {
     }
   };
 
-  typedef std::map<const CodeGenInstruction *, X86FoldTableEntry,
-                   CompareInstrsByEnum>
-      FoldTable;
+  using FoldTable = std::map<const CodeGenInstruction *, X86FoldTableEntry,
+                             CompareInstrsByEnum>;
   // Table2Addr - Holds instructions which their memory form performs
   //              load+store.
   //
@@ -230,6 +231,7 @@ private:
     OS << "};\n\n";
   }
 };
+} // namespace
 
 // Return true if one of the instruction's operands is a RST register class
 static bool hasRSTRegClass(const CodeGenInstruction *Inst) {
@@ -318,6 +320,7 @@ static bool isNOREXRegClass(const Record *Op) {
 
 // Function object - Operator() returns true if the given Reg instruction
 // matches the Mem instruction of this object.
+namespace {
 class IsMatch {
   const CodeGenInstruction *MemInst;
   const X86Disassembler::RecognizableInstrBase MemRI;
@@ -553,10 +556,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
       const Record *RegOpRec = RegInst->Operands[I].Rec;
       const Record *MemOpRec = MemInst->Operands[I].Rec;
-      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
+      // RegClassByHwMode: For instructions like TAILJMPr, TAILJMPr64,
       // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
-           RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
+           (RegOpRec->isSubClassOf("RegClassByHwMode"))) &&
           isMemoryOperand(MemOpRec)) {
         switch (I) {
         case 0:

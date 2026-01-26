@@ -131,6 +131,8 @@ define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_release(ptr noundef
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -145,6 +147,8 @@ define void @test_flat_amdgcn_cooperative_atomic_store_16x8B_release(ptr noundef
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -158,6 +162,8 @@ define void @test_flat_amdgcn_cooperative_atomic_store_8x16B_release(ptr noundef
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -221,6 +227,8 @@ define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst(ptr noundef
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -235,6 +243,8 @@ define void @test_flat_amdgcn_cooperative_atomic_store_16x8B_seq_cst(ptr noundef
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -248,6 +258,8 @@ define void @test_flat_amdgcn_cooperative_atomic_store_8x16B_seq_cst(ptr noundef
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -386,6 +398,8 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_release(ptr 
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -400,6 +414,8 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x8B_release(ptr 
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -413,6 +429,8 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_release(ptr 
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -476,6 +494,8 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst(ptr 
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -490,6 +510,8 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x8B_seq_cst(ptr 
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -503,6 +525,8 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_seq_cst(ptr 
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_dscnt 0x0

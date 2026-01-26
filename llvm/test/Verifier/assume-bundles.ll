@@ -3,7 +3,7 @@
 
 declare void @llvm.assume(i1)
 
-define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
+define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
 ; CHECK: tags must be valid attribute names
 ; CHECK: "adazdazd"
   call void @llvm.assume(i1 true) ["adazdazd"()]
@@ -32,5 +32,7 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P, i32 123)]
 ; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["align"(ptr %P, i32 4), "dereferenceable"(ptr %P)]
+; CHECK: assume with operand bundles must have i1 true condition
+  call void @llvm.assume(i1 %cond) ["nonnull"(ptr %P)]
   ret void
 }

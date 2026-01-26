@@ -45,11 +45,11 @@ define i32 @multiuse(<16 x i32> %u, <16 x i32> %v, ptr %b) {
 ; CHECK-NEXT:    [[U_MASKED:%.*]] = and <16 x i32> [[U:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[V_MASKED:%.*]] = and <16 x i32> [[V:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i32> [[TMP7]], [[V_MASKED]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i32> [[TMP0]], splat (i32 15)
+; CHECK-NEXT:    [[DOTINNER:%.*]] = and <16 x i8> [[WIDE_LOAD]], splat (i8 15)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[DOTINNER]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <16 x i32> [[TMP4]], [[U_MASKED]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP8]])

@@ -1128,7 +1128,8 @@ static bool CheckMemoryRangeAvailability(uptr beg, uptr size, bool verbose) {
     uptr end = beg + size - 1;
     if (!MemoryRangeIsAvailable(beg, end)) {
       if (verbose)
-        Printf("FATAL: Memory range %p - %p is not available.\n", beg, end);
+        Printf("FATAL: Memory range %p - %p is not available.\n", (void*)beg,
+               (void*)end);
       return false;
     }
   }
@@ -1150,8 +1151,8 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range %p - %p (%s).\n", beg, end,
-             name);
+      Printf("FATAL: Cannot protect memory range %p - %p (%s).\n", (void*)beg,
+             (void*)end, name);
       return false;
     }
   }
@@ -1172,7 +1173,7 @@ static bool InitShadow(bool init_origins, bool dry_run) {
   if (!MEM_IS_APP(&__dfsan::dfsan_init)) {
     if (!dry_run)
       Printf("FATAL: Code %p is out of application range. Non-PIE build?\n",
-             (uptr)&__dfsan::dfsan_init);
+             (void*)&__dfsan::dfsan_init);
     return false;
   }
 

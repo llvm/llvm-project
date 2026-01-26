@@ -29,9 +29,12 @@
 %Struct7 = type [2 x %Struct]
 %Nested = type { %Struct7 }
 
+@G = global %Struct zeroinitializer
+
 define spir_kernel void @foo(ptr addrspace(4) %arg1, ptr addrspace(4) %arg2) {
 entry:
   %var = alloca %Struct
+  store %Struct zeroinitializer, ptr %var
   %r1 = call %Struct @_Z29__spirv_SpecConstantComposite_1(float 1.0)
   store %Struct %r1, ptr addrspace(4) %arg1
   %r2 = call %Struct7 @_Z29__spirv_SpecConstantComposite_2(%Struct %r1, %Struct %r1)

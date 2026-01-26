@@ -25,7 +25,7 @@ __attribute__((noinline)) void test_unw_resume() {
   unw_resume(&cursor);
 }
 
-int main() {
+int main(int, char **) {
   test_unw_resume();
   return 0;
 }

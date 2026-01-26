@@ -667,7 +667,7 @@ getToElementsDefiningOps(FromElementsOp fromElemsOp,
 struct ToFromElementsToShuffleTreeRewrite final
     : OpRewritePattern<vector::FromElementsOp> {
 
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::FromElementsOp fromElemsOp,
                                 PatternRewriter &rewriter) const override {

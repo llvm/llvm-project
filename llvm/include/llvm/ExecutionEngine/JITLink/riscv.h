@@ -221,6 +221,18 @@ enum EdgeKind_riscv : Edge::Kind {
   /// Fixup expression:
   ///   Fixup <- Fixup - Target + Addend
   NegDelta32,
+
+  /// Set ULEB128-encoded value
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target + Addend
+  R_RISCV_SET_ULEB128,
+
+  /// Subtract from ULEB128-encoded value
+  ///
+  /// Fixup expression:
+  ///   Fixup <- V - Target - Addend
+  R_RISCV_SUB_ULEB128,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes

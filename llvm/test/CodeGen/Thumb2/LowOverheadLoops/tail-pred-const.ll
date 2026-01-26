@@ -14,10 +14,10 @@ define dso_local void @foo(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 32003, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP3]] = sub i32 [[TMP1]], 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP2]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP2]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP2]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP2]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP2]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, ptr [[LSR_IV14]], i32 4
@@ -120,10 +120,10 @@ define dso_local void @foo3(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[INDUCTION]], splat (i32 32002)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -182,10 +182,10 @@ define dso_local void @foo5(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[INDUCTION]], <i32 0, i32 3200, i32 32002, i32 32002>
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -239,10 +239,10 @@ define dso_local void @inconsistent_tripcounts(ptr noalias nocapture %A, ptr noa
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 -1)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -294,10 +294,10 @@ define dso_local void @overflow_in_sub(ptr noalias nocapture %A, ptr noalias noc
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 32003)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -349,10 +349,10 @@ define dso_local void @IV_not_an_induction(ptr noalias nocapture %A, ptr noalias
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[N:%.*]], i32 32003)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -404,10 +404,10 @@ define dso_local void @IV_wrong_step(ptr noalias nocapture %A, ptr noalias nocap
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 32003)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 3
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -462,10 +462,10 @@ define dso_local void @IV_step_not_constant(ptr noalias nocapture %A, ptr noalia
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 32003)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV11]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[LSR_IV14]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[N:%.*]]
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
@@ -528,10 +528,10 @@ define dso_local void @outerloop_phi(ptr noalias nocapture %A, ptr noalias nocap
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[J_025]], i32 4096)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV38]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD27:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV33]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV38]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD27:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV33]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD27]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP1]], ptr [[LSR_IV28]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP1]], ptr align 4 [[LSR_IV28]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP29]] = getelementptr i32, ptr [[LSR_IV28]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP34]] = getelementptr i32, ptr [[LSR_IV33]], i32 4
