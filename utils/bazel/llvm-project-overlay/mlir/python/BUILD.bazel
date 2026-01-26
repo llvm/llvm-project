@@ -22,6 +22,7 @@ filegroup(
     name = "DialectCorePyFiles",
     srcs = [
         "mlir/dialects/_ods_common.py",
+        "mlir/dialects/ext.py",
     ],
 )
 
