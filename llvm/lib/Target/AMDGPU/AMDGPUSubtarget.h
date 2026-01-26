@@ -42,6 +42,7 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+    GFX13 = 12,
   };
 
 private:

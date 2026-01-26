@@ -1551,6 +1551,12 @@ public:
 
   bool isGFX1250() const { return AMDGPU::isGFX1250(getSTI()); }
 
+  bool isGFX1250Plus() const { return AMDGPU::isGFX1250Plus(getSTI()); }
+
+  bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
+
+  bool isGFX13Plus() const { return AMDGPU::isGFX13Plus(getSTI()); }
+
   bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
 
   bool isGFX10_BEncoding() const {
@@ -2931,7 +2937,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
     return AMDGPU::NoRegister;
   }
 
-  if (RegKind == IS_VGPR && !isGFX1250() && RegIdx + RegWidth / 32 > 256) {
+  if (RegKind == IS_VGPR && !isGFX1250Plus() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
     return MCRegister();
   }
@@ -3953,7 +3959,7 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
   bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250;
-  bool AllowSameVGPR = isGFX1250();
+  bool AllowSameVGPR = isGFX1250Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -4087,7 +4093,7 @@ bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
 // form but switch to VOPD3 otherwise.
 bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
-  if (!isGFX1250() || !isVOPD(Opcode))
+  if (!isGFX1250Plus() || !isVOPD(Opcode))
     return false;
 
   if (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3)
@@ -5377,7 +5383,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
-  if (!isGFX1250()) {
+  if (!isGFX1250Plus()) {
     if (CPol & CPol::SCAL) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
@@ -6176,7 +6182,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
       AccumOffset = ExprVal;
     } else if (ID == ".amdhsa_named_barrier_count") {
-      if (!isGFX1250())
+      if (!isGFX1250Plus())
         return Error(IDRange.Start, "directive requires gfx1250+", IDRange);
       NamedBarCnt = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
@@ -6376,7 +6382,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  if (isGFX1250()) {
+  if (isGFX1250Plus()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
     AMDGPU::MCKernelDescriptor::bits_set(
@@ -6431,7 +6437,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  getContext());
   }
 
-  if (isGFX1250())
+  if (isGFX1250Plus())
     MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, NamedBarCnt,
                                  COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
                                  COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
