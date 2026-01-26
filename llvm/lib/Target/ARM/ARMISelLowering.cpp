@@ -10046,8 +10046,8 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
     MakeLibCallOptions Opts;
     SDLoc dl(Op);
 
-    auto Pair =
-        makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(), Opts, dl, LD->getChain());
+    auto Pair = makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(),
+                            Opts, dl, LD->getChain());
 
     // If necessary, extend the node to 64bit
     if (LD->getExtensionType() != ISD::NON_EXTLOAD) {
@@ -10096,8 +10096,9 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
         (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
 
     MakeLibCallOptions Opts;
-    auto CallResult = makeLibCall(DAG, LC, MVT::isVoid,
-                                  {StoreVal, ST->getBasePtr()}, Opts, dl, ST->getChain());
+    auto CallResult =
+        makeLibCall(DAG, LC, MVT::isVoid, {StoreVal, ST->getBasePtr()}, Opts,
+                    dl, ST->getChain());
 
     return CallResult.second;
   }
@@ -10777,7 +10778,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     EVT MemVT = LD->getMemoryVT();
     if (Subtarget->hasMVEIntegerOps() &&
         (MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
-          MemVT == MVT::v16i1))
+         MemVT == MVT::v16i1))
       return LowerPredicateLoad(Op, DAG);
 
     auto Pair = LowerAEABIUnalignedLoad(Op, DAG);
