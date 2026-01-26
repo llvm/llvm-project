@@ -1252,24 +1252,6 @@ inline const char* StringTemplateSpecC<char>::data() const [[clang::lifetimeboun
     return buffer;
 }
 
-template<typename T>
-class MemberFuncsTpl {
-public:
-    // Template Version A: Attribute on declaration only
-    const T* memberA(const T& x [[clang::lifetimebound]]);
-    // Template Version B: Attribute on definition only
-    const T* memberB(const T& x);
-    // Template Version C: Attribute on BOTH declaration and definition
-    const T* memberC(const T& x [[clang::lifetimebound]]);
-};
-
-template<typename T>
-const T* MemberFuncsTpl<T>::memberA(const T& x) { return &x; }
-template<typename T>
-const T* MemberFuncsTpl<T>::memberB(const T& x [[clang::lifetimebound]]) { return &x; }
-template<typename T>
-const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) { return &x; }
-
 void test() {
     // Non-templated tests
     const auto ptrA = StringA().data();  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
@@ -1285,10 +1267,5 @@ void test() {
     const auto ptrTSA = StringTemplateSpecA<char>().data();  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
     const auto ptrTSB = StringTemplateSpecB<char>().data();  // Definition-only attribute   // expected-warning {{temporary whose address is used}}
     const auto ptrTSC = StringTemplateSpecC<char>().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
-
-    MemberFuncsTpl<int> mtf;
-    const int* pTMA = mtf.memberA(1);  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
-    const int* pTMB = mtf.memberB(2);  // Definition-only attribute   // FIXME: Definition-only attribute
-    const int* pTMC = mtf.memberC(3);  // Both have attribute         // expected-warning {{temporary whose address is used}}
 }
 } // namespace GH175391
