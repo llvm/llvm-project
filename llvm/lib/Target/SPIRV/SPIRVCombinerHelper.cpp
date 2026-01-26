@@ -368,6 +368,7 @@ SPIRVCombinerHelper::getDotProductVectorType(Register ResReg, uint32_t K,
     assert(ScalarResType->isIntegerTy() || ScalarResType->isFloatingPointTy());
     break;
   }
+  assert(ScalarResType && "Could not determine scalar result type");
   Type *VecType =
       (K > 1 ? FixedVectorType::get(ScalarResType, K) : ScalarResType);
   return GR->getOrCreateSPIRVType(VecType, Builder,
