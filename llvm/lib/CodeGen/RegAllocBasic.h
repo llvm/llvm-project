@@ -28,8 +28,8 @@ struct CompSpillWeight {
   bool operator()(const LiveInterval *A, const LiveInterval *B) const {
     // Compare by weight first, then use register number as a stable tie-breaker
     // to ensure deterministic ordering when the weights are equal.
-    return std::make_tuple(A->weight(), A->reg()) <
-           std::make_tuple(B->weight(), B->reg());
+    return std::tuple(A->weight(), A->reg()) <
+           std::tuple(B->weight(), B->reg());
   }
 };
 
