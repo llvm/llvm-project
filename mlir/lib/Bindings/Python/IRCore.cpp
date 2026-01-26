@@ -4537,7 +4537,8 @@ void populateIRCore(nb::module_ &m) {
           kDumpDocstring)
       .def_prop_ro(
           "owner",
-          [](PyValue &self) -> nb::typed<nb::object, PyOpView> {
+          [](PyValue &self)
+              -> nb::typed<nb::object, std::variant<PyOpView, PyBlock>> {
             MlirValue v = self.get();
             if (mlirValueIsAOpResult(v)) {
               assert(mlirOperationEqual(self.getParentOperation()->get(),
