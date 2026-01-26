@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -286,6 +288,16 @@ void ReachingDefInfo::run(MachineFunction &mf) {
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
   LLVM_DEBUG(dbgs() << "********** REACHING DEFINITION ANALYSIS **********\n");
+
+  MachineFunctionProperties &Props = MF->getProperties();
+  if (!Props.hasTracksLiveness()) {
+    Props.setTracksLiveness();
+
+    SmallVector<MachineBasicBlock *> AllMBBsInPostOrder;
+    for (MachineBasicBlock *MBB : post_order(MF))
+      AllMBBsInPostOrder.push_back(MBB);
+    fullyRecomputeLiveIns(AllMBBsInPostOrder);
+  }
   init();
   traverse();
 }
