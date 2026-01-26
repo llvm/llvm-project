@@ -156,7 +156,8 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         return;
 
       LDBG() << "Inferred range " << attrs;
-      IntegerValueRangeLattice *lattice = argLattices[arg.getArgNumber()];
+      IntegerValueRangeLattice *lattice =
+          nonSuccessorInputLattices[arg.getArgNumber()];
       IntegerValueRange oldRange = lattice->getValue();
 
       ChangeResult changed = lattice->join(attrs);
@@ -208,7 +209,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         loop.getLoopInductionVars();
     if (!maybeIvs) {
       return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
-          op, successor, successorInputs, argLattices);
+          op, successor, successorInputs, nonSuccessorInputLattices);
     }
     // This shouldn't be returning nullopt if there are indunction variables.
     SmallVector<OpFoldResult> lowerBounds = *loop.getLoopLowerBounds();
@@ -246,5 +247,5 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   }
 
   return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-      op, successor, successorInputs, argLattices);
+      op, successor, successorInputs, nonSuccessorInputLattices);
 }
