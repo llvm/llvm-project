@@ -12,11 +12,7 @@
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
 // RUN:   -fno-ms-anonymous-structs
-// Test that explicit -fno-ms-anonymous-structs does not enable the feature.
-// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
-// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
-// RUN:   -fno-ms-anonymous-structs
-// Test that explicit -fno-ms-anonymous-structs overrides -earlier fms-anonymous-structs.
+// Test that explicit -fno-ms-anonymous-structs overrides earlier -fms-anonymous-structs.
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
 // RUN:   -fms-anonymous-structs -fno-ms-anonymous-structs
