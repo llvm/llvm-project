@@ -3744,7 +3744,7 @@ const char JavaImportRegexPattern[] =
     "^[\t ]*import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;";
 
 const char JavaTypeDeclRegexPattern[] =
-    "^[\t ]*(public|private|protected|static|final|abstract|sealed|strictfp)?"
+    "^[\t ]*(public|private|protected|static|final|abstract)*"
     "[\t ]*(class|interface|enum|record|@interface)[\t ]+";
 
 } // anonymous namespace
