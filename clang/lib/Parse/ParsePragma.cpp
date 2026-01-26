@@ -1412,7 +1412,7 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
   auto *TheTokens =
       (std::pair<std::unique_ptr<Token[]>, size_t> *)Tok.getAnnotationValue();
   PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
-                      false);
+                      /*IsReinject=*/true);
   ConsumeAnnotationToken();
 
   llvm::scope_exit OnReturn([this]() {
