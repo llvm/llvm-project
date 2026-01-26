@@ -49,6 +49,11 @@ protected:
                           lldb_private::ThreadList &new_thread_list) override;
 
   lldb::addr_t FindSymbol(const char *name);
+
+private:
+  void ShowCrashInfo();
+
+  bool m_displayed_crash_info = false;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNEL_H
