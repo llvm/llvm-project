@@ -649,6 +649,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  Elf32_Xword
+  HDRS
+  Elf32_Xword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Xword
+)
+
+add_proxy_header_library(
   Elf64_Addr
   HDRS
     Elf64_Addr.h

@@ -139,8 +139,8 @@ class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{19-15} = imm;
 }
 
-class RVInstV<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
-              dag ins, string opcodestr, string argstr>
+class RVInstVUnary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
+                   dag ins, string opcodestr, string argstr>
     : RVInstVBase<funct6, opv, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
 

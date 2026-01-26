@@ -1409,10 +1409,11 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
   StringRef PragmaName = "export";
 
   using namespace clang::charinfo;
-  auto *TheTokens =
-      (std::pair<std::unique_ptr<Token[]>, size_t> *)Tok.getAnnotationValue();
+  auto *TheTokens = static_cast<std::pair<std::unique_ptr<Token[]>, size_t> *>(
+      Tok.getAnnotationValue());
   PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
-                      false);
+                      /*IsReinject=*/true);
+  Tok.setAnnotationValue(nullptr);
   ConsumeAnnotationToken();
 
   llvm::scope_exit OnReturn([this]() {
