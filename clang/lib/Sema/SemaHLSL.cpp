@@ -201,6 +201,15 @@ LocalResourceAssigns::Assign::Assign(const Expr *AssignExpr,
                                      const DeclBindingInfo *Info)
     : AssignExpr(AssignExpr), AssignScope(AssignScope), Info(Info), Invalidated(false) {}
 
+static bool isAncestorScope(const Scope *Ancestor, const Scope *Cur) {
+  while (Cur != nullptr) {
+    if (Ancestor == Cur)
+      return true;
+    Cur = Cur->getParent();
+  }
+  return false;
+}
+
 void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
                                        const Scope *AssignScope,
                                        const Expr *AssignExpr,
@@ -215,8 +224,9 @@ void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
   }
 
   Assign &Prev = AssignIt->getSecond();
-  if (Cur.AssignScope == Prev.AssignScope) {
-    // If we are in the same scope, just overwrite it
+  if (isAncestorScope(Cur.AssignScope, Prev.AssignScope)) {
+    // If the current scope is an ancestor of the previous scope,
+    // we should ignore the previous access and overwrite it
     Prev = Cur;
     return;
   }

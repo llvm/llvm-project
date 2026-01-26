@@ -60,3 +60,12 @@ void conditional_result_in_same(int idx) {
     RWStructuredBuffer<int> Out = cond ? Out0 : Out0;
 	Out[idx] = In[idx];
 }
+
+void unused_reassign(int idx) {
+    RWStructuredBuffer<int> Out = Out0;
+    if (cond) {
+        Out = Out1;
+    }
+    Out = Out0;
+    Out[idx] = In[idx];
+}
