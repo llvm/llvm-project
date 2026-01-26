@@ -963,7 +963,7 @@ template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
 /// UnwindCursor contains all state (including all register values) during
 /// an unwind.  This is normally stack allocated inside a unw_cursor_t.
 template <typename A, typename R>
-class UnwindCursor : public AbstractUnwindCursor{
+class UnwindCursor : public AbstractUnwindCursor {
   typedef typename A::pint_t pint_t;
 public:
                       UnwindCursor(unw_context_t *context, A &as);
@@ -2037,7 +2037,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
   if (personalityIndex != 0) {
     --personalityIndex; // change 1-based to zero-based index
     if (personalityIndex >= sectionHeader.personalityArrayCount()) {
-      _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
+      _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d, "
                             "but personality table has only %d entries",
                             encoding, personalityIndex,
                             sectionHeader.personalityArrayCount());
@@ -3256,7 +3256,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn() {
 
 template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   (void)stage2;
-  // Bottom of stack is defined is when unwind info cannot be found.
+  // Bottom of stack is defined when unwind info cannot be found.
   if (_unwindInfoMissing)
     return UNW_STEP_END;
 
