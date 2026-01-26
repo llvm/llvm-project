@@ -2151,11 +2151,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.Inputs.insert(FakeStep);
   if (TaskContextStructPtrVal)
     OI.Inputs.insert(TaskContextStructPtrVal);
-  assert(
-      (TaskContextStructPtrVal && DupCB) ||
-      (!TaskContextStructPtrVal && !DupCB) &&
-          "Task context struct ptr and duplication callback must be both set "
-          "or both null");
+  assert(((TaskContextStructPtrVal && DupCB) ||
+          (!TaskContextStructPtrVal && !DupCB)) &&
+         "Task context struct ptr and duplication callback must be both set "
+         "or both null");
 
   // It isn't safe to run the duplication bodygen callback inside the post
   // outlining callback so this has to be run now before we know the real task
@@ -8320,7 +8319,7 @@ static Expected<Function *> createOutlinedFunction(
     // multiple mappings (technically not legal in OpenMP, but there is a case
     // in Fortran for Common Blocks where this is neccesary), we will end up
     // with GEP's into this array inside the kernel, that refer to the Global
-    // but are technically seperate arguments to the kernel for all intents and
+    // but are technically separate arguments to the kernel for all intents and
     // purposes. If we have mapped a segment that requires a GEP into the 0-th
     // index, it will fold into an referal to the Global, if we then encounter
     // this folded GEP during replacement all of the references to the
@@ -8328,7 +8327,7 @@ static Expected<Function *> createOutlinedFunction(
     // that corresponds to it, including any other GEP's that refer to the
     // Global that may be other arguments. This will invalidate all of the other
     // preceding mapped arguments that refer to the same global that may be
-    // seperate segments. To prevent this, we defer global processing until all
+    // separate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
     if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(
             removeASCastIfPresent(Input))) {
@@ -10694,10 +10693,21 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     if (ThreadLimit == nullptr)
       ThreadLimit = Builder.getInt32(0);
 
+    // The __kmpc_push_num_teams_51 function expects int32 as the arguments. So,
+    // truncate or sign extend the passed values to match the int32 parameters.
+    Value *NumTeamsLowerInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsLower, Builder.getInt32Ty());
+    Value *NumTeamsUpperInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsUpper, Builder.getInt32Ty());
+    Value *ThreadLimitInt32 =
+        Builder.CreateSExtOrTrunc(ThreadLimit, Builder.getInt32Ty());
+
     Value *ThreadNum = getOrCreateThreadID(Ident);
+
     createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
-        {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
+        {Ident, ThreadNum, NumTeamsLowerInt32, NumTeamsUpperInt32,
+         ThreadLimitInt32});
   }
   // Generate the body of teams.
   InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());

@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -190,7 +191,8 @@ class TwoAddressInstructionImpl {
 public:
   TwoAddressInstructionImpl(MachineFunction &MF, MachineFunctionPass *P);
   TwoAddressInstructionImpl(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM);
+                            MachineFunctionAnalysisManager &MFAM,
+                            LiveIntervals *LIS);
   void setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
   bool run();
 };
@@ -199,10 +201,7 @@ class TwoAddressInstructionLegacyPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {
-    initializeTwoAddressInstructionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {}
 
   /// Pass entry point.
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -233,7 +232,9 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   // Disable optimizations if requested. We cannot skip the whole pass as some
   // fixups are necessary for correctness.
-  TwoAddressInstructionImpl Impl(MF, MFAM);
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+
+  TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
   if (MF.getFunction().hasOptNone())
     Impl.setOptLevel(CodeGenOptLevel::None);
 
@@ -242,11 +243,16 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<LiveIntervalsAnalysis>();
+
+  // SlotIndexes are only maintained when LiveIntervals is available. Only
+  // preserve SlotIndexes if we had LiveIntervals available and updated them.
+  if (LIS)
+    PA.preserve<SlotIndexesAnalysis>();
+
   PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -259,13 +265,13 @@ INITIALIZE_PASS(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
                 "Two-Address instruction pass", false, false)
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(
-    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM)
+    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM,
+    LiveIntervals *LIS)
     : MF(&Func), TII(Func.getSubtarget().getInstrInfo()),
       TRI(Func.getSubtarget().getRegisterInfo()),
       InstrItins(Func.getSubtarget().getInstrItineraryData()),
       MRI(&Func.getRegInfo()),
-      LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)),
-      LIS(MFAM.getCachedResult<LiveIntervalsAnalysis>(Func)),
+      LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)), LIS(LIS),
       OptLevel(Func.getTarget().getOptLevel()) {}
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
@@ -1599,7 +1605,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
                                       TII->get(TargetOpcode::COPY), RegA);
     // If this operand is folding a truncation, the truncation now moves to the
     // copy so that the register classes remain valid for the operands.
-    MIB.addReg(RegB, 0, SubRegB);
+    MIB.addReg(RegB, {}, SubRegB);
     const TargetRegisterClass *RC = MRI->getRegClass(RegB);
     if (SubRegB) {
       if (RegA.isVirtual()) {
@@ -1865,8 +1871,10 @@ bool TwoAddressInstructionImpl::run() {
 
       // Expand REG_SEQUENCE instructions. This will position mi at the first
       // expanded instruction.
-      if (mi->isRegSequence())
+      if (mi->isRegSequence()) {
         eliminateRegSequence(mi);
+        MadeChange = true;
+      }
 
       DistanceMap.insert(std::make_pair(&*mi, ++Dist));
 

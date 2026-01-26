@@ -4064,7 +4064,7 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       MRI.constrainRegClass(AM.BaseReg, &AArch64::GPR64spRegClass);
       auto B = BuildMI(MBB, MemI, DL, get(Opcode))
                    .addReg(MemI.getOperand(0).getReg(),
-                           MemI.mayLoad() ? RegState::Define : 0)
+                           getDefRegState(MemI.mayLoad()))
                    .addReg(AM.BaseReg)
                    .addReg(AM.ScaledReg)
                    .addImm(0)
@@ -4085,13 +4085,13 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
     else
       Opcode = scaledOffsetOpcode(Opcode, Scale);
 
-    auto B = BuildMI(MBB, MemI, DL, get(Opcode))
-                 .addReg(MemI.getOperand(0).getReg(),
-                         MemI.mayLoad() ? RegState::Define : 0)
-                 .addReg(AM.BaseReg)
-                 .addImm(AM.Displacement / Scale)
-                 .setMemRefs(MemI.memoperands())
-                 .setMIFlags(MemI.getFlags());
+    auto B =
+        BuildMI(MBB, MemI, DL, get(Opcode))
+            .addReg(MemI.getOperand(0).getReg(), getDefRegState(MemI.mayLoad()))
+            .addReg(AM.BaseReg)
+            .addImm(AM.Displacement / Scale)
+            .setMemRefs(MemI.memoperands())
+            .setMIFlags(MemI.getFlags());
     return B.getInstr();
   }
 
@@ -4108,17 +4108,17 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
     if (RC->hasSuperClassEq(&AArch64::GPR64RegClass)) {
       OffsetReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
       BuildMI(MBB, MemI, DL, get(TargetOpcode::COPY), OffsetReg)
-          .addReg(AM.ScaledReg, 0, AArch64::sub_32);
+          .addReg(AM.ScaledReg, {}, AArch64::sub_32);
     }
-    auto B = BuildMI(MBB, MemI, DL, get(Opcode))
-                 .addReg(MemI.getOperand(0).getReg(),
-                         MemI.mayLoad() ? RegState::Define : 0)
-                 .addReg(AM.BaseReg)
-                 .addReg(OffsetReg)
-                 .addImm(AM.Form == ExtAddrMode::Formula::SExtScaledReg)
-                 .addImm(AM.Scale != 1)
-                 .setMemRefs(MemI.memoperands())
-                 .setMIFlags(MemI.getFlags());
+    auto B =
+        BuildMI(MBB, MemI, DL, get(Opcode))
+            .addReg(MemI.getOperand(0).getReg(), getDefRegState(MemI.mayLoad()))
+            .addReg(AM.BaseReg)
+            .addReg(OffsetReg)
+            .addImm(AM.Form == ExtAddrMode::Formula::SExtScaledReg)
+            .addImm(AM.Scale != 1)
+            .setMemRefs(MemI.memoperands())
+            .setMIFlags(MemI.getFlags());
 
     return B.getInstr();
   }
@@ -5320,7 +5320,7 @@ bool AArch64InstrInfo::shouldClusterMemOps(
 
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
                                             MCRegister Reg, unsigned SubIdx,
-                                            unsigned State,
+                                            RegState State,
                                             const TargetRegisterInfo *TRI) {
   if (!SubIdx)
     return MIB.addReg(Reg, State);
@@ -5359,7 +5359,7 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
   for (; SubReg != End; SubReg += Incr) {
     const MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opcode));
     AddSubReg(MIB, DestReg, Indices[SubReg], RegState::Define, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], 0, TRI);
+    AddSubReg(MIB, SrcReg, Indices[SubReg], {}, TRI);
     AddSubReg(MIB, SrcReg, Indices[SubReg], getKillRegState(KillSrc), TRI);
   }
 }
@@ -5853,7 +5853,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR8RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
         !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
                                                    &AArch64::FPR128RegClass);
@@ -6157,7 +6157,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator MBBI,
                                             Register DestReg, int FI,
                                             const TargetRegisterClass *RC,
-                                            Register VReg,
+                                            Register VReg, unsigned SubReg,
                                             MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -11260,11 +11260,15 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
       .addMBB(ExitMBB)
       .setMIFlags(Flags);
 
-  //   STR XZR, [SP]
-  BuildMI(*LoopBodyMBB, LoopBodyMBB->end(), DL, TII->get(AArch64::STRXui))
-      .addReg(AArch64::XZR)
+  //   LDR XZR, [SP]
+  BuildMI(*LoopBodyMBB, LoopBodyMBB->end(), DL, TII->get(AArch64::LDRXui))
+      .addDef(AArch64::XZR)
       .addReg(AArch64::SP)
       .addImm(0)
+      .addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getUnknownStack(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+          Align(8)))
       .setMIFlags(Flags);
 
   //   B loop

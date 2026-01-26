@@ -40,6 +40,21 @@ bool MsvcStlWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // std::wstring_view
 
+// MSVC STL std::*_ordering
+bool IsMsvcStlOrdering(ValueObject &valobj);
+
+bool MsvcStlPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::partial_ordering
+
+bool MsvcStlWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::weak_ordering
+
+bool MsvcStlStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::strong_ordering
+
 // MSVC STL std::shared_ptr<> and std::weak_ptr<>
 bool IsMsvcStlSmartPointer(ValueObject &valobj);
 bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,

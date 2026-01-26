@@ -116,7 +116,9 @@ private:
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
 
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
+
+  bool softPromoteHalfType() const override { return false; }
 };
 
 } // End namespace llvm;

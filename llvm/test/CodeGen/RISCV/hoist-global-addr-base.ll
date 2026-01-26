@@ -374,8 +374,7 @@ define ptr @neg_offset_not_simm32() {
 ;
 ; RV32XQCI-LABEL: neg_offset_not_simm32:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addai a0, 2147482283
+; RV32XQCI-NEXT:    qc.e.li a0, bar+2147482283
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: neg_offset_not_simm32:

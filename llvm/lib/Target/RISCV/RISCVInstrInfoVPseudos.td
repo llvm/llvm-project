@@ -564,6 +564,7 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
+  bit IsAltFmt = !eq(AltFmtType.Value, IS_ALTFMT.Value);
   bit IncludeInInversePseudoTable = 1;
 }
 
@@ -571,7 +572,7 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
 def RISCVVPseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let CppTypeName = "PseudoInfo";
-  let Fields = [ "Pseudo", "BaseInstr" ];
+  let Fields = ["Pseudo", "BaseInstr", "VLMul", "SEW", "IsAltFmt"];
   let PrimaryKey = [ "Pseudo" ];
   let PrimaryKeyName = "getPseudoInfo";
   let PrimaryKeyEarlyOut = true;
@@ -581,9 +582,9 @@ def RISCVVInversePseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let FilterClassField = "IncludeInInversePseudoTable";
   let CppTypeName = "PseudoInfo";
-  let Fields = [ "Pseudo", "BaseInstr", "VLMul", "SEW"];
-  let PrimaryKey = [ "BaseInstr", "VLMul", "SEW"];
-  let PrimaryKeyName = "getBaseInfo";
+  let Fields = ["Pseudo", "BaseInstr", "VLMul", "SEW", "IsAltFmt"];
+  let PrimaryKey = ["BaseInstr", "VLMul", "SEW", "IsAltFmt"];
+  let PrimaryKeyName = "getBaseInfoImpl";
   let PrimaryKeyEarlyOut = true;
 }
 
@@ -2596,7 +2597,11 @@ multiclass VPseudoBinaryM<DAGOperand Op2Class, LMULInfo m, bit Commutable = 0> {
                           !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
                           TargetConstraintType = 2>;
     def "_" # m.MX # "_MASK" :
-      VPseudoBinaryMOutMask<VR, m.vrclass, Op2Class,
+      VPseudoBinaryMOutMask<!if(!ge(m.octuple, 16), VRNoV0, VR),
+                            GetVRegNoV0<m.vrclass>.R,
+                            !if(!isa<VReg>(Op2Class),
+                                GetVRegNoV0<!cast<VReg>(Op2Class)>.R,
+                                Op2Class),
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
                             TargetConstraintType = 2>,
       RISCVMaskedPseudo<MaskIdx=3>;
@@ -3174,7 +3179,7 @@ multiclass VPseudoTernaryWithPolicyRoundingMode<VReg RetClass,
                                                 int sew = 0,
                                                 bit Commutable = 0,
                                                 bits<2> TargetConstraintType = 1> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW = sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     let isCommutable = Commutable in
     def suffix :
