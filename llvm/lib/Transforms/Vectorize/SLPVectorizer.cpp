@@ -16773,8 +16773,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
 
       LLVM_DEBUG(dbgs() << "SLP: Trimming unprofitable subtree at node "
                         << TE->Idx << " with cost "
-                        << std::get<0>(Worklist.top().second) << " and gather cost "
-                        << GatherCost << ".\n");
+                        << std::get<0>(Worklist.top().second)
+                        << " and gather cost " << GatherCost << ".\n");
       if (TE->UserTreeIndex) {
         TransformedToGatherNodes.try_emplace(TE, GatherCost);
         NodesCosts.erase(TE);
