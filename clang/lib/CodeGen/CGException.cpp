@@ -1210,11 +1210,13 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   }
 }
 
-void CodeGenFunction::popCatchScope() {
+LLVM::BasicBlock *CodeGenFunction::popCatchScope() {
   EHCatchScope &catchScope = cast<EHCatchScope>(*EHStack.begin());
+  LLVM::BasicBlock *dispatchBlock = catchScope.getCachedEHDispatchBlock();
   if (catchScope.hasEHBranches())
     emitCatchDispatchBlock(*this, catchScope);
   EHStack.popCatch();
+  return dispatchBlock;
 }
 
 void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
