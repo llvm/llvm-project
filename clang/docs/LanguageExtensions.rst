@@ -926,31 +926,31 @@ Example:
 
 Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
-======================================= ====================================================================== ==================================
-         Name                            Operation                                                              Supported element types
-======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_add(VT a)           \+                                                                     integer types
- ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
- ET __builtin_reduce_and(VT a)           &                                                                      integer types
- ET __builtin_reduce_or(VT a)            \|                                                                     integer types
- ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
- ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
-                                         for the comparison.
- ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
-                                         for the comparison.
- ET __builtin_reduce_addf(VT a)          unordered floating-point add reduction.                                floating point types
- ET __builtin_reduce_addf(VT a, ET s)    ordered floating-point add reduction, initializing the accumulator     floating point types
-                                         with `(ET)s`, then adding each lane of the `a` in-order, starting
-                                         from lane 0.
-======================================= ====================================================================== ==================================
+============================================= ====================================================================== ==================================
+         Name                                 Operation                                                              Supported element types
+============================================= ====================================================================== ==================================
+ ET __builtin_reduce_max(VT a)                 return the largest element of the vector. The floating point result    integer and floating point types
+                                               will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)                 return the smallest element of the vector. The floating point result   integer and floating point types
+                                               will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_add(VT a)                 \+                                                                     integer types
+ ET __builtin_reduce_mul(VT a)                 \*                                                                     integer types
+ ET __builtin_reduce_and(VT a)                 &                                                                      integer types
+ ET __builtin_reduce_or(VT a)                  \|                                                                     integer types
+ ET __builtin_reduce_xor(VT a)                 ^                                                                      integer types
+ ET __builtin_reduce_maximum(VT a)             return the largest element of the vector. Follows IEEE 754-2019        floating point types
+                                               semantics, see `LangRef
+                                               <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                               for the comparison.
+ ET __builtin_reduce_minimum(VT a)             return the smallest element of the vector. Follows IEEE 754-2019       floating point types
+                                               semantics, see `LangRef
+                                               <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                               for the comparison.
+ ET __builtin_reduce_addf(VT a)                unordered floating-point add reduction.                                floating point types
+ ET __builtin_ordered_reduce_addf(VT a, ET s)  ordered floating-point add reduction, initializing the accumulator     floating point types
+                                               with `(ET)s`, then adding each lane of the `a` in-order, starting
+                                               from lane 0.
+============================================= ====================================================================== ==================================
 
 *Masked Builtins*
 

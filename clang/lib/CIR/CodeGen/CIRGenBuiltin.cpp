@@ -1529,6 +1529,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_reduce_or:
   case Builtin::BI__builtin_reduce_and:
   case Builtin::BI__builtin_reduce_addf:
+  case Builtin::BI__builtin_ordered_reduce_addf:
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
   case Builtin::BI__builtin_matrix_transpose:

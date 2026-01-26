@@ -1670,6 +1670,12 @@ def ReduceAddf : Builtin {
   let Prototype = "void(...)";
 }
 
+def OrderedReduceAddf : Builtin {
+  let Spellings = ["__builtin_ordered_reduce_addf"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ReduceMul : Builtin {
   let Spellings = ["__builtin_reduce_mul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
