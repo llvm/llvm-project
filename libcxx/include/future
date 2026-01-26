@@ -440,7 +440,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(launch){
     deferred                                                  = 2,
     any _LIBCPP_DEPRECATED_("std::launch::any is a deprecated extension. "
                             "Use std::launch::async | std::launch::deferred instead. "
-                            "It will be removed in LLVM 24.") = async | deferred};
+                            "It will be removed in LLVM 25.") = async | deferred};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
 
 #    ifndef _LIBCPP_CXX03_LANG
