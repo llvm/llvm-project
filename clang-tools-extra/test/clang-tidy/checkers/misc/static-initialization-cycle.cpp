@@ -157,15 +157,17 @@ namespace template_test {
 template <class T>
 struct S {
   static T f1();
-  static T A = f1();
+  static T A;
 };
+template <class T>
+T S<T>::A = f1();
 template <class T>
 T S<T>::f1() {
   return A;
 }
 
-void f(S<int> *) {}
+S<int> X;
 }
-// CHECK-NOTES: :[[@LINE-9]]:12: warning: Static variable initialization cycle detected involving 'A'
+// CHECK-NOTES: :[[@LINE-11]]:12: warning: Static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-6]]:10: note: Value of 'A' may be used to compute result of 'f1'
-// CHECK-NOTES: :[[@LINE-11]]:16: note: Result of 'f1' may be used to initialize variable 'A' here
+// CHECK-NOTES: :[[@LINE-10]]:13: note: Result of 'f1' may be used to initialize variable 'A' here
