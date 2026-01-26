@@ -9,6 +9,8 @@
 #ifndef __CLC_CLCTYPES_H_
 #define __CLC_CLCTYPES_H_
 
+#ifndef _OPENCL_BASE_H_
+
 /* 6.1.1 Built-in Scalar Data Types */
 
 typedef unsigned char uchar;
@@ -104,5 +106,7 @@ typedef __attribute__((ext_vector_type(4))) half half4;
 typedef __attribute__((ext_vector_type(8))) half half8;
 typedef __attribute__((ext_vector_type(16))) half half16;
 #endif
+
+#endif // _OPENCL_BASE_H_
 
 #endif // __CLC_CLCTYPES_H_
