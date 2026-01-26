@@ -745,18 +745,14 @@ define void @loadAndPass_char_32() {
 entry:
   %byval-temp = alloca <32 x i8>, align 8
   %0 = load <32 x i8>, ptr @global_char_32, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <32 x i8> %0, ptr %byval-temp, align 8
   call void @passCallee_char_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
 declare void @passCallee_char_32(ptr noundef dead_on_return)
 
-declare void @llvm.lifetime.start.p0(ptr captures(none))
 
-declare void @llvm.lifetime.end.p0(ptr captures(none))
 
 define void @loadAndPass_short_2() {
 ; CHECK-LABEL: loadAndPass_short_2:
@@ -862,10 +858,8 @@ define void @loadAndPass_int_32() {
 entry:
   %byval-temp = alloca <8 x i32>, align 8
   %0 = load <8 x i32>, ptr @global_int_32, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <8 x i32> %0, ptr %byval-temp, align 8
   call void @passCallee_int_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -933,10 +927,8 @@ define void @loadAndPass___int128_32() {
 entry:
   %byval-temp = alloca <2 x i128>, align 8
   %0 = load <2 x i128>, ptr @global___int128_32, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x i128> %0, ptr %byval-temp, align 8
   call void @passCallee___int128_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1011,10 +1003,8 @@ define void @loadAndPass__Float16_32() {
 entry:
   %byval-temp = alloca <16 x half>, align 8
   %0 = load <16 x half>, ptr @global__Float16_32, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <16 x half> %0, ptr %byval-temp, align 8
   call void @passCallee__Float16_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1110,10 +1100,8 @@ define void @loadAndPass_double_32() {
 entry:
   %byval-temp = alloca <4 x double>, align 8
   %0 = load <4 x double>, ptr @global_double_32, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <4 x double> %0, ptr %byval-temp, align 8
   call void @passCallee_double_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1142,21 +1130,17 @@ define void @loadAndPass_long_double_32() {
 ; CHECK-NEXT:    aghi %r15, -192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 352
 ; CHECK-NEXT:    lgrl %r1, global_long_double_32@GOT
-; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    vl %v1, 16(%r1), 3
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    vst %v1, 176(%r15), 3
-; CHECK-NEXT:    vst %v0, 160(%r15), 3
+; CHECK-NEXT:    mvc 176(16,%r15), 16(%r1)
+; CHECK-NEXT:    mvc 160(16,%r15), 0(%r1)
 ; CHECK-NEXT:    brasl %r14, passCallee_long_double_32@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <2 x fp128>, align 8
   %0 = load <2 x fp128>, ptr @global_long_double_32, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x fp128> %0, ptr %byval-temp, align 8
   call void @passCallee_long_double_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 

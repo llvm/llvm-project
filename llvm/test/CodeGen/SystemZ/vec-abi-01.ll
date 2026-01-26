@@ -901,27 +901,22 @@ define void @loadAndPass_char_1() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_char_1@GOT
-; CHECK-NEXT:    lb %r0, 0(%r1)
+; CHECK-NEXT:    mvc 167(1,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 167(%r15)
-; CHECK-NEXT:    stc %r0, 167(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_char_1@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <1 x i8>, align 1
   %0 = load <1 x i8>, ptr @global_char_1, align 2
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x i8> %0, ptr %byval-temp, align 1
   call void @passCallee_char_1(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
 declare void @passCallee_char_1(ptr noundef dead_on_return)
 
-declare void @llvm.lifetime.start.p0(ptr captures(none))
 
-declare void @llvm.lifetime.end.p0(ptr captures(none))
 
 define void @loadAndPass_char_8() {
 ; CHECK-LABEL: loadAndPass_char_8:
@@ -932,19 +927,16 @@ define void @loadAndPass_char_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_char_8@GOT
-; CHECK-NEXT:    lg %r0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    stg %r0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_char_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <8 x i8>, align 8
   %0 = load <8 x i8>, ptr @global_char_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <8 x i8> %0, ptr %byval-temp, align 8
   call void @passCallee_char_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -975,10 +967,8 @@ define void @loadAndPass_char_16() {
 entry:
   %byval-temp = alloca <16 x i8>, align 16
   %0 = load <16 x i8>, ptr @global_char_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <16 x i8> %0, ptr %byval-temp, align 16
   call void @passCallee_char_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1011,10 +1001,8 @@ define void @loadAndPass_char_32() {
 entry:
   %byval-temp = alloca <32 x i8>, align 32
   %0 = load <32 x i8>, ptr @global_char_32, align 32
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <32 x i8> %0, ptr %byval-temp, align 32
   call void @passCallee_char_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1029,19 +1017,16 @@ define void @loadAndPass_short_2() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_short_2@GOT
-; CHECK-NEXT:    lh %r0, 0(%r1)
+; CHECK-NEXT:    mvc 166(2,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 166(%r15)
-; CHECK-NEXT:    sth %r0, 166(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_short_2@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <1 x i16>, align 2
   %0 = load <1 x i16>, ptr @global_short_2, align 2
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x i16> %0, ptr %byval-temp, align 2
   call void @passCallee_short_2(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1056,19 +1041,16 @@ define void @loadAndPass_short_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_short_8@GOT
-; CHECK-NEXT:    lg %r0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    stg %r0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_short_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <4 x i16>, align 8
   %0 = load <4 x i16>, ptr @global_short_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <4 x i16> %0, ptr %byval-temp, align 8
   call void @passCallee_short_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1099,10 +1081,8 @@ define void @loadAndPass_short_16() {
 entry:
   %byval-temp = alloca <8 x i16>, align 16
   %0 = load <8 x i16>, ptr @global_short_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <8 x i16> %0, ptr %byval-temp, align 16
   call void @passCallee_short_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1117,19 +1097,16 @@ define void @loadAndPass_int_4() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_int_4@GOT
-; CHECK-NEXT:    l %r0, 0(%r1)
+; CHECK-NEXT:    mvc 164(4,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 164(%r15)
-; CHECK-NEXT:    st %r0, 164(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_int_4@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <1 x i32>, align 4
   %0 = load <1 x i32>, ptr @global_int_4, align 4
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x i32> %0, ptr %byval-temp, align 4
   call void @passCallee_int_4(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1144,19 +1121,16 @@ define void @loadAndPass_int_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_int_8@GOT
-; CHECK-NEXT:    lg %r0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    stg %r0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_int_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <2 x i32>, align 8
   %0 = load <2 x i32>, ptr @global_int_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x i32> %0, ptr %byval-temp, align 8
   call void @passCallee_int_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1187,10 +1161,8 @@ define void @loadAndPass_int_16() {
 entry:
   %byval-temp = alloca <4 x i32>, align 16
   %0 = load <4 x i32>, ptr @global_int_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <4 x i32> %0, ptr %byval-temp, align 16
   call void @passCallee_int_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1223,10 +1195,8 @@ define void @loadAndPass_int_32() {
 entry:
   %byval-temp = alloca <8 x i32>, align 32
   %0 = load <8 x i32>, ptr @global_int_32, align 32
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <8 x i32> %0, ptr %byval-temp, align 32
   call void @passCallee_int_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1241,19 +1211,16 @@ define void @loadAndPass_long_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_long_8@GOT
-; CHECK-NEXT:    lg %r0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    stg %r0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_long_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <1 x i64>, align 8
   %0 = load <1 x i64>, ptr @global_long_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x i64> %0, ptr %byval-temp, align 8
   call void @passCallee_long_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1284,10 +1251,8 @@ define void @loadAndPass_long_16() {
 entry:
   %byval-temp = alloca <2 x i64>, align 16
   %0 = load <2 x i64>, ptr @global_long_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x i64> %0, ptr %byval-temp, align 16
   call void @passCallee_long_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1318,10 +1283,8 @@ define void @loadAndPass___int128_16() {
 entry:
   %byval-temp = alloca <1 x i128>, align 16
   %0 = load <1 x i128>, ptr @global___int128_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x i128> %0, ptr %byval-temp, align 16
   call void @passCallee___int128_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1354,10 +1317,8 @@ define void @loadAndPass___int128_32() {
 entry:
   %byval-temp = alloca <2 x i128>, align 32
   %0 = load <2 x i128>, ptr @global___int128_32, align 32
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x i128> %0, ptr %byval-temp, align 32
   call void @passCallee___int128_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1385,10 +1346,8 @@ define void @loadAndPass__Float16_2() {
 entry:
   %byval-temp = alloca <1 x half>, align 2
   %0 = load <1 x half>, ptr @global__Float16_2, align 2
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x half> %0, ptr %byval-temp, align 2
   call void @passCallee__Float16_2(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1403,19 +1362,16 @@ define void @loadAndPass__Float16_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global__Float16_8@GOT
-; CHECK-NEXT:    lg %r0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    stg %r0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee__Float16_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <4 x half>, align 8
   %0 = load <4 x half>, ptr @global__Float16_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <4 x half> %0, ptr %byval-temp, align 8
   call void @passCallee__Float16_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1446,10 +1402,8 @@ define void @loadAndPass__Float16_16() {
 entry:
   %byval-temp = alloca <8 x half>, align 16
   %0 = load <8 x half>, ptr @global__Float16_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <8 x half> %0, ptr %byval-temp, align 16
   call void @passCallee__Float16_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1482,10 +1436,8 @@ define void @loadAndPass__Float16_32() {
 entry:
   %byval-temp = alloca <16 x half>, align 32
   %0 = load <16 x half>, ptr @global__Float16_32, align 32
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <16 x half> %0, ptr %byval-temp, align 32
   call void @passCallee__Float16_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1500,19 +1452,16 @@ define void @loadAndPass_float_4() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_float_4@GOT
-; CHECK-NEXT:    le %f0, 0(%r1)
+; CHECK-NEXT:    mvc 164(4,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 164(%r15)
-; CHECK-NEXT:    ste %f0, 164(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_float_4@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <1 x float>, align 4
   %0 = load <1 x float>, ptr @global_float_4, align 4
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x float> %0, ptr %byval-temp, align 4
   call void @passCallee_float_4(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1527,19 +1476,16 @@ define void @loadAndPass_float_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_float_8@GOT
-; CHECK-NEXT:    lg %r0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    stg %r0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_float_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <2 x float>, align 8
   %0 = load <2 x float>, ptr @global_float_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x float> %0, ptr %byval-temp, align 8
   call void @passCallee_float_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1570,10 +1516,8 @@ define void @loadAndPass_float_16() {
 entry:
   %byval-temp = alloca <4 x float>, align 16
   %0 = load <4 x float>, ptr @global_float_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <4 x float> %0, ptr %byval-temp, align 16
   call void @passCallee_float_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1588,19 +1532,16 @@ define void @loadAndPass_double_8() {
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
 ; CHECK-NEXT:    lgrl %r1, global_double_8@GOT
-; CHECK-NEXT:    ld %f0, 0(%r1)
+; CHECK-NEXT:    mvc 160(8,%r15), 0(%r1)
 ; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    std %f0, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_double_8@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %byval-temp = alloca <1 x double>, align 8
   %0 = load <1 x double>, ptr @global_double_8, align 8
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x double> %0, ptr %byval-temp, align 8
   call void @passCallee_double_8(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1631,10 +1572,8 @@ define void @loadAndPass_double_16() {
 entry:
   %byval-temp = alloca <2 x double>, align 16
   %0 = load <2 x double>, ptr @global_double_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x double> %0, ptr %byval-temp, align 16
   call void @passCallee_double_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1667,10 +1606,8 @@ define void @loadAndPass_double_32() {
 entry:
   %byval-temp = alloca <4 x double>, align 32
   %0 = load <4 x double>, ptr @global_double_32, align 32
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <4 x double> %0, ptr %byval-temp, align 32
   call void @passCallee_double_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1700,10 +1637,8 @@ define void @loadAndPass_long_double_16() {
 entry:
   %byval-temp = alloca <1 x fp128>, align 16
   %0 = load <1 x fp128>, ptr @global_long_double_16, align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <1 x fp128> %0, ptr %byval-temp, align 16
   call void @passCallee_long_double_16(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
@@ -1734,10 +1669,8 @@ define void @loadAndPass_long_double_32() {
 entry:
   %byval-temp = alloca <2 x fp128>, align 32
   %0 = load <2 x fp128>, ptr @global_long_double_32, align 32
-  call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp)
   store <2 x fp128> %0, ptr %byval-temp, align 32
   call void @passCallee_long_double_32(ptr noundef nonnull dead_on_return %byval-temp)
-  call void @llvm.lifetime.end.p0(ptr nonnull %byval-temp)
   ret void
 }
 
