@@ -1161,10 +1161,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     if (!Arg.Flags[0].isVarArg()) {
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        auto NewArgReg = constrainRegToClass(MRI, TII, RBI, Arg.Regs[Part],
-                                             *TLI.getRegClassFor(NewVT));
-        if (Arg.Regs[Part] != NewArgReg)
-          MIRBuilder.buildCopy(NewArgReg, Arg.Regs[Part]);
+        auto NewArgReg = MRI.createGenericVirtualRegister(LLT(NewVT));
+        MRI.setRegClass(NewArgReg, TLI.getRegClassFor(NewVT));        MIRBuilder.buildCopy(NewArgReg, Arg.Regs[Part]);
         CallInst.addUse(Arg.Regs[Part]);
       }
       ++NumFixedArgs;
