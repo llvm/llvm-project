@@ -489,7 +489,7 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
-  bool AlignToEnd : 1;
+  bool AlignToEnd;
 
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)

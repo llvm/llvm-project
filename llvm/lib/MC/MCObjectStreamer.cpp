@@ -403,7 +403,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
   MCAssembler &Assembler = getAssembler();
   MCAsmBackend &Backend = Assembler.getBackend();
 
-  // To enable better bundle-nop optimization, we emits every instruction
+  // To enable better bundle-nop optimization, we emit every instruction
   // as a relaxable fragment.
   if (Assembler.isBundlingEnabled()) {
     if (Sec->isBundleLocked() || Assembler.getRelaxAll()) {

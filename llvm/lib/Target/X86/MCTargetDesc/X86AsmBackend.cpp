@@ -120,10 +120,6 @@ cl::opt<bool> X86PrefixPadForBundle(
     "x86-prefix-pad-for-bundle", cl::init(false), cl::Hidden,
     cl::desc("Pad using prefixes to align instruction bundles"));
 
-cl::opt<bool> X86RelaxForBundle(
-    "x86-relax-for-bundle", cl::init(false), cl::Hidden,
-    cl::desc("Pad using instruction relaxation to align instruction bundles"));
-
 class X86AsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
   std::unique_ptr<const MCInstrInfo> MCII;
@@ -135,9 +131,6 @@ class X86AsmBackend : public MCAsmBackend {
   unsigned PrevInstOpcode = 0;
   MCBoundaryAlignFragment *PendingBA = nullptr;
   std::pair<MCFragment *, size_t> PrevInstPosition;
-
-  mutable unsigned TotalHandledBundles = 0;
-  mutable unsigned EliminatedNops = 0;
 
   uint8_t determinePaddingPrefix(const MCInst &Inst) const;
   bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;
@@ -912,7 +905,7 @@ bool X86AsmBackend::padInstructionEncoding(MCFragment &RF,
                                            MCCodeEmitter &Emitter,
                                            unsigned &RemainingSize) const {
   bool Changed = false;
-  if (RemainingSize != 0 && !X86RelaxForBundle)
+  if (RemainingSize != 0)
     Changed |= padInstructionViaRelaxation(RF, Emitter, RemainingSize);
   if (RemainingSize != 0)
     Changed |= padInstructionViaPrefix(RF, Emitter, RemainingSize);
@@ -1014,10 +1007,6 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
   if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(LastF)) {
     BF->setSize(RemainingSize);
   }
-
-  TotalHandledBundles++;
-  if (RemainingSize == 0)
-    EliminatedNops++;
 
   return Changed;
 }
