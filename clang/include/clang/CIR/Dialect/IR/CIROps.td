@@ -2798,6 +2798,55 @@ def CIR_ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// InsertMemberOp
+//===----------------------------------------------------------------------===//
+
+def CIR_InsertMemberOp : CIR_Op<"insert_member", [
+  Pure, AllTypesMatch<["record", "result"]>
+]> {
+  let summary = "Overwrite the value of a member of a record value";
+  let description = [{
+    The `cir.insert_member` operation overwrites the value of a particular
+    member in the input record value, and returns the modified record value. The
+    result of this operation is equal to the input record value, except for the
+    member specified by `index_attr` whose value is equal to the given value.
+
+    This operation is named after the LLVM instruction `insertvalue`.
+
+    Currently `cir.insert_member` does not work on unions.
+
+    Example:
+
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 32>
+    !record_ty = !cir.record<"struct.Bar" {!s32i, !s8i}>
+
+    // And suppose we have a value of the record type.
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s8i}> : !record_ty
+    // %0 is {1, 2}
+
+    // Overwrite the second member of the record value.
+    %1 = cir.const #cir.int<3> : !s8i
+    %2 = cir.insert_member %0[1], %1 : !record_ty, !s8i
+    // %2 is {1, 3}
+    ```
+  }];
+
+  let arguments = (ins CIRRecordType:$record, I64Attr:$index,
+                       CIR_AnyType:$value);
+  let results = (outs CIRRecordType:$result);
+
+  let assemblyFormat = [{
+    $record `[` $index `]` `,` $value attr-dict
+    `:` qualified(type($record)) `,` qualified(type($value))
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GetElementOp
 //===----------------------------------------------------------------------===//
 
@@ -4346,6 +4395,78 @@ def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
 
   let assemblyFormat = [{
     $src `[` $offset `]` `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
+}
+
+//===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BaseMethodOp : CIR_Op<"base_method", [Pure]> {
+  let summary = [{
+    Cast a derived class pointer-to-member-function to a base class
+    pointer-to-member-function
+  }];
+  let description = [{
+    The `cir.base_method` operation casts a pointer-to-member-function of type
+    `Ret (Derived::*)(Args)` to a pointer-to-member-function of type
+    `Ret (Base::*)(Args)`, where `Base` is a non-virtual base class of
+    `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+
+    Example:
+
+    ```mlir
+    %1 = cir.base_method %0 [16] : !cir.method<!cir.func<(!s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!s32i)> in !rec_Base>
+    ```
+  }];
+
+  let arguments = (ins CIR_MethodType:$src, IndexAttr:$offset);
+  let results = (outs CIR_MethodType:$result);
+
+  let assemblyFormat = [{
+    $src `[` $offset `]` `:` qualified(type($src))
+         `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
+}
+
+def CIR_DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
+  let summary = [{
+    Cast a base class pointer-to-member-function to a derived class
+    pointer-to-member-function
+  }];
+  let description = [{
+    The `cir.derived_method` operation casts a pointer-to-member-function of
+    type `Ret (Base::*)(Args)` to a pointer-to-member-function of type
+    `Ret (Derived::*)(Args)`, where `Base` is a non-virtual base class of
+    `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+
+    Example:
+
+    ```mlir
+    %1 = cir.derived_method %0 [16] : !cir.method<!cir.func<(!s32i)> in !rec_Base> -> !cir.method<!cir.func<(!s32i)> in !rec_Derived>
+    ```
+  }];
+
+  let arguments = (ins CIR_MethodType:$src, IndexAttr:$offset);
+  let results = (outs CIR_MethodType:$result);
+
+  let assemblyFormat = [{
+    $src `[` $offset `]` `:` qualified(type($src))
+         `->` qualified(type($result)) attr-dict
   }];
 
   let hasVerifier = 1;

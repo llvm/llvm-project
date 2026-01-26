@@ -3335,6 +3335,24 @@ mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
   llvm_unreachable("Unexpected record kind");
 }
 
+mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
+    cir::InsertMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  std::int64_t indecies[1] = {static_cast<std::int64_t>(op.getIndex())};
+  mlir::Type recordTy = op.getRecord().getType();
+
+  if (auto cirRecordTy = mlir::dyn_cast<cir::RecordType>(recordTy)) {
+    if (cirRecordTy.getKind() == cir::RecordType::Union) {
+      op.emitError("cir.update_member cannot update member of a union");
+      return mlir::failure();
+    }
+  }
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, adaptor.getRecord(), adaptor.getValue(), indecies);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
     cir::UnreachableOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

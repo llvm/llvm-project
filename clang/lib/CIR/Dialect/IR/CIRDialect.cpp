@@ -2614,6 +2614,18 @@ LogicalResult cir::DerivedDataMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
@@ -2788,6 +2800,22 @@ LogicalResult cir::ExtractMemberOp::verify() {
     return emitError() << "member index out of bounds";
   if (recordTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::InsertMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError() << "cir.insert_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+    return emitError() << "member type mismatch";
+  // The op trait already checks that the types of $result and $record match.
   return mlir::success();
 }
 
