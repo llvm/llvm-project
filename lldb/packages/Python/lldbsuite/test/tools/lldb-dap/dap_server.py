@@ -52,7 +52,8 @@ EVENT_QUIET_PERIOD = 0.25
 class SpawnHelperCallback(Protocol):
     def __call__(
         self, executable: str, args: List[str], extra_env: List[str], **kwargs
-    ) -> subprocess.Popen: ...
+    ) -> subprocess.Popen:
+        ...
 
 
 ## DAP type references
@@ -2106,7 +2107,9 @@ def main():
         level=(
             logging.DEBUG
             if opts.verbose > 1
-            else logging.INFO if opts.verbose > 0 else logging.WARNING
+            else logging.INFO
+            if opts.verbose > 0
+            else logging.WARNING
         ),
     )
 
