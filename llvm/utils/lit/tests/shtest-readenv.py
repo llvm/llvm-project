@@ -60,6 +60,5 @@
 
 # CHECK-LABEL: FAIL: shtest-readenv :: unset.txt ({{[^)]*}})
 # CHECK: echo PRE $SOME_UNSET_ENV_VAR POST
-# CHECK: # executed command: echo PRE '%{readenv:SOME_UNSET_ENV_VAR}' POST 
+# CHECK: # executed command: echo PRE '%{readenv:SOME_UNSET_ENV_VAR}' POST
 # CHECK: # | Environment variable specified in readenv subsitution is not set: SOME_UNSET_ENV_VAR
-

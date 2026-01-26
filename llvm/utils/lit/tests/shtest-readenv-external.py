@@ -87,6 +87,5 @@
 # CHECK-NEXT: PRE Environment variable specified in readenv subsitution is not set: SOME_UNSET_ENV_VAR POST
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
-# CHECK-NEXT: echo PRE ${SOME_UNSET_ENV_VAR-'Environment variable specified in readenv subsitution is not set: SOME_UNSET_ENV_VAR'} POST # {{R}}UN: at line 1 
+# CHECK-NEXT: echo PRE ${SOME_UNSET_ENV_VAR-'Environment variable specified in readenv subsitution is not set: SOME_UNSET_ENV_VAR'} POST # {{R}}UN: at line 1
 # CHECK-NEXT: + echo PRE 'Environment variable specified in readenv subsitution is not set: SOME_UNSET_ENV_VAR' POST
-
