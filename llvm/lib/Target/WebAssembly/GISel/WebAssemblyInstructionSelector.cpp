@@ -15,6 +15,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
@@ -24,11 +25,13 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -45,6 +48,67 @@ namespace {
 
 class WebAssemblyInstructionSelector : public InstructionSelector {
 public:
+  // From FastISel
+  // All possible address modes.
+  class Address {
+  public:
+    enum BaseKind { RegBase, FrameIndexBase };
+
+  private:
+    BaseKind Kind = RegBase;
+    union {
+      unsigned Reg;
+      int FI;
+    } Base;
+
+    // Whether the base has been determined yet
+    bool IsBaseSet = false;
+
+    int64_t Offset = 0;
+
+    const GlobalValue *GV = nullptr;
+
+  public:
+    // Innocuous defaults for our address.
+    Address() { Base.Reg = 0; }
+    void setKind(BaseKind K) {
+      assert(!isSet() && "Can't change kind with non-zero base");
+      Kind = K;
+    }
+    BaseKind getKind() const { return Kind; }
+    bool isRegBase() const { return Kind == RegBase; }
+    bool isFIBase() const { return Kind == FrameIndexBase; }
+    void setReg(unsigned Reg) {
+      assert(isRegBase() && "Invalid base register access!");
+      assert(!IsBaseSet && "Base cannot be reset");
+      Base.Reg = Reg;
+      IsBaseSet = true;
+    }
+    unsigned getReg() const {
+      assert(isRegBase() && "Invalid base register access!");
+      return Base.Reg;
+    }
+    void setFI(unsigned FI) {
+      assert(isFIBase() && "Invalid base frame index access!");
+      assert(!IsBaseSet && "Base cannot be reset");
+      Base.FI = FI;
+      IsBaseSet = true;
+    }
+    unsigned getFI() const {
+      assert(isFIBase() && "Invalid base frame index access!");
+      return Base.FI;
+    }
+
+    void setOffset(int64_t NewOffset) {
+      assert(NewOffset >= 0 && "Offsets must be non-negative");
+      Offset = NewOffset;
+    }
+    int64_t getOffset() const { return Offset; }
+    void setGlobalValue(const GlobalValue *G) { GV = G; }
+    const GlobalValue *getGlobalValue() const { return GV; }
+    bool isSet() const { return IsBaseSet; }
+  };
+
   WebAssemblyInstructionSelector(const WebAssemblyTargetMachine &TM,
                                  const WebAssemblySubtarget &STI,
                                  const WebAssemblyRegisterBankInfo &RBI);
@@ -61,6 +125,8 @@ public:
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
+  bool computeAddress(const MachineInstr &MI, Address &Addr) const;
 
   InstructionSelector::ComplexRendererFns
   selectAddrOperands(LLT AddrType, unsigned int ConstOpc,
@@ -102,6 +168,83 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 {
 }
 
+bool WebAssemblyInstructionSelector::computeAddress(const MachineInstr &MI,
+                                                    Address &Addr) const {
+  unsigned Opcode = MI.getOpcode();
+  auto &MRI = MI.getMF()->getRegInfo();
+
+  if (MI.getNumDefs() == 0 || !MI.getOperand(0).isReg())
+    return false;
+
+  Register Def = MI.getOperand(0).getReg();
+
+  if (!Def.isValid() || !MRI.getType(Def).isPointer() ||
+      !(MRI.getType(Def).getAddressSpace() == 0))
+    return false;
+
+  switch (Opcode) {
+  default:
+    break;
+  case TargetOpcode::G_GLOBAL_VALUE: {
+    if (TM.isPositionIndependent())
+      return false;
+    if (Addr.getGlobalValue())
+      return false;
+    if (MI.getOperand(1).getGlobal()->isThreadLocal())
+      return false;
+
+    uint64_t TmpOffset = Addr.getOffset() + MI.getOperand(1).getOffset();
+    if (int64_t(TmpOffset) < 0)
+      return false;
+
+    Addr.setGlobalValue(MI.getOperand(1).getGlobal());
+    Addr.setOffset(TmpOffset);
+    return true;
+  }
+  case TargetOpcode::G_FRAME_INDEX: {
+    if (Addr.isSet()) {
+      return false;
+    }
+    Addr.setKind(Address::FrameIndexBase);
+    Addr.setFI(MI.getOperand(1).getIndex());
+    return true;
+  }
+  case TargetOpcode::G_PTR_ADD: {
+    // We should not fold operands into an offset when 'nuw' (no unsigned wrap)
+    // is not present, because the address calculation does not wrap.
+    if (!MI.getFlag(MachineInstr::MIFlag::NoUWrap))
+      break;
+
+    const MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
+    const MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+
+    if (LHS->getOpcode() == TargetOpcode::G_CONSTANT)
+      std::swap(LHS, RHS);
+
+    if (RHS->getOpcode() == TargetOpcode::G_CONSTANT) {
+      uint64_t TmpOffset =
+          Addr.getOffset() + RHS->getOperand(1).getCImm()->getSExtValue();
+      if (int64_t(TmpOffset) >= 0) {
+        Addr.setOffset(TmpOffset);
+        return computeAddress(*LHS, Addr);
+      }
+    }
+
+    Address Backup = Addr;
+    if (computeAddress(*LHS, Addr) && computeAddress(*RHS, Addr))
+      return true;
+    Addr = Backup;
+
+    break;
+  }
+  }
+
+  if (Addr.isSet())
+    return false;
+  Addr.setReg(Def);
+  return Addr.getReg() != 0;
+}
+
 InstructionSelector::ComplexRendererFns
 WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
                                                    unsigned int ConstOpc,
@@ -114,86 +257,35 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
       Root.getParent()->getParent()->getParent()->getRegInfo();
   MachineInstr &RootDef = *MRI.getVRegDef(Root.getReg());
 
-  if (RootDef.getOpcode() == TargetOpcode::G_PTR_ADD) {
-    // RootDef will always be G_PTR_ADD
-    MachineOperand &LHS = RootDef.getOperand(1);
+  Address Addr = Address();
 
-    MachineOperand &RHS = RootDef.getOperand(2);
-    MachineInstr &LHSDef = *MRI.getVRegDef(LHS.getReg());
-    MachineInstr &RHSDef =
-        *MRI.getVRegDef(RHS.getReg()); // Will always be G_CONSTANT
+  if (!computeAddress(RootDef, Addr))
+    return std::nullopt;
 
-    // WebAssembly constant offsets are performed as unsigned with infinite
-    // precision, so we need to check for NoUnsignedWrap so that we don't fold
-    // and offset for an add that needs wrapping.
-    if (RootDef.getFlag(MachineInstr::MIFlag::NoUWrap)) {
-      for (size_t i = 0; i < 2; ++i) {
-        // MachineOperand &Op = i == 0 ? LHS : RHS;
-        MachineInstr &OpDef = i == 0 ? LHSDef : RHSDef;
-        MachineOperand &OtherOp = i == 0 ? RHS : LHS;
-        // MachineInstr &OtherOpDef = i == 0 ? RHSDef : LHSDef;
+  if (Addr.isRegBase()) {
+    unsigned Reg = Addr.getReg();
+    if (Reg == 0) {
+      Reg = MRI.createGenericVirtualRegister(AddrType);
 
-        if (OpDef.getOpcode() == TargetOpcode::G_CONSTANT) {
-          auto Offset = OpDef.getOperand(1).getCImm()->getZExtValue();
-          auto Addr = OtherOp;
+      MachineIRBuilder B(RootDef);
 
-          return {{
-              [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); },
-              [=](MachineInstrBuilder &MIB) { MIB.add(Addr); },
-          }};
-        }
-
-        if (!TM.isPositionIndependent()) {
-          if (OpDef.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
-            auto *Offset = OpDef.getOperand(1).getGlobal();
-            auto Addr = OtherOp;
-
-            return {{
-                [=](MachineInstrBuilder &MIB) { MIB.addGlobalAddress(Offset); },
-                [=](MachineInstrBuilder &MIB) { MIB.add(Addr); },
-            }};
-          }
-        }
-      }
+      auto MIB = B.buildInstr(ConstOpc).addDef(Reg).addImm(0);
+      assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
+             "Couldn't constrain registers for instruction");
+      Addr.setReg(Reg);
     }
   }
 
-  if (RootDef.getOpcode() == TargetOpcode::G_CONSTANT) {
-    auto Offset = RootDef.getOperand(1).getCImm()->getZExtValue();
-    auto Addr = MRI.createGenericVirtualRegister(AddrType);
-
-    MachineIRBuilder B(RootDef);
-
-    auto MIB = B.buildInstr(ConstOpc).addDef(Addr).addImm(0);
-    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
-
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); },
-        [=](MachineInstrBuilder &MIB) { MIB.addReg(Addr); },
-    }};
-  }
-
-  if (!TM.isPositionIndependent() &&
-      RootDef.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
-    auto *Offset = RootDef.getOperand(1).getGlobal();
-    auto Addr = MRI.createGenericVirtualRegister(AddrType);
-
-    MachineIRBuilder B(RootDef);
-
-    auto MIB = B.buildInstr(ConstOpc).addDef(Addr).addImm(0);
-    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
-
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addGlobalAddress(Offset); },
-        [=](MachineInstrBuilder &MIB) { MIB.addReg(Addr); },
-    }};
-  }
-
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
-      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+      [=](MachineInstrBuilder &MIB) {
+        Addr.getGlobalValue()
+            ? MIB.addGlobalAddress(Addr.getGlobalValue(), Addr.getOffset())
+            : MIB.addImm(Addr.getOffset());
+      },
+      [=](MachineInstrBuilder &MIB) {
+        Addr.isFIBase() ? MIB.addFrameIndex(Addr.getFI())
+                        : MIB.addReg(Addr.getReg());
+      },
   }};
 }
 
@@ -582,14 +674,11 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
       OperandFlags = WebAssemblyII::MO_GOT;
     }
 
-    auto NewOpc = MF.getDataLayout().getPointerSizeInBits() == 64
-                      ? WebAssembly::CONST_I64
-                      : WebAssembly::CONST_I32;
+    auto NewOpc = PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
 
     if (OperandFlags & WebAssemblyII::MO_GOT) {
-      NewOpc = MF.getDataLayout().getPointerSizeInBits() == 64
-                   ? WebAssembly::GLOBAL_GET_I64
-                   : WebAssembly::GLOBAL_GET_I32;
+      NewOpc =
+          PtrIsI64 ? WebAssembly::GLOBAL_GET_I64 : WebAssembly::GLOBAL_GET_I32;
     }
 
     I.setDesc(TII.get(NewOpc));
