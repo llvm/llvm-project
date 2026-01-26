@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
@@ -86,8 +87,14 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
         APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
   }
 
-  // Handle ConstantFP -> ConstantInt
+  // Handle ConstantFP -> Constant{Int, FP}
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
+    // Handle half <-> bfloat
+    if (!isa<VectorType>(SrcTy) && DestTy->isFloatingPointTy()) {
+      APInt Val = FP->getValueAPF().bitcastToAPInt();
+      APFloat ResultFP(DestTy->getFltSemantics(), Val);
+      return ConstantFP::get(DestTy->getContext(), ResultFP);
+    }
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
