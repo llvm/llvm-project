@@ -1088,8 +1088,15 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::OpBuilder::InsertionGuard guard(builder);
   if (insertBefore)
     builder.setInsertionPoint(insertBefore);
-  return hlfir::genDeclare(loc, builder, exv, name,
-                           fir::FortranVariableFlagsAttr{});
+  hlfir::EntityWithAttributes declare = hlfir::genDeclare(
+      loc, builder, exv, name, fir::FortranVariableFlagsAttr{});
+  // Replace the fir.save_result "to" by the declare results instead of
+  // directly using the alloca.
+  if (insertBefore && insertBefore->getNumResults() == 1)
+    for (auto resUser : insertBefore->getResult(0).getUsers())
+      if (auto save_result = llvm::dyn_cast<fir::SaveResultOp>(resUser))
+        save_result.getMemrefMutable().assign(declare.getFirBase());
+  return declare;
 }
 namespace {
 /// Structure to hold the clean-up related to a dummy argument preparation
