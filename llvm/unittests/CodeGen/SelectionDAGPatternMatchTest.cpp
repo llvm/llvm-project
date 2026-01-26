@@ -1173,3 +1173,47 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   EXPECT_TRUE(sd_match(Zero, m_SpecificNeg(Zero)));
 }
+
+TEST_F(SelectionDAGPatternMatchTest, matchReassociatableFlags) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
+
+  SDNodeFlags NSWFlags;
+  NSWFlags.setNoSignedWrap(true);
+
+  // (Op0 +nsw Op1) +nsw Op2
+  SDValue Add0 = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1, NSWFlags);
+  SDValue Add1 = DAG->getNode(ISD::ADD, DL, Int32VT, Add0, Op2, NSWFlags);
+
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 4, Int32VT);
+  SDValue Op4 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 5, Int32VT);
+  SDValue Op5 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 6, Int32VT);
+
+  // (Op3 + Op4) +nsw Op5
+  SDValue Add2 = DAG->getNode(ISD::ADD, DL, Int32VT, Op3, Op4);
+  SDValue Add3 = DAG->getNode(ISD::ADD, DL, Int32VT, Add2, Op5, NSWFlags);
+
+  SDValue Op6 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 7, Int32VT);
+  SDValue Op7 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 8, Int32VT);
+  SDValue Op8 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 9, Int32VT);
+
+  SDNodeFlags NUWFlags;
+  NUWFlags.setNoUnsignedWrap(true);
+
+  // (Op6 +nuw Op7) +nuw Op8
+  SDValue Add4 = DAG->getNode(ISD::ADD, DL, Int32VT, Op6, Op7, NUWFlags);
+  SDValue Add5 = DAG->getNode(ISD::ADD, DL, Int32VT, Add4, Op8, NUWFlags);
+
+  using namespace SDPatternMatch;
+
+  EXPECT_TRUE(sd_match(Add1, m_ReassociatableNSWAdd(m_Specific(Op0), m_Specific(Op1), m_Specific(Op2))));
+  EXPECT_FALSE(sd_match(Add3, m_ReassociatableNSWAdd(m_Specific(Op3), m_Specific(Op4), m_Specific(Op5))));
+  EXPECT_TRUE(sd_match(Add3, m_ReassociatableNSWAdd(m_Specific(Add2), m_Specific(Op5))));
+
+  EXPECT_TRUE(sd_match(Add5, m_ReassociatableNUWAdd(m_Specific(Op6), m_Specific(Op7), m_Specific(Op8))));
+  EXPECT_FALSE(sd_match(Add1, m_ReassociatableNUWAdd(m_Specific(Op0), m_Specific(Op1), m_Specific(Op2))));
+}
