@@ -213,8 +213,6 @@ struct ConstraintTy {
   SmallVector<int64_t, 8> Coefficients;
   SmallVector<ConditionTy, 2> Preconditions;
 
-  SmallVector<SmallVector<int64_t, 8>> ExtraInfo;
-
   bool IsSigned = false;
 
   ConstraintTy() = default;
@@ -1477,17 +1475,6 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   }
 
   auto &CSToUse = Info.getCS(R.IsSigned);
-
-  // If there was extra information collected during decomposition, apply
-  // it now and remove it immediately once we are done with reasoning
-  // about the constraint.
-  for (auto &Row : R.ExtraInfo)
-    CSToUse.addVariableRow(Row);
-  llvm::scope_exit InfoRestorer([&]() {
-    for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
-      CSToUse.popLastConstraint();
-  });
-
   if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
     if (!DebugCounter::shouldExecute(EliminatedCounter))
       return std::nullopt;
