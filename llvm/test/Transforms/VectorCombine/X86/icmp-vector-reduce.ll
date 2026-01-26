@@ -163,7 +163,7 @@ define i1 @umin_shl(<4 x i32> %x, <4 x i32> %y) {
 define i1 @umax_zext(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @umax_zext(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -176,7 +176,7 @@ define i1 @umax_zext(<4 x i16> %x) {
 define i1 @umax_sext(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @umax_sext(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -189,7 +189,7 @@ define i1 @umax_sext(<4 x i16> %x) {
 define i1 @umax_neg(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_neg(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -202,7 +202,7 @@ define i1 @umax_neg(<4 x i32> %x) {
 define i1 @umax_mul(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_mul(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -215,7 +215,7 @@ define i1 @umax_mul(<4 x i32> %x) {
 define i1 @umax_shl(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define i1 @umax_shl(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
