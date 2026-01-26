@@ -1646,6 +1646,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
+    return RValue::get(emitLValue(e->getArg(0)).getPointer());
   case Builtin::BI__builtin_function_start:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_operator_new:

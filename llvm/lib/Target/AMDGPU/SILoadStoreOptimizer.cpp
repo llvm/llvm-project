@@ -2282,8 +2282,6 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
   }
 
   // Now extract the base register (which should be a 64-bit VGPR).
-  MachineInstr *BaseDef = MRI->getVRegDef(BaseOp->getReg());
-  assert(BaseDef && "Expected definition for base register");
   Addr.Base.LoReg = BaseOp->getReg();
   Addr.Base.UseV64Pattern = true;
   return true;
