@@ -31,9 +31,8 @@ static LIBC_NAMESPACE::cpp::simd<float> wrap_ref_vexpf(float x, float control) {
   LIBC_NAMESPACE::cpp::simd<float> v(x);
   v[0] = control;
   constexpr size_t N = LIBC_NAMESPACE::cpp::internal::native_vector_size<float>;
-  for (size_t i = 0; i < N; i++) {
+  for (size_t i = 0; i < N; i++)
     v[i] = LIBC_NAMESPACE::expf(v[i]);
-  }
   return v;
 }
 
@@ -100,7 +99,6 @@ TEST_F(LlvmLibcVecExpfTest, Borderline) {
   float x;
 
   x = FPBits(0x42affff8U).get_val();
-  // Do we need ASSERT? If so it needs a version for all rounding modes
   EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 
   x = FPBits(0x42b00008U).get_val();

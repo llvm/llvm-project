@@ -11,4 +11,7 @@ add_fp_unittest(
     libc.src.mathvec.expf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
 )

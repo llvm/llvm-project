@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace common_constants_internal {
+namespace mathvec {
 
 // Lookup table for mantissas of 2^(i / 64) with i = 0, ..., 63.
 static constexpr uint64_t EXP_MANTISSA[64] = {
@@ -33,7 +33,7 @@ static constexpr uint64_t EXP_MANTISSA[64] = {
     0xea4afa2a490da, 0xefa1bee615a27, 0xf50765b6e4540, 0xfa7c1819e90d8,
 };
 
-} // namespace common_constants_internal
+} // namespace mathvec
 
 } // namespace LIBC_NAMESPACE_DECL
 
