@@ -198,12 +198,18 @@ namespace synchronize {
 void init(bool IsSPMD);
 
 /// Synchronize all threads in a warp identified by \p Mask.
-void warp(LaneMaskTy Mask);
+static inline void warp(LaneMaskTy Mask) { __gpu_sync_lane(Mask); }
 
 /// Synchronize all threads in a block and perform a fence before and after the
 /// barrier according to \p Ordering. Note that the fence might be part of the
 /// barrier.
-void threads(atomic::OrderingTy Ordering);
+static inline void threads(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_barrier_sync(8);
+#else
+  __gpu_sync_threads();
+#endif
+}
 
 /// Synchronizing threads is allowed even if they all hit different instances of
 /// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
@@ -223,16 +229,35 @@ threadsAligned(atomic::OrderingTy Ordering);
 
 } // namespace synchronize
 
+// FIXME: NVPTX does not respect the memory scope argument.
 namespace fence {
 
 /// Memory fence with \p Ordering semantics for the team.
-void team(atomic::OrderingTy Ordering);
+static inline void team(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_membar_cta();
+#else
+  __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
+#endif
+}
 
 /// Memory fence with \p Ordering semantics for the contention group.
-void kernel(atomic::OrderingTy Ordering);
+static inline void kernel(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_membar_gl();
+#else
+  __scoped_atomic_thread_fence(Ordering, atomic::device);
+#endif
+}
 
 /// Memory fence with \p Ordering semantics for the system.
-void system(atomic::OrderingTy Ordering);
+static inline void system(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_membar_sys();
+#else
+  __scoped_atomic_thread_fence(Ordering, atomic::system);
+#endif
+}
 
 } // namespace fence
 

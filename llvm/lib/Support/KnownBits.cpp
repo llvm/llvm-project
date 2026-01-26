@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownBits.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -602,6 +603,33 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
+KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
+  KnownBits Res =
+      makeConstant(APIntOps::clmul(LHS.getMinValue(), RHS.getMinValue()));
+
+  // This is the same operation as clmul except it accumulates the result with
+  // an OR instead of an XOR.
+  auto ClMulOr = [](const APInt &LHS, const APInt &RHS) {
+    unsigned BW = LHS.getBitWidth();
+    assert(BW == RHS.getBitWidth() && "Operand mismatch");
+    APInt Result(BW, 0);
+    for (unsigned I :
+         seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
+      if (RHS[I])
+        Result |= LHS << I;
+    return Result;
+  };
+
+  // Bits in the result are known if, for every corresponding pair of input
+  // bits, both input bits are known or either input bit is known to be zero.
+  APInt Known = ~(ClMulOr(~LHS.Zero & ~LHS.One, ~RHS.Zero) |
+                  ClMulOr(~LHS.Zero, ~RHS.Zero & ~RHS.One));
+  Res.Zero &= Known;
+  Res.One &= Known;
+
+  return Res;
+}
+
 std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
     return std::optional<bool>(LHS.getConstant() == RHS.getConstant());
@@ -1021,24 +1049,22 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   // Where C5, C6 describe the known bits of %a, %b
   // C1, C2 describe the known bottom bits of %a, %b.
   // C7 describes the mask of the known bits of the result.
-  const APInt &Bottom0 = LHS.One;
-  const APInt &Bottom1 = RHS.One;
 
   // How many times we'd be able to divide each argument by 2 (shr by 1).
   // This gives us the number of trailing zeros on the multiplication result.
-  unsigned TrailBitsKnown0 = (LHS.Zero | LHS.One).countr_one();
-  unsigned TrailBitsKnown1 = (RHS.Zero | RHS.One).countr_one();
-  unsigned TrailZero0 = LHS.countMinTrailingZeros();
-  unsigned TrailZero1 = RHS.countMinTrailingZeros();
-  unsigned TrailZ = TrailZero0 + TrailZero1;
+  unsigned TrailBitsKnownLHS = (LHS.Zero | LHS.One).countr_one();
+  unsigned TrailBitsKnownRHS = (RHS.Zero | RHS.One).countr_one();
+  unsigned TrailZeroLHS = LHS.countMinTrailingZeros();
+  unsigned TrailZeroRHS = RHS.countMinTrailingZeros();
+  unsigned TrailZ = TrailZeroLHS + TrailZeroRHS;
 
   // Figure out the fewest known-bits operand.
-  unsigned SmallestOperand =
-      std::min(TrailBitsKnown0 - TrailZero0, TrailBitsKnown1 - TrailZero1);
+  unsigned SmallestOperand = std::min(TrailBitsKnownLHS - TrailZeroLHS,
+                                      TrailBitsKnownRHS - TrailZeroRHS);
   unsigned ResultBitsKnown = std::min(SmallestOperand + TrailZ, BitWidth);
 
-  APInt BottomKnown =
-      Bottom0.getLoBits(TrailBitsKnown0) * Bottom1.getLoBits(TrailBitsKnown1);
+  // The lower ResultBitsKnown bits of this are known.
+  APInt BottomKnown = LHS.One * RHS.One;
 
   KnownBits Res(BitWidth);
   Res.Zero.setHighBits(LeadZ);
@@ -1047,13 +1073,13 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
   if (NoUndefSelfMultiply) {
     // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
-    unsigned TwoTZP1 = 2 * TrailZero0 + 1;
+    unsigned TwoTZP1 = 2 * TrailZeroLHS + 1;
     if (TwoTZP1 < BitWidth)
       Res.Zero.setBit(TwoTZP1);
 
     // If X has exactly TZ trailing zeros, then bit (2 * TZ + 2) must also be
     // zero.
-    if (TrailZero0 < BitWidth && LHS.One[TrailZero0]) {
+    if (TrailZeroLHS < BitWidth && LHS.One[TrailZeroLHS]) {
       unsigned TwoTZP2 = TwoTZP1 + 1;
       if (TwoTZP2 < BitWidth)
         Res.Zero.setBit(TwoTZP2);
