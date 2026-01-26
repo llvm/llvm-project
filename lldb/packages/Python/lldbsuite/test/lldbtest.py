@@ -2593,7 +2593,6 @@ FileCheck output:
         )
 
         frame = self.frame()
-        options = lldb.SBExpressionOptions()
 
         if not options:
             options = lldb.SBExpressionOptions()
