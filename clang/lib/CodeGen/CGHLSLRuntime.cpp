@@ -1109,8 +1109,6 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   // Make sure the global variable is buffer resource handle
   llvm::Type *HandleTy = GV->getValueType();
   assert(HandleTy->isTargetExtTy() && "unexpected type of the buffer global");
-  llvm::Type *UnderlyingType =
-      cast<TargetExtType>(HandleTy)->getTypeParameter(0);
 
   llvm::Value *CreateHandle = Builder.CreateIntrinsic(
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
