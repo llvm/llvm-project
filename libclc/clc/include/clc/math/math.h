@@ -11,6 +11,7 @@
 
 #include <clc/clc_as_type.h>
 #include <clc/clcfunc.h>
+#include <clc/math/clc_subnormal_config.h>
 
 #define SNAN 0x001
 #define QNAN 0x002
