@@ -1684,11 +1684,14 @@ let vm = 1, RVVConstraint = NoConstraint in {
 def VMV_X_S : RVInstV<0b010000, 0b00000, OPMVV, (outs GPR:$vd),
                       (ins VR:$vs2), "vmv.x.s", "$vd, $vs2">,
               Sched<[WriteVMovXS, ReadVMovXS]>;
-let Constraints = "$vd = $vd_wb" in
-def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
-                      (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
-              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>;
+def VMV_S_X : RVInstVX<0b010000, OPMVX, (outs VR:$vd_wb),
+                       (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
+              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]> {
+  let vs2 = 0;
+
+  let Constraints = "$vd = $vd_wb";
 }
+} // vm = 1, RVVConstraint = NoConstraint in {
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -1702,10 +1705,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
 def VFMV_F_S : RVInstV<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
                       (ins VR:$vs2), "vfmv.f.s", "$vd, $vs2">,
                Sched<[WriteVMovFS, ReadVMovFS]>;
-let Constraints = "$vd = $vd_wb" in
-def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
-                       (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">,
-               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
+def VFMV_S_F : RVInstVX<0b010000, OPFVF, (outs VR:$vd_wb),
+                        (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">,
+               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]> {
+  let vs2 = 0;
+
+  let Constraints = "$vd = $vd_wb";
+}
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
 

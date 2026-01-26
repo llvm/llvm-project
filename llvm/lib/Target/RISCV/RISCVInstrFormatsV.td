@@ -123,25 +123,6 @@ class RVInstVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let RVVConstraint = VMConstraint;
 }
 
-class RVInstV2<bits<6> funct6, bits<5> vs2, RISCVVFormat opv, dag outs, dag ins,
-                string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs1;
-  bits<5> vd;
-  bit vm;
-
-  let Inst{31-26} = funct6;
-  let Inst{25} = vm;
-  let Inst{24-20} = vs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = opv.Value;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
-}
-
 class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
                 string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
