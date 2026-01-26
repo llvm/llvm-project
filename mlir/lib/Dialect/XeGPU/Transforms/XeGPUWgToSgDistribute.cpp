@@ -612,8 +612,8 @@ struct WgToSgConvertLayoutOp
 
     VectorType resultType = op.getResult().getType();
     ArrayRef<int64_t> wgShape = resultType.getShape();
-    auto inputLayout = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
-    auto targetLayout = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
+    auto inputLayout = op.getInputLayout();
+    auto targetLayout = op.getTargetLayout();
 
     if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
         !targetLayout.isForWorkgroup())
@@ -1229,12 +1229,11 @@ struct WgToSgVectorShapeCastOp
           return false;
       return srcIdx == src.size();
     };
-
     xegpu::DistributeLayoutAttr layoutToDistribute = layout;
 
     if (checkOnlyExpandUnitDims(srcShape, wgShape)) {
       xegpu::DistributeLayoutAttr sourceLayout =
-          xegpu::getDistributeLayoutAttr(op.getSource());
+          xegpu::getTemporaryLayout(op->getOpOperand(0));
 
       auto usedByBroadcastOp = [](vector::ShapeCastOp op) {
         return llvm::all_of(op.getResult().getUsers(), [](Operation *user) {

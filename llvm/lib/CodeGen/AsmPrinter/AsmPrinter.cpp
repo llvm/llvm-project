@@ -811,7 +811,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   SectionKind GVKind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
 
   const DataLayout &DL = GV->getDataLayout();
-  uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+  uint64_t Size = GV->getGlobalSize(DL);
 
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
@@ -2473,11 +2473,13 @@ void AsmPrinter::emitGlobalGOTEquivs() {
 
 void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   MCSymbol *Name = getSymbol(&GA);
+  const GlobalObject *BaseObject = GA.getAliaseeObject();
+
   bool IsFunction = GA.getValueType()->isFunctionTy();
   // Treat bitcasts of functions as functions also. This is important at least
   // on WebAssembly where object and function addresses can't alias each other.
   if (!IsFunction)
-    IsFunction = isa<Function>(GA.getAliasee()->stripPointerCasts());
+    IsFunction = isa_and_nonnull<Function>(BaseObject);
 
   // AIX's assembly directive `.set` is not usable for aliasing purpose,
   // so AIX has to use the extra-label-at-definition strategy. At this
@@ -2485,7 +2487,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // those labels.
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     // Linkage for alias of global variable has been emitted.
-    if (isa<GlobalVariable>(GA.getAliaseeObject()))
+    if (isa_and_nonnull<GlobalVariable>(BaseObject))
       return;
 
     emitLinkage(&GA, Name);
@@ -2537,7 +2539,6 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // size of the alias symbol from the type of the alias. We don't do this in
   // other situations as the alias and aliasee having differing types but same
   // size may be intentional.
-  const GlobalObject *BaseObject = GA.getAliaseeObject();
   if (MAI->hasDotTypeDotSizeDirective() && GA.getValueType()->isSized() &&
       (!BaseObject || BaseObject->hasPrivateLinkage())) {
     const DataLayout &DL = M.getDataLayout();
