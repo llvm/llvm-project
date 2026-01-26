@@ -37,7 +37,7 @@ namespace powf_internal {
 using namespace common_constants_internal;
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE_VAR alignas(16) constexpr DoubleDouble LOG2_R_DD[128] = {
+alignas(16) LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0.0, 0.0},
     {-0x1.177c23362928cp-25, 0x1.72c8p-7},
     {-0x1.179e0caa9c9abp-22, 0x1.744p-6},
