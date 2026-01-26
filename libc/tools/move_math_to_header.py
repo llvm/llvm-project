@@ -294,8 +294,7 @@ def update_support_math_cmake(cmake_path: Path, func_name: str, deps: list) -> s
 
     # Build the new entry
     deps_str = "\n    ".join(transformed_deps) if transformed_deps else ""
-    new_entry = f"""
-add_header_library(
+    new_entry = f"""add_header_library(
   {func_name}
   HDRS
     {func_name}.h
@@ -304,7 +303,40 @@ add_header_library(
 )
 """
 
-    return content.rstrip() + "\n" + new_entry
+    # Find where to insert (after other add_header_library entries, alphabetically)
+    insert_pos = 0
+    for match in re.finditer(r"add_header_library\s*\(\s*(\w+)", content):
+        existing_name = match.group(1)
+        if existing_name < func_name:
+            # Find end of this block
+            block_start = match.start()
+            paren_count = 0
+            found_open = False
+            for i, char in enumerate(content[block_start:], block_start):
+                if char == "(":
+                    paren_count += 1
+                    found_open = True
+                elif char == ")":
+                    paren_count -= 1
+                    if found_open and paren_count == 0:
+                        insert_pos = i + 1
+                        break
+        elif existing_name > func_name:
+            # Insert before this entry
+            if insert_pos == 0:
+                insert_pos = match.start()
+            break
+
+    if insert_pos > 0:
+        # Find next newline after insert_pos
+        next_newline = content.find("\n", insert_pos)
+        if next_newline != -1:
+            insert_pos = next_newline + 1
+        # Insert the new entry
+        return content[:insert_pos] + "\n" + new_entry + content[insert_pos:]
+
+    # Fallback: append to end
+    return content.rstrip() + "\n\n" + new_entry
 
 
 def update_shared_math_h(path: Path, func_name: str) -> str:
