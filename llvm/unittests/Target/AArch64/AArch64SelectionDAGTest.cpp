@@ -721,6 +721,9 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 
+// Test that we can compute the known bits of a subvector extract
+// from a scalable vector, which requires this knowledge to be known
+// for all elements of the scalable source vector.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBitsSVE_EXTRACT_SUBVECTOR) {
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);

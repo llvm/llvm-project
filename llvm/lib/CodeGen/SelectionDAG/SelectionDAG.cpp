@@ -3516,7 +3516,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     APInt DemandedSrcElts;
     if (Src.getValueType().isScalableVector())
-      DemandedSrcElts = APInt(1, 1);  // <=> 'demand all elements'
+      DemandedSrcElts = APInt(1, 1); // <=> 'demand all elements'
     else {
       uint64_t Idx = Op.getConstantOperandVal(1);
       unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
