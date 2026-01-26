@@ -26,9 +26,9 @@ def adapt_cmake(module_path: str, check_name_camel: str) -> bool:
 
     # The documentation files are encoded using UTF-8, however on Windows the
     # default encoding might be different (e.g. CP-1252). To make sure UTF-8 is
-    # always used, use `io.open(filename, mode, encoding='utf8')` for reading and
+    # always used, use `open(filename, mode, encoding='utf8')` for reading and
     # writing files here and elsewhere.
-    with io.open(filename, "r", encoding="utf8") as f:
+    with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
     cpp_file = check_name_camel + ".cpp"
@@ -39,7 +39,7 @@ def adapt_cmake(module_path: str, check_name_camel: str) -> bool:
             return False
 
     print("Updating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         cpp_found = False
         file_added = False
         for line in lines:
@@ -80,7 +80,7 @@ def write_header(
         override_supported = ""
     filename = os.path.join(module_path, check_name_camel) + ".h"
     print("Creating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         header_guard = (
             "LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_"
             + module.upper()
@@ -139,7 +139,7 @@ def write_implementation(
 ) -> None:
     filename = os.path.join(module_path, check_name_camel) + ".cpp"
     print("Creating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
             """\
 //===----------------------------------------------------------------------===//
@@ -195,11 +195,11 @@ def adapt_module(
     module_path: str, module: str, check_name: str, check_name_camel: str
 ) -> None:
     filename = get_module_filename(module_path, module)
-    with io.open(filename, "r", encoding="utf8") as f:
+    with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
     print("Updating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         header_added = False
         header_found = False
         check_added = False
@@ -268,7 +268,7 @@ def add_release_notes(
     filename = os.path.normpath(
         os.path.join(module_path, "../../docs/ReleaseNotes.rst")
     )
-    with io.open(filename, "r", encoding="utf8") as f:
+    with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
     lineMatcher = re.compile("New checks")
@@ -276,7 +276,7 @@ def add_release_notes(
     checkMatcher = re.compile("- New :doc:`(.*)")
 
     print("Updating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         note_added = False
         header_found = False
         add_note_here = False
@@ -339,7 +339,7 @@ def write_test(
         )
     )
     print("Creating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
             """\
 // RUN: %%check_clang_tidy %(standard)s%%s %(check_name_dashes)s %%t
@@ -379,7 +379,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
     docs_dir = os.path.join(clang_tidy_path, "../docs/clang-tidy/checks")
     filename = os.path.normpath(os.path.join(docs_dir, "list.rst"))
     # Read the content of the current list.rst file
-    with io.open(filename, "r", encoding="utf8") as f:
+    with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
     # Get all existing docs
     doc_files = []
@@ -401,7 +401,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
         module_file = get_module_filename(module_path, module_name)
         if not os.path.isfile(module_file):
             return ""
-        with io.open(module_file, "r") as f:
+        with open(module_file, "r") as f:
             code = f.read()
             full_check_name = module_name + "-" + check_name
             if (name_pos := code.find('"' + full_check_name + '"')) == -1:
@@ -439,7 +439,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
             header_file = os.path.splitext(check_file)[0] + ".h"
             if not os.path.isfile(header_file):
                 return ""
-            with io.open(header_file, encoding="utf8") as f:
+            with open(header_file, encoding="utf8") as f:
                 code = f.read()
             matches = re.search(" " + ctor_pattern, code)
 
@@ -479,7 +479,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 if not (check_file and os.path.isfile(check_file)):
                     return ""
 
-        with io.open(check_file, encoding="utf8") as f:
+        with open(check_file, encoding="utf8") as f:
             code = f.read()
             if has_fixits(code):
                 return ' "Yes"'
@@ -487,7 +487,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
         if base_class := get_base_class(code, check_file):
             base_file = os.path.join(clang_tidy_path, dirname, base_class + ".cpp")
             if os.path.isfile(base_file):
-                with io.open(base_file, encoding="utf8") as f:
+                with open(base_file, encoding="utf8") as f:
                     code = f.read()
                     if has_fixits(code):
                         return ' "Yes"'
@@ -497,7 +497,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
     def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[Match[str]]]:
         check_name = doc_file[0] + "-" + doc_file[1].replace(".rst", "")
 
-        with io.open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
+        with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
             content = doc.read()
 
             if match := re.search(".*:orphan:.*", content):
@@ -574,7 +574,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
         return ""
 
     print("Updating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         for line in lines:
             f.write(line)
             if line.strip() == ".. csv-table::":
@@ -598,7 +598,7 @@ def write_docs(module_path: str, module: str, check_name: str) -> None:
         )
     )
     print("Creating %s..." % filename)
-    with io.open(filename, "w", encoding="utf8", newline="\n") as f:
+    with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
             """.. title:: clang-tidy - %(check_name_dashes)s
 
