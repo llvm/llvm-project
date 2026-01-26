@@ -81,7 +81,7 @@ __global__ void k4(SingleElement) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local amdgpu_kernel void @_Z2k55ByRef(
-// AMDGPU-SAME: ptr addrspace(4) noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGPU-SAME: ptr addrspace(4) noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -117,7 +117,7 @@ __global__ void k7(unsigned*) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f0s(
-// AMDGPU-SAME: i16 noundef signext [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// AMDGPU-SAME: i16 noundef signext [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -129,7 +129,7 @@ __device__ void f0(short) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f1j(
-// AMDGPU-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -141,7 +141,7 @@ __device__ void f1(unsigned) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f2d(
-// AMDGPU-SAME: double noundef [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: double noundef [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -153,7 +153,7 @@ __device__ void f2(double) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f311Transparent(
-// AMDGPU-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -165,7 +165,7 @@ __device__ void f3(Transparent) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f413SingleElement(
-// AMDGPU-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -177,7 +177,7 @@ __device__ void f4(SingleElement) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f55ByRef(
-// AMDGPU-SAME: ptr addrspace(5) noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ptr addrspace(5) noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -189,7 +189,7 @@ __device__ void f5(ByRef) { }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z2f6Dv1_jDv2_jDv3_jDv4_j(
-// AMDGPU-SAME: <1 x i32> noundef [[TMP0:%.*]], <2 x i32> noundef [[TMP1:%.*]], <3 x i32> noundef [[TMP2:%.*]], <4 x i32> noundef [[TMP3:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: <1 x i32> noundef [[TMP0:%.*]], <2 x i32> noundef [[TMP1:%.*]], <3 x i32> noundef [[TMP2:%.*]], <4 x i32> noundef [[TMP3:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret void
 //
@@ -201,7 +201,7 @@ __device__ void f6(V1, V2, V3, V4) { }
 // AMDGCNSPIRV-NEXT:    ret i16 0
 //
 // AMDGPU-LABEL: define dso_local noundef signext i16 @_Z2f7v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret i16 0
 //
@@ -213,7 +213,7 @@ __device__ short f7() { return 0; }
 // AMDGCNSPIRV-NEXT:    ret i32 0
 //
 // AMDGPU-LABEL: define dso_local noundef i32 @_Z2f8v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret i32 0
 //
@@ -225,7 +225,7 @@ __device__ unsigned f8() { return 0; }
 // AMDGCNSPIRV-NEXT:    ret double 0.000000e+00
 //
 // AMDGPU-LABEL: define dso_local noundef double @_Z2f9v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret double 0.000000e+00
 //
@@ -237,7 +237,7 @@ __device__ double f9() { return 0.; }
 // AMDGCNSPIRV-NEXT:    ret i32 0
 //
 // AMDGPU-LABEL: define dso_local noundef i32 @_Z3f10v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret i32 0
 //
@@ -249,7 +249,7 @@ __device__ Transparent f10() { return {}; }
 // AMDGCNSPIRV-NEXT:    ret i32 0
 //
 // AMDGPU-LABEL: define dso_local noundef i32 @_Z3f11v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret i32 0
 //
@@ -262,7 +262,7 @@ __device__ SingleElement f11() { return {}; }
 // AMDGCNSPIRV-NEXT:    ret void
 //
 // AMDGPU-LABEL: define dso_local void @_Z3f12v(
-// AMDGPU-SAME: ptr addrspace(5) dead_on_unwind noalias writable writeonly sret([[STRUCT_BYREF:%.*]]) align 4 captures(none) initializes((0, 68)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// AMDGPU-SAME: ptr addrspace(5) dead_on_unwind noalias writable writeonly sret([[STRUCT_BYREF:%.*]]) align 4 captures(none) initializes((0, 68)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    tail call void @llvm.memset.p5.i64(ptr addrspace(5) noundef align 4 dereferenceable(68) [[AGG_RESULT]], i8 0, i64 68, i1 false)
 // AMDGPU-NEXT:    ret void
@@ -275,7 +275,7 @@ __device__ ByRef f12() { return {}; }
 // AMDGCNSPIRV-NEXT:    ret <1 x i32> zeroinitializer
 //
 // AMDGPU-LABEL: define dso_local noundef <1 x i32> @_Z3f13v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret <1 x i32> zeroinitializer
 //
@@ -287,7 +287,7 @@ __device__ V1 f13() { return {}; }
 // AMDGCNSPIRV-NEXT:    ret <2 x i32> zeroinitializer
 //
 // AMDGPU-LABEL: define dso_local noundef <2 x i32> @_Z3f14v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret <2 x i32> zeroinitializer
 //
@@ -299,7 +299,7 @@ __device__ V2 f14() { return {}; }
 // AMDGCNSPIRV-NEXT:    ret <3 x i32> zeroinitializer
 //
 // AMDGPU-LABEL: define dso_local noundef <3 x i32> @_Z3f15v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret <3 x i32> zeroinitializer
 //
@@ -311,7 +311,7 @@ __device__ V3 f15() { return {}; }
 // AMDGCNSPIRV-NEXT:    ret <4 x i32> zeroinitializer
 //
 // AMDGPU-LABEL: define dso_local noundef <4 x i32> @_Z3f16v(
-// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// AMDGPU-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    ret <4 x i32> zeroinitializer
 //
@@ -319,3 +319,11 @@ __device__ V4 f16() { return {}; }
 //.
 // AMDGCNSPIRV: [[META9]] = !{i32 1024, i32 1, i32 1}
 //.
+
+// For recording purpose of AMDGPU
+// attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx906" "uniform-work-group-size"="true" }
+// attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx906" "uniform-work-group-size"="true" }
+// attributes #2 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx906" "uniform-work-group-size"="false" }
+// attributes #3 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx906" "uniform-work-group-size"="false" }
+// attributes #4 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx906" "uniform-work-group-size"="false" }
+// attributes #5 = { mustprogress nocallback nofree nounwind willreturn memory(argmem: write) }

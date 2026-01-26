@@ -874,8 +874,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [](ModulePassManager &PM, OptimizationLevel Level,
-         ThinOrFullLTOPhase Phase) {
+      [this](ModulePassManager &PM, OptimizationLevel Level,
+             ThinOrFullLTOPhase Phase) {
         if (!isLTOPreLink(Phase)) {
           // When we are not using -fgpu-rdc, we can run accelerator code
           // selection relatively early, but still after linking to prevent
@@ -898,6 +898,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
+
+        if (!isLTOPreLink(Phase))
+          if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
+            AMDGPUAttributorOptions Opts;
+            PM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+          }
       });
 
   PB.registerPeepholeEPCallback(
@@ -944,20 +950,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
-
-  // FIXME: Why is AMDGPUAttributor not in CGSCC?
-  PB.registerOptimizerLastEPCallback([this](ModulePassManager &MPM,
-                                            OptimizationLevel Level,
-                                            ThinOrFullLTOPhase Phase) {
-    if (Level != OptimizationLevel::O0) {
-      if (!isLTOPreLink(Phase)) {
-        if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
-          AMDGPUAttributorOptions Opts;
-          MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
-        }
-      }
-    }
-  });
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
