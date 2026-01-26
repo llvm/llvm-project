@@ -153,14 +153,14 @@ struct InitializerInsertion {
       const std::optional<Token> Tok = utils::lexer::getPreviousToken(
           Constructor.getBody()->getBeginLoc(), Context.getSourceManager(),
           Context.getLangOpts());
-      Location = Tok.has_value() ? Tok->getLocation() : SourceLocation{};
+      Location = Tok ? Tok->getLocation() : SourceLocation{};
       break;
     }
     case InitializerPlacement::Before: {
       const std::optional<Token> Tok = utils::lexer::getPreviousToken(
           Where->getSourceRange().getBegin(), Context.getSourceManager(),
           Context.getLangOpts());
-      Location = Tok.has_value() ? Tok->getLocation() : SourceLocation{};
+      Location = Tok ? Tok->getLocation() : SourceLocation{};
       break;
     }
     case InitializerPlacement::After:
