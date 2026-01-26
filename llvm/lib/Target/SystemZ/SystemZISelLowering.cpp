@@ -847,16 +847,16 @@ bool SystemZTargetLowering::useSoftFloat() const {
 }
 
 unsigned SystemZTargetLowering::getVectorTypeBreakdownForCallingConv(
-      LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
-      unsigned &NumIntermediates, MVT &RegisterVT) const {
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Pass fp16 vectors in VR(s).
   if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16) {
     IntermediateVT = RegisterVT = MVT::v8f16;
-    return NumIntermediates = divideCeil(VT.getVectorNumElements(),
-                                         SystemZ::VectorBytes / 2);
+    return NumIntermediates =
+               divideCeil(VT.getVectorNumElements(), SystemZ::VectorBytes / 2);
   }
-  return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT,
-                         IntermediateVT, NumIntermediates, RegisterVT);
+  return TargetLowering::getVectorTypeBreakdownForCallingConv(
+      Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
 }
 
 MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
@@ -873,9 +873,8 @@ MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
-unsigned SystemZTargetLowering::
-getNumRegistersForCallingConv(LLVMContext &Context, CallingConv::ID CC,
-                              EVT VT) const {
+unsigned SystemZTargetLowering::getNumRegistersForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
   // Pass fp16 vectors in VR(s).
   if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16)
     return divideCeil(VT.getVectorNumElements(), SystemZ::VectorBytes / 2);

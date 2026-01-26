@@ -82,9 +82,11 @@ public:
       return 1;
     return TargetLowering::getNumRegisters(Context, VT);
   }
-  unsigned getVectorTypeBreakdownForCallingConv(
-      LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
-      unsigned &NumIntermediates, MVT &RegisterVT) const override;
+  unsigned
+  getVectorTypeBreakdownForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                       EVT VT, EVT &IntermediateVT,
+                                       unsigned &NumIntermediates,
+                                       MVT &RegisterVT) const override;
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,

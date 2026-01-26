@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z16 | FileCheck %s --check-prefix=VECTOR
 ;
-; Test insertions into fp16 undef vectors.
+; Test insertions into fp16 vectors.
 
 define <8 x half> @f0(half %val) {
 ; CHECK-LABEL: f0:
@@ -18,7 +18,7 @@ define <8 x half> @f0(half %val) {
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h def $v0
 ; VECTOR-NEXT:    vreph %v24, %v0, 0
 ; VECTOR-NEXT:    br %r14
-  %ret = insertelement <8 x half> undef, half %val, i32 2
+  %ret = insertelement <8 x half> poison, half %val, i32 2
   ret <8 x half> %ret
 }
 
@@ -37,7 +37,7 @@ define <8 x half> @f1(half %val) {
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h def $v0
 ; VECTOR-NEXT:    vreph %v24, %v0, 0
 ; VECTOR-NEXT:    br %r14
-  %v0 = insertelement <8 x half> undef, half %val, i32 2
+  %v0 = insertelement <8 x half> poison, half %val, i32 2
   %ret = insertelement <8 x half> %v0, half %val, i32 3
   ret <8 x half> %ret
 }
@@ -63,7 +63,7 @@ define <8 x half> @f2(half %val0, half %val1) {
 ; VECTOR-NEXT:    vmrhf %v0, %v0, %v0
 ; VECTOR-NEXT:    vmrhg %v24, %v0, %v0
 ; VECTOR-NEXT:    br %r14
-  %v0 = insertelement <8 x half> undef, half %val0, i32 2
+  %v0 = insertelement <8 x half> poison, half %val0, i32 2
   %ret = insertelement <8 x half> %v0, half %val1, i32 3
   ret <8 x half> %ret
 }
@@ -91,7 +91,7 @@ define <8 x half> @f3(half %val0, half %val1) {
 ; VECTOR-NEXT:    vmrhf %v0, %v0, %v0
 ; VECTOR-NEXT:    vmrhg %v24, %v0, %v0
 ; VECTOR-NEXT:    br %r14
-  %v0 = insertelement <8 x half> undef, half %val0, i32 2
+  %v0 = insertelement <8 x half> poison, half %val0, i32 2
   %v1 = insertelement <8 x half> %v0, half %val1, i32 3
   %v2 = insertelement <8 x half> %v1, half %val0, i32 4
   %ret = insertelement <8 x half> %v2, half %val1, i32 5
