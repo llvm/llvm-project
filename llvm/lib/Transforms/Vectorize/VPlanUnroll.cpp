@@ -551,9 +551,11 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 
     // Look through buildvector to avoid unnecessary extracts.
     if (match(Op, m_BuildVector())) {
-      NewOps.push_back(
-          cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
-      continue;
+      auto *BV = cast<VPInstruction>(Op);
+      if (BV->getNumOperands() > Lane.getKnownLane()) {
+        NewOps.push_back(BV->getOperand(Lane.getKnownLane()));
+        continue;
+      }
     }
     VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
@@ -584,19 +586,14 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
 
-  // Visit VPBBs in DFS order, excluding replicate regions, to ensure
-  // definitions are processed before uses.
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  SmallVector<VPBasicBlock *> VPBBsToUnroll;
-  for (VPBlockBase *Block : vp_depth_first_shallow(Plan.getEntry())) {
-    if (Block == LoopRegion) {
-      auto LoopBlocks = VPBlockUtils::blocksOnly<VPBasicBlock>(
-          vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()));
-      VPBBsToUnroll.append(LoopBlocks.begin(), LoopBlocks.end());
-      continue;
-    }
-    VPBBsToUnroll.push_back(cast<VPBasicBlock>(Block));
-  }
+  // Visit all VPBBs outside the loop region and directly inside the top-level
+  // loop region.
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()));
+  auto VPBBsToUnroll =
+      concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion);
   // A mapping of current VPValue definitions to collections of new VPValues
   // defined per lane. Serves to hook-up potential users of current VPValue
   // definition that are replicated-per-VF later.
