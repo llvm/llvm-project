@@ -948,9 +948,8 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
                 }
               }
             } else {
-              Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32)
-                           ? AMDGPU::S_ADDK_I32
-                           : AMDGPU::S_MULK_I32;
+              Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ? AMDGPU::S_ADDK_I32
+                                                          : AMDGPU::S_MULK_I32;
             }
 
             if (Opc != 0) {
