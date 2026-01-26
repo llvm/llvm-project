@@ -26,6 +26,7 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -810,7 +811,7 @@ void LayoutInfoPropagation::visitDpasOp(
       }
       instDataCD = {maxALen, maxCLen};
     }
-    if (layoutKind == LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData) {
       dpasALayout =
           LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataA));
       dpasBLayout =
@@ -819,7 +820,7 @@ void LayoutInfoPropagation::visitDpasOp(
         dpasCDLayout =
             LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataCD));
       }
-    } else if (layoutKind == LayoutKind::Lane) {
+    } else if (layoutKind == xegpu::LayoutKind::Lane) {
       dpasALayout = getSIMTLayoutInfoForDPASOperand(
           aTy, 0, uArch, uArchInstruction->getPackedFormatBitSizeA());
       dpasBLayout = getSIMTLayoutInfoForDPASOperand(
@@ -981,7 +982,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     if (layoutKind == xegpu::LayoutKind::InstData)
       storeLayout =
           LayoutInfo(xegpu::LayoutAttr::get(dataTy.getContext(), instData));
-    else if (layoutKind == LayoutKind::Lane)
+    else if (layoutKind == xegpu::LayoutKind::Lane)
       storeLayout =
           getSIMTLayoutInfoBlockIO(store.getValueType(), uArch,
                                    uArchInstruction->getPackedFormatBitSize());
@@ -1171,7 +1172,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
             uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
 
     // Check if value inst_data complies with uArch
-    if (layoutKind == LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData) {
       // Each lane loads either one element
       SmallVector<int> instDataUarch{subgroupSize};
       // Or multiple elements as 2D with lane's elements in the inner dimension
@@ -1213,10 +1214,10 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   // Rank >1 data: Enforce the default xegpu 1D layout for mask.
   if (!hasParamsOfLayoutKind(anchorLayout) ||
       load.getValueType().getRank() > 1) {
-    if (layoutKind == LayoutKind::InstData)
+    if (layoutKind == xegpu::LayoutKind::InstData)
       maskLayout = LayoutInfo(
           xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}));
-    else if (layoutKind == LayoutKind::Lane)
+    else if (layoutKind == xegpu::LayoutKind::Lane)
       maskLayout =
           getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
   }
@@ -1271,7 +1272,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       return;
     }
 
-    if (layoutKind == LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData) {
       const auto *uArchInstruction =
           dyn_cast<xegpu::uArch::StoreScatterInstruction>(uArch->getInstruction(
               xegpu::uArch::InstructionKind::StoreScatter));
@@ -1308,10 +1309,10 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // Rank >1 data: Enforce the default xegpu 1D layout for mask.
   if (!hasParamsOfLayoutKind(anchorLayout) ||
       storeScatter.getValueType().getRank() > 1) {
-    if (layoutKind == LayoutKind::InstData)
+    if (layoutKind == xegpu::LayoutKind::InstData)
       maskLayout = LayoutInfo(
           xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize}));
-    else if (layoutKind == LayoutKind::Lane)
+    else if (layoutKind == xegpu::LayoutKind::Lane)
       maskLayout =
           getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
   }
@@ -1345,7 +1346,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     assert(payloadTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
     SmallVector<int> instData = {1, uArch->getSubgroupSize()};
-    if (layoutKind == LayoutKind::InstData)
+    if (layoutKind == xegpu::LayoutKind::InstData)
       layout = LayoutInfo(
           xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
     else
@@ -1453,60 +1454,93 @@ struct ResolveLayoutConflicts {
 private:
   Operation *parentOp;
   OpBuilder builder;
-  LogicalResult resolveLoadNdOp(xegpu::LoadNdOp loadNdOp);
+  LogicalResult resolveTensorDescConsumer(OpOperand &operand);
+  LogicalResult resolveVectorConsumer(OpOperand &operand);
 };
 
 } // namespace
 
 LogicalResult ResolveLayoutConflicts::run() {
+  // Helper function to get the tensor descriptor operand, or null if none found
+  // TODO: We assume only one tensor descriptor operand per op.
+  auto getTensorDescOperand = [](Operation *op) -> OpOperand * {
+    for (OpOperand &opnd : op->getOpOperands()) {
+      if (isa<xegpu::TensorDescType>(opnd.get().getType())) {
+        return &opnd;
+      }
+    }
+    return nullptr;
+  };
+
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
-    TypeSwitch<Operation *>(op).Case([&](xegpu::LoadNdOp loadNdOp) {
-      return failed(resolveLoadNdOp(loadNdOp)) ? WalkResult::interrupt()
-                                               : WalkResult::advance();
-    });
-    // TODO: Add other layout conflict resolution methods as needed.
+    // Check if this op is an anchor op and at least one operand is a tensor
+    // descriptor type.
+    OpOperand *tdescOperand = getTensorDescOperand(op);
+    if (isa<xegpu::AnchorLayoutInterface>(op) && tdescOperand) {
+      auto res = resolveTensorDescConsumer(*tdescOperand);
+      return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+    }
     return WalkResult::advance();
   });
 
   return r.wasInterrupted() ? failure() : success();
 }
 
-/// LoadNd has a conflict if the tensor descriptor layout is different from the
-/// load's anchor layout.
-LogicalResult
-ResolveLayoutConflicts::resolveLoadNdOp(xegpu::LoadNdOp loadNdOp) {
-  Attribute anchorLayout = loadNdOp.getLayoutAttr();
-  Attribute tdescLayout = loadNdOp.getTensorDescType().getLayout();
+/// Helper to get the defining CreateNdDescOp of a tensor descriptor value. This
+/// function tries to find the defining CreateNdDescOp recursively accross
+/// control-flow boundaries.
+static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
+  // Try to get the defining CreateNdDescOp of the tensor descriptor.
+  auto definingOp = tdescValue.getDefiningOp<xegpu::CreateNdDescOp>();
+  if (definingOp)
+    return definingOp;
+  // If tdescValue is an argument, try to get the tied init value from the
+  // parent loop-like op.
+  if (auto arg = dyn_cast<BlockArgument>(tdescValue)) {
+    auto *parentOp = arg.getOwner()->getParentOp();
+    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
+      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
+      if (tiedInit)
+        return getDefiningCreateNdDescOp(tiedInit->get());
+    }
+  }
+  // If not found, return null.
+  return nullptr;
+}
 
-  if (anchorLayout && tdescLayout && anchorLayout != tdescLayout) {
+LogicalResult
+ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
+  Operation *consumerOp = operand.getOwner();
+  Value tdescValue = operand.get();
+  auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(consumerOp);
+  auto currTDescType = dyn_cast<xegpu::TensorDescType>(tdescValue.getType());
+  assert(anchorOp && currTDescType &&
+         "Expected anchor layout op and tensor descriptor consumer.");
+  Attribute currLayout = currTDescType.getLayout();
+  Attribute expectedLayout = anchorOp.getAnchorLayout();
+  // A conflict exists in tensot descriptor operand if tensor descriptor's
+  // layout is different from the anchor layout expected by the consumer.
+  if (expectedLayout && currLayout && expectedLayout != currLayout) {
     // Try to get the defining CreateNdDescOp of the tensor descriptor.
-    auto conflictingCreateNdOp =
-        loadNdOp.getTensorDesc().getDefiningOp<xegpu::CreateNdDescOp>();
+    auto conflictingCreateNdOp = getDefiningCreateNdDescOp(tdescValue);
     if (!conflictingCreateNdOp) {
       DBGS() << "Unable to find defining CreateNdDescOp for tensor descriptor: "
-             << loadNdOp.getTensorDesc() << "\n";
+             << tdescValue << "\n";
       return failure();
     }
     // Duplicate the CreateNdDescOp with the expected layout.
     builder.setInsertionPointAfter(conflictingCreateNdOp);
-    xegpu::TensorDescType tdescType = loadNdOp.getTensorDescType();
-    auto expectedLayout = anchorLayout;
     auto newTensorDescType = xegpu::TensorDescType::get(
-        conflictingCreateNdOp.getContext(), tdescType.getShape(),
-        tdescType.getElementType(), tdescType.getEncoding(), expectedLayout);
+        conflictingCreateNdOp.getContext(), currTDescType.getShape(),
+        currTDescType.getElementType(), currTDescType.getEncoding(),
+        expectedLayout);
     xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
-        builder, loadNdOp.getLoc(), newTensorDescType,
+        builder, consumerOp->getLoc(), newTensorDescType,
         conflictingCreateNdOp->getOperands(),
         conflictingCreateNdOp->getAttrs());
-    // Replace only the conflicting uses of the createNdOp that can be
-    // resolved using the new layout.
-    conflictingCreateNdOp->replaceUsesWithIf(
-        ArrayRef<Value>(newOp.getResult()), [&](OpOperand &opnd) {
-          auto userLoadNdOp = dyn_cast<xegpu::LoadNdOp>(opnd.getOwner());
-          if (!userLoadNdOp)
-            return false;
-          return userLoadNdOp.getLayoutAttr() == expectedLayout;
-        });
+    // Replace the tensor descriptor operand in the consumer op with the new
+    // tensor descriptor.
+    consumerOp->replaceUsesOfWith(tdescValue, newOp.getResult());
   }
   return success();
 }
