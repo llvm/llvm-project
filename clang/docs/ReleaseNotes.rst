@@ -185,6 +185,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Fixed an assertion failure when checking literal types with malformed destructor declarations. (#GH177894)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

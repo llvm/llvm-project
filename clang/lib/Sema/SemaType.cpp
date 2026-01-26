@@ -9679,7 +9679,6 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
     // destructors. If this class's destructor is non-trivial / non-constexpr,
     // it must be user-declared.
     CXXDestructorDecl *Dtor = RD->getDestructor();
-    assert(Dtor && "class has literal fields and bases but no dtor?");
     if (!Dtor)
       return true;
 

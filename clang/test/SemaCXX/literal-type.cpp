@@ -176,3 +176,12 @@ static_assert(__is_literal(UnionWithNonLiteralMemberConstexprDtor2), "fail");
 #endif
 }
 #endif
+
+
+namespace GH177894 {
+struct S {
+  ~S() = (0); // expected-error {{initializer on function does not look like a pure-specifier}}
+};
+
+void bar() { S s; }
+}
