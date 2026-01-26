@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test requires noexcept
+// UNSUPPORTED: c++03
+
 // GCC doesn't support -Wfunction-effect-analysis and the associated attributes
 // UNSUPPORTED: gcc
 
