@@ -55,6 +55,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -699,7 +700,9 @@ private:
     TempDtorContext() = default;
     TempDtorContext(TryResult KnownExecuted)
         : IsConditional(true), KnownExecuted(KnownExecuted) {}
-
+    TempDtorContext(TryResult KnownExecuted, bool TrackExpiringMTEs)
+        : IsConditional(true), TrackExpiringMTEs(TrackExpiringMTEs),
+          KnownExecuted(KnownExecuted) {}
     /// Returns whether we need to start a new branch for a temporary destructor
     /// call. This is the case when the temporary destructor is
     /// conditionally executed, and it is the first one we encounter while
@@ -717,7 +720,16 @@ private:
       TerminatorExpr = E;
     }
 
+    void track(const MaterializeTemporaryExpr *MTE) {
+      // Must only be invoked when TrackMTE is true
+      assert(TrackExpiringMTEs);
+      if (MTE)
+        CollectedMTEs.push_back(MTE);
+    }
+
     const bool IsConditional = false;
+    bool TrackExpiringMTEs = false;
+    SmallVector<const MaterializeTemporaryExpr *, 5> CollectedMTEs;
     const TryResult KnownExecuted = true;
     CFGBlock *Succ = nullptr;
     CXXBindTemporaryExpr *TerminatorExpr = nullptr;
@@ -806,6 +818,7 @@ private:
   void addScopeChangesHandling(LocalScope::const_iterator SrcPos,
                                LocalScope::const_iterator DstPos,
                                Stmt *S);
+  void addFullExprCleanupMarker(TempDtorContext &Context);
   CFGBlock *createScopeChangesHandlingBlock(LocalScope::const_iterator SrcPos,
                                             CFGBlock *SrcBlk,
                                             LocalScope::const_iterator DstPost,
@@ -1827,8 +1840,11 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
     if (BuildOpts.AddTemporaryDtors && HasTemporaries) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
+      Context.TrackExpiringMTEs = true;
       VisitForTemporaryDtors(cast<ExprWithCleanups>(Init)->getSubExpr(),
                              /*ExternallyDestructed=*/false, Context);
+
+      addFullExprCleanupMarker(Context);
     }
   }
 
@@ -2074,6 +2090,23 @@ void CFGBuilder::addScopeChangesHandling(LocalScope::const_iterator SrcPos,
   // Append scopeEnds, destructor and lifetime with the terminator for
   // block left by goto.
   addAutomaticObjHandling(SrcPos, BasePos, S);
+}
+
+void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context) {
+  assert(Context.TrackExpiringMTEs);
+
+  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
+  MTEVecTy *ExpiringMTEs = nullptr;
+  BumpVectorContext &BVC = cfg->getBumpVectorContext();
+
+  size_t NumCollected = Context.CollectedMTEs.size();
+  if (NumCollected > 0) {
+    autoCreateBlock();
+    ExpiringMTEs = new (cfg->getAllocator()) MTEVecTy(BVC, NumCollected);
+    for (const MaterializeTemporaryExpr *MTE : Context.CollectedMTEs)
+      ExpiringMTEs->push_back(MTE, BVC);
+    Block->appendFullExprCleanup(ExpiringMTEs, BVC);
+  }
 }
 
 /// createScopeChangesHandlingBlock - Creates a block with cfgElements
@@ -3137,8 +3170,11 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
     if (BuildOpts.AddTemporaryDtors && HasTemporaries) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
+      Context.TrackExpiringMTEs = true;
       VisitForTemporaryDtors(cast<ExprWithCleanups>(Init)->getSubExpr(),
                              /*ExternallyDestructed=*/true, Context);
+
+      addFullExprCleanupMarker(Context);
     }
   }
 
@@ -4956,12 +4992,16 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 }
 
 CFGBlock *CFGBuilder::VisitExprWithCleanups(ExprWithCleanups *E,
-    AddStmtChoice asc, bool ExternallyDestructed) {
+                                            AddStmtChoice asc,
+                                            bool ExternallyDestructed) {
   if (BuildOpts.AddTemporaryDtors) {
     // If adding implicit destructors visit the full expression for adding
     // destructors of temporaries.
     TempDtorContext Context;
+    Context.TrackExpiringMTEs = true;
     VisitForTemporaryDtors(E->getSubExpr(), ExternallyDestructed, Context);
+
+    addFullExprCleanupMarker(Context);
 
     // Full expression has to be added as CFGStmt so it will be sequenced
     // before destructors of it's temporaries.
@@ -5153,6 +5193,8 @@ tryAgain:
     case Stmt::MaterializeTemporaryExprClass: {
       const MaterializeTemporaryExpr* MTE = cast<MaterializeTemporaryExpr>(E);
       ExternallyDestructed = (MTE->getStorageDuration() != SD_FullExpression);
+      if (Context.TrackExpiringMTEs && !ExternallyDestructed)
+        Context.track(MTE);
       SmallVector<const Expr *, 2> CommaLHSs;
       SmallVector<SubobjectAdjustment, 2> Adjustments;
       // Find the expression whose lifetime needs to be extended.
@@ -5244,9 +5286,13 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaryDtors(
     // executed, thus we add a branch node that depends on the temporary
     // constructor call.
     TempDtorContext RHSContext(
-        bothKnownTrue(Context.KnownExecuted, RHSExecuted));
+        bothKnownTrue(Context.KnownExecuted, RHSExecuted),
+        Context.TrackExpiringMTEs);
     VisitForTemporaryDtors(E->getRHS(), false, RHSContext);
     InsertTempDtorDecisionBlock(RHSContext);
+
+    if (Context.TrackExpiringMTEs)
+      Context.CollectedMTEs.append(RHSContext.CollectedMTEs);
 
     return Block;
   }
@@ -5338,14 +5384,15 @@ CFGBlock *CFGBuilder::VisitConditionalOperatorForTemporaryDtors(
   if (NegatedVal.isKnown()) NegatedVal.negate();
 
   TempDtorContext TrueContext(
-      bothKnownTrue(Context.KnownExecuted, ConditionVal));
+      bothKnownTrue(Context.KnownExecuted, ConditionVal),
+      Context.TrackExpiringMTEs);
   VisitForTemporaryDtors(E->getTrueExpr(), ExternallyDestructed, TrueContext);
   CFGBlock *TrueBlock = Block;
 
   Block = ConditionBlock;
   Succ = ConditionSucc;
-  TempDtorContext FalseContext(
-      bothKnownTrue(Context.KnownExecuted, NegatedVal));
+  TempDtorContext FalseContext(bothKnownTrue(Context.KnownExecuted, NegatedVal),
+                               Context.TrackExpiringMTEs);
   VisitForTemporaryDtors(E->getFalseExpr(), ExternallyDestructed, FalseContext);
 
   if (TrueContext.TerminatorExpr && FalseContext.TerminatorExpr) {
@@ -5356,6 +5403,11 @@ CFGBlock *CFGBuilder::VisitConditionalOperatorForTemporaryDtors(
   } else {
     InsertTempDtorDecisionBlock(FalseContext);
   }
+  if (Context.TrackExpiringMTEs) {
+    Context.CollectedMTEs.append(TrueContext.CollectedMTEs);
+    Context.CollectedMTEs.append(FalseContext.CollectedMTEs);
+  }
+
   return Block;
 }
 
@@ -6035,6 +6087,13 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
   case CFGElement::Kind::LifetimeEnds:
     Helper.handleDecl(E.castAs<CFGLifetimeEnds>().getVarDecl(), OS);
     OS << " (Lifetime ends)";
+    break;
+
+  case CFGElement::Kind::FullExprCleanup:
+    OS << "(FullExprCleanup collected "
+       << std::to_string(
+              E.castAs<CFGFullExprCleanup>().getExpiringMTEs().size())
+       << " MTEs)";
     break;
 
   case CFGElement::Kind::LoopExit:
