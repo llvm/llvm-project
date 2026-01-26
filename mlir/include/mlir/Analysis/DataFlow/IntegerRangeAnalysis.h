@@ -63,7 +63,8 @@ public:
 
   /// Visit block arguments or operation results of an operation with region
   /// control-flow for which values are not defined by region control-flow. This
-  /// function tries to reduce the range on loop induction variables with
+  /// function calls `InferIntRangeInterface` to provide values for block
+  /// arguments or tries to reduce the range on loop induction variables with
   /// known bounds.
   void visitNonControlFlowArguments(
       Operation *op, const RegionSuccessor &successor,
