@@ -185,6 +185,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -198,7 +199,6 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
-- Fixed a crash when diagnosing invalid deducing-this member function overloads which is annotated as static. (#GH177741)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
 
 OpenACC Specific Changes
