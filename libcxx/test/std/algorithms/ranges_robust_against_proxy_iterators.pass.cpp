@@ -191,7 +191,9 @@ constexpr void run_tests() {
   test(std::ranges::sort_heap, in);
   test(std::ranges::prev_permutation, in);
   test(std::ranges::next_permutation, in);
-
+#if TEST_STD_VER >= 23
+  test(std::ranges::shift_left, in, count);
+#endif
   // The algorithms that work on uninitialized memory have constraints that prevent proxy iterators from being used with
   // them.
 }
