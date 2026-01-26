@@ -492,6 +492,64 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+template <Intrinsic::ID ID>
+static Instruction *foldSelectIntrinsicUnary(SelectInst &SI,
+                                             InstCombiner::BuilderTy &Builder) {
+  Value *TrueV = SI.getTrueValue();
+  Value *FalseV = SI.getFalseValue();
+  Value *TV = nullptr, *FV = nullptr;
+
+  if (match(TrueV, m_Intrinsic<ID>(m_Value(TV))) &&
+      match(FalseV, m_Intrinsic<ID>(m_Value(FV)))) {
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV);
+    Instruction *NewCall =
+        Builder.CreateIntrinsic(ID, {NewSel->getType()}, {NewSel});
+    return NewCall;
+  }
+  return nullptr;
+}
+
+template <Intrinsic::ID ID>
+static Instruction *
+foldSelectIntrinsicBinary(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
+  Value *TrueV = SI.getTrueValue();
+  Value *FalseV = SI.getFalseValue();
+  Value *TV = nullptr, *FV = nullptr;
+  ConstantInt *TZ = nullptr, *FZ = nullptr;
+
+  if (match(TrueV, m_Intrinsic<ID>(m_Value(TV), m_ConstantInt(TZ))) &&
+      match(FalseV, m_Intrinsic<ID>(m_Value(FV), m_ConstantInt(FZ))) &&
+      TZ == FZ) {
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV);
+    Instruction *NewCall =
+        Builder.CreateIntrinsic(ID, {NewSel->getType()}, {NewSel, TZ});
+    return NewCall;
+  }
+  return nullptr;
+}
+
+/// This transforms patterns of the form:
+///   select cond, intrinsic(x, ...), intrinsic(y, ...)
+/// into:
+///   intrinsic(select cond, x, y, ...)
+Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
+  Instruction *ResCall = nullptr;
+
+  if ((ResCall = foldSelectIntrinsicUnary<Intrinsic::ctpop>(SI, Builder))) {
+    return replaceInstUsesWith(SI, ResCall);
+  }
+  if ((ResCall = foldSelectIntrinsicBinary<Intrinsic::ctlz>(SI, Builder))) {
+    return replaceInstUsesWith(SI, ResCall);
+  }
+  if ((ResCall = foldSelectIntrinsicBinary<Intrinsic::cttz>(SI, Builder))) {
+    return replaceInstUsesWith(SI, ResCall);
+  }
+  if ((ResCall = foldSelectIntrinsicBinary<Intrinsic::abs>(SI, Builder))) {
+    return replaceInstUsesWith(SI, ResCall);
+  }
+  return nullptr;
+}
+
 static bool isSelect01(const APInt &C1I, const APInt &C2I) {
   if (!C1I.isZero() && !C2I.isZero()) // One side must be zero.
     return false;
@@ -4439,6 +4497,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (TI && FI && TI->getOpcode() == FI->getOpcode())
     if (Instruction *IV = foldSelectOpOp(SI, TI, FI))
       return IV;
+
+  if (Instruction *I = foldSelectIntrinsic(SI))
+    return I;
 
   if (Instruction *I = foldSelectExtConst(SI))
     return I;
