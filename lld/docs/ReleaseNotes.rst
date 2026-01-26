@@ -31,6 +31,7 @@ ELF Improvements
 
 * ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
   (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
+* Add support for LoongArch32 (LA32R and LA32S) relocations.
 
 Breaking changes
 ----------------
