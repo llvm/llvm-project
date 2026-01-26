@@ -372,16 +372,8 @@ add_entrypoint_object(
   HDRS
     ../sinf.h
   DEPENDS
-    libc.src.__support.math.range_reduction
-    libc.src.__support.math.sincosf_utils
+    libc.src.__support.math.sinf
     libc.src.errno.errno
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
 )
 
 add_entrypoint_object(

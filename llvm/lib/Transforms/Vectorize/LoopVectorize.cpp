@@ -7319,11 +7319,13 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     return;
 
   VPValue *BackedgeVal;
+  bool IsFindIV = false;
   if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult ||
       EpiRedResult->getOpcode() == VPInstruction::ComputeReductionResult)
     BackedgeVal = EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
-  else if (!matchFindIVResult(EpiRedResult, m_VPValue(BackedgeVal),
-                              m_VPValue()))
+  else if (matchFindIVResult(EpiRedResult, m_VPValue(BackedgeVal), m_VPValue()))
+    IsFindIV = true;
+  else
     return;
 
   auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
@@ -7337,7 +7339,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
         vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
   }
 
-  RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
     assert((VPI->getOpcode() == VPInstruction::Broadcast ||
@@ -7346,7 +7347,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   } else
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
     [[maybe_unused]] Value *StartV =
         EpiRedResult->getOperand(0)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
@@ -7356,7 +7357,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
-  } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
+  } else if (IsFindIV) {
     MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
@@ -9412,7 +9413,6 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      RecurKind RK = ReductionPhi->getRecurrenceKind();
       // Find the reduction result by searching users of the phi or its backedge
       // value.
       auto IsReductionResult = [](VPRecipeBase *R) {
@@ -9428,7 +9428,18 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
 
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+
+      // Check for FindIV pattern by looking for icmp user of RdxResult.
+      // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
+      using namespace VPlanPatternMatch;
+      VPValue *SentinelVPV = nullptr;
+      bool IsFindIV = any_of(RdxResult->users(), [&](VPUser *U) {
+        return match(U, VPlanPatternMatch::m_SpecificICmp(
+                            ICmpInst::ICMP_NE, m_Specific(RdxResult),
+                            m_VPValue(SentinelVPV)));
+      });
+
+      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
         Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
@@ -9438,18 +9449,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
-      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
-        using namespace VPlanPatternMatch;
-        // Find the icmp user of RdxResult to get the sentinel value.
-        // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
-        VPValue *SentinelVPV = nullptr;
-        [[maybe_unused]] bool Found =
-            any_of(RdxResult->users(), [&](VPUser *U) {
-              return match(U, VPlanPatternMatch::m_SpecificICmp(
-                                  ICmpInst::ICMP_NE, m_Specific(RdxResult),
-                                  m_VPValue(SentinelVPV)));
-            });
-        assert(Found && "expected to find icmp using RdxResult");
+      } else if (IsFindIV) {
+        assert(SentinelVPV && "expected to find icmp using RdxResult");
 
         // Get the frozen start value from the main loop.
         Value *FrozenStartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
