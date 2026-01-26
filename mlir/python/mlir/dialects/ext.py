@@ -29,10 +29,14 @@ __all__ = [
     "Dialect",
     "Operand",
     "Result",
+    "register_dialect",
+    "register_operation",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
+register_dialect = _cext.register_dialect
+register_operation = _cext.register_operation
 
 
 class ConstraintLoweringContext:
@@ -424,6 +428,11 @@ class Dialect(ir.Dialect):
     ```
     """
 
+    class ExtOperation(Operation):
+        def __init__(*args, **kwargs):
+            raise RuntimeError("Cannot instantiate Dialect.ExtOperation directly.")
+
+
     @classmethod
     def __init_subclass__(cls, name: str, **kwargs):
         cls.name = name
@@ -431,7 +440,7 @@ class Dialect(ir.Dialect):
         cls.operations = []
         cls.Operation = type(
             "Operation",
-            (Operation,),
+            (cls.ExtOperation,),
             {"_dialect_obj": cls, "_dialect_name": name},
         )
 
@@ -451,21 +460,25 @@ class Dialect(ir.Dialect):
         return m
 
     @classmethod
-    def load(cls) -> None:
-        if hasattr(cls, "_mlir_module"):
+    def load(cls, register=True, context: Optional[ir.Context] = None) -> None:
+        context = context or ir.Context.current
+
+        try:
+            context.dialects[cls.name]
             raise RuntimeError(f"Dialect {cls.name} is already loaded.")
+        except IndexError:
+            pass  # Dialect not loaded yet.
 
-        mlir_module = cls._emit_module()
-
+        cls._mlir_module = cls._emit_module()
         pm = PassManager()
         pm.add("canonicalize, cse")
-        pm.run(mlir_module.operation)
+        pm.run(cls._mlir_module.operation)
 
-        irdl.load_dialects(mlir_module)
+        irdl.load_dialects(cls._mlir_module)
 
-        _cext.register_dialect(cls)
+        if register:
+            _cext.register_dialect(cls)
 
-        for op in cls.operations:
-            _cext.register_operation(cls)(op)
-
-        cls._mlir_module = mlir_module
+            register_dialect_operation = _cext.register_operation(cls)
+            for op in cls.operations:
+                register_dialect_operation(op)

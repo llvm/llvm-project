@@ -194,8 +194,12 @@ public:
       auto pyResults = PyTransformResults(results);
       auto pyState = PyTransformState(state);
 
-      // Invoke `pyClass.apply(op, rewriter, results, state)` as a classmethod.
-      nb::object res = pyApply(op, pyRewriter, pyResults, pyState);
+      // Invoke `pyClass.apply(opview(op), rewriter, results, state)` as a
+      // staticmethod.
+      PyMlirContextRef context =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      auto opview = PyOperation::forOperation(context, op)->createOpView();
+      nb::object res = pyApply(opview, pyRewriter, pyResults, pyState);
 
       return nb::cast<MlirDiagnosedSilenceableFailure>(res);
     };
@@ -208,8 +212,12 @@ public:
       auto pyAllowRepeatedHandleOperands = nb::cast<nb::callable>(
           nb::getattr(pyClass, "allow_repeated_handle_operands"));
 
-      // Invoke `pyClass.allow_repeated_handle_operands(op)` as a classmethod.
-      nb::object res = pyAllowRepeatedHandleOperands(op);
+      // Invoke `pyClass.allow_repeated_handle_operands(opview(op))` as a
+      // staticmethod.
+      PyMlirContextRef context =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      auto opview = PyOperation::forOperation(context, op)->createOpView();
+      nb::object res = pyAllowRepeatedHandleOperands(opview);
 
       return nb::cast<bool>(res);
     };

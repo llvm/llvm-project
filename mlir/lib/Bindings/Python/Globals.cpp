@@ -206,8 +206,7 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   // Make sure dialect module is loaded.
   auto split = operationName.split('.');
   llvm::StringRef dialectNamespace = split.first;
-  if (!loadDialectModule(dialectNamespace))
-    return std::nullopt;
+  loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
   auto foundIt = operationClassMap.find(operationName);

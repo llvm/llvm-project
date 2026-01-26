@@ -1,14 +1,13 @@
-# RUN: %PYTHON %s | FileCheck %s
+# RUN: env PYTHONUNBUFFERED=1 %PYTHON %s 2>&1 | FileCheck %s
 
 from typing import Sequence
 
 from contextlib import contextmanager
 
 from mlir import ir
-from mlir.ir import TypeAttr, F32Type, UnitAttr
-from mlir.dialects import transform, irdl, func, arith
+from mlir.ir import F32Type, UnitAttr
+from mlir.dialects import transform, func, arith, ext
 from mlir.dialects.transform import (
-    debug as transform_debug,
     AnyOpType,
     AnyValueType,
     AnyParamType,
@@ -16,46 +15,30 @@ from mlir.dialects.transform import (
     interpreter,
 )
 
-from mlir.dialects._ods_common import get_op_result_or_value, get_op_results_or_values
+@ext.register_dialect
+class MyTransform(ext.Dialect, name="my_transform"):
+    pass
 
 
 def run(emit_schedule):
-    with ir.Context(), ir.Location.unknown():
-        irdl_module = ir.Module.create()
-        with ir.InsertionPoint(irdl_module.body):
-            my_transform = irdl.dialect("my_transform")
-            with ir.InsertionPoint(my_transform.body):
-                GetNamedAttributeOp.emit_irdl()
-                OneOpInOneOpOut.emit_irdl()
-                OpValParamInParamOpValOut.emit_irdl()
-                OpsParamsInValuesParamOut.emit_irdl()
-        irdl_module.operation.verify()
-
-        print(irdl_module)
-        irdl.load_dialects(irdl_module)
-
-        GetNamedAttributeTransformOpInterfaceFallbackModel.attach(
-            "my_transform." + GetNamedAttributeOp.name
-        )
-        GetNamedAttributeMemoryEffectsOpInterfaceFallbackModel.attach(
-            "my_transform." + GetNamedAttributeOp.name
-        )
-
+    print(f"Test: {emit_schedule.__name__}")
+    with ir.Context() as ctx, ir.Location.unknown():
         payload = emit_payload()
-        schedule = emit_schedule()
 
-        print("payload:", payload)
-        print("schedule:", schedule)
-        named_seq = schedule.operation.regions[0].blocks[0].operations[0]
+        MyTransform.load(register=False)
+
+        GetNamedAttributeOp.attach_interface_impls(ctx)
+        PrintParamOp.attach_interface_impls(ctx)
+
+        # NB: Other newly defined my_transform ops have their interfaces attached
+        #     in their respective test functions.
+        schedule = emit_schedule()
 
         interpreter.apply_named_sequence(
             payload,
-            named_seq,
+            named_seq := schedule.operation.regions[0].blocks[0].operations[0],
             schedule,
         )
-
-    del payload
-    del schedule
 
 
 # Payload used by all tests
@@ -65,224 +48,13 @@ def emit_payload():
 
         @func.FuncOp.from_py_func(F32Type.get(), F32Type.get(), results=[F32Type.get()])
         def name_of_func(a, b):
-            c = arith.AddFOp(a, b)
-            d = arith.constant(F32Type.get(), 42.0)
-            e = arith.constant(F32Type.get(), 24.0)
-            func.ReturnOp([c.results[0]])
+            c = arith.addf(a, b)
+            i32 = ir.IntegerType.get_signless(32)
+            c42 = arith.constant(i32, 42)
+            c24 = arith.constant(i32, 24)
+            func.ReturnOp([c])
 
     return payload_module
-
-
-class GetNamedAttributeOp:
-    name = "get_named_attribute"
-
-    def __init__(self, target: AnyOpType, attr_name: str):
-        self.op = ir.Operation.create(
-            "my_transform.get_named_attribute",
-            [AnyParamType.get()],
-            [get_op_result_or_value(target)],
-            {"attr_name": ir.StringAttr.get(attr_name)},
-        )
-
-    @property
-    def attr_as_param(self) -> ir.Value:
-        return self.op.results[0]
-
-    @classmethod
-    def emit_irdl(cls):
-        op = irdl.operation_(cls.name)
-        with ir.InsertionPoint(op.body):
-            op_handle_type = irdl.is_(TypeAttr.get(AnyOpType.get()))
-            param_handle_type = irdl.is_(TypeAttr.get(AnyParamType.get()))
-            name_handle_kind = irdl.base(base_name="#builtin.string")
-            irdl.operands_(
-                [op_handle_type],
-                ["target"],
-                [irdl.Variadicity.single],
-            )
-            irdl.attributes_([name_handle_kind], ["attr_name"])
-            irdl.results_(
-                [param_handle_type], ["attr_as_param"], [irdl.Variadicity.single]
-            )
-        return op
-
-
-class GetNamedAttributeTransformOpInterfaceFallbackModel(
-    transform.TransformOpInterface
-):
-    @staticmethod
-    def apply(
-        op_: ir.Operation,
-        rewriter: transform.TransformRewriter,
-        results: transform.TransformResults,
-        state: transform.TransformState,
-    ):
-        targets = state.get_payload_ops(target := op_.operands[0])
-        associated_attrs = []
-        for target_op in targets:
-            assoc_attr = target_op.attributes.get(op_.attributes["attr_name"].value)
-            if assoc_attr is None:
-                return transform.DiagnosedSilenceableFailure.RecoverableFailure
-            associated_attrs.append(assoc_attr)
-        results.set_params(op_.results[0], associated_attrs)
-        return transform.DiagnosedSilenceableFailure.Success
-
-    @staticmethod
-    def allow_repeated_handle_operands(op_: ir.Operation) -> bool:
-        return False
-
-
-class GetNamedAttributeMemoryEffectsOpInterfaceFallbackModel(
-    ir.MemoryEffectsOpInterface
-):
-    @staticmethod
-    def get_effects(op_: ir.Operation, effects):
-        transform.only_reads_handle(list(op_.op_operands), effects)
-        transform.produces_handle(list(op_.results), effects)
-
-
-class OneOpInOneOpOut:
-    name = "one_op_in_one_op_out"
-
-    def __init__(self, op_arg: AnyOpType):
-        self.op = ir.Operation.create(
-            "my_transform.one_op_in_one_op_out",
-            [AnyOpType.get()],
-            [get_op_result_or_value(op_arg)],
-        )
-
-    @property
-    def result(self):
-        return self.op.results[0]
-
-    @classmethod
-    def emit_irdl(cls):
-        op = irdl.operation_(cls.name)
-        with ir.InsertionPoint(op.body):
-            op_handle_type = irdl.is_(TypeAttr.get(AnyOpType.get()))
-            irdl.operands_(
-                [op_handle_type],
-                ["arg"],
-                [irdl.Variadicity.single],
-            )
-            irdl.results_([op_handle_type], ["result"], [irdl.Variadicity.single])
-        return op
-
-
-class OpValParamInParamOpValOut:
-    name = "op_val_param_in_param_op_val_out"
-
-    def __init__(
-        self,
-        op_arg: AnyOpType,
-        val: AnyValueType,
-        param: AnyParamType,
-    ):
-        self.op = ir.Operation.create(
-            "my_transform." + self.name,
-            [
-                AnyParamType.get(),
-                AnyOpType.get(),
-                AnyValueType.get(),
-            ],
-            [
-                get_op_result_or_value(op_arg),
-                get_op_result_or_value(val),
-                get_op_result_or_value(param),
-            ],
-        )
-
-    @property
-    def param_res(self):
-        return self.op.results[0]
-
-    @property
-    def op_res(self):
-        return self.op.results[1]
-
-    @property
-    def value_res(self):
-        return self.op.results[2]
-
-    @classmethod
-    def emit_irdl(cls):
-        op = irdl.operation_(cls.name)
-        with ir.InsertionPoint(op.body):
-            op_handle_type = irdl.is_(TypeAttr.get(AnyOpType.get()))
-            value_handle_type = irdl.is_(TypeAttr.get(AnyValueType.get()))
-            param_handle_type = irdl.is_(TypeAttr.get(AnyParamType.get()))
-            irdl.operands_(
-                [op_handle_type, value_handle_type, param_handle_type],
-                ["op_arg", "value_arg", "param_arg"],
-                [
-                    irdl.Variadicity.single,
-                    irdl.Variadicity.single,
-                    irdl.Variadicity.single,
-                ],
-            )
-            irdl.results_(
-                [param_handle_type, op_handle_type, value_handle_type],
-                ["param_res", "op_res", "value_res"],
-                [
-                    irdl.Variadicity.single,
-                    irdl.Variadicity.single,
-                    irdl.Variadicity.single,
-                ],
-            )
-        return op
-
-
-class OpsParamsInValuesParamOut:
-    name = "ops_params_in_values_param_out"
-
-    def __init__(
-        self,
-        value_results: Sequence[AnyValueType],
-        ops: Sequence[AnyOpType],
-        params: Sequence[AnyParamType],
-    ):
-        def as_i32(x):
-            return ir.IntegerAttr.get(ir.IntegerType.get_signless(32), x)
-
-        self.op = ir.Operation.create(
-            "my_transform." + self.name,
-            list(value_results) + [AnyParamType.get()],
-            list(get_op_results_or_values(ops))
-            + list(get_op_results_or_values(params)),
-            {
-                "operandSegmentSizes": ir.DenseI32ArrayAttr.get(
-                    [len(ops), len(params)]
-                ),
-                "resultSegmentSizes": ir.DenseI32ArrayAttr.get([len(value_results)]),
-            },
-        )
-
-    @property
-    def param(self):
-        return self.op.results[-1]
-
-    @property
-    def values(self):
-        return self.op.results[:-1]
-
-    @classmethod
-    def emit_irdl(cls):
-        op = irdl.operation_(cls.name)
-        with ir.InsertionPoint(op.body):
-            op_handle_type = irdl.is_(TypeAttr.get(AnyOpType.get()))
-            value_handle_type = irdl.is_(TypeAttr.get(AnyValueType.get()))
-            param_handle_type = irdl.is_(TypeAttr.get(AnyParamType.get()))
-            irdl.operands_(
-                [op_handle_type, param_handle_type],
-                ["ops", "params"],
-                [irdl.Variadicity.variadic, irdl.Variadicity.variadic],
-            )
-            irdl.results_(
-                [value_handle_type, param_handle_type],
-                ["value_results", "param"],
-                [irdl.Variadicity.variadic, irdl.Variadicity.single],
-            )
-        return op
 
 
 @contextmanager
@@ -300,103 +72,176 @@ def schedule_boilerplate():
             yield schedule, named_sequence
 
 
-@run
-def OneOpInOneOpOutTransformOpInterface():
-    class OneOpInOneOpOutTransformOpInterfaceFallbackModel(
-        transform.TransformOpInterface
-    ):
+# MemoryEffectsOpInterface implementation for TransformOpInterface-implementing ops.
+# Used by all ops defined below.
+class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
+    @staticmethod
+    def get_effects(op_: ir.Operation, effects):
+        transform.only_reads_handle(list(op_.op_operands), effects)
+        transform.produces_handle(list(op_.results), effects)
+
+
+# Demonstration of a TransformOpInterface-implementing op that gets named attributes
+# from target ops and produces them as param handles.
+@ext.register_operation(MyTransform)
+class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
+    target: ext.Operand[transform.AnyOpType]
+    attr_name: ir.StringAttr
+    attr_as_param: ext.Result[transform.AnyParamType[()]]
+
+    @classmethod
+    def attach_interface_impls(cls, ctx=None):
+        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+
+    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
-            op_: ir.Operation,
+            op: "GetNamedAttributeOp",
             rewriter: transform.TransformRewriter,
             results: transform.TransformResults,
             state: transform.TransformState,
         ):
-            targets = state.get_payload_ops(arg := op_.operands[0])
-            target_names = [t.opview.name.value for t in targets]
-            print(
-                f"OneOpInOneOpOutTransformOpInterfaceFallbackModel: target_names={target_names}"
-            )
-            results.set_ops(result := op_.results[0], targets)
+            target_ops = state.get_payload_ops(op.target)
+            associated_attrs = []
+            for target_op in target_ops:
+                assoc_attr = target_op.attributes.get(op.attr_name.value)
+                if assoc_attr is None:
+                    return transform.DiagnosedSilenceableFailure.RecoverableFailure
+                associated_attrs.append(assoc_attr)
+            results.set_params(op.attr_as_param, associated_attrs)
             return transform.DiagnosedSilenceableFailure.Success
 
         @staticmethod
-        def allow_repeated_handle_operands(op_: ir.Operation) -> bool:
+        def allow_repeated_handle_operands(op: "GetNamedAttributeOp") -> bool:
             return False
 
-    OneOpInOneOpOutTransformOpInterfaceFallbackModel.attach(
-        "my_transform.one_op_in_one_op_out", ir.Context.current
-    )
 
-    # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface.
-    class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
+@ext.register_operation(MyTransform)
+class PrintParamOp(MyTransform.Operation, name="print_param"):
+    target: ext.Operand[transform.AnyParamType]
+    name: ir.StringAttr
+
+    @classmethod
+    def attach_interface_impls(cls, ctx=None):
+        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+
+    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
-        def get_effects(op_: ir.Operation, effects):
-            transform.only_reads_handle(list(op_.op_operands), effects)
-            transform.produces_handle(list(op_.results), effects)
+        def apply(
+            op: "PrintParamOp",
+            rewriter: transform.TransformRewriter,
+            results: transform.TransformResults,
+            state: transform.TransformState,
+        ):
+            target_attrs = state.get_params(op.target)
+            print(f"[[[ IR printer: {op.name.value} ]]]")
+            for attr in target_attrs:
+                print(attr)
+            return transform.DiagnosedSilenceableFailure.Success
 
-    MemoryEffectsOpInterfaceFallbackModel.attach(
-        "my_transform.one_op_in_one_op_out", ir.Context.current
-    )
+        @staticmethod
+        def allow_repeated_handle_operands(op: "GetNamedAttributeOp") -> bool:
+            return False
+
+
+# Syntax for an op with one op handle operand and one op handle result.
+@ext.register_operation(MyTransform)
+class OneOpInOneOpOut(MyTransform.Operation, name="one_op_in_one_op_out"):
+    target: ext.Operand[transform.AnyOpType]
+    res: ext.Result[transform.AnyOpType[()]]
+
+
+# CHECK-LABEL: Test: OneOpInOneOpOutTransformOpInterface
+@run
+def OneOpInOneOpOutTransformOpInterface():
+    # Define an implementation of the TransformOpInterface for OneOpInOneOpOut.
+    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+        @staticmethod
+        def apply(
+            op: OneOpInOneOpOut,
+            rewriter: transform.TransformRewriter,
+            results: transform.TransformResults,
+            state: transform.TransformState,
+        ):
+            target_ops = state.get_payload_ops(op.target)
+            target_names = [t.opview.name.value for t in target_ops]
+            print(f"OneOpInOneOpOutTransformOpInterface: target_names={target_names}")
+            results.set_ops(op.res, target_ops)
+            return transform.DiagnosedSilenceableFailure.Success
+
+        @staticmethod
+        def allow_repeated_handle_operands(op: OneOpInOneOpOut) -> bool:
+            return False
+
+    # Attach the interface implementation to the op.
+    TransformOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
+
+    # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
+    MemoryEffectsOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     with schedule_boilerplate() as (schedule, named_seq):
-        print(f"{named_seq=}")
         func_handle = structured.MatchOp.match_op_names(
             named_seq.bodyTarget, ["func.func"]
         ).result
-        func_handle.dump()
-        # CHECK: OneOpInOneOpOutTransformOpInterfaceFallbackModel: target_names=['name_of_func']
+        # CHECK: OneOpInOneOpOutTransformOpInterface: target_names=['name_of_func']
         out = OneOpInOneOpOut(func_handle).result
-        out.dump()
-        print(out.owner)
+        # CHECK: Output handle from OneOpInOneOpOut
+        # CHECK-NEXT: func.func @
+        transform.PrintOp(target=out, name="Output handle from OneOpInOneOpOut")
         transform.YieldOp([out])
-        named_seq.verify()
-        print("named_seq", named_seq)
-        print("named_seq.parent", named_seq.parent)
 
     return schedule
 
 
+@ext.register_operation(MyTransform)
+class OpValParamInParamOpValOut(
+    MyTransform.Operation, name="op_val_param_in_param_op_val_out"
+):
+    # operands
+    op_arg: ext.Operand[transform.AnyOpType]
+    val_arg: ext.Operand[transform.AnyValueType]
+    param_arg: ext.Operand[transform.AnyParamType]
+    # results
+    param_res: ext.Result[transform.AnyParamType[()]]
+    op_res: ext.Result[transform.AnyOpType[()]]
+    value_res: ext.Result[transform.AnyValueType[()]]
+
+
+# CHECK-LABEL: Test: OpValParamInParamOpValOutTransformOpInterface
 @run
 def OpValParamInParamOpValOutTransformOpInterface():
-    class OpValParamInParamOpValOutTransformOpInterfaceFallbackModel(
-        transform.TransformOpInterface
-    ):
+    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
-            op_: ir.Operation,
+            op: OpValParamInParamOpValOut,
             rewriter: transform.TransformRewriter,
             results: transform.TransformResults,
             state: transform.TransformState,
         ):
-            ops = state.get_payload_ops(op_.operands[0])
-            values = state.get_payload_values(op_.operands[1])
-            params = state.get_params(op_.operands[2])
+            ops = state.get_payload_ops(op.op_arg)
+            values = state.get_payload_values(op.val_arg)
+            params = state.get_params(op.param_arg)
             print(
-                f"OpValParamInParamOpValOutTransformOpInterfaceFallbackModel: ops={len(ops)}, values={len(values)}, params={len(params)}"
+                f"OpValParamInParamOpValOutTransformOpInterface: ops={len(ops)}, values={len(values)}, params={len(params)}"
             )
-            results.set_params(op_.results[0], params)
-            results.set_ops(op_.results[1], ops)
-            results.set_values(op_.results[2], values)
+            results.set_params(op.param_res, params)
+            results.set_ops(op.op_res, ops)
+            results.set_values(op.value_res, values)
             return transform.DiagnosedSilenceableFailure.Success
 
         @staticmethod
-        def allow_repeated_handle_operands(op_: ir.Operation) -> bool:
+        def allow_repeated_handle_operands(op: OpValParamInParamOpValOut) -> bool:
             return False
 
-    OpValParamInParamOpValOutTransformOpInterfaceFallbackModel.attach(
-        "my_transform.op_val_param_in_param_op_val_out", ir.Context.current
+    TransformOpInterfaceFallbackModel.attach(
+        OpValParamInParamOpValOut.OPERATION_NAME, ir.Context.current
     )
 
-    # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface.
-    class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
-        @staticmethod
-        def get_effects(op_: ir.Operation, effects):
-            transform.only_reads_handle(list(op_.op_operands), effects)
-            transform.produces_handle(list(op_.results), effects)
-
+    # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
     MemoryEffectsOpInterfaceFallbackModel.attach(
-        "my_transform.op_val_param_in_param_op_val_out", ir.Context.current
+        OpValParamInParamOpValOut.OPERATION_NAME, ir.Context.current
     )
 
     with schedule_boilerplate() as (schedule, named_seq):
@@ -414,9 +259,35 @@ def OpValParamInParamOpValOutTransformOpInterface():
             AnyParamType.get(), ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 42)
         ).param
 
-        # CHECK: OpValParamInParamOpValOutTransformOpInterfaceFallbackModel: ops=2, values=1, params=1
+        # CHECK: OpValParamInParamOpValOutTransformOpInterface: ops=2, values=1, params=1
         op_val_param_op = OpValParamInParamOpValOut(
             func_and_addf, value_handle, param_handle
+        )
+        # CHECK: Ops passed through OpValParamInParamOpValOut:
+        # CHECK-NEXT: func.func
+        # CHECK: arith.addf
+        transform.PrintOp(
+            target=op_val_param_op.op_res,
+            name="Ops passed through OpValParamInParamOpValOut:",
+        )
+
+        # CHECK: Ops defining values passed through OpValParamInParamOpValOut:
+        # CHECK-NEXT: arith.addf
+        addf_as_res = transform.GetDefiningOp(
+            transform.AnyOpType.get(), op_val_param_op.value_res
+        ).result
+        transform.PrintOp(
+            target=addf_as_res,
+            name="Ops defining values passed through OpValParamInParamOpValOut:",
+        )
+
+        # CHECK: Parameter passed through OpValParamInParamOpValOut:
+        # CHECK-NEXT: 42 : i32
+        PrintParamOp(
+            op_val_param_op.param_res,
+            name=ir.StringAttr.get(
+                "Parameter passed through OpValParamInParamOpValOut:"
+            ),
         )
 
         transform.YieldOp([op_val_param_op.op_res])
@@ -425,74 +296,64 @@ def OpValParamInParamOpValOutTransformOpInterface():
     return schedule
 
 
+@ext.register_operation(MyTransform)
+class OpsParamsInValuesParamOut(
+    MyTransform.Operation, name="ops_params_in_values_param_out"
+):
+    # operands
+    ops: Sequence[ext.Operand[transform.AnyOpType]]
+    params: Sequence[ext.Operand[transform.AnyParamType]]
+    # results
+    values: Sequence[ext.Result[transform.AnyValueType]]
+    param: ext.Result[transform.AnyParamType]
+
+
+# CHECK-LABEL: Test: OpsParamsInValuesParamOutTransformOpInterface
 @run
 def OpsParamsInValuesParamOutTransformOpInterface():
-    class OpsParamsInValuesParamOutTransformOpInterfaceFallbackModel(
-        transform.TransformOpInterface
-    ):
+    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
-            op_: ir.Operation,
+            op: OpsParamsInValuesParamOut,
             rewriter: transform.TransformRewriter,
             results: transform.TransformResults,
             state: transform.TransformState,
         ):
-            # The last operand is the param. All previous ones are ops.
-            op_handles, param_handles = [], []
-            for operand in op_.operands:
-                if isinstance(operand.type, transform.AnyOpType):
-                    op_handles.append(operand)
-                else:
-                    param_handles.append(operand)
-
             ops_count = 0
             value_handles = []
-            for op_handle in op_handles:
+            for op_handle in op.ops:
                 ops = state.get_payload_ops(op_handle)
                 ops_count += len(ops)
-                value_handles.append(list(op.results[:1] for op in ops))
+                value_handles.append([i for op in ops for i in op.results])
 
             param_count = 0
             param_sum = 0
-            for param_handle in param_handles:
+            for param_handle in op.params:
                 params = state.get_params(param_handle)
                 param_count += len(params)
                 param_sum += sum(p.value for p in params)
 
             print(
-                f"OpsParamInValuesParamOutTransformOpInterfaceFallbackModel: #op_handles={len(op_handles)}, ops_count={ops_count}, #param_handles={len(param_handles)}, param_count={param_count}"
+                f"OpsParamsInValuesParamOutTransformOpInterfaceFallbackModel: op_count={ops_count}, param_count={param_count}"
             )
 
-            assert len(op_.results) + 1 == len(op_handles)
-            for i in range(len(op_.results) - 1):
-                results.set_values(
-                    op_.results[i],
-                    value_handles[i],
-                )
+            assert len(op.values) == len(op.ops)
+            for value_res_handle, value_vector in zip(op.values, value_handles):
+                results.set_values(value_res_handle, value_vector)
             results.set_params(
-                op_.results[-1],
+                op.param,
                 [ir.IntegerAttr.get(ir.IntegerType.get_signless(32), param_sum)],
             )
             return transform.DiagnosedSilenceableFailure.Success
 
         @staticmethod
-        def allow_repeated_handle_operands(op_: ir.Operation) -> bool:
+        def allow_repeated_handle_operands(op: OpsParamsInValuesParamOut) -> bool:
             return True
 
-    OpsParamsInValuesParamOutTransformOpInterfaceFallbackModel.attach(
-        "my_transform." + OpsParamsInValuesParamOut.name
-    )
+    TransformOpInterfaceFallbackModel.attach(OpsParamsInValuesParamOut.OPERATION_NAME)
 
-    class OpsParamsInParamsOutMemoryEffectsOpInterfaceFallbackModel(
-        ir.MemoryEffectsOpInterface
-    ):
-        @staticmethod
-        def get_effects(op_: ir.Operation, effects):
-            transform.only_reads_handle(list(op_.op_operands), effects)
-            transform.produces_handle(list(op_.results), effects)
-
-    OpsParamsInParamsOutMemoryEffectsOpInterfaceFallbackModel.attach(
-        "my_transform." + OpsParamsInValuesParamOut.name
+    MemoryEffectsOpInterfaceFallbackModel.attach(
+        OpsParamsInValuesParamOut.OPERATION_NAME
     )
 
     with schedule_boilerplate() as (schedule, named_seq):
@@ -502,24 +363,48 @@ def OpsParamsInValuesParamOutTransformOpInterface():
         csts_handle = structured.MatchOp.match_op_names(
             named_seq.bodyTarget, ["arith.constant"]
         ).result
-        csts_as_param = GetNamedAttributeOp(csts_handle, "value").attr_as_param
+        csts_as_param = GetNamedAttributeOp(
+            csts_handle, attr_name=ir.StringAttr.get("value")
+        ).attr_as_param
 
         param_handle = transform.ParamConstantOp(
             AnyParamType.get(), ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 123)
         ).param
 
-        # CHECK: OpsParamInParamsOutTransformOpInterfaceFallbackModel: op_count=2, param_count=1
+        # CHECK: OpsParamsInValuesParamOutTransformOpInterfaceFallbackModel: op_count=3, param_count=3
         op = OpsParamsInValuesParamOut(
-            [transform.AnyValueType.get()] * 2 + [transform.AnyParamType.get()],
+            [transform.AnyValueType.get()] * 2,
+            transform.AnyParamType.get(),
             [func_handle, csts_handle],
             [csts_as_param, param_handle],
         )
-        print(op.op)
-        # CHECK: Sum of params: 189
-        transform_debug.EmitParamAsRemarkOp(op.param, message="Sum of params")
 
-        transform_debug.EmitRemarkAtOp(op.values[0], message="Value results 0")
-        transform_debug.EmitRemarkAtOp(op.values[1], message="Value results 1")
+        empty_handle = transform.GetDefiningOp(transform.AnyOpType.get(), op.values[0])
+        # CHECK: Defining op of value result 0
+        transform.PrintOp(
+            target=empty_handle.result, name="Defining op of value result 0"
+        )
+        # NB: no result on the func.func, so output is expected to be empty
+        cst1_res, cst2_res = transform.SplitHandleOp(
+            [transform.AnyValueType.get()] * 2, op.values[1]
+        ).results
+
+        cst1_again = transform.GetDefiningOp(transform.AnyOpType.get(), cst1_res)
+        # CHECK-NEXT: Defining op of first constant
+        # CHECK-NEXT: arith.constant 42 : i32
+        transform.PrintOp(
+            target=cst1_again.result, name="Defining op of first constant"
+        )
+        cst2_again = transform.GetDefiningOp(transform.AnyOpType.get(), cst2_res)
+        # CHECK-NEXT: Defining op of second constant
+        # CHECK-NEXT: arith.constant 24 : i32
+        transform.PrintOp(
+            target=cst2_again.result, name="Defining op of second constant"
+        )
+
+        # CHECK: Sum of params:
+        # CHECK-NEXT: 189 : i32
+        PrintParamOp(op.param, name=ir.StringAttr.get("Sum of params:"))
 
         transform.YieldOp([func_handle])
         named_seq.verify()
