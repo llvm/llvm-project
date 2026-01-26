@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
   // CHECK: [[ARGC:%.+]] = load i32, ptr %
   // CHECK: [[P1_X_ARGC_0:%.+]] = call noundef i32 @"?GetX@S@@QEAAHHH@Z"(ptr {{[^,]*}} [[P1]], i32 noundef [[ARGC]], i32 noundef 0)
   // CHECK: [[CAST:%.+]] = trunc i32 [[P1_X_ARGC_0]] to i8
-  // CHECK: [[P2_Y_p1_X_ARGC_0_T:%.+]] = call noundef i8 @"?GetY@?$St@M@@QEAADDVTest1@@@Z"(ptr {{[^,]*}} [[P2_2]], i8 noundef [[CAST]], ptr dead_on_return noundef %{{.+}})
+  // CHECK: [[P2_Y_p1_X_ARGC_0_T:%.+]] = call noundef i8 @"?GetY@?$St@M@@QEAADDVTest1@@@Z"(ptr {{[^,]*}} [[P2_2]], i8 noundef [[CAST]], ptr noundef dead_on_return %{{.+}})
   // CHECK: [[CAST:%.+]] = sitofp i8 [[P2_Y_p1_X_ARGC_0_T]] to float
   // CHECK: [[J:%.+]] = load i32, ptr %
   // CHECK: [[CAST1:%.+]] = sitofp i32 [[J]] to float
@@ -124,6 +124,6 @@ int main(int argc, char **argv) {
 // CHECK: call noundef i32 @"?GetX@?$St@H@@QEAAHHH@Z"(ptr {{[^,]*}} [[BAR]], i32 noundef %{{.+}} i32 noundef %{{.+}})
 // CHECK: call void @"?PutY@?$St@H@@QEAAXDHN@Z"(ptr {{[^,]*}} [[BAR]], i8 noundef %{{.+}}, i32 noundef %{{.+}}, double noundef %{{.+}}
 // CHECK: call noundef i32 @"?GetX@?$St@H@@QEAAHHH@Z"(ptr {{[^,]*}} [[BAR]], i32 noundef %{{.+}} i32 noundef %{{.+}})
-// CHECK: call noundef i8 @"?GetY@?$St@H@@QEAADDVTest1@@@Z"(ptr {{[^,]*}} [[BAR]], i8 noundef %{{.+}}, ptr dead_on_return noundef %{{.+}})
+// CHECK: call noundef i8 @"?GetY@?$St@H@@QEAADDVTest1@@@Z"(ptr {{[^,]*}} [[BAR]], i8 noundef %{{.+}}, ptr noundef dead_on_return %{{.+}})
 // CHECK: call noundef i32 @"?PutX@?$St@H@@QEAAHHHH@Z"(ptr {{[^,]*}} [[BAR]], i32 noundef %{{.+}}, i32 noundef %{{.+}}, i32 noundef %{{.+}})
 #endif //HEADER

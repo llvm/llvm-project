@@ -657,9 +657,16 @@ LogicalResult cir::CastOp::verify() {
              << "requires floating point !cir.complex type for result";
     return success();
   }
-  default:
-    llvm_unreachable("Unknown CastOp kind?");
+  case cir::CastKind::member_ptr_to_bool: {
+    if (!mlir::isa<cir::DataMemberType, cir::MethodType>(srcType))
+      return emitOpError()
+             << "requires !cir.data_member or !cir.method type for source";
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
   }
+  }
+  llvm_unreachable("Unknown CastOp kind?");
 }
 
 static bool isIntOrBoolCast(cir::CastOp op) {
@@ -2047,6 +2054,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    cir::SideEffect sideEffect;
+
+    if (parser.parseLParen().failed() ||
+        parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
+  }
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2216,6 +2235,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
+  }
+
+  if (std::optional<cir::SideEffect> sideEffect = getSideEffect();
+      sideEffect && *sideEffect != cir::SideEffect::All) {
+    p << " side_effect(";
+    p << stringifySideEffect(*sideEffect);
+    p << ")";
   }
 
   function_interface_impl::printFunctionAttributes(

@@ -1716,6 +1716,34 @@ bool ClauseProcessor::processUseDevicePtr(
   return clauseFound;
 }
 
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        const auto &objects = clause.v;
+        if (!objects.empty())
+          genObjectList(objects, converter, result.uniformVars);
+      });
+}
+
+bool ClauseProcessor::processInbranch(
+    mlir::omp::InbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Inbranch>()) {
+    result.inbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNotinbranch(
+    mlir::omp::NotinbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Notinbranch>()) {
+    result.notinbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran
