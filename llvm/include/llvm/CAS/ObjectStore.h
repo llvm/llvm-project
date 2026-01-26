@@ -203,7 +203,7 @@ public:
     return storeFromOpenFileImpl(FD, Status);
   }
 
-  static Error createUnknownObjectError(const CASID &ID);
+  LLVM_ABI static Error createUnknownObjectError(const CASID &ID);
 
   /// Create ObjectProxy from CASID. If the object doesn't exist, get an error.
   LLVM_ABI Expected<ObjectProxy> getProxy(const CASID &ID);
@@ -212,7 +212,7 @@ public:
   LLVM_ABI Expected<ObjectProxy> getProxy(ObjectRef Ref);
 
   /// \returns \c std::nullopt if the object is missing from the CAS.
-  Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
+  LLVM_ABI Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
 
   /// Read the data from \p Data into \p OS.
   uint64_t readData(ObjectHandle Node, raw_ostream &OS, uint64_t Offset = 0,
@@ -294,7 +294,7 @@ public:
     return CAS->forEachRef(H, Callback);
   }
 
-  std::unique_ptr<MemoryBuffer>
+  LLVM_ABI std::unique_ptr<MemoryBuffer>
   getMemoryBuffer(StringRef Name = "",
                   bool RequiresNullTerminator = true) const;
 
