@@ -1905,8 +1905,7 @@ void SwiftASTContext::AddExtraClangArgs(
   // If it is not a fresh invocation, make sure the cc1 option matches.
   if (!fresh_invocation &&
       (importer_options.DirectClangCC1ModuleBuild != invocation_direct_cc1))
-    AddDiagnostic(
-        eSeverityWarning,
+    HEALTH_LOG_PRINTF(
         "Mixing and matching of driver and cc1 Clang options detected");
 
   importer_options.DirectClangCC1ModuleBuild = invocation_direct_cc1;
