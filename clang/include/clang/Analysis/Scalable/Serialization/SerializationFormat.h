@@ -17,11 +17,9 @@
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include <string>
 #include <vector>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 class TUSummary;
 class EntityIdTable;
@@ -41,11 +39,11 @@ protected:
   static const NestedBuildNamespace &getCommonNamespace(const TUSummary &S);
 
   static BuildNamespaceKind getBuildNamespaceKind(const BuildNamespace &BN);
-  static const std::string &getBuildNamespaceName(const BuildNamespace &BN);
+  static llvm::StringRef getBuildNamespaceName(const BuildNamespace &BN);
   static const std::vector<BuildNamespace> &
   getNestedBuildNamespaces(const NestedBuildNamespace &NBN);
 
-  static const std::string &getEntityNameUSR(const EntityName &EN);
+  static llvm::StringRef getEntityNameUSR(const EntityName &EN);
   static const llvm::SmallString<16> &getEntityNameSuffix(const EntityName &EN);
   static const NestedBuildNamespace &
   getEntityNameNamespace(const EntityName &EN);
@@ -53,13 +51,12 @@ protected:
 public:
   virtual ~SerializationFormat() = default;
 
-  virtual TUSummary readTUSummary(const std::string &Path) = 0;
+  virtual TUSummary readTUSummary(llvm::StringRef Path) = 0;
 
   virtual void writeTUSummary(const TUSummary &Summary,
                               llvm::StringRef OutputDir) = 0;
 };
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf
 
 #endif // CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
