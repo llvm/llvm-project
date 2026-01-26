@@ -1968,6 +1968,90 @@ LogicalResult ReduceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ConvolutionOpInterface
+//===----------------------------------------------------------------------===//
+
+// There must be a way to avoid defining the following 3 functions
+ParseResult mlir::linalg::detail::convolution_impl::parse(
+    OpAsmParser &parser, OperationState &result, bool isQuantized) {
+  if (isQuantized)
+    return parseNamedStructuredOp(
+        parser, result, 5,
+        mlir::linalg::detail::convolution_impl::quantizedRegionBuilder);
+  return parseNamedStructuredOp(
+      parser, result, 3, mlir::linalg::detail::convolution_impl::regionBuilder);
+}
+
+void mlir::linalg::detail::convolution_impl::print(LinalgOp op,
+                                                   OpAsmPrinter &p) {
+  printNamedStructuredOp(
+      p, op.getOperation(), op.getDpsInputs(), op.getDpsInits(),
+      /*elidedAttrs=*/{"operandSegmentSizes", "linalg.memoized_indexing_maps"});
+}
+
+// Build {mul, add} region for convolution
+void mlir::linalg::detail::convolution_impl::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "ConvolutionInterface regionBuilder expects 3 (>=0) args");
+  RegionBuilderHelper helper(b, block);
+  SmallVector<Value> yields;
+
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(1));
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
+  Value value4 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  yields.push_back(value4);
+  helper.yieldOutputs(yields);
+}
+
+void mlir::linalg::detail::convolution_impl::quantizedRegionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 5 &&
+         "ConvolutionInterface regionBuilder expects 5 args");
+  RegionBuilderHelper helper(b, block);
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(2));
+  Value value3 = helper.buildBinaryFn(BinaryFn::sub, value1, value2);
+  Value value4 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(1));
+  Value value5 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(3));
+  Value value6 = helper.buildBinaryFn(BinaryFn::sub, value4, value5);
+  Value value7 = helper.buildBinaryFn(BinaryFn::mul, value3, value6);
+  Value value8 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(4), value7);
+  helper.yieldOutputs({value8});
+}
+
+//===----------------------------------------------------------------------===//
+// GroupedConvNDOp
+//===----------------------------------------------------------------------===//
+
+void GroupedConvNDOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability GroupedConvNDOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+//===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
