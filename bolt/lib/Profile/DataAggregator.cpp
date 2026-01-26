@@ -438,7 +438,7 @@ void DataAggregator::generatePerfTextData() {
       exit(1);
     }
 
-    SS << PPI->Type << formatv("={0:x16};", getFileSize(PathData));
+    SS << PPI->Type << formatv("={0:x-16};", getFileSize(PathData));
 
     // Merge all perf-scripts jobs' output into the single OutputFile
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
