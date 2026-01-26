@@ -1210,10 +1210,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableFlags) {
 
   using namespace SDPatternMatch;
 
-  EXPECT_TRUE(sd_match(Add1, m_ReassociatableNSWAdd(m_Specific(Op0), m_Specific(Op1), m_Specific(Op2))));
-  EXPECT_FALSE(sd_match(Add3, m_ReassociatableNSWAdd(m_Specific(Op3), m_Specific(Op4), m_Specific(Op5))));
-  EXPECT_TRUE(sd_match(Add3, m_ReassociatableNSWAdd(m_Specific(Add2), m_Specific(Op5))));
+  EXPECT_TRUE(
+      sd_match(Add1, m_ReassociatableNSWAdd(m_Specific(Op0), m_Specific(Op1),
+                                            m_Specific(Op2))));
+  EXPECT_FALSE(
+      sd_match(Add3, m_ReassociatableNSWAdd(m_Specific(Op3), m_Specific(Op4),
+                                            m_Specific(Op5))));
+  EXPECT_TRUE(sd_match(
+      Add3, m_ReassociatableNSWAdd(m_Specific(Add2), m_Specific(Op5))));
 
-  EXPECT_TRUE(sd_match(Add5, m_ReassociatableNUWAdd(m_Specific(Op6), m_Specific(Op7), m_Specific(Op8))));
-  EXPECT_FALSE(sd_match(Add1, m_ReassociatableNUWAdd(m_Specific(Op0), m_Specific(Op1), m_Specific(Op2))));
+  EXPECT_TRUE(
+      sd_match(Add5, m_ReassociatableNUWAdd(m_Specific(Op6), m_Specific(Op7),
+                                            m_Specific(Op8))));
+  EXPECT_FALSE(
+      sd_match(Add1, m_ReassociatableNUWAdd(m_Specific(Op0), m_Specific(Op1),
+                                            m_Specific(Op2))));
 }

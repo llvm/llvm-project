@@ -1433,17 +1433,15 @@ m_ReassociatableMul(const PatternTs &...Patterns) {
 template <typename... PatternTs>
 inline ReassociatableOpc_match<PatternTs...>
 m_ReassociatableNSWAdd(const PatternTs &...Patterns) {
-  return ReassociatableOpc_match<PatternTs...>(ISD::ADD,
-                                               SDNodeFlags::NoSignedWrap,
-                                               Patterns...);
+  return ReassociatableOpc_match<PatternTs...>(
+      ISD::ADD, SDNodeFlags::NoSignedWrap, Patterns...);
 }
 
 template <typename... PatternTs>
 inline ReassociatableOpc_match<PatternTs...>
 m_ReassociatableNUWAdd(const PatternTs &...Patterns) {
-  return ReassociatableOpc_match<PatternTs...>(ISD::ADD,
-                                               SDNodeFlags::NoUnsignedWrap,
-                                               Patterns...);
+  return ReassociatableOpc_match<PatternTs...>(
+      ISD::ADD, SDNodeFlags::NoUnsignedWrap, Patterns...);
 }
 
 } // namespace SDPatternMatch
