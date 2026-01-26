@@ -1201,6 +1201,14 @@ def sext_like : PatFrags<(ops node:$src),
                          [(zext_nneg node:$src),
                           (sext node:$src)]>;
 
+def ffloor_nnan : PatFrag<(ops node:$src), (ffloor node:$src), [{
+  return N->getFlags().hasNoNaNs();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::FmNoNans);
+  }];
+}
+
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal
 // definitions. When expanding a pattern, if the null fragment is referenced

@@ -1416,6 +1416,17 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_f16sqrtl",
+    hdrs = ["src/__support/math/f16sqrtl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
 fma_common_hdrs = [
     "src/__support/FPUtil/FMA.h",
     "src/__support/FPUtil/generic/FMA.h",
@@ -4248,7 +4259,8 @@ libc_math_function(
 libc_math_function(
     name = "f16sqrtl",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_f16sqrtl",
+        ":errno",
     ],
 )
 

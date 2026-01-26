@@ -58,32 +58,22 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   for (auto *End : Ends) {
     EndBlocks.insert(End->getParent());
   }
-  SmallVector<Instruction *, 8> ReachableRetVec;
-  unsigned NumCoveredExits = 0;
+  bool UncoveredRets = false;
   for (auto *RI : RetVec) {
-    if (!isPotentiallyReachable(Start, RI, nullptr, &DT, &LI))
-      continue;
-    ReachableRetVec.push_back(RI);
     // If there is an end in the same basic block as the return, we know for
     // sure that the return is covered. Otherwise, we can check whether there
     // is a way to reach the RI from the start of the lifetime without passing
     // through an end.
-    if (EndBlocks.contains(RI->getParent()) ||
-        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
-      ++NumCoveredExits;
+    if (!EndBlocks.contains(RI->getParent()) &&
+        isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
+      Callback(RI);
+      UncoveredRets = true;
     }
   }
-  if (NumCoveredExits == ReachableRetVec.size()) {
-    for_each(Ends, Callback);
-  } else {
-    // If there's a mix of covered and non-covered exits, just put the untag
-    // on exits, so we avoid the redundancy of untagging twice.
-    for_each(ReachableRetVec, Callback);
-    // We may have inserted untag outside of the lifetime interval.
-    // Signal the caller to remove the lifetime end call for this alloca.
-    return false;
-  }
-  return true;
+  for_each(Ends, Callback);
+  // We may have inserted untag outside of the lifetime interval.
+  // Signal the caller to remove the lifetime end call for this alloca.
+  return !UncoveredRets;
 }
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,

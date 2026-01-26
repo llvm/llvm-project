@@ -529,13 +529,7 @@ private:
 
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
-  // In any given run of this pass, WCG will point to one of these two
-  // generator objects, which must have been re-initialised before use
-  // from a value made using a subtarget constructor.
-  WaitcntGeneratorPreGFX12 WCGPreGFX12;
-  WaitcntGeneratorGFX12Plus WCGGFX12Plus;
-
-  WaitcntGenerator *WCG = nullptr;
+  std::unique_ptr<WaitcntGenerator> WCG;
 
   // Remember call and return instructions in the function.
   DenseSet<MachineInstr *> CallInsts;
@@ -3325,13 +3319,14 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                               .getFnAttribute("amdgpu-expert-scheduling-mode")
                               .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
-    WCGGFX12Plus =
-        WaitcntGeneratorGFX12Plus(MF, MaxCounter, &Limits, IsExpertMode);
-    WCG = &WCGGFX12Plus;
+    if (!WCG)
+      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, &Limits,
+                                                        IsExpertMode);
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, NUM_NORMAL_INST_CNTS, &Limits);
-    WCG = &WCGPreGFX12;
+    if (!WCG)
+      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(MF, NUM_NORMAL_INST_CNTS,
+                                                       &Limits);
   }
 
   for (auto T : inst_counter_types())

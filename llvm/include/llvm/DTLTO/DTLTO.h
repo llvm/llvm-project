@@ -19,9 +19,14 @@ class DTLTO : public LTO {
   using Base = LTO;
 
 public:
-  // Inherit constructors.
-  using Base::Base;
-  ~DTLTO() override = default;
+  LLVM_ABI DTLTO(Config Conf, ThinBackend Backend,
+                 unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode,
+                 StringRef LinkerOutputFile, bool SaveTemps)
+      : Base(std::move(Conf), Backend, ParallelCodeGenParallelismLevel,
+             LTOMode),
+        LinkerOutputFile(LinkerOutputFile), SaveTemps(SaveTemps) {
+    assert(!LinkerOutputFile.empty() && "expected a valid linker output file");
+  }
 
   // Add an input file and prepare it for distribution.
   LLVM_ABI Expected<std::shared_ptr<InputFile>>
@@ -36,6 +41,12 @@ private:
   // Bump allocator for a purpose of saving updated module IDs.
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
+
+  /// The output file to which this LTO invocation will contribute.
+  StringRef LinkerOutputFile;
+
+  /// Controls preservation of any created temporary files.
+  bool SaveTemps;
 
   // Determines if a file at the given path is a thin archive file.
   Expected<bool> isThinArchive(const StringRef ArchivePath);

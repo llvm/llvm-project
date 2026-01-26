@@ -758,8 +758,11 @@ def FP_ONE : PatLeaf <
 
 def FP_HALF : PatLeaf <
   (fpimm),
-  [{return N->isExactlyValue(0.5);}]
->;
+  [{return N->isExactlyValue(0.5);}]> {
+  let GISelPredicateCode = [{
+    return MI.getOperand(1).getFPImm()->isExactlyValue(0.5);
+  }];
+}
 
 /* Generic helper patterns for intrinsics */
 /* -------------------------------------- */
@@ -806,16 +809,15 @@ class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
 
 // Special conversion patterns
 
-def cvt_rpi_i32_f32 : PatFrag <
+let GIIgnoreCopies = 1 in
+def cvt_rpi_i32_f32 : PatFrag<
   (ops node:$src),
-  (fp_to_sint (ffloor (fadd $src, FP_HALF))),
-  [{ (void) N; return TM.Options.NoNaNsFPMath; }]
->;
+  (fp_to_sint (ffloor_nnan (fadd $src, FP_HALF)))
+>, GISelFlags;
 
-def cvt_flr_i32_f32 : PatFrag <
+def cvt_flr_i32_f32 : PatFrag<
   (ops node:$src),
-  (fp_to_sint (ffloor $src)),
-  [{ (void)N; return TM.Options.NoNaNsFPMath; }]
+  (fp_to_sint (ffloor_nnan $src))
 >;
 
 let AddedComplexity = 2 in {

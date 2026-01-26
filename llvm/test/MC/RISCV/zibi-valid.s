@@ -7,7 +7,7 @@
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+experimental-zibi %s \
-# RUN:        | llvm-objdump -d --mattr=+experimental-zibi --no-print-imm-hex  - \
+# RUN:        | llvm-objdump -dr --mattr=+experimental-zibi --no-print-imm-hex  - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-OBJ
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+experimental-zibi %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
@@ -61,3 +61,8 @@ bnei s1, 11, -4096
 # CHECK-ENCODING: [0x63,0xb0,0xb4,0x80]
 # CHECK-ERROR: instruction requires the following: 'Zibi' (Branch with Immediate){{$}}
 # CHECK-UNKNOWN: 80b4b063 <unknown>
+
+bnei s1, 12, undef+1
+# CHECK-OBJ:      bnei s1, 12, {{.*}}
+# CHECK-OBJ-NEXT: R_RISCV_BRANCH undef+0x1
+# CHECK-ASM:      bnei s1, 12, undef+1
