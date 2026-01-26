@@ -3767,9 +3767,19 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
       fir::FortranVariableFlagsAttr attributes =
           Fortran::lower::translateSymbolAttributes(builder.getContext(),
                                                     *object.sym(), extraFlags);
+      // For character types, we need to provide the length parameter
+      llvm::SmallVector<mlir::Value> typeParams;
+      mlir::Type unwrappedType = fir::unwrapRefType(type);
+      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+        if (charTy.hasConstantLen()) {
+          mlir::Value lenValue = builder.createIntegerConstant(
+              loc, builder.getIndexType(), charTy.getLen());
+          typeParams.push_back(lenValue);
+        }
+      }
       auto declareOp =
-          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                   nullptr, nullptr, 0, attributes);
+          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr,
+                                   typeParams, nullptr, nullptr, 0, attributes);
       if (name == "omp_out")
         ompOutVar = declareOp.getResult(0);
       symTable.addVariableDefinition(*object.sym(), declareOp);
@@ -3790,9 +3800,12 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               // Optional load may be generated if we get a reference to the
               // reduction type.
               if (auto refType =
-                      llvm::dyn_cast<fir::ReferenceType>(exprResult.getType()))
-                if (lhs.getType() == refType.getElementType())
+                      llvm::dyn_cast<fir::ReferenceType>(exprResult.getType())) {
+                mlir::Type expectedType =
+                    isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
+                if (expectedType == refType.getElementType())
                   exprResult = fir::LoadOp::create(builder, loc, exprResult);
+              }
               return exprResult;
             }},
         evalExpr.u);

@@ -394,16 +394,34 @@ bool ClauseProcessor::processInitializer(
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
-        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
-        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        mlir::Value addr;
+        mlir::Type ompOrigType = ompOrig.getType();
+        // If ompOrig is already a reference, we can use it directly
+        if (fir::isa_ref_type(ompOrigType)) {
+          addr = ompOrig;
+        } else {
+          addr = builder.createTemporary(loc, ompOrigType);
+          fir::StoreOp::create(builder, loc, ompOrig, addr);
+        }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
         std::string name = object.sym()->name().ToString();
+        // For character types, we need to provide the length parameter
+        llvm::SmallVector<mlir::Value> typeParams;
+        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+          if (charTy.hasConstantLen()) {
+            mlir::Value lenValue = builder.createIntegerConstant(
+                loc, builder.getIndexType(), charTy.getLen());
+            typeParams.push_back(lenValue);
+          }
+        }
         auto declareOp =
-            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                     nullptr, nullptr, 0, attributes);
+            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr,
+                                     typeParams, nullptr, nullptr, 0,
+                                     attributes);
         if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
         symMap.addVariableDefinition(*object.sym(), declareOp);
