@@ -255,11 +255,24 @@ public:
   /// Get the CIR attributes and calling convention to use for a particular
   /// function type.
   ///
+  /// \param name - The function name.
+  /// \param info - The function type information.
   /// \param calleeInfo - The callee information these attributes are being
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
-  void constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                              mlir::NamedAttrList &attrs);
+  /// \param attrs [out] - On return, the attribute list to use.
+  /// \param callingConv [out] - On return, the calling convention to use.
+  /// \param sideEffect [out] - On return, the side effect type of the
+  /// attributes.
+  /// \param attrOnCallSite - Whether or not the attributes are on a call site.
+  /// \param isThunk - Whether the function is a thunk.
+  void constructAttributeList(llvm::StringRef name,
+                              const CIRGenFunctionInfo &info,
+                              CIRGenCalleeInfo calleeInfo,
+                              mlir::NamedAttrList &attrs,
+                              cir::CallingConv &callingConv,
+                              cir::SideEffect &sideEffect, bool attrOnCallSite,
+                              bool isThunk);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -458,6 +471,10 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set the CIR function attributes (Sext, zext, etc).
+  void setCIRFunctionAttributes(GlobalDecl gd, const CIRGenFunctionInfo &info,
+                                cir::FuncOp func, bool isThunk);
+
   /// Set extra attributes (inline, etc.) for a function.
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
@@ -570,6 +587,7 @@ public:
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
   static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
+  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

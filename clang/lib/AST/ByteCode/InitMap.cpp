@@ -10,9 +10,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-InitMap::InitMap(unsigned N)
-    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {}
-
 bool InitMap::initializeElement(unsigned I) {
   unsigned Bucket = I / PER_FIELD;
   T Mask = T(1) << (I % PER_FIELD);
@@ -28,4 +25,30 @@ bool InitMap::isElementInitialized(unsigned I) const {
     return true;
   unsigned Bucket = I / PER_FIELD;
   return data()[Bucket] & (T(1) << (I % PER_FIELD));
+}
+
+// Values in the second half of data() are inverted,
+// i.e. 0 means "lifetime started".
+void InitMap::startElementLifetime(unsigned I) {
+  unsigned LifetimeIndex = NumElems + I;
+
+  unsigned Bucket = numFields(NumElems) / 2 + (I / PER_FIELD);
+  T Mask = T(1) << (LifetimeIndex % PER_FIELD);
+  if ((data()[Bucket] & Mask)) {
+    data()[Bucket] &= ~Mask;
+    --DeadFields;
+  }
+}
+
+// Values in the second half of data() are inverted,
+// i.e. 0 means "lifetime started".
+void InitMap::endElementLifetime(unsigned I) {
+  unsigned LifetimeIndex = NumElems + I;
+
+  unsigned Bucket = numFields(NumElems) / 2 + (I / PER_FIELD);
+  T Mask = T(1) << (LifetimeIndex % PER_FIELD);
+  if (!(data()[Bucket] & Mask)) {
+    data()[Bucket] |= Mask;
+    ++DeadFields;
+  }
 }

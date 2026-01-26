@@ -187,7 +187,7 @@ public:
   unsigned convertToVALUOp(unsigned Opc, bool UseVOP3 = false) const {
     switch (Opc) {
     case AMDGPU::S_ADD_I32: {
-      if (ST->hasAddNoCarry())
+      if (ST->hasAddNoCarryInsts())
         return UseVOP3 ? AMDGPU::V_ADD_U32_e64 : AMDGPU::V_ADD_U32_e32;
       return UseVOP3 ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_ADD_CO_U32_e32;
     }
@@ -2415,7 +2415,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
     } else { // This is a copy
       MachineInstr *SubDef = MRI->getVRegDef(Def->getReg());
       SubDef->getOperand(1).setIsKill(false);
-      RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
+      RS.addReg(SubDef->getOperand(1).getReg(), {}, Def->getSubReg());
     }
     RS.addImm(SubIdx);
   }
@@ -2739,7 +2739,7 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
     MachineInstr *VGPRCopy =
         BuildMI(*DefMBB, ++Def->getIterator(), Def->getDebugLoc(),
                 TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64), TempVGPR)
-            .addReg(Reg, /* flags */ 0, SubReg);
+            .addReg(Reg, /* flags */ {}, SubReg);
 
     // Copy back to an AGPR and use that instead of the AGPR subreg in all MOs.
     Register TempAGPR = MRI->createVirtualRegister(ARC);

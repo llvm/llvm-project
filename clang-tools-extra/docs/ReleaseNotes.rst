@@ -97,22 +97,58 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-use-vector-utils
+  <clang-tidy/checks/llvm/use-vector-utils>` check.
+
+  Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
+  ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
+  ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
+
+- New :doc:`modernize-use-string-view
+  <clang-tidy/checks/modernize/use-string-view>` check.
+
+  Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
+  change it to ``std::[...]string_view`` for performance reasons if possible.
+
+- New :doc:`performance-string-view-conversions
+  <clang-tidy/checks/performance/string-view-conversions>` check.
+
+  Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
+  ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
+  definition in the warning message if the macro is defined on command line.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
+
+- Improved :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
+  algorithms: ``std::accumulate``, ``std::replace_copy``, and
+  ``std::replace_copy_if``.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
+
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
+  when an argument is part of a macro expansion.
+
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
+  of invalid code for function types with redundant parentheses.
 
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false

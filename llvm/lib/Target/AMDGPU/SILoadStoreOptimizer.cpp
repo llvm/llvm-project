@@ -1390,7 +1390,7 @@ void SILoadStoreOptimizer::copyToDestRegs(
 
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
+      .addReg(DestReg, {}, SubRegIdx0);
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest1)
       .addReg(DestReg, RegState::Kill, SubRegIdx1);
@@ -1464,7 +1464,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
 
   Register BaseReg = AddrReg->getReg();
   unsigned BaseSubReg = AddrReg->getSubReg();
-  unsigned BaseRegFlags = 0;
+  RegState BaseRegFlags = {};
   if (CI.BaseOff) {
     Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
@@ -1475,7 +1475,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
 
     TII->getAddNoCarry(*MBB, InsertBefore, DL, BaseReg)
         .addReg(ImmReg)
-        .addReg(AddrReg->getReg(), 0, BaseSubReg)
+        .addReg(AddrReg->getReg(), {}, BaseSubReg)
         .addImm(0); // clamp bit
     BaseSubReg = 0;
   }
@@ -1550,7 +1550,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
 
   Register BaseReg = AddrReg->getReg();
   unsigned BaseSubReg = AddrReg->getSubReg();
-  unsigned BaseRegFlags = 0;
+  RegState BaseRegFlags = {};
   if (CI.BaseOff) {
     Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
@@ -1561,7 +1561,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
 
     TII->getAddNoCarry(*MBB, InsertBefore, DL, BaseReg)
         .addReg(ImmReg)
-        .addReg(AddrReg->getReg(), 0, BaseSubReg)
+        .addReg(AddrReg->getReg(), {}, BaseSubReg)
         .addImm(0); // clamp bit
     BaseSubReg = 0;
   }
@@ -2218,14 +2218,14 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   MachineInstr *LoHalf =
       BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_CO_U32_e64), DestSub0)
           .addReg(CarryReg, RegState::Define)
-          .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
+          .addReg(Addr.Base.LoReg, {}, Addr.Base.LoSubReg)
           .add(OffsetLo)
           .addImm(0); // clamp bit
 
   MachineInstr *HiHalf =
       BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADDC_U32_e64), DestSub1)
           .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
-          .addReg(Addr.Base.HiReg, 0, Addr.Base.HiSubReg)
+          .addReg(Addr.Base.HiReg, {}, Addr.Base.HiSubReg)
           .add(OffsetHi)
           .addReg(CarryReg, RegState::Kill)
           .addImm(0); // clamp bit

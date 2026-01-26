@@ -19,8 +19,8 @@
 
 namespace llvm {
 class APFloat;
-class APInt;
 class APSInt;
+class APInt;
 }
 namespace clang {
 class QualType;
@@ -81,5 +81,7 @@ uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);
 uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,
                    const llvm::APSInt &Imm, bool Inverse = false);
+llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
+                                   const llvm::APSInt &Amount);
 
 #endif

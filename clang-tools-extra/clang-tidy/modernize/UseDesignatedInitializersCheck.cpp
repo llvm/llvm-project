@@ -51,7 +51,7 @@ namespace {
 struct Designators {
   Designators(const InitListExpr *InitList) : InitList(InitList) {
     assert(InitList->isSyntacticForm());
-  };
+  }
 
   unsigned size() { return getCached().size(); }
 

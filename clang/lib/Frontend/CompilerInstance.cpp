@@ -1762,8 +1762,8 @@ static ModuleSource selectModuleSource(
 }
 
 ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
-    StringRef ModuleName, SourceLocation ImportLoc,
-    SourceLocation ModuleNameLoc, bool IsInclusionDirective) {
+    StringRef ModuleName, SourceLocation ImportLoc, SourceRange ModuleNameRange,
+    bool IsInclusionDirective) {
   // Search for a module with the given name.
   HeaderSearch &HS = PP->getHeaderSearchInfo();
   Module *M =
@@ -1780,10 +1780,11 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   std::string ModuleFilename;
   ModuleSource Source =
       selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
+  SourceLocation ModuleNameLoc = ModuleNameRange.getBegin();
   if (Source == MS_ModuleNotFound) {
     // We can't find a module, error out here.
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
-        << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
+        << ModuleName << ModuleNameRange;
     return nullptr;
   }
   if (ModuleFilename.empty()) {
@@ -1969,8 +1970,11 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
   } else {
+    SourceLocation ModuleNameEndLoc = Path.back().getLoc().getLocWithOffset(
+        Path.back().getIdentifierInfo()->getLength());
     ModuleLoadResult Result = findOrCompileModuleAndReadAST(
-        ModuleName, ImportLoc, ModuleNameLoc, IsInclusionDirective);
+        ModuleName, ImportLoc, SourceRange{ModuleNameLoc, ModuleNameEndLoc},
+        IsInclusionDirective);
     if (!Result.isNormal())
       return Result;
     if (!Result)
