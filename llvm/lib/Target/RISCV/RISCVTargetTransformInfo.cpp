@@ -2621,7 +2621,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},
         {ISD::SDIV, MVT::i32, TTI::TCC_Expensive},
         {ISD::SDIV, MVT::i64, TTI::TCC_Expensive}};
-    if (LegalOp)
+    if (TLI->isOperationLegalOrPromote(ISDOpcode, LT.second))
       if (const auto *Entry = CostTableLookup(DivTbl, ISDOpcode, LT.second))
         return Entry->Cost * LT.first;
 
