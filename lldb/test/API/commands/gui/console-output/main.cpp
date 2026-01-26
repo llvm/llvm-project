@@ -1,6 +1,6 @@
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
 void generate_output() {
   for (unsigned i = 1; i < 4; ++i) {
@@ -9,7 +9,7 @@ void generate_output() {
   }
 }
 
-int main (int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   int test_var = 42;
 
   // Break before output

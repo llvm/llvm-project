@@ -6312,7 +6312,7 @@ class ConsoleOutputWindowDelegate : public WindowDelegate {
 private:
   void PollProcessOutput() {
     ExecutionContext exe_ctx =
-      m_debugger.GetCommandInterpreter().GetExecutionContext();
+        m_debugger.GetCommandInterpreter().GetExecutionContext();
     Process *process = exe_ctx.GetProcessPtr();
 
     if (!process || !process->IsAlive())
@@ -6370,14 +6370,14 @@ private:
     // Auto-scroll to bottom if enabled
     if (m_auto_scroll && !m_output_lines.empty()) {
       m_first_visible_line =
-        m_output_lines.size() > 0 ? m_output_lines.size() - 1 : 0;
+          m_output_lines.size() > 0 ? m_output_lines.size() - 1 : 0;
     }
   }
 
 public:
   ConsoleOutputWindowDelegate(Debugger &debugger)
-     : m_debugger(debugger), m_first_visible_line(0),
-       m_auto_scroll(true), m_max_lines(10000) {}
+      : m_debugger(debugger), m_first_visible_line(0), m_auto_scroll(true),
+        m_max_lines(10000) {}
 
   ~ConsoleOutputWindowDelegate() override = default;
 
@@ -6390,7 +6390,7 @@ public:
     window.Erase();
     window.DrawTitleBox(window.GetName());
 
-    const int width  = window.GetWidth();
+    const int width = window.GetWidth();
     const int height = window.GetHeight();
 
     // Calculate the visible range
@@ -6403,8 +6403,7 @@ public:
 
     // Adjust scroll pos if needed
     if (m_first_visible_line >= total_lines) {
-      m_first_visible_line =
-        total_lines > 0 ? total_lines - 1 : 0;
+      m_first_visible_line = total_lines > 0 ? total_lines - 1 : 0;
     }
 
     // Draw visible line
@@ -6413,13 +6412,13 @@ public:
 
     // If we are at the end, display last N lines
     if (m_auto_scroll || start_line + visible_height > total_lines) {
-      start_line =
-        total_lines > static_cast<size_t>(visible_height) ?
-                      total_lines - visible_height : 0;
+      start_line = total_lines > static_cast<size_t>(visible_height)
+                       ? total_lines - visible_height
+                       : 0;
     }
 
-    for (int row = 1; row <= visible_height &&
-                      (start_line + row - 1) < total_lines; ++row) {
+    for (int row = 1;
+         row <= visible_height && (start_line + row - 1) < total_lines; ++row) {
       window.MoveCursor(2, row);
       const std::string &line = m_output_lines[start_line + row - 1];
 
@@ -6476,7 +6475,8 @@ public:
       m_first_visible_line += visible_height;
       if (m_first_visible_line + visible_height >= total_lines) {
         m_first_visible_line = total_lines > static_cast<size_t>(visible_height)
-                                  ? total_lines - visible_height : 0;
+                                   ? total_lines - visible_height
+                                   : 0;
         m_auto_scroll = true;
       }
       return eKeyHandled;
@@ -6485,7 +6485,8 @@ public:
       m_auto_scroll = !m_auto_scroll;
       if (m_auto_scroll && total_lines > 0)
         m_first_visible_line = total_lines > static_cast<size_t>(visible_height)
-                                  ? total_lines - visible_height : 0;
+                                   ? total_lines - visible_height
+                                   : 0;
       return eKeyHandled;
 
     case 'c':
@@ -6501,7 +6502,8 @@ public:
 
     case KEY_END:
       m_first_visible_line = total_lines > static_cast<size_t>(visible_height)
-                                  ? total_lines - visible_height : 0;
+                                 ? total_lines - visible_height
+                                 : 0;
       m_auto_scroll = true;
       return eKeyHandled;
 
@@ -6518,16 +6520,11 @@ public:
 
   KeyHelp *WindowDelegateGetKeyHelp() override {
     static curses::KeyHelp g_source_view_key_help[] = {
-        {KEY_UP, "Scroll up"},
-        {KEY_DOWN, "Scroll down"},
-        {KEY_PPAGE, "Page up"},
-        {KEY_NPAGE, "Page down"},
-        {KEY_HOME, "Go to top"},
-        {KEY_END, "Go to bottom"},
-        {'h', "Show help dialog"},
-        {'a', "Toggle auto-scroll"},
-        {'c', "Clear output"},
-        {'\0', nullptr}};
+        {KEY_UP, "Scroll up"},     {KEY_DOWN, "Scroll down"},
+        {KEY_PPAGE, "Page up"},    {KEY_NPAGE, "Page down"},
+        {KEY_HOME, "Go to top"},   {KEY_END, "Go to bottom"},
+        {'h', "Show help dialog"}, {'a', "Toggle auto-scroll"},
+        {'c', "Clear output"},     {'\0', nullptr}};
     return g_source_view_key_help;
   }
 
@@ -6826,7 +6823,8 @@ public:
         if (console_window_sp) {
           Rect console_bounds = console_window_sp->GetBounds();
           console_bounds.origin.x = variables_bounds.origin.x;
-          console_bounds.size.width = variables_bounds.size.width + console_bounds.size.width;
+          console_bounds.size.width =
+              variables_bounds.size.width + console_bounds.size.width;
           console_window_sp->SetBounds(console_bounds);
         } else if (registers_window_sp) {
           // We have a registers window, so give all the area back to the
@@ -6835,8 +6833,8 @@ public:
           registers_bounds.size.width = source_bounds.size.width;
           registers_window_sp->SetBounds(registers_bounds);
         } else {
-          // We have no console or registers window showing so give the bottom area back
-          // to the source view
+          // We have no console or registers window showing so give the bottom
+          // area back to the source view
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
                                        variables_bounds.size.height);
@@ -6859,14 +6857,15 @@ public:
                                                    new_regs_rect);
           registers_window_sp->SetBounds(new_regs_rect);
         } else {
-          // No registers or console window, grab the bottom part of the source window
+          // No registers or console window, grab the bottom part of the source
+          // window
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_vars_rect);
           source_window_sp->SetBounds(new_source_rect);
         }
-        WindowSP new_window_sp = main_window_sp->CreateSubWindow(
-            "Variables", new_vars_rect, false);
+        WindowSP new_window_sp =
+            main_window_sp->CreateSubWindow("Variables", new_vars_rect, false);
         new_window_sp->SetDelegate(
             WindowDelegateSP(new FrameVariablesWindowDelegate(m_debugger)));
       }
@@ -6940,8 +6939,8 @@ public:
         if (variables_window_sp) {
           // Variables window exists, so give Console space to Variables
           Rect variables_bounds = variables_window_sp->GetBounds();
-          variables_bounds.size.width = variables_bounds.size.width +
-                                        console_bounds.size.width;
+          variables_bounds.size.width =
+              variables_bounds.size.width + console_bounds.size.width;
           variables_window_sp->SetBounds(variables_bounds);
         } else if (registers_window_sp) {
           // Registers window exists, so give Console space to Registers
@@ -6952,7 +6951,7 @@ public:
           // No Variables or Registers window exists
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
-                                   console_bounds.size.height);
+                                       console_bounds.size.height);
         }
       } else {
         Rect new_console_rect;
@@ -6978,9 +6977,9 @@ public:
           source_window_sp->SetBounds(new_source_rect);
         }
         WindowSP new_window_sp =
-          main_window_sp->CreateSubWindow("Console", new_console_rect, false);
+            main_window_sp->CreateSubWindow("Console", new_console_rect, false);
         new_window_sp->SetDelegate(
-          WindowDelegateSP(new ConsoleOutputWindowDelegate(m_debugger)));
+            WindowDelegateSP(new ConsoleOutputWindowDelegate(m_debugger)));
       }
       touchwin(stdscr);
     }
@@ -7937,8 +7936,9 @@ void IOHandlerCursesGUI::Activate() {
         "Source", nullptr, 's', ApplicationDelegate::eMenuID_ViewSource));
     view_menu_sp->AddSubmenu(std::make_shared<Menu>(
         "Variables", nullptr, 'v', ApplicationDelegate::eMenuID_ViewVariables));
-    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
-        "Breakpoints", nullptr, 'b', ApplicationDelegate::eMenuID_ViewBreakpoints));
+    view_menu_sp->AddSubmenu(
+        std::make_shared<Menu>("Breakpoints", nullptr, 'b',
+                               ApplicationDelegate::eMenuID_ViewBreakpoints));
     view_menu_sp->AddSubmenu(std::make_shared<Menu>(
         "Console", nullptr, 'o', ApplicationDelegate::eMenuId_ViewConsole));
 
@@ -7973,7 +7973,7 @@ void IOHandlerCursesGUI::Activate() {
     source_variables_bounds.HorizontalSplitPercentage(0.70, source_bounds,
                                                       variables_console_bounds);
     variables_console_bounds.VerticalSplitPercentage(0.50, variables_bounds,
-                                                      console_bounds);
+                                                     console_bounds);
 
     WindowSP menubar_window_sp =
         main_window_sp->CreateSubWindow("Menubar", menubar_bounds, false);

@@ -13,34 +13,33 @@ class TestGuiConsoleOutputTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_gui_console_output(self):
         """Test that console pane prints messages"""
         self.build()
 
         self.launch(
-            executable=self.getBuildArtifact("a.out"), 
+            executable=self.getBuildArtifact("a.out"),
             dimensions=(100, 500),
-            run_under=["env", "TERM=xterm"]
+            run_under=["env", "TERM=xterm"],
         )
-        
+
         self.expect(
             'br set -o true -f main.cpp -p "// break here begin"',
             substrs=["Breakpoint 1", "address ="],
         )
-        
+
         self.expect(
             'br set -o true -f main.cpp -p "// break here end"',
             substrs=["Breakpoint 2", "address ="],
         )
-        
+
         self.expect("run", substrs=["stop reason ="])
 
         escape_key = chr(27).encode()
 
         # Start the GUI.
         self.child.sendline("gui")
-        
+
         # Check for gui elements in Menu bar (top of screen)
         # We expect these in the order they appear to avoid consumption issues
         self.child.expect_exact("Target")
@@ -76,35 +75,34 @@ class TestGuiConsoleOutputTest(PExpectTest):
 
     @skipIfAsan
     @skipIfCursesSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_gui_console_navigate(self):
         """Test that console pane navigation works"""
         self.build()
 
         self.launch(
-            executable=self.getBuildArtifact("a.out"), 
+            executable=self.getBuildArtifact("a.out"),
             dimensions=(100, 500),
-            run_under=["env", "TERM=xterm"]
+            run_under=["env", "TERM=xterm"],
         )
-        
+
         self.expect(
             'br set -o true -f main.cpp -p "// break here begin"',
             substrs=["Breakpoint 1", "address ="],
         )
-        
+
         self.expect(
             'br set -o true -f main.cpp -p "// break here end"',
             substrs=["Breakpoint 2", "address ="],
         )
-        
+
         self.expect("run", substrs=["stop reason ="])
 
         escape_key = chr(27).encode()
-        tab_key    = chr(9).encode()
+        tab_key = chr(9).encode()
 
         # Start the GUI.
         self.child.sendline("gui")
-        
+
         # Match elements in top-to-bottom order
         self.child.expect_exact("Target")
         self.child.expect_exact("Sources")
@@ -114,7 +112,7 @@ class TestGuiConsoleOutputTest(PExpectTest):
         self.child.expect_exact("(no output yet)")
 
         # Continue program execution
-        self.child.send('c')
+        self.child.send("c")
 
         # Check console output for messages
         self.child.expect_exact("Hello from stdout line 1")
@@ -123,12 +121,12 @@ class TestGuiConsoleOutputTest(PExpectTest):
         self.child.expect_exact("stop reason")
 
         # Tab to console
-        self.child.send(tab_key) # Sources -> Threads
-        self.child.send(tab_key) # Threads -> Variables
-        self.child.send(tab_key) # Variables -> Console
+        self.child.send(tab_key)  # Sources -> Threads
+        self.child.send(tab_key)  # Threads -> Variables
+        self.child.send(tab_key)  # Variables -> Console
 
         # Clear Console output
-        self.child.send('c')
+        self.child.send("c")
 
         # The Console window show this message after clear
         self.child.expect_exact("(no output yet)")
@@ -138,3 +136,4 @@ class TestGuiConsoleOutputTest(PExpectTest):
 
         self.expect_prompt()
         self.quit()
+
