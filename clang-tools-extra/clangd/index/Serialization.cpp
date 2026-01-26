@@ -686,8 +686,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   case IndexFileFormat::YAML:
     writeYAML(O, OS);
     break;
-  case IndexFileFormat::SHARDED:
-    llvm_unreachable("SHARDED format not supported for serialization");
   }
   return OS;
 }
