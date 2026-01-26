@@ -98,21 +98,22 @@ TEST_F(SemilatticeTest, BasicConstruction) {
   EXPECT_TRUE(Lat.lookup(Cond)->isLeaf());
 }
 
-TEST_F(SemilatticeTest, ConstructionNonIntegralExcluded) {
+TEST_F(SemilatticeTest, ConstructionWithIntAndPtr) {
   parseAssembly(
       "define void @test(i32 %int_arg, float %float_arg, ptr %ptr_arg, <2 x "
-      "i32> %vec_arg) {\n"
+      "i32> %vec_int_arg, <2 x ptr> %vec_ptr_arg) {\n"
       "entry:\n"
       "  br i1 poison, label %then, label %else\n"
       "then:\n"
       "  %int_val = add i32 %int_arg, 1\n"
       "  %float_val = fadd float %float_arg, 1.0\n"
-      "  %vec_val = add <2 x i32> %vec_arg, <i32 1, i32 2>\n"
+      "  %vec_val = add <2 x i32> %vec_int_arg, <i32 1, i32 2>\n"
       "  br label %merge\n"
       "else:\n"
-      "  %int_val2 = mul i32 %int_arg, 2\n"
+      "  %fpconv = fptoui float %float_arg to i32"
+      "  %int_val2 = mul i32 %int_arg, %fpconv\n"
       "  %ptr_val = getelementptr i8, ptr %ptr_arg, i32 4\n"
-      "  %vec_val2 = mul <2 x i32> %vec_arg, <i32 3, i32 4>\n"
+      "  %vec_val2 = mul <2 x i32> %vec_int_arg, <i32 3, i32 4>\n"
       "  br label %merge\n"
       "merge:\n"
       "  %phi_int = phi i32 [ %int_val, %then ], [ %int_val2, %else ]\n"
@@ -120,7 +121,8 @@ TEST_F(SemilatticeTest, ConstructionNonIntegralExcluded) {
       "  %phi_ptr = phi ptr [ %ptr_arg, %then ], [ %ptr_val, %else ]\n"
       "  %phi_vec = phi <2 x i32> [ %vec_val, %then ], [ %vec_val2, %else ]\n"
       "  %final_int = add i32 %phi_int, 5\n"
-      "  %final_vec = add <2 x i32> %phi_vec, <i32 5, i32 6>\n"
+      "  %vec_ptr_conv = ptrtoint <2 x ptr> %vec_ptr_arg to <2 x i32>"
+      "  %final_vec = add <2 x i32> %phi_vec, %vec_ptr_conv\n"
       "  store float %phi_float, ptr %phi_ptr\n"
       "  ret void\n"
       "}\n");
@@ -129,7 +131,8 @@ TEST_F(SemilatticeTest, ConstructionNonIntegralExcluded) {
   Argument *IntArg = &*ArgIt++;
   Argument *FloatArg = &*ArgIt++;
   Argument *PtrArg = &*ArgIt++;
-  Argument *VecArg = &*ArgIt;
+  Argument *VecIntArg = &*ArgIt;
+  Argument *VecPtrArg = &*ArgIt;
   Instruction *IntVal = findInstructionByName(F, "int_val");
   Instruction *FloatVal = findInstructionByName(F, "float_val");
   Instruction *VecVal = findInstructionByName(F, "vec_val");
@@ -141,28 +144,32 @@ TEST_F(SemilatticeTest, ConstructionNonIntegralExcluded) {
   Instruction *PhiPtr = findInstructionByName(F, "phi_ptr");
   Instruction *PhiVec = findInstructionByName(F, "phi_vec");
   Instruction *FinalInt = findInstructionByName(F, "final_int");
+  Instruction *FPConv = findInstructionByName(F, "fpconv");
+  Instruction *VecPtrConv = findInstructionByName(F, "vec_ptr_conv");
   Instruction *FinalVec = findInstructionByName(F, "final_vec");
 
   EXPECT_TRUE(Lat.contains(IntArg));
+  EXPECT_FALSE(Lat.contains(FloatArg));
+  EXPECT_TRUE(Lat.contains(PtrArg));
+  EXPECT_TRUE(Lat.contains(VecIntArg));
+  EXPECT_TRUE(Lat.contains(VecPtrArg));
+
   EXPECT_TRUE(Lat.contains(IntVal));
   EXPECT_TRUE(Lat.contains(IntVal2));
   EXPECT_TRUE(Lat.contains(PhiInt));
   EXPECT_TRUE(Lat.contains(FinalInt));
-
-  EXPECT_TRUE(Lat.contains(VecArg));
   EXPECT_TRUE(Lat.contains(VecVal));
   EXPECT_TRUE(Lat.contains(VecVal2));
   EXPECT_TRUE(Lat.contains(PhiVec));
+  EXPECT_TRUE(Lat.contains(FPConv));
+  EXPECT_TRUE(Lat.contains(VecPtrConv));
   EXPECT_TRUE(Lat.contains(FinalVec));
-
-  EXPECT_FALSE(Lat.contains(FloatArg));
-  EXPECT_FALSE(Lat.contains(PtrArg));
   EXPECT_FALSE(Lat.contains(FloatVal));
-  EXPECT_FALSE(Lat.contains(PtrVal));
+  EXPECT_TRUE(Lat.contains(PtrVal));
   EXPECT_FALSE(Lat.contains(PhiFloat));
-  EXPECT_FALSE(Lat.contains(PhiPtr));
+  EXPECT_TRUE(Lat.contains(PhiPtr));
 
-  EXPECT_EQ(Lat.size(), 10u);
+  EXPECT_EQ(Lat.size(), 16u);
 }
 
 TEST_F(SemilatticeTest, Iteration) {

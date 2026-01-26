@@ -19,14 +19,16 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 
 namespace llvm {
 class Semilattice;
+class Value;
+class User;
+class Function;
+class DataLayout;
 
 class SemilatticeNode {
   friend class Semilattice;
@@ -60,11 +62,7 @@ public:
 
 protected:
   SemilatticeNode() : ValHasKnownBits(nullptr, 0) {}
-  SemilatticeNode(Value *V)
-      : ValHasKnownBits(V, 0),
-        Known(V->getType()->getScalarType()->getIntegerBitWidth()) {
-    assert(V && "Attempting to create a node with an empty Value");
-  }
+  SemilatticeNode(Value *V, const DataLayout &DL);
   SemilatticeNode(const SemilatticeNode &) = delete;
   SemilatticeNode &operator=(const SemilatticeNode &) = delete;
 
@@ -100,17 +98,22 @@ class Semilattice {
   NodeT *RootNode;
   DenseMap<Value *, NodeT *> NodeMap;
   NodeT *create() { return new (NodeAllocator) NodeT(); }
-  NodeT *create(Value *V) { return new (NodeAllocator) NodeT(V); }
-  NodeT *getOrCreate(Value *V) { return NodeMap.lookup_or(V, create(V)); }
-  NodeT *insert(Value *V, NodeT *Parent = nullptr);
+  NodeT *create(Value *V, const DataLayout &DL) {
+    return new (NodeAllocator) NodeT(V, DL);
+  }
+  NodeT *getOrCreate(Value *V, const DataLayout &DL) {
+    return NodeMap.lookup_or(V, create(V, DL));
+  }
+  NodeT *insert(Value *V, const DataLayout &DL, NodeT *Parent = nullptr);
   SmallVector<NodeT *, 4> insert_range(NodeT *Parent, // NOLINT
-                                       ArrayRef<User *> R);
-  void recurseInsertChildren(ArrayRef<NodeT *>);
+                                       ArrayRef<User *> R,
+                                       const DataLayout &DL);
+  void recurseInsertChildren(ArrayRef<NodeT *>, const DataLayout &DL);
 
   // The roots (excluding the sentinel value) are the arguments of the function,
   // and PHI nodes in each Basic Block, excluding values whose types are not
   // either integer or vector of integers.
-  void initialize(ArrayRef<Value *> Roots);
+  void initialize(ArrayRef<Value *> Roots, const DataLayout &DL);
   void initialize(Function &F);
 
 public:

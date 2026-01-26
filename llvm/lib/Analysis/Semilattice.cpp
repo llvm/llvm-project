@@ -11,37 +11,46 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using NodeT = SemilatticeNode;
 
-void Semilattice::initialize(ArrayRef<Value *> Roots) {
-  auto ToInsert = make_filter_range(Roots, [&](Value *V) {
-    return !contains(V) && V->getType()->isIntOrIntVectorTy();
-  });
+static bool isSupportedValue(Value *V) {
+  // Pointer types are useful for inferring alignment.
+  return V->getType()->isIntOrIntVectorTy() ||
+         V->getType()->isPtrOrPtrVectorTy();
+}
+
+SemilatticeNode::SemilatticeNode(Value *V, const DataLayout &DL)
+    : ValHasKnownBits(V, 0),
+      Known(DL.getTypeSizeInBits(V->getType()->getScalarType())) {
+  assert(V && "Attempting to create a node with an empty Value");
+}
+
+void Semilattice::initialize(ArrayRef<Value *> Roots, const DataLayout &DL) {
+  auto ToInsert = make_filter_range(
+      Roots, [&](Value *V) { return !contains(V) && isSupportedValue(V); });
   for (Value *V : ToInsert)
-    recurseInsertChildren(insert(V));
+    recurseInsertChildren(insert(V, DL), DL);
 }
 
 void Semilattice::initialize(Function &F) {
   SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
-  initialize(Args);
-  for (BasicBlock &BB : F)
-    if (!BB.empty()) {
-      SmallVector<Value *> Args(llvm::make_pointer_range(
-          make_range(BB.begin(), BB.getFirstNonPHIIt())));
-      initialize(Args);
-    }
+  initialize(Args, F.getDataLayout());
+  for (BasicBlock &BB : F) {
+    SmallVector<Value *> Args(llvm::make_pointer_range(BB));
+    initialize(Args, F.getDataLayout());
+  }
 }
 
 Semilattice::Semilattice(Function &F) : RootNode(create()) { initialize(F); }
 
-NodeT *Semilattice::insert(Value *V, NodeT *Parent) {
-  assert(V->getType()->isIntOrIntVectorTy() &&
-         "Cannot insert non-integral types");
-  NodeT *Node = getOrCreate(V);
+NodeT *Semilattice::insert(Value *V, const DataLayout &DL, NodeT *Parent) {
+  assert(isSupportedValue(V) && "Cannot insert non-integral non-pointer types");
+  NodeT *Node = getOrCreate(V, DL);
   NodeMap.try_emplace(V, Node);
   NodeT *ParentNode = Parent ? Parent : RootNode;
   ParentNode->addChild(Node);
@@ -49,20 +58,23 @@ NodeT *Semilattice::insert(Value *V, NodeT *Parent) {
 }
 
 SmallVector<NodeT *, 4> Semilattice::insert_range(NodeT *Parent,
-                                                  ArrayRef<User *> R) {
+                                                  ArrayRef<User *> R,
+                                                  const DataLayout &DL) {
   SmallVector<NodeT *, 4> Ret;
   auto Users = make_filter_range(R, [&](User *U) {
     return (!contains(U) || !lookup(U)->hasParent(Parent)) &&
-           U->getType()->isIntOrIntVectorTy();
+           isSupportedValue(U);
   });
   for (User *U : Users)
-    Ret.push_back(insert(U, Parent));
+    Ret.push_back(insert(U, DL, Parent));
   return Ret;
 }
 
-void Semilattice::recurseInsertChildren(ArrayRef<NodeT *> Parents) {
+void Semilattice::recurseInsertChildren(ArrayRef<NodeT *> Parents,
+                                        const DataLayout &DL) {
   for (NodeT *P : Parents)
-    recurseInsertChildren(insert_range(P, to_vector(P->getValue()->users())));
+    recurseInsertChildren(
+        insert_range(P, to_vector(P->getValue()->users()), DL), DL);
 }
 
 SmallVector<NodeT *> Semilattice::invalidateKnownBits(Value *V) {
