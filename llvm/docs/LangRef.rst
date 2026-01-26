@@ -2085,7 +2085,8 @@ For example:
 
     If multiple allocation functions operate on the same allocation (for
     example, an "alloc" followed by "free"), allocation elision is only allowed
-    if all involved functions have the same ``"alloc-family"``.
+    if all involved functions have the same ``"alloc-family"``. In this case,
+    either all operations have to be elided or none of them.
 ``"alloc-variant-zeroed"="FUNCTION"``
     This attribute indicates that another function is equivalent to an allocator function,
     but returns zeroed memory. The function must have "zeroed" allocation behavior,
