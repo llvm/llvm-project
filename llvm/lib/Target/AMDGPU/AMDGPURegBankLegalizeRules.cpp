@@ -737,16 +737,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S64, P3}, {{Vgpr64}, {VgprP3, Vgpr64}}});
 
   addRulesForGOpcs({G_ATOMIC_CMPXCHG})
-      .Any({{S32, P2}, {{Vgpr32}, {VgprP2, Vgpr32, Vgpr32}}})
-      .Any({{S64, P2}, {{Vgpr64}, {VgprP2, Vgpr64, Vgpr64}}})
-      .Any({{S32, P3}, {{Vgpr32}, {VgprP3, Vgpr32, Vgpr32}}})
-      .Any({{S64, P3}, {{Vgpr64}, {VgprP3, Vgpr64, Vgpr64}}});
+      .Any({{DivS32, P2}, {{Vgpr32}, {VgprP2, Vgpr32, Vgpr32}}})
+      .Any({{DivS64, P2}, {{Vgpr64}, {VgprP2, Vgpr64, Vgpr64}}})
+      .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3, Vgpr32, Vgpr32}}})
+      .Any({{DivS64, P3}, {{Vgpr64}, {VgprP3, Vgpr64, Vgpr64}}});
 
   addRulesForGOpcs({G_AMDGPU_ATOMIC_CMPXCHG})
-      .Any({{S32, P0}, {{Vgpr32}, {VgprP0, VgprV2S32}}})
-      .Any({{S32, P1}, {{Vgpr32}, {VgprP1, VgprV2S32}}})
-      .Any({{S64, P0}, {{Vgpr64}, {VgprP0, VgprV2S64}}})
-      .Any({{S64, P1}, {{Vgpr64}, {VgprP1, VgprV2S64}}});
+      .Any({{DivS32, P0}, {{Vgpr32}, {VgprP0, VgprV2S32}}})
+      .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1, VgprV2S32}}})
+      .Any({{DivS64, P0}, {{Vgpr64}, {VgprP0, VgprV2S64}}})
+      .Any({{DivS64, P1}, {{Vgpr64}, {VgprP1, VgprV2S64}}});
 
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
