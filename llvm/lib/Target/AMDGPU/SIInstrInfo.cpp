@@ -7815,7 +7815,7 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
       Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
               get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-          .addReg(Inst.getOperand(1).getReg(), 0, BaseIndices[i]);
+          .addReg(Inst.getOperand(1).getReg(), {}, BaseIndices[i]);
 
       DstRegs.push_back(NewDst);
     }
