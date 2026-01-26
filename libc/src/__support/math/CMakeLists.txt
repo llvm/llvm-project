@@ -781,6 +781,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.include.llvm-libc-macros.float16_macros
 )
 
 add_header_library(

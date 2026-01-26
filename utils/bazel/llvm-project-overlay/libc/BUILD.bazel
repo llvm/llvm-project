@@ -3434,6 +3434,7 @@ libc_support_library(
         ":__support_math_expxf16_utils",
         ":hdr_errno_macros",
         ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
