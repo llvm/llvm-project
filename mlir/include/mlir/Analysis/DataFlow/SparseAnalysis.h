@@ -218,13 +218,6 @@ protected:
       ValueRange noSuccessorInputs,
       ArrayRef<AbstractSparseLattice *> argLattices) = 0;
 
-  /// Given an operation with region non-control-flow, the lattices of the entry
-  /// block arguments, compute the lattice values for block arguments.(ex. the
-  /// block argument of gpu.launch).
-  virtual void visitNonControlFlowArgumentsImpl(
-      Operation *op, Region *const region, ValueRange arguments,
-      ArrayRef<AbstractSparseLattice *> argLattices) = 0;
-
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
 
@@ -401,15 +394,6 @@ private:
       ArrayRef<AbstractSparseLattice *> argLattices) override {
     visitNonControlFlowArguments(
         op, successor, noSuccessorInputs,
-        {reinterpret_cast<StateT *const *>(argLattices.begin()),
-         argLattices.size()});
-  }
-
-  virtual void visitNonControlFlowArgumentsImpl(
-      Operation *op, Region *const region, ValueRange arguments,
-      ArrayRef<AbstractSparseLattice *> argLattices) override {
-    visitNonControlFlowArguments(
-        op, region, arguments,
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
          argLattices.size()});
   }

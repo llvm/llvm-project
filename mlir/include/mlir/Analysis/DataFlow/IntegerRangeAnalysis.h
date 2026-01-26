@@ -69,12 +69,6 @@ public:
       Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
       ArrayRef<IntegerValueRangeLattice *> argLattices) override;
-
-  /// This function calls `InferIntRangeInterface` to provide values for block
-  /// arguments which is not RegionBranchOpInterface, (ex, gpu.launch).
-  void visitNonControlFlowArguments(
-      Operation *op, Region *const region, ValueRange nonSuccessorInputs,
-      ArrayRef<IntegerValueRangeLattice *> argLattices) override;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without
