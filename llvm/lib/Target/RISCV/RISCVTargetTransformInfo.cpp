@@ -2614,8 +2614,6 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
-    bool LegalOp = TLI->isOperationLegalOrPromote(ISDOpcode, LT.second);
-
     static const CostTblEntry DivTbl[]{
         {ISD::UDIV, MVT::i32, TTI::TCC_Expensive},
         {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},
