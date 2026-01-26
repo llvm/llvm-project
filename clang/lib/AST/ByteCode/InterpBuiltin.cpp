@@ -370,10 +370,6 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     const ASTContext &AC = S.getASTContext();
     unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
     if (ElemSize != WCharSize) {
-      if (S.diagnosing()) {
-        //  a dedicated diagnostic
-        diagnoseNonConstexprBuiltin(S, OpPC, ID);
-      }
       return false;
     }
   }
