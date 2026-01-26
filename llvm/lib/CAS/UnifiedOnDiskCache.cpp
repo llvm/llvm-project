@@ -66,7 +66,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/UnifiedOnDiskCache.h"
-#include "BuiltinCAS.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -74,7 +73,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
@@ -253,26 +251,42 @@ static Error validateOutOfProcess(StringRef LLVMCasBinary, StringRef RootPath,
   return Error::success();
 }
 
+Error UnifiedOnDiskCache::validateActionCache() const {
+  auto ValidateRef = [this](FileOffset Offset, ArrayRef<char> Value) -> Error {
+    auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
+    auto formatError = [&](Twine Msg) {
+      return createStringError(
+          llvm::errc::illegal_byte_sequence,
+          "bad record at 0x" +
+              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+              Msg.str());
+    };
+    if (Error E = this->getGraphDB().validateObjectID(ID))
+      return formatError(llvm::toString(std::move(E)));
+    return Error::success();
+  };
+  return getKeyValueDB().validate(ValidateRef);
+}
+
 static Error validateInProcess(StringRef RootPath, StringRef HashName,
-                               unsigned HashByteSize, bool CheckHash) {
+                               unsigned HashByteSize, bool CheckHash,
+                               OnDiskGraphDB::HashingFuncT HashFn) {
   std::shared_ptr<UnifiedOnDiskCache> UniDB;
   if (Error E = UnifiedOnDiskCache::open(RootPath, std::nullopt, HashName,
                                          HashByteSize)
                     .moveInto(UniDB))
     return E;
-  auto CAS = builtin::createObjectStoreFromUnifiedOnDiskCache(UniDB);
-  if (Error E = CAS->validate(CheckHash))
+  if (Error E = UniDB->getGraphDB().validate(CheckHash, HashFn))
     return E;
-  auto Cache = builtin::createActionCacheFromUnifiedOnDiskCache(UniDB);
-  if (Error E = Cache->validate())
+  if (Error E = UniDB->validateActionCache())
     return E;
   return Error::success();
 }
 
 Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
     StringRef RootPath, StringRef HashName, unsigned HashByteSize,
-    bool CheckHash, bool AllowRecovery, bool ForceValidation,
-    std::optional<StringRef> LLVMCasBinaryPath) {
+    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn, bool AllowRecovery,
+    bool ForceValidation, std::optional<StringRef> LLVMCasBinaryPath) {
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -333,10 +347,10 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
 
   // Validate!
   bool NeedsRecovery = false;
-  Error E =
-      LLVMCasBinaryPath
-          ? validateOutOfProcess(*LLVMCasBinaryPath, RootPath, CheckHash)
-          : validateInProcess(RootPath, HashName, HashByteSize, CheckHash);
+  Error E = LLVMCasBinaryPath
+                ? validateOutOfProcess(*LLVMCasBinaryPath, RootPath, CheckHash)
+                : validateInProcess(RootPath, HashName, HashByteSize, CheckHash,
+                                    HashFn);
   if (E) {
     if (Logger)
       LogValidationError = toStringWithoutConsuming(E);
