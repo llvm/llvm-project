@@ -1489,15 +1489,8 @@ struct WgToSgMultiDimReductionOp
 
     SmallVector<OpFoldResult> storeOffsets2D = {rowOffsetStore, colOffset};
 
-    auto storeMatrixLayout = xegpu::SliceAttr::get(
-        rewriter.getContext(),
-        xegpu::LayoutAttr::get(rewriter.getContext(), /*sg_layout =*/nullptr,
-                               /*sg_data =*/nullptr,
-                               /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-                               /*lane_data =*/nullptr, /*order =*/nullptr),
-        dyn_cast<xegpu::SliceAttr>(layout).getDims());
     xegpu::StoreMatrixOp::create(rewriter, loc, storeData, memDesc.getResult(),
-                                 storeOffsets2D, /*layout=*/storeMatrixLayout);
+                                 storeOffsets2D, /*layout=*/nullptr);
 
     gpu::BarrierOp::create(rewriter, loc);
 
