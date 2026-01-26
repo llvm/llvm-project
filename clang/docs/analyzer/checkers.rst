@@ -3682,7 +3682,7 @@ For types like this, instead of using built in casts, the programmer will use he
 
 alpha.webkit.NoDeleteChecker
 """""""""""""""""""""""""""""""
-Check that [[clang::annotate_type("webkit.nodelete")]] annotation does not appear on a fucntion which could delete an object
+Check that `[[clang::annotate_type("webkit.nodelete")]]` annotation does not appear on a fucntion which could delete an object
 
 .. code-block:: cpp
 
@@ -3693,6 +3693,9 @@ Check that [[clang::annotate_type("webkit.nodelete")]] annotation does not appea
  Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
    return obj->anotherTrivialFunction();
  };
+ 
+`[[clang::annotate_type("webkit.nodelete")]]` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
+For example, alpha.webkit.UncountedCallArgsChecker will ignore a function call with this annotation.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""
