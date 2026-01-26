@@ -589,23 +589,21 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 /// \param Val     Value to be casted.
 /// \param DstTy   Destination type for the cast.
 /// \return the final value in the created cast chain.
-template <typename FolderTy, typename InserterTy>
 static Value *createLoadStoreCastChain(const DataLayout &DL,
-                                       IRBuilder<FolderTy, InserterTy> &Builder,
-                                       Value *Val, Type *DstTy) {
+                                       IRBuilderBase &Builder, Value *Val,
+                                       Type *DstTy) {
   const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
-                                                   Type *PtrTy) -> Value * {
-    assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
-    const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
-    if (!PtrTy->isVectorTy())
-      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
-    const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
+                                                   Type *DstTy) -> Value * {
+    if (DstTy->isPointerTy())
+      return Builder.CreateBitOrPointerCast(Val, DL.getIntPtrType(DstTy));
     // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need
     // to first cast the ptr vector to <2 x i64>.
-    assert((Size % NumPtrElts == 0) && "Vector size not divisble");
-    Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
+    TypeSize Size = DL.getTypeStoreSizeInBits(DstTy);
+    TypeSize EltSize = DL.getTypeStoreSizeInBits(DstTy->getScalarType());
+    assert(Size.isKnownMultipleOf(EltSize) && "Vector size not divisble");
+    unsigned NumPtrElts = Size.divideCoefficientBy(EltSize);
     return Builder.CreateBitOrPointerCast(
-        Val, FixedVectorType::get(EltTy, NumPtrElts));
+        Val, FixedVectorType::get(Builder.getIntNTy(EltSize), NumPtrElts));
   };
 
   {
