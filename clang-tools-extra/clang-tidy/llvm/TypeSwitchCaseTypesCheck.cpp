@@ -51,7 +51,7 @@ void TypeSwitchCaseTypesCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const ParmVarDecl *LambdaParam = CallOp->getParamDecl(0);
-  QualType ParamType = LambdaParam->getType();
+  const QualType ParamType = LambdaParam->getType();
 
   // Check if the parameter uses `auto`.
   QualType ParamBaseType = ParamType.getNonReferenceType();
