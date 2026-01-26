@@ -878,27 +878,27 @@ define signext i32 @vpreduce_umax_nxv4i32(i32 signext %s, <vscale x 4 x i32> %v,
 define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %v, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_umax_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    srli a2, a3, 2
-; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a2
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a3, a4, 1
 ; CHECK-NEXT:    sub a2, a1, a3
-; CHECK-NEXT:    sltu a4, a1, a2
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    sltu a5, a1, a2
+; CHECK-NEXT:    addi a5, a5, -1
+; CHECK-NEXT:    and a2, a5, a2
+; CHECK-NEXT:    srli a4, a4, 2
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v25, v0, a4
 ; CHECK-NEXT:    bltu a1, a3, .LBB67_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:  .LBB67_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v25, a0
+; CHECK-NEXT:    vmv.s.x v24, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vredmaxu.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vredmaxu.vs v24, v8, v24, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vredmaxu.vs v25, v16, v25, v0.t
-; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    vredmaxu.vs v24, v16, v24, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v24
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vp.reduce.umax.nxv32i32(i32 %s, <vscale x 32 x i32> %v, <vscale x 32 x i1> %m, i32 %evl)
   ret i32 %r

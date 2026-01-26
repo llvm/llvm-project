@@ -240,9 +240,9 @@ define void @masked_store_v32i64(<32 x i64> %val, ptr %a, <32 x i1> %mask) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
@@ -278,9 +278,9 @@ define void @masked_store_v64i32(<64 x i32> %val, ptr %a, <64 x i1> %mask) {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0), v0.t
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 4
-; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
@@ -305,9 +305,9 @@ define void @masked_store_v128i16(<128 x i16> %val, ptr %a, <128 x i1> %mask) {
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0), v0.t
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 8
-; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
@@ -320,11 +320,11 @@ define void @masked_store_v256i8(<256 x i8> %val, ptr %a, <256 x i1> %mask) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a1)
-; CHECK-NEXT:    addi a1, a0, 128
+; CHECK-NEXT:    vlm.v v25, (a1)
 ; CHECK-NEXT:    vse8.v v8, (a0), v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vse8.v v16, (a1), v0.t
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vse8.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v256i8.p0(<256 x i8> %val, ptr %a, i32 8, <256 x i1> %mask)
   ret void

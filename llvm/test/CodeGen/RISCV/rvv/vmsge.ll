@@ -819,8 +819,8 @@ define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i8_i8_1(<vscale x 4 x i1> 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v10, v0
-; CHECK-NEXT:    li a0, 99
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    li a0, 99
 ; CHECK-NEXT:    vmsgt.vx v10, v8, a0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1316,15 +1316,15 @@ define <vscale x 1 x i1> @intrinsic_vmsge_mask_vx_nxv1i64_i64(<vscale x 1 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; RV32-NEXT:    vmv1r.v v11, v0
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
-; RV32-NEXT:    vlse64.v v11, (a0), zero
-; RV32-NEXT:    vmv1r.v v10, v0
+; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vmv1r.v v0, v9
-; RV32-NEXT:    vmsle.vv v10, v11, v8, v0.t
-; RV32-NEXT:    vmv.v.v v0, v10
+; RV32-NEXT:    vmsle.vv v11, v10, v8, v0.t
+; RV32-NEXT:    vmv.v.v v0, v11
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1379,12 +1379,12 @@ define <vscale x 2 x i1> @intrinsic_vmsge_mask_vx_nxv2i64_i64(<vscale x 2 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; RV32-NEXT:    vmv1r.v v11, v0
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
-; RV32-NEXT:    vmv1r.v v11, v0
 ; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    vmsle.vv v11, v12, v8, v0.t
 ; RV32-NEXT:    vmv1r.v v0, v11
@@ -1442,12 +1442,12 @@ define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i64_i64(<vscale x 4 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv4i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; RV32-NEXT:    vmv1r.v v13, v0
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
-; RV32-NEXT:    vmv1r.v v13, v0
 ; RV32-NEXT:    vmv1r.v v0, v12
 ; RV32-NEXT:    vmsle.vv v13, v16, v8, v0.t
 ; RV32-NEXT:    vmv1r.v v0, v13

@@ -569,24 +569,24 @@ define <vscale x 128 x i8> @vssub_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x
 ; CHECK-LABEL: vssub_vi_nxv128i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v25, v0
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub a3, a1, a2
+; CHECK-NEXT:    sltu a4, a1, a3
 ; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    sub a2, a1, a0
-; CHECK-NEXT:    sltu a3, a1, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a2
-; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vssub.vx v16, v16, a2, v0.t
-; CHECK-NEXT:    bltu a1, a0, .LBB50_2
+; CHECK-NEXT:    vssub.vx v16, v16, a0, v0.t
+; CHECK-NEXT:    bltu a1, a2, .LBB50_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB50_2:
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vssub.vx v8, v8, a2, v0.t
+; CHECK-NEXT:    vssub.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i8> @llvm.vp.ssub.sat.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> splat (i8 -1), <vscale x 128 x i1> %m, i32 %evl)
   ret <vscale x 128 x i8> %v
@@ -1346,18 +1346,18 @@ define <vscale x 16 x i32> @vssub_vi_nxv16i32_unmasked(<vscale x 16 x i32> %va, 
 define <vscale x 32 x i32> @vssub_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vssub_vi_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a1, a3, 1
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a2
+; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a4, a4, a2
 ; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; CHECK-NEXT:    srli a3, a3, 2
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vslidedown.vx v0, v0, a3
+; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vssub.vx v16, v16, a2, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB118_2
 ; CHECK-NEXT:  # %bb.1:

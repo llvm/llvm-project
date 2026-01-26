@@ -391,21 +391,21 @@ define <vscale x 128 x i8> @vmin_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vs
 ; CHECK-LABEL: vmin_vx_nxv128i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v25, v0
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    sub a4, a2, a3
 ; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    sub a3, a2, a1
-; CHECK-NEXT:    sltu a4, a2, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a3, a4, a3
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
+; CHECK-NEXT:    sltu a1, a2, a4
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a1, a1, a4
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmin.vx v16, v16, a0, v0.t
-; CHECK-NEXT:    bltu a2, a1, .LBB34_2
+; CHECK-NEXT:    bltu a2, a3, .LBB34_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
@@ -928,17 +928,17 @@ define <vscale x 16 x i32> @vmin_vx_nxv16i32_unmasked(<vscale x 16 x i32> %va, i
 define <vscale x 32 x i32> @vmin_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmin_vx_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a2, a3, 1
+; CHECK-NEXT:    sub a4, a1, a2
+; CHECK-NEXT:    sltu a5, a1, a4
+; CHECK-NEXT:    addi a5, a5, -1
+; CHECK-NEXT:    and a4, a5, a4
+; CHECK-NEXT:    srli a3, a3, 2
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a3, a2, 2
-; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
-; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a3, a4, a3
-; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmin.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    bltu a1, a2, .LBB80_2
 ; CHECK-NEXT:  # %bb.1:
@@ -1000,16 +1000,16 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
 ;
 ; RV64-LABEL: vmin_vx_nxv32i32_evl_nx8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmv1r.v v24, v0
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    srli a3, a1, 2
 ; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    vslidedown.vx v0, v0, a3
 ; RV64-NEXT:    sub a3, a1, a2
 ; RV64-NEXT:    sltu a4, a1, a3
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
+; RV64-NEXT:    srli a4, a1, 2
+; RV64-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmv1r.v v24, v0
+; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vmin.vx v16, v16, a0, v0.t
 ; RV64-NEXT:    bltu a1, a2, .LBB82_2

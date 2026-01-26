@@ -187,21 +187,21 @@ define {<vscale x 64 x i1>, <vscale x 64 x i1>} @vector_deinterleave_nxv64i1_nxv
 ; ZIP-LABEL: vector_deinterleave_nxv64i1_nxv128i1:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; ZIP-NEXT:    vmv1r.v v9, v0
+; ZIP-NEXT:    vmv1r.v v24, v0
 ; ZIP-NEXT:    vmv1r.v v0, v8
-; ZIP-NEXT:    vmv.v.i v24, 0
-; ZIP-NEXT:    vmerge.vim v16, v24, 1, v0
-; ZIP-NEXT:    vmv1r.v v0, v9
-; ZIP-NEXT:    vmerge.vim v24, v24, 1, v0
+; ZIP-NEXT:    vmv.v.i v16, 0
+; ZIP-NEXT:    vmerge.vim v8, v16, 1, v0
+; ZIP-NEXT:    vmv1r.v v0, v24
+; ZIP-NEXT:    vmerge.vim v24, v16, 1, v0
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; ZIP-NEXT:    ri.vunzip2a.vv v12, v16, v20
-; ZIP-NEXT:    ri.vunzip2b.vv v4, v16, v20
-; ZIP-NEXT:    ri.vunzip2a.vv v8, v24, v28
+; ZIP-NEXT:    ri.vunzip2a.vv v20, v8, v12
+; ZIP-NEXT:    ri.vunzip2b.vv v4, v8, v12
+; ZIP-NEXT:    ri.vunzip2a.vv v16, v24, v28
 ; ZIP-NEXT:    ri.vunzip2b.vv v0, v24, v28
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; ZIP-NEXT:    vmsne.vi v16, v8, 0
+; ZIP-NEXT:    vmsne.vi v9, v16, 0
 ; ZIP-NEXT:    vmsne.vi v8, v0, 0
-; ZIP-NEXT:    vmv1r.v v0, v16
+; ZIP-NEXT:    vmv1r.v v0, v9
 ; ZIP-NEXT:    ret
 %retval = call {<vscale x 64 x i1>, <vscale x 64 x i1>} @llvm.vector.deinterleave2.nxv128i1(<vscale x 128 x i1> %vec)
 ret {<vscale x 64 x i1>, <vscale x 64 x i1>} %retval
@@ -355,23 +355,23 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>} @vector_dein
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v8, v0
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v16, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
+; CHECK-NEXT:    vmv1r.v v14, v0
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a1
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v10, v12, 1, v0
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v18, v10, 1, v0
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v20, v10, 1, v0
-; CHECK-NEXT:    vs8r.v v16, (a0)
-; CHECK-NEXT:    vlseg3e8.v v8, (a0)
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v14, a0
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
+; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    vlseg3e8.v v8, (a1)
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    vmsne.vi v8, v10, 0
 ; CHECK-NEXT:    vmsne.vi v9, v12, 0
@@ -483,21 +483,21 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v22, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v20, v10, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v16, v10, 1, v0
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a1
+; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
 ; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v18, v10, 1, v0
-; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vlseg4e8.v v8, (a0)
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    vmsne.vi v8, v10, 0
@@ -601,38 +601,40 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmerge.vim v14, v12, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
+; CHECK-NEXT:    vmv1r.v v16, v0
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a1
-; CHECK-NEXT:    srli a2, a0, 1
-; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v18, v12, 1, v0
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v9, a2
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v10, v12, 1, v0
+; CHECK-NEXT:    sub a1, a0, a1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v16, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v20, v12, 1, v0
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v9, a0
+; CHECK-NEXT:    vslidedown.vx v0, v16, a0
+; CHECK-NEXT:    vmv1r.v v18, v21
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v14, v12, 1, v0
-; CHECK-NEXT:    vmv1r.v v10, v15
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
-; CHECK-NEXT:    vmv1r.v v11, v12
+; CHECK-NEXT:    vmv1r.v v19, v14
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v8, v21
+; CHECK-NEXT:    vmv1r.v v16, v13
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vmv1r.v v9, v14
-; CHECK-NEXT:    vs8r.v v16, (a0)
-; CHECK-NEXT:    vmv1r.v v12, v13
-; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    vmv1r.v v17, v20
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vmv1r.v v20, v15
+; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e8.v v8, (a0)
 ; CHECK-NEXT:    vlseg5e8.v v14, (a1)
@@ -830,41 +832,41 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v14, 0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v16, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v14, 1, v0
+; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v26, v14, 1, v0
 ; CHECK-NEXT:    srli a2, a0, 1
-; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v18, v10, 1, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v9, a2
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v20, v10, 1, v0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v28, v14, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v26, v10, 1, v0
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmerge.vim v18, v14, 1, v0
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v9, a0
-; CHECK-NEXT:    vs8r.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v24, v10, 1, v0
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a1
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v28, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v16, v14, 1, v0
+; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v24, (a0)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v8, a1
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v20, v14, 1, v0
+; CHECK-NEXT:    vs8r.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg6e8.v v16, (a2)
-; CHECK-NEXT:    vlseg6e8.v v10, (a0)
+; CHECK-NEXT:    vlseg6e8.v v16, (a0)
+; CHECK-NEXT:    vlseg6e8.v v10, (a2)
 ; CHECK-NEXT:    vmv2r.v v8, v16
 ; CHECK-NEXT:    vmv2r.v v22, v18
 ; CHECK-NEXT:    vmv2r.v v24, v20
@@ -1063,52 +1065,53 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
+; CHECK-NEXT:    vmv1r.v v17, v8
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmv.v.i v20, 0
 ; CHECK-NEXT:    srli a1, a0, 2
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v8, a1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v22, v20, 1, v0
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    vslidedown.vx v0, v9, a2
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v22, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v14, v20, 1, v0
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v9, a0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v20, v12, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v9, a1
-; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v18, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v12, v20, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v14, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v20, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmerge.vim v8, v20, 1, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a1
-; CHECK-NEXT:    vmv1r.v v10, v15
+; CHECK-NEXT:    vslidedown.vx v0, v0, a1
+; CHECK-NEXT:    vmv1r.v v18, v25
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v24, v12, 1, v0
-; CHECK-NEXT:    vmv1r.v v11, v24
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v23
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v9, v14
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v14, v12, 1, v0
-; CHECK-NEXT:    vmv1r.v v12, v25
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vmv1r.v v13, v14
-; CHECK-NEXT:    vs8r.v v16, (a0)
-; CHECK-NEXT:    vmv1r.v v14, v15
+; CHECK-NEXT:    vmerge.vim v10, v20, 1, v0
+; CHECK-NEXT:    vmv1r.v v19, v22
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vmv1r.v v16, v15
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v17, a0
+; CHECK-NEXT:    vmv1r.v v17, v24
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v24, v20, 1, v0
+; CHECK-NEXT:    vmv1r.v v20, v23
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vmv1r.v v21, v24
 ; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    vmv1r.v v22, v25
+; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v8, (a0)
-; CHECK-NEXT:    vlseg7e8.v v16, (a1)
+; CHECK-NEXT:    vlseg7e8.v v8, (a1)
+; CHECK-NEXT:    vlseg7e8.v v16, (a0)
 ; CHECK-NEXT:    vmv2r.v v24, v8
 ; CHECK-NEXT:    vmv2r.v v26, v10
 ; CHECK-NEXT:    vmv2r.v v28, v12
@@ -1333,49 +1336,49 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    vmv.v.i v18, 0
+; CHECK-NEXT:    srli a0, a1, 2
+; CHECK-NEXT:    sub a2, a1, a0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v22, v10, 1, v0
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v9, a0
-; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v20, v10, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vim v16, v10, 1, v0
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v9, a1
-; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v18, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v30, v18, 1, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v8, a2
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v30, v10, 1, v0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v22, v18, 1, v0
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v9, a1
+; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v28, v18, 1, v0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v8, a1
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v20, v18, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmerge.vim v24, v18, 1, v0
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v9, a0
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v26, v18, 1, v0
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a1)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v16, v18, 1, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v8, a0
-; CHECK-NEXT:    vs8r.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v28, v10, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v24, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v18, v18, 1, v0
+; CHECK-NEXT:    vs8r.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a1
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v26, v10, 1, v0
-; CHECK-NEXT:    vs8r.v v24, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v18, (a2)
-; CHECK-NEXT:    vlseg8e8.v v10, (a0)
+; CHECK-NEXT:    vlseg8e8.v v18, (a1)
+; CHECK-NEXT:    vlseg8e8.v v10, (a2)
 ; CHECK-NEXT:    vmv2r.v v8, v18
 ; CHECK-NEXT:    vmv2r.v v26, v20
 ; CHECK-NEXT:    vmv2r.v v28, v22

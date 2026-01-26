@@ -3876,10 +3876,10 @@ define void @trunc_v8bf16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -3901,10 +3901,10 @@ define void @trunc_v6bf16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -3927,8 +3927,8 @@ define void @trunc_v8f16(ptr %x) {
 ; ZVFH-NEXT:    vle16.v v8, (a0)
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
-; ZVFH-NEXT:    fmv.h.x fa5, a1
 ; ZVFH-NEXT:    vfabs.v v9, v8
+; ZVFH-NEXT:    fmv.h.x fa5, a1
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -3942,10 +3942,10 @@ define void @trunc_v8f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -3968,8 +3968,8 @@ define void @trunc_v6f16(ptr %x) {
 ; ZVFH-NEXT:    vle16.v v8, (a0)
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
-; ZVFH-NEXT:    fmv.h.x fa5, a1
 ; ZVFH-NEXT:    vfabs.v v9, v8
+; ZVFH-NEXT:    fmv.h.x fa5, a1
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -3983,10 +3983,10 @@ define void @trunc_v6f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4008,8 +4008,8 @@ define void @trunc_v4f32(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4045,8 +4045,8 @@ define void @trunc_v2f64(ptr %x) {
 ; RV64ZVFH-NEXT:    vle64.v v8, (a0)
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
-; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFH-NEXT:    vfabs.v v9, v8
+; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4076,8 +4076,8 @@ define void @trunc_v2f64(ptr %x) {
 ; RV64ZVFHMIN-NEXT:    vle64.v v8, (a0)
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
-; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
+; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4098,11 +4098,11 @@ define void @ceil_v8bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4125,11 +4125,11 @@ define void @ceil_v6bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4153,9 +4153,9 @@ define void @ceil_v8f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    fsrmi a1, 3
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    fsrmi a1, 3
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4170,11 +4170,11 @@ define void @ceil_v8f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    fsrmi a1, 3
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    fsrmi a1, 3
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    fsrm a1
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4198,9 +4198,9 @@ define void @ceil_v6f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    fsrmi a1, 3
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    fsrmi a1, 3
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4215,11 +4215,11 @@ define void @ceil_v6f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    fsrmi a1, 3
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    fsrmi a1, 3
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    fsrm a1
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4242,9 +4242,9 @@ define void @ceil_v4f32(ptr %x) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4265,9 +4265,9 @@ define void @ceil_v2f64(ptr %x) {
 ; RV32ZVFH-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFH-NEXT:    lui a1, %hi(.LCPI180_0)
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI180_0)(a1)
+; RV32ZVFH-NEXT:    fsrmi a1, 3
 ; RV32ZVFH-NEXT:    vfabs.v v9, v8
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFH-NEXT:    fsrmi a1, 3
 ; RV32ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFH-NEXT:    fsrm a1
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4283,9 +4283,9 @@ define void @ceil_v2f64(ptr %x) {
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFH-NEXT:    fsrmi a1, 3
 ; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFH-NEXT:    fsrmi a1, 3
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    fsrm a1
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4300,9 +4300,9 @@ define void @ceil_v2f64(ptr %x) {
 ; RV32ZVFHMIN-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFHMIN-NEXT:    lui a1, %hi(.LCPI180_0)
 ; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI180_0)(a1)
+; RV32ZVFHMIN-NEXT:    fsrmi a1, 3
 ; RV32ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFHMIN-NEXT:    fsrmi a1, 3
 ; RV32ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    fsrm a1
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4318,9 +4318,9 @@ define void @ceil_v2f64(ptr %x) {
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFHMIN-NEXT:    fsrmi a1, 3
 ; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFHMIN-NEXT:    fsrmi a1, 3
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    fsrm a1
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4341,11 +4341,11 @@ define void @floor_v8bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4368,11 +4368,11 @@ define void @floor_v6bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4396,9 +4396,9 @@ define void @floor_v8f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    fsrmi a1, 2
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    fsrmi a1, 2
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4413,11 +4413,11 @@ define void @floor_v8f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    fsrmi a1, 2
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    fsrmi a1, 2
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    fsrm a1
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4441,9 +4441,9 @@ define void @floor_v6f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    fsrmi a1, 2
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    fsrmi a1, 2
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4458,11 +4458,11 @@ define void @floor_v6f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    fsrmi a1, 2
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    fsrmi a1, 2
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    fsrm a1
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4485,9 +4485,9 @@ define void @floor_v4f32(ptr %x) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4508,9 +4508,9 @@ define void @floor_v2f64(ptr %x) {
 ; RV32ZVFH-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFH-NEXT:    lui a1, %hi(.LCPI186_0)
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI186_0)(a1)
+; RV32ZVFH-NEXT:    fsrmi a1, 2
 ; RV32ZVFH-NEXT:    vfabs.v v9, v8
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFH-NEXT:    fsrmi a1, 2
 ; RV32ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFH-NEXT:    fsrm a1
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4526,9 +4526,9 @@ define void @floor_v2f64(ptr %x) {
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFH-NEXT:    fsrmi a1, 2
 ; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFH-NEXT:    fsrmi a1, 2
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    fsrm a1
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4543,9 +4543,9 @@ define void @floor_v2f64(ptr %x) {
 ; RV32ZVFHMIN-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFHMIN-NEXT:    lui a1, %hi(.LCPI186_0)
 ; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI186_0)(a1)
+; RV32ZVFHMIN-NEXT:    fsrmi a1, 2
 ; RV32ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFHMIN-NEXT:    fsrmi a1, 2
 ; RV32ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    fsrm a1
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4561,9 +4561,9 @@ define void @floor_v2f64(ptr %x) {
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFHMIN-NEXT:    fsrmi a1, 2
 ; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFHMIN-NEXT:    fsrmi a1, 2
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    fsrm a1
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4584,11 +4584,11 @@ define void @round_v8bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4611,11 +4611,11 @@ define void @round_v6bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4639,9 +4639,9 @@ define void @round_v8f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    fsrmi a1, 4
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    fsrmi a1, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4656,11 +4656,11 @@ define void @round_v8f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    fsrmi a1, 4
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    fsrmi a1, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    fsrm a1
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4684,9 +4684,9 @@ define void @round_v6f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    fsrmi a1, 4
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    fsrmi a1, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4701,11 +4701,11 @@ define void @round_v6f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    fsrmi a1, 4
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    fsrmi a1, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    fsrm a1
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4728,9 +4728,9 @@ define void @round_v4f32(ptr %x) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4751,9 +4751,9 @@ define void @round_v2f64(ptr %x) {
 ; RV32ZVFH-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFH-NEXT:    lui a1, %hi(.LCPI192_0)
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI192_0)(a1)
+; RV32ZVFH-NEXT:    fsrmi a1, 4
 ; RV32ZVFH-NEXT:    vfabs.v v9, v8
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFH-NEXT:    fsrmi a1, 4
 ; RV32ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFH-NEXT:    fsrm a1
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4769,9 +4769,9 @@ define void @round_v2f64(ptr %x) {
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFH-NEXT:    fsrmi a1, 4
 ; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFH-NEXT:    fsrmi a1, 4
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    fsrm a1
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4786,9 +4786,9 @@ define void @round_v2f64(ptr %x) {
 ; RV32ZVFHMIN-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFHMIN-NEXT:    lui a1, %hi(.LCPI192_0)
 ; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI192_0)(a1)
+; RV32ZVFHMIN-NEXT:    fsrmi a1, 4
 ; RV32ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFHMIN-NEXT:    fsrmi a1, 4
 ; RV32ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    fsrm a1
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4804,9 +4804,9 @@ define void @round_v2f64(ptr %x) {
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFHMIN-NEXT:    fsrmi a1, 4
 ; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFHMIN-NEXT:    fsrmi a1, 4
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    fsrm a1
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4826,10 +4826,10 @@ define void @rint_v8bf16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4852,8 +4852,8 @@ define void @rint_v8f16(ptr %x) {
 ; ZVFH-NEXT:    vle16.v v8, (a0)
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
-; ZVFH-NEXT:    fmv.h.x fa5, a1
 ; ZVFH-NEXT:    vfabs.v v9, v8
+; ZVFH-NEXT:    fmv.h.x fa5, a1
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4867,10 +4867,10 @@ define void @rint_v8f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -4892,8 +4892,8 @@ define void @rint_v4f32(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a1
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4929,8 +4929,8 @@ define void @rint_v2f64(ptr %x) {
 ; RV64ZVFH-NEXT:    vle64.v v8, (a0)
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
-; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFH-NEXT:    vfabs.v v9, v8
+; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4960,8 +4960,8 @@ define void @rint_v2f64(ptr %x) {
 ; RV64ZVFHMIN-NEXT:    vle64.v v8, (a0)
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
-; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
+; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -4982,11 +4982,11 @@ define void @nearbyint_v8bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    frflags a1
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
-; CHECK-NEXT:    frflags a1
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
 ; CHECK-NEXT:    fsflags a1
@@ -5010,9 +5010,9 @@ define void @nearbyint_v8f16(ptr %x) {
 ; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    slli a1, a1, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    frflags a1
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; ZVFH-NEXT:    frflags a1
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; ZVFH-NEXT:    fsflags a1
@@ -5027,11 +5027,11 @@ define void @nearbyint_v8f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v10, (a0)
 ; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
+; ZVFHMIN-NEXT:    frflags a1
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
-; ZVFHMIN-NEXT:    frflags a1
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
 ; ZVFHMIN-NEXT:    fsflags a1
@@ -5054,9 +5054,9 @@ define void @nearbyint_v4f32(ptr %x) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    frflags a1
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    frflags a1
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; CHECK-NEXT:    fsflags a1
@@ -5077,9 +5077,9 @@ define void @nearbyint_v2f64(ptr %x) {
 ; RV32ZVFH-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFH-NEXT:    lui a1, %hi(.LCPI200_0)
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI200_0)(a1)
+; RV32ZVFH-NEXT:    frflags a1
 ; RV32ZVFH-NEXT:    vfabs.v v9, v8
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFH-NEXT:    frflags a1
 ; RV32ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; RV32ZVFH-NEXT:    fsflags a1
@@ -5095,9 +5095,9 @@ define void @nearbyint_v2f64(ptr %x) {
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFH-NEXT:    frflags a1
 ; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFH-NEXT:    frflags a1
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; RV64ZVFH-NEXT:    fsflags a1
@@ -5112,9 +5112,9 @@ define void @nearbyint_v2f64(ptr %x) {
 ; RV32ZVFHMIN-NEXT:    vle64.v v8, (a0)
 ; RV32ZVFHMIN-NEXT:    lui a1, %hi(.LCPI200_0)
 ; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI200_0)(a1)
+; RV32ZVFHMIN-NEXT:    frflags a1
 ; RV32ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV32ZVFHMIN-NEXT:    frflags a1
 ; RV32ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; RV32ZVFHMIN-NEXT:    fsflags a1
@@ -5130,9 +5130,9 @@ define void @nearbyint_v2f64(ptr %x) {
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
+; RV64ZVFHMIN-NEXT:    frflags a1
 ; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
-; RV64ZVFHMIN-NEXT:    frflags a1
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; RV64ZVFHMIN-NEXT:    fsflags a1

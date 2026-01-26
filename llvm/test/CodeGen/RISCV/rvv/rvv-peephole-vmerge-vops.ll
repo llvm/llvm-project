@@ -858,8 +858,8 @@ define void @test_dag_loop() {
 ; CHECK-LABEL: test_dag_loop:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
 ; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t

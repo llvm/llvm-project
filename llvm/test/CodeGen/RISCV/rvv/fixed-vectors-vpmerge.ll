@@ -168,17 +168,17 @@ define <32 x i1> @vpmerge_vv_v32i1(<32 x i1> %va, <32 x i1> %vb, <32 x i1> %m, i
 ; RV64-LABEL: vpmerge_vv_v32i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v10, 0
+; RV64-NEXT:    vmv.v.i v12, 0
 ; RV64-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; RV64-NEXT:    vmerge.vim v12, v10, 1, v0
+; RV64-NEXT:    vmerge.vim v10, v12, 1, v0
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
+; RV64-NEXT:    vmerge.vim v12, v12, 1, v0
 ; RV64-NEXT:    vmv1r.v v0, v9
 ; RV64-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
-; RV64-NEXT:    vmerge.vvm v10, v10, v12, v0
+; RV64-NEXT:    vmerge.vvm v12, v12, v10, v0
 ; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    ret
 ;
 ; RV32ZVFHMIN-LABEL: vpmerge_vv_v32i1:
@@ -196,17 +196,17 @@ define <32 x i1> @vpmerge_vv_v32i1(<32 x i1> %va, <32 x i1> %vb, <32 x i1> %m, i
 ; RV64ZVFHMIN-LABEL: vpmerge_vv_v32i1:
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vmv.v.i v10, 0
+; RV64ZVFHMIN-NEXT:    vmv.v.i v12, 0
 ; RV64ZVFHMIN-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vmerge.vim v12, v10, 1, v0
+; RV64ZVFHMIN-NEXT:    vmerge.vim v10, v12, 1, v0
 ; RV64ZVFHMIN-NEXT:    vmv1r.v v0, v8
 ; RV64ZVFHMIN-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vmerge.vim v10, v10, 1, v0
+; RV64ZVFHMIN-NEXT:    vmerge.vim v12, v12, 1, v0
 ; RV64ZVFHMIN-NEXT:    vmv1r.v v0, v9
 ; RV64ZVFHMIN-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
-; RV64ZVFHMIN-NEXT:    vmerge.vvm v10, v10, v12, v0
+; RV64ZVFHMIN-NEXT:    vmerge.vvm v12, v12, v10, v0
 ; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vmsne.vi v0, v10, 0
+; RV64ZVFHMIN-NEXT:    vmsne.vi v0, v12, 0
 ; RV64ZVFHMIN-NEXT:    ret
   %v = call <32 x i1> @llvm.vp.merge.v32i1(<32 x i1> %m, <32 x i1> %va, <32 x i1> %vb, i32 %evl)
   ret <32 x i1> %v
@@ -216,17 +216,17 @@ define <64 x i1> @vpmerge_vv_v64i1(<64 x i1> %va, <64 x i1> %vb, <64 x i1> %m, i
 ; CHECK-LABEL: vpmerge_vv_v64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v12, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
-; CHECK-NEXT:    vmerge.vvm v12, v12, v16, v0
+; CHECK-NEXT:    vmerge.vvm v16, v16, v12, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
+; CHECK-NEXT:    vmsne.vi v0, v16, 0
 ; CHECK-NEXT:    ret
   %v = call <64 x i1> @llvm.vp.merge.v64i1(<64 x i1> %m, <64 x i1> %va, <64 x i1> %vb, i32 %evl)
   ret <64 x i1> %v
@@ -1309,9 +1309,9 @@ define <32 x double> @vpmerge_vv_v32f64(<32 x double> %va, <32 x double> %vb, <3
 ; CHECK-NEXT:    addi a0, a2, -16
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
@@ -1342,9 +1342,9 @@ define <32 x double> @vpmerge_vf_v32f64(double %a, <32 x double> %vb, <32 x i1> 
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v16, v16, fa0, v0
 ; CHECK-NEXT:    ret

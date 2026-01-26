@@ -857,6 +857,13 @@ float RISCVRegisterInfo::getSpillWeightScaleFactor(
   return getRegClassWeight(RC).RegWeight;
 }
 
+unsigned RISCVRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
+                                                   unsigned Idx) const {
+  if (Idx == RISCV::RegisterPressureSets::VMV0)
+    return 1;
+  return RISCVGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
+}
+
 // Add two address hints to improve chances of being able to use a compressed
 // instruction.
 bool RISCVRegisterInfo::getRegAllocationHints(

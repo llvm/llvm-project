@@ -86,15 +86,15 @@ define <vscale x 7 x float> @vfptrunc_nxv7f32_nxv7f64(<vscale x 7 x double> %a, 
 define <vscale x 16 x float> @vfptrunc_nxv16f32_nxv16f64(<vscale x 16 x double> %a, <vscale x 16 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv16f32_nxv16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 3
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a3
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a3
+; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    srli a3, a1, 3
+; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v28, v16, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB7_2
@@ -119,8 +119,6 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -144,10 +142,13 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    and a4, a7, a4
 ; CHECK-NEXT:    srli a7, a1, 2
 ; CHECK-NEXT:    vl8re64.v v8, (a6)
-; CHECK-NEXT:    vslidedown.vx v24, v0, a7
+; CHECK-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v25, v0, a7
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v6, v0, a5
-; CHECK-NEXT:    vslidedown.vx v0, v24, a5
+; CHECK-NEXT:    vmv1r.v v24, v25
+; CHECK-NEXT:    vslidedown.vx v0, v25, a5
 ; CHECK-NEXT:    bltu a0, a1, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
@@ -165,9 +166,9 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    sltu a3, a2, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
-; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    addi a3, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16, v0.t
 ; CHECK-NEXT:    bltu a2, a1, .LBB8_6

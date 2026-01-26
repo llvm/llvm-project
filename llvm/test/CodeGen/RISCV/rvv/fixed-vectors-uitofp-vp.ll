@@ -363,9 +363,9 @@ define <32 x double> @vuitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 ze
 ; CHECK-LABEL: vuitofp_v32f64_v32i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 2
-; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB25_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16

@@ -43,6 +43,11 @@
 
 namespace llvm {
 
+static bool isCopyFromV0(const MachineInstr &MI) {
+  return MI.isFullCopy() && MI.getOperand(1).getReg() == RISCV::V0 &&
+         MI.getOperand(0).getReg().isVirtual();
+}
+
 static bool isCopyToV0(const MachineInstr &MI) {
   return MI.isFullCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
          MI.getOperand(1).getReg().isVirtual();
@@ -72,8 +77,40 @@ public:
   void apply(ScheduleDAGInstrs *DAG) override {
     SUnit *NearestUseV0SU = nullptr;
     SmallVector<SUnit *, 2> DefMask;
+    SUnit *CopyFromV0 = nullptr;
+    SUnit *NearestHasVMV0OpSU = nullptr;
+
+    auto HasVMV0Op = [&](const MachineInstr *MI) {
+      for (const MachineOperand &Use : MI->uses()) {
+        if (!Use.isReg())
+          continue;
+        Register Reg = Use.getReg();
+        if (!Reg.isVirtual())
+          continue;
+        if (DAG->MRI.getRegClass(Reg)->getID() == RISCV::VMV0RegClassID)
+          return true;
+      }
+      return false;
+    };
+
     for (SUnit &SU : DAG->SUnits) {
       const MachineInstr *MI = SU.getInstr();
+      // The copies of v0 should not go accross these instructions with vmv0
+      // operands.
+      if (HasVMV0Op(MI)) {
+        NearestHasVMV0OpSU = &SU;
+        if (CopyFromV0) {
+          DAG->addEdge(&SU, SDep(CopyFromV0, SDep::Artificial));
+          CopyFromV0 = nullptr;
+        }
+      }
+
+      if (NearestHasVMV0OpSU && NearestHasVMV0OpSU != &SU && isCopyToV0(*MI))
+        DAG->addEdge(&SU, SDep(NearestHasVMV0OpSU, SDep::Artificial));
+
+      if (isCopyFromV0(*MI))
+        CopyFromV0 = &SU;
+
       bool UseV0 = MI->findRegisterUseOperand(RISCV::V0, TRI);
       if (isSoleUseCopyToV0(SU) && !UseV0)
         DefMask.push_back(&SU);

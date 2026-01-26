@@ -7,6 +7,8 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a2, a1, 4
 ; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv2r.v v0, v8
 ; CHECK-NEXT:    bltu a0, a2, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
@@ -24,16 +26,15 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    addi a2, sp, 64
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
-; CHECK-NEXT:    vs8r.v v24, (a1)
+; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    lbu a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80

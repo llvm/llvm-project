@@ -7,24 +7,24 @@ define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wi
 ; CHECK-LABEL: _ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v8, v0
+; CHECK-NEXT:    vmv1r.v v17, v0
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmv.v.i v14, 0
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    vmv2r.v v16, v10
-; CHECK-NEXT:    vle32.v v16, (a0), v0.t
-; CHECK-NEXT:    vand.vi v16, v16, 1
-; CHECK-NEXT:    vmsne.vi v9, v16, 0
-; CHECK-NEXT:    vmand.mm v0, v8, v9
-; CHECK-NEXT:    vmerge.vim v12, v12, -1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vor.vi v14, v14, 1, v0.t
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
+; CHECK-NEXT:    vmv2r.v v14, v8
+; CHECK-NEXT:    vmv1r.v v0, v17
+; CHECK-NEXT:    vle32.v v14, (a0), v0.t
+; CHECK-NEXT:    vand.vi v14, v14, 1
+; CHECK-NEXT:    vmsne.vi v16, v14, 0
+; CHECK-NEXT:    vmand.mm v0, v17, v16
+; CHECK-NEXT:    vmerge.vim v10, v10, -1, v0
+; CHECK-NEXT:    vmv1r.v v0, v17
+; CHECK-NEXT:    vor.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    j .LBB0_1
 entry:

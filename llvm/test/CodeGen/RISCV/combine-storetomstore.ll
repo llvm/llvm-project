@@ -53,7 +53,6 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; RISCV-LABEL: test_masked_store_success_v4f16:
 ; RISCV:       # %bb.0:
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RISCV-NEXT:    vmv1r.v v9, v0
 ; RISCV-NEXT:    vfirst.m a3, v0
 ; RISCV-NEXT:    mv a2, a0
 ; RISCV-NEXT:    beqz a3, .LBB4_2
@@ -62,17 +61,17 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; RISCV-NEXT:  .LBB4_2:
 ; RISCV-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RISCV-NEXT:    vmv.v.i v8, 0
-; RISCV-NEXT:    vmv1r.v v0, v9
+; RISCV-NEXT:    vmv1r.v v11, v0
 ; RISCV-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RISCV-NEXT:    vslidedown.vi v8, v8, 2
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RISCV-NEXT:    vmsne.vi v8, v8, 0
-; RISCV-NEXT:    vmv.v.i v10, 0
-; RISCV-NEXT:    vmv1r.v v0, v8
-; RISCV-NEXT:    vmerge.vim v11, v10, 1, v0
-; RISCV-NEXT:    vslidedown.vi v11, v11, 1
-; RISCV-NEXT:    vmv.x.s a3, v11
+; RISCV-NEXT:    vmsne.vi v0, v8, 0
+; RISCV-NEXT:    vmv.v.i v8, 0
+; RISCV-NEXT:    vmv1r.v v10, v0
+; RISCV-NEXT:    vmerge.vim v9, v8, 1, v0
+; RISCV-NEXT:    vslidedown.vi v9, v9, 1
+; RISCV-NEXT:    vmv.x.s a3, v9
 ; RISCV-NEXT:    andi a3, a3, 1
 ; RISCV-NEXT:    bnez a3, .LBB4_4
 ; RISCV-NEXT:  # %bb.3:
@@ -81,10 +80,10 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; RISCV-NEXT:  .LBB4_4:
 ; RISCV-NEXT:    addi a3, a0, 24
 ; RISCV-NEXT:  .LBB4_5:
-; RISCV-NEXT:    vmv1r.v v0, v9
-; RISCV-NEXT:    vmerge.vim v9, v10, 1, v0
-; RISCV-NEXT:    vslidedown.vi v9, v9, 1
-; RISCV-NEXT:    vmv.x.s a4, v9
+; RISCV-NEXT:    vmv1r.v v0, v11
+; RISCV-NEXT:    vmerge.vim v8, v8, 1, v0
+; RISCV-NEXT:    vslidedown.vi v8, v8, 1
+; RISCV-NEXT:    vmv.x.s a4, v8
 ; RISCV-NEXT:    andi a4, a4, 1
 ; RISCV-NEXT:    bnez a4, .LBB4_7
 ; RISCV-NEXT:  # %bb.6:
@@ -96,7 +95,7 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; RISCV-NEXT:    lh a4, 0(a2)
 ; RISCV-NEXT:    lh a2, 0(a3)
 ; RISCV-NEXT:    lh a3, 0(a5)
-; RISCV-NEXT:    vfirst.m a5, v8
+; RISCV-NEXT:    vfirst.m a5, v10
 ; RISCV-NEXT:    beqz a5, .LBB4_10
 ; RISCV-NEXT:  # %bb.9:
 ; RISCV-NEXT:    addi a0, a1, 4
@@ -192,7 +191,7 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-LABEL: test_masked_store_success_v8f16:
 ; RISCV:       # %bb.0:
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RISCV-NEXT:    vmv1r.v v8, v0
+; RISCV-NEXT:    vmv1r.v v11, v0
 ; RISCV-NEXT:    vfirst.m a3, v0
 ; RISCV-NEXT:    mv a2, a0
 ; RISCV-NEXT:    beqz a3, .LBB11_2
@@ -200,25 +199,27 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    mv a2, a1
 ; RISCV-NEXT:  .LBB11_2:
 ; RISCV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RISCV-NEXT:    vmv.v.i v9, 0
-; RISCV-NEXT:    vmv1r.v v0, v8
-; RISCV-NEXT:    vmerge.vim v9, v9, 1, v0
-; RISCV-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; RISCV-NEXT:    vslidedown.vi v9, v9, 4
+; RISCV-NEXT:    vmv.v.i v8, 0
 ; RISCV-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RISCV-NEXT:    vmsne.vi v11, v9, 0
-; RISCV-NEXT:    vmv.v.i v10, 0
+; RISCV-NEXT:    vmv.v.i v9, 0
 ; RISCV-NEXT:    vmv1r.v v0, v11
-; RISCV-NEXT:    vmerge.vim v9, v10, 1, v0
+; RISCV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RISCV-NEXT:    vmerge.vim v8, v8, 1, v0
+; RISCV-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
+; RISCV-NEXT:    vslidedown.vi v8, v8, 4
+; RISCV-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RISCV-NEXT:    vmsne.vi v0, v8, 0
+; RISCV-NEXT:    vmv1r.v v13, v0
+; RISCV-NEXT:    vmerge.vim v8, v9, 1, v0
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RISCV-NEXT:    vslidedown.vi v9, v9, 2
+; RISCV-NEXT:    vslidedown.vi v10, v8, 2
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RISCV-NEXT:    vmsne.vi v9, v9, 0
-; RISCV-NEXT:    vmv.v.i v12, 0
-; RISCV-NEXT:    vmv1r.v v0, v9
-; RISCV-NEXT:    vmerge.vim v13, v12, 1, v0
-; RISCV-NEXT:    vslidedown.vi v13, v13, 1
-; RISCV-NEXT:    vmv.x.s a3, v13
+; RISCV-NEXT:    vmv.v.i v8, 0
+; RISCV-NEXT:    vmsne.vi v0, v10, 0
+; RISCV-NEXT:    vmv1r.v v12, v0
+; RISCV-NEXT:    vmerge.vim v10, v8, 1, v0
+; RISCV-NEXT:    vslidedown.vi v10, v10, 1
+; RISCV-NEXT:    vmv.x.s a3, v10
 ; RISCV-NEXT:    andi a3, a3, 1
 ; RISCV-NEXT:    bnez a3, .LBB11_4
 ; RISCV-NEXT:  # %bb.3:
@@ -227,42 +228,42 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:  .LBB11_4:
 ; RISCV-NEXT:    addi a3, a0, 56
 ; RISCV-NEXT:  .LBB11_5:
-; RISCV-NEXT:    vmv1r.v v0, v8
+; RISCV-NEXT:    vmv1r.v v0, v11
 ; RISCV-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RISCV-NEXT:    vmerge.vim v10, v10, 1, v0
+; RISCV-NEXT:    vmerge.vim v9, v9, 1, v0
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RISCV-NEXT:    vslidedown.vi v10, v10, 2
+; RISCV-NEXT:    vslidedown.vi v9, v9, 2
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RISCV-NEXT:    vmsne.vi v10, v10, 0
-; RISCV-NEXT:    vmv1r.v v0, v10
-; RISCV-NEXT:    vmerge.vim v13, v12, 1, v0
-; RISCV-NEXT:    vslidedown.vi v13, v13, 1
-; RISCV-NEXT:    vmv.x.s a4, v13
+; RISCV-NEXT:    vmsne.vi v0, v9, 0
+; RISCV-NEXT:    vmv1r.v v10, v0
+; RISCV-NEXT:    vmerge.vim v9, v8, 1, v0
+; RISCV-NEXT:    vslidedown.vi v9, v9, 1
+; RISCV-NEXT:    vmv.x.s a4, v9
 ; RISCV-NEXT:    andi a4, a4, 1
 ; RISCV-NEXT:    bnez a4, .LBB11_8
 ; RISCV-NEXT:  # %bb.6:
 ; RISCV-NEXT:    addi a4, a1, 6
-; RISCV-NEXT:    vfirst.m a5, v11
+; RISCV-NEXT:    vfirst.m a5, v13
 ; RISCV-NEXT:    bnez a5, .LBB11_9
 ; RISCV-NEXT:  .LBB11_7:
 ; RISCV-NEXT:    addi a5, a0, 32
 ; RISCV-NEXT:    j .LBB11_10
 ; RISCV-NEXT:  .LBB11_8:
 ; RISCV-NEXT:    addi a4, a0, 24
-; RISCV-NEXT:    vfirst.m a5, v11
+; RISCV-NEXT:    vfirst.m a5, v13
 ; RISCV-NEXT:    beqz a5, .LBB11_7
 ; RISCV-NEXT:  .LBB11_9:
 ; RISCV-NEXT:    addi a5, a1, 8
 ; RISCV-NEXT:  .LBB11_10:
-; RISCV-NEXT:    vmv1r.v v0, v11
-; RISCV-NEXT:    vmerge.vim v11, v12, 1, v0
-; RISCV-NEXT:    vslidedown.vi v11, v11, 1
-; RISCV-NEXT:    vmv.x.s a6, v11
+; RISCV-NEXT:    vmv1r.v v0, v13
+; RISCV-NEXT:    vmerge.vim v9, v8, 1, v0
+; RISCV-NEXT:    vslidedown.vi v9, v9, 1
+; RISCV-NEXT:    vmv.x.s a6, v9
 ; RISCV-NEXT:    andi a6, a6, 1
 ; RISCV-NEXT:    bnez a6, .LBB11_14
 ; RISCV-NEXT:  # %bb.11:
 ; RISCV-NEXT:    addi a6, a1, 10
-; RISCV-NEXT:    vfirst.m a7, v9
+; RISCV-NEXT:    vfirst.m a7, v12
 ; RISCV-NEXT:    bnez a7, .LBB11_15
 ; RISCV-NEXT:  .LBB11_12:
 ; RISCV-NEXT:    addi a7, a0, 48
@@ -273,7 +274,7 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    j .LBB11_17
 ; RISCV-NEXT:  .LBB11_14:
 ; RISCV-NEXT:    addi a6, a0, 40
-; RISCV-NEXT:    vfirst.m a7, v9
+; RISCV-NEXT:    vfirst.m a7, v12
 ; RISCV-NEXT:    beqz a7, .LBB11_12
 ; RISCV-NEXT:  .LBB11_15:
 ; RISCV-NEXT:    addi a7, a1, 12
@@ -282,7 +283,6 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:  .LBB11_16:
 ; RISCV-NEXT:    addi t1, a1, 4
 ; RISCV-NEXT:  .LBB11_17:
-; RISCV-NEXT:    vmv1r.v v0, v8
 ; RISCV-NEXT:    lh t0, 0(a2)
 ; RISCV-NEXT:    lh a2, 0(a3)
 ; RISCV-NEXT:    lh a3, 0(a4)
@@ -290,7 +290,8 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    lh a5, 0(a6)
 ; RISCV-NEXT:    lh a6, 0(a7)
 ; RISCV-NEXT:    lh a7, 0(t1)
-; RISCV-NEXT:    vmerge.vim v8, v12, 1, v0
+; RISCV-NEXT:    vmv1r.v v0, v11
+; RISCV-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RISCV-NEXT:    vslidedown.vi v8, v8, 1
 ; RISCV-NEXT:    vmv.x.s t1, v8
 ; RISCV-NEXT:    andi t1, t1, 1
@@ -566,13 +567,11 @@ define void @test_masked_store_multiple_v8i32(<8 x i32> %x, <8 x i32> %y, ptr %p
 ; RISCV-LABEL: test_masked_store_multiple_v8i32:
 ; RISCV:       # %bb.0:
 ; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RISCV-NEXT:    vmv1r.v v13, v0
-; RISCV-NEXT:    vle32.v v14, (a1)
-; RISCV-NEXT:    vmv1r.v v0, v12
-; RISCV-NEXT:    vmerge.vvm v10, v14, v10, v0
-; RISCV-NEXT:    vmv1r.v v0, v13
+; RISCV-NEXT:    vle32.v v16, (a1)
 ; RISCV-NEXT:    vse32.v v8, (a0), v0.t
-; RISCV-NEXT:    vse32.v v10, (a1)
+; RISCV-NEXT:    vmv1r.v v0, v12
+; RISCV-NEXT:    vmerge.vvm v8, v16, v10, v0
+; RISCV-NEXT:    vse32.v v8, (a1)
 ; RISCV-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr1, align 32
   %load2 = load <8 x i32>, ptr %ptr2, align 32
@@ -587,13 +586,11 @@ define void @test_masked_store_multiple_v8i64(<8 x i64> %x, <8 x i64> %y, ptr %p
 ; RISCV-LABEL: test_masked_store_multiple_v8i64:
 ; RISCV:       # %bb.0:
 ; RISCV-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RISCV-NEXT:    vmv1r.v v17, v0
-; RISCV-NEXT:    vle64.v v20, (a1)
-; RISCV-NEXT:    vmv1r.v v0, v16
-; RISCV-NEXT:    vmerge.vvm v12, v20, v12, v0
-; RISCV-NEXT:    vmv1r.v v0, v17
+; RISCV-NEXT:    vle64.v v24, (a1)
 ; RISCV-NEXT:    vse64.v v8, (a0), v0.t
-; RISCV-NEXT:    vse64.v v12, (a1)
+; RISCV-NEXT:    vmv1r.v v0, v16
+; RISCV-NEXT:    vmerge.vvm v8, v24, v12, v0
+; RISCV-NEXT:    vse64.v v8, (a1)
 ; RISCV-NEXT:    ret
   %load = load <8 x i64>, ptr %ptr1, align 32
   %load2 = load <8 x i64>, ptr %ptr2, align 32

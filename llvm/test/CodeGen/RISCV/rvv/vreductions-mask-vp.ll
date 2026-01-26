@@ -315,26 +315,26 @@ define zeroext i1 @vpreduce_or_nxv128i1(i1 zeroext %s, <vscale x 128 x i1> %v, <
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v0
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vcpop.m a3, v8, v0.t
-; CHECK-NEXT:    snez a3, a3
-; CHECK-NEXT:    bltu a1, a2, .LBB22_2
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    sub a2, a1, a3
+; CHECK-NEXT:    sltu a4, a1, a2
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vcpop.m a2, v8, v0.t
+; CHECK-NEXT:    snez a2, a2
+; CHECK-NEXT:    bltu a1, a3, .LBB22_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:  .LBB22_2:
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v11, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    or a0, a3, a0
+; CHECK-NEXT:    or a0, a2, a0
 ; CHECK-NEXT:    ret
   %r = call i1 @llvm.vp.reduce.or.nxv128i1(i1 %s, <vscale x 128 x i1> %v, <vscale x 128 x i1> %m, i32 %evl)
   ret i1 %r

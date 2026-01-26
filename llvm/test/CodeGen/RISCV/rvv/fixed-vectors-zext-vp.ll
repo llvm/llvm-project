@@ -138,26 +138,25 @@ define <32 x i64> @vzext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext
 ; CHECK-LABEL: vzext_v32i64_v32i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 2
 ; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v16, v0, 2
 ; CHECK-NEXT:    bltu a0, a2, .LBB12_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v8, v0.t
+; CHECK-NEXT:    vzext.vf2 v24, v8, v0.t
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 16
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vzext.vf2 v24, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v8, v16
-; CHECK-NEXT:    vmv.v.v v16, v24
+; CHECK-NEXT:    vzext.vf2 v16, v8, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.zext.v32i64.v32i32(<32 x i32> %va, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
