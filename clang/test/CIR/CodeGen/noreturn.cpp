@@ -3,14 +3,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
 
 extern "C" {
 // CIR: cir.func {{.*}} @bar() -> !s32i attributes {no_return} {
 // LLVM: Function Attrs:{{.*}} noreturn
 // LLVM-NEXT: define {{.*}} i32 @bar() #[[BAR_FOO_ATTR:.*]] {
-// OGCG: Function Attrs:{{.*}} noreturn
-// OGCG-NEXT: define {{.*}} i32 @bar() #[[BAR_FOO_ATTR:.*]] {
 __attribute((noreturn))
 int bar() { }
 
@@ -21,29 +19,23 @@ int bar() { }
 
 // CIR: cir.func {{.*}} @foo() -> !s32i attributes {no_return} {
 // LLVM: Function Attrs:{{.*}} noreturn
-// LLVM-NEXT: define {{.*}} i32 @foo() #[[BAR_FOO_ATTR:.*]] {
-// OGCG: Function Attrs:{{.*}} noreturn
-// OGCG-NEXT: define {{.*}} i32 @foo() #[[BAR_FOO_ATTR:.*]] {
+// LLVM-NEXT: define {{.*}} i32 @foo() #[[BAR_FOO_ATTR]] {
 [[noreturn]]
 int foo() { }
 
 void caller() {
   // CIR: cir.call @bar() {no_return} : () -> !s32i
   // LLVM: call i32 @bar() #[[CALL_ATTR:.*]]
-  // OGCG: call i32 @bar() #[[CALL_ATTR:.*]]
   bar();
 }
 
 void caller2() {
   // CIR: cir.call @foo() {no_return} : () -> !s32i
-  // LLVM: call i32 @foo() #[[CALL_ATTR:.*]]
-  // OGCG: call i32 @foo() #[[CALL_ATTR:.*]]
+  // LLVM: call i32 @foo() #[[CALL_ATTR]]
   foo();
 }
 
 // LLVM: attributes #[[BAR_FOO_ATTR]] = {{.*}}noreturn
-// OGCG: attributes #[[BAR_FOO_ATTR]] = {{.*}}noreturn
 // LLVM: attributes #[[CALL_ATTR]] = {{.*}}noreturn
-// OGCG: attributes #[[CALL_ATTR]] = {{.*}}noreturn
 
 }
