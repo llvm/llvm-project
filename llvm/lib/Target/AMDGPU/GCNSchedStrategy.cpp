@@ -39,6 +39,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> ForceRevertScheduling(
+    "amdgpu-force-revert-scheduling",
+    cl::desc("For testing purposes only, always revert scheduling."),
+    cl::ReallyHidden, cl::init(false));
+
 static cl::opt<bool> DisableUnclusterHighRP(
     "amdgpu-disable-unclustered-high-rp-reschedule", cl::Hidden,
     cl::desc("Disable unclustered high register pressure "
@@ -1600,7 +1605,8 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
 
-  if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
+  if (!ForceRevertScheduling &&
+      PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
 
@@ -1657,7 +1663,7 @@ void GCNSchedStage::checkScheduling() {
 
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
-  if (shouldRevertScheduling(WavesAfter))
+  if (ForceRevertScheduling || shouldRevertScheduling(WavesAfter))
     revertScheduling();
   else
     DAG.Pressure[RegionIdx] = PressureAfter;
