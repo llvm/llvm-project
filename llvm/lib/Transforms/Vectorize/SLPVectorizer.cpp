@@ -607,7 +607,7 @@ static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
 static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
 
 /// \returns number of operands of \p I, considering commutativity. Returns 2
-/// for commutative instrinsics.
+/// for commutative intrinsics.
 /// \param I The instruction to check for commutativity
 static unsigned getNumberOfPotentiallyCommutativeOps(Instruction *I) {
   if (isa<IntrinsicInst>(I) && isCommutative(I)) {
@@ -4519,6 +4519,10 @@ private:
   LLVM_DUMP_METHOD void dumpVectorizableTree() const {
     for (unsigned Id = 0, IdE = VectorizableTree.size(); Id != IdE; ++Id) {
       VectorizableTree[Id]->dump();
+      if (TransformedToGatherNodes.contains(VectorizableTree[Id].get()))
+        dbgs() << "[[TRANSFORMED TO GATHER]]";
+      else if (DeletedNodes.contains(VectorizableTree[Id].get()))
+        dbgs() << "[[DELETED NODE]]";
       dbgs() << "\n";
     }
   }
@@ -15437,7 +15441,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::StridedVectorize: {
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
         FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-        assert(StridedLoadTy && "Missing StridedPoinerInfo for tree entry.");
+        assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getMemIntrinsicInstrCost(
@@ -16482,7 +16486,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     ArrayRef<Value *> VectorizedVals) {
   SmallDenseMap<const TreeEntry *, InstructionCost> NodesCosts;
   SmallPtrSet<Value *, 4> CheckedExtracts;
-  SmallPtrSet<const TreeEntry *, 4> GatheredLoadsNodes;
+  SmallSetVector<TreeEntry *, 4> GatheredLoadsNodes;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
   InstructionCost Cost = 0;
@@ -16533,11 +16537,6 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   if (SLPCostThreshold.getNumOccurrences() > 0 && SLPCostThreshold < 0 &&
       Cost < -SLPCostThreshold)
     return Cost;
-  // Bail out, if gathered loads nodes are found.
-  // TODO: add analysis for gathered load to include their cost correctly into
-  // the related subtrees.
-  if (!GatheredLoadsNodes.empty())
-    return Cost;
   // The narrow non-profitable tree in loop? Skip, may cause regressions.
   constexpr unsigned PartLimit = 2;
   const unsigned Sz =
@@ -16551,17 +16550,38 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     return Cost;
   SmallVector<std::pair<InstructionCost, SmallVector<unsigned>>> SubtreeCosts(
       VectorizableTree.size());
+  auto UpdateParentNodes =
+      [&](const TreeEntry *UserTE, const TreeEntry *TE, InstructionCost C,
+          SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
+              &VisitedUser,
+          bool AddToList = true) {
+        while (UserTE &&
+               VisitedUser.insert(std::make_pair(TE, UserTE)).second) {
+          SubtreeCosts[UserTE->Idx].first += C;
+          if (AddToList)
+            SubtreeCosts[UserTE->Idx].second.push_back(TE->Idx);
+          UserTE = UserTE->UserTreeIndex.UserTE;
+        }
+      };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
     InstructionCost C = NodesCosts.at(&TE);
     SubtreeCosts[TE.Idx].first += C;
-    const TreeEntry *UserTE = TE.UserTreeIndex.UserTE;
-    while (UserTE) {
-      SubtreeCosts[UserTE->Idx].first += C;
-      SubtreeCosts[UserTE->Idx].second.push_back(TE.Idx);
-      UserTE = UserTE->UserTreeIndex.UserTE;
+    if (const TreeEntry *UserTE = TE.UserTreeIndex.UserTE) {
+      SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
+          VisitedUser;
+      UpdateParentNodes(UserTE, &TE, C, VisitedUser);
     }
   }
+  SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4> Visited;
+  for (TreeEntry *TE : GatheredLoadsNodes) {
+    InstructionCost C = SubtreeCosts[TE->Idx].first;
+    for (Value *V : TE->Scalars) {
+      for (const TreeEntry *BVTE : ValueToGatherNodes.lookup(V))
+        UpdateParentNodes(BVTE, TE, C, Visited, /*AddToList=*/false);
+    }
+  }
+  Visited.clear();
   using CostIndicesTy =
       std::pair<TreeEntry *, std::pair<InstructionCost, SmallVector<unsigned>>>;
   struct FirstGreater {
@@ -16583,6 +16603,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
     return Cost;
 
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   bool Changed = false;
   while (!Worklist.empty() && Worklist.top().second.first > 0) {
     TreeEntry *TE = Worklist.top().first;
@@ -16624,7 +16645,6 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       if (isConstant(V))
         DemandedElts.clearBit(Idx);
     }
-    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
     Type *ScalarTy = getValueType(TE->Scalars.front());
     auto *VecTy = getWidenedType(ScalarTy, Sz);
@@ -16663,7 +16683,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     // Erase subtree if it is non-profitable.
     if (SubtreeCost > GatherCost) {
       // If the remaining tree is just a buildvector - exit, it will cause
-      // enless attempts to vectorize.
+      // endless attempts to vectorize.
       if (VectorizableTree.front()->hasState() &&
           VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
           TE->Idx == 1)
@@ -16694,6 +16714,71 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   if (!Changed)
     return SubtreeCosts.front().first;
 
+  SmallPtrSet<TreeEntry *, 4> GatheredLoadsToDelete;
+  InstructionCost LoadsExtractsCost = 0;
+  // Check if all loads of gathered loads nodes are marked for deletion. In this
+  // case the whole gathered loads subtree must be deleted.
+  // Also, try to account for extracts, which might be required, if only part of
+  // gathered load must be vectorized. Keep partially vectorized nodes, if
+  // extracts are cheaper than gathers.
+  for (TreeEntry *TE : GatheredLoadsNodes) {
+    if (DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE))
+      continue;
+    GatheredLoadsToDelete.insert(TE);
+    APInt DemandedElts = APInt::getZero(TE->getVectorFactor());
+    // All loads are removed from gathered? Need to delete the subtree.
+    SmallDenseMap<const TreeEntry *, SmallVector<Value *>> ValuesToInsert;
+    for (Value *V : TE->Scalars) {
+      unsigned Pos = TE->findLaneForValue(V);
+      for (const TreeEntry *BVE : ValueToGatherNodes.lookup(V)) {
+        if (DeletedNodes.contains(BVE))
+          continue;
+        DemandedElts.setBit(Pos);
+        ValuesToInsert.try_emplace(BVE).first->second.push_back(V);
+      }
+    }
+    if (!DemandedElts.isZero()) {
+      Type *ScalarTy = TE->Scalars.front()->getType();
+      auto *VecTy = getWidenedType(ScalarTy, TE->getVectorFactor());
+      InstructionCost ExtractsCost = ::getScalarizationOverhead(
+          *TTI, ScalarTy, VecTy, DemandedElts,
+          /*Insert=*/false, /*Extract=*/true, CostKind);
+      InstructionCost BVCost = 0;
+      for (const auto &[BVE, Values] : ValuesToInsert) {
+        APInt BVDemandedElts = APInt::getZero(BVE->getVectorFactor());
+        SmallVector<Value *> BVValues(BVE->getVectorFactor(),
+                                      PoisonValue::get(ScalarTy));
+        for (Value *V : Values) {
+          unsigned Pos = BVE->findLaneForValue(V);
+          BVValues[Pos] = V;
+          BVDemandedElts.setBit(Pos);
+        }
+        auto *BVVecTy = getWidenedType(ScalarTy, BVE->getVectorFactor());
+        BVCost += ::getScalarizationOverhead(
+            *TTI, ScalarTy, BVVecTy, BVDemandedElts,
+            /*Insert=*/true, /*Extract=*/false, CostKind,
+            BVDemandedElts.isAllOnes(), BVValues);
+      }
+      if (ExtractsCost < BVCost) {
+        LoadsExtractsCost += ExtractsCost;
+        GatheredLoadsToDelete.erase(TE);
+        continue;
+      }
+      LoadsExtractsCost += BVCost;
+    }
+    NodesCosts.erase(TE);
+  }
+
+  // Deleted all subtrees rooted at gathered loads nodes.
+  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->UserTreeIndex &&
+        GatheredLoadsToDelete.contains(TE->UserTreeIndex.UserTE)) {
+      DeletedNodes.insert(TE.get());
+      NodesCosts.erase(TE.get());
+      GatheredLoadsToDelete.insert(TE.get());
+    }
+  }
+
   for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (!TE->UserTreeIndex && TransformedToGatherNodes.contains(TE.get())) {
       assert(TE->getOpcode() == Instruction::Load && "Expected load only.");
@@ -16717,7 +16802,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
                       << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
   }
-  if (NewCost >= Cost) {
+  if (NewCost + LoadsExtractsCost >= Cost) {
     DeletedNodes.clear();
     TransformedToGatherNodes.clear();
     NewCost = Cost;
@@ -19965,8 +20050,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       // PHINodes may have multiple entries from the same block. We want to
       // visit every block once.
-      SmallPtrSet<BasicBlock *, 4> VisitedBBs;
-
+      SmallDenseMap<BasicBlock *, unsigned, 4> VisitedBBs;
       for (unsigned I : seq<unsigned>(PH->getNumIncomingValues())) {
         BasicBlock *IBB = PH->getIncomingBlock(I);
 
@@ -19976,13 +20060,17 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return NewPhi;
         }
 
-        if (!VisitedBBs.insert(IBB).second) {
-          Value *VecOp = NewPhi->getIncomingValueForBlock(IBB);
-          NewPhi->addIncoming(VecOp, IBB);
+        auto Res = VisitedBBs.try_emplace(IBB, I);
+        if (!Res.second) {
           TreeEntry *OpTE = getOperandEntry(E, I);
-          assert(!OpTE->VectorizedValue && "Expected no vectorized value.");
-          OpTE->VectorizedValue = VecOp;
-          continue;
+          if (OpTE->isGather() || DeletedNodes.contains(OpTE) ||
+              TransformedToGatherNodes.contains(OpTE)) {
+            Value *VecOp = NewPhi->getIncomingValue(Res.first->getSecond());
+            NewPhi->addIncoming(VecOp, IBB);
+            assert(!OpTE->VectorizedValue && "Expected no vectorized value.");
+            OpTE->VectorizedValue = VecOp;
+            continue;
+          }
         }
 
         Builder.SetInsertPoint(IBB->getTerminator());
@@ -21794,6 +21882,23 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (!Values.insert(std::make_pair(V, Op)).second)
           return std::nullopt;
       }
+    } else {
+      // If any of the parent requires scheduling - exit, complex dep between
+      // schedulable/non-schedulable parents.
+      if (any_of(EI.UserTE->Scalars, [&](Value *V) {
+            if (EI.UserTE->hasCopyableElements() &&
+                EI.UserTE->isCopyableElement(V))
+              return false;
+            ArrayRef<TreeEntry *> Entries = SLP->getTreeEntries(V);
+            return any_of(Entries, [](const TreeEntry *TE) {
+              return TE->doesNotNeedToSchedule() && TE->UserTreeIndex &&
+                     TE->UserTreeIndex.UserTE->hasState() &&
+                     TE->UserTreeIndex.UserTE->State !=
+                         TreeEntry::SplitVectorize &&
+                     TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
+            });
+          }))
+        return std::nullopt;
     }
   }
   bool HasCopyables = S.areInstructionsWithCopyableElements();
@@ -23977,9 +24082,10 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
-      OwningArrayRef<std::pair<unsigned, unsigned>> RangeSizes(Operands.size());
-      for (std::pair<unsigned, unsigned> &P : RangeSizes)
-        P.first = P.second = 1;
+      llvm::SmallVector<std::pair<unsigned, unsigned>> RangeSizesStorage(
+          Operands.size(), {1, 1});
+      // The `slice` and `drop_front` interfaces are convenient
+      const auto RangeSizes = MutableArrayRef(RangeSizesStorage);
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
       auto IsNotVectorized = [](bool First,
                                 const std::pair<unsigned, unsigned> &P) {

@@ -558,7 +558,9 @@ static Constant* SegmentOffset(IRBuilderBase &IRB,
       IRB.getPtrTy(AddressSpace));
 }
 
-Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
+Value *
+X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
+                                   const LibcallLoweringInfo &Libcalls) const {
   // glibc, bionic, and Fuchsia have a special slot for the stack guard in
   // tcbhead_t; use it instead of the usual global variable (see
   // sysdeps/{i386,x86_64}/nptl/tls.h)
@@ -602,16 +604,17 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
     return SegmentOffset(IRB, Offset, AddressSpace);
   }
-  return TargetLowering::getIRStackGuard(IRB);
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
-void X86TargetLowering::insertSSPDeclarations(Module &M) const {
+void X86TargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT provides functionalities for stack protection.
@@ -638,11 +641,11 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   if ((GuardMode == "tls" || GuardMode.empty()) &&
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
-Value *
-X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+Value *X86TargetLowering::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
   // definition of TLS_SLOT_SAFESTACK in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
@@ -659,7 +662,7 @@ X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
     return SegmentOffset(IRB, 0x18, getAddressSpace());
   }
 
-  return TargetLowering::getSafeStackPointerLocation(IRB);
+  return TargetLowering::getSafeStackPointerLocation(IRB, Libcalls);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1205,50 +1208,31 @@ SDValue X86TargetLowering::LowerCallResult(
   return Chain;
 }
 
-//===----------------------------------------------------------------------===//
-//                C & StdCall & Fast Calling Convention implementation
-//===----------------------------------------------------------------------===//
-//  StdCall calling convention seems to be standard for many Windows' API
-//  routines and around. It differs from C calling convention just a little:
-//  callee should clean up the stack, not caller. Symbols should be also
-//  decorated in some fancy way :) It doesn't support any vector arguments.
-//  For info on fast calling convention see Fast Calling Convention (tail call)
-//  implementation LowerX86_32FastCCCallTo.
-
 /// Determines whether Args, either a set of outgoing arguments to a call, or a
 /// set of incoming args of a call, contains an sret pointer that the callee
-/// pops
+/// pops. This happens on most x86-32, System V platforms, unless register
+/// parameters are in use (-mregparm=1+, regcallcc, etc).
 template <typename T>
 static bool hasCalleePopSRet(const SmallVectorImpl<T> &Args,
+                             const SmallVectorImpl<CCValAssign> &ArgLocs,
                              const X86Subtarget &Subtarget) {
   // Not C++20 (yet), so no concepts available.
   static_assert(std::is_same_v<T, ISD::OutputArg> ||
                     std::is_same_v<T, ISD::InputArg>,
                 "requires ISD::OutputArg or ISD::InputArg");
 
-  // Only 32-bit pops the sret.  It's a 64-bit world these days, so early-out
-  // for most compilations.
-  if (!Subtarget.is32Bit())
+  // Popping the sret pointer only happens on x86-32 System V ABI platforms
+  // (Linux, Cygwin, BSDs, Mac, etc). That excludes Windows-minus-Cygwin and
+  // MCU.
+  const Triple &TT = Subtarget.getTargetTriple();
+  if (!TT.isX86_32() || TT.isOSMSVCRT() || TT.isOSIAMCU())
     return false;
 
-  if (Args.empty())
-    return false;
-
-  // Most calls do not have an sret argument, check the arg next.
-  const ISD::ArgFlagsTy &Flags = Args[0].Flags;
-  if (!Flags.isSRet() || Flags.isInReg())
-    return false;
-
-  // The MSVCabi does not pop the sret.
-  if (Subtarget.getTargetTriple().isOSMSVCRT())
-    return false;
-
-  // MCUs don't pop the sret
-  if (Subtarget.isTargetMCU())
-    return false;
-
-  // Callee pops argument
-  return true;
+  // Check if the first argument is marked sret and if it is passed in memory.
+  bool IsSRetInMem = false;
+  if (!Args.empty())
+    IsSRetInMem = Args.front().Flags.isSRet() && ArgLocs.front().isMemLoc();
+  return IsSRetInMem;
 }
 
 /// Make a copy of an aggregate at address specified by "Src" to address
@@ -1894,7 +1878,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   } else {
     FuncInfo->setBytesToPopOnReturn(0); // Callee pops nothing.
     // If this is an sret function, the return should pop the hidden pointer.
-    if (!canGuaranteeTCO(CallConv) && hasCalleePopSRet(Ins, Subtarget))
+    if (hasCalleePopSRet(Ins, ArgLocs, Subtarget))
       FuncInfo->setBytesToPopOnReturn(4);
   }
 
@@ -2073,8 +2057,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
   bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
       CallConv, MF.getTarget().Options.GuaranteedTailCallOpt);
-  bool IsCalleePopSRet =
-      !ShouldGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
@@ -2136,8 +2118,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // be a tail call that doesn't require heroics like moving the return
     // address or swapping byval arguments. We treat some musttail calls as
     // sibling calls to avoid unnecessary argument copies.
-    IsSibcall =
-        isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs, IsCalleePopSRet);
+    IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
     isTailCall = IsSibcall || IsMustTail;
   }
 
@@ -2735,12 +2716,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop = 0; // Callee pops nothing.
   if (X86::isCalleePop(CallConv, Is64Bit, isVarArg,
-                       DAG.getTarget().Options.GuaranteedTailCallOpt))
+                       DAG.getTarget().Options.GuaranteedTailCallOpt)) {
     NumBytesForCalleeToPop = NumBytes;    // Callee pops everything
-  else if (!canGuaranteeTCO(CallConv) && IsCalleePopSRet)
+  } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget)) {
     // If this call passes a struct-return pointer, the callee
     // pops that struct pointer.
     NumBytesForCalleeToPop = 4;
+  }
 
   // Returns a glue for retval copy to use.
   if (!IsSibcall) {
@@ -2947,7 +2929,7 @@ mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
 /// emission in all cases.
 bool X86TargetLowering::isEligibleForSiblingCallOpt(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
-    SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
+    SmallVectorImpl<CCValAssign> &ArgLocs) const {
   SelectionDAG &DAG = CLI.DAG;
   const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
@@ -3012,7 +2994,7 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
     // sret. Condition #b is harder to determine.
     if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
       return false;
-  } else if (IsCalleePopSRet)
+  } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget))
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't
     // expect that.
     return false;
