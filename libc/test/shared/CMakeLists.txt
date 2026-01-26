@@ -82,4 +82,5 @@ add_fp_unittest(
     libc.src.__support.math.sin
     libc.src.__support.math.tan
     libc.src.__support.math.tanf
+    libc.src.__support.math.sinf
 )
