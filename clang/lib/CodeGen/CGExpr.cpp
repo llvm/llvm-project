@@ -7194,17 +7194,27 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
       // Matrices are represented as flat arrays in memory, but has a vector
       // value type. So we use ConvertMatrixAddress to convert the address from
       // array to vector, and extract elements similar to the vector case above.
-      // The order in which we iterate over the elements is sequentially in
-      // memory; whether the matrix is in row- or column-major order does not
-      // matter.
+      // The order in which we iterate over the elements must respect the
+      // matrix memory layout, computing the proper index for each (row, col).
       llvm::Type *LLVMT = ConvertTypeForMem(T);
       CharUnits Align = getContext().getTypeAlignInChars(T);
       Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
                                               Align, "matrix.gep");
       LValue Base = MakeAddrLValue(GEP, T);
       Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::MatrixBuilder MB(Builder);
       for (unsigned I = 0, E = MT->getNumElementsFlattened(); I < E; I++) {
-        llvm::Constant *Idx = llvm::ConstantInt::get(IdxTy, I);
+        // Compute (row, col) from linear index assuming row-major iteration.
+        unsigned Row = I / NumCols;
+        unsigned Col = I % NumCols;
+        llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
+        llvm::Value *ColIdx = llvm::ConstantInt::get(IdxTy, Col);
+        llvm::Value *Idx =
+            MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
         LValue LV = LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
                                           Base.getBaseInfo(), TBAAAccessInfo());
         AccessList.emplace_back(LV);
