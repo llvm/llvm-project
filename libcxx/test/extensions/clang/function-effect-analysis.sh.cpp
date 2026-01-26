@@ -56,10 +56,10 @@ void g(std::span<int> span, std::size_t index) noexcept [[clang::nonallocating]]
 }
 
 // Test the test: ensure that a diagnostic would be emitted normally
-void __potentially_blocking();
+void potentially_blocking();
 void f() noexcept [[clang::nonblocking]] {
-  __potentially_blocking(); // expected-error {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
+  potentially_blocking(); // expected-error {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
 void g() noexcept [[clang::nonallocating]] {
-  __potentially_blocking(); // expected-error {{function with 'nonallocating' attribute must not call non-'nonallocating' function}}
+  potentially_blocking(); // expected-error {{function with 'nonallocating' attribute must not call non-'nonallocating' function}}
 }
