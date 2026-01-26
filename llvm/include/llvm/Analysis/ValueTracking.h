@@ -331,7 +331,7 @@ LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
 /// Return true if the floating-point value \p V is known to be an integer
 /// value.
-LLVM_ABI bool isKnownIntegral(const Value *V, const DataLayout &DL,
+LLVM_ABI bool isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
                               FastMathFlags FMF);
 
 /// If the specified value can be set by repeating the same byte in memory,

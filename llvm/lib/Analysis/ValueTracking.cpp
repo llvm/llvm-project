@@ -6229,7 +6229,7 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
   }
 }
 
-bool llvm::isKnownIntegral(const Value *V, const DataLayout &DL,
+bool llvm::isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
                            FastMathFlags FMF) {
   if (isa<PoisonValue>(V))
     return true;
@@ -6271,7 +6271,7 @@ bool llvm::isKnownIntegral(const Value *V, const DataLayout &DL,
 
     // Need to check int size cannot produce infinity, which computeKnownFPClass
     // knows how to do already.
-    return isKnownNeverInfinity(I, SimplifyQuery(DL));
+    return isKnownNeverInfinity(I, SQ);
   case Instruction::Call: {
     const CallInst *CI = cast<CallInst>(I);
     switch (CI->getIntrinsicID()) {
@@ -6282,8 +6282,7 @@ bool llvm::isKnownIntegral(const Value *V, const DataLayout &DL,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven:
-      return (FMF.noInfs() && FMF.noNaNs()) ||
-             isKnownNeverInfOrNaN(I, SimplifyQuery(DL));
+      return (FMF.noInfs() && FMF.noNaNs()) || isKnownNeverInfOrNaN(I, SQ);
     default:
       break;
     }
