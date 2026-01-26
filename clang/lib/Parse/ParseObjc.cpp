@@ -1405,8 +1405,14 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
       LateAttr->addDecl(Result);
     }
     LateParsedAttrs.append(LateParsedReturnAttrs);
+    // The parsing of ObjC methods differs enough from C functions and C++
+    // methods that it's easier to enter the context here rather than in
+    // ParseLexedCAttribute.
+    Actions.ObjC().ActOnEnterObjCMethodContextForLateParsedAttrs(
+        getCurScope(), cast<ObjCMethodDecl>(Result));
     ParseLexedCAttributeList(LateParsedAttrs,
                              /*we already have parameters in scope*/ false);
+    Actions.ActOnExitFunctionContext();
   }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 

@@ -382,6 +382,11 @@ static void copyDomainAvailabilityAttr(ObjCMethodDecl *MD, Sema &SemaRef) {
     SemaRef.copyFeatureAvailabilityCheck(MD, IDecl, true);
 }
 
+void SemaObjC::ActOnEnterObjCMethodContextForLateParsedAttrs(Scope *S, ObjCMethodDecl *D) {
+  SemaRef.PushDeclContext(S, D);
+  // parameters are already added to scope
+}
+
 /// ActOnStartOfObjCMethodDef - This routine sets up parameters; invisible
 /// and user declared, in the method definition's AST.
 void SemaObjC::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
