@@ -35,6 +35,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -4546,18 +4547,24 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *And = nullptr, *OtherVal = nullptr;
         // select(C0, select(C1, a, b), b) -> select(C0&&C1, a, b)
         if (TrueSI->getFalseValue() == FalseVal) {
-          And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
+          And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition(), "",
+                                         ProfcheckDisableMetadataFixes ? nullptr
+                                                                       : &SI);
           OtherVal = TrueSI->getTrueValue();
         }
         // select(C0, select(C1, b, a), b) -> select(C0&&!C1, a, b)
         else if (TrueSI->getTrueValue() == FalseVal) {
           Value *InvertedCond = Builder.CreateNot(TrueSI->getCondition());
-          And = Builder.CreateLogicalAnd(CondVal, InvertedCond);
+          And = Builder.CreateLogicalAnd(CondVal, InvertedCond, "",
+                                         ProfcheckDisableMetadataFixes ? nullptr
+                                                                       : &SI);
           OtherVal = TrueSI->getFalseValue();
         }
         if (And && OtherVal) {
           replaceOperand(SI, 0, And);
           replaceOperand(SI, 1, OtherVal);
+          if (!ProfcheckDisableMetadataFixes)
+            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
       }
@@ -4575,18 +4582,24 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *Or = nullptr, *OtherVal = nullptr;
         // select(C0, a, select(C1, a, b)) -> select(C0||C1, a, b)
         if (FalseSI->getTrueValue() == TrueVal) {
-          Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
+          Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition(), "",
+                                       ProfcheckDisableMetadataFixes ? nullptr
+                                                                     : &SI);
           OtherVal = FalseSI->getFalseValue();
         }
         // select(C0, a, select(C1, b, a)) -> select(C0||!C1, a, b)
         else if (FalseSI->getFalseValue() == TrueVal) {
           Value *InvertedCond = Builder.CreateNot(FalseSI->getCondition());
-          Or = Builder.CreateLogicalOr(CondVal, InvertedCond);
+          Or = Builder.CreateLogicalOr(CondVal, InvertedCond, "",
+                                       ProfcheckDisableMetadataFixes ? nullptr
+                                                                     : &SI);
           OtherVal = FalseSI->getTrueValue();
         }
         if (Or && OtherVal) {
           replaceOperand(SI, 0, Or);
           replaceOperand(SI, 2, OtherVal);
+          if (!ProfcheckDisableMetadataFixes)
+            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
       }
