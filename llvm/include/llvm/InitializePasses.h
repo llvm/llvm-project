@@ -83,6 +83,7 @@ LLVM_ABI void initializeCallGraphWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeCheckDebugMachineModulePass(PassRegistry &);
 LLVM_ABI void initializeCodeGenPrepareLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeComplexDeinterleavingLegacyPassPass(PassRegistry &);
+LLVM_ABI void initializeComputeLiveInsPass(PassRegistry &);
 LLVM_ABI void initializeConstantHoistingLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeCycleInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDAEPass(PassRegistry &);

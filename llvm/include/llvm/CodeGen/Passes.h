@@ -211,6 +211,10 @@ LLVM_ABI FunctionPass *createVirtRegRewriter(bool ClearVirtRegs = true);
 LLVM_ABI extern char &UnreachableMachineBlockElimID;
 
 /// DeadMachineInstructionElim - This pass removes dead machine instructions.
+
+/// ComputeLiveIns - This pass computes and adds live-in information to all
+/// MBBs.
+LLVM_ABI extern char &ComputeLiveInsID;
 LLVM_ABI extern char &DeadMachineInstructionElimID;
 
 /// This pass adds dead/undef flags after analyzing subregister lanes.
