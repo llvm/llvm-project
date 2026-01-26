@@ -154,6 +154,7 @@ Changes to the LoongArch Backend
 * Always emit symbol-based relocations regardless of relaxation.
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the LoongArch platform.
+* Improved LoongArch32 support by adding LA32R/LA32S relocations, PC-relative address materialization, and `call`/`tail` macro instructions.
 * Assorted codegen improvements.
 
 Changes to the MIPS Backend
