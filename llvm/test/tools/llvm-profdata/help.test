@@ -1,0 +1,22 @@
+# RUN: llvm-profdata --help | FileCheck %s --check-prefix=TOP
+# RUN: llvm-profdata merge --help | FileCheck %s --check-prefix=MERGE
+# RUN: llvm-profdata show --help | FileCheck %s --check-prefix=SHOW
+
+# TOP: OVERVIEW: LLVM profile data
+# TOP: USAGE: llvm-profdata [subcommand] [options]
+# TOP: SUBCOMMANDS:
+# TOP: merge - Takes several profiles and merge them together.
+# TOP: show - Takes a profile data file and displays the profiles.
+
+# MERGE: OVERVIEW: LLVM profile data
+# MERGE: Takes several profiles and merge them together.
+# MERGE: OPTIONS:
+# MERGE: -instr
+# MERGE: -output <output>
+# MERGE: -sample
+
+# SHOW: OVERVIEW: LLVM profile data
+# SHOW: Takes a profile data file and displays the profiles.
+# SHOW: OPTIONS:
+# SHOW: -output <output>
+# SHOW: -show-format

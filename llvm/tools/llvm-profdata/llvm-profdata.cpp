@@ -3168,11 +3168,56 @@ static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ProgramName) << Message << "\n";
 }
 
+static StringRef getOptionValue(const opt::Arg *A) {
+  if (A->getNumValues() == 0)
+    return StringRef();
+  StringRef V = A->getValue();
+  V.consume_front("=");
+  return V;
+}
+
+static std::string getLastArgValueClean(const opt::InputArgList &Args,
+                                        unsigned OptionID,
+                                        StringRef Default = "") {
+  if (const opt::Arg *A = Args.getLastArg(OptionID))
+    return getOptionValue(A).str();
+  return Default.str();
+}
+
+static std::vector<std::string>
+getAllArgValuesClean(const opt::InputArgList &Args, unsigned OptionID) {
+  std::vector<std::string> Values;
+  for (const opt::Arg *A : Args.filtered(OptionID))
+    Values.push_back(getOptionValue(A).str());
+  return Values;
+}
+
+static bool parseBooleanOption(const opt::Arg *A, bool &Value) {
+  if (!A)
+    return true;
+  StringRef V = getOptionValue(A);
+  if (V.empty()) {
+    Value = true;
+    return true;
+  }
+  if (V.equals_insensitive("true") || V == "1") {
+    Value = true;
+    return true;
+  }
+  if (V.equals_insensitive("false") || V == "0") {
+    Value = false;
+    return true;
+  }
+  reportCmdLineError(Twine("invalid argument '") + V + "' for option '" +
+                     A->getSpelling() + "'");
+  return false;
+}
+
 template <typename T>
 static bool parseNumericOption(const opt::Arg *A, T &Value) {
   if (!A)
     return true;
-  StringRef V = A->getValue();
+  StringRef V = getOptionValue(A);
   T Parsed{};
   if (!llvm::to_integer(V, Parsed, 0)) {
     if (!std::numeric_limits<T>::is_signed && V == "-1") {
@@ -3187,10 +3232,86 @@ static bool parseNumericOption(const opt::Arg *A, T &Value) {
   return true;
 }
 
+static bool applyLibraryOptionsWithCL(const opt::InputArgList &Args) {
+  SmallVector<std::string, 16> CLStrings;
+  CLStrings.push_back(ProgramName);
+
+  auto AddBool = [&](unsigned OptID, StringRef Spelling) -> bool {
+    if (const opt::Arg *A = Args.getLastArg(OptID)) {
+      bool Value = true;
+      if (!parseBooleanOption(A, Value))
+        return false;
+      CLStrings.push_back(
+          (Spelling + Twine("=") + (Value ? "true" : "false")).str());
+    }
+    return true;
+  };
+  auto AddUInt = [&](unsigned OptID, StringRef Spelling) -> bool {
+    if (const opt::Arg *A = Args.getLastArg(OptID)) {
+      uint64_t Value = 0;
+      if (!parseNumericOption(A, Value))
+        return false;
+      CLStrings.push_back((Spelling + Twine("=") + Twine(Value)).str());
+    }
+    return true;
+  };
+  auto AddInt = [&](unsigned OptID, StringRef Spelling) -> bool {
+    if (const opt::Arg *A = Args.getLastArg(OptID)) {
+      int Value = 0;
+      if (!parseNumericOption(A, Value))
+        return false;
+      CLStrings.push_back((Spelling + Twine("=") + Twine(Value)).str());
+    }
+    return true;
+  };
+
+  if (!AddBool(OPT_profile_isfs, "--profile-isfs"))
+    return false;
+  if (!AddBool(OPT_generate_merged_base_profiles,
+               "--generate-merged-base-profiles"))
+    return false;
+  if (!AddUInt(OPT_profile_symbol_list_cutoff, "--profile-symbol-list-cutoff"))
+    return false;
+  if (!AddBool(OPT_extbinary_write_vtable_type_prof,
+               "--extbinary-write-vtable-type-prof"))
+    return false;
+
+  if (!AddBool(OPT_profile_summary_contextless,
+               "--profile-summary-contextless"))
+    return false;
+  if (!AddInt(OPT_profile_summary_cutoff_hot, "--profile-summary-cutoff-hot"))
+    return false;
+  if (!AddInt(OPT_profile_summary_cutoff_cold, "--profile-summary-cutoff-cold"))
+    return false;
+  if (!AddUInt(OPT_profile_summary_hot_count, "--profile-summary-hot-count"))
+    return false;
+  if (!AddUInt(OPT_profile_summary_cold_count, "--profile-summary-cold-count"))
+    return false;
+  if (!AddUInt(OPT_profile_summary_huge_working_set_size_threshold,
+               "--profile-summary-huge-working-set-size-threshold"))
+    return false;
+  if (!AddUInt(OPT_profile_summary_large_working_set_size_threshold,
+               "--profile-summary-large-working-set-size-threshold"))
+    return false;
+
+  if (CLStrings.size() == 1)
+    return true;
+
+  SmallVector<char *, 16> CLArgs;
+  for (std::string &S : CLStrings)
+    CLArgs.push_back(S.data());
+
+  return cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data(),
+                                     /*Overview=*/"", /*Errs=*/nullptr,
+                                     /*VFS=*/nullptr,
+                                     /*EnvVar=*/nullptr,
+                                     /*LongOptionsUseDoubleDash=*/false);
+}
+
 static bool parseFloatOption(const opt::Arg *A, float &Value) {
   if (!A)
     return true;
-  StringRef V = A->getValue();
+  StringRef V = getOptionValue(A);
   double Parsed;
   if (V.getAsDouble(Parsed)) {
     reportCmdLineError(Twine("invalid argument '") + V + "' for option '" +
@@ -3206,9 +3327,17 @@ static bool parseCutoffValues(const opt::InputArgList &Args,
   Cutoffs.clear();
   for (const opt::Arg *A : Args.filtered(OPT_detailed_summary_cutoffs)) {
     SmallVector<StringRef, 4> Parts;
-    StringRef(A->getValue())
-        .split(Parts, ',', /*MaxSplit=*/-1,
-               /*KeepEmpty=*/false);
+    if (A->getNumValues() <= 1) {
+      getOptionValue(A).split(Parts, ',', /*MaxSplit=*/-1,
+                              /*KeepEmpty=*/false);
+    } else {
+      for (unsigned I = 0, E = A->getNumValues(); I != E; ++I) {
+        StringRef Part = A->getValue(I);
+        if (!Part.empty() && Part.front() == '=')
+          Part = Part.drop_front();
+        Parts.push_back(Part);
+      }
+    }
     for (StringRef Part : Parts) {
       uint32_t Parsed;
       if (!llvm::to_integer(Part, Parsed, 0)) {
@@ -3227,7 +3356,7 @@ static bool parseFSDiscriminatorPassArg(const opt::InputArgList &Args) {
   if (!A)
     return true;
 
-  StringRef Value = A->getValue();
+  StringRef Value = getOptionValue(A);
   auto Parsed = StringSwitch<std::optional<FSDiscriminatorPass>>(Value)
                     .Case("Base", FSDiscriminatorPass::Base)
                     .Case("base", FSDiscriminatorPass::Base)
@@ -3268,48 +3397,26 @@ static bool validateSubcommandOptions(const opt::InputArgList &Args,
   return Valid;
 }
 
-static void printSubcommandHelp(const ProfdataOptTable &Tbl,
-                                StringRef Subcommand, bool ShowHidden) {
-  SmallString<64> Usage;
-  Usage += ProgramName;
-  Usage += " ";
-  Usage += Subcommand;
-  Usage += " [options]";
-  Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data", ShowHidden,
-                /*ShowAllAliases=*/false, Visibility(), Subcommand);
-  outs() << "\nPass @FILE as argument to read options from FILE.\n";
-}
-
-static void printTopLevelHelp() {
-  outs() << "OVERVIEW: LLVM profile data\n\n"
-         << "USAGE: " << ProgramName << " <subcommand> [options]\n\n"
-         << "SUBCOMMANDS:\n";
-  for (const auto &SC : OptionSubCommands)
-    outs() << "  " << SC.Name << " - " << SC.HelpText << "\n";
-  outs() << "\n  Type \"" << ProgramName
-         << " <subcommand> --help\" to get more help on a specific "
-            "subcommand\n\n"
-         << "OPTIONS:\n  --help        Display this message\n"
-         << "  --version     Display the version\n";
-}
-
-static bool parseMergeOptions(const opt::InputArgList &Args) {
-  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
+static bool parseMergeOptions(const opt::InputArgList &Args,
+                              ArrayRef<StringRef> Positionals) {
+  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
   if (const opt::Arg *A = Args.getLastArg(OPT_sample, OPT_instr))
     ProfileKind = A->getOption().matches(OPT_sample) ? sample : instr;
+  if (!applyLibraryOptionsWithCL(Args))
+    return false;
 
   if (!parseNumericOption(
           Args.getLastArg(OPT_max_debug_info_correlation_warnings),
           MaxDbgCorrelationWarnings))
     return false;
-  ProfiledBinary = Args.getLastArgValue(OPT_profiled_binary).str();
-  DebugInfoFilename = Args.getLastArgValue(OPT_debug_info).str();
-  BinaryFilename = Args.getLastArgValue(OPT_binary_file).str();
-  DebugFileDirectory = Args.getAllArgValues(OPT_debug_file_directory);
+  ProfiledBinary = getLastArgValueClean(Args, OPT_profiled_binary);
+  DebugInfoFilename = getLastArgValueClean(Args, OPT_debug_info);
+  BinaryFilename = getLastArgValueClean(Args, OPT_binary_file);
+  DebugFileDirectory = getAllArgValuesClean(Args, OPT_debug_file_directory);
   DebugInfod = Args.hasArg(OPT_debuginfod);
 
   if (const opt::Arg *A = Args.getLastArg(OPT_correlate)) {
-    StringRef V = A->getValue();
+    StringRef V = getOptionValue(A);
     auto Parsed = StringSwitch<std::optional<ProfCorrelatorKind>>(V)
                       .Case("", InstrProfCorrelator::NONE)
                       .Case("debug-info", InstrProfCorrelator::DEBUG_INFO)
@@ -3323,9 +3430,12 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
     BIDFetcherProfileCorrelate = *Parsed;
   }
 
-  FuncNameFilter = Args.getLastArgValue(OPT_function).str();
-  InputFilenames = Args.getAllArgValues(OPT_INPUT);
-  WeightedInputFilenames = Args.getAllArgValues(OPT_weighted_input);
+  FuncNameFilter = getLastArgValueClean(Args, OPT_function);
+  InputFilenames.clear();
+  InputFilenames.reserve(Positionals.size());
+  for (StringRef Pos : Positionals)
+    InputFilenames.emplace_back(Pos.str());
+  WeightedInputFilenames = getAllArgValuesClean(Args, OPT_weighted_input);
 
   OutputFormat = PF_Ext_Binary;
   if (const opt::Arg *Fmt =
@@ -3340,11 +3450,15 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
       OutputFormat = PF_Ext_Binary;
   }
 
-  InputFilenamesFile = Args.getLastArgValue(OPT_input_files).str();
+  InputFilenamesFile = getLastArgValueClean(Args, OPT_input_files);
   DumpInputFileList = Args.hasArg(OPT_dump_input_file_list);
-  RemappingFile = Args.getLastArgValue(OPT_remapping_file).str();
+  RemappingFile = getLastArgValueClean(Args, OPT_remapping_file);
   UseMD5 = Args.hasArg(OPT_use_md5);
-  CompressAllSections = Args.hasArg(OPT_compress_all_sections);
+  const opt::Arg *CompressArg =
+      Args.getLastArg(OPT_compress_all_sections, OPT_compress_all_sections_EQ);
+  CompressAllSections = CompressArg != nullptr;
+  if (!parseBooleanOption(CompressArg, CompressAllSections))
+    return false;
   SampleMergeColdContext = Args.hasArg(OPT_sample_merge_cold_context);
   SampleTrimColdContext = Args.hasArg(OPT_sample_trim_cold_context);
   if (!parseNumericOption(
@@ -3357,7 +3471,7 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
   GenPartialProfile = Args.hasArg(OPT_gen_partial_profile);
   SplitLayout = Args.hasArg(OPT_split_layout);
   SupplInstrWithSample =
-      Args.getLastArgValue(OPT_supplement_instr_with_sample).str();
+      getLastArgValueClean(Args, OPT_supplement_instr_with_sample);
   if (!parseFloatOption(Args.getLastArg(OPT_zero_counter_threshold),
                         ZeroCounterThreshold))
     return false;
@@ -3375,9 +3489,12 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
           Args.getLastArg(OPT_temporal_profile_max_trace_length),
           TemporalProfMaxTraceLength))
     return false;
-  FuncNameNegativeFilter = Args.getLastArgValue(OPT_no_function).str();
+  FuncNameNegativeFilter = getLastArgValueClean(Args, OPT_no_function);
 
-  StringRef FailureModeValue = Args.getLastArgValue(OPT_failure_mode, "any");
+  StringRef FailureModeValue =
+      Args.getLastArg(OPT_failure_mode)
+          ? getOptionValue(Args.getLastArg(OPT_failure_mode))
+          : StringRef("any");
   auto ParsedFailMode =
       StringSwitch<std::optional<FailureMode>>(FailureModeValue)
           .Case("warn", warnOnly)
@@ -3391,13 +3508,16 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
   }
   FailMode = *ParsedFailMode;
 
-  OutputSparse = Args.hasArg(OPT_sparse);
+  const opt::Arg *SparseArg = Args.getLastArg(OPT_sparse, OPT_sparse_EQ);
+  OutputSparse = SparseArg != nullptr;
+  if (!parseBooleanOption(SparseArg, OutputSparse))
+    return false;
   if (!parseNumericOption(Args.getLastArg(OPT_num_threads), NumThreads))
     return false;
-  ProfileSymbolListFile = Args.getLastArgValue(OPT_prof_sym_list).str();
+  ProfileSymbolListFile = getLastArgValueClean(Args, OPT_prof_sym_list);
 
   if (const opt::Arg *A = Args.getLastArg(OPT_convert_sample_profile_layout)) {
-    StringRef Layout = A->getValue();
+    StringRef Layout = getOptionValue(A);
     auto ParsedLayout = StringSwitch<std::optional<SampleProfileLayout>>(Layout)
                             .Case("nest", SPL_Nest)
                             .Case("flat", SPL_Flat)
@@ -3415,7 +3535,7 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
   DoWritePrevVersion = Args.hasArg(OPT_write_prev_version);
 
   if (const opt::Arg *A = Args.getLastArg(OPT_memprof_version)) {
-    StringRef Version = A->getValue();
+    StringRef Version = getOptionValue(A);
     auto ParsedVersion =
         StringSwitch<std::optional<memprof::IndexedVersion>>(Version)
             .Case("2", memprof::Version2)
@@ -3442,12 +3562,12 @@ static bool parseMergeOptions(const opt::InputArgList &Args) {
   return true;
 }
 
-static bool parseShowOptions(const opt::InputArgList &Args) {
-  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
-  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
-  if (!Inputs.empty()) {
-    Filename = Inputs.front();
-    if (Inputs.size() > 1) {
+static bool parseShowOptions(const opt::InputArgList &Args,
+                             ArrayRef<StringRef> Positionals) {
+  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  if (!Positionals.empty()) {
+    Filename = Positionals.front().str();
+    if (Positionals.size() > 1) {
       reportCmdLineError("too many positional arguments");
       return false;
     }
@@ -3457,13 +3577,15 @@ static bool parseShowOptions(const opt::InputArgList &Args) {
           Args.getLastArg(OPT_max_debug_info_correlation_warnings),
           MaxDbgCorrelationWarnings))
     return false;
-  ProfiledBinary = Args.getLastArgValue(OPT_profiled_binary).str();
-  DebugInfoFilename = Args.getLastArgValue(OPT_debug_info).str();
-  FuncNameFilter = Args.getLastArgValue(OPT_function).str();
+  if (!applyLibraryOptionsWithCL(Args))
+    return false;
+  ProfiledBinary = getLastArgValueClean(Args, OPT_profiled_binary);
+  DebugInfoFilename = getLastArgValueClean(Args, OPT_debug_info);
+  FuncNameFilter = getLastArgValueClean(Args, OPT_function);
 
   ShowCounts = Args.hasArg(OPT_counts);
   if (const opt::Arg *A = Args.getLastArg(OPT_show_format)) {
-    StringRef Value = A->getValue();
+    StringRef Value = getOptionValue(A);
     auto Parsed = StringSwitch<std::optional<ShowFormat>>(Value)
                       .Case("text", ShowFormat::Text)
                       .Case("json", ShowFormat::Json)
@@ -3514,20 +3636,20 @@ static bool parseShowOptions(const opt::InputArgList &Args) {
   return true;
 }
 
-static bool parseOverlapOptions(const opt::InputArgList &Args) {
-  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
-  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
-  if (Inputs.size() != 2) {
+static bool parseOverlapOptions(const opt::InputArgList &Args,
+                                ArrayRef<StringRef> Positionals) {
+  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  if (Positionals.size() != 2) {
     reportCmdLineError("overlap requires two positional profile filenames");
     return false;
   }
-  BaseFilename = Inputs[0];
-  TestFilename = Inputs[1];
+  BaseFilename = Positionals[0].str();
+  TestFilename = Positionals[1].str();
 
   if (const opt::Arg *A = Args.getLastArg(OPT_sample, OPT_instr))
     ProfileKind = A->getOption().matches(OPT_sample) ? sample : instr;
 
-  FuncNameFilter = Args.getLastArgValue(OPT_function).str();
+  FuncNameFilter = getLastArgValueClean(Args, OPT_function);
   if (!parseNumericOption(Args.getLastArg(OPT_similarity_cutoff),
                           SimilarityCutoff))
     return false;
@@ -3542,12 +3664,12 @@ static bool parseOverlapOptions(const opt::InputArgList &Args) {
   return true;
 }
 
-static bool parseOrderOptions(const opt::InputArgList &Args) {
-  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
-  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
-  if (!Inputs.empty()) {
-    Filename = Inputs.front();
-    if (Inputs.size() > 1) {
+static bool parseOrderOptions(const opt::InputArgList &Args,
+                              ArrayRef<StringRef> Positionals) {
+  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  if (!Positionals.empty()) {
+    Filename = Positionals.front().str();
+    if (Positionals.size() > 1) {
       reportCmdLineError("too many positional arguments");
       return false;
     }
@@ -3561,47 +3683,137 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
-  ProgramName = sys::path::filename(argv[0]).str();
+  ProgramName = sys::path::stem(argv[0]).str();
 
-  if (argc < 2) {
+  ProfdataOptTable Tbl;
+  ArrayRef<opt::OptTable::SubCommand> KnownSubcommands = Tbl.getSubCommands();
+  auto IsKnownSubcommand = [&](StringRef Name) {
+    return llvm::any_of(
+        KnownSubcommands,
+        [&](const opt::OptTable::SubCommand &SC) { return Name == SC.Name; });
+  };
+  ArrayRef<const char *> RawArgs(argv + 1, argv + argc);
+  SmallVector<StringRef, 4> RawSubcommands;
+  for (const char *Arg : RawArgs) {
+    StringRef ArgRef(Arg);
+    if (!ArgRef.starts_with("-") && IsKnownSubcommand(ArgRef))
+      RawSubcommands.push_back(ArgRef);
+  }
+  auto HasFlag = [&](StringRef Flag) {
+    return llvm::is_contained(RawArgs, Flag);
+  };
+  auto HasAnySubcommand = [&]() { return !RawSubcommands.empty(); };
+
+  if (!HasAnySubcommand()) {
+    if (HasFlag("--help") || HasFlag("-help") || HasFlag("-h")) {
+      std::string Usage = ProgramName + " [subcommand] [options]";
+      Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data",
+                    /*ShowHidden=*/false, /*ShowAllAliases=*/false,
+                    Visibility(), /*Subcommand=*/{});
+      return 0;
+    }
+    if (HasFlag("--help-hidden")) {
+      std::string Usage = ProgramName + " [subcommand] [options]";
+      Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data",
+                    /*ShowHidden=*/true, /*ShowAllAliases=*/false, Visibility(),
+                    /*Subcommand=*/{});
+      return 0;
+    }
+    if (HasFlag("--version") || HasFlag("-version")) {
+      outs() << ProgramName << '\n';
+      cl::PrintVersionMessage();
+      return 0;
+    }
+  }
+
+  if (argc <= 1) {
     errs() << ProgramName << ": No subcommand specified! Run " << ProgramName
            << " --help for usage.\n";
     return 1;
   }
 
-  StringRef Subcommand = argv[1];
-  if (Subcommand == "--help" || Subcommand == "-help" || Subcommand == "-h") {
-    printTopLevelHelp();
-    return 0;
-  }
-
-  if (Subcommand == "--version" || Subcommand == "-version") {
-    outs() << ProgramName << '\n';
-    cl::PrintVersionMessage();
-    return 0;
-  }
-
-  if (Subcommand != "show" && Subcommand != "order" &&
-      Subcommand != "overlap" && Subcommand != "merge") {
-    errs() << ProgramName << ": Unknown command. Run " << ProgramName
-           << " --help for usage.\n";
-    return 1;
-  }
-
-  ProfdataOptTable Tbl;
   bool HadParseError = false;
   opt::InputArgList Args =
-      Tbl.parseArgs(argc - 2, argv + 2, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+      Tbl.parseArgs(argc - 1, argv + 1, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         WithColor::error(errs(), ProgramName) << Msg << "\n";
         HadParseError = true;
       });
   if (HadParseError)
     return 1;
 
+  bool HadSubcommandError = false;
+  SmallVector<StringRef, 4> OtherPositionals;
+  auto HandleMultipleSubcommands = [&](ArrayRef<StringRef> SubCommands) {
+    HadSubcommandError = true;
+    WithColor::error(errs(), ProgramName) << "multiple subcommands specified:";
+    for (StringRef SC : SubCommands)
+      errs() << " '" << SC << "'";
+    errs() << ".\n";
+  };
+  auto HandleOtherPositionals = [&](ArrayRef<StringRef> Positionals) {
+    OtherPositionals.append(Positionals.begin(), Positionals.end());
+  };
+
+  StringRef Subcommand = Args.getSubCommand(
+      Tbl.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+  if (HadSubcommandError)
+    return 1;
+
+  if (Subcommand.empty() && RawSubcommands.size() > 1) {
+    HadSubcommandError = true;
+    HandleMultipleSubcommands(RawSubcommands);
+  }
+  if (HadSubcommandError)
+    return 1;
+
+  if (Subcommand.empty() && argc > 1 && IsKnownSubcommand(argv[1]))
+    Subcommand = argv[1];
+  if (Subcommand.empty() && !OtherPositionals.empty() &&
+      IsKnownSubcommand(OtherPositionals.front())) {
+    Subcommand = OtherPositionals.front();
+    OtherPositionals.erase(OtherPositionals.begin());
+  }
+  if (Subcommand.empty() && RawSubcommands.size() == 1)
+    Subcommand = RawSubcommands.front();
+  if (!Subcommand.empty()) {
+    auto It = llvm::find(OtherPositionals, Subcommand);
+    if (It != OtherPositionals.end())
+      OtherPositionals.erase(It);
+  }
+
+  ArrayRef<StringRef> Positionals = OtherPositionals;
+
   bool ShowHidden = Args.hasArg(OPT_help_hidden);
   if (Args.hasArg(OPT_help) || ShowHidden) {
-    printSubcommandHelp(Tbl, Subcommand, ShowHidden);
+    std::string Usage = ProgramName + " [subcommand] [options]";
+    Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data",
+                  /*ShowHidden=*/ShowHidden, /*ShowAllAliases=*/false,
+                  Visibility(), Subcommand);
     return 0;
+  }
+
+  if (Subcommand.empty()) {
+    if (Args.hasArg(OPT_version)) {
+      outs() << ProgramName << '\n';
+      cl::PrintVersionMessage();
+      return 0;
+    }
+    if (!OtherPositionals.empty()) {
+      WithColor::error(errs(), ProgramName) << "Unknown command";
+      if (OtherPositionals.size() != 1)
+        errs() << "s";
+      errs() << " ";
+      for (size_t I = 0; I < OtherPositionals.size(); ++I) {
+        if (I)
+          errs() << ", ";
+        errs() << "'" << OtherPositionals[I] << "'";
+      }
+      errs() << ". Run " << ProgramName << " --help for usage.\n";
+    } else {
+      errs() << ProgramName << ": No subcommand specified! Run " << ProgramName
+             << " --help for usage.\n";
+    }
+    return 1;
   }
 
   if (!validateSubcommandOptions(Args, Subcommand))
@@ -3614,22 +3826,22 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   if (Subcommand == "merge") {
-    if (!parseMergeOptions(Args))
+    if (!parseMergeOptions(Args, Positionals))
       return 1;
     return merge_main(ProgramName);
   }
   if (Subcommand == "show") {
-    if (!parseShowOptions(Args))
+    if (!parseShowOptions(Args, Positionals))
       return 1;
     return show_main(ProgramName);
   }
   if (Subcommand == "overlap") {
-    if (!parseOverlapOptions(Args))
+    if (!parseOverlapOptions(Args, Positionals))
       return 1;
     return overlap_main();
   }
   if (Subcommand == "order") {
-    if (!parseOrderOptions(Args))
+    if (!parseOrderOptions(Args, Positionals))
       return 1;
     return order_main();
   }

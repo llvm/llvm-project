@@ -118,6 +118,11 @@ def compress_all_sections
       HelpText<"Compress all sections when writing the profile (only "
                "meaningful for -extbinary)">,
       Flags<[HelpHidden]>;
+def compress_all_sections_EQ
+    : Joined<["-","--"], "compress-all-sections=", [Merge]>,
+      HelpText<"Compress all sections when writing the profile (only "
+               "meaningful for -extbinary)">,
+      Flags<[HelpHidden]>;
 def sample_merge_cold_context
     : Flag<["-","--"], "sample-merge-cold-context", [Merge]>,
       HelpText<"Merge context sample profiles whose count is below cold "
@@ -188,8 +193,65 @@ def failure_mode
     : JoinedOrSeparate<["-","--"], "failure-mode", [Merge]>,
       HelpText<"Failure mode: warn, any, or all">,
       MetaVarName<"<mode>">;
-def sparse : Flag<["-","--"], "sparse", [Merge]>,
-             HelpText<"Generate a sparse profile (only meaningful for -instr)">;
+def sparse
+    : Flag<["-","--"], "sparse", [Merge]>,
+      HelpText<"Generate a sparse profile (only meaningful for -instr)">;
+def sparse_EQ
+    : Joined<["-","--"], "sparse=", [Merge]>,
+      HelpText<"Generate a sparse profile (only meaningful for -instr)">,
+      Flags<[HelpHidden]>;
+
+def profile_isfs : Flag<["-","--"], "profile-isfs", [Show, Merge]>,
+                   HelpText<"Profile uses flow-sensitive discriminators">,
+                   Flags<[HelpHidden]>;
+
+def generate_merged_base_profiles
+    : JoinedOrSeparate<["-","--"], "generate-merged-base-profiles", [Merge]>,
+      HelpText<"Generate merged base profiles when creating nested "
+               "context-sensitive profiles">,
+      Flags<[HelpHidden]>;
+
+def profile_symbol_list_cutoff
+    : JoinedOrSeparate<["-","--"], "profile-symbol-list-cutoff", [Merge]>,
+      HelpText<"Maximum number of symbols to keep in the profile symbol list">,
+      Flags<[HelpHidden]>;
+def profile_summary_cutoff_hot
+    : JoinedOrSeparate<["-","--"], "profile-summary-cutoff-hot",
+                       [Show, Merge]>,
+      HelpText<"Percentile (times 10000) for determining hot threshold">,
+      Flags<[HelpHidden]>;
+def profile_summary_cutoff_cold
+    : JoinedOrSeparate<["-","--"], "profile-summary-cutoff-cold",
+                       [Show, Merge]>,
+      HelpText<"Percentile (times 10000) for determining cold threshold">,
+      Flags<[HelpHidden]>;
+def profile_summary_hot_count
+    : JoinedOrSeparate<["-","--"], "profile-summary-hot-count",
+                       [Show, Merge]>,
+      HelpText<"Override hot count derived from summary cutoffs">,
+      Flags<[HelpHidden]>;
+def profile_summary_cold_count
+    : JoinedOrSeparate<["-","--"], "profile-summary-cold-count",
+                       [Show, Merge]>,
+      HelpText<"Override cold count derived from summary cutoffs">,
+      Flags<[HelpHidden]>;
+def profile_summary_contextless
+    : JoinedOrSeparate<["-","--"], "profile-summary-contextless",
+                       [Show, Merge]>,
+      HelpText<"Merge context profiles before calculating summary thresholds">,
+      Flags<[HelpHidden]>;
+def profile_summary_huge_working_set_size_threshold
+    : JoinedOrSeparate<["-","--"],
+                       "profile-summary-huge-working-set-size-threshold",
+                       [Show, Merge]>,
+      HelpText<"Threshold for huge working set size used in profile summary">,
+      Flags<[HelpHidden]>;
+def profile_summary_large_working_set_size_threshold
+    : JoinedOrSeparate<["-","--"],
+                       "profile-summary-large-working-set-size-threshold",
+                       [Show, Merge]>,
+      HelpText<"Threshold for large working set size used in profile summary">,
+      Flags<[HelpHidden]>;
 def num_threads : JoinedOrSeparate<["-","--"], "num-threads", [Merge]>,
                   HelpText<"Number of merge threads to use (default: autodetect)">,
                   MetaVarName<"<n>">;
@@ -261,6 +323,10 @@ def ic_targets : Flag<["-","--"], "ic-targets", [Show]>,
                  HelpText<"Show indirect call site target values">;
 def show_vtables : Flag<["-","--"], "show-vtables", [Show]>,
                    HelpText<"Show vtable names for shown functions">;
+def extbinary_write_vtable_type_prof
+    : Flag<["-","--"], "extbinary-write-vtable-type-prof", [Merge]>,
+      HelpText<"Include vtable type profile data in ext-binary sample profile">,
+      Flags<[HelpHidden]>;
 def memop_sizes : Flag<["-","--"], "memop-sizes", [Show]>,
                   HelpText<"Show profiled sizes of memory intrinsic calls">;
 def detailed_summary : Flag<["-","--"], "detailed-summary", [Show]>,
