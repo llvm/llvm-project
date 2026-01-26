@@ -1138,11 +1138,7 @@ def WavePrefixOp : DXILOp<121, wavePrefixOp> {
       ]>
   ];
 
-  let arguments = [    
-    Int32Ty,      // prefix op kind
-    Int1Ty,      // value
-    Int8Ty       // signedness
-  ];
+  let arguments = [ Int32Ty, Int1Ty, Int8Ty ];
 
   let result = Int32Ty;
 
@@ -1150,8 +1146,17 @@ def WavePrefixOp : DXILOp<121, wavePrefixOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
+def LegacyF32ToF16 : DXILOp<130, legacyF32ToF16> {
+  let Doc = "converts the float stored in the first element of the float2 "
+            "to a half and stores it in the low-half of the output uint";
+  let intrinsics = [IntrinSelect<int_dx_legacyf32tof16>];
+  let arguments = [FloatTy];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
-  let Doc = "returns the float16 stored in the low-half of the uint converted "
+  let Doc = "returns the half stored in the low-half of the uint converted "
             "to a float";
   let intrinsics = [IntrinSelect<int_dx_legacyf16tof32>];
   let arguments = [Int32Ty];
