@@ -176,7 +176,7 @@ The following features are planned for DTLTO but not yet implemented:
 
 - Support for platforms other than ELF and COFF.
 - Support for more LTO configurations; only a very limited set of LTO
-  configurations is supported currently, e.g., support for basic block sections
+  configurations is supported currently, e.g. support for basic block sections
   is not currently available.
 - Support for sharing ThinLTO cache entries with in-process ThinLTO entries.
   This is not currently supported because identical code generation is not yet
