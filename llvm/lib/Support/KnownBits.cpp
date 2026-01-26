@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -604,12 +604,12 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
 }
 
 KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
-  KnownBits Res = makeConstant(APIntOps::clmul(LHS.getMinValue(),
-                                               RHS.getMinValue()));
+  KnownBits Res =
+      makeConstant(APIntOps::clmul(LHS.getMinValue(), RHS.getMinValue()));
 
   // This is the same operation as clmul except it accumulates the result with
   // an OR instead of an XOR.
-  auto ClMulOr = [](const APInt &LHS, const APInt &RHS){
+  auto ClMulOr = [](const APInt &LHS, const APInt &RHS) {
     APInt Res(LHS.getBitWidth(), 0);
     for (unsigned I : seq(LHS.getBitWidth())) {
       if (LHS[I])
