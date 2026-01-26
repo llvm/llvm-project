@@ -1860,6 +1860,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
 
         if (VT != MVT::nxv2bf16 && Subtarget->hasBF16()) {
+          // These operations can be lowered to BFMLAT/B. Note: nxv2bf16 is not
+          // supported to avoid performing fp operations on inactive lanes (as
+          // BFMLAT/B is unpredicated).
           setOperationAction(ISD::FMUL, VT, Custom);
           setOperationAction(ISD::FADD, VT, Custom);
           setOperationAction(ISD::FSUB, VT, Custom);
@@ -7827,16 +7830,18 @@ AArch64TargetLowering::LowerBFloatArithToBFMLAL(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   unsigned Opcode = Op.getOpcode();
+  assert((Opcode == ISD::FADD || Opcode == ISD::FSUB || Opcode == ISD::FMUL) &&
+         "Unexpected operation");
+
   EVT VT = Op.getValueType();
-  if ((Opcode != ISD::FADD && Opcode != ISD::FSUB && Opcode != ISD::FMUL) ||
-      VT.getScalarType() != MVT::bf16 ||
+  if (VT.getScalarType() != MVT::bf16 ||
       (Subtarget->hasSVEB16B16() &&
        Subtarget->isNonStreamingSVEorSME2Available()))
     return SDValue();
 
   assert(Subtarget->hasBF16() && "Expected +bf16 for custom FMUL/ADD lowering");
   assert((VT == MVT::nxv4bf16 || VT == MVT::nxv8bf16 || VT == MVT::v8bf16) &&
-         "Unexpected FMUL/ADD VT");
+         "Unexpected VT");
 
   auto MakeGetIntrinsic = [&](Intrinsic::ID IID) {
     return [&, IID](EVT VT, auto... Ops) {
@@ -7887,7 +7892,7 @@ AArch64TargetLowering::LowerBFloatArithToBFMLAL(SDValue Op,
   } else if (Opcode == ISD::FADD || Opcode == ISD::FSUB) {
     // Lower FADD/SUB by extending the LHS to be used as the accumulator, and
     // multiplying the RHS by 1.0F (or -1.0F for FSUB).
-    if (VT.getVectorMinNumElements() > 4) {
+    if (VT != MVT::nxv4bf16) {
       SDValue Zero = DAG.getConstantFP(+0.0, DL, VT);
       // Note: This extends the even/odd lanes to f32. TRN1/2 is used as the
       // zero is likely cheap/hoisted and can be used to extend the odd lanes.
@@ -7970,9 +7975,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
   LLVM_DEBUG(Op.dump());
 
-  if (SDValue Result = LowerBFloatArithToBFMLAL(Op, DAG))
-    return Result;
-
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("unimplemented operand");
@@ -8038,10 +8040,16 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::UMULO:
     return LowerXALUO(Op, DAG);
   case ISD::FADD:
+    if (SDValue Result = LowerBFloatArithToBFMLAL(Op, DAG))
+      return Result;
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
   case ISD::FSUB:
+    if (SDValue Result = LowerBFloatArithToBFMLAL(Op, DAG))
+      return Result;
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
   case ISD::FMUL:
+    if (SDValue Result = LowerBFloatArithToBFMLAL(Op, DAG))
+      return Result;
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
   case ISD::FMA:
     return LowerFMA(Op, DAG);
