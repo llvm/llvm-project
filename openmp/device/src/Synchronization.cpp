@@ -189,20 +189,7 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 #if defined(__SPIRV__)
 void namedBarrierInit() { __builtin_trap(); } // TODO
 void namedBarrier() { __builtin_trap(); }     // TODO
-void fenceTeam(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
-}
 
-void fenceKernel(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::device);
-}
-
-void fenceSystem(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::system);
-}
-
-void syncWarp(__kmpc_impl_lanemask_t mask) { __gpu_sync_lane(mask); }
-void syncThreads(atomic::OrderingTy Ordering) { __gpu_sync_threads(); }
 void unsetLock(omp_lock_t *Lock) {
   atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
 }
@@ -225,7 +212,7 @@ void setLock(omp_lock_t *Lock) {
 
 void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
-void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
+void syncThreadsAligned(atomic::OrderingTy Ordering) { synchronize::threads(Ordering); }
 #endif
 
 } // namespace impl
