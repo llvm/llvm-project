@@ -228,6 +228,9 @@ LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides);
 /// where %ub is computed as a static offset from %lb.
 /// Note: the matched addition should be nsw/nuw (matching the loop comparison)
 /// to avoid overflow, otherwise an overflow would imply a zero trip count.
+///
+/// For unsigned narrow types, the result is zero-extended to 64 bits to avoid
+/// misinterpretation when callers use getSExtValue().
 std::optional<APInt> constantTripCount(
     OpFoldResult lb, OpFoldResult ub, OpFoldResult step, bool isSigned,
     llvm::function_ref<std::optional<llvm::APSInt>(Value, Value, bool)>

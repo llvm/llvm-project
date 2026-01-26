@@ -700,3 +700,109 @@ func.func @trip_count_arith_add_nuw_loop_unsigned_invalid(%lb : i32, %other : i3
   }
   return %1 : i32
 }
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_full_range(
+func.func @trip_count_i8_unsigned_full_range(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i8
+  %c255 = arith.constant 255 : i8
+  %c1 = arith.constant 1 : i8
+
+  // This is the bug case: unsigned i8 from 0 to 255
+  // Before fix: 0xFF in 8-bit was interpreted as -1 with getSExtValue()
+  // After fix: Narrow unsigned types are zero-extended to 64-bit
+  // Result: 255 as i64
+  // CHECK: "test.trip-count" = 255 : i64
+  %r = scf.for unsigned %i = %c0 to %c255 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_partial_range(
+func.func @trip_count_i8_unsigned_partial_range(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i8
+  %c200 = arith.constant 200 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Unsigned i8 from 0 to 200, should work correctly
+  // After fix: Narrow unsigned types are zero-extended to 64-bit
+  // Result: 200 as i64
+  // CHECK: "test.trip-count" = 200 : i64
+  %r = scf.for unsigned %i = %c0 to %c200 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_high_range(
+func.func @trip_count_i8_unsigned_high_range(%a : i32, %b : i32) -> i32 {
+  %c200 = arith.constant 200 : i8
+  %c255 = arith.constant 255 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Unsigned i8 from 200 to 255
+  // After fix: Narrow unsigned types are zero-extended to 64-bit
+  // CHECK: "test.trip-count" = 55 : i64
+  %r = scf.for unsigned %i = %c200 to %c255 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_signed_crossing_zero(
+func.func @trip_count_i8_signed_crossing_zero(%a : i32, %b : i32) -> i32 {
+  %c-128 = arith.constant -128 : i32
+  %c127 = arith.constant 127 : i32
+  %c1 = arith.constant 1 : i32
+
+  // Signed i32 from -128 to 127, crossing zero
+  // CHECK: "test.trip-count" = 255
+  %r = scf.for %i = %c-128 to %c127 step %c1 iter_args(%0 = %a) -> i32 : i32 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i16_unsigned_full_range(
+func.func @trip_count_i16_unsigned_full_range(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i16
+  %c65535 = arith.constant 65535 : i16
+  %c1 = arith.constant 1 : i16
+
+  // Unsigned i16 from 0 to 65535, should be 65535
+  // After fix: Narrow unsigned types are zero-extended to 64-bit
+  // Result: 65535 as i64
+  // CHECK: "test.trip-count" = 65535 : i64
+  %r = scf.for unsigned %i = %c0 to %c65535 step %c1 iter_args(%0 = %a) -> i32 : i16 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_step_2(
+func.func @trip_count_i8_unsigned_step_2(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i8
+  %c255 = arith.constant 255 : i8
+  %c2 = arith.constant 2 : i8
+
+  // Unsigned i8 from 0 to 255 step 2, should be 128 (255/2 rounded up)
+  // After fix: Narrow unsigned types are zero-extended to 64-bit
+  // Result: 128 as i64
+  // CHECK: "test.trip-count" = 128 : i64
+  %r = scf.for unsigned %i = %c0 to %c255 step %c2 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
