@@ -155,7 +155,8 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_ffloor_nnan = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_frag,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
 // CHECK-NEXT:  };
 
