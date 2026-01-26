@@ -127,9 +127,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
     return c;
   }
 
-  a = __clc_soft_flush_denormal(a);
-  b = __clc_soft_flush_denormal(b);
-  c = __clc_soft_flush_denormal(c);
+  a = __clc_flush_denormal_if_not_supported(a);
+  b = __clc_flush_denormal_if_not_supported(b);
+  c = __clc_flush_denormal_if_not_supported(c);
 
   if (a == 0.0f || b == 0.0f) {
     return c;

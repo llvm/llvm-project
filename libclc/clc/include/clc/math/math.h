@@ -64,7 +64,7 @@ bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
 
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
 
-static _CLC_INLINE float __clc_soft_flush_denormal(float x) {
+static _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
   int ix = __clc_as_int(x);
   if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
       ((ix & MANTBITS_SP32) != 0)) {
