@@ -329,6 +329,11 @@ LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 /// the value is NaN.
 LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
+/// Return true if the floating-point value \p V is known to be an integer
+/// value.
+LLVM_ABI bool isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
+                              FastMathFlags FMF);
+
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
 /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
