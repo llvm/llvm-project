@@ -445,11 +445,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
     return false;
   Type *PrintfFormatArgTy = PrintfFunctionTy->getParamType(0);
   if (!PrintfFormatArgTy->isPointerTy() ||
-      !(PrintfFormatArgTy->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
-        PrintfFormatArgTy->getPointerAddressSpace() ==
-            AMDGPUAS::GLOBAL_ADDRESS ||
-        PrintfFormatArgTy->getPointerAddressSpace() ==
-            AMDGPUAS::CONSTANT_ADDRESS))
+      !AMDGPU::isFlatGlobalAddrSpace(
+          PrintfFormatArgTy->getPointerAddressSpace()))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {
