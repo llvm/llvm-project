@@ -13,8 +13,7 @@ RUN: llvm-ar rcs t.a t1.o t2.o
 DEFINE: %{tdir} = dummy-to-make-lit-work
 DEFINE: %{action} = dummy-to-make-lit-work
 DEFINE: %{test-temps-dtlto} = \
-DEFINE:   rm -f send-signal1 && rm -f send-signal2 && mkdir %{tdir} && \
-DEFINE:   %python %S/test_temps.py %{tdir} %{action} \
+DEFINE:   mkdir %{tdir} && %python %S/test_temps.py %{tdir} %{action} \
 DEFINE:     %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
 DEFINE:       -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
 DEFINE:       -fthinlto-distributor=%python \

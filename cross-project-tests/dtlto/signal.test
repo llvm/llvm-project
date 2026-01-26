@@ -12,13 +12,11 @@ RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
 RUN: llvm-ar rcs t.a t1.o t2.o
 
 DEFINE: %{tdir} = dummy-to-make-lit-work
-DEFINE: %{kill-dtlto} = \
-DEFINE:   rm -f send-signal1 && rm -f send-signal2 && mkdir %{tdir} && \
-DEFINE:   %python %S/test_temps.py %{tdir} kill \
-DEFINE:     %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
-DEFINE:       -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
-DEFINE:       -fthinlto-distributor=%python \
-DEFINE:       -Xthinlto-distributor=%S/local_codegen_and_wait.py
+DEFINE: %{kill-dtlto} = mkdir %{tdir} && %python %S/test_temps.py %{tdir} kill \
+DEFINE:   %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
+DEFINE:     -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
+DEFINE:     -fthinlto-distributor=%python \
+DEFINE:     -Xthinlto-distributor=%S/local_codegen_and_wait.py
 
 # Check that all temporary files are removed if the process is aborted.
 REDEFINE: %{tdir} = empty

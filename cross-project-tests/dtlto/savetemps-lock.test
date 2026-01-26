@@ -19,13 +19,12 @@ RUN: llvm-ar rcs t.a t1.o t2.o
 # Check that a warning is reported for each temporary file that cannot be
 # removed. Note that the use of the name "locked" for the output directory
 # triggers special behaviour in test_temps.py.
-RUN: rm -f send-signal1 && rm -f send-signal2 && mkdir locked
-RUN: %python %S/test_temps.py locked lock \
-RUN:     %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
-RUN:       -fuse-ld=lld -Wl,--whole-archive t.a -o locked/t.elf -shared \
-RUN:       -fthinlto-distributor=%python \
-RUN:       -Xthinlto-distributor=%S/local_codegen_and_wait.py 2>&1 \
-RUN:         | FileCheck %s --implicit-check-not=warning
+RUN: mkdir locked && %python %S/test_temps.py locked lock \
+RUN:   %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
+RUN:     -fuse-ld=lld -Wl,--whole-archive t.a -o locked/t.elf -shared \
+RUN:     -fthinlto-distributor=%python \
+RUN:     -Xthinlto-distributor=%S/local_codegen_and_wait.py 2>&1 \
+RUN:       | FileCheck %s --implicit-check-not=warning
 
 # Sanity check for the expected test_temps.py behaviour.
 CHECK-DAG: Lock any files in the output directory.
