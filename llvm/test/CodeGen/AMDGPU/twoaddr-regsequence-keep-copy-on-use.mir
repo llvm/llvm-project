@@ -65,5 +65,5 @@ body:             |
     %0:sgpr_32 = S_MOV_B32  0, implicit $exec
 
     %1:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, undef %2:sgpr_32, %subreg.sub1
-    %3:vgpr_32 = COPY %1, implicit $exec
+    %3:vreg_64 = COPY %1, implicit $exec
 ...
