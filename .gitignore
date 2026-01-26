@@ -22,6 +22,8 @@
 .sw?
 #OS X specific files.
 .DS_store
+#macOS case-sensitive version of above
+.DS_Store
 
 # Ignore the user specified CMake presets in subproject directories.
 /*/CMakeUserPresets.json
