@@ -594,6 +594,15 @@ add_header_library(
 )
 
 add_header_library(
+  f16sqrtl
+  HDRS
+    f16sqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
   frexpf128
   HDRS
     frexpf128.h
@@ -1268,5 +1277,21 @@ add_header_library(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  tanf
+  HDRS
+    tanf.h
+  DEPENDS
+    .range_reduction
+    .sincosf_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
 )
