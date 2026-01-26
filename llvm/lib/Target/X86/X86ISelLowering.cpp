@@ -59611,6 +59611,25 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     }
+    case ISD::SCALAR_TO_VECTOR: {
+      if (!IsSplat &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                   Op.getOperand(0).getOperand(0).getValueType() ==
+                       Op0.getValueType() &&
+                   isNullConstant(Op.getOperand(0).getOperand(1));
+          })) {
+        SmallVector<SDValue, 4> Subs;
+        for (SDValue SubOp : Ops)
+          Subs.push_back(SubOp.getOperand(0).getOperand(0));
+        if (SDValue R =
+                combineConcatVectorOps(DL, VT, Subs, DAG, Subtarget, Depth + 1))
+          return R;
+      }
+      break;
+    }
     case ISD::VECTOR_SHUFFLE: {
       // TODO: Generalize NumOps support.
       if (!IsSplat && NumOps == 2 &&

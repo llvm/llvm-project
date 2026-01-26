@@ -159,19 +159,7 @@ define <8 x i64> @pclmul512_lo_hi(<8 x i64> %v0, <8 x i64> %v1) {
 ;
 ; AVX512-VPCLMULQDQ-LABEL: pclmul512_lo_hi:
 ; AVX512-VPCLMULQDQ:       # %bb.0:
-; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $16, %xmm3, %xmm2, %xmm2
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $16, %xmm4, %xmm3, %xmm3
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm4
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $3, %zmm1, %xmm5
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $16, %xmm5, %xmm4, %xmm4
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $16, %xmm1, %xmm0, %xmm0
-; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm1
-; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512-VPCLMULQDQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $16, %zmm1, %zmm0, %zmm0
 ; AVX512-VPCLMULQDQ-NEXT:    retq
   %i0 = zext i1 0 to i64 ; constant time lo/hi select
   %i1 = zext i1 1 to i64 ; constant time lo/hi select
@@ -242,19 +230,7 @@ define <8 x i64> @pclmul512_hi_lo(<8 x i64> %v0, <8 x i64> %v1) {
 ;
 ; AVX512-VPCLMULQDQ-LABEL: pclmul512_hi_lo:
 ; AVX512-VPCLMULQDQ:       # %bb.0:
-; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $1, %xmm3, %xmm2, %xmm2
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $1, %xmm4, %xmm3, %xmm3
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm4
-; AVX512-VPCLMULQDQ-NEXT:    vextracti32x4 $3, %zmm1, %xmm5
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $1, %xmm5, %xmm4, %xmm4
-; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $1, %xmm1, %xmm0, %xmm0
-; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm1
-; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512-VPCLMULQDQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $1, %zmm1, %zmm0, %zmm0
 ; AVX512-VPCLMULQDQ-NEXT:    retq
   %i0 = zext i1 1 to i64 ; constant time lo/hi select
   %i1 = zext i1 0 to i64 ; constant time lo/hi select
