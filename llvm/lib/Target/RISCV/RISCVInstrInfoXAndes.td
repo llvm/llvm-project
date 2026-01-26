@@ -379,7 +379,7 @@ class NDSRVInstVSINTLN<bits<5> funct5, string opcodestr>
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
 }
 
 class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
@@ -498,7 +498,7 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
   let mayLoad = 1;
   let mayStore = 0;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
 }
 
