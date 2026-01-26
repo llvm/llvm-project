@@ -1052,8 +1052,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
       // minProfitableTripCount).
-      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
-                                          StepV, DL);
+      TripCountCheck =
+          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepV, DL);
     } else {
       // TripCountCheck = false, folding tail implies positive vector trip
       // count.
