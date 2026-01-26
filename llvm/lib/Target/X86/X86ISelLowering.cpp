@@ -59615,7 +59615,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (!IsSplat &&
           (VT.is256BitVector() ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
-          llvm::all_of(Ops, [Op0, VT](SDValue Op) {
+          llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
                    Op.getOperand(0).getOperand(0).getValueType() ==
                        Op0.getValueType() &&
