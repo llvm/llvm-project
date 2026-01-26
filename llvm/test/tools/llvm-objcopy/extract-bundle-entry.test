@@ -1,44 +1,66 @@
-## Test llvm-extract-bundle-entry
-# REQUIRES: target={{x86_64-.*-linux.*}}
-# REQUIRES: amdgpu-registered-target
+## Test llvm-extract-bundle-entry.
 
 # RUN: yaml2obj %s -o %t.elf
 # RUN: llvm-extract-bundle-entry file://%t.elf#offset=8192\&size=4048
-# RUN: llvm-objdump -d %t.elf-offset8192-size4048.co  | FileCheck %s
+# RUN: llvm-objdump -d %t.elf-offset8192-size4048.co  | FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY
+# EXTRACT_BUNDLE_ENTRY:        s_load_dword s7, s[4:5], 0x24                              // 000000001900: C00201C2 00000024
+# EXTRACT_BUNDLE_ENTRY-NEXT:        s_load_dwordx4 s[0:3], s[4:5], 0x0                         // 000000001908: C00A0002 00000000
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_mov_b32_e32 v1, 0                                        // 000000001910: 7E020280
+# EXTRACT_BUNDLE_ENTRY-NEXT:        s_waitcnt lgkmcnt(0)                                       // 000000001914: BF8CC07F
+# EXTRACT_BUNDLE_ENTRY-NEXT:        s_and_b32 s4, s7, 0xffff                                   // 000000001918: 8604FF07 0000FFFF
+# EXTRACT_BUNDLE_ENTRY-NEXT:        s_mul_i32 s6, s6, s4                                       // 000000001920: 92060406
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_add_u32_e32 v0, s6, v0                                   // 000000001924: 68000006
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_lshlrev_b64 v[0:1], 2, v[0:1]                            // 000000001928: D28F0000 00020082
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_mov_b32_e32 v3, s3                                       // 000000001930: 7E060203
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_add_co_u32_e32 v2, vcc, s2, v0                           // 000000001934: 32040002
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_addc_co_u32_e32 v3, vcc, v3, v1, vcc                     // 000000001938: 38060303
+# EXTRACT_BUNDLE_ENTRY-NEXT:        global_load_dword v2, v[2:3], off                          // 00000000193C: DC508000 027F0002
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_mov_b32_e32 v3, s1                                       // 000000001944: 7E060201
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_add_co_u32_e32 v0, vcc, s0, v0                           // 000000001948: 32000000
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_addc_co_u32_e32 v1, vcc, v3, v1, vcc                     // 00000000194C: 38020303
+# EXTRACT_BUNDLE_ENTRY-NEXT:        global_load_dword v3, v[0:1], off                          // 000000001950: DC508000 037F0000
+# EXTRACT_BUNDLE_ENTRY-NEXT:        s_waitcnt vmcnt(0)                                         // 000000001958: BF8C0F70
+# EXTRACT_BUNDLE_ENTRY-NEXT:        v_add_u32_e32 v2, v3, v2                                   // 00000000195C: 68040503
+# EXTRACT_BUNDLE_ENTRY-NEXT:        global_store_dword v[0:1], v2, off                         // 000000001960: DC708000 007F0200
+# EXTRACT_BUNDLE_ENTRY-NEXT:        s_endpgm                                                   // 000000001968: BF810000
+
+# RUN: llvm-extract-bundle-entry 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_HELP
+# EXTRACT_BUNDLE_ENTRY_HELP: OVERVIEW: llvm-extract-bundle-entry tool
+# EXTRACT_BUNDLE_ENTRY_HELP: USAGE: llvm-extract-bundle-entry URI
+# EXTRACT_BUNDLE_ENTRY_HELP: OPTIONS:
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:  --Help URIs can be read from STDIN, one per line.
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:         From the URIs specified, extracts code objects into files named:
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                <executable_name>-[pid<number>]-offset<number>-size<number>.co
+# EXTRACT_BUNDLE_ENTRY_HELP:         URI syntax:
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                code_object_uri ::== file_uri | memory_uri
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                file_uri        ::== "file://" extract_file [ range_specifier ]
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                memory_uri      ::== "memory://" process_id range_specifier
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                range_specifier ::== range_delimiter range_attribute ["&" range_attribute]
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                range_delimiter ::== "#" | "?"
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                range_attribute ::== ["offset=" number | "size=" number ]
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                extract_file    ::== URI_ENCODED_OS_FILE_PATH
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                process_id      ::== DECIMAL_NUMBER
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:                number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+# EXTRACT_BUNDLE_ENTRY_HELP:         Example: file://dir1/dir2/hello_world#offset=133&size=14472
+# EXTRACT_BUNDLE_ENTRY_HELP-NEXT:          memory://1234#offset=0x20000&size=3000
+# EXTRACT_BUNDLE_ENTRY_HELP: Pass @FILE as argument to read options from FILE.
 
 # RUN: not llvm-extract-bundle-entry file://%t.elf#offset=8192\&size=4048000 2>&1 | \
-# RUN:  FileCheck %s --check-prefix=ERR1
+# RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_ERROR1
+# EXTRACT_BUNDLE_ENTRY_ERROR1: size in URI(4048000) is larger than source (12640)
 
 # RUN: not llvm-extract-bundle-entry file://%t.elf#offset=819200000\&size=4048 2>&1 | \
-# RUN:  FileCheck %s --check-prefix=ERR2
+# RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_ERROR2
+# EXTRACT_BUNDLE_ENTRY_ERROR2: offset in URI (819200000)  is beyond the size of the source (12640)
 
 # RUN: not llvm-extract-bundle-entry file://%t.elf#offset=8192\&size=8048 2>&1 | \
-# RUN:  FileCheck %s --check-prefix=ERR3
+# RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_ERROR3
+# EXTRACT_BUNDLE_ENTRY_ERROR3: offset + size (16240) in URI is beyond the size of the source (12640)
 
-# CHECK:        s_load_dword s7, s[4:5], 0x24                              // 000000001900: C00201C2 00000024
-# CHECK-NEXT:        s_load_dwordx4 s[0:3], s[4:5], 0x0                         // 000000001908: C00A0002 00000000
-# CHECK-NEXT:        v_mov_b32_e32 v1, 0                                        // 000000001910: 7E020280
-# CHECK-NEXT:        s_waitcnt lgkmcnt(0)                                       // 000000001914: BF8CC07F
-# CHECK-NEXT:        s_and_b32 s4, s7, 0xffff                                   // 000000001918: 8604FF07 0000FFFF
-# CHECK-NEXT:        s_mul_i32 s6, s6, s4                                       // 000000001920: 92060406
-# CHECK-NEXT:        v_add_u32_e32 v0, s6, v0                                   // 000000001924: 68000006
-# CHECK-NEXT:        v_lshlrev_b64 v[0:1], 2, v[0:1]                            // 000000001928: D28F0000 00020082
-# CHECK-NEXT:        v_mov_b32_e32 v3, s3                                       // 000000001930: 7E060203
-# CHECK-NEXT:        v_add_co_u32_e32 v2, vcc, s2, v0                           // 000000001934: 32040002
-# CHECK-NEXT:        v_addc_co_u32_e32 v3, vcc, v3, v1, vcc                     // 000000001938: 38060303
-# CHECK-NEXT:        global_load_dword v2, v[2:3], off                          // 00000000193C: DC508000 027F0002
-# CHECK-NEXT:        v_mov_b32_e32 v3, s1                                       // 000000001944: 7E060201
-# CHECK-NEXT:        v_add_co_u32_e32 v0, vcc, s0, v0                           // 000000001948: 32000000
-# CHECK-NEXT:        v_addc_co_u32_e32 v1, vcc, v3, v1, vcc                     // 00000000194C: 38020303
-# CHECK-NEXT:        global_load_dword v3, v[0:1], off                          // 000000001950: DC508000 037F0000
-# CHECK-NEXT:        s_waitcnt vmcnt(0)                                         // 000000001958: BF8C0F70
-# CHECK-NEXT:        v_add_u32_e32 v2, v3, v2                                   // 00000000195C: 68040503
-# CHECK-NEXT:        global_store_dword v[0:1], v2, off                         // 000000001960: DC708000 007F0200
-# CHECK-NEXT:        s_endpgm                                                   // 000000001968: BF810000
-
-# ERR1: size in URI is larger than source
-# ERR2: offset in URI is beyond the size of the source
-# ERR3: offset + size in URI is beyond the size of the source
+# RUN: not llvm-extract-bundle-entry --error 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_ERROR4
+# EXTRACT_BUNDLE_ENTRY_ERROR4: unknown argument '--error'
 
 --- !ELF
 FileHeader:
@@ -71,4 +93,3 @@ Sections:
     AddressAlign:    0x8
     Content:         '465049480100000000102000000000000000000000000000'
 ...
-

@@ -1735,6 +1735,12 @@ Expected<DriverConfig> objcopy::parseExtractBundleEntryOptions(
     exit(0);
   }
 
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_version)) {
+    outs() << "llvm-extract-bundle-entry, compatible with roc-obj-ls\n";
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
   for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());

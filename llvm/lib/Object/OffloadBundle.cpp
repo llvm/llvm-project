@@ -228,18 +228,20 @@ Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
   Expected<MemoryBufferRef> InputBuffOrErr = Source.getMemoryBufferRef();
   if (Error Err = InputBuffOrErr.takeError())
     return createFileError(OutputFileName, std::move(Err));
-  ;
 
   if (Size > InputBuffOrErr->getBufferSize())
-    return createStringError("size in URI is larger than source");
+    // SALINAS return createStringError("size in URI is larger than source");
+    return createStringError("size in URI(%llu) is larger than source (%llu)",Size, InputBuffOrErr->getBufferSize());
 
   if (Offset > InputBuffOrErr->getBufferSize())
-    return createStringError("offset in URI is beyond the size of the source");
+    // SALINAS return createStringError("offset in URI is beyond the size of the source");
+    return createStringError("offset in URI (%llu) is beyond the size of the source (%llu)", Offset,  InputBuffOrErr->getBufferSize());
 
   if (Offset + Size > InputBuffOrErr->getBufferSize())
-    return createStringError(
+/* SALINAS    return createStringError(
         inconvertibleErrorCode(),
-        "offset + size in URI is beyond the size of the source");
+        "offset + size in URI is beyond the size of the source"); */
+    return createStringError("offset + size (%llu) in URI is beyond the size of the source (%llu)", Offset + Size, InputBuffOrErr->getBufferSize());
 
   std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
   std::copy(InputBuffOrErr->getBufferStart() + Offset,
