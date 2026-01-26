@@ -1005,10 +1005,28 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     if (auto Res =
             DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
-  } else {
+  } else if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
+             SrcDevice->Platform.Plugin->isDataExchangable(
+                 SrcDevice->Device->getDeviceId(),
+                 DstDevice->Device->getDeviceId())) {
     if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
                                                    DstPtr, Size, QueueImpl))
       return Res;
+  } else {
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+
+    void *Buffer = malloc(Size);
+    if (!Buffer)
+      return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
+                                "Couldn't allocate a buffer for transfer");
+    Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
+    if (!Res)
+      Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, nullptr);
+
+    free(Buffer);
+    return Res;
   }
 
   return Error::success();
@@ -1229,6 +1247,15 @@ Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
 
 Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
   return Device->Device->dataUnlock(Ptr);
+}
+
+Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
+  if (Queue->AsyncInfo->Queue) {
+    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
+                                                     IsQueueWorkCompleted))
+      return Err;
+  }
+  return Error::success();
 }
 
 } // namespace offload

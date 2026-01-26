@@ -84,8 +84,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
          QT->isUnsignedIntegerOrEnumerationType());
   OptPrimType T = S.getContext().classify(QT);
   assert(T);
-
-  unsigned BitWidth = S.getASTContext().getTypeSize(QT);
+  unsigned BitWidth = S.getASTContext().getIntWidth(QT);
 
   if (T == PT_IntAPS) {
     auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
@@ -729,6 +728,30 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
     Val = popToAPSInt(S, Call->getArg(0));
   }
   pushInteger(S, Val.popcount(), Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_crc32(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const CallExpr *Call,
+                                       unsigned DataBytes) {
+  uint64_t DataVal = popToUInt64(S, Call->getArg(1));
+  uint64_t CRCVal = popToUInt64(S, Call->getArg(0));
+
+  // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+  static const uint32_t CRC32C_POLY = 0x82F63B78;
+
+  // Process each byte
+  uint32_t Result = static_cast<uint32_t>(CRCVal);
+  for (unsigned I = 0; I != DataBytes; ++I) {
+    uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
+    Result ^= Byte;
+    for (int J = 0; J != 8; ++J) {
+      Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
+    }
+  }
+
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 
@@ -1894,13 +1917,8 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   // Check for overlapping memory regions.
   if (!Move && Pointer::pointToSameBlock(SrcPtr, DestPtr)) {
     // Remove base casts.
-    Pointer SrcP = SrcPtr;
-    while (SrcP.isBaseClass())
-      SrcP = SrcP.getBase();
-
-    Pointer DestP = DestPtr;
-    while (DestP.isBaseClass())
-      DestP = DestP.getBase();
+    Pointer SrcP = SrcPtr.stripBaseCasts();
+    Pointer DestP = DestPtr.stripBaseCasts();
 
     unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
     unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
@@ -2294,7 +2312,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   assert(Kind <= 3 && "unexpected kind");
   bool UseFieldDesc = (Kind & 1u);
   bool ReportMinimum = (Kind & 2u);
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  Pointer Ptr = S.Stk.pop<Pointer>();
 
   if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
     // "If there are any side effects in them, it returns (size_t) -1
@@ -2332,6 +2350,11 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     }
   }
 
+  // The "closest surrounding subobject" is NOT a base class,
+  // so strip the base class casts.
+  if (UseFieldDesc && Ptr.isBaseClass())
+    Ptr = Ptr.stripBaseCasts();
+
   const Descriptor *Desc = UseFieldDesc ? Ptr.getFieldDesc() : DeclDesc;
   assert(Desc);
 
@@ -2341,10 +2364,12 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
 
   unsigned ByteOffset;
   if (UseFieldDesc) {
-    if (Ptr.isBaseClass())
+    if (Ptr.isBaseClass()) {
+      assert(computePointerOffset(ASTCtx, Ptr.getBase()) <=
+             computePointerOffset(ASTCtx, Ptr));
       ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
                    computePointerOffset(ASTCtx, Ptr);
-    else {
+    } else {
       if (Ptr.inArray())
         ByteOffset =
             computePointerOffset(ASTCtx, Ptr) -
@@ -4253,29 +4278,49 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
-          return Value.rotl(Amount);
-        });
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_right:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
-  case Builtin::BI_rotr64:
+  case Builtin::BI_rotr64: {
+    // Determine if this is a rotate right operation
+    bool IsRotateRight;
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      IsRotateRight = true;
+      break;
+    default:
+      IsRotateRight = false;
+      break;
+    }
+
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
-          return Value.rotr(Amount);
+        S, OpPC, Call, [IsRotateRight](const APSInt &Value, APSInt Amount) {
+          Amount = NormalizeRotateAmount(Value, Amount);
+          return IsRotateRight ? Value.rotr(Amount.getZExtValue())
+                               : Value.rotl(Amount.getZExtValue());
         });
+  }
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
@@ -4386,6 +4431,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_assume_aligned:
     return interp__builtin_assume_aligned(S, OpPC, Frame, Call);
+
+  case clang::X86::BI__builtin_ia32_crc32qi:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 1);
+  case clang::X86::BI__builtin_ia32_crc32hi:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 2);
+  case clang::X86::BI__builtin_ia32_crc32si:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 4);
+  case clang::X86::BI__builtin_ia32_crc32di:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 8);
 
   case clang::X86::BI__builtin_ia32_bextr_u32:
   case clang::X86::BI__builtin_ia32_bextr_u64:
@@ -4817,12 +4871,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_packuswb256:
   case clang::X86::BI__builtin_ia32_packuswb512:
     return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
-      unsigned DstBits = Src.getBitWidth() / 2;
-      if (Src.isNegative())
-        return APInt::getZero(DstBits);
-      if (Src.isIntN(DstBits))
-        return APInt(Src).trunc(DstBits);
-      return APInt::getAllOnes(DstBits);
+      return APInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
 
   case clang::X86::BI__builtin_ia32_selectss_128:

@@ -8,7 +8,7 @@
 ; With default options, `llvm-dis` returns invalid record for ThinLTO minimized bitcode.
 ; RUN: not llvm-dis %t.thinlink.bc 2>&1 | FileCheck %s --check-prefix=INVALID-RECORD
 
-; INVALID-RECORD: Invalid record
+; INVALID-RECORD: Invalid function record
 
 ; Tests that `llvm-dis` could disassemble minimized bitcode with `--print-thinlto-index-only`, and verify its content.
 ; RUN: llvm-dis --print-thinlto-index-only %t.thinlink.bc -o - | FileCheck %s --check-prefix=DIS

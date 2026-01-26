@@ -95,7 +95,6 @@ ModuleListProperties::ModuleListProperties() {
     llvm::sys::path::append(path, "IndexCache");
     lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
   }
-
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -186,7 +185,7 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
   return m_symlink_paths;
 }
 
-bool ModuleListProperties::GetLoadSymbolOnDemand() {
+bool ModuleListProperties::GetLoadSymbolOnDemand() const {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);
@@ -1047,8 +1046,7 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr, bool always_create,
-                            bool invoke_locate_callback) {
+                            bool *did_create_ptr, bool invoke_locate_callback) {
   SharedModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(shared_module_list.GetMutex());
   char path[PATH_MAX];
@@ -1067,7 +1065,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // Make sure no one else can try and get or create a module while this
   // function is actively working on it by doing an extra lock on the global
   // mutex list.
-  if (!always_create) {
+  {
     ModuleList matching_module_list;
     shared_module_list.FindModules(module_spec, matching_module_list);
     const size_t num_matching_modules = matching_module_list.GetSize();

@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=aarch64-windows %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-windows %s -o - | FileCheck %s --check-prefixes=CHECK,WIN
+; RUN: llc -mtriple=arm64-apple-ios %s -o - | FileCheck %s --check-prefixes=CHECK,IOS --implicit-check-not=.seh
 
 ; This test verifies that functions requiring Windows CFI that have minimal
 ; or no prologue instructions still emit proper SEH directives, specifically
@@ -8,7 +9,7 @@
 ; calling convention would fail with:
 ; "error: starting epilogue (.seh_startepilogue) before prologue has ended (.seh_endprologue)"
 
-; Test 1: Swift-style tail call function with minimal prologue
+; Swift-style tail call function with minimal prologue
 define swifttailcc void @test_swifttailcc_minimal(ptr %async_ctx, ptr %arg1, ptr %arg2) {
 ; CHECK-LABEL: test_swifttailcc_minimal:
 ; CHECK-NOT:   .seh_proc test_swifttailcc_minimal
@@ -25,14 +26,15 @@ entry:
   ret void
 }
 
-; Test 2: Function similar to the original failing case
+; Function similar to the original failing case
 define linkonce_odr hidden swifttailcc void @test_linkonce_swifttailcc(ptr swiftasync %async_ctx, ptr %arg1, ptr noalias dereferenceable(40) %arg2, ptr %arg3, i64 %value, ptr %arg4, ptr %arg5, ptr %arg6, i1 %flag, ptr %arg7, ptr noalias dereferenceable(40) %arg8) {
 ; CHECK-LABEL: test_linkonce_swifttailcc:
-; CHECK-NEXT:  .seh_proc
-; CHECK:       .seh_endprologue
-; CHECK:       .seh_startepilogue
-; CHECK:       .seh_endepilogue
-; CHECK:       .seh_endproc
+; IOS-NEXT:  .cfi_startproc
+; WIN-NEXT:  .seh_proc
+; WIN:       .seh_endprologue
+; WIN:       .seh_startepilogue
+; WIN:       .seh_endepilogue
+; WIN:       .seh_endproc
 entry:
   %frame_ptr = getelementptr inbounds nuw i8, ptr %async_ctx, i64 16
   %ctx1 = getelementptr inbounds nuw i8, ptr %async_ctx, i64 400

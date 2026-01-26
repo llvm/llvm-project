@@ -1735,7 +1735,24 @@ protected:
     const size_t argc = command.GetArgumentCount();
     const lldb::ABISP &abi = process_sp->GetABI();
 
-    if (argc == 1) {
+    if (argc == 0) {
+      if (!m_memory_region_options.m_all) {
+        if ( // When we're repeating the command, the previous end
+             // address is used for load_addr. If that was 0xF...F then
+             // we must have reached the end of memory.
+            (load_addr == LLDB_INVALID_ADDRESS) ||
+            // If the target has non-address bits (tags, limited virtual
+            // address size, etc.), the end of mappable memory will be
+            // lower than that. So if we find any non-address bit set,
+            // we must be at the end of the mappable range.
+            (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+          result.AppendErrorWithFormat(
+              "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
+              m_cmd_name.c_str(), m_cmd_syntax.c_str());
+          return;
+        }
+      }
+    } else if (argc == 1) {
       if (m_memory_region_options.m_all) {
         result.AppendError(
             "The \"--all\" option cannot be used when an address "
@@ -1751,17 +1768,8 @@ protected:
                                      command[0].c_str(), error.AsCString());
         return;
       }
-    } else if (argc > 1 ||
-               // When we're repeating the command, the previous end address is
-               // used for load_addr. If that was 0xF...F then we must have
-               // reached the end of memory.
-               (argc == 0 && !m_memory_region_options.m_all &&
-                load_addr == LLDB_INVALID_ADDRESS) ||
-               // If the target has non-address bits (tags, limited virtual
-               // address size, etc.), the end of mappable memory will be lower
-               // than that. So if we find any non-address bit set, we must be
-               // at the end of the mappable range.
-               (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+    } else {
+      // argc > 1
       result.AppendErrorWithFormat(
           "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
