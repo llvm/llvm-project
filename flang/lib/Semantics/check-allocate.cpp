@@ -673,6 +673,56 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           }
         }
       }
+      else {
+        // Array bounds specification - check that bounds array size matches object rank
+        const auto &allocateShapeSpecArrayList{
+            std::get<parser::AllocateShapeSpecArrayList>(allocation_.t)};
+        if (const auto *boundsArray{
+                std::get_if<parser::AllocateShapeSpecArray>(&allocateShapeSpecArrayList.u)}) {
+          const auto &lowerOptIntExpr{std::get<0>(boundsArray->t)};
+          const auto &upperIntExpr{std::get<1>(boundsArray->t)};
+          
+          int64_t boundsArraySize{-1};
+          
+          // Try to get size from upper bounds (always present)
+          if (const auto *upperExpr{GetExpr(context, upperIntExpr)}) {
+            if (upperExpr->Rank() == 1) {
+              if (auto shape{evaluate::GetShape(context.foldingContext(), *upperExpr)}) {
+                if (shape->size() == 1 && (*shape)[0]) {
+                  if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
+                    boundsArraySize = *extent;
+                  }
+                }
+              }
+            }
+          }
+          
+          // If upper was scalar, try to get size from lower bounds
+          if (boundsArraySize < 0 && lowerOptIntExpr) {
+            if (const auto *lowerExpr{GetExpr(context, *lowerOptIntExpr)}) {
+              if (lowerExpr->Rank() == 1) {
+                if (auto shape{evaluate::GetShape(context.foldingContext(), *lowerExpr)}) {
+                  if (shape->size() == 1 && (*shape)[0]) {
+                    if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
+                      boundsArraySize = *extent;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          // Check if bounds array size matches the object's rank
+          if (boundsArraySize > 0 && boundsArraySize != rank_) {
+            context.Say(name_.source,
+                "ALLOCATE bounds array has %jd elements but allocatable object '%s' has rank %d"_err_en_US,
+                static_cast<std::intmax_t>(boundsArraySize),
+                name_.source,
+                rank_);
+            return false;
+          }
+        }
+      }
     }
   } else { // allocating a scalar object
     if (hasAllocateShapeSpecList()) {
