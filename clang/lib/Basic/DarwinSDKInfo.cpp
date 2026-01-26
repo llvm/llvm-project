@@ -176,8 +176,7 @@ static std::optional<VersionTuple> getVersionKey(const llvm::json::Object &Obj,
 }
 
 std::optional<DarwinSDKInfo>
-DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
-                                          const llvm::json::Object *Obj) {
+DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   auto Version = getVersionKey(*Obj, "Version");
   if (!Version)
     return std::nullopt;
@@ -227,7 +226,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
     }
   }
 
-  return DarwinSDKInfo(std::move(FilePath), std::move(*Version),
+  return DarwinSDKInfo(std::move(*Version),
                        std::move(*MaximumDeploymentVersion),
                        std::move(PlatformInfos), std::move(VersionMappings));
 }
@@ -248,8 +247,7 @@ clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
     return Result.takeError();
 
   if (const auto *Obj = Result->getAsObject()) {
-    if (auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(
-            Filepath.str().str(), Obj))
+    if (auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(Obj))
       return std::move(SDKInfo);
   }
   return llvm::make_error<llvm::StringError>("invalid SDKSettings.json",
