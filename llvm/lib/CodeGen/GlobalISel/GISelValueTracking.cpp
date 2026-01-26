@@ -682,7 +682,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLS: {
-    unsigned MinRedundantSignBits = computeNumSignBits(MI.getOperand(0).getReg(), Depth + 1) - 1;
+    unsigned MinRedundantSignBits =
+        computeNumSignBits(MI.getOperand(0).getReg(), Depth + 1) - 1;
 
     ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
                         APInt(BitWidth, BitWidth));
