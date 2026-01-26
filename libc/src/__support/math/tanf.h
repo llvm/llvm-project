@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_TANF_H
-#define LIBC_SRC___SUPPORT_MATH_TANF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TANF_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_TANF_H
 
 #include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -161,4 +161,4 @@ LIBC_INLINE static float tanf(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_TANF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_TANF_H

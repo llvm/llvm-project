@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_COS_H
-#define LIBC_SRC___SUPPORT_MATH_COS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_COS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_COS_H
 
 #include "range_reduction_double_common.h"
 #include "sincos_eval.h"
@@ -170,4 +170,4 @@ LIBC_INLINE static constexpr double cos(double x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_COS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
-#define LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -242,4 +242,4 @@ LIBC_INLINE static constexpr float atan2f(float y, float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H

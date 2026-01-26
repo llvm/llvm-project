@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_CBRT_H
-#define LIBC_SRC___SUPPORT_MATH_CBRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_CBRT_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_CBRT_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -347,4 +347,4 @@ LIBC_INLINE static constexpr double cbrt(double x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_CBRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_CBRT_H

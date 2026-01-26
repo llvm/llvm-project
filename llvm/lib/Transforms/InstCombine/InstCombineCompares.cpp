@@ -41,6 +41,10 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 /// Compute Result = In1+In2, returning true if the result overflowed for this
 /// type.
 static bool addWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
@@ -4395,7 +4399,8 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
       Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHS, I.getName());
     if (!Op2)
       Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHS, I.getName());
-    return SelectInst::Create(SI->getOperand(0), Op1, Op2);
+    return SelectInst::Create(SI->getOperand(0), Op1, Op2, "", nullptr,
+                              ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
 
   return nullptr;
@@ -5934,15 +5939,17 @@ enum class OffsetKind { Invalid, Value, Select };
 struct OffsetResult {
   OffsetKind Kind;
   Value *V0, *V1, *V2;
+  Instruction *MDFrom;
 
   static OffsetResult invalid() {
-    return {OffsetKind::Invalid, nullptr, nullptr, nullptr};
+    return {OffsetKind::Invalid, nullptr, nullptr, nullptr, nullptr};
   }
   static OffsetResult value(Value *V) {
-    return {OffsetKind::Value, V, nullptr, nullptr};
+    return {OffsetKind::Value, V, nullptr, nullptr, nullptr};
   }
-  static OffsetResult select(Value *Cond, Value *TrueV, Value *FalseV) {
-    return {OffsetKind::Select, Cond, TrueV, FalseV};
+  static OffsetResult select(Value *Cond, Value *TrueV, Value *FalseV,
+                             Instruction *MDFrom) {
+    return {OffsetKind::Select, Cond, TrueV, FalseV, MDFrom};
   }
   bool isValid() const { return Kind != OffsetKind::Invalid; }
   Value *materialize(InstCombiner::BuilderTy &Builder) const {
@@ -5952,7 +5959,8 @@ struct OffsetResult {
     case OffsetKind::Value:
       return V0;
     case OffsetKind::Select:
-      return Builder.CreateSelect(V0, V1, V2);
+      return Builder.CreateSelect(
+          V0, V1, V2, "", ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
     }
     llvm_unreachable("Unknown OffsetKind enum");
   }
@@ -6018,7 +6026,7 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
       Value *FalseVal = ApplyOffsetImpl(Sel->getFalseValue(), BinOpc, RHS);
       if (!FalseVal)
         return OffsetResult::invalid();
-      return OffsetResult::select(Sel->getCondition(), TrueVal, FalseVal);
+      return OffsetResult::select(Sel->getCondition(), TrueVal, FalseVal, Sel);
     }
     if (Value *Simplified = ApplyOffsetImpl(V, BinOpc, RHS))
       return OffsetResult::value(Simplified);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_CBRTF_H
-#define LIBC_SRC___SUPPORT_MATH_CBRTF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_CBRTF_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_CBRTF_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -158,4 +158,4 @@ LIBC_INLINE static constexpr float cbrtf(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_CBRTF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_CBRTF_H

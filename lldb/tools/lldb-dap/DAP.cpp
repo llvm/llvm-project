@@ -1065,7 +1065,7 @@ llvm::Error DAP::Loop() {
     m_disconnecting = false;
   }
 
-  auto thread = std::thread(std::bind(&DAP::TransportHandler, this));
+  auto thread = std::thread([this] { TransportHandler(); });
 
   llvm::scope_exit cleanup([this]() {
     // FIXME: Merge these into the MainLoop handler.
