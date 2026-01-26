@@ -47,6 +47,10 @@ def foo : Instruction, InstCommonBase {
 
 // CHECK: if (OptionalOperandsMask[*(p + 1)]) {
 
+// CHECK: SmallBitVector OptionalOperandsMask(2);
+
+// CHECK: OptionalOperandsMask.reset(0, 2);
+
 // CHECK: if (Formal == InvalidMatchClass) {
 // CHECK-NEXT:   OptionalOperandsMask.set(FormalIdx, 2);
 // CHECK: if (isSubclass(Formal, OptionalMatchClass)) {
