@@ -66,11 +66,19 @@ spec_benchmarks &= no_fortran
 
 for benchmark in spec_benchmarks:
     print(f'#--- {benchmark}.sh.test')
-    print(f'RUN: rm -rf %{{temp}}') # clean up any previous (potentially incomplete) run
+    # Clean up any previous (potentially incomplete) run
+    print(f'RUN: rm -rf %{{temp}}')
+
+    # Build the benchmark
     print(f'RUN: mkdir %{{temp}}')
     print(f'RUN: cp {spec_config} %{{temp}}/spec-config.cfg')
-    print(f'RUN: %{{spec_dir}}/bin/runcpu --config %{{temp}}/spec-config.cfg --size train --output-root %{{temp}} --rebuild {benchmark}')
-    print(f'RUN: rm -rf %{{temp}}/benchspec') # remove the temporary directory, which can become quite large
+    print(f'RUN: %{{spec_dir}}/bin/runcpu --config %{{temp}}/spec-config.cfg --action build --output_root %{{temp}} {benchmark}')
+
+    # Run the benchmark
+    print(f'RUN: /usr/bin/time -l -o %{{temp}}/time.txt %{{spec_dir}}/bin/runcpu --config %{{temp}}/spec-config.cfg --action run --size train --output_root %{{temp}} {benchmark}')
+
+    # Clean up, since there can be lots of content created
+    print(f'RUN: rm -rf %{{temp}}/benchspec')
 
     # The `runcpu` command above doesn't fail even if the benchmark fails to run. To determine failure, parse the CSV
     # results and ensure there are no compilation errors or runtime errors in the status row. Also print the logs and
@@ -78,6 +86,7 @@ for benchmark in spec_benchmarks:
     print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results --extract "Base Status" --keep-failed %{{temp}}/result/*.train.csv > %{{temp}}/status || ! cat %{{temp}}/result/*.log')
     print(f'RUN: ! grep -E "CE|RE" %{{temp}}/status || ! cat %{{temp}}/result/*.log')
 
-    # If there were no errors, parse the results into LNT-compatible format and print them.
+    # If there were no errors, parse the SPEC results and the `time` output into LNT-compatible format and print them.
     print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %{{temp}}/result/*.train.csv --output-format=lnt > %{{temp}}/results.lnt')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-time-output %{{temp}}/time.txt --benchmark {benchmark} --extract instructions max_rss cycles peak_memory >> %{{temp}}/results.lnt')
     print(f'RUN: cat %{{temp}}/results.lnt')

@@ -50,7 +50,7 @@ def RetCC_SystemZ_ELF : CallingConv<[
   // Sub-128 vectors are returned in the same way, but they're widened
   // to one of these types during type legalization.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
              CCAssignToReg<[V24, V26, V28, V30, V25, V27, V29, V31]>>>
 ]>;
 
@@ -116,19 +116,19 @@ def CC_SystemZ_ELF : CallingConv<[
   // are passed in the same way, but they're widened to one of these types
   // during type legalization.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
              CCIfArgFixed<CCAssignToReg<[V24, V26, V28, V30,
                                          V25, V27, V29, V31]>>>>,
 
   // However, sub-128 vectors which need to go on the stack occupy just a
   // single 8-byte-aligned 8-byte stack slot.  Pass as i64.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
              CCIfShortVector<CCBitConvertToType<i64>>>>,
 
   // Other vector arguments are passed in 8-byte-aligned 16-byte stack slots.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
              CCAssignToStack<16, 8>>>,
 
   // Other arguments are passed in 8-byte-aligned 8-byte stack slots.

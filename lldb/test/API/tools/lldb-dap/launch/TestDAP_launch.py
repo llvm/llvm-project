@@ -16,7 +16,7 @@ import tempfile
 
 
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     def test_default(self):
         """
         Tests the default launch of a simple program. No arguments,
@@ -76,7 +76,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             r"unexpected value, expected 'internalConsole\', 'integratedTerminal\' or 'externalTerminal\' at arguments.console",
         )
 
-    @skipIfWindowsWithoutConPTY
     def test_termination(self):
         """
         Tests the correct termination of lldb-dap upon a 'disconnect'
@@ -142,6 +141,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
         self.assertTrue(found, "verified program working directory")
 
+    @expectedFailureWindows
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
@@ -210,7 +210,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(output, "", "expect no program output")
 
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
     def test_shellExpandArguments_enabled(self):
         """
@@ -233,7 +233,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     quote_path, line, 'verify "%s" expanded to "%s"' % (glob, program)
                 )
 
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     def test_shellExpandArguments_disabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -255,7 +255,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     quote_path, line, 'verify "%s" stayed to "%s"' % (glob, glob)
                 )
 
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     def test_args(self):
         """
         Tests launch of a simple program with arguments
@@ -280,7 +280,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 'arg[%i] "%s" not in "%s"' % (i + 1, quoted_arg, lines[i]),
             )
 
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     def test_environment_with_object(self):
         """
         Tests launch of a simple program with environment variables
@@ -558,7 +558,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         output = self.collect_console(pattern=terminateCommands[0])
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
@@ -642,7 +642,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfAsan
-    @skipIfWindowsWithoutConPTY
+    @expectedFailureWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     @skipIfBuildType(["debug"])
     def test_stdio_redirection_and_console(self):
