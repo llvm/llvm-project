@@ -610,8 +610,8 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   // This is the same operation as clmul except it accumulates the result with
   // an OR instead of an XOR.
   auto ClMulOr = [](const APInt &LHS, const APInt &RHS) {
-    assert(LHS.getBitWidth() == RHS.getBitWidth());
     unsigned BW = LHS.getBitWidth();
+    assert(BW == RHS.getBitWidth() && "Operand mismatch");
     APInt Result(BW, 0);
     for (unsigned I :
          seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
