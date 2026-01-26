@@ -54,53 +54,32 @@ def LSWidth16    : RISCVWidth<0b0101>;
 def LSWidth32    : RISCVWidth<0b0110>;
 def LSWidth64    : RISCVWidth<0b0111>;
 
-class RVInstSetiVLi<dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+class RVInstVSetiVLi<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInstIBase<OPCFG.Value, OPC_OP_V, outs, ins, opcodestr, argstr> {
   bits<5> uimm;
-  bits<5> rd;
   bits<10> vtypei;
+
+  let rs1 = uimm;
 
   let Inst{31} = 1;
   let Inst{30} = 1;
-  let Inst{29-20} = vtypei{9-0};
-  let Inst{19-15} = uimm;
-  let Inst{14-12} = OPCFG.Value;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
+  let Inst{29-20} = vtypei;
 
   let Defs = [VL, VTYPE];
 }
 
-class RVInstSetVLi<dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
-  bits<5> rs1;
-  bits<5> rd;
+class RVInstVSetVLi<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInstIBase<OPCFG.Value, OPC_OP_V, outs, ins, opcodestr, argstr> {
   bits<11> vtypei;
 
   let Inst{31} = 0;
   let Inst{30-20} = vtypei;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = OPCFG.Value;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
 
   let Defs = [VL, VTYPE];
 }
 
-class RVInstSetVL<dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
-
-  let Inst{31} = 1;
-  let Inst{30-25} = 0b000000;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = OPCFG.Value;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
+class RVInstVSetVL<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInstR<0b1000000, OPCFG.Value, OPC_OP_V, outs, ins, opcodestr, argstr> {
   let Defs = [VL, VTYPE];
 }
 
