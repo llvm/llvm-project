@@ -45,8 +45,6 @@ void TypeSwitchCaseTypesCheck::check(const MatchFinder::MatchResult &Result) {
   if (TemplateArg.getArgument().getKind() != TemplateArgument::Type)
     return;
 
-  QualType CaseType = TemplateArg.getArgument().getAsType();
-
   // Get the lambda's call operator to examine its parameter.
   const CXXMethodDecl *CallOp = Lambda->getCallOperator();
   if (!CallOp || CallOp->getNumParams() != 1)
@@ -81,6 +79,7 @@ void TypeSwitchCaseTypesCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Handle `.Case<T>([](T x) {...})` -> `.Case([](T x) {...})`.
   // Only warn if the types match (otherwise it might be intentional or a bug).
+  const QualType CaseType = TemplateArg.getArgument().getAsType();
   if (CaseType->getCanonicalTypeUnqualified() !=
       ParamBaseType->getCanonicalTypeUnqualified())
     return;

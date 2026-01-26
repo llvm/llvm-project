@@ -21,8 +21,7 @@ namespace clang::tidy::llvm_check {
 /// https://clang.llvm.org/extra/clang-tidy/checks/llvm/type-switch-case-types.html
 class TypeSwitchCaseTypesCheck : public ClangTidyCheck {
 public:
-  TypeSwitchCaseTypesCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  using ClangTidyCheck::ClangTidyCheck;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
