@@ -93,10 +93,6 @@ public:
   friend class VarUseGraph;
 };
 
-static inline bool operator==(const VarUseRecord &LHS, const VarUseNode *RHS) {
-  return LHS.Node == RHS;
-}
-
 // "Variable usage graph":
 // Stores dependencies of variables from other variables or function calls,
 // and dependencies of function results from variables or functions.
@@ -108,13 +104,13 @@ class VarUseGraph {
   using UseMapTy = llvm::DenseMap<const Decl *, std::unique_ptr<VarUseNode>>;
 
   UseMapTy UseMap;
-  // Root contains edges to all other nodes, without a "Ref" expression.
-  VarUseNode *Root;
 
 public:
   VarUseGraph() {
+    // A special "root" is added at nullptr location.
+    // It contains edges to all other nodes, without a "Ref" expression.
+    // This is used by the SCC algorithm.
     UseMap[nullptr] = std::make_unique<VarUseNode>(nullptr);
-    Root = UseMap[nullptr].get();
   }
 
   VarUseNode *addNode(const NamedDecl *D) {
@@ -122,7 +118,7 @@ public:
     if (N)
       return N.get();
     N = std::make_unique<VarUseNode>(D);
-    Root->Uses.emplace_back(nullptr, N.get());
+    UseMap[nullptr]->Uses.emplace_back(nullptr, N.get());
     return N.get();
   }
 
@@ -133,7 +129,7 @@ public:
 
   unsigned size() const { return UseMap.size(); }
 
-  VarUseNode *getRoot() const { return Root; }
+  VarUseNode *getRoot() { return UseMap[nullptr].get(); }
 
   friend class VarUseGraphBuilder;
 };
@@ -233,14 +229,16 @@ template <> struct GraphTraits<const VarUseNode *> {
   using ChildIteratorType = NodeType::const_iterator;
 
   static NodeType *getEntryNode(const VarUseNode *N) { return N; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
-  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); } // NOLINT(readability-identifier-naming)
+  static ChildIteratorType child_end(NodeType *N) { return N->end(); } // NOLINT(readability-identifier-naming)
 };
 
 template <>
 struct GraphTraits<const VarUseGraph *>
     : public GraphTraits<const VarUseNode *> {
-  static NodeType *getEntryNode(const VarUseGraph *G) { return G->getRoot(); }
+  static NodeType *getEntryNode(const VarUseGraph *G) {
+    return const_cast<VarUseGraph *>(G)->getRoot();
+  }
 
   static VarUseNode *getValue(VarUseGraph::const_iterator::value_type &P) {
     return P.second.get();
