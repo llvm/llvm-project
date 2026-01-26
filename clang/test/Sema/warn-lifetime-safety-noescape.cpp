@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-noescape -Wlifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -Wlifetime-safety-noescape -Wlifetime-safety -verify %s
+
+#include "Inputs/lifetime-analysis.h"
 
 struct [[gsl::Owner]] MyObj {
   int id;
@@ -92,7 +94,7 @@ void pointer_used_locally(MyObj* p [[clang::noescape]]) {
   p->id = 42;
 }
 
-// Noescape should take precedence and warn since the parameter does escape.
+// FIXME: diagnose differently when parameter has both '[[clang::noescape]]' and '[[clang::lifetimebound]]'.
 View both_noescape_and_lifetimebound(
     const MyObj& in [[clang::noescape]] [[clang::lifetimebound]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   return in; // expected-note {{returned here}}
@@ -107,16 +109,29 @@ View escape_through_lifetimebound_call(
 
 View no_annotation_identity(View v) { return v; }
 
-// FIXME: Escaping through a function without lifetimebound is not detected.
-View escape_through_unannotated_call(const MyObj& in [[clang::noescape]]) {
-  return no_annotation_identity(in);
+View escape_through_unannotated_call(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  return no_annotation_identity(in); // expected-note {{returned here}}
 }
 
-View view;
+View global_view;
 
 // FIXME: Escaping through a global variable is not detected.
 void escape_through_global_var(const MyObj& in [[clang::noescape]]) {
-  view = in;
+  global_view = in;
+}
+
+// FIXME: Escaping through a member variable is not detected.
+struct ObjConsumer {
+  void escape_through_member(const MyObj& in [[clang::noescape]]) {
+    member_view = in;
+  }
+
+  View member_view;
+};
+
+// FIXME: Escaping through another param is not detected.
+void escape_through_param(const MyObj& in, std::vector<View> &v) {
+  v.push_back(in);
 }
 
 View reassign_to_second(
