@@ -20,7 +20,7 @@ end program test_character_reduction
 
 ! Verify the declare_reduction is generated with reference type for character
 ! CHECK-LABEL: omp.declare_reduction @char_max : !fir.ref<!fir.char<1>>
-! CHECK-SAME: init
+! CHECK: init {
 ! CHECK: omp.yield
 
 ! Verify the combiner region works
