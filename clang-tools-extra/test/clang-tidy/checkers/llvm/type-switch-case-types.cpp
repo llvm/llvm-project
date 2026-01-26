@@ -54,9 +54,13 @@ void test_value_type_switch() {
 void test_auto_param_with_explicit_type(Base *base) {
   llvm::TypeSwitch<Base *, int>(base)
       .Case<DerivedA>([](auto a) { return 20; })
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: lambda parameter needlessly uses 'auto', use explicit type instead
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: replace 'auto' with explicit type
+  // CHECK-MESSAGES: :[[@LINE-3]]:13: note: type from template argument can be inferred and removed
       .Case<DerivedB>([](auto *b) { return 80; });
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: lambda parameter needlessly uses 'auto', use explicit type instead
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: lambda parameter needlessly uses 'auto', use explicit type instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: lambda parameter needlessly uses 'auto', use explicit type instead
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: replace 'auto' with explicit type
+  // CHECK-MESSAGES: :[[@LINE-3]]:13: note: type from template argument can be inferred and removed
 }
 
 void test_already_inferred_case(Base *base) {
@@ -114,6 +118,8 @@ void test_inside_llvm_namespace(Base *base) {
   TypeSwitch<Base *, int>(base)
       .Case<DerivedA>([](auto a) { return 71; });
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: lambda parameter needlessly uses 'auto', use explicit type instead
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: replace 'auto' with explicit type
+  // CHECK-MESSAGES: :[[@LINE-3]]:13: note: type from template argument can be inferred and removed
 }
 } // namespace llvm
 
