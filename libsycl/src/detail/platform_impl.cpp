@@ -94,8 +94,7 @@ void PlatformImpl::iterateDevices(
   // Early exit if host/custom/accelerator device is requested:
   // - host device is deprecated and not required by the SYCL 2020
   // specification.
-  // - accelerator is not supported by liboffload now.
-  // - custom accelerators are not supported by liboffload as well.
+  // - accelerator and custom devices are unsupported by liboffload.
   if ((DeviceType == info::device_type::host) ||
       (DeviceType == info::device_type::custom) ||
       (DeviceType == info::device_type::accelerator))

@@ -97,12 +97,12 @@ public:
 
     if constexpr (std::is_same_v<typename Param::return_type, std::string>) {
       std::string Result;
-      Result.resize(ExpectedSize - 1);
+      Result.resize(ExpectedSize);
       callAndThrow(olGetDeviceInfo, MOffloadDevice, olInfo, ExpectedSize,
                    Result.data());
       return Result;
     } else if constexpr (olInfo == OL_DEVICE_INFO_TYPE) {
-      assert((sizeof(DescType) == ExpectedSize) &&
+      assert((sizeof(typename Param::return_type) == ExpectedSize) &&
              "Size of info descriptor reported by backend doesn't match with "
              "expected.");
       ol_device_type_t olType{};

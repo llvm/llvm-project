@@ -56,7 +56,7 @@ public:
 
   /// Constructs a SYCL device instance using the device
   /// identified by the provided device selector.
-  /// \param DeviceSelector is SYCL 2020 device Selector, a simple callable that
+  /// \param DeviceSelector is SYCL 2020 device selector, a simple callable that
   /// takes a device and returns an int.
   template <
       typename DeviceSelector,
@@ -98,7 +98,7 @@ public:
   /// Queries this SYCL device for information requested by the template
   /// parameter param.
   ///
-  /// \return device info of type described in 4.6.4.4. Information descriptors.
+  /// \return device info of type described in 4.6.4.4.
   template <typename Param>
   detail::is_device_info_desc_t<Param> get_info() const;
 
