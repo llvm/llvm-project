@@ -697,8 +697,8 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 }
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createWebAssemblyPostLegalizerCombiner());
+  addPass(createWebAssemblyPostLegalizerCombiner(getOptLevel() ==
+                                                 CodeGenOptLevel::None));
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {

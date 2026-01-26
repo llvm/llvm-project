@@ -24,10 +24,13 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/GlobalValue.h"
 
 #define GET_GICOMBINER_DEPS
 #include "WebAssemblyGenPostLegalizeGICombiner.inc"
@@ -42,6 +45,60 @@ namespace {
 #define GET_GICOMBINER_TYPES
 #include "WebAssemblyGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
+
+bool matchFoldGlobalOffset(MachineOperand &Dst, MachineOperand &Global,
+                           MachineOperand &Offset, BuildFnTy &MatchInfo) {
+  if (Dst.getParent()->getMF()->getTarget().isPositionIndependent())
+    return false;
+
+  // We assume at this point that we are looking at the Global as the operand of
+  // a G_GLOBAL_VALUE, which is on the left-hand side of a NUW G_PTRADD, with
+  // Offset being the immediate from a G_CONSTANT on the right-hand side.
+  if (!Dst.isReg() || !Global.isGlobal() || !Offset.isCImm())
+    return false;
+
+  Register DstReg = Dst.getReg();
+  auto *GV = Global.getGlobal();
+
+  if (GV->isThreadLocal())
+    return false;
+
+  uint64_t NewOffset = Global.getOffset() + Offset.getCImm()->getSExtValue();
+
+  if (int64_t(NewOffset) < 0) {
+    return false;
+  }
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildInstr(TargetOpcode::G_GLOBAL_VALUE)
+        .addDef(DstReg)
+        .addGlobalAddress(GV, NewOffset);
+  };
+
+  return true;
+}
+
+bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  Register DstReg = MI.getOperand(0).getReg();
+  if (MRI.getType(DstReg).isVector())
+    return false;
+  // Match a store of a truncate.
+  if (!mi_match(DstReg, MRI, m_GTrunc(MIPatternMatch::m_Reg(SrcReg))))
+    return false;
+  // Only form truncstores for value types of max 64b.
+  return MRI.getType(SrcReg).getSizeInBits() <= 64;
+}
+
+void applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, GISelChangeObserver &Observer,
+                         Register &SrcReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(SrcReg);
+  Observer.changedInstr(MI);
+}
 
 class WebAssemblyPostLegalizerCombinerImpl : public Combiner {
 protected:
@@ -90,7 +147,7 @@ class WebAssemblyPostLegalizerCombiner : public MachineFunctionPass {
 public:
   static char ID;
 
-  WebAssemblyPostLegalizerCombiner();
+  WebAssemblyPostLegalizerCombiner(bool IsOptNone = false);
 
   StringRef getPassName() const override {
     return "WebAssemblyPostLegalizerCombiner";
@@ -100,6 +157,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
+  bool IsOptNone;
   WebAssemblyPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
@@ -111,15 +169,18 @@ void WebAssemblyPostLegalizerCombiner::getAnalysisUsage(
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<GISelCSEAnalysisWrapperPass>();
-  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
+  if (!IsOptNone) {
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<GISelCSEAnalysisWrapperPass>();
+    AU.addPreserved<GISelCSEAnalysisWrapperPass>();
+  }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-WebAssemblyPostLegalizerCombiner::WebAssemblyPostLegalizerCombiner()
-    : MachineFunctionPass(ID) {
+WebAssemblyPostLegalizerCombiner::WebAssemblyPostLegalizerCombiner(
+    bool IsOptNone)
+    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -139,15 +200,25 @@ bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(
 
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-  MachineDominatorTree *MDT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+  MachineDominatorTree *MDT = nullptr;
+  GISelCSEInfo *CSEInfo = nullptr;
+
+  if (!IsOptNone) {
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+
+    GISelCSEAnalysisWrapper &Wrapper =
+        getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+    CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+  }
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
   WebAssemblyPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo,
                                             RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
@@ -163,6 +234,6 @@ INITIALIZE_PASS_END(WebAssemblyPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine WebAssembly MachineInstrs after legalization",
                     false, false)
 
-FunctionPass *llvm::createWebAssemblyPostLegalizerCombiner() {
-  return new WebAssemblyPostLegalizerCombiner();
+FunctionPass *llvm::createWebAssemblyPostLegalizerCombiner(bool IsOptNone) {
+  return new WebAssemblyPostLegalizerCombiner(IsOptNone);
 }
