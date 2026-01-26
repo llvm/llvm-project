@@ -318,6 +318,14 @@ const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
+// s390x Linux
+const MemoryMapParams Linux_S390X_MemoryMapParams = {
+    0xC00000000000, // AndMask
+    0,              // XorMask (not used)
+    0x080000000000, // ShadowBase
+    0x1C0000000000, // OriginBase
+};
+
 namespace {
 
 class DFSanABIList {
@@ -1145,6 +1153,9 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
     break;
   case Triple::loongarch64:
     MapParams = &Linux_LoongArch64_MemoryMapParams;
+    break;
+  case Triple::systemz:
+    MapParams = &Linux_S390X_MemoryMapParams;
     break;
   default:
     report_fatal_error("unsupported architecture");

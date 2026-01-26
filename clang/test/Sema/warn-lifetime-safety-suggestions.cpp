@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -12,6 +12,8 @@ struct View;
 
 struct [[gsl::Owner]] MyObj {
   int id;
+  MyObj(int i) : id(i) {} 
+  MyObj() {}
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
 
@@ -45,6 +47,15 @@ View redeclared_in_header(View a);
 inline View redeclared_in_header(View a) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
   return a;                                 // expected-note {{param returned here}}
 }
+
+struct ReturnThis {
+  const ReturnThis& get() const;           // expected-warning {{implicit this in cross-TU function should be marked [[clang::lifetimebound]]}}.
+};
+
+struct ReturnThisPointer {
+  const ReturnThisPointer* get() const;           // expected-warning {{implicit this in cross-TU function should be marked [[clang::lifetimebound]]}}.
+};
+
 
 #endif // TEST_HEADER_H
 
@@ -110,9 +121,9 @@ struct Container {
   MyObj data;
   const MyObj& getData() [[clang::lifetimebound]] { return data; }
 };
-// FIXME: c.data does not forward loans
-View return_struct_field(const Container& c) {
-  return c.data;
+
+View return_struct_field(const Container& c) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return c.data; // expected-note {{param returned here}}
 }
 View return_struct_lifetimebound_getter(Container& c) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
   return c.getData().getView();  // expected-note {{param returned here}}
@@ -161,34 +172,85 @@ static View return_view_static(View a) {  // expected-warning {{parameter in int
   return a;                               // expected-note {{param returned here}} 
 }
 
-//===----------------------------------------------------------------------===//
-// FIXME Test Cases
-//===----------------------------------------------------------------------===//
+const ReturnThis& ReturnThis::get() const {
+  return *this;                       // expected-note {{param returned here}}
+}
+
+const ReturnThisPointer* ReturnThisPointer::get() const {
+  return this;                       // expected-note {{param returned here}}
+}
 
 struct ReturnsSelf {
-  const ReturnsSelf& get() const {
-    return *this;
+  ReturnsSelf() {}
+  ~ReturnsSelf() {}
+  const ReturnsSelf& get() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return *this;                  // expected-note {{param returned here}}
   }
+};
+
+struct ReturnThisAnnotated {
+  const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
 };
 
 struct ViewProvider {
+  ViewProvider(int d) : data(d) {}
+  ~ViewProvider() {}
   MyObj data;
-  View getView() const {
-    return data;
+  View getView() const {        // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return data;                // expected-note {{param returned here}}
   }
 };
 
-// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
-void test_get_on_temporary() {
-  const ReturnsSelf& s_ref = ReturnsSelf().get();
-  (void)s_ref;
+View return_view_field(const ViewProvider& v) {    // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+  return v.data;                                   // expected-note {{param returned here}}
 }
 
-// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
-void test_getView_on_temporary() {
-  View sv = ViewProvider{1}.getView();
-  (void)sv;
+void test_get_on_temporary_pointer() {
+  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{object whose reference is captured does not live long enough}}.
+                                                   // expected-note@-1 {{destroyed here}}
+  (void)s_ref;                                     // expected-note {{later used here}}
 }
+
+void test_get_on_temporary_ref() {
+  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{object whose reference is captured does not live long enough}}.
+                                                   // expected-note@-1 {{destroyed here}}
+  (void)s_ref;                                     // expected-note {{later used here}}
+}
+
+void test_getView_on_temporary() {
+  View sv = ViewProvider{1}.getView();      // expected-warning {{object whose reference is captured does not live long enough}}.
+                                            // expected-note@-1 {{destroyed here}}
+  (void)sv;                                 // expected-note {{later used here}}
+}
+
+void test_get_on_temporary_copy() {
+  ReturnsSelf copy = ReturnsSelf().get();                                               
+  (void)copy;                                     
+}
+
+struct MemberReturn {
+  MyObj data;
+
+  MyObj& getRef() {                // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return data;                   // expected-note {{param returned here}}
+  }
+
+  MyObj& getRefExplicit() {        // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return this->data;             // expected-note {{param returned here}}
+  }
+
+  MyObj& getRefDereference() {     // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return (*this).data;           // expected-note {{param returned here}}
+  }
+
+  const MyObj* getPtr() {          // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return &data;                  // expected-note {{param returned here}}
+  }
+
+  const MyObj* getPtrExplicit() {      // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return &(this->data);              // expected-note {{param returned here}}
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Annotation Inference Test Cases
