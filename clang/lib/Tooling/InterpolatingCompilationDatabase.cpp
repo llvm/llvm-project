@@ -269,7 +269,7 @@ struct TransferableCommand {
           Spelling = "clatest";
         else if (Std == latestLangStandardCXX())
           Spelling = "c++latest";
-     }
+      }
 
       Result.CommandLine.emplace_back(
           (llvm::Twine(ClangCLMode ? "/std:" : "-std=") + Spelling).str());

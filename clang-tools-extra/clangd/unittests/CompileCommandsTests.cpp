@@ -542,7 +542,8 @@ TEST(CommandMangler, ClangClStdFlags_Inference) {
     tooling::CompileCommand Cmd;
     Cmd.CommandLine = {"clang-cl", "/std:c++23preview", "--", "/Users/foo.cc"};
     Mangler(Cmd, "/Users/foo.hpp");
-    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++23preview"));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("/std:c++23preview"));
   }
 
   {
