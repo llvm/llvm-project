@@ -6661,7 +6661,7 @@ static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
   SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i64, In64);
   SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i64, BCast,
                              DAG.getConstant(48, DL, MVT::i32));
-  return DAG.getZExtOrTrunc(Shft, DL, MVT::i32);
+  return Shft;
 }
 
 SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
@@ -6689,8 +6689,10 @@ SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // Otherwise bitcast to the equivalent integer form and insert via a GPR.
   MVT IntVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
   MVT IntVecVT = MVT::getVectorVT(IntVT, VT.getVectorNumElements());
-  SDValue IntOp1 = VT == MVT::v8f16 ? convertFromF16(Op1, DL, DAG)
-                                    : DAG.getNode(ISD::BITCAST, DL, IntVT, Op1);
+  SDValue IntOp1 =
+      VT == MVT::v8f16
+          ? DAG.getZExtOrTrunc(convertFromF16(Op1, DL, DAG), DL, MVT::i32)
+          : DAG.getNode(ISD::BITCAST, DL, IntVT, Op1);
   SDValue Res =
       DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntVecVT,
                   DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op0), IntOp1, Op2);
