@@ -91,10 +91,6 @@ static llvm::cl::opt<bool> forceLoopToExecuteOnce(
     "always-execute-loop-body", llvm::cl::init(false),
     llvm::cl::desc("force the body of a loop to execute at least once"));
 
-namespace Fortran::lower {
-extern llvm::cl::opt<bool> lowerDoWhileToSCFWhile;
-} // namespace Fortran::lower
-
 namespace {
 /// Information for generating a structured or unstructured increment loop.
 struct IncrementLoopInfo {
@@ -2534,7 +2530,7 @@ private:
       // etc.) by requiring that the loop body is structured (as decided by the
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
-      if (Fortran::lower::lowerDoWhileToSCFWhile && !unstructuredContext) {
+      if (!unstructuredContext) {
         maybeStartBlock(preheaderBlock); // no block or empty block
         genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
         return;
