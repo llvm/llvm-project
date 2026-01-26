@@ -12,13 +12,13 @@ void generate_output() {
 int main(int argc, char *argv[]) {
   int test_var = 42;
 
-  // Break before output
+  // Break before output.
   int break_here = 0; // break here begin
 
-  // Generate stdout/stderr output
+  // Generate stdout/stderr output.
   generate_output();
 
-  // Wait to capture output
+  // Wait to capture output.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   return 0; // break here end

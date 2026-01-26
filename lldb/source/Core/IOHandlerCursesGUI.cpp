@@ -6318,18 +6318,18 @@ private:
     if (!process || !process->IsAlive())
       return;
 
-    // Buffer for reading output
+    // Buffer for reading output.
     char buffer[1024];
     Status error;
 
-    // Read stdout
+    // Read process's stdout.
     size_t stdout_bytes = process->GetSTDOUT(buffer, sizeof(buffer) - 1, error);
     if (stdout_bytes > 0) {
       buffer[stdout_bytes] = '\0';
       AppendOutput(buffer, false);
     }
 
-    // Read stderr
+    // Read process's stderr.
     size_t stderr_bytes = process->GetSTDERR(buffer, sizeof(buffer) - 1, error);
     if (stderr_bytes > 0) {
       buffer[stderr_bytes] = '\0';
@@ -6343,7 +6343,7 @@ private:
 
     std::lock_guard<std::mutex> lock(m_output_mutex);
 
-    // Split text into lines and add to buffer
+    // Split text into lines and add to buffer.
     std::string remaining = m_partial_line;
     remaining += text;
 
@@ -6354,7 +6354,7 @@ private:
         line = "[stderr] " + line;
       m_output_lines.push_back(line);
 
-      // Keep buffer size under limit
+      // Keep buffer size under limit.
       while (m_output_lines.size() > m_max_lines) {
         m_output_lines.pop_front();
         if (m_first_visible_line > 0)
@@ -6364,10 +6364,10 @@ private:
       start = pos + 1;
     }
 
-    // Save any remaining partial line
+    // Save any remaining partial line.
     m_partial_line = remaining.substr(start);
 
-    // Auto-scroll to bottom if enabled
+    // Auto-scroll to bottom if enabled.
     if (m_auto_scroll && !m_output_lines.empty()) {
       m_first_visible_line =
           m_output_lines.size() > 0 ? m_output_lines.size() - 1 : 0;
@@ -6382,7 +6382,7 @@ public:
   ~ConsoleOutputWindowDelegate() override = default;
 
   bool WindowDelegateDraw(Window &window, bool force) override {
-    // Poll for new output
+    // Poll for new output.
     PollProcessOutput();
 
     std::lock_guard<std::mutex> lock(m_output_mutex);
@@ -6393,7 +6393,7 @@ public:
     const int width = window.GetWidth();
     const int height = window.GetHeight();
 
-    // Calculate the visible range
+    // Calculate the visible range.
     size_t total_lines = m_output_lines.size();
     if (total_lines == 0) {
       window.MoveCursor(2, 1);
@@ -6401,16 +6401,16 @@ public:
       return true;
     }
 
-    // Adjust scroll pos if needed
+    // Adjust scroll pos if needed.
     if (m_first_visible_line >= total_lines) {
       m_first_visible_line = total_lines > 0 ? total_lines - 1 : 0;
     }
 
-    // Draw visible line
+    // Draw visible line.
     int visible_height = height - 2;
     size_t start_line = m_first_visible_line;
 
-    // If we are at the end, display last N lines
+    // If we are at the end, display last N lines.
     if (m_auto_scroll || start_line + visible_height > total_lines) {
       start_line = total_lines > static_cast<size_t>(visible_height)
                        ? total_lines - visible_height
@@ -6422,12 +6422,12 @@ public:
       window.MoveCursor(2, row);
       const std::string &line = m_output_lines[start_line + row - 1];
 
-      // Highlight stderr lines?
+      // Highlight stderr lines?.
       bool is_stderr = (line.find("[stderr]") == 0);
       if (is_stderr)
         window.AttributeOn(COLOR_PAIR(2));
 
-      // Truncate line to fit window width
+      // Truncate line to fit window width.
       int available_width = width - 3;
       if (static_cast<int>(line.length()) > available_width)
         window.PutCString(line.substr(0, available_width).c_str());
@@ -6458,7 +6458,7 @@ public:
     case KEY_DOWN:
       if (m_first_visible_line + visible_height < total_lines)
         ++m_first_visible_line;
-      // Re-enable Auto-scroll at bottom
+      // Re-enable Auto-scroll at bottom.
       if (m_first_visible_line + visible_height >= total_lines)
         m_auto_scroll = true;
       return eKeyHandled;
@@ -6828,13 +6828,13 @@ public:
           console_window_sp->SetBounds(console_bounds);
         } else if (registers_window_sp) {
           // We have a registers window, so give all the area back to the
-          // registers window
+          // registers window.
           Rect registers_bounds = variables_bounds;
           registers_bounds.size.width = source_bounds.size.width;
           registers_window_sp->SetBounds(registers_bounds);
         } else {
           // We have no console or registers window showing so give the bottom
-          // area back to the source view
+          // area back to the source view.
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
                                        variables_bounds.size.height);
@@ -6842,7 +6842,7 @@ public:
       } else {
         Rect new_vars_rect;
         if (console_window_sp) {
-          // Console exists, so split the area
+          // Console exists, so split the area.
           const Rect console_bounds = console_window_sp->GetBounds();
           Rect new_console_rect;
           console_bounds.VerticalSplitPercentage(0.50, new_vars_rect,
@@ -6850,7 +6850,7 @@ public:
         } else if (registers_window_sp) {
           // We have a registers window so split the area of the registers
           // window into two columns where the left hand side will be the
-          // variables and the right hand side will be the registers
+          // variables and the right hand side will be the registers.
           const Rect registers_bounds = registers_window_sp->GetBounds();
           Rect new_regs_rect;
           registers_bounds.VerticalSplitPercentage(0.50, new_vars_rect,
@@ -6858,7 +6858,7 @@ public:
           registers_window_sp->SetBounds(new_regs_rect);
         } else {
           // No registers or console window, grab the bottom part of the source
-          // window
+          // window.
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_vars_rect);
@@ -6885,13 +6885,13 @@ public:
           const Rect variables_bounds = variables_window_sp->GetBounds();
 
           // We have a variables window, so give all the area back to the
-          // variables window
+          // variables window.
           variables_window_sp->Resize(variables_bounds.size.width +
                                           registers_window_sp->GetWidth(),
                                       variables_bounds.size.height);
         } else {
           // We have no variables window showing so give the bottom area back
-          // to the source view
+          // to the source view.
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
                                        registers_window_sp->GetHeight());
@@ -6902,14 +6902,14 @@ public:
         if (variables_window_sp) {
           // We have a variables window, split it into two columns where the
           // left hand side will be the variables and the right hand side will
-          // be the registers
+          // be the registers.
           const Rect variables_bounds = variables_window_sp->GetBounds();
           Rect new_vars_rect;
           variables_bounds.VerticalSplitPercentage(0.50, new_vars_rect,
                                                    new_regs_rect);
           variables_window_sp->SetBounds(new_vars_rect);
         } else {
-          // No variables window, grab the bottom part of the source window
+          // No variables window, grab the bottom part of the source window.
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_regs_rect);
@@ -6937,18 +6937,18 @@ public:
         main_window_sp->RemoveSubWindow(console_window_sp.get());
 
         if (variables_window_sp) {
-          // Variables window exists, so give Console space to Variables
+          // Variables window exists, so give Console space to Variables.
           Rect variables_bounds = variables_window_sp->GetBounds();
           variables_bounds.size.width =
               variables_bounds.size.width + console_bounds.size.width;
           variables_window_sp->SetBounds(variables_bounds);
         } else if (registers_window_sp) {
-          // Registers window exists, so give Console space to Registers
+          // Registers window exists, so give Console space to Registers.
           Rect registers_bounds = registers_window_sp->GetBounds();
           registers_bounds.size.width = source_bounds.size.width;
           registers_window_sp->SetBounds(registers_bounds);
         } else {
-          // No Variables or Registers window exists
+          // No Variables or Registers window exists.
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
                                        console_bounds.size.height);
@@ -6956,21 +6956,21 @@ public:
       } else {
         Rect new_console_rect;
         if (variables_window_sp) {
-          // Variable window exists, split area
+          // Variable window exists, split area.
           const Rect variables_bounds = variables_window_sp->GetBounds();
           Rect new_vars_rect;
           variables_bounds.VerticalSplitPercentage(0.50, new_vars_rect,
                                                    new_console_rect);
           variables_window_sp->SetBounds(new_vars_rect);
         } else if (registers_window_sp) {
-          // Registers window exists, split area
+          // Registers window exists, split area.
           const Rect registers_bounds = registers_window_sp->GetBounds();
           Rect new_regs_rect;
           registers_bounds.VerticalSplitPercentage(0.50, new_console_rect,
                                                    new_regs_rect);
           registers_window_sp->SetBounds(new_regs_rect);
         } else {
-          // No Registers or Variables window exists, split source area
+          // No Registers or Variables window exists, split source area.
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_console_rect);
