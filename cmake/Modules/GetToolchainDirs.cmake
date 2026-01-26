@@ -62,22 +62,17 @@ function (get_toolchain_os_dirname outvar)
 endfunction ()
 
 
-# Corresponds to Clang's ToolChain::getRuntimePath(). Adapted from Compiler-RT.
-function (get_toolchain_arch_dirname outvar)
-  string(FIND ${LLVM_TARGET_TRIPLE} "-" dash_index)
-  string(SUBSTRING ${LLVM_TARGET_TRIPLE} ${dash_index} -1 triple_suffix)
-  string(SUBSTRING ${LLVM_TARGET_TRIPLE} 0 ${dash_index} triple_cpu)
-  set(arch "${triple_cpu}")
-  if("${arch}" MATCHES "^i.86$")
-    # Android uses i686, but that's remapped at a later stage.
-    set(arch "i386")
-  endif()
-
-  if(ANDROID AND ${arch} STREQUAL "i386")
+# Internal function extracted from compiler-rt. Use get_toolchain_arch_dirname
+# instead for new code.
+function(get_runtimes_target_libdir_common default_target_triple arch variable)
+  string(FIND "${default_target_triple}" "-" dash_index)
+  string(SUBSTRING "${default_target_triple}" ${dash_index} -1 triple_suffix)
+  string(SUBSTRING "${default_target_triple}" 0 ${dash_index} triple_cpu)
+  if(ANDROID AND "${arch}" STREQUAL "i386")
     set(target "i686${triple_suffix}")
-  elseif(${arch} STREQUAL "amd64")
+  elseif("${arch}" STREQUAL "amd64")
     set(target "x86_64${triple_suffix}")
-  elseif(${arch} STREQUAL "sparc64")
+  elseif("${arch}" STREQUAL "sparc64")
     set(target "sparcv9${triple_suffix}")
   elseif("${arch}" MATCHES "mips64|mips64el")
     string(REGEX REPLACE "-gnu.*" "-gnuabi64" triple_suffix_gnu "${triple_suffix}")
@@ -91,7 +86,8 @@ function (get_toolchain_arch_dirname outvar)
     string(REGEX REPLACE "mips64" "mips" triple_cpu_mips "${triple_cpu_mips}")
     set(target "${triple_cpu_mips}${triple_suffix_gnu}")
   elseif("${arch}" MATCHES "^arm")
-    # FIXME: Handle arch other than arm, armhf, armv6m
+    # Arch is arm, armhf, armv6m (anything else would come from using
+    # COMPILER_RT_DEFAULT_TARGET_ONLY, which is checked above).
     if (${arch} STREQUAL "armhf")
       # If we are building for hard float but our ABI is soft float.
       if ("${triple_suffix}" MATCHES ".*eabi$")
@@ -115,5 +111,19 @@ function (get_toolchain_arch_dirname outvar)
   else()
     set(target "${arch}${triple_suffix}")
   endif()
-  set(${outvar} "${target}" PARENT_SCOPE)
+  set("${variable}" "${target}" PARENT_SCOPE)
+endfunction()
+
+
+# Corresponds to Clang's ToolChain::getRuntimePath().
+function (get_toolchain_arch_dirname outvar)
+  string(FIND "${LLVM_TARGET_TRIPLE}" "-" dash_index)
+  string(SUBSTRING "${LLVM_TARGET_TRIPLE}" 0 ${dash_index} triple_cpu)
+  set(arch "${triple_cpu}")
+  if("${arch}" MATCHES "^i.86$")
+    # Android uses i686, but that's remapped at a later stage.
+    set(arch "i386")
+  endif()
+  get_runtimes_target_libdir("${LLVM_TARGET_TRIPLE}" "${arch}" target)
+  set("${outvar}" "${target}" PARENT_SCOPE)
 endfunction()
