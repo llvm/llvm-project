@@ -1,17 +1,12 @@
-; RUN: opt -passes=loop-vectorize -mtriple=aarch64 -force-vector-width=4 -force-vector-interleave=1 %s -S | FileCheck %s --check-prefixes=CHECK-LE
-; RUN: opt -passes=loop-vectorize -mtriple=aarch64_be -force-vector-width=4 -force-vector-interleave=1 %s -S | FileCheck %s --check-prefixes=CHECK-BE
+; RUN: opt -passes=loop-vectorize -mtriple=aarch64 -force-vector-width=4 -force-vector-interleave=1 %s -S | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+; RUN: opt -passes=loop-vectorize -mtriple=aarch64_be -force-vector-width=4 -force-vector-interleave=1 %s -S | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
 ; Vectors with i4 elements may not legal with nontemporal stores.
 define void @test_i4_store(ptr %ddst) {
-; CHECK-LE-LABEL: define void @test_i4_store(
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE:        store i4 {{.*}} !nontemporal !0
-; CHECK-LE:        ret void
-;
-; CHECK-BE-LABEL: define void @test_i4_store(
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE:        store i4 {{.*}} !nontemporal !0
-; CHECK-BE:        ret void
+; CHECK-LABEL: define void @test_i4_store(
+; CHECK-NOT:   vector.body:
+; CHECK:        store i4 {{.*}} !nontemporal !0
+; CHECK:        ret void
 entry:
   br label %for.body
 
@@ -139,13 +134,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define void @test_i33_store(ptr nocapture %ddst) {
-; CHECK-LE-LABEL: define void @test_i33_store(
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE:         ret
-;
-; CHECK-BE-LABEL: define void @test_i33_store(
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE:         ret
+; CHECK-LABEL: define void @test_i33_store(
+; CHECK-NOT:   vector.body:
+; CHECK:         ret
 entry:
   br label %for.body
 
@@ -169,13 +160,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define void @test_i40_store(ptr nocapture %ddst) {
-; CHECK-LE-LABEL: define void @test_i40_store(
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE:         ret
-;
-; CHECK-BE-LABEL: define void @test_i40_store(
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE:         ret
+; CHECK-LABEL: define void @test_i40_store(
+; CHECK-NOT:   vector.body:
+; CHECK:         ret
 entry:
   br label %for.body
 
@@ -276,13 +263,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define void @test_i256_store(ptr %ddst) {
-; CHECK-LE-LABEL: define void @test_i256_store(
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE:        ret void
-;
-; CHECK-BE-LABEL: define void @test_i256_store(
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE:        ret void
+; CHECK-LABEL: define void @test_i256_store(
+; CHECK-NOT:   vector.body:
+; CHECK:        ret void
 entry:
   br label %for.body
 
@@ -300,13 +283,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define i4 @test_i4_load(ptr %ddst) {
-; CHECK-LE-LABEL: define i4 @test_i4_load
-; CHECK-LE-NOT: vector.body:
-; CHECK-LE: ret i4 %{{.*}}
-;
-; CHECK-BE-LABEL: define i4 @test_i4_load
-; CHECK-BE-NOT: vector.body:
-; CHECK-BE: ret i4 %{{.*}}
+; CHECK-LABEL: define i4 @test_i4_load
+; CHECK-NOT: vector.body:
+; CHECK: ret i4 %{{.*}}
 entry:
   br label %for.body
 
@@ -433,13 +412,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define i33 @test_i33_load(ptr %ddst) {
-; CHECK-LE-LABEL: @test_i33_load
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE: ret i33 %{{.*}}
-;
-; CHECK-BE-LABEL: @test_i33_load
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE: ret i33 %{{.*}}
+; CHECK-LABEL: @test_i33_load
+; CHECK-NOT:   vector.body:
+; CHECK: ret i33 %{{.*}}
 entry:
   br label %for.body
 
@@ -458,13 +433,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define i40 @test_i40_load(ptr %ddst) {
-; CHECK-LE-LABEL: @test_i40_load
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE: ret i40 %{{.*}}
-;
-; CHECK-BE-LABEL: @test_i40_load
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE: ret i40 %{{.*}}
+; CHECK-LABEL: @test_i40_load
+; CHECK-NOT:   vector.body:
+; CHECK: ret i40 %{{.*}}
 entry:
   br label %for.body
 
@@ -564,13 +535,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 define i256 @test_256_load(ptr %ddst) {
-; CHECK-LE-LABEL: @test_256_load
-; CHECK-LE-NOT:   vector.body:
-; CHECK-LE: ret i256 %{{.*}}
-;
-; CHECK-BE-LABEL: @test_256_load
-; CHECK-BE-NOT:   vector.body:
-; CHECK-BE: ret i256 %{{.*}}
+; CHECK-LABEL: @test_256_load
+; CHECK-NOT:   vector.body:
+; CHECK: ret i256 %{{.*}}
 entry:
   br label %for.body
 
