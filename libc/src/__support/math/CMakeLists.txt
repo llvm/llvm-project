@@ -1265,6 +1265,7 @@ add_header_library(
   HDRS
     sinhf16.h
   DEPENDS
+    .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.fenv_impl
@@ -1274,8 +1275,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
-    libc.src.__support.math.expxf16_utils
-    
 )
 
 add_header_library(
