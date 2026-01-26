@@ -475,7 +475,7 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
 
 void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(Reflection): Implement this.
-  assert(false & "not implemented yet");
+  assert(false && "not implemented yet");
 }
 
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
