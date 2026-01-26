@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGObjCRuntime.h"
+#include "Address.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGRecordLayout.h"
@@ -23,6 +24,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -148,6 +150,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     Cont = CGF.getJumpDestInCurrentScope("eh.cont");
 
   bool useFunclets = EHPersonality::get(CGF).usesFuncletPads();
+  bool IsWasm = EHPersonality::get(CGF).isWasmPersonality();
+  bool IsMSVC = EHPersonality::get(CGF).isMSVCPersonality();
 
   CodeGenFunction::FinallyInfo FinallyInfo;
   if (!useFunclets)
@@ -187,7 +191,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       Catch->setHandler(I, { Handlers[I].TypeInfo, Handlers[I].Flags }, Handlers[I].Block);
   }
 
-  if (useFunclets)
+  if (IsMSVC)
     if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
         CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
         if (!CGF.CurSEHParent)
@@ -213,28 +217,55 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   CGF.EmitStmt(S.getTryBody());
 
   // Leave the try.
-  if (S.getNumCatchStmts())
-    CGF.popCatchScope();
+  llvm::BasicBlock *DispatchBlock = nullptr;
+  if (S.getNumCatchStmts()) {
+     DispatchBlock = CGF.popCatchScope();
+  }
+
+  // TODO(hugo): Better documentation
+  // Wasm uses Windows-style EH instructions, but merges all catch clauses into
+  // one big catchpad. So we save the old funclet pad here before we traverse
+  // each catch handler.
+  SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
+  llvm::BasicBlock *WasmCatchStartBlock = nullptr;
+  llvm::CatchPadInst *CPI = nullptr;
+  if (!!DispatchBlock && IsWasm) {
+    auto *CatchSwitch =
+        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
+    WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
+                              ? CatchSwitch->getSuccessor(1)
+                              : CatchSwitch->getSuccessor(0);
+    CPI =
+        cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
+    CGF.CurrentFuncletPad = CPI;
+  }
 
   // Remember where we were.
   CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveAndClearIP();
 
   // Emit the handlers.
+  // TODO(hugo): Document
+  bool HasCatchAll = false;
   for (CatchHandler &Handler : Handlers) {
+    HasCatchAll |= Handler.TypeInfo == nullptr;
     CGF.EmitBlock(Handler.Block);
 
     CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
     SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
-    if (useFunclets) {
+    if (IsMSVC) {
       llvm::BasicBlock::iterator CPICandidate =
           Handler.Block->getFirstNonPHIIt();
       if (CPICandidate != Handler.Block->end()) {
-        if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
+        CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate);
+        if (!!CPI) {
           CGF.CurrentFuncletPad = CPI;
           CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
-          CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
         }
       }
+    }
+
+    if (!!CPI) {
+      CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
     }
 
     llvm::Value *RawExn = CGF.getExceptionFromSlot();
@@ -270,6 +301,10 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     Cleanups.ForceCleanup();
 
     CGF.EmitBranchThroughCleanup(Cont);
+  }
+
+  if (IsWasm && !HasCatchAll) {
+    CGF.WasmEmitFallthroughRethrow(WasmCatchStartBlock);
   }
 
   // Go back to the try-statement fallthrough.
