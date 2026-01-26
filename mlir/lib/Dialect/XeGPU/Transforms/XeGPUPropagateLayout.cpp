@@ -1461,24 +1461,22 @@ private:
 } // namespace
 
 LogicalResult ResolveLayoutConflicts::run() {
-  // Helper function to get the tensor descriptor operand, or null if none found
-  // TODO: We assume only one tensor descriptor operand per op.
-  auto getTensorDescOperand = [](Operation *op) -> OpOperand * {
-    for (OpOperand &opnd : op->getOpOperands()) {
-      if (isa<xegpu::TensorDescType>(opnd.get().getType())) {
-        return &opnd;
-      }
-    }
-    return nullptr;
-  };
-
+  // Scan all operations in the parent operation and resolve layout conflicts at
+  // tensor descriptor and vector use points.
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
-    // Check if this op is an anchor op and at least one operand is a tensor
-    // descriptor type.
-    OpOperand *tdescOperand = getTensorDescOperand(op);
-    if (isa<xegpu::AnchorLayoutInterface>(op) && tdescOperand) {
-      auto res = resolveTensorDescConsumer(*tdescOperand);
-      return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+    for (OpOperand &operand : op->getOpOperands()) {
+      // Handle conflicts in tensor descriptor operands.
+      Type operandType = operand.get().getType();
+      if (isa<xegpu::AnchorLayoutInterface>(op) &&
+          isa<xegpu::TensorDescType>(operandType)) {
+        auto res = resolveTensorDescConsumer(operand);
+        return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+      }
+      // Handle conflicts in vector operands.
+      if (isa<VectorType>(operandType)) {
+        auto res = resolveVectorConsumer(operand);
+        return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+      }
     }
     return WalkResult::advance();
   });
@@ -1506,6 +1504,13 @@ static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
   }
   // If not found, return null.
   return nullptr;
+}
+
+LogicalResult
+ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
+  // TODO: Implement vector consumer layout conflict resolution. Requires layout
+  // utilities.
+  return success();
 }
 
 LogicalResult
