@@ -2085,8 +2085,14 @@ For example:
 
     If multiple allocation functions operate on the same allocation (for
     example, an "alloc" followed by "free"), allocation elision is only allowed
-    if all involved functions have the same ``"alloc-family"``. In this case,
-    either all operations have to be elided or none of them.
+    if all involved functions have the same ``"alloc-family"``. The following
+    transforms can be performed, or combinations thereof:
+
+    * An "alloc" that is leaked (no "free"/"realloc") can be elided.
+    * An "alloc" and "free" pair can be elided.
+    * A "realloc" and "free" pair can be converted into a "free" of the original
+      allocation.
+    * An "alloc" and "realloc" pair can be converted into an "alloc".
 ``"alloc-variant-zeroed"="FUNCTION"``
     This attribute indicates that another function is equivalent to an allocator function,
     but returns zeroed memory. The function must have "zeroed" allocation behavior,
