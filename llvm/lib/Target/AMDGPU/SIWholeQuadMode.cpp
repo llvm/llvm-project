@@ -1179,16 +1179,17 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
     }
   }
 
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
   MachineInstr *MI;
 
   if (SaveWQM) {
     unsigned Opcode =
         IsTerminator ? LMC.AndSaveExecTermOpc : LMC.AndSaveExecOpc;
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(Opcode), SaveWQM)
-             .addReg(LiveMaskReg);
+    MI =
+        BuildMI(MBB, Before, DL, TII->get(Opcode), SaveWQM).addReg(LiveMaskReg);
   } else {
     unsigned Opcode = IsTerminator ? LMC.AndTermOpc : LMC.AndOpc;
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(Opcode), LMC.ExecReg)
+    MI = BuildMI(MBB, Before, DL, TII->get(Opcode), LMC.ExecReg)
              .addReg(LMC.ExecReg)
              .addReg(LiveMaskReg);
   }
@@ -1200,13 +1201,14 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
 void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator Before,
                             Register SavedWQM) {
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
   MachineInstr *MI;
 
   if (SavedWQM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), LMC.ExecReg)
+    MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::COPY), LMC.ExecReg)
              .addReg(SavedWQM);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(LMC.WQMOpc), LMC.ExecReg)
+    MI = BuildMI(MBB, Before, DL, TII->get(LMC.WQMOpc), LMC.ExecReg)
              .addReg(LMC.ExecReg);
   }
 
@@ -1222,13 +1224,13 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
   assert(StrictStateNeeded == StateStrictWWM ||
          StrictStateNeeded == StateStrictWQM);
 
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
+
   if (StrictStateNeeded == StateStrictWWM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WWM),
-                 SaveOrig)
+    MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WWM), SaveOrig)
              .addImm(-1);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WQM),
-                 SaveOrig)
+    MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WQM), SaveOrig)
              .addImm(-1);
   }
   LIS->InsertMachineInstrInMaps(*MI);
@@ -1245,14 +1247,16 @@ void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
   assert(CurrentStrictState == StateStrictWWM ||
          CurrentStrictState == StateStrictWQM);
 
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
+
   if (CurrentStrictState == StateStrictWWM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WWM),
-                 LMC.ExecReg)
-             .addReg(SavedOrig);
+    MI =
+        BuildMI(MBB, Before, DL, TII->get(AMDGPU::EXIT_STRICT_WWM), LMC.ExecReg)
+            .addReg(SavedOrig);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WQM),
-                 LMC.ExecReg)
-             .addReg(SavedOrig);
+    MI =
+        BuildMI(MBB, Before, DL, TII->get(AMDGPU::EXIT_STRICT_WQM), LMC.ExecReg)
+            .addReg(SavedOrig);
   }
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = NonStrictState;
