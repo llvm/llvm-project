@@ -1,5 +1,6 @@
 include(CMakePushCheckState)
 include(CheckSymbolExists)
+include(GetToolchainDirs)
 
 # Because compiler-rt spends a lot of time setting up custom compile flags,
 # define a handy helper function for it. The compile flags setting in CMake
@@ -464,9 +465,6 @@ function(get_compiler_rt_target arch variable)
     # Use exact spelling when building only for the target specified to CMake.
     set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
   else()
-    string(FIND ${default_target_triple} "-" dash_index)
-    string(SUBSTRING ${default_target_triple} ${dash_index} -1 triple_suffix)
-    string(SUBSTRING ${default_target_triple} 0 ${dash_index} triple_cpu)
     get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" result)
   endif()
   set(${variable} "${result}" PARENT_SCOPE)

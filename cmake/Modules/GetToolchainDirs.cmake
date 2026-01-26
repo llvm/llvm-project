@@ -65,7 +65,9 @@ endfunction ()
 # Internal function extracted from compiler-rt. Use get_toolchain_arch_dirname
 # instead for new code.
 function(get_runtimes_target_libdir_common default_target_triple arch variable)
+message("  string(FIND "${default_target_triple}" "-" dash_index)")
   string(FIND "${default_target_triple}" "-" dash_index)
+message("string(SUBSTRING "${default_target_triple}" ${dash_index} -1 triple_suffix)")
   string(SUBSTRING "${default_target_triple}" ${dash_index} -1 triple_suffix)
   string(SUBSTRING "${default_target_triple}" 0 ${dash_index} triple_cpu)
   if(ANDROID AND "${arch}" STREQUAL "i386")
@@ -124,6 +126,6 @@ function (get_toolchain_arch_dirname outvar)
     # Android uses i686, but that's remapped at a later stage.
     set(arch "i386")
   endif()
-  get_runtimes_target_libdir("${LLVM_TARGET_TRIPLE}" "${arch}" target)
+  get_runtimes_target_libdir_common("${LLVM_TARGET_TRIPLE}" "${arch}" target)
   set("${outvar}" "${target}" PARENT_SCOPE)
 endfunction()
