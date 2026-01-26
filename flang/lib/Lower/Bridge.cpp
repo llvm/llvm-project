@@ -1122,7 +1122,7 @@ public:
                                                       fir::LocationKind::Base));
 
         // Gather include location information if any.
-        Fortran::parser::ProvenanceRange *prov = &*provenance;
+        std::optional<Fortran::parser::ProvenanceRange> prov = provenance;
         while (prov) {
           if (std::optional<Fortran::parser::ProvenanceRange> include =
                   cooked->allSources().GetInclusionInfo(*prov)) {
@@ -1132,9 +1132,9 @@ public:
               locAttrs.push_back(fir::LocationKindAttr::get(
                   &getMLIRContext(), fir::LocationKind::Inclusion));
             }
-            prov = &*include;
+            prov = include;
           } else {
-            prov = nullptr;
+            prov.reset();
           }
         }
         if (locs.size() > 1) {
@@ -2180,8 +2180,8 @@ private:
       }
     }
     if (!labelList.empty()) {
-      auto selectExpr =
-          fir::LoadOp::create(*builder, loc, getSymbolAddress(symbol));
+      mlir::Value selectExpr = hlfir::loadTrivialScalar(
+          loc, *builder, hlfir::Entity{getSymbolAddress(symbol)});
       // Add a default error target in case the goto is nonconforming.
       mlir::Block *errorBlock =
           builder->getBlock()->splitBlock(builder->getInsertionPoint());

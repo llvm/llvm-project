@@ -490,6 +490,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
   }
 
+  if (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc())
+    setOperationAction({ISD::CLMUL, ISD::CLMULH}, XLenVT, Legal);
+  if (Subtarget.hasStdExtZbc())
+    setOperationAction(ISD::CLMULR, XLenVT, Legal);
+
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUMNUM,
       ISD::FMAXIMUMNUM,   ISD::LRINT,          ISD::LLRINT,
@@ -11366,12 +11371,11 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::riscv_clmul:
-    return DAG.getNode(RISCVISD::CLMUL, DL, XLenVT, Op.getOperand(1),
+    return DAG.getNode(ISD::CLMUL, DL, XLenVT, Op.getOperand(1),
                        Op.getOperand(2));
   case Intrinsic::riscv_clmulh:
   case Intrinsic::riscv_clmulr: {
-    unsigned Opc =
-        IntNo == Intrinsic::riscv_clmulh ? RISCVISD::CLMULH : RISCVISD::CLMULR;
+    unsigned Opc = IntNo == Intrinsic::riscv_clmulh ? ISD::CLMULH : ISD::CLMULR;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::experimental_get_vector_length:
@@ -15553,7 +15557,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue NewOp1 =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      SDValue Res = DAG.getNode(RISCVISD::CLMUL, DL, MVT::i64, NewOp0, NewOp1);
+      SDValue Res = DAG.getNode(ISD::CLMUL, DL, MVT::i64, NewOp0, NewOp1);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
@@ -15579,8 +15583,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                            DAG.getConstant(32, DL, MVT::i64));
       NewOp1 = DAG.getNode(ISD::SHL, DL, MVT::i64, NewOp1,
                            DAG.getConstant(32, DL, MVT::i64));
-      unsigned Opc = IntNo == Intrinsic::riscv_clmulh ? RISCVISD::CLMULH
-                                                      : RISCVISD::CLMULR;
+      unsigned Opc =
+          IntNo == Intrinsic::riscv_clmulh ? ISD::CLMULH : ISD::CLMULR;
       SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1);
       Res = DAG.getNode(ISD::SRL, DL, MVT::i64, Res,
                         DAG.getConstant(32, DL, MVT::i64));
@@ -17047,8 +17051,6 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
 
-  if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
-    return V;
   if (SDValue V = combineOrAndToBitfieldInsert(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
@@ -17056,9 +17058,12 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
     return V;
 
-  if (DCI.isAfterLegalizeDAG())
+  if (DCI.isAfterLegalizeDAG()) {
+    if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
+      return V;
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
       return V;
+  }
 
   // Look for Or of CZERO_EQZ/NEZ with same condition which is the select idiom.
   // We may be able to pull a common operation out of the true and false value.

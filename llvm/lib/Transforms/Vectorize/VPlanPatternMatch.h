@@ -472,18 +472,22 @@ m_ComputeReductionResult(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ComputeReductionResult>(Op0);
 }
 
+/// Match FindIV result pattern:
+/// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
+///        ComputeReductionResult(ReducedIV), Start.
+template <typename Op0_t, typename Op1_t>
+inline bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV, Op1_t Start) {
+  return match(VPI, m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                            m_ComputeReductionResult(ReducedIV),
+                                            m_VPValue()),
+                             m_ComputeReductionResult(ReducedIV), Start));
+}
+
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ComputeAnyOfResult, Op0_t, Op1_t,
                            Op2_t>
 m_ComputeAnyOfResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ComputeAnyOfResult>(Op0, Op1, Op2);
-}
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPInstruction_match<VPInstruction::ComputeFindIVResult, Op0_t, Op1_t,
-                           Op2_t>
-m_ComputeFindIVResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_VPInstruction<VPInstruction::ComputeFindIVResult>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t>

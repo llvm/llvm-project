@@ -1151,6 +1151,19 @@ static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
       cast<VPSingleDefRecipe>(SelR));
 }
 
+/// Find and return the final select instruction of the FindIV result pattern
+/// for the given \p BackedgeVal:
+/// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
+///        ComputeReductionResult(ReducedIV), Start.
+static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
+  return cast<VPInstruction>(
+      vputils::findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        return VPI &&
+               matchFindIVResult(VPI, m_Specific(BackedgeVal), m_VPValue());
+      }));
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinOrMaxCompareValue =
       [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
@@ -1511,35 +1524,37 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //
     // For example, this transforms
     // vp<%min.result> = compute-reduction-result ir<%min.val.next>
-    // vp<%find.iv.result = compute-find-iv-result ir<0>, SENTINEL,
-    //                                             vp<%min.idx.next>
+    // vp<%iv.rdx> = compute-reduction-result (smax) vp<%min.idx.next>
+    // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
+    // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
     //
     // into:
     //
     // vp<min.result> = compute-reduction-result ir<%min.val.next>
     // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
-    // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
-    // vp<%find.iv.result> = compute-find-iv-result ir<0>, SENTINEL,
-    //                                              vp<%final.iv>
-    VPInstruction *FindIVResult =
-        findUserOf<VPInstruction::ComputeFindIVResult>(
-            FindIVPhiR->getBackedgeValue());
-    assert(FindIVResult && "Backedge value feeding FindIVPhiR expected to also "
-                           "feed a ComputeFindIVResult");
-    assert(FindIVResult->getParent() == MinOrMaxResult->getParent() &&
+    // vp<%final.iv> = select vp<%final.min.cmp>, vp<%min.idx.next>, SENTINEL
+    // vp<%iv.rdx> = compute-reduction-result (smax) vp<%final.iv>
+    // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
+    // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
+    //
+    // Find the FindIV result pattern.
+    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
+    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
+    assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
-    MinOrMaxResult->moveBefore(*FindIVResult->getParent(),
-                               FindIVResult->getIterator());
+    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
+                               FindIVRdxResult->getIterator());
 
-    VPBuilder B(FindIVResult);
+    VPBuilder B(FindIVRdxResult);
     VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinOrMaxCmp =
         B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
-    VPValue *Sentinel = FindIVResult->getOperand(1);
-    VPValue *LastIVExiting = FindIVResult->getOperand(2);
+    VPValue *Sentinel = FindIVCmp->getOperand(1);
+    VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =
         B.createSelect(FinalMinOrMaxCmp, LastIVExiting, Sentinel);
-    FindIVResult->setOperand(2, FinalIVSelect);
+    FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
 }
