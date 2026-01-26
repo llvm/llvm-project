@@ -44,10 +44,16 @@ std::string DeviceTypeToString(sycl::info::device_type DevType) {
   }
 }
 
+std::string GenerateDeviceDescription(sycl::info::device_type DevType,
+                                      const sycl::platform &Platform) {
+  return std::string(DeviceTypeToString(DevType)) + " (" +
+         BackendToString(Platform.get_backend()) + ")";
+}
+
 template <typename T1, typename T2>
 int Check(const T1 &LHS, const T2 &RHS, std::string TestName) {
   if (LHS != RHS) {
-    std::cout << "Failed check " << LHS << " != " << RHS << ": " << TestName
+    std::cerr << "Failed check " << LHS << " != " << RHS << ": " << TestName
               << std::endl;
     return 1;
   }
@@ -63,16 +69,17 @@ int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
 
   if (DevType == sycl::info::device_type::automatic) {
     if (AllDevices.empty()) {
-      Failures += Check(
-          Devices.size(), 0,
-          "No devices reported for all query, but automatic returns a device.");
+      Failures += Check(Devices.size(), 0,
+                        "No devices reported for device_type::all query, but "
+                        "device_type::automatic returns a device.");
     } else {
       Failures += Check(Devices.size(), 1,
                         "Number of devices for device_type::automatic query.");
       if (Devices.size())
-        Failures +=
-            Check(std::count(AllDevices.begin(), AllDevices.end(), Devices[0]),
-                  1, "Device is in the set of all devices in the platform.");
+        Failures += Check(
+            std::count(AllDevices.begin(), AllDevices.end(), Devices[0]), 1,
+            "Device is in the set of device_type::all devices in the "
+            "platform.");
     }
     return Failures;
   }
@@ -82,18 +89,19 @@ int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
   for (sycl::device Device : Devices)
     DevCount += (Device.get_info<sycl::info::device::device_type>() == DevType);
 
-  Failures +=
-      Check(Devices.size(), DevCount,
-            "Unexpected number of devices for " + DeviceTypeToString(DevType));
+  Failures += Check(Devices.size(), DevCount,
+                    "Unexpected number of devices for " +
+                        GenerateDeviceDescription(DevType, P));
 
-  Failures += Check(std::all_of(Devices.begin(), Devices.end(),
-                                [&](const auto &Dev) {
-                                  return std::count(AllDevices.begin(),
-                                                    AllDevices.end(), Dev) == 1;
-                                }),
-                    true,
-                    "Not all devices for " + DeviceTypeToString(DevType) +
-                        " appear in the list of all devices");
+  Failures +=
+      Check(std::all_of(Devices.begin(), Devices.end(),
+                        [&](const auto &Dev) {
+                          return std::count(AllDevices.begin(),
+                                            AllDevices.end(), Dev) == 1;
+                        }),
+            true,
+            "Not all devices for " + GenerateDeviceDescription(DevType, P) +
+                " appear in the list of all devices");
 
   return Failures;
 }
@@ -101,9 +109,6 @@ int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
 int main() {
   int Failures = 0;
   for (sycl::platform P : sycl::platform::get_platforms()) {
-    std::cout << "Checking platform with backend "
-              << BackendToString(P.get_backend()) << std::endl;
-
     std::vector<sycl::device> Devices = P.get_devices();
 
     for (sycl::info::device_type DevType :

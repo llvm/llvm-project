@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-message("Configuring SYCL End-to-End Tests")
+message("Configuring libsycl End-to-End Tests")
 
 set(LIBSYCL_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++")
 set(LIBSYCL_E2E_CXX_FLAGS "" CACHE STRING
@@ -31,6 +31,7 @@ list(APPEND LIBSYCL_E2E_TEST_DEPS
 )
 
 add_lit_testsuite(check-sycl-e2e
-  "Running SYCL End-to-End tests"
+  "Running libsycl End-to-End tests"
   ${CMAKE_CURRENT_BINARY_DIR}
+  EXCLUDE_FROM_CHECK_ALL
   DEPENDS ${LIBSYCL_E2E_TEST_DEPS})

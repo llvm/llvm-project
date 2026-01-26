@@ -142,5 +142,5 @@ endif()
 add_custom_target(libsycl-toolchain ALL
   DEPENDS libsycl-runtime-libraries
           sycl-ls
-  COMMENT "Building SYCL compiler toolchain..."
+  COMMENT "Building libsycl toolchain..."
 )
