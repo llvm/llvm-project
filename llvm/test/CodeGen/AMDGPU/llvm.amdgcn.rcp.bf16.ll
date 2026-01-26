@@ -15,6 +15,7 @@ define amdgpu_kernel void @rcp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; SDAG-TRUE16-NEXT:    s_mov_b32 s1, 0
 ; SDAG-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, s2
 ; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-TRUE16-NEXT:    s_endpgm
@@ -25,6 +26,7 @@ define amdgpu_kernel void @rcp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; SDAG-FAKE16-NEXT:    s_mov_b32 s1, 0
 ; SDAG-FAKE16-NEXT:    v_rcp_bf16_e32 v0, s2
 ; SDAG-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-FAKE16-NEXT:    s_endpgm

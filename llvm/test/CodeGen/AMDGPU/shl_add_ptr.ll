@@ -253,20 +253,21 @@ define amdgpu_kernel void @atomic_cmpxchg_shl_base_lds_0(ptr addrspace(1) %out, 
 ; CI-LABEL: atomic_cmpxchg_shl_base_lds_0:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; CI-NEXT:    s_load_dword s8, s[4:5], 0xd
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    s_load_dword s3, s[4:5], 0xd
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v2, 7
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    s_mov_b32 s7, 0xf000
+; CI-NEXT:    s_mov_b32 s5, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v3, s8
+; CI-NEXT:    v_mov_b32_e32 v3, s3
 ; CI-NEXT:    ds_cmpst_rtn_b32 v1, v1, v2, v3 offset:8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_mov_b32 s4, s0
-; CI-NEXT:    s_mov_b32 s5, s1
 ; CI-NEXT:    s_mov_b32 s0, s2
-; CI-NEXT:    s_mov_b32 s1, s3
+; CI-NEXT:    s_mov_b32 s1, s5
 ; CI-NEXT:    s_mov_b32 s2, s6
 ; CI-NEXT:    s_mov_b32 s3, s7
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 2, v0
@@ -277,20 +278,21 @@ define amdgpu_kernel void @atomic_cmpxchg_shl_base_lds_0(ptr addrspace(1) %out, 
 ; VI-LABEL: atomic_cmpxchg_shl_base_lds_0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s8, s[4:5], 0x34
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s3, s[4:5], 0x34
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 7
 ; VI-NEXT:    s_mov_b32 m0, -1
-; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v3, s8
+; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    ds_cmpst_rtn_b32 v1, v1, v2, v3 offset:8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_mov_b32 s0, s2
-; VI-NEXT:    s_mov_b32 s1, s3
+; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    s_mov_b32 s2, s6
 ; VI-NEXT:    s_mov_b32 s3, s7
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 2, v0

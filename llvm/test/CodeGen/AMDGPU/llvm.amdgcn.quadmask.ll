@@ -180,6 +180,7 @@ define amdgpu_kernel void @test_scc_quadmask_32(i32 %val0, i32 %val1, ptr addrsp
 ; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX11-GISEL-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-GISEL-NEXT:    s_quadmask_b32 s1, s1
 ; GFX11-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
@@ -195,6 +196,7 @@ define amdgpu_kernel void @test_scc_quadmask_32(i32 %val0, i32 %val1, ptr addrsp
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_mov_b32 s3, 0
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-SDAG-NEXT:    s_quadmask_b32 s1, s1
 ; GFX11-SDAG-NEXT:    s_cmp_eq_u32 s0, 0

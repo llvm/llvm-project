@@ -358,10 +358,7 @@ define amdgpu_kernel void @select_v8f32(ptr addrspace(1) %out, <8 x float> %a, <
 }
 
 ; GCN-LABEL: {{^}}select_v2f64:
-; GCN: s_cselect_b32
-; GCN: s_cselect_b32
-; GCN: s_cselect_b32
-; GCN: s_cselect_b32
+; GCN: s_cselect_b64
 define amdgpu_kernel void @select_v2f64(ptr addrspace(1) %out, <2 x double> %a, <2 x double> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x double> %a, <2 x double> %b

@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -o - %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}t0:
-; CHECK: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], s[8:9], 0x0
-; CHECK: v_mov_b32_e32 v{{[0-9]+}}, s[[PTR_HI]]
+; CHECK: s_load_dwordx4 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], s[8:9], 0x0
+; CHECK: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; There should be no redundant copies from PTR_HI.
 ; CHECK-NOT: v_mov_b32_e32 v{{[0-9]+}}, s[[PTR_HI]]
 define protected amdgpu_kernel void @t0(ptr addrspace(1) %p, i32 %i0, i32 %j0, i32 %k0) {

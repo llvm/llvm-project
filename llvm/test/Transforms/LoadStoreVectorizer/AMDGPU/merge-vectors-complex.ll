@@ -5,21 +5,44 @@ define void @merge_i32_v2i16_f32_v4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %
 ; CHECK-LABEL: define void @merge_i32_v2i16_f32_v4i8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <2 x i16>, ptr addrspace(1) [[PTR1]], i64 1
-; CHECK-NEXT:    [[LOAD2:%.*]] = load <2 x i16>, ptr addrspace(1) [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 2
-; CHECK-NEXT:    [[LOAD3:%.*]] = load float, ptr addrspace(1) [[GEP3]], align 4
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(1) [[PTR1]], i64 3
-; CHECK-NEXT:    [[LOAD4:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP4]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD11:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[LOAD11]] to i32
+; CHECK-NEXT:    [[LOAD22:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i8> [[LOAD22]] to <2 x i16>
+; CHECK-NEXT:    [[LOAD33:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[LOAD33]] to float
+; CHECK-NEXT:    [[LOAD44:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
-; CHECK-NEXT:    store i32 [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
-; CHECK-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds <2 x i16>, ptr addrspace(2) [[PTR2]], i64 1
-; CHECK-NEXT:    store <2 x i16> [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i16> poison, i16 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i16> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i16> [[TMP7]], i16 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i16> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i16> [[TMP9]], i16 [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i16> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i16> [[TMP11]], i16 [[TMP12]], i32 3
+; CHECK-NEXT:    store <4 x i16> [[TMP13]], ptr addrspace(2) [[STORE_GEP1]], align 4
 ; CHECK-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[PTR2]], i64 2
-; CHECK-NEXT:    store float [[LOAD3]], ptr addrspace(2) [[STORE_GEP3]], align 4
-; CHECK-NEXT:    [[STORE_GEP4:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(2) [[PTR2]], i64 3
-; CHECK-NEXT:    store <4 x i8> [[LOAD4]], ptr addrspace(2) [[STORE_GEP4]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast float [[TMP4]] to <4 x i8>
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i8> [[TMP14]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i8> poison, i8 [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i8> [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP16]], i8 [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i8> [[TMP14]], i32 2
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP19]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i8> [[TMP14]], i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <8 x i8> [[TMP20]], i8 [[TMP21]], i32 3
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i8> [[LOAD44]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP22]], i8 [[TMP23]], i32 4
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i8> [[LOAD44]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP24]], i8 [[TMP25]], i32 5
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i8> [[LOAD44]], i32 2
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP27]], i32 6
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i8> [[LOAD44]], i32 3
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP28]], i8 [[TMP29]], i32 7
+; CHECK-NEXT:    store <8 x i8> [[TMP30]], ptr addrspace(2) [[STORE_GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr inbounds i32, ptr addrspace(1) %ptr1, i64 0
@@ -45,13 +68,21 @@ define void @merge_f32_v2f16_type(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2
 ; CHECK-LABEL: define void @merge_f32_v2f16_type(
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 0
-; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(1) [[PTR1]], i64 1
-; CHECK-NEXT:    [[LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[GEP2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD11:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[LOAD11]] to float
+; CHECK-NEXT:    [[LOAD22:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
-; CHECK-NEXT:    store float [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
-; CHECK-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(2) [[PTR2]], i64 1
-; CHECK-NEXT:    store <2 x half> [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to <2 x half>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x half> poison, half [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x half> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x half> [[TMP5]], half [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[LOAD22]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x half> [[TMP7]], half [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x half> [[LOAD22]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x half> [[TMP9]], half [[TMP10]], i32 3
+; CHECK-NEXT:    store <4 x half> [[TMP11]], ptr addrspace(2) [[STORE_GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr inbounds float, ptr addrspace(1) %ptr1, i64 0

@@ -157,13 +157,14 @@ define amdgpu_kernel void @s_test_imax_sge_i32(ptr addrspace(1) %out, i32 %a, i3
 ; SI-LABEL: s_test_imax_sge_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_max_i32 s4, s4, s5
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_i32 s0, s2, s3
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_imax_sge_i32:
@@ -172,9 +173,10 @@ define amdgpu_kernel void @s_test_imax_sge_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_i32 s2, s2, s3
+; GFX1250-NEXT:    s_max_i32 s1, s2, s3
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -197,14 +199,15 @@ define amdgpu_kernel void @s_test_imax_sge_i32(ptr addrspace(1) %out, i32 %a, i3
 define amdgpu_kernel void @s_test_imax_sge_imm_i32(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: s_test_imax_sge_imm_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_max_i32 s4, s6, 9
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_i32 s0, s2, 9
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_imax_sge_imm_i32:
@@ -213,9 +216,10 @@ define amdgpu_kernel void @s_test_imax_sge_imm_i32(ptr addrspace(1) %out, i32 %a
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_i32 s2, s2, 9
+; GFX1250-NEXT:    s_max_i32 s1, s2, 9
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -320,14 +324,15 @@ define amdgpu_kernel void @v_test_imax_sge_i8(ptr addrspace(1) %out, ptr addrspa
 define amdgpu_kernel void @s_test_imax_sgt_imm_i32(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: s_test_imax_sgt_imm_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_max_i32 s4, s6, 9
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_i32 s0, s2, 9
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_imax_sgt_imm_i32:
@@ -336,9 +341,10 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_i32(ptr addrspace(1) %out, i32 %a
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_i32 s2, s2, 9
+; GFX1250-NEXT:    s_max_i32 s1, s2, 9
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -362,15 +368,16 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; SI-LABEL: s_test_imax_sgt_imm_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_max_i32 s5, s5, 9
-; SI-NEXT:    s_max_i32 s4, s4, 9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    v_mov_b32_e32 v1, s5
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_i32 s0, s3, 9
+; SI-NEXT:    s_max_i32 s1, s2, 9
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_imax_sgt_imm_v2i32:
@@ -379,10 +386,11 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_i32 s2, s2, 9
-; GFX1250-NEXT:    s_max_i32 s3, s3, 9
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1250-NEXT:    s_max_i32 s1, s2, 9
+; GFX1250-NEXT:    s_max_i32 s2, s3, 9
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -478,13 +486,14 @@ define amdgpu_kernel void @s_test_imax_sgt_i32(ptr addrspace(1) %out, i32 %a, i3
 ; SI-LABEL: s_test_imax_sgt_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_max_i32 s4, s4, s5
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_i32 s0, s2, s3
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_imax_sgt_i32:
@@ -493,9 +502,10 @@ define amdgpu_kernel void @s_test_imax_sgt_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_i32 s2, s2, s3
+; GFX1250-NEXT:    s_max_i32 s1, s2, s3
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -589,13 +599,14 @@ define amdgpu_kernel void @s_test_umax_uge_i32(ptr addrspace(1) %out, i32 %a, i3
 ; SI-LABEL: s_test_umax_uge_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_max_u32 s4, s4, s5
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_u32 s0, s2, s3
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_umax_uge_i32:
@@ -604,9 +615,10 @@ define amdgpu_kernel void @s_test_umax_uge_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_u32 s2, s2, s3
+; GFX1250-NEXT:    s_max_u32 s1, s2, s3
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -827,13 +839,14 @@ define amdgpu_kernel void @s_test_umax_ugt_i32(ptr addrspace(1) %out, i32 %a, i3
 ; SI-LABEL: s_test_umax_ugt_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_max_u32 s4, s4, s5
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_u32 s0, s2, s3
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_umax_ugt_i32:
@@ -842,9 +855,10 @@ define amdgpu_kernel void @s_test_umax_ugt_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_u32 s2, s2, s3
+; GFX1250-NEXT:    s_max_u32 s1, s2, s3
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -868,15 +882,16 @@ define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; SI-LABEL: s_test_umax_ugt_imm_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_max_u32 s5, s5, 23
-; SI-NEXT:    s_max_u32 s4, s4, 15
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    v_mov_b32_e32 v1, s5
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_max_u32 s0, s3, 23
+; SI-NEXT:    s_max_u32 s1, s2, 15
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: s_test_umax_ugt_imm_v2i32:
@@ -885,10 +900,11 @@ define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_max_u32 s2, s2, 15
-; GFX1250-NEXT:    s_max_u32 s3, s3, 23
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1250-NEXT:    s_max_u32 s1, s2, 15
+; GFX1250-NEXT:    s_max_u32 s2, s3, 23
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;

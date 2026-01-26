@@ -299,15 +299,15 @@ entry:
 define amdgpu_kernel void @global_load_saddr_i32_uniform_offset(ptr addrspace(1) %sbase, i32 %soffset, ptr addrspace(1) %r) {
 ; GFX942-LABEL: global_load_saddr_i32_uniform_offset:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dword s0, s[0:1], s6 offset:0x0
+; GFX942-NEXT:    s_mov_b32 s1, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    s_load_dword s0, s[0:1], s2 offset:0x0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s0
-; GFX942-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX942-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX942-NEXT:    s_endpgm
   %zext.offset = zext i32 %soffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset

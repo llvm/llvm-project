@@ -8,6 +8,9 @@ define amdgpu_kernel void @test_select_v2i32(ptr addrspace(1) %out, ptr addrspac
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s1, 0
+; SI-NEXT:    s_mov_b32 s3, s1
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x0
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -26,6 +29,9 @@ define amdgpu_kernel void @test_select_v2i32(ptr addrspace(1) %out, ptr addrspac
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s1, 0
+; VI-NEXT:    s_mov_b32 s3, s1
+; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x0
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000

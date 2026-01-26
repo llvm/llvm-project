@@ -9,6 +9,7 @@ define amdgpu_kernel void @ds_bpermute_fi_b32(ptr addrspace(1) %out, i32 %index,
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s1, 0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    ds_bpermute_fi_b32 v0, v0, v1
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
@@ -25,6 +26,7 @@ define amdgpu_kernel void @ds_bpermute_fi_b32_imm_offset(ptr addrspace(1) %out, 
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_mov_b32 s1, 0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-SDAG-NEXT:    ds_bpermute_fi_b32 v0, v0, v1 offset:4
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0
@@ -36,9 +38,10 @@ define amdgpu_kernel void @ds_bpermute_fi_b32_imm_offset(ptr addrspace(1) %out, 
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_add_co_i32 s2, s2, 4
+; GFX12-GISEL-NEXT:    s_add_co_i32 s1, s2, 4
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v0, s2
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v0, s1
+; GFX12-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX12-GISEL-NEXT:    ds_bpermute_fi_b32 v0, v0, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_wait_dscnt 0x0

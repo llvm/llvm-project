@@ -10,7 +10,10 @@ define amdgpu_kernel void @tbuffer_store_d16_x(ptr addrspace(8) %rsrc, half %dat
 ; PREGFX10-UNPACKED-LABEL: tbuffer_store_d16_x:
 ; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
 ; PREGFX10-UNPACKED-NEXT:    s_load_dword s6, s[4:5], 0x34
-; PREGFX10-UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; PREGFX10-UNPACKED-NEXT:    s_load_dword s0, s[4:5], 0x24
+; PREGFX10-UNPACKED-NEXT:    s_mov_b32 s1, 0
+; PREGFX10-UNPACKED-NEXT:    s_mov_b32 s2, s1
+; PREGFX10-UNPACKED-NEXT:    s_mov_b32 s3, s1
 ; PREGFX10-UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PREGFX10-UNPACKED-NEXT:    v_mov_b32_e32 v0, s6
 ; PREGFX10-UNPACKED-NEXT:    tbuffer_store_format_d16_x v0, off, s[0:3], 0 format:[BUF_NUM_FORMAT_USCALED]
@@ -19,7 +22,10 @@ define amdgpu_kernel void @tbuffer_store_d16_x(ptr addrspace(8) %rsrc, half %dat
 ; PREGFX10-PACKED-LABEL: tbuffer_store_d16_x:
 ; PREGFX10-PACKED:       ; %bb.0: ; %main_body
 ; PREGFX10-PACKED-NEXT:    s_load_dword s6, s[4:5], 0x34
-; PREGFX10-PACKED-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; PREGFX10-PACKED-NEXT:    s_load_dword s0, s[4:5], 0x24
+; PREGFX10-PACKED-NEXT:    s_mov_b32 s1, 0
+; PREGFX10-PACKED-NEXT:    s_mov_b32 s2, s1
+; PREGFX10-PACKED-NEXT:    s_mov_b32 s3, s1
 ; PREGFX10-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PREGFX10-PACKED-NEXT:    v_mov_b32_e32 v0, s6
 ; PREGFX10-PACKED-NEXT:    tbuffer_store_format_d16_x v0, off, s[0:3], 0 format:[BUF_NUM_FORMAT_USCALED]
@@ -28,20 +34,27 @@ define amdgpu_kernel void @tbuffer_store_d16_x(ptr addrspace(8) %rsrc, half %dat
 ; GFX10-PACKED-LABEL: tbuffer_store_d16_x:
 ; GFX10-PACKED:       ; %bb.0: ; %main_body
 ; GFX10-PACKED-NEXT:    s_clause 0x1
-; GFX10-PACKED-NEXT:    s_load_dword s6, s[4:5], 0x34
-; GFX10-PACKED-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-PACKED-NEXT:    s_load_dword s2, s[4:5], 0x34
+; GFX10-PACKED-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-PACKED-NEXT:    s_mov_b32 s1, 0
+; GFX10-PACKED-NEXT:    s_mov_b32 s3, s1
 ; GFX10-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-PACKED-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-PACKED-NEXT:    s_mov_b32 s2, s1
 ; GFX10-PACKED-NEXT:    tbuffer_store_format_d16_x v0, off, s[0:3], 0 format:[BUF_FMT_10_11_11_SSCALED]
 ; GFX10-PACKED-NEXT:    s_endpgm
 ;
 ; GFX11-PACKED-LABEL: tbuffer_store_d16_x:
 ; GFX11-PACKED:       ; %bb.0: ; %main_body
 ; GFX11-PACKED-NEXT:    s_clause 0x1
-; GFX11-PACKED-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX11-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-PACKED-NEXT:    s_load_b32 s2, s[4:5], 0x34
+; GFX11-PACKED-NEXT:    s_load_b32 s0, s[4:5], 0x24
+; GFX11-PACKED-NEXT:    s_mov_b32 s1, 0
+; GFX11-PACKED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-PACKED-NEXT:    s_mov_b32 s3, s1
 ; GFX11-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-PACKED-NEXT:    s_mov_b32 s2, s1
 ; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX11-PACKED-NEXT:    s_endpgm
 main_body:

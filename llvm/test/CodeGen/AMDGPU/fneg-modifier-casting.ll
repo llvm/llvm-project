@@ -1619,22 +1619,20 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x4
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x6
 ; GFX7-NEXT:    s_add_i32 s12, s12, s17
 ; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x6
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX7-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX7-NEXT:    v_mov_b32_e32 v0, s3
-; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_cselect_b32 s1, s1, s3
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX7-NEXT:    s_cselect_b32 s1, 0, 0
+; GFX7-NEXT:    v_bfrev_b32_e32 v0, 1
 ; GFX7-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
@@ -1645,18 +1643,16 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX9-NEXT:    s_load_dword s6, s[8:9], 0x10
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x18
+; GFX9-NEXT:    v_bfrev_b32_e32 v0, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX9-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX9-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    s_cselect_b32 s1, s1, s3
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_cselect_b32 s1, 0, 0
 ; GFX9-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
@@ -1664,20 +1660,18 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX11-LABEL: multiple_uses_fneg_select_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x10
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x18
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_bfrev_b32_e32 v0, 1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX11-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, s3, v0, vcc_lo
-; GFX11-NEXT:    s_and_b32 s6, vcc_lo, exec_lo
-; GFX11-NEXT:    s_cselect_b32 s1, s1, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s1, 0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, s0, s2
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, s1, -v0, vcc_lo
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, s1, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm

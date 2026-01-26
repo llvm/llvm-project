@@ -132,100 +132,69 @@ define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) #1
 }
 
 define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, float %val) #1 {
-; GFX6-SDAG-LABEL: s_test_canonicalize_var_f32:
-; GFX6-SDAG:       ; %bb.0:
-; GFX6-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x2
-; GFX6-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX6-SDAG-NEXT:    s_add_i32 s12, s12, s17
-; GFX6-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX6-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_mul_f32_e64 v2, 1.0, s2
-; GFX6-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-SDAG-NEXT:    flat_store_dword v[0:1], v2
-; GFX6-SDAG-NEXT:    s_endpgm
+; GFX678-SDAG-LABEL: s_test_canonicalize_var_f32:
+; GFX678-SDAG:       ; %bb.0:
+; GFX678-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX678-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; GFX678-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX678-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX678-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX678-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX678-SDAG-NEXT:    v_mul_f32_e64 v2, 1.0, s2
+; GFX678-SDAG-NEXT:    flat_store_dword v[0:1], v2
+; GFX678-SDAG-NEXT:    s_endpgm
 ;
-; GFX6-GISEL-LABEL: s_test_canonicalize_var_f32:
-; GFX6-GISEL:       ; %bb.0:
-; GFX6-GISEL-NEXT:    s_load_dword s2, s[8:9], 0x2
-; GFX6-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX6-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; GFX6-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX6-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX6-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-GISEL-NEXT:    v_mul_f32_e64 v2, 1.0, s2
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-GISEL-NEXT:    flat_store_dword v[0:1], v2
-; GFX6-GISEL-NEXT:    s_endpgm
-;
-; GFX8-SDAG-LABEL: s_test_canonicalize_var_f32:
-; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX8-SDAG-NEXT:    s_add_i32 s12, s12, s17
-; GFX8-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX8-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_mul_f32_e64 v2, 1.0, s2
-; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-SDAG-NEXT:    flat_store_dword v[0:1], v2
-; GFX8-SDAG-NEXT:    s_endpgm
-;
-; GFX8-GISEL-LABEL: s_test_canonicalize_var_f32:
-; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX8-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX8-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; GFX8-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX8-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_mul_f32_e64 v2, 1.0, s2
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-GISEL-NEXT:    flat_store_dword v[0:1], v2
-; GFX8-GISEL-NEXT:    s_endpgm
+; GFX678-GISEL-LABEL: s_test_canonicalize_var_f32:
+; GFX678-GISEL:       ; %bb.0:
+; GFX678-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX678-GISEL-NEXT:    s_add_i32 s12, s12, s17
+; GFX678-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX678-GISEL-NEXT:    s_mov_b32 s1, 0
+; GFX678-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX678-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX678-GISEL-NEXT:    v_mul_f32_e64 v2, 1.0, s2
+; GFX678-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX678-GISEL-NEXT:    flat_store_dword v[0:1], v2
+; GFX678-GISEL-NEXT:    s_endpgm
 ;
 ; GFX9-SDAG-LABEL: s_test_canonicalize_var_f32:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX9-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_mov_b32 s1, 0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-SDAG-NEXT:    v_max_f32_e64 v1, s2, s2
 ; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: s_test_canonicalize_var_f32:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s1, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v0, s2, s2
 ; GFX9-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: s_test_canonicalize_var_f32:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_clause 0x1
-; GFX11-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
 ; GFX11-SDAG-NEXT:    v_max_f32_e64 v1, s2, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: s_test_canonicalize_var_f32:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_clause 0x1
-; GFX11-GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v0, s2, s2
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -235,6 +204,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, fl
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_mov_b32 s1, 0
 ; GFX12-SDAG-NEXT:    v_max_num_f32_e64 v1, s2, s2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -244,6 +214,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, fl
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v0, s2, s2
 ; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm

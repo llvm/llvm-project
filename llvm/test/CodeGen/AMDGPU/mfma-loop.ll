@@ -1213,12 +1213,12 @@ exit:
 define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float %init) #0 {
 ; GFX908-LABEL: test_mfma_loop_sgpr_init:
 ; GFX908:       ; %bb.0: ; %entry
-; GFX908-NEXT:    s_load_dword s0, s[4:5], 0x2c
-; GFX908-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v0, s0
-; GFX908-NEXT:    s_mov_b32 s0, 16
-; GFX908-NEXT:    s_nop 0
+; GFX908-NEXT:    s_mov_b32 s1, 16
+; GFX908-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX908-NEXT:    v_mov_b32_e32 v0, s2
+; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_write_b32 a31, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a30, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a29, v0
@@ -1256,17 +1256,17 @@ define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
-; GFX908-NEXT:    s_add_i32 s0, s0, -1
-; GFX908-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX908-NEXT:    s_add_i32 s1, s1, -1
+; GFX908-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX908-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX908-NEXT:  ; %bb.2: ; %exit
-; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX908-NEXT:    s_nop 13
+; GFX908-NEXT:    s_nop 14
 ; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v28, a28
 ; GFX908-NEXT:    v_accvgpr_read_b32 v29, a29
 ; GFX908-NEXT:    v_accvgpr_read_b32 v30, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v31, a31
+; GFX908-NEXT:    s_mov_b32 s1, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
@@ -1295,8 +1295,8 @@ define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float
 ; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
 ; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
 ; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
-; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
+; GFX908-NEXT:    s_nop 0
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:64
@@ -1479,13 +1479,13 @@ exit:
 define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, float %x) #0 {
 ; GFX908-LABEL: test_mfma_loop_mixed_init:
 ; GFX908:       ; %bb.0: ; %entry
-; GFX908-NEXT:    s_load_dword s1, s[4:5], 0x2c
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a31, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a30, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a29, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v0, s1
+; GFX908-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX908-NEXT:    v_accvgpr_write_b32 a28, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a27, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a26, 0
@@ -1514,24 +1514,24 @@ define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, floa
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v0
-; GFX908-NEXT:    s_mov_b32 s0, 16
+; GFX908-NEXT:    s_mov_b32 s1, 16
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GFX908-NEXT:  .LBB6_1: ; %for.cond.preheader
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
-; GFX908-NEXT:    s_add_i32 s0, s0, -1
-; GFX908-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX908-NEXT:    s_add_i32 s1, s1, -1
+; GFX908-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX908-NEXT:    s_cbranch_scc1 .LBB6_1
 ; GFX908-NEXT:  ; %bb.2: ; %exit
-; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX908-NEXT:    s_nop 13
+; GFX908-NEXT:    s_nop 14
 ; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v28, a28
 ; GFX908-NEXT:    v_accvgpr_read_b32 v29, a29
 ; GFX908-NEXT:    v_accvgpr_read_b32 v30, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v31, a31
+; GFX908-NEXT:    s_mov_b32 s1, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
@@ -1560,8 +1560,8 @@ define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, floa
 ; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
 ; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
 ; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
-; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
+; GFX908-NEXT:    s_nop 0
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:64
@@ -1573,13 +1573,13 @@ define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, floa
 ;
 ; GFX90A-LABEL: test_mfma_loop_mixed_init:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dword s1, s[4:5], 0x2c
-; GFX90A-NEXT:    s_mov_b32 s0, 16
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_mov_b32 s1, 16
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, s1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v6, 0
@@ -1634,13 +1634,13 @@ define amdgpu_kernel void @test_mfma_loop_mixed_init(ptr addrspace(1) %arg, floa
 ;
 ; GFX942-LABEL: test_mfma_loop_mixed_init:
 ; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_load_dword s1, s[4:5], 0x2c
-; GFX942-NEXT:    s_mov_b32 s0, 16
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_mov_b32 s1, 16
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v6, 0

@@ -57,19 +57,21 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(ptr addrspace(1) %out,
 define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(ptr addrspace(1) %out, float %a, float %b, float %c, [8 x i32], i1 %d) nounwind {
 ; GCN-LABEL: test_div_fmas_f32_inline_imm_1:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x16
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0xb
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0xd
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp1_b32 s2, 0
+; GCN-NEXT:    s_load_dword s1, s[4:5], 0x16
+; GCN-NEXT:    s_load_dword s3, s[4:5], 0xd
+; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_bitcmp1_b32 s1, 0
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    v_div_fmas_f32 v0, v0, 1.0, v1
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float 1.0, float %c, i1 %d) nounwind readnone
   store float %result, ptr addrspace(1) %out, align 4
@@ -101,23 +103,23 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(ptr addrspace(1) %out,
 define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, double %b, double %c, i1 %d) nounwind {
 ; GCN-LABEL: test_div_fmas_f64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s8, s[4:5], 0x11
-; GCN-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s11, 0xf000
+; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x9
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x11
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp1_b32 s8, 0
+; GCN-NEXT:    s_bitcmp1_b32 s0, 0
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    s_mov_b32 s10, -1
-; GCN-NEXT:    s_mov_b32 s8, s0
-; GCN-NEXT:    s_mov_b32 s9, s1
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, s5
-; GCN-NEXT:    v_mov_b32_e32 v4, s6
-; GCN-NEXT:    v_mov_b32_e32 v5, s7
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-NEXT:    v_mov_b32_e32 v5, v1
+; GCN-NEXT:    s_mov_b32 s0, s8
+; GCN-NEXT:    v_mov_b32_e32 v0, s10
+; GCN-NEXT:    v_mov_b32_e32 v2, s12
+; GCN-NEXT:    v_mov_b32_e32 v4, s14
 ; GCN-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
-; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %d) nounwind readnone
   store double %result, ptr addrspace(1) %out, align 8
@@ -127,16 +129,18 @@ define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, d
 define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %i) nounwind {
 ; GCN-LABEL: test_div_fmas_f32_cond_to_vcc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_eq_u32 s3, 0
+; GCN-NEXT:    s_cmp_eq_u32 s9, 0
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v2, s8
 ; GCN-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
@@ -149,14 +153,17 @@ define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(ptr addrspace(1) %out, 
 define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c) nounwind {
 ; GCN-LABEL: test_div_fmas_f32_imm_false_cond_to_vcc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s1, s[4:5], 0xd
+; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_mov_b64 vcc, 0
 ; GCN-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -169,14 +176,17 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace
 define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c) nounwind {
 ; GCN-LABEL: test_div_fmas_f32_imm_true_cond_to_vcc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s1, s[4:5], 0xd
+; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_mov_b64 vcc, -1
 ; GCN-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -190,24 +200,26 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(ptr addrspace(1
 ; GCN-LABEL: test_div_fmas_f32_logical_cond_to_vcc:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GCN-NEXT:    s_load_dword s8, s[4:5], 0xd
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s1, s[4:5], 0xd
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    s_mov_b32 s3, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_mov_b32 s6, s3
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; GCN-NEXT:    buffer_load_dword v0, v[1:2], s[4:7], 0 addr64 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v3, v[1:2], s[4:7], 0 addr64 offset:4 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, v[1:2], s[4:7], 0 addr64 offset:8 glc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s8, 0
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, vcc, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GCN-NEXT:    s_and_b64 vcc, vcc, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s1, s3
 ; GCN-NEXT:    s_mov_b32 s3, s7
 ; GCN-NEXT:    v_div_fmas_f32 v0, v0, v3, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8

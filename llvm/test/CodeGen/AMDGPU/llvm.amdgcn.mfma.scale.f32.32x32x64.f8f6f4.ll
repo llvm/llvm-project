@@ -3135,6 +3135,7 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4__vgprcd(<8 x i32>
 ; SDAG-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x40
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x80
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    s_mov_b32 s3, 0
 ; SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; SDAG-NEXT:    v_mov_b32_e32 v16, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v17, s9
@@ -3178,6 +3179,7 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4__vgprcd(<8 x i32>
 ; GISEL-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x40
 ; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x80
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_mov_b32 s3, 0
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[12:13]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[10:11]

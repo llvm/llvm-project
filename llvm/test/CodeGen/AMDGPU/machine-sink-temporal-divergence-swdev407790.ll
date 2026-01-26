@@ -415,21 +415,21 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:8
 ; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:8
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_xor_b32_e32 v46, v9, v5
-; CHECK-NEXT:    v_xor_b32_e32 v45, v8, v4
-; CHECK-NEXT:    v_xor_b32_e32 v57, v11, v7
-; CHECK-NEXT:    v_xor_b32_e32 v56, v10, v6
-; CHECK-NEXT:    v_or_b32_e32 v5, v46, v57
-; CHECK-NEXT:    v_or_b32_e32 v4, v45, v56
+; CHECK-NEXT:    v_xor_b32_e32 v57, v9, v5
+; CHECK-NEXT:    v_xor_b32_e32 v56, v8, v4
+; CHECK-NEXT:    v_xor_b32_e32 v46, v11, v7
+; CHECK-NEXT:    v_xor_b32_e32 v45, v10, v6
+; CHECK-NEXT:    v_or_b32_e32 v5, v57, v46
+; CHECK-NEXT:    v_or_b32_e32 v4, v56, v45
 ; CHECK-NEXT:    v_cmpx_ne_u64_e32 0, v[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_27
 ; CHECK-NEXT:  ; %bb.29: ; in Loop: Header=BB0_28 Depth=1
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx2 v[58:59], v[2:3], off offset:24
 ; CHECK-NEXT:    global_load_dwordx2 v[60:61], v[0:1], off offset:24
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v45
-; CHECK-NEXT:    v_alignbit_b32 v1, v46, v45, 12
-; CHECK-NEXT:    v_and_b32_e32 v2, 0xf0000, v45
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v56
+; CHECK-NEXT:    v_alignbit_b32 v1, v57, v56, 12
+; CHECK-NEXT:    v_and_b32_e32 v2, 0xf0000, v56
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    v_and_b32_e32 v3, 0xf000, v0
@@ -465,28 +465,27 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_xor_b32 s4, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_31
 ; CHECK-NEXT:  ; %bb.30: ; in Loop: Header=BB0_28 Depth=1
-; CHECK-NEXT:    v_xor_b32_e32 v4, v60, v58
-; CHECK-NEXT:    v_lshrrev_b64 v[2:3], 16, v[56:57]
-; CHECK-NEXT:    v_mad_u64_u32 v[6:7], null, 0x180, v73, s[66:67]
-; CHECK-NEXT:    v_lshlrev_b32_e32 v10, 5, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
-; CHECK-NEXT:    v_lshlrev_b32_e32 v8, 6, v72
-; CHECK-NEXT:    v_lshlrev_b32_e32 v9, 12, v63
-; CHECK-NEXT:    v_xor_b32_e32 v5, v61, v59
-; CHECK-NEXT:    v_lshlrev_b32_e32 v11, 16, v56
-; CHECK-NEXT:    v_or_b32_e32 v3, v1, v3
+; CHECK-NEXT:    v_xor_b32_e32 v2, v61, v59
+; CHECK-NEXT:    v_xor_b32_e32 v1, v60, v58
+; CHECK-NEXT:    v_mad_u64_u32 v[7:8], null, 0x180, v73, s[66:67]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v12, 5, v0
+; CHECK-NEXT:    v_lshrrev_b64 v[5:6], 16, v[56:57]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 16, v45
+; CHECK-NEXT:    v_lshlrev_b32_e32 v9, 6, v72
+; CHECK-NEXT:    v_lshrrev_b64 v[2:3], 16, v[1:2]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v10, 12, v63
+; CHECK-NEXT:    v_lshlrev_b32_e32 v11, 16, v1
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 16, v[45:46]
-; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v6, v10
-; CHECK-NEXT:    v_or3_b32 v8, v8, v9, v62
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
-; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 16, v[4:5]
+; CHECK-NEXT:    v_add_co_u32 v7, vcc_lo, v7, v12
+; CHECK-NEXT:    v_or_b32_e32 v6, v4, v6
+; CHECK-NEXT:    v_or3_b32 v4, v9, v10, v62
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v8, null, 0, v8, vcc_lo
 ; CHECK-NEXT:    v_or_b32_e32 v1, v11, v1
+; CHECK-NEXT:    global_store_dwordx3 v[7:8], v[4:6], off offset:4
+; CHECK-NEXT:    global_store_dwordx4 v[7:8], v[0:3], off offset:16
 ; CHECK-NEXT:    ; implicit-def: $vgpr42
 ; CHECK-NEXT:    ; implicit-def: $vgpr43
 ; CHECK-NEXT:    ; implicit-def: $vgpr44
-; CHECK-NEXT:    global_store_dword v[6:7], v8, off offset:4
-; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[0:3], off offset:8
-; CHECK-NEXT:    global_store_dwordx2 v[6:7], v[4:5], off offset:24
 ; CHECK-NEXT:  .LBB0_31: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_28 Depth=1
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s4, s4
