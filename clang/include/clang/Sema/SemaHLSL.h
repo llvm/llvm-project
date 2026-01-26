@@ -137,7 +137,7 @@ public:
   // std::nullopt if the expr refers to non-unique global bindings, returns
   // nullptr if it isn't refer to any global binding, otherwise it returns
   // a reference to the global binding info.
-  std::optional<const DeclBindingInfo *> GetGlobalBinding(Expr *E);
+  std::optional<const DeclBindingInfo *> getGlobalBinding(Expr *E);
 
   // Return true if everything is ok; returns false if there was an error.
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,

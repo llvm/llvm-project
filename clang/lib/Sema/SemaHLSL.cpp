@@ -4398,10 +4398,10 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   return false;
 }
 
-std::optional<const DeclBindingInfo *> SemaHLSL::GetGlobalBinding(Expr *E) {
+std::optional<const DeclBindingInfo *> SemaHLSL::getGlobalBinding(Expr *E) {
   if (auto *Ternary = dyn_cast<ConditionalOperator>(E)) {
-    auto TrueInfo = GetGlobalBinding(Ternary->getTrueExpr());
-    auto FalseInfo = GetGlobalBinding(Ternary->getFalseExpr());
+    auto TrueInfo = getGlobalBinding(Ternary->getTrueExpr());
+    auto FalseInfo = getGlobalBinding(Ternary->getFalseExpr());
     if (!TrueInfo || !FalseInfo)
       return std::nullopt;
     if (*TrueInfo != *FalseInfo)
@@ -4450,7 +4450,7 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
           return false;
       }
 
-      auto RHSBinding = GetGlobalBinding(RHSExpr);
+      auto RHSBinding = getGlobalBinding(RHSExpr);
       if (!RHSBinding) {
         SemaRef.Diag(Loc,
                      diag::err_hlsl_assigning_local_resource_is_not_unique)
@@ -4851,7 +4851,7 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   // If initializing a local resource, register the binding it is using.
   if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
     if (auto *InitExpr = Init) {
-      if (auto Binding = GetGlobalBinding(InitExpr)) {
+      if (auto Binding = getGlobalBinding(InitExpr)) {
         LocalResourceBindings.insert({VDecl, *Binding});
       } else {
         SemaRef.Diag(Init->getBeginLoc(),
