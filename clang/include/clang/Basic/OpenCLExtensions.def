@@ -131,6 +131,7 @@ OPENCL_GENERIC_EXTENSION(__opencl_c_work_group_collective_functions, false, 200,
 OPENCL_EXTENSION(cl_clang_storage_class_specifiers, true, 100)
 OPENCL_EXTENSION(__cl_clang_function_pointers, true, 100)
 OPENCL_EXTENSION(__cl_clang_variadic_functions, true, 100)
+OPENCL_EXTENSION(__cl_clang_function_scope_local_variables, true, 100)
 OPENCL_EXTENSION(__cl_clang_non_portable_kernel_param_types, true, 100)
 OPENCL_EXTENSION(__cl_clang_bitfields, true, 100)
 
