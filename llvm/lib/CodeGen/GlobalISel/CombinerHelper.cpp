@@ -1681,6 +1681,26 @@ static APFloat constantFoldFpUnary(const MachineInstr &MI,
     Result.clearSign();
     return Result;
   }
+  case TargetOpcode::G_FCEIL:
+    Result.roundToIntegral(APFloat::rmTowardPositive);
+    return Result;
+  case TargetOpcode::G_FFLOOR:
+    Result.roundToIntegral(APFloat::rmTowardNegative);
+    return Result;
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    Result.roundToIntegral(APFloat::rmTowardZero);
+    return Result;
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    Result.roundToIntegral(APFloat::rmNearestTiesToAway);
+    return Result;
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+    return Result;
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_FNEARBYINT:
+    // Use default rounding mode (round to nearest, ties to even)
+    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+    return Result;
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     bool Unused;

@@ -3157,19 +3157,55 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
+    __deprecation_message = (
+        "'CompletionChunk.{}' will be removed in a future release. "
+        "All uses of 'CompletionChunk.{}' should be replaced by checking "
+        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
+    )
+
     def isKindOptional(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindOptional",
+            "isKindOptional",
+            "OPTIONAL",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.OPTIONAL
 
     def isKindTypedText(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindTypedText",
+            "isKindTypedText",
+            "TYPED_TEXT",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.TYPED_TEXT
 
     def isKindPlaceHolder(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindPlaceHolder",
+            "isKindPlaceHolder",
+            "PLACEHOLDER",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.PLACEHOLDER
 
     def isKindInformative(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindInformative",
+            "isKindInformative",
+            "INFORMATIVE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.INFORMATIVE
 
     def isKindResultType(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindResultType",
+            "isKindResultType",
+            "RESULT_TYPE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.RESULT_TYPE
 
 
