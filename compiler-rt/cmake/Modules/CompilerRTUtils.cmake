@@ -473,6 +473,7 @@ function(get_compiler_rt_target arch variable)
 endfunction()
 
 function(get_compiler_rt_install_dir arch install_dir)
+  # TODO: Use RUNTIMES_INSTALL_RESOURCE_LIB_PATH instead
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     get_compiler_rt_target(${arch} target)
     set(${install_dir} ${COMPILER_RT_INSTALL_LIBRARY_DIR}/${target} PARENT_SCOPE)
@@ -482,6 +483,7 @@ function(get_compiler_rt_install_dir arch install_dir)
 endfunction()
 
 function(get_compiler_rt_output_dir arch output_dir)
+  # TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     get_compiler_rt_target(${arch} target)
     set(${output_dir} ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/${target} PARENT_SCOPE)

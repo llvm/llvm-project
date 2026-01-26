@@ -61,6 +61,7 @@ endif()
 # Configure System
 #===============================================================================
 
+# TODO: Use RUNTIMES_OUTPUT_RESOURCE_*_DIR/RUNTIMES_INSTALL_RESOURCE_*_PATH instead
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LLVM_LIBGCC_LIBDIR_SUBDIR)

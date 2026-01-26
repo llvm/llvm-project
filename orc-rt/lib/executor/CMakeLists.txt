@@ -16,6 +16,7 @@ target_link_libraries(orc-rt-executor
   )
 
 # Apply RTTI and exceptions compile flags
+# TODO: Use RUNTIMES_INSTALL_RESOURCE_LIB_PATH instead
 target_compile_options(orc-rt-executor PRIVATE ${ORC_RT_COMPILE_FLAGS})
 install(TARGETS orc-rt-executor
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
