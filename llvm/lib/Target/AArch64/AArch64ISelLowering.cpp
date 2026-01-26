@@ -7323,7 +7323,7 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
 
 // Lower non-temporal stores that would otherwise be broken by legalization.
 //
-// Coordinated with SDNP constraints in
+// Coordinated with STNP constraints in
 // `llvm/lib/Target/AArch64/AArch64InstrInfo.td` and
 // `AArch64TargetLowering::ReplaceNodeResults`
 static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
