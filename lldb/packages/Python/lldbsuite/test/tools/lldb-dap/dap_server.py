@@ -353,10 +353,6 @@ class DebugCommunication(object):
             # `packet` will be `None` on EOF. We want to pass it down to
             # handle_recv_packet anyway so the main thread can handle unexpected
             # termination of lldb-dap and stop waiting for new packets.
-            if packet:
-                print("<--", packet)
-            else:
-                print("<-- EOF")
             if not self._handle_recv_packet(packet):
                 break
 
@@ -626,8 +622,6 @@ class DebugCommunication(object):
         # Encode our command dictionary as a JSON string
         json_str = json.dumps(packet, separators=(",", ":"))
 
-        print("-->", json_str)
-
         length = len(json_str)
         if length > 0:
             # Send the encoded JSON packet and flush the 'send' file
@@ -692,6 +686,7 @@ class DebugCommunication(object):
         self.wait_for_event(["initialized"])
 
     def ensure_initialized(self):
+        """Validates that we can wait for initialized."""
         if self.initialized:
             return
         assert self.launch_or_attach_sent, "launch or attach request not yet sent"
@@ -709,6 +704,7 @@ class DebugCommunication(object):
         return self.collect_events(["module"])
 
     def wait_for_breakpoint_events(self):
+        """wait for the next 'breakpoint' event to occur, coalescing all breakpoint events within a given quiet period."""
         return self.collect_events(["breakpoint"])
 
     def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[int]):
