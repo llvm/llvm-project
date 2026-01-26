@@ -46,7 +46,7 @@
 "`P2255R2 <https://wg21.link/P2255R2>`__","A type trait to detect reference binding to temporary","2022-02 (Virtual)","|Partial|","","`#105180 <https://github.com/llvm/llvm-project/issues/105180>`__","Implemented the type traits only."
 "`P2273R3 <https://wg21.link/P2273R3>`__","Making ``std::unique_ptr`` constexpr","2022-02 (Virtual)","|Complete|","16","`#105182 <https://github.com/llvm/llvm-project/issues/105182>`__",""
 "`P2387R3 <https://wg21.link/P2387R3>`__","Pipe support for user-defined range adaptors","2022-02 (Virtual)","|Complete|","19","`#105183 <https://github.com/llvm/llvm-project/issues/105183>`__",""
-"`P2440R1 <https://wg21.link/P2440R1>`__","``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right``","2022-02 (Virtual)","|Partial|","","`#105184 <https://github.com/llvm/llvm-project/issues/105184>`__","Only ``ranges::iota`` is implemented."
+"`P2440R1 <https://wg21.link/P2440R1>`__","``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right``","2022-02 (Virtual)","|Partial|","","`#105184 <https://github.com/llvm/llvm-project/issues/105184>`__","``ranges::iota`` and ``ranges::shift_left`` are implemented."
 "`P2441R2 <https://wg21.link/P2441R2>`__","``views::join_with``","2022-02 (Virtual)","|Complete|","21","`#105185 <https://github.com/llvm/llvm-project/issues/105185>`__",""
 "`P2442R1 <https://wg21.link/P2442R1>`__","Windowing range adaptors: ``views::chunk`` and ``views::slide``","2022-02 (Virtual)","","","`#105187 <https://github.com/llvm/llvm-project/issues/105187>`__",""
 "`P2443R1 <https://wg21.link/P2443R1>`__","``views::chunk_by``","2022-02 (Virtual)","|Complete|","18","`#105188 <https://github.com/llvm/llvm-project/issues/105188>`__",""

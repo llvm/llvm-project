@@ -57,6 +57,7 @@ def VMaskCarryInAsmOperand : AsmOperandClass {
   let DiagnosticString = "operand must be v0";
 }
 
+// An optional v0.t operand encoded in vm.
 def VMaskOp : RegisterOperand<VMV0> {
   let ParserMatchClass = VMaskAsmOperand;
   let PrintMethod = "printVMaskReg";
@@ -66,9 +67,12 @@ def VMaskOp : RegisterOperand<VMV0> {
   let OperandType = "OPERAND_VMASK";
 }
 
+// An always present v0 operand encoded with vm=0. Classes that use this must
+// set the vm field in RVInstV* to 0.
 def VMaskCarryInOp : RegisterOperand<VMV0> {
   let ParserMatchClass = VMaskCarryInAsmOperand;
   let EncoderMethod = "getVMaskReg";
+  let DecoderMethod = "decodeVMaskReg";
 }
 
 def simm5 : RISCVSImmLeafOp<5> {
@@ -1075,16 +1079,16 @@ multiclass VWholeLoadN<int l, bits<3> nf, string opcodestr, RegisterClass VRC> {
 
 let Predicates = [HasVInstructions] in {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
-def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
-                           "vsetvli", "$rd, $rs1, $vtypei">,
-                           Sched<[WriteVSETVLI, ReadVSETVLI]>;
-def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
-                             "vsetivli", "$rd, $uimm, $vtypei">,
-                             Sched<[WriteVSETIVLI]>;
+def VSETVLI : RVInstVSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
+                            "vsetvli", "$rd, $rs1, $vtypei">,
+              Sched<[WriteVSETVLI, ReadVSETVLI]>;
+def VSETIVLI : RVInstVSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
+                              "vsetivli", "$rd, $uimm, $vtypei">,
+               Sched<[WriteVSETIVLI]>;
 
-def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                         "vsetvl", "$rd, $rs1, $rs2">,
-                          Sched<[WriteVSETVL, ReadVSETVL, ReadVSETVL]>;
+def VSETVL : RVInstVSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                          "vsetvl", "$rd, $rs1, $rs2">,
+             Sched<[WriteVSETVL, ReadVSETVL, ReadVSETVL]>;
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
 

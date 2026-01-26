@@ -8975,8 +8975,17 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
         NewVD->setInvalidDecl();
         return;
       }
-      if (T.getAddressSpace() == LangAS::opencl_constant ||
-          T.getAddressSpace() == LangAS::opencl_local) {
+      // When this extension is enabled, 'local' variables are permitted in
+      // non-kernel functions and within nested scopes of kernel functions,
+      // bypassing standard OpenCL address space restrictions.
+      bool AllowFunctionScopeLocalVariables =
+          T.getAddressSpace() == LangAS::opencl_local &&
+          getOpenCLOptions().isAvailableOption(
+              "__cl_clang_function_scope_local_variables", getLangOpts());
+      if (AllowFunctionScopeLocalVariables) {
+        // Direct pass: No further diagnostics needed for this specific case.
+      } else if (T.getAddressSpace() == LangAS::opencl_constant ||
+                 T.getAddressSpace() == LangAS::opencl_local) {
         FunctionDecl *FD = getCurFunctionDecl();
         // OpenCL v1.1 s6.5.2 and s6.5.3: no local or constant variables
         // in functions.
@@ -15457,7 +15466,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
     }
   }
 
-  // FIMXE: We assume every Decl in the group is in the same file.
+  // FIXME: We assume every Decl in the group is in the same file.
   // This is false when preprocessor constructs the group from decls in
   // different files (e. g. macros or #include).
   Context.attachCommentsToJustParsedDecls(Group, &getPreprocessor());

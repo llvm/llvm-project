@@ -424,7 +424,7 @@ toFileEntries(llvm::ArrayRef<StringRef> FileNames, FileManager &FM) {
   llvm::SmallVector<FileEntryRef> Results;
 
   for (auto FName : FileNames) {
-    // FIMXE: log the failing cases?
+    // FIXME: log the failing cases?
     if (auto FE = FM.getOptionalFileRef(FName))
       Results.push_back(*FE);
   }
