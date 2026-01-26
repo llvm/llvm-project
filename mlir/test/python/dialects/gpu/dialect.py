@@ -187,6 +187,7 @@ def testGPULaunchFuncOp():
         c1 = arith.constant(T.index(), 1)
         grid_sizes = (1, 1, 1)
         block_sizes = (1, 1, 1)
+        cluster_sizes = (1, 1, 1)
         token = gpu.wait()
         token = gpu.launch_func(
             async_dependencies=[token],
@@ -194,6 +195,7 @@ def testGPULaunchFuncOp():
             grid_size=grid_sizes,
             block_size=block_sizes,
             kernel_operands=[],
+            cluster_size=cluster_sizes,
         )
         gpu.wait(async_dependencies=[token])
         func.ReturnOp([])
@@ -215,7 +217,10 @@ def testGPULaunchFuncOp():
     # CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
     # CHECK:           %[[CONSTANT_5:.*]] = arith.constant 1 : index
     # CHECK:           %[[CONSTANT_6:.*]] = arith.constant 1 : index
-    # CHECK:           %[[LAUNCH_FUNC_0:.*]] = gpu.launch_func async {{\[}}%[[WAIT_0]]] @gpu_module::@kernel blocks in (%[[CONSTANT_1]], %[[CONSTANT_2]], %[[CONSTANT_3]]) threads in (%[[CONSTANT_4]], %[[CONSTANT_5]], %[[CONSTANT_6]])
+    # CHECK:           %[[CONSTANT_7:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_8:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_9:.*]] = arith.constant 1 : index
+    # CHECK:           %[[LAUNCH_FUNC_0:.*]] = gpu.launch_func async {{\[}}%[[WAIT_0]]] @gpu_module::@kernel clusters in (%[[CONSTANT_7]], %[[CONSTANT_8]], %[[CONSTANT_9]]) blocks in (%[[CONSTANT_1]], %[[CONSTANT_2]], %[[CONSTANT_3]]) threads in (%[[CONSTANT_4]], %[[CONSTANT_5]], %[[CONSTANT_6]])
     # CHECK:           %[[WAIT_1:.*]] = gpu.wait async {{\[}}%[[LAUNCH_FUNC_0]]]
     # CHECK:           return
     # CHECK:         }
