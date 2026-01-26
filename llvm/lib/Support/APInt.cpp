@@ -3203,9 +3203,9 @@ APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
   assert(LHS.getBitWidth() == RHS.getBitWidth());
   unsigned BW = LHS.getBitWidth();
   APInt Result(BW, 0);
-  for (unsigned I : seq<unsigned>(BW))
+  for (unsigned I : seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
     if (RHS[I])
-      Result ^= LHS.shl(I);
+      Result ^= LHS << I;
   return Result;
 }
 

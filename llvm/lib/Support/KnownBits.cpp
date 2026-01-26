@@ -610,12 +610,14 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   // This is the same operation as clmul except it accumulates the result with
   // an OR instead of an XOR.
   auto ClMulOr = [](const APInt &LHS, const APInt &RHS) {
-    APInt Res(LHS.getBitWidth(), 0);
-    for (unsigned I : seq(LHS.getBitWidth())) {
-      if (LHS[I])
-        Res |= RHS << I;
-    }
-    return Res;
+    assert(LHS.getBitWidth() == RHS.getBitWidth());
+    unsigned BW = LHS.getBitWidth();
+    APInt Result(BW, 0);
+    for (unsigned I :
+         seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
+      if (RHS[I])
+        Result |= LHS << I;
+    return Result;
   };
 
   // Bits in the result are known if, for every corresponding pair of input
