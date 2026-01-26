@@ -25,9 +25,9 @@ enum PartialMappingIdx {
 enum ValueMappingIdx {
   InvalidIdx = 0,
   I32Idx = 1,
-  I64Idx = 4,
-  F32Idx = 7,
-  F64Idx = 10
+  I64Idx = 5,
+  F32Idx = 9,
+  F64Idx = 13
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
@@ -38,19 +38,23 @@ const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
 const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
-    // up to 3 operands as I32
+    // up to 4 operands as I32
     {&PartMappings[PMI_I32 - PMI_Min], 1},
     {&PartMappings[PMI_I32 - PMI_Min], 1},
     {&PartMappings[PMI_I32 - PMI_Min], 1},
-    // up to 3 operands as I64
+    {&PartMappings[PMI_I32 - PMI_Min], 1},
+    // up to 4 operands as I64
     {&PartMappings[PMI_I64 - PMI_Min], 1},
     {&PartMappings[PMI_I64 - PMI_Min], 1},
     {&PartMappings[PMI_I64 - PMI_Min], 1},
-    // up to 3 operands as F32
+    {&PartMappings[PMI_I64 - PMI_Min], 1},
+    // up to 4 operands as F32
     {&PartMappings[PMI_F32 - PMI_Min], 1},
     {&PartMappings[PMI_F32 - PMI_Min], 1},
     {&PartMappings[PMI_F32 - PMI_Min], 1},
-    // up to 3 operands as F64
+    {&PartMappings[PMI_F32 - PMI_Min], 1},
+    // up to 4 operands as F64
+    {&PartMappings[PMI_F64 - PMI_Min], 1},
     {&PartMappings[PMI_F64 - PMI_Min], 1},
     {&PartMappings[PMI_F64 - PMI_Min], 1},
     {&PartMappings[PMI_F64 - PMI_Min], 1}};
@@ -279,7 +283,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_INTRINSIC:
   case G_INTRINSIC_W_SIDE_EFFECTS: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-      default: break;
+    default:
+      break;
     }
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, nullptr, 0);
   }

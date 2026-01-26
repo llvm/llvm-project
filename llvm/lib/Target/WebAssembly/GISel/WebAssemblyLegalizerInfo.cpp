@@ -104,7 +104,9 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .minScalarSameAs(1, 0)
       .maxScalarSameAs(1, 0);
 
-  getActionDefinitionsBuilder({G_FSHL, G_FSHR, G_ROTL, G_ROTR})
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
+  getActionDefinitionsBuilder({G_ROTL, G_ROTR})
       .legalFor({{s32, s32}, {s64, s64}})
       //.scalarize(0)
       .lower();
