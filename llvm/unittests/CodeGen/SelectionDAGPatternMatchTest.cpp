@@ -1208,6 +1208,18 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableFlags) {
   SDValue Add4 = DAG->getNode(ISD::ADD, DL, Int32VT, Op6, Op7, NUWFlags);
   SDValue Add5 = DAG->getNode(ISD::ADD, DL, Int32VT, Add4, Op8, NUWFlags);
 
+  // (Op0 +nsw+nuw Op1) +nsw+nuw Op2
+  SDNodeFlags BothFlags;
+  BothFlags.setNoSignedWrap(true);
+  BothFlags.setNoUnsignedWrap(true);
+
+  SDValue Op9 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 10, Int32VT);
+  SDValue Op10 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 11, Int32VT);
+  SDValue Op11 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 12, Int32VT);
+
+  SDValue Add6 = DAG->getNode(ISD::ADD, DL, Int32VT, Op9, Op10, BothFlags);
+  SDValue Add7 = DAG->getNode(ISD::ADD, DL, Int32VT, Add6, Op11, BothFlags);
+
   using namespace SDPatternMatch;
 
   EXPECT_TRUE(
@@ -1225,4 +1237,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableFlags) {
   EXPECT_FALSE(
       sd_match(Add1, m_ReassociatableNUWAdd(m_Specific(Op0), m_Specific(Op1),
                                             m_Specific(Op2))));
+  EXPECT_TRUE(
+      sd_match(Add7, m_ReassociatableNSWAdd(m_Specific(Op9), m_Specific(Op10),
+                                            m_Specific(Op11))));
+  EXPECT_TRUE(
+      sd_match(Add7, m_ReassociatableNUWAdd(m_Specific(Op9), m_Specific(Op10),
+                                            m_Specific(Op11))));
 }

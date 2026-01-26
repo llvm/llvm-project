@@ -1342,7 +1342,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   constexpr static size_t NumPatterns =
       std::tuple_size_v<std::tuple<PatternTs...>>;
 
-  std::optional<SDNodeFlags> Flags;
+  SDNodeFlags Flags;
 
   ReassociatableOpc_match(unsigned Opcode, const PatternTs &...Patterns)
       : Opcode(Opcode), Patterns(Patterns...) {}
@@ -1368,8 +1368,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
   bool collectLeaves(SDValue V, std::array<SDValue, NumPatterns> &Leaves,
                      std::size_t &LeafIdx) {
-    if (V->getOpcode() == Opcode &&
-        (!Flags || (*Flags & V->getFlags()) == *Flags)) {
+    if (V->getOpcode() == Opcode && (Flags & V->getFlags()) == Flags) {
       for (size_t I = 0, N = V->getNumOperands(); I < N; I++)
         if ((LeafIdx == NumPatterns) ||
             !collectLeaves(V->getOperand(I), Leaves, LeafIdx))
