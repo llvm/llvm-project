@@ -814,11 +814,18 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsWithoutConPTY(func: Callable):
+def skipIfWindowsWithoutConPTY(func=None, bugnumber=None):
     """Decorator to skip tests on Windows without ConPTY support.
     see https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/
     """
-    return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
+    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
+    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
+    # the first way, the first argument will be the actual function because decorators are
+    # weird like that.  So this is basically a check that says "how was the
+    # decorator used"
+    if func is not None:
+        return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
+    return skipIfWindows(windows_version=["<", "10.0.17763"])
 
 
 def skipIfWindowsAndNonEnglish(func):

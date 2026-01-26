@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Optional, Callable, Any, List, Union, Final
+from typing import Optional, Callable, Any, List, Mapping, Final, Literal, overload
 import uuid
 
 import dap_server
@@ -264,7 +264,7 @@ class DAPTestCaseBase(TestBase):
         self.assertIsNotNone(event)
         self.assertEqual(memoryReference, event["body"].get("memoryReference"))
 
-    def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
+    def get_dict_value(self, d: Mapping[str, Any], key_path: List[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
         corresponding dictionary. This is handy for grabbing values from VS
@@ -273,13 +273,10 @@ class DAPTestCaseBase(TestBase):
         """
         value = d
         for key in key_path:
-            if key in value:
-                value = value[key]
-            else:
-                self.assertTrue(
-                    key in value,
-                    'key "%s" from key_path "%s" not in "%s"' % (key, key_path, d),
-                )
+            self.assertIn(
+                key, value, f"lookup failure for dict={d} key_path={key_path}"
+            )
+            value = value[key]
         return value
 
     def get_stackFrames_and_totalFramesCount(
@@ -494,12 +491,9 @@ class DAPTestCaseBase(TestBase):
         *,
         disconnectAutomatically=True,
         sourceInitFile=False,
-        waitForResponse=False,
         **kwargs,
-    ) -> Optional[Response]:
-        """Build the default Makefile target, create the DAP debug adapter,
-        and attach to the process.
-        """
+    ) -> int:
+        """Attach to the process."""
 
         # Make sure we disconnect and terminate the DAP debug adapter even
         # if we throw an exception during the test case.
@@ -512,12 +506,17 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        attach_seq = self.dap_server.request_attach(**kwargs)
+        return self.dap_server.request_attach(**kwargs)
+
+    def attach_and_configurationDone(
+        self,
+        **kwargs,
+    ) -> Response:
+        """Attach to the process."""
+        attach_seq = self.attach(**kwargs)
         self.dap_server.wait_for_event(["initialized"])
-        if waitForResponse:
-            self.dap_server.request_configurationDone()
-            return self.dap_server.receive_response(attach_seq)
-        return None
+        self.dap_server.request_configurationDone()
+        return self.dap_server.receive_response(attach_seq)
 
     def launch(
         self,
@@ -525,10 +524,9 @@ class DAPTestCaseBase(TestBase):
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
-        waitForResponse=False,
         **kwargs,
-    ):
-        """Sending launch request to dap"""
+    ) -> int:
+        """Send launch request."""
 
         # Make sure we disconnect and terminate the DAP debug adapter,
         # if we throw an exception during the test case
@@ -542,12 +540,18 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        launch_seq = self.dap_server.request_launch(program, **kwargs)
+        return self.dap_server.request_launch(program, **kwargs)
+
+    def launch_and_configurationDone(
+        self,
+        program: str,
+        **kwargs,
+    ) -> Response:
+        """Send launch request."""
+        launch_seq = self.launch(program, **kwargs)
         self.dap_server.wait_for_event(["initialized"])
-        if waitForResponse:
-            self.dap_server.request_configurationDone()
-            return self.dap_server.receive_response(launch_seq)
-        return launch_seq
+        self.dap_server.request_configurationDone()
+        return self.dap_server.receive_response(launch_seq)
 
     def build_and_launch(
         self,
@@ -564,9 +568,9 @@ class DAPTestCaseBase(TestBase):
 
         return self.launch(program, **kwargs)
 
-    def verify_configuration_done(self, expectedResult=True):
+    def verify_configuration_done(self, expected_success=True):
         resp = self.dap_server.request_configurationDone()
-        if expectedResult:
+        if expected_success:
             self.assertTrue(resp["success"])
         else:
             self.assertFalse(resp["success"])

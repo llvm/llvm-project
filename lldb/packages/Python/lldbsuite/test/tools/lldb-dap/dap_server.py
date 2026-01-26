@@ -20,7 +20,6 @@ import subprocess
 import sys
 import threading
 import time
-import warnings
 from typing import (
     Any,
     BinaryIO,
@@ -39,7 +38,7 @@ from typing import (
 
 # set timeout based on whether ASAN was enabled or not. Increase
 # timeout by a factor of 10 if ASAN is enabled.
-DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+DEFAULT_TIMEOUT: Final[float] = 50.0 * (10.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
 
 
 # A quiet period between events, used to determine if we're done receiving
@@ -237,6 +236,22 @@ class DebugCommunication(object):
         """Returns True if the debuggee is stopped, otherwise False."""
         return len(self.thread_stop_reasons) > 0 or self.exit_status is not None
 
+    @property
+    def launch_or_attach_sent(self) -> bool:
+        return any(
+            req
+            for dir, req in self._log.requests
+            if dir == Log.Dir.SENT and req["command"] in ["launch", "attach"]
+        )
+
+    @property
+    def configuration_done_sent(self) -> bool:
+        return any(
+            req
+            for dir, req in self._log.requests
+            if dir == Log.Dir.SENT and req["command"] == "configurationDone"
+        )
+
     def __init__(
         self,
         recv: BinaryIO,
@@ -266,7 +281,6 @@ class DebugCommunication(object):
         self.exit_status: Optional[int] = None
         self.capabilities: Dict = {}
         self.initialized: bool = False
-        self.configuration_done_sent: bool = False
         self.process_event_body: Optional[Dict] = None
         self.terminated: bool = False
         self.events: List[Event] = []
@@ -339,6 +353,10 @@ class DebugCommunication(object):
             # `packet` will be `None` on EOF. We want to pass it down to
             # handle_recv_packet anyway so the main thread can handle unexpected
             # termination of lldb-dap and stop waiting for new packets.
+            if packet:
+                print("<--", packet)
+            else:
+                print("<-- EOF")
             if not self._handle_recv_packet(packet):
                 break
 
@@ -416,23 +434,28 @@ class DebugCommunication(object):
         *,
         predicate: Optional[Callable[[ProtocolMessage], bool]] = None,
         timeout: float = DEFAULT_TIMEOUT,
-    ) -> Optional[ProtocolMessage]:
+    ) -> ProtocolMessage:
         """Processes received packets from the adapter.
         Updates the DebugCommunication stateful properties based on the received
         packets in the order they are received.
+
         NOTE: The only time the session state properties should be updated is
         during this call to ensure consistency during tests.
+
         Args:
             predicate:
                 Optional, if specified, returns the first packet that matches
                 the given predicate.
             timeout:
-                Optional, if specified, processes packets until either the
-                timeout occurs or the predicate matches a packet, whichever
-                occurs first.
+                Processes packets until either the timeout occurs or the
+                predicate matches a packet, whichever occurs first.
+
         Returns:
-            The first matching packet for the given predicate, if specified,
-            otherwise None.
+            The first matching packet for the given predicate.
+
+        Raises:
+            TimeoutError: Timeout while waiting for predicate.
+            EOFError: End of stream detected.
         """
         assert (
             threading.current_thread != self._recv_thread
@@ -448,10 +471,15 @@ class DebugCommunication(object):
                 if predicate and predicate(packet):
                     self._pending_packets.pop(i)
                     return packet
+            return False
 
         with self._recv_condition:
             packet = self._recv_condition.wait_for(process_until_match, timeout)
-            return None if isinstance(packet, EOFError) else packet
+            if isinstance(packet, EOFError):
+                raise EOFError
+            if not packet:
+                raise TimeoutError
+            return cast(ProtocolMessage, packet)
 
     def _process_recv_packets(self) -> None:
         """Process received packets, updating the session state."""
@@ -598,6 +626,8 @@ class DebugCommunication(object):
         # Encode our command dictionary as a JSON string
         json_str = json.dumps(packet, separators=(",", ":"))
 
+        print("-->", json_str)
+
         length = len(json_str)
         if length > 0:
             # Send the encoded JSON packet and flush the 'send' file
@@ -620,64 +650,66 @@ class DebugCommunication(object):
         self.validate_response(request, response)
         return response
 
-    def receive_response(self, seq: int) -> Optional[Response]:
+    def receive_response(self, seq: int) -> Response:
         """Waits for a response with the associated request_sec."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "response" and p["request_seq"] == seq
 
-        return cast(Optional[Response], self._recv_packet(predicate=predicate))
+        return cast(Response, self._recv_packet(predicate=predicate))
 
-    def wait_for_event(self, filter: List[str] = []) -> Optional[Event]:
+    def wait_for_event(self, filter: List[str]) -> Event:
         """Wait for the first event that matches the filter."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "event" and p["event"] in filter
 
-        return cast(
-            Optional[Event],
-            self._recv_packet(predicate=predicate),
-        )
+        return cast(Event, self._recv_packet(predicate=predicate))
+
+    def collect_events(self, filter: List[str]) -> List[Event]:
+        """Wait for the first event that matches the filter."""
+        events = []
+
+        def predicate(p: ProtocolMessage):
+            return p["type"] == "event" and p["event"] in filter
+
+        event = cast(Event, self._recv_packet(predicate=predicate))
+        while event:
+            events.append(event)
+            try:
+                event = cast(
+                    Event,
+                    self._recv_packet(predicate=predicate, timeout=EVENT_QUIET_PERIOD),
+                )
+            except TimeoutError:
+                break
+        return events
+
+    def wait_for_initialized(self):
+        """Wait for the debugger to become initialized."""
+        if self.initialized:
+            return
+        self.wait_for_event(["initialized"])
+
+    def ensure_initialized(self):
+        if self.initialized:
+            return
+        assert self.launch_or_attach_sent, "launch or attach request not yet sent"
+        assert (
+            not self.configuration_done_sent
+        ), "configuration done has already been sent, 'initialized' should have already occurred"
+        self.wait_for_initialized()
 
     def wait_for_stopped(self) -> List[Event]:
         """Wait for the next 'stopped' event to occur, coalescing all stopped events within a given quiet period."""
-        stopped_events = []
-        # Check for either 'stopped' or 'exited' to ensure we catch if the
-        # process exits unexpectedly.
-        stopped_event = self.wait_for_event(filter=["stopped", "exited"])
-        while stopped_event:
-            stopped_events.append(stopped_event)
-            # If we exited, then we are done
-            if stopped_event["event"] == "exited":
-                break
+        return self.collect_events(["stopped", "exited"])
 
-            # Otherwise we stopped and there might be one or more 'stopped'
-            # events for each thread that stopped with a reason, so keep
-            # checking for more 'stopped' events and return all of them
-            # Use a shorter timeout for additional stopped events.
-            def predicate(p: ProtocolMessage):
-                return p["type"] == "event" and p["event"] in ["stopped", "exited"]
-
-            stopped_event = cast(
-                Optional[Event],
-                self._recv_packet(predicate=predicate, timeout=EVENT_QUIET_PERIOD),
-            )
-        return stopped_events
+    def wait_for_module_events(self) -> List[Event]:
+        """Wait for the next 'module' event to occur, coalescing all module events within a given quiet period."""
+        return self.collect_events(["module"])
 
     def wait_for_breakpoint_events(self):
-        breakpoint_events: list[Event] = []
-        breakpoint_event = self.wait_for_event(["breakpoint"])
-        while breakpoint_event:
-            breakpoint_events.append(breakpoint_event)
-
-            def predicate(p: ProtocolMessage):
-                return p["type"] == "event" and p["event"] == "breakpoint"
-
-            breakpoint_event = cast(
-                Optional[Event],
-                self._recv_packet(predicate=predicate, timeout=EVENT_QUIET_PERIOD),
-            )
-        return breakpoint_events
+        return self.collect_events(["breakpoint"])
 
     def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[int]):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
@@ -972,7 +1004,6 @@ class DebugCommunication(object):
         }
         response = self._send_recv(command_dict)
         if response and response["success"]:
-            self.configuration_done_sent = True
             stopped_on_entry = self.is_stopped
             threads_response = self.request_threads()
             if not stopped_on_entry:
@@ -1299,7 +1330,7 @@ class DebugCommunication(object):
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        assert self.initialized, "cannot setBreakpoints before initialized"
+        self.ensure_initialized()
         args_dict = {
             "source": source,
             "sourceModified": False,
@@ -1337,7 +1368,7 @@ class DebugCommunication(object):
     def request_setExceptionBreakpoints(
         self, *, filters: list[str] = [], filter_options: list[dict] = []
     ):
-        assert self.initialized, "cannot setExceptionBreakpoints before initialized"
+        self.ensure_initialized()
         args_dict = {"filters": filters}
         if filter_options:
             args_dict["filterOptions"] = filter_options
@@ -1349,7 +1380,7 @@ class DebugCommunication(object):
         return self._send_recv(command_dict)
 
     def request_setFunctionBreakpoints(self, names, condition=None, hitCondition=None):
-        assert self.initialized, "cannot setFunctionBreakpoints before initialized"
+        self.ensure_initialized()
         breakpoints = []
         for name in names:
             bp = {"name": name}
@@ -1398,7 +1429,7 @@ class DebugCommunication(object):
             [hitCondition]: string
         }
         """
-        assert self.initialized, "cannot setDataBreakpoints before initialized"
+        self.ensure_initialized()
         args_dict = {"breakpoints": dataBreakpoints}
         command_dict = {
             "command": "setDataBreakpoints",
