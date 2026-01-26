@@ -28,77 +28,76 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE_VAR static constexpr fputil::ExceptValues<float16, 17>
-    SINHF16_EXCEPTS_POS = {{
-        // x = 0x1.714p-5, sinhf16(x) = 0x1.714p-5 (RZ)
-        {0x29c5U, 0x29c5U, 1U, 0U, 1U},
-        // x = 0x1.25p-4, sinhf16(x) = 0x1.25p-4 (RZ)
-        {0x2c94U, 0x2c94U, 1U, 0U, 1U},
-        // x = 0x1.f5p-4, sinhf16(x) = 0x1.f64p-4 (RZ)
-        {0x2fd4U, 0x2fd9U, 1U, 0U, 0U},
-        // x = 0x1.b1cp-3, sinhf16(x) = 0x1.b4cp-3 (RZ)
-        {0x32c7U, 0x32d3U, 1U, 0U, 1U},
-        // x = 0x1.6e8p-2, sinhf16(x) = 0x1.764p-2 (RZ)
-        {0x35baU, 0x35d9U, 1U, 0U, 1U},
-        // x = 0x1.6b4p-1, sinhf16(x) = 0x1.8a4p-1 (RZ)
-        {0x39adU, 0x3a29U, 1U, 0U, 1U},
-        // x = 0x1.a58p-1, sinhf16(x) = 0x1.d68p-1 (RZ)
-        {0x3a96U, 0x3b5aU, 1U, 0U, 1U},
-        // x = 0x1.574p+0, sinhf16(x) = 0x1.c78p+0 (RZ)
-        {0x3d5dU, 0x3f1eU, 1U, 0U, 1U},
-        // x = 0x1.648p+1, sinhf16(x) = 0x1.024p+3 (RZ)
-        {0x4192U, 0x4809U, 1U, 0U, 0U},
-        // x = 0x1.cdcp+1, sinhf16(x) = 0x1.26cp+4 (RZ)
-        {0x4337U, 0x4c9bU, 1U, 0U, 0U},
-        // x = 0x1.d0cp+1, sinhf16(x) = 0x1.2d8p+4 (RZ)
-        {0x4343U, 0x4cb6U, 1U, 0U, 1U},
-        // x = 0x1.018p+2, sinhf16(x) = 0x1.bfp+4 (RZ)
-        {0x4406U, 0x4efcU, 1U, 0U, 0U},
-        // x = 0x1.2fcp+2, sinhf16(x) = 0x1.cc4p+5 (RZ)
-        {0x44bfU, 0x5331U, 1U, 0U, 1U},
-        // x = 0x1.4ecp+2, sinhf16(x) = 0x1.75cp+6 (RZ)
-        {0x453bU, 0x55d7U, 1U, 0U, 0U},
-        // x = 0x1.8a4p+2, sinhf16(x) = 0x1.d94p+7 (RZ)
-        {0x4629U, 0x5b65U, 1U, 0U, 1U},
-        // x = 0x1.5fp+3, sinhf16(x) = 0x1.c54p+14 (RZ)
-        {0x497cU, 0x7715U, 1U, 0U, 1U},
-        // x = 0x1.3c8p+1, sinhf16(x) = 0x1.78ap+2 (RZ)
-        {0x40f2U, 0x45e2U, 1U, 0U, 1U},
-    }};
+LIBC_INLINE static constexpr float16 sinhf16(float16 x) {
 
-LIBC_INLINE_VAR static constexpr fputil::ExceptValues<float16, 13>
-    SINHF16_EXCEPTS_NEG = {{
-        // x = -0x1.714p-5, sinhf16(x) = -0x1.714p-5 (RZ)
-        {0xa9c5U, 0xa9c5U, 0U, 1U, 1U},
-        // x = -0x1.25p-4, sinhf16(x) = -0x1.25p-4 (RZ)
-        {0xac94U, 0xac94U, 0U, 1U, 1U},
-        // x = -0x1.f5p-4, sinhf16(x) = -0x1.f64p-4 (RZ)
-        {0xafd4U, 0xafd9U, 0U, 1U, 0U},
-        // x = -0x1.6e8p-2, sinhf16(x) = -0x1.764p-2 (RZ)
-        {0xb5baU, 0xb5d9U, 0U, 1U, 1U},
-        // x = -0x1.a58p-1, sinhf16(x) = -0x1.d68p-1 (RZ)
-        {0xba96U, 0xbb5aU, 0U, 1U, 1U},
-        // x = -0x1.cdcp+1, sinhf16(x) = -0x1.26cp+4 (RZ)
-        {0xc337U, 0xcc9bU, 0U, 1U, 0U},
-        // x = -0x1.d0cp+1, sinhf16(x) = -0x1.2d8p+4 (RZ)
-        {0xc343U, 0xccb6U, 0U, 1U, 1U},
-        // x = -0x1.018p+2, sinhf16(x) = -0x1.bfp+4 (RZ)
-        {0xc406U, 0xcefcU, 0U, 1U, 0U},
-        // x = -0x1.2fcp+2, sinhf16(x) = -0x1.cc4p+5 (RZ)
-        {0xc4bfU, 0xd331U, 0U, 1U, 1U},
-        // x = -0x1.4ecp+2, sinhf16(x) = -0x1.75cp+6 (RZ)
-        {0xc53bU, 0xd5d7U, 0U, 1U, 0U},
-        // x = -0x1.8a4p+2, sinhf16(x) = -0x1.d94p+7 (RZ)
-        {0xc629U, 0xdb65U, 0U, 1U, 1U},
-        // x = -0x1.5fp+3, sinhf16(x) = -0x1.c54p+14 (RZ)
-        {0xc97cU, 0xf715U, 0U, 1U, 1U},
-        // x = -0x1.3c8p+1, sinhf16(x) = -0x1.78ap+2 (RZ)
-        {0xc0f2U, 0xc5e2U, 0U, 1U, 1U},
-    }};
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  constexpr fputil::ExceptValues<float16, 17> SINHF16_EXCEPTS_POS = {{
+      // x = 0x1.714p-5, sinhf16(x) = 0x1.714p-5 (RZ)
+      {0x29c5U, 0x29c5U, 1U, 0U, 1U},
+      // x = 0x1.25p-4, sinhf16(x) = 0x1.25p-4 (RZ)
+      {0x2c94U, 0x2c94U, 1U, 0U, 1U},
+      // x = 0x1.f5p-4, sinhf16(x) = 0x1.f64p-4 (RZ)
+      {0x2fd4U, 0x2fd9U, 1U, 0U, 0U},
+      // x = 0x1.b1cp-3, sinhf16(x) = 0x1.b4cp-3 (RZ)
+      {0x32c7U, 0x32d3U, 1U, 0U, 1U},
+      // x = 0x1.6e8p-2, sinhf16(x) = 0x1.764p-2 (RZ)
+      {0x35baU, 0x35d9U, 1U, 0U, 1U},
+      // x = 0x1.6b4p-1, sinhf16(x) = 0x1.8a4p-1 (RZ)
+      {0x39adU, 0x3a29U, 1U, 0U, 1U},
+      // x = 0x1.a58p-1, sinhf16(x) = 0x1.d68p-1 (RZ)
+      {0x3a96U, 0x3b5aU, 1U, 0U, 1U},
+      // x = 0x1.574p+0, sinhf16(x) = 0x1.c78p+0 (RZ)
+      {0x3d5dU, 0x3f1eU, 1U, 0U, 1U},
+      // x = 0x1.648p+1, sinhf16(x) = 0x1.024p+3 (RZ)
+      {0x4192U, 0x4809U, 1U, 0U, 0U},
+      // x = 0x1.cdcp+1, sinhf16(x) = 0x1.26cp+4 (RZ)
+      {0x4337U, 0x4c9bU, 1U, 0U, 0U},
+      // x = 0x1.d0cp+1, sinhf16(x) = 0x1.2d8p+4 (RZ)
+      {0x4343U, 0x4cb6U, 1U, 0U, 1U},
+      // x = 0x1.018p+2, sinhf16(x) = 0x1.bfp+4 (RZ)
+      {0x4406U, 0x4efcU, 1U, 0U, 0U},
+      // x = 0x1.2fcp+2, sinhf16(x) = 0x1.cc4p+5 (RZ)
+      {0x44bfU, 0x5331U, 1U, 0U, 1U},
+      // x = 0x1.4ecp+2, sinhf16(x) = 0x1.75cp+6 (RZ)
+      {0x453bU, 0x55d7U, 1U, 0U, 0U},
+      // x = 0x1.8a4p+2, sinhf16(x) = 0x1.d94p+7 (RZ)
+      {0x4629U, 0x5b65U, 1U, 0U, 1U},
+      // x = 0x1.5fp+3, sinhf16(x) = 0x1.c54p+14 (RZ)
+      {0x497cU, 0x7715U, 1U, 0U, 1U},
+      // x = 0x1.3c8p+1, sinhf16(x) = 0x1.78ap+2 (RZ)
+      {0x40f2U, 0x45e2U, 1U, 0U, 1U},
+  }};
+
+  constexpr fputil::ExceptValues<float16, 13> SINHF16_EXCEPTS_NEG = {{
+      // x = -0x1.714p-5, sinhf16(x) = -0x1.714p-5 (RZ)
+      {0xa9c5U, 0xa9c5U, 0U, 1U, 1U},
+      // x = -0x1.25p-4, sinhf16(x) = -0x1.25p-4 (RZ)
+      {0xac94U, 0xac94U, 0U, 1U, 1U},
+      // x = -0x1.f5p-4, sinhf16(x) = -0x1.f64p-4 (RZ)
+      {0xafd4U, 0xafd9U, 0U, 1U, 0U},
+      // x = -0x1.6e8p-2, sinhf16(x) = -0x1.764p-2 (RZ)
+      {0xb5baU, 0xb5d9U, 0U, 1U, 1U},
+      // x = -0x1.a58p-1, sinhf16(x) = -0x1.d68p-1 (RZ)
+      {0xba96U, 0xbb5aU, 0U, 1U, 1U},
+      // x = -0x1.cdcp+1, sinhf16(x) = -0x1.26cp+4 (RZ)
+      {0xc337U, 0xcc9bU, 0U, 1U, 0U},
+      // x = -0x1.d0cp+1, sinhf16(x) = -0x1.2d8p+4 (RZ)
+      {0xc343U, 0xccb6U, 0U, 1U, 1U},
+      // x = -0x1.018p+2, sinhf16(x) = -0x1.bfp+4 (RZ)
+      {0xc406U, 0xcefcU, 0U, 1U, 0U},
+      // x = -0x1.2fcp+2, sinhf16(x) = -0x1.cc4p+5 (RZ)
+      {0xc4bfU, 0xd331U, 0U, 1U, 1U},
+      // x = -0x1.4ecp+2, sinhf16(x) = -0x1.75cp+6 (RZ)
+      {0xc53bU, 0xd5d7U, 0U, 1U, 0U},
+      // x = -0x1.8a4p+2, sinhf16(x) = -0x1.d94p+7 (RZ)
+      {0xc629U, 0xdb65U, 0U, 1U, 1U},
+      // x = -0x1.5fp+3, sinhf16(x) = -0x1.c54p+14 (RZ)
+      {0xc97cU, 0xf715U, 0U, 1U, 1U},
+      // x = -0x1.3c8p+1, sinhf16(x) = -0x1.78ap+2 (RZ)
+      {0xc0f2U, 0xc5e2U, 0U, 1U, 1U},
+  }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE static constexpr float16 sinhf16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
