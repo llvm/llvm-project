@@ -7477,7 +7477,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
     MachineOperand *Dest = &MI.getOperand(0);
     if (!RI.isSGPRClass(MRI.getRegClass(Dest->getReg()))) {
-      createWaterFallForSiCall(&MI, MDT, {Dest});
+      createWaterFallForCall(&MI, MDT, {Dest});
     }
   }
 
@@ -7739,10 +7739,10 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
     legalizeOperandsVALUt16(MI, OpIdx, MRI);
 }
 
-void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
-                                           MachineDominatorTree *MDT,
-                                           ArrayRef<MachineOperand *> ScalarOps,
-                                           ArrayRef<Register> PhySGPRs) const {
+void SIInstrInfo::createWaterFallForCall(MachineInstr *MI,
+                                         MachineDominatorTree *MDT,
+                                         ArrayRef<MachineOperand *> ScalarOps,
+                                         ArrayRef<Register> PhySGPRs) const {
   assert(MI->getOpcode() == AMDGPU::SI_CALL_ISEL &&
          "This only handle waterfall for SI_CALL_ISEL");
   // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
@@ -7788,8 +7788,8 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
 
   for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : Worklist.WaterFalls)
     if (Entry.first->getOpcode() == AMDGPU::SI_CALL_ISEL)
-      createWaterFallForSiCall(Entry.first, MDT, Entry.second.MOs,
-                               Entry.second.SGPRs);
+      createWaterFallForCall(Entry.first, MDT, Entry.second.MOs,
+                             Entry.second.SGPRs);
 
   for (std::pair<MachineInstr *, bool> Entry : Worklist.V2SPhyCopiesToErase)
     if (Entry.second)
@@ -7801,7 +7801,7 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
   // hope for the best.
   const TargetRegisterClass *DstRC = RI.getRegClassForReg(MRI, DstReg);
   ArrayRef<int16_t> BaseIndices = RI.getRegSplitParts(DstRC, 4);
-  if (BaseIndices.empty() || BaseIndices.size() == 1) {
+  if (BaseIndices.size() == 1) {
     Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
             get(AMDGPU::V_READFIRSTLANE_B32), NewDst)

@@ -1498,9 +1498,9 @@ public:
   /// Wrapper function for generating waterfall for instruction \p MI
   /// This function take into consideration of related pre & succ instructions
   /// (e.g. calling process) into consideratioin
-  void createWaterFallForSiCall(MachineInstr *MI, MachineDominatorTree *MDT,
-                                ArrayRef<MachineOperand *> ScalarOps,
-                                ArrayRef<Register> PhySGPRs = {}) const;
+  void createWaterFallForCall(MachineInstr *MI, MachineDominatorTree *MDT,
+                              ArrayRef<MachineOperand *> ScalarOps,
+                              ArrayRef<Register> PhySGPRs = {}) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;

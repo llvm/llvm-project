@@ -29,61 +29,41 @@ define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) #
 ; CHECK-LABEL: test_call_external_void_func_a15i32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s59, s33
+; CHECK-NEXT:    s_mov_b32 s41, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-; CHECK-NEXT:    s_xor_saveexec_b64 s[40:41], -1
+; CHECK-NEXT:    s_xor_saveexec_b64 s[42:43], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[40:41]
-; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
-; CHECK-NEXT:    s_mov_b32 s40, s26
-; CHECK-NEXT:    s_mov_b32 s41, s25
-; CHECK-NEXT:    s_mov_b32 s42, s24
-; CHECK-NEXT:    s_mov_b32 s43, s23
-; CHECK-NEXT:    s_mov_b32 s44, s22
-; CHECK-NEXT:    s_mov_b32 s45, s21
-; CHECK-NEXT:    s_mov_b32 s46, s20
-; CHECK-NEXT:    s_mov_b32 s47, s19
-; CHECK-NEXT:    s_mov_b32 s56, s18
-; CHECK-NEXT:    s_mov_b32 s57, s17
-; CHECK-NEXT:    s_mov_b32 s58, s16
-; CHECK-NEXT:    s_mov_b64 s[60:61], exec
+; CHECK-NEXT:    s_mov_b64 exec, s[42:43]
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
-; CHECK-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_mov_b32 s40, s26
+; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
 ; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s26, v0
-; CHECK-NEXT:    s_and_saveexec_b64 vcc, vcc
-; CHECK-NEXT:    s_getpc_b64 s[62:63]
-; CHECK-NEXT:    s_add_u32 s62, s62, external_void_func_a15i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s63, s63, external_void_func_a15i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s0, s58
-; CHECK-NEXT:    s_mov_b32 s1, s57
-; CHECK-NEXT:    s_mov_b32 s2, s56
-; CHECK-NEXT:    s_mov_b32 s3, s47
-; CHECK-NEXT:    s_mov_b32 s16, s46
-; CHECK-NEXT:    s_mov_b32 s17, s45
-; CHECK-NEXT:    s_mov_b32 s18, s44
-; CHECK-NEXT:    s_mov_b32 s19, s43
-; CHECK-NEXT:    s_mov_b32 s20, s42
-; CHECK-NEXT:    s_mov_b32 s21, s41
+; CHECK-NEXT:    s_getpc_b64 s[42:43]
+; CHECK-NEXT:    s_add_u32 s42, s42, external_void_func_a15i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s43, s43, external_void_func_a15i32_inreg@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s3, s19
+; CHECK-NEXT:    s_mov_b32 s2, s18
+; CHECK-NEXT:    s_mov_b32 s1, s17
+; CHECK-NEXT:    s_mov_b32 s0, s16
+; CHECK-NEXT:    s_mov_b32 s16, s20
+; CHECK-NEXT:    s_mov_b32 s17, s21
+; CHECK-NEXT:    s_mov_b32 s18, s22
+; CHECK-NEXT:    s_mov_b32 s19, s23
+; CHECK-NEXT:    s_mov_b32 s20, s24
+; CHECK-NEXT:    s_mov_b32 s21, s25
 ; CHECK-NEXT:    s_mov_b32 s22, s40
 ; CHECK-NEXT:    s_mov_b32 s23, s27
 ; CHECK-NEXT:    s_mov_b32 s24, s28
 ; CHECK-NEXT:    s_mov_b32 s25, s29
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[62:63]
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    s_xor_b64 exec, exec, vcc
-; CHECK-NEXT:    s_cbranch_execnz .LBB3_1
-; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b64 exec, s[60:61]
+; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
 ; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_mov_b32 s33, s59
+; CHECK-NEXT:    s_mov_b32 s33, s41
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   call void @external_void_func_a15i32_inreg([15 x i32] inreg %arg0)
@@ -94,66 +74,43 @@ define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) #
 ; CHECK-LABEL: test_call_external_void_func_a16i32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s74, s33
+; CHECK-NEXT:    s_mov_b32 s44, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[40:41], -1
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[40:41]
-; CHECK-NEXT:    v_writelane_b32 v2, s30, 0
-; CHECK-NEXT:    s_mov_b32 s40, s27
-; CHECK-NEXT:    s_mov_b32 s41, s26
-; CHECK-NEXT:    s_mov_b32 s42, s25
-; CHECK-NEXT:    s_mov_b32 s43, s24
-; CHECK-NEXT:    s_mov_b32 s44, s23
-; CHECK-NEXT:    s_mov_b32 s45, s22
-; CHECK-NEXT:    s_mov_b32 s46, s21
-; CHECK-NEXT:    s_mov_b32 s47, s20
-; CHECK-NEXT:    s_mov_b32 s56, s19
-; CHECK-NEXT:    s_mov_b32 s57, s18
-; CHECK-NEXT:    s_mov_b32 s58, s17
-; CHECK-NEXT:    s_mov_b32 s59, s16
-; CHECK-NEXT:    s_mov_b64 s[60:61], exec
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
-; CHECK-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
+; CHECK-NEXT:    s_mov_b32 s41, s27
+; CHECK-NEXT:    s_mov_b32 s40, s26
+; CHECK-NEXT:    v_writelane_b32 v2, s30, 0
 ; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s27, v1
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], s26, v0
-; CHECK-NEXT:    s_and_b64 s[16:17], vcc, s[16:17]
-; CHECK-NEXT:    s_and_saveexec_b64 s[62:63], s[16:17]
-; CHECK-NEXT:    s_getpc_b64 s[72:73]
-; CHECK-NEXT:    s_add_u32 s72, s72, external_void_func_a16i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s73, s73, external_void_func_a16i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s0, s59
-; CHECK-NEXT:    s_mov_b32 s1, s58
-; CHECK-NEXT:    s_mov_b32 s2, s57
-; CHECK-NEXT:    s_mov_b32 s3, s56
-; CHECK-NEXT:    s_mov_b32 s16, s47
-; CHECK-NEXT:    s_mov_b32 s17, s46
-; CHECK-NEXT:    s_mov_b32 s18, s45
-; CHECK-NEXT:    s_mov_b32 s19, s44
-; CHECK-NEXT:    s_mov_b32 s20, s43
-; CHECK-NEXT:    s_mov_b32 s21, s42
-; CHECK-NEXT:    s_mov_b32 s22, s41
-; CHECK-NEXT:    s_mov_b32 s23, s40
+; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
+; CHECK-NEXT:    s_getpc_b64 s[42:43]
+; CHECK-NEXT:    s_add_u32 s42, s42, external_void_func_a16i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s43, s43, external_void_func_a16i32_inreg@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s3, s19
+; CHECK-NEXT:    s_mov_b32 s2, s18
+; CHECK-NEXT:    s_mov_b32 s1, s17
+; CHECK-NEXT:    s_mov_b32 s0, s16
+; CHECK-NEXT:    s_mov_b32 s16, s20
+; CHECK-NEXT:    s_mov_b32 s17, s21
+; CHECK-NEXT:    s_mov_b32 s18, s22
+; CHECK-NEXT:    s_mov_b32 s19, s23
+; CHECK-NEXT:    s_mov_b32 s20, s24
+; CHECK-NEXT:    s_mov_b32 s21, s25
+; CHECK-NEXT:    s_mov_b32 s22, s40
+; CHECK-NEXT:    s_mov_b32 s23, s41
 ; CHECK-NEXT:    s_mov_b32 s24, s28
 ; CHECK-NEXT:    s_mov_b32 s25, s29
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[72:73]
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[62:63]
-; CHECK-NEXT:    s_cbranch_execnz .LBB4_1
-; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b64 exec, s[60:61]
+; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
 ; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_mov_b32 s33, s74
+; CHECK-NEXT:    s_mov_b32 s33, s44
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   call void @external_void_func_a16i32_inreg([16 x i32] inreg %arg0)
@@ -164,66 +121,43 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
 ; CHECK-LABEL: test_call_external_void_func_a15i32_inreg_i32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s74, s33
+; CHECK-NEXT:    s_mov_b32 s44, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[40:41], -1
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[40:41]
-; CHECK-NEXT:    v_writelane_b32 v2, s30, 0
-; CHECK-NEXT:    s_mov_b32 s40, s27
-; CHECK-NEXT:    s_mov_b32 s41, s26
-; CHECK-NEXT:    s_mov_b32 s42, s25
-; CHECK-NEXT:    s_mov_b32 s43, s24
-; CHECK-NEXT:    s_mov_b32 s44, s23
-; CHECK-NEXT:    s_mov_b32 s45, s22
-; CHECK-NEXT:    s_mov_b32 s46, s21
-; CHECK-NEXT:    s_mov_b32 s47, s20
-; CHECK-NEXT:    s_mov_b32 s56, s19
-; CHECK-NEXT:    s_mov_b32 s57, s18
-; CHECK-NEXT:    s_mov_b32 s58, s17
-; CHECK-NEXT:    s_mov_b32 s59, s16
-; CHECK-NEXT:    s_mov_b64 s[60:61], exec
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
-; CHECK-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
+; CHECK-NEXT:    s_mov_b32 s41, s27
+; CHECK-NEXT:    s_mov_b32 s40, s26
+; CHECK-NEXT:    v_writelane_b32 v2, s30, 0
 ; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s27, v1
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], s26, v0
-; CHECK-NEXT:    s_and_b64 s[16:17], vcc, s[16:17]
-; CHECK-NEXT:    s_and_saveexec_b64 s[62:63], s[16:17]
-; CHECK-NEXT:    s_getpc_b64 s[72:73]
-; CHECK-NEXT:    s_add_u32 s72, s72, external_void_func_a15i32_inreg_i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s73, s73, external_void_func_a15i32_inreg_i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s0, s59
-; CHECK-NEXT:    s_mov_b32 s1, s58
-; CHECK-NEXT:    s_mov_b32 s2, s57
-; CHECK-NEXT:    s_mov_b32 s3, s56
-; CHECK-NEXT:    s_mov_b32 s16, s47
-; CHECK-NEXT:    s_mov_b32 s17, s46
-; CHECK-NEXT:    s_mov_b32 s18, s45
-; CHECK-NEXT:    s_mov_b32 s19, s44
-; CHECK-NEXT:    s_mov_b32 s20, s43
-; CHECK-NEXT:    s_mov_b32 s21, s42
-; CHECK-NEXT:    s_mov_b32 s22, s41
-; CHECK-NEXT:    s_mov_b32 s23, s40
+; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
+; CHECK-NEXT:    s_getpc_b64 s[42:43]
+; CHECK-NEXT:    s_add_u32 s42, s42, external_void_func_a15i32_inreg_i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s43, s43, external_void_func_a15i32_inreg_i32_inreg@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s3, s19
+; CHECK-NEXT:    s_mov_b32 s2, s18
+; CHECK-NEXT:    s_mov_b32 s1, s17
+; CHECK-NEXT:    s_mov_b32 s0, s16
+; CHECK-NEXT:    s_mov_b32 s16, s20
+; CHECK-NEXT:    s_mov_b32 s17, s21
+; CHECK-NEXT:    s_mov_b32 s18, s22
+; CHECK-NEXT:    s_mov_b32 s19, s23
+; CHECK-NEXT:    s_mov_b32 s20, s24
+; CHECK-NEXT:    s_mov_b32 s21, s25
+; CHECK-NEXT:    s_mov_b32 s22, s40
+; CHECK-NEXT:    s_mov_b32 s23, s41
 ; CHECK-NEXT:    s_mov_b32 s24, s28
 ; CHECK-NEXT:    s_mov_b32 s25, s29
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[72:73]
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[62:63]
-; CHECK-NEXT:    s_cbranch_execnz .LBB5_1
-; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b64 exec, s[60:61]
+; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
 ; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_mov_b32 s33, s74
+; CHECK-NEXT:    s_mov_b32 s33, s44
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   call void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1)
