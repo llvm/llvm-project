@@ -111,6 +111,7 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       Cost += 1;
       break;
     case RISCV::VDIV_VV:
+    case RISCV::VREM_VV:
       Cost += LMULCost * TTI::TCC_Expensive;
       break;
     default:
@@ -2618,7 +2619,11 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         {ISD::UDIV, MVT::i32, TTI::TCC_Expensive},
         {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},
         {ISD::SDIV, MVT::i32, TTI::TCC_Expensive},
-        {ISD::SDIV, MVT::i64, TTI::TCC_Expensive}};
+        {ISD::SDIV, MVT::i64, TTI::TCC_Expensive},
+        {ISD::UREM, MVT::i32, TTI::TCC_Expensive},
+        {ISD::UREM, MVT::i64, TTI::TCC_Expensive},
+        {ISD::SREM, MVT::i32, TTI::TCC_Expensive},
+        {ISD::SREM, MVT::i64, TTI::TCC_Expensive}};
     if (TLI->isOperationLegalOrPromote(ISDOpcode, LT.second))
       if (const auto *Entry = CostTableLookup(DivTbl, ISDOpcode, LT.second))
         return Entry->Cost * LT.first;
