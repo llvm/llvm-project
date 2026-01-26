@@ -151,12 +151,7 @@ FailureOr<OpFoldResult> FatRawBufferCastOp::reifyDimOfResult(OpBuilder &builder,
                                                              int resultIndex,
                                                              int dim) {
   assert(resultIndex == 0 && "FatRawBufferCastOp has a single result");
-  Value source = getSource();
-  auto sourceType = cast<MemRefType>(source.getType());
-  if (sourceType.isDynamicDim(dim))
-    return OpFoldResult(
-        builder.createOrFold<memref::DimOp>(getLoc(), source, dim));
-  return OpFoldResult(builder.getIndexAttr(sourceType.getDimSize(dim)));
+  return memref::getMixedSize(builder, getLoc(), getSource(), dim);
 }
 
 LogicalResult FatRawBufferCastOp::verify() {
@@ -778,6 +773,21 @@ LogicalResult PermlaneSwapOp::verify() {
   return success();
 }
 
+/// Remove amdgpu.lds_barrier after amdgpu.lds_barrier.
+static LogicalResult eraseRedundantLDSBarrierOps(LDSBarrierOp op,
+                                                 PatternRewriter &rewriter) {
+  if (isa_and_nonnull<LDSBarrierOp>(op->getNextNode())) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+  return failure();
+}
+
+void LDSBarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add(eraseRedundantLDSBarrierOps);
+}
+
 //===----------------------------------------------------------------------===//
 // MemoryCounterWaitOp
 //===----------------------------------------------------------------------===//
@@ -833,7 +843,7 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!dstType.areTrailingDimsContiguous(1))
+  if (dstType.getRank() > 0 && !dstType.areTrailingDimsContiguous(1))
     return emitOpError("destination type inner most dim must be contiguous");
 
   auto elemType = srcType.getElementType();

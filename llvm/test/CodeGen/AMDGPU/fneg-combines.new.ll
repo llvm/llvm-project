@@ -3509,7 +3509,7 @@ define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   ret float %fneg
 }
 
@@ -3530,7 +3530,7 @@ define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   ret float %mul
 }
 
@@ -3815,25 +3815,20 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
 ; SI-LABEL: fadd_select_fneg_fneg_v2f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v1, v1, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v6
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_sub_f32_e32 v0, v4, v0
-; SI-NEXT:    v_sub_f32_e32 v1, v3, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_sub_f32_e32 v1, v4, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_sub_f32_e32 v0, v2, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: fadd_select_fneg_fneg_v2f16:
@@ -4242,32 +4237,15 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_v2f16(<2 x half> %ar
 }
 
 define <2 x half> @v_fneg_select_infloop_regression_v2f16(<2 x half> %arg, i1 %arg1) {
-; SI-LABEL: v_fneg_select_infloop_regression_v2f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_and_b32_e32 v1, 1, v2
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, vcc
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_fneg_select_infloop_regression_v2f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 1, v1
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; VI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_fneg_select_infloop_regression_v2f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %arg
   %i2 = fneg <2 x half> %i
   %i3 = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %i2
@@ -4453,6 +4431,7 @@ define float @v_fmul_0_fsub_0_safe_infloop_regression(float %arg) {
 ; SI-NSZ-NEXT:    s_brev_b32 s4, 1
 ; SI-NSZ-NEXT:    v_fma_f32 v0, v0, s4, 0
 ; SI-NSZ-NEXT:    s_setpc_b64 s[30:31]
+;
 ; FIXME: utils/update_llc_test_checks.py will generate redundant VI
 ; labels, remove them, they will cause test failure.
 bb:

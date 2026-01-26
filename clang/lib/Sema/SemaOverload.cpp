@@ -449,7 +449,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
 
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
-          Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)) {
+          ((Ctx.getLangOpts().CPlusPlus &&
+            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
           ConstantValue = R.Val;
@@ -7550,6 +7551,12 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function,
     return nullptr;
 
   SFINAETrap Trap(*this);
+  // Perform the access checking immediately so any access diagnostics are
+  // caught by the SFINAE trap.
+  llvm::scope_exit UndelayDiags(
+      [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
+        DelayedDiagnostics.popUndelayed(CurrentState);
+      });
   SmallVector<Expr *, 16> ConvertedArgs;
   // FIXME: We should look into making enable_if late-parsed.
   Expr *DiscardedThis;
@@ -12723,7 +12730,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   // We prefer adding such notes at the end of the deduction failure because
   // duplicate code snippets appearing in the diagnostic would likely become
   // noisy.
-  auto _ = llvm::make_scope_exit([&] { NoteImplicitDeductionGuide(S, Fn); });
+  llvm::scope_exit _([&] { NoteImplicitDeductionGuide(S, Fn); });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:

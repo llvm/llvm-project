@@ -138,7 +138,7 @@ LogicalResult BranchConditionalOp::verify() {
       return emitOpError("must have exactly two branch weights");
     }
     if (llvm::all_of(*weights, [](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getValue().isZero();
+          return cast<IntegerAttr>(attr).getValue().isZero();
         }))
       return emitOpError("branch weights cannot both be zero");
   }
@@ -504,8 +504,8 @@ LogicalResult ReturnValueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult SelectOp::verify() {
-  if (auto conditionTy = llvm::dyn_cast<VectorType>(getCondition().getType())) {
-    auto resultVectorTy = llvm::dyn_cast<VectorType>(getResult().getType());
+  if (auto conditionTy = dyn_cast<VectorType>(getCondition().getType())) {
+    auto resultVectorTy = dyn_cast<VectorType>(getResult().getType());
     if (!resultVectorTy) {
       return emitOpError("result expected to be of vector type when "
                          "condition is of vector type");

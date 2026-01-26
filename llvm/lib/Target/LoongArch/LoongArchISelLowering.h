@@ -60,7 +60,7 @@ public:
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
   bool hasAndNot(SDValue Y) const override;
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
@@ -71,7 +71,7 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *CI) const override;
   Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
                                           AtomicCmpXchgInst *CI,
                                           Value *AlignedAddr, Value *CmpVal,
@@ -262,8 +262,6 @@ private:
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
-
-  bool softPromoteHalfType() const override { return true; }
 
   bool
   splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,

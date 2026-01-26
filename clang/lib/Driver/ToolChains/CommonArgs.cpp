@@ -1241,6 +1241,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                            "-split-machine-functions"));
   }
 
+  if (auto *A =
+          Args.getLastArg(options::OPT_fpartition_static_data_sections,
+                          options::OPT_fno_partition_static_data_sections)) {
+    if (A->getOption().matches(options::OPT_fpartition_static_data_sections)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "-partition-static-data-sections"));
+    }
+  }
+
   if (Arg *A = getLastProfileSampleUseArg(Args)) {
     StringRef FName = A->getValue();
     if (!llvm::sys::fs::exists(FName))
@@ -3291,6 +3300,41 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
   return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
 }
 
+void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs,
+                                    const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    CmdArgs.push_back("-mllvm");
+    if (A->getOption().matches(options::OPT_fglobal_isel)) {
+      CmdArgs.push_back("-global-isel=1");
+
+      // GISel is on by default on AArch64 -O0, so don't bother adding
+      // the fallback remarks for it. Other combinations will add a warning of
+      // some kind.
+      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
+      bool IsOptLevelSupported = false;
+
+      Arg *A = Args.getLastArg(options::OPT_O_Group);
+      if (IsArchSupported) {
+        if (!A || A->getOption().matches(options::OPT_O0))
+          IsOptLevelSupported = true;
+      }
+      if (!IsArchSupported || !IsOptLevelSupported) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-global-isel-abort=2");
+
+        if (!IsArchSupported)
+          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
+        else
+          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
+      }
+    } else {
+      CmdArgs.push_back("-global-isel=0");
+    }
+  }
+}
+
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
   bool use_fwrapv = false;
@@ -3461,4 +3505,29 @@ void tools::setComplexRange(const Driver &D, StringRef NewOpt,
     emitComplexRangeDiag(D, LastOpt, Range, NewOpt, NewRange);
   LastOpt = NewOpt;
   Range = NewRange;
+}
+
+void tools::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfoList &JobInputs,
+                                     const ArgStringList &LinkerInputs,
+                                     const InputInfo &Output,
+                                     const llvm::opt::ArgList &Args,
+                                     const char *OutputFilename) {
+  // Construct llvm-link command.
+  // The output from llvm-link is a bitcode file.
+
+  assert(!LinkerInputs.empty() && !JobInputs.empty() &&
+         "Must have at least one input.");
+
+  ArgStringList LlvmLinkArgs(
+      {"-o", OutputFilename ? OutputFilename : Output.getFilename()});
+
+  LlvmLinkArgs.append(LinkerInputs);
+
+  const ToolChain &TC = T.getToolChain();
+  const char *LlvmLink = Args.MakeArgString(TC.GetProgramPath("llvm-link"));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         LlvmLink, LlvmLinkArgs, JobInputs,
+                                         Output));
 }

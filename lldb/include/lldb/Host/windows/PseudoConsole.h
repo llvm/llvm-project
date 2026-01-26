@@ -21,6 +21,14 @@ namespace lldb_private {
 class PseudoConsole {
 
 public:
+  PseudoConsole() = default;
+  ~PseudoConsole();
+
+  PseudoConsole(const PseudoConsole &) = delete;
+  PseudoConsole(PseudoConsole &&) = delete;
+  PseudoConsole &operator=(const PseudoConsole &) = delete;
+  PseudoConsole &operator=(PseudoConsole &&) = delete;
+
   llvm::Error OpenPseudoConsole();
 
   /// Close the ConPTY, its read/write handles and invalidate them.

@@ -518,6 +518,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-thinlto-object-suffix-replace:" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_thinlto_prefix_replace_eq))
     add("-thinlto-prefix-replace:" + StringRef(arg->getValue()));
+  if (args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false))
+    add("-fat-lto-objects");
+  else
+    add("-fat-lto-objects:no");
 
   for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
     add("-mllvm:-" + StringRef(a->getValue()));

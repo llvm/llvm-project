@@ -4,6 +4,8 @@
 // RUN: not %clang_cc1 -emit-obj < %s -fpass-plugin=%llvmshlibdir/Bye%pluginext -mllvm -last-words 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 // REQUIRES: plugins, llvm-examples
 // UNSUPPORTED: target={{.*windows.*}}
+// Plugins are currently broken on AIX, at least in the CI.
+// XFAIL: target={{.*}}-aix{{.*}}
 // CHECK-INACTIVE-NOT: Bye
 // CHECK-ACTIVE: CodeGen Bye
 // CHECK-LLVM: define{{.*}} i32 @f

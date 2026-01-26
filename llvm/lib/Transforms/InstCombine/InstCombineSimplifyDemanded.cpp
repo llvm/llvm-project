@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1105,8 +1106,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                                    Depth + 1) ||
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q,
                                    Depth + 1)) {
-            // Range attribute may no longer hold.
-            I->dropPoisonGeneratingReturnAttributes();
+            // Range attribute or metadata may no longer hold.
+            I->dropPoisonGeneratingAnnotations();
             return I;
           }
         } else { // fshl is a rotate
@@ -1641,7 +1642,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
                            ->getNumElements();
     // Handle trivial case of a splat. Only check the first element of LHS
     // operand.
-    if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
+    if (all_of(Shuffle->getShuffleMask(), equal_to(0)) &&
         DemandedElts.isAllOnes()) {
       if (!isa<PoisonValue>(I->getOperand(1))) {
         I->setOperand(1, PoisonValue::get(I->getOperand(1)->getType()));
@@ -2005,12 +2006,17 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 
 /// For floating-point classes that resolve to a single bit pattern, return that
 /// value.
-static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
+static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
+                                    bool IsCanonicalizing = false) {
   if (Mask == fcNone)
     return PoisonValue::get(Ty);
 
   if (Mask == fcPosZero)
     return Constant::getNullValue(Ty);
+
+  // Turn any possible snans into quiet if we can.
+  if (Mask == fcNan && IsCanonicalizing)
+    return ConstantFP::getQNaN(Ty);
 
   // TODO: Support aggregate types that are allowed by FPMathOperator.
   if (Ty->isAggregateType())
@@ -2028,40 +2034,175 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
   }
 }
 
-Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
+/// Perform multiple-use aware simplfications for fabs(\p Src). Returns a
+/// replacement value if it's simplified, otherwise nullptr. Updates \p Known
+/// with the known fpclass if not simplified.
+static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
+                                          FPClassTest DemandedMask,
+                                          KnownFPClass KnownSrc, bool NSZ) {
+  if ((DemandedMask & fcNan) == fcNone)
+    KnownSrc.knownNot(fcNan);
+  if ((DemandedMask & fcInf) == fcNone)
+    KnownSrc.knownNot(fcInf);
+
+  if (KnownSrc.SignBit == false ||
+      ((DemandedMask & fcNan) == fcNone && KnownSrc.isKnownNever(fcNegative)))
+    return Src;
+
+  // If the only sign bit difference is due to -0, ignore it with nsz
+  if (NSZ &&
+      KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
+    return Src;
+
+  Known = KnownFPClass::fabs(KnownSrc);
+  return nullptr;
+}
+
+static Value *
+simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
+                              const CallInst *CI, FPClassTest DemandedMask,
+                              KnownFPClass KnownLHS, KnownFPClass KnownRHS,
+                              const Function &F, bool NSZ) {
+  const bool PropagateNaN =
+      IID == Intrinsic::maximum || IID == Intrinsic::minimum;
+
+  /// Propagate nnan-ness to simplify edge case checks.
+  if (PropagateNaN && (DemandedMask & fcNan) == fcNone) {
+    KnownLHS.knownNot(fcNan);
+    KnownRHS.knownNot(fcNan);
+  }
+
+  bool OrderedZeroSign = !NSZ;
+
+  KnownFPClass::MinMaxKind OpKind;
+  switch (IID) {
+  case Intrinsic::maximum: {
+    OpKind = KnownFPClass::MinMaxKind::maximum;
+
+    // If one operand is known greater than the other, it must be that
+    // operand unless the other is a nan.
+    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownRHS.isKnownNever(fcNan))
+      return CI->getArgOperand(0);
+
+    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownLHS.isKnownNever(fcNan))
+      return CI->getArgOperand(1);
+
+    break;
+  }
+  case Intrinsic::minimum: {
+    OpKind = KnownFPClass::MinMaxKind::minimum;
+
+    // If one operand is known less than the other, it must be that operand
+    // unless the other is a nan.
+    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownRHS.isKnownNever(fcNan))
+      return CI->getArgOperand(0);
+
+    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownLHS.isKnownNever(fcNan))
+      return CI->getArgOperand(1);
+
+    break;
+  }
+  case Intrinsic::maximumnum: {
+    OpKind = KnownFPClass::MinMaxKind::maximumnum;
+
+    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownLHS.isKnownNever(fcNan))
+      return CI->getArgOperand(0);
+
+    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownRHS.isKnownNever(fcNan))
+      return CI->getArgOperand(1);
+
+    break;
+  }
+  case Intrinsic::minimumnum: {
+    OpKind = KnownFPClass::MinMaxKind::minimumnum;
+
+    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownLHS.isKnownNever(fcNan))
+      return CI->getArgOperand(0);
+
+    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+        KnownRHS.isKnownNever(fcNan))
+      return CI->getArgOperand(1);
+
+    break;
+  }
+  default:
+    llvm_unreachable("not a min/max intrinsic");
+  }
+
+  Type *EltTy = CI->getType()->getScalarType();
+  DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+  Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode);
+
+  FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+  return getFPClassConstant(CI->getType(), ValidResults,
+                            /*IsCanonicalizing=*/true);
+}
+
+/// Try to set an inferred no-nans or no-infs in \p FMF. \p
+/// ValidResults is a mask of known valid results for the operator
+/// (already computed from the result, and the known operand inputs,
+/// \p KnownLHS and \p KnownRHS)
+static FastMathFlags
+inferFastMathValueFlagsBinOp(FastMathFlags FMF, FPClassTest ValidResults,
+                             const KnownFPClass &KnownLHS,
+                             const KnownFPClass &KnownRHS) {
+  if (!FMF.noNaNs() && (ValidResults & fcNan) == fcNone &&
+      KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN())
+    FMF.setNoNaNs();
+
+  if (!FMF.noInfs() && (ValidResults & fcInf) == fcNone &&
+      KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity())
+    FMF.setNoInfs();
+
+  return FMF;
+}
+
+static FPClassTest adjustDemandedMaskFromFlags(FPClassTest DemandedMask,
+                                               FastMathFlags FMF) {
+  if (FMF.noNaNs())
+    DemandedMask &= ~fcNan;
+
+  if (FMF.noInfs())
+    DemandedMask &= ~fcInf;
+  return DemandedMask;
+}
+
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
                                                     Instruction *CxtI,
                                                     unsigned Depth) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
-  Type *VTy = V->getType();
-
   assert(Known == KnownFPClass() && "expected uninitialized state");
+  assert(I->hasOneUse() && "wrong version called");
 
-  if (DemandedMask == fcNone)
-    return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
+  Type *VTy = I->getType();
 
-  if (Depth == MaxAnalysisRecursionDepth)
-    return nullptr;
-
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) {
-    // Handle constants and arguments
-    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
-    Value *FoldedToConst =
-        getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
-    return FoldedToConst == V ? nullptr : FoldedToConst;
-  }
-
-  if (!I->hasOneUse())
-    return nullptr;
-
+  FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
-    if (FPOp->hasNoNaNs())
-      DemandedMask &= ~fcNan;
-    if (FPOp->hasNoInfs())
-      DemandedMask &= ~fcInf;
+    FMF = FPOp->getFastMathFlags();
+    DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
+
+  // Remove unwanted results from the computed result
+  scope_exit ApplyDemandedMask(
+      [=, &Known]() { Known.knownNot(~DemandedMask); });
+
   switch (I->getOpcode()) {
   case Instruction::FNeg: {
     if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
@@ -2070,15 +2211,302 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     Known.fneg();
     break;
   }
+  case Instruction::FAdd: {
+    KnownFPClass KnownLHS, KnownRHS;
+
+    // fadd x, x can be handled more aggressively.
+    if (I->getOperand(0) == I->getOperand(1) &&
+        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, CxtI, SQ.DT,
+                                 Depth + 1)) {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      FPClassTest SrcDemandedMask = DemandedMask;
+
+      // Doubling a subnormal could have resulted in a normal value.
+      if (DemandedMask & fcPosNormal)
+        SrcDemandedMask |= fcPosSubnormal;
+      if (DemandedMask & fcNegNormal)
+        SrcDemandedMask |= fcNegSubnormal;
+
+      // Doubling a subnormal may produce 0 if FTZ/DAZ.
+      if (Mode != DenormalMode::getIEEE()) {
+        if (DemandedMask & fcPosZero) {
+          SrcDemandedMask |= fcPosSubnormal;
+
+          if (Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero())
+            SrcDemandedMask |= fcNegSubnormal;
+        }
+
+        if (DemandedMask & fcNegZero)
+          SrcDemandedMask |= fcNegSubnormal;
+      }
+
+      // Doubling a normal could have resulted in an infinity.
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosNormal;
+      if (DemandedMask & fcNegInf)
+        SrcDemandedMask |= fcNegNormal;
+
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+
+      Known = KnownFPClass::fadd_self(KnownLHS, Mode);
+      KnownRHS = KnownLHS;
+    } else {
+      FPClassTest SrcDemandedMask = fcFinite;
+
+      // inf + (-inf) = nan
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan | fcInf;
+
+      if (DemandedMask & fcInf)
+        SrcDemandedMask |= fcInf;
+
+      if (SimplifyDemandedFPClass(I, 1, SrcDemandedMask, KnownRHS, Depth + 1) ||
+          SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      Known = KnownFPClass::fadd(KnownLHS, KnownRHS, Mode);
+    }
+
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+    if (Constant *SingleVal =
+            getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+      return SingleVal;
+
+    // Propagate known result to simplify edge case checks.
+    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
+    if (ResultNotNan) {
+      KnownLHS.knownNot(fcNan);
+      KnownRHS.knownNot(fcNan);
+    }
+
+    // With nnan: X + {+/-}Inf --> {+/-}Inf
+    if (ResultNotNan && KnownRHS.isKnownAlways(fcInf | fcNan) &&
+        KnownLHS.isKnownNever(fcNan))
+      return I->getOperand(1);
+
+    // With nnan: {+/-}Inf + X --> {+/-}Inf
+    if (ResultNotNan && KnownLHS.isKnownAlways(fcInf | fcNan) &&
+        KnownRHS.isKnownNever(fcNan))
+      return I->getOperand(0);
+
+    FastMathFlags InferredFMF =
+        inferFastMathValueFlagsBinOp(FMF, ValidResults, KnownLHS, KnownRHS);
+    if (InferredFMF != FMF) {
+      I->setFastMathFlags(InferredFMF);
+      return I;
+    }
+
+    return nullptr;
+  }
+  case Instruction::FMul: {
+    KnownFPClass KnownLHS, KnownRHS;
+
+    Value *X = I->getOperand(0);
+    Value *Y = I->getOperand(1);
+
+    FPClassTest SrcDemandedMask =
+        DemandedMask & (fcNan | fcZero | fcSubnormal | fcNormal);
+
+    if (DemandedMask & fcInf) {
+      // mul x, inf = inf
+      // mul large_x, large_y = inf
+      SrcDemandedMask |= fcSubnormal | fcNormal | fcInf;
+    }
+
+    if (DemandedMask & fcNan) {
+      // mul +/-inf, 0 => nan
+      SrcDemandedMask |= fcZero | fcInf;
+
+      // TODO: Mode check
+      // mul +/-inf, sub => nan if daz
+      SrcDemandedMask |= fcSubnormal;
+    }
+
+    // mul normal, subnormal = normal
+    // Normal inputs may result in underflow.
+    if (DemandedMask & (fcNormal | fcSubnormal))
+      SrcDemandedMask |= fcNormal | fcSubnormal;
+
+    if (DemandedMask & fcZero)
+      SrcDemandedMask |= fcNormal | fcSubnormal;
+
+    if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+      Type *EltTy = VTy->getScalarType();
+
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      Known = KnownFPClass::square(KnownLHS, Mode);
+
+      // Propagate known result to simplify edge case checks.
+      if ((DemandedMask & fcNan) == fcNone)
+        Known.knownNot(fcNan);
+      if ((DemandedMask & fcPosInf) == fcNone)
+        Known.knownNot(fcInf);
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      if (Constant *Folded =
+              getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+        return Folded;
+
+      if (Known.isKnownAlways(fcPosZero | fcPosInf | fcNan)) {
+        assert(KnownLHS.isKnownNever(fcPosNormal));
+
+        // We can skip the fabs if the source was already known positive.
+        if (KnownLHS.isKnownAlways(fcPositive))
+          return X;
+
+        // => fabs(x), in case this was a -inf or -0.
+        // Note: Dropping canonicalize.
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
+        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FMF);
+        Fabs->takeName(I);
+        return Fabs;
+      }
+
+      return nullptr;
+    }
+
+    if (SimplifyDemandedFPClass(I, 1, SrcDemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    // Propagate nnan-ness to sources to simplify source checks.
+    if ((DemandedMask & fcNan) == fcNone) {
+      KnownLHS.knownNot(fcNan);
+      KnownRHS.knownNot(fcNan);
+    }
+
+    if (FMF.noInfs()) {
+      // Flag implies inputs cannot be infinity.
+      KnownLHS.knownNot(fcInf);
+      KnownRHS.knownNot(fcInf);
+    }
+
+    bool NonNanResult = (DemandedMask & fcNan) == fcNone;
+
+    // With no-nans/no-infs:
+    // X * 0.0 --> copysign(0.0, X)
+    // X * -0.0 --> copysign(0.0, -X)
+    if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
+        KnownRHS.isKnownAlways(fcPosZero | fcNan)) {
+      // => copysign(+0, lhs)
+      // Note: Dropping canonicalize
+      Value *Copysign = Builder.CreateCopySign(Y, X, FMF);
+      Copysign->takeName(I);
+      return Copysign;
+    }
+
+    if (KnownLHS.isKnownAlways(fcPosZero | fcNan) &&
+        (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      // => copysign(+0, rhs)
+      // Note: Dropping canonicalize
+      Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
+      Copysign->takeName(I);
+      return Copysign;
+    }
+
+    if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
+        KnownRHS.isKnownAlways(fcNegZero | fcNan)) {
+      // => copysign(0, fneg(lhs))
+      // Note: Dropping canonicalize
+      Value *Copysign =
+          Builder.CreateCopySign(Y, Builder.CreateFNegFMF(X, FMF), FMF);
+      Copysign->takeName(I);
+      return Copysign;
+    }
+
+    if (KnownLHS.isKnownAlways(fcNegZero | fcNan) &&
+        (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      // => copysign(+0, fneg(rhs))
+      // Note: Dropping canonicalize
+      Value *Copysign =
+          Builder.CreateCopySign(X, Builder.CreateFNegFMF(Y, FMF), FMF);
+      Copysign->takeName(I);
+      return Copysign;
+    }
+
+    Type *EltTy = VTy->getScalarType();
+    DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+    if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+        (KnownRHS.isKnownNeverNaN() &&
+         KnownRHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      // Note: Dropping canonicalize
+      Value *Neg = Builder.CreateFNegFMF(X, FMF);
+      Neg->takeName(I);
+      return Neg;
+    }
+
+    if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
+        (KnownLHS.isKnownNeverNaN() &&
+         KnownLHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      // Note: Dropping canonicalize
+      Value *Neg = Builder.CreateFNegFMF(Y, FMF);
+      Neg->takeName(I);
+      return Neg;
+    }
+
+    Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
+
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+    if (Constant *SingleVal =
+            getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+      return SingleVal;
+
+    FastMathFlags InferredFMF =
+        inferFastMathValueFlagsBinOp(FMF, ValidResults, KnownLHS, KnownRHS);
+    if (InferredFMF != FMF) {
+      I->setFastMathFlags(InferredFMF);
+      return I;
+    }
+
+    return nullptr;
+  }
+  case Instruction::FPExt: {
+    FPClassTest SrcDemandedMask = DemandedMask;
+
+    // No subnormal result does not imply not-subnormal in the source type.
+    if ((DemandedMask & fcNegNormal) != fcNone)
+      SrcDemandedMask |= fcNegSubnormal;
+    if ((DemandedMask & fcPosNormal) != fcNone)
+      SrcDemandedMask |= fcPosSubnormal;
+
+    KnownFPClass KnownSrc;
+    if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+      return I;
+
+    const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
+    const fltSemantics &SrcTy =
+        I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+
+    return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+  }
   case Instruction::Call: {
     CallInst *CI = cast<CallInst>(I);
-    switch (CI->getIntrinsicID()) {
-    case Intrinsic::fabs:
-      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
-                                  Depth + 1))
+    const Intrinsic::ID IID = CI->getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::fabs: {
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask),
+                                  KnownSrc, Depth + 1))
         return I;
-      Known.fabs();
+
+      if (Value *Simplified = simplifyDemandedFPClassFabs(
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
+              FMF.noSignedZeros()))
+        return Simplified;
       break;
+    }
     case Intrinsic::arithmetic_fence:
       if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
         return I;
@@ -2091,23 +2519,410 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
 
       if ((DemandedMask & fcNegative) == DemandedMask) {
         // Roundabout way of replacing with fneg(fabs)
-        I->setOperand(1, ConstantFP::get(VTy, -1.0));
+        CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
       if ((DemandedMask & fcPositive) == DemandedMask) {
         // Roundabout way of replacing with fabs
-        I->setOperand(1, ConstantFP::getZero(VTy));
+        CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      KnownFPClass KnownSign =
-          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
+      KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
+                                                   fcAllFlags, CxtI, Depth + 1);
+
+      if (Known.SignBit && KnownSign.SignBit &&
+          *Known.SignBit == *KnownSign.SignBit)
+        return CI->getOperand(0);
+
+      // TODO: Call argument attribute not considered
+      // Input implied not-nan from flag.
+      if (FMF.noNaNs())
+        KnownSign.knownNot(fcNan);
+
+      if (KnownSign.SignBit == false) {
+        CI->dropUBImplyingAttrsAndMetadata();
+        CI->setOperand(1, ConstantFP::getZero(VTy));
+        return I;
+      }
+
+      if (KnownSign.SignBit == true) {
+        CI->dropUBImplyingAttrsAndMetadata();
+        CI->setOperand(1, ConstantFP::get(VTy, -1.0));
+        return I;
+      }
+
       Known.copysign(KnownSign);
       break;
     }
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      const bool PropagateNaN =
+          IID == Intrinsic::maximum || IID == Intrinsic::minimum;
+
+      // We can't tell much based on the demanded result without inspecting the
+      // operands (e.g., a known-positive result could have been clamped), but
+      // we can still prune known-nan inputs.
+      FPClassTest SrcDemandedMask =
+          PropagateNaN ? DemandedMask | ~fcNan : fcAllFlags;
+
+      KnownFPClass KnownLHS, KnownRHS;
+      if (SimplifyDemandedFPClass(CI, 1, SrcDemandedMask, KnownRHS,
+                                  Depth + 1) ||
+          SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+
+      Value *Simplified =
+          simplifyDemandedFPClassMinMax(Known, IID, CI, DemandedMask, KnownLHS,
+                                        KnownRHS, F, FMF.noSignedZeros());
+      if (Simplified)
+        return Simplified;
+
+      auto *FPOp = cast<FPMathOperator>(CI);
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      FastMathFlags InferredFMF = FMF;
+
+      if (!FMF.noSignedZeros()) {
+        // Add NSZ flag if we know the result will not be sensitive to the sign
+        // of 0.
+        FPClassTest ZeroMask = fcZero;
+
+        Type *EltTy = VTy->getScalarType();
+        DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+        if (Mode != DenormalMode::getIEEE())
+          ZeroMask |= fcSubnormal;
+
+        bool ResultNotLogical0 = (ValidResults & ZeroMask) == fcNone;
+        if (ResultNotLogical0 || ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+                                   KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
+                                  (KnownLHS.isKnownNeverLogicalPosZero(Mode) ||
+                                   KnownRHS.isKnownNeverLogicalNegZero(Mode))))
+          InferredFMF.setNoSignedZeros(true);
+      }
+
+      if (!FMF.noNaNs() &&
+          ((PropagateNaN && (ValidResults & fcNan) == fcNone) ||
+           (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN()))) {
+        CI->dropUBImplyingAttrsAndMetadata();
+        InferredFMF.setNoNaNs(true);
+      }
+
+      if (InferredFMF != FMF) {
+        CI->setFastMathFlags(InferredFMF);
+        return FPOp;
+      }
+
+      return nullptr;
+    }
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+    case Intrinsic::exp10: {
+      if ((DemandedMask & fcPositive) == fcNone) {
+        // Only returns positive values or nans.
+        if ((DemandedMask & fcNan) == fcNone)
+          return PoisonValue::get(VTy);
+
+        // Only need nan propagation.
+        if ((DemandedMask & ~fcNan) == fcNone)
+          return ConstantFP::getQNaN(VTy);
+
+        return CI->getArgOperand(0);
+      }
+
+      FPClassTest SrcDemandedMask = DemandedMask & fcNan;
+
+      if (DemandedMask & fcZero) {
+        // exp(-infinity) = 0
+        SrcDemandedMask |= fcNegInf;
+
+        // exp(-largest_normal) = 0
+        //
+        // Negative numbers of sufficiently large magnitude underflow to 0. No
+        // subnormal input has a 0 result.
+        SrcDemandedMask |= fcNegNormal;
+      }
+
+      if (DemandedMask & fcPosSubnormal) {
+        // Negative numbers of sufficiently large magnitude underflow to 0. No
+        // subnormal input has a 0 result.
+        SrcDemandedMask |= fcNegNormal;
+      }
+
+      if (DemandedMask & fcPosNormal) {
+        // exp(0) = 1
+        // exp(+/- smallest_normal) = 1
+        // exp(+/- largest_denormal) = 1
+        // exp(+/- smallest_denormal) = 1
+        // exp(-1) = pos normal
+        SrcDemandedMask |= fcNormal | fcSubnormal | fcZero;
+      }
+
+      // exp(inf), exp(largest_normal) = inf
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosInf | fcPosNormal;
+
+      KnownFPClass KnownSrc;
+
+      // TODO: This could really make use of KnownFPClass of specific value
+      // range, (i.e., close enough to 1)
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+        return I;
+
+      /// Propagate nnan-ness to simplify edge case checks.
+      if ((DemandedMask & fcNan) == fcNone)
+        KnownSrc.knownNot(fcNan);
+
+      // exp(+/-0) = 1
+      if (KnownSrc.isKnownAlways(fcZero))
+        return ConstantFP::get(VTy, 1.0);
+
+      // Only perform nan propagation.
+      // Note: Dropping canonicalize / quiet of signaling nan.
+      if (KnownSrc.isKnownAlways(fcNan))
+        return CI->getArgOperand(0);
+
+      // exp(0 | nan) => x == 0.0 ? 1.0 : x
+      if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
+        // fadd +/-0, 1.0 => 1.0
+        // fadd nan, 1.0 => nan
+        return Builder.CreateFAddFMF(CI->getArgOperand(0),
+                                     ConstantFP::get(VTy, 1.0), FMF);
+      }
+
+      if (KnownSrc.isKnownAlways(fcInf | fcNan)) {
+        // exp(-inf) = 0
+        // exp(+inf) = +inf
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
+        // Note: Dropping canonicalize / quiet of signaling nan.
+        Value *X = CI->getArgOperand(0);
+        Value *IsPosInfOrNan = Builder.CreateFCmpFMF(
+            FCmpInst::FCMP_UEQ, X, ConstantFP::getInfinity(VTy), FMF);
+        // We do not know whether an infinity or a NaN is more likely here,
+        // so mark the branch weights as unkown.
+        Value *ZeroOrInf = Builder.CreateSelectFMFWithUnknownProfile(
+            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF, DEBUG_TYPE);
+        return ZeroOrInf;
+      }
+
+      Known = KnownFPClass::exp(KnownSrc);
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+    }
+    case Intrinsic::log:
+    case Intrinsic::log2:
+    case Intrinsic::log10: {
+      FPClassTest DemandedSrcMask = DemandedMask & (fcNan | fcPosInf);
+
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      // log(x < 0) = nan
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= (fcNegative & ~fcNegZero);
+
+      // log(0) = -inf
+      if (DemandedMask & fcNegInf) {
+        DemandedSrcMask |= fcZero;
+
+        // No value produces subnormal result.
+        if (Mode.inputsMayBeZero())
+          DemandedSrcMask |= fcSubnormal;
+      }
+
+      if (DemandedMask & fcNormal)
+        DemandedSrcMask |= fcNormal | fcSubnormal;
+
+      // log(1) = 0
+      if (DemandedMask & fcZero)
+        DemandedSrcMask |= fcPosNormal;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(I, 0, DemandedSrcMask, KnownSrc, Depth + 1))
+        return I;
+
+      Known = KnownFPClass::log(KnownSrc, Mode);
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+    }
+    case Intrinsic::sqrt: {
+      FPClassTest DemandedSrcMask =
+          DemandedMask & (fcNegZero | fcPositive | fcNan);
+
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= (fcNegative & ~fcNegZero);
+
+      // sqrt(max_subnormal) is a normal value
+      if (DemandedMask & fcPosNormal)
+        DemandedSrcMask |= fcPosSubnormal;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(I, 0, DemandedSrcMask, KnownSrc, Depth + 1))
+        return I;
+
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      // sqrt(-x) = nan, but be careful of negative subnormals flushed to 0.
+      if (KnownSrc.isKnownNever(fcPositive) &&
+          KnownSrc.isKnownNeverLogicalZero(Mode))
+        return ConstantFP::getQNaN(VTy);
+
+      Known = KnownFPClass::sqrt(KnownSrc, Mode);
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+
+      if (ValidResults == fcZero) {
+        if (FMF.noSignedZeros())
+          return ConstantFP::getZero(VTy);
+
+        Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
+                                                 CI->getArgOperand(0), FMF);
+        Copysign->takeName(CI);
+        return Copysign;
+      }
+
+      return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+    }
+    case Intrinsic::trunc:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven: {
+      FPClassTest DemandedSrcMask = DemandedMask;
+
+      // Zero results imply valid subnormal sources.
+      if (DemandedMask & fcNegZero)
+        DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
+
+      if (DemandedMask & fcPosZero)
+        DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, Depth + 1))
+        return I;
+
+      // Note: Possibly dropping snan quiet.
+      if (KnownSrc.isKnownAlways(fcInf | fcNan | fcZero))
+        return CI->getArgOperand(0);
+
+      // Propagate nnan-ness to source to simplify source checks.
+      if ((DemandedMask & fcNan) == fcNone)
+        KnownSrc.knownNot(fcNan);
+
+      bool IsRoundNearestOrTrunc =
+          IID == Intrinsic::round || IID == Intrinsic::roundeven ||
+          IID == Intrinsic::nearbyint || IID == Intrinsic::rint ||
+          IID == Intrinsic::trunc;
+
+      // Ignore denormals-as-zero, as canonicalization is not mandated.
+      if ((IID == Intrinsic::floor || IsRoundNearestOrTrunc) &&
+          KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
+        return ConstantFP::getZero(VTy);
+
+      if ((IID == Intrinsic::ceil || IsRoundNearestOrTrunc) &&
+          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
+        return ConstantFP::getZero(VTy, true);
+
+      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal))
+        return ConstantFP::get(VTy, -1.0);
+
+      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
+        return ConstantFP::get(VTy, 1.0);
+
+      Known = KnownFPClass::roundToIntegral(
+          KnownSrc, IID == Intrinsic::trunc,
+          VTy->getScalarType()->isMultiUnitFPType());
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      if (Constant *SingleVal =
+              getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+        return SingleVal;
+
+      if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
+          KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+        Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
+                                                 CI->getArgOperand(0));
+        Copysign->takeName(CI);
+        return Copysign;
+      }
+
+      return nullptr;
+    }
+    case Intrinsic::canonicalize: {
+      Type *EltTy = VTy->getScalarType();
+
+      // TODO: This could have more refined support for PositiveZero denormal
+      // mode.
+      if (EltTy->isIEEELikeFPTy()) {
+        DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+        FPClassTest SrcDemandedMask = DemandedMask;
+
+        // A demanded quiet nan result may have come from a signaling nan, so we
+        // need to expand the demanded mask.
+        if ((DemandedMask & fcQNan) != fcNone)
+          SrcDemandedMask |= fcSNan;
+
+        if (Mode != DenormalMode::getIEEE()) {
+          // Any zero results may have come from flushed denormals.
+          if (DemandedMask & fcPosZero)
+            SrcDemandedMask |= fcPosSubnormal;
+          if (DemandedMask & fcNegZero)
+            SrcDemandedMask |= fcNegSubnormal;
+        }
+
+        if (Mode == DenormalMode::getPreserveSign()) {
+          // If a denormal input will be flushed, and we don't need zeros, we
+          // don't need denormals either.
+          if ((DemandedMask & fcPosZero) == fcNone)
+            SrcDemandedMask &= ~fcPosSubnormal;
+
+          if ((DemandedMask & fcNegZero) == fcNone)
+            SrcDemandedMask &= ~fcNegSubnormal;
+        }
+
+        KnownFPClass KnownSrc;
+
+        // Simplify upstream operations before trying to simplify this call.
+        if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+          return I;
+
+        // Perform the canonicalization to see if this folded to a constant.
+        Known = KnownFPClass::canonicalize(KnownSrc, Mode);
+
+        if (Constant *SingleVal =
+                getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses))
+          return SingleVal;
+
+        // For IEEE handling, there is only a bit change for nan inputs, so we
+        // can drop it if we do not demand nan results or we know the input
+        // isn't a nan.
+        // Otherwise, we also need to avoid denormal inputs to drop the
+        // canonicalize.
+        if ((KnownSrc.isKnownNeverNaN() || (DemandedMask & fcNan) == fcNone) &&
+            (Mode == DenormalMode::getIEEE() ||
+             KnownSrc.isKnownNeverSubnormal()))
+          return CI->getArgOperand(0);
+
+        return nullptr;
+      }
+
+      [[fallthrough]];
+    }
     default:
-      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
       break;
     }
 
@@ -2124,16 +2939,162 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     if (KnownRHS.isKnownNever(DemandedMask))
       return I->getOperand(1);
 
-    // TODO: Recognize clamping patterns
+    adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
+                                   /*Invert=*/false, SQ, Depth);
+    adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
+                                   /*Invert=*/true, SQ, Depth);
+    Known = KnownLHS.intersectWith(KnownRHS);
+    break;
+  }
+  case Instruction::ExtractElement: {
+    // TODO: Handle demanded element mask
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
+      return I;
+    break;
+  }
+  case Instruction::InsertElement: {
+    KnownFPClass KnownInserted, KnownVec;
+    if (SimplifyDemandedFPClass(I, 1, DemandedMask, KnownInserted, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, DemandedMask, KnownVec, Depth + 1))
+      return I;
+
+    // TODO: Use demanded elements logic from computeKnownFPClass
+    Known = KnownVec | KnownInserted;
+    break;
+  }
+  case Instruction::ShuffleVector: {
+    KnownFPClass KnownLHS, KnownRHS;
+    if (SimplifyDemandedFPClass(I, 1, DemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, DemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    // TODO: This is overly conservative and should consider demanded elements,
+    // and splats.
     Known = KnownLHS | KnownRHS;
     break;
   }
   default:
-    Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+    Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
     break;
   }
 
   return getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+}
+
+/// Helper routine of SimplifyDemandedUseFPClass. It computes Known
+/// floating-point classes. It also tries to handle simplifications that can be
+/// done based on DemandedMask, but without modifying the Instruction.
+Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
+    Instruction *I, FPClassTest DemandedMask, KnownFPClass &Known,
+    Instruction *CxtI, unsigned Depth) {
+  FastMathFlags FMF;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
+    FMF = FPOp->getFastMathFlags();
+    DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
+  }
+
+  // Remove unwanted results from the computed result
+  scope_exit ApplyDemandedMask(
+      [=, &Known]() { Known.knownNot(~DemandedMask); });
+
+  switch (I->getOpcode()) {
+  case Instruction::Select: {
+    // TODO: Can we infer which side it came from based on adjusted result
+    // class?
+    KnownFPClass KnownRHS =
+        computeKnownFPClass(I->getOperand(2), DemandedMask, CxtI, Depth + 1);
+    if (KnownRHS.isKnownNever(DemandedMask))
+      return I->getOperand(1);
+
+    KnownFPClass KnownLHS =
+        computeKnownFPClass(I->getOperand(1), DemandedMask, CxtI, Depth + 1);
+    if (KnownLHS.isKnownNever(DemandedMask))
+      return I->getOperand(2);
+
+    adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
+                                   /*Invert=*/false, SQ, Depth);
+    adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
+                                   /*Invert=*/true, SQ, Depth);
+    Known = KnownLHS.intersectWith(KnownRHS);
+    break;
+  }
+  case Instruction::FNeg: {
+    // Special case fneg(fabs(x))
+    Value *Src;
+
+    Value *FNegSrc = I->getOperand(0);
+    if (!match(FNegSrc, m_FAbs(m_Value(Src)))) {
+      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+      break;
+    }
+
+    FastMathFlags FabsFMF = cast<FPMathOperator>(FNegSrc)->getFastMathFlags();
+    FPClassTest ThisDemandedMask =
+        adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
+
+    KnownFPClass KnownSrc =
+        computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
+    if ((ThisDemandedMask & fcNan) == fcNone)
+      KnownSrc.knownNot(fcNan);
+    if ((ThisDemandedMask & fcInf) == fcNone)
+      KnownSrc.knownNot(fcInf);
+
+    // If the source value is known negative, we can directly fold to it.
+    if (KnownSrc.SignBit == true)
+      return Src;
+
+    // If the only sign bit difference is for 0, ignore it with nsz.
+    if ((FMF.noSignedZeros() || FabsFMF.noSignedZeros()) &&
+        KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
+      return Src;
+
+    Known = KnownFPClass::fneg(KnownFPClass::fabs(KnownSrc));
+    break;
+  }
+  case Instruction::Call: {
+    const CallInst *CI = cast<CallInst>(I);
+    const Intrinsic::ID IID = CI->getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::fabs: {
+      Value *Src = CI->getArgOperand(0);
+      KnownFPClass KnownSrc =
+          computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
+      if (Value *Simplified = simplifyDemandedFPClassFabs(
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
+              FMF.noSignedZeros()))
+        return Simplified;
+      break;
+    }
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      KnownFPClass KnownRHS = computeKnownFPClass(
+          CI->getArgOperand(1), DemandedMask, CxtI, Depth + 1);
+      if (KnownRHS.isUnknown())
+        return nullptr;
+
+      KnownFPClass KnownLHS = computeKnownFPClass(
+          CI->getArgOperand(0), DemandedMask, CxtI, Depth + 1);
+
+      return simplifyDemandedFPClassMinMax(
+          Known, IID, CI, DemandedMask, KnownLHS, KnownRHS, F,
+          cast<FPMathOperator>(CI)->hasNoSignedZeros());
+    }
+    default:
+      break;
+    }
+
+    [[fallthrough]];
+  }
+  default:
+    Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+    break;
+  }
+
+  return getFPClassConstant(I->getType(), DemandedMask & Known.KnownFPClasses);
 }
 
 bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
@@ -2141,8 +3102,59 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
                                                KnownFPClass &Known,
                                                unsigned Depth) {
   Use &U = I->getOperandUse(OpNo);
-  Value *NewVal =
-      SimplifyDemandedUseFPClass(U.get(), DemandedMask, Known, I, Depth);
+  Value *V = U.get();
+  Type *VTy = V->getType();
+
+  if (DemandedMask == fcNone) {
+    if (isa<UndefValue>(V))
+      return false;
+    replaceUse(U, PoisonValue::get(VTy));
+    return true;
+  }
+
+  // Handle constant
+  Instruction *VInst = dyn_cast<Instruction>(V);
+  if (!VInst) {
+    // Handle constants and arguments
+    Known = computeKnownFPClass(V, fcAllFlags, I, Depth);
+    Known.knownNot(~DemandedMask);
+
+    if (Known.KnownFPClasses == fcNone) {
+      if (isa<UndefValue>(V))
+        return false;
+      replaceUse(U, PoisonValue::get(VTy));
+      return true;
+    }
+
+    // Do not try to replace values which are already constants (unless we are
+    // folding to poison). Doing so could promote poison elements to non-poison
+    // constants.
+    if (isa<Constant>(V))
+      return false;
+
+    Value *FoldedToConst = getFPClassConstant(VTy, Known.KnownFPClasses);
+    if (!FoldedToConst || FoldedToConst == V)
+      return false;
+
+    replaceUse(U, FoldedToConst);
+    return true;
+  }
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
+
+  Value *NewVal;
+
+  if (VInst->hasOneUse()) {
+    // If the instruction has one use, we can directly simplify it.
+    NewVal = SimplifyDemandedUseFPClass(VInst, DemandedMask, Known, I, Depth);
+  } else {
+    // If there are multiple uses of this instruction, then we can simplify
+    // VInst to some other value, but not modify the instruction.
+    NewVal = SimplifyMultipleUseDemandedFPClass(VInst, DemandedMask, Known, I,
+                                                Depth);
+  }
+
   if (!NewVal)
     return false;
   if (Instruction *OpInst = dyn_cast<Instruction>(U))

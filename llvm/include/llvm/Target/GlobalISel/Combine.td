@@ -2004,6 +2004,22 @@ class narrow_binop_opcode<Instruction binopOpcode> : GICombineRule <
          [{ return Helper.matchNarrowBinop(*${Trunc}, *${Binop}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${Trunc}, ${matchinfo}); }])>;
 
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+class ctlz_to_ctls_op<Instruction ctlzOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (ctlzOpcode $dst, $src):$root,
+         [{ return Helper.matchCtls(*${root}, ${matchinfo}); }]),
+  (apply [{Helper.applyBuildFn(*${root}, ${matchinfo});}])>;
+
+def ctlz_to_ctls : ctlz_to_ctls_op<G_CTLZ>;
+def ctlz_zero_undef_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_UNDEF>;
+
+def ctls_combines : GICombineGroup<[
+  ctlz_to_ctls,
+  ctlz_zero_undef_to_ctls,
+]>;
+
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
 def narrow_binop_sub : narrow_binop_opcode<G_SUB>;
 def narrow_binop_mul : narrow_binop_opcode<G_MUL>;
@@ -2166,7 +2182,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

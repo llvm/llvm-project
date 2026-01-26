@@ -13,7 +13,6 @@ int f19(void) {
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[TMP:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
 // CIR:   cir.scope {
-// CIR:     %[[C3:.+]] = cir.const #cir.int<3> : !s32i
 // CIR:     %[[C4:.+]] = cir.const #cir.int<4> : !s32i
 // CIR:     cir.store {{.*}} %[[C4]], %[[TMP]] : !s32i, !cir.ptr<!s32i>
 // CIR:   }

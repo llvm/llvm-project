@@ -412,7 +412,7 @@ static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
   switch (AS) {
   case AMDGPUAS::PRIVATE_ADDRESS:
     // FIXME: Private element size.
-    return ST.enableFlatScratch() ? 128 : 32;
+    return ST.hasFlatScratchEnabled() ? 128 : 32;
   case AMDGPUAS::LOCAL_ADDRESS:
     return ST.useDS128() ? 128 : 64;
   case AMDGPUAS::GLOBAL_ADDRESS:
@@ -751,7 +751,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .scalarize(0);
 
-  if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
+  if (ST.hasVOP3PInsts() && ST.hasAddNoCarryInsts() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
     if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
@@ -3410,6 +3410,7 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_sqrt:
       return true;
     default:
       break;
@@ -3417,6 +3418,8 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
 
     break;
   }
+  case TargetOpcode::G_FSQRT:
+    return true;
   case TargetOpcode::G_FFREXP: {
     if (DefMI->getOperand(0).getReg() == Src)
       return true;
@@ -6882,7 +6885,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   Observer.changingInstr(MI);
-  auto ChangedInstr = make_scope_exit([&] { Observer.changedInstr(MI); });
+  scope_exit ChangedInstr([&] { Observer.changedInstr(MI); });
 
   const unsigned StoreOpcode = IsD16 ? AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16
                                      : AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE;
@@ -7310,7 +7313,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
 bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
                                        MachineRegisterInfo &MRI,
                                        MachineIRBuilder &B) const {
-  if (!ST.isTrapHandlerEnabled() ||
+  if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
 
@@ -7430,7 +7433,7 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
                                             MachineIRBuilder &B) const {
   // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
-  if (!ST.isTrapHandlerEnabled() ||
+  if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
     Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
