@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-multi-exit=false -S | FileCheck %s -check-prefix=NOUNROLL
 
 ; Multi exit loop with predictable exit -- unroll
+; Exit before loop body.
 define i32 @test1(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @test1(
 ; CHECK: epil
@@ -42,7 +43,7 @@ declare i32 @foo()
 
 !0 = !{!"branch_weights", i32 1, i32 100}
 
-; exit is a deopt call so it should unroll
+; Exit is a deopt call so it should unroll
 define i32 @test2(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @test2(
 ; CHECK: epil
@@ -120,7 +121,8 @@ otherexit:
 
 !2 = !{!"branch_weights", i32 1, i32 2}
 
-; multi exit loop with high predictability of exits -- unroll
+; Multi exit loop with high predictability of exits -- unroll.
+; Exit after loop body.
 define i32 @test4(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @test4(
 ; CHECK: epil
