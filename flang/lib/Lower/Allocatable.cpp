@@ -412,8 +412,11 @@ private:
       return true;
     }
     else {
-      printf("UNIMPLEMENTED 1, hardcoding true for my case which doesn't use lower bounds\n");
-      return true;
+      // For AllocateShapeSpecArray, check if the optional lower bound is present
+      const auto &shapeSpecArray{alloc.getShapeSpecArrays()};
+      // std::get<0> gets the optional<IntExpr> for the lower bound
+      // If it has a value, then lower bounds are not all ones
+      return !std::get<0>(shapeSpecArray.t).has_value();
     }
   }
 
@@ -460,9 +463,68 @@ private:
       }
     }
     else {
-      printf("IMPLEMENTING 2\n");
-      const auto &array{alloc.getShapeSpecArrays()};
+      // Handle AllocateShapeSpecArray (F2023 array bounds feature)
+      const auto &shapeSpecArray{alloc.getShapeSpecArrays()};
+      const auto &lowerOptBoundsExpr{std::get<0>(shapeSpecArray.t)};
+      const auto &upperBoundsExpr{std::get<1>(shapeSpecArray.t)};
       
+      // Get the semantic expression for the upper bounds array
+      const Fortran::lower::SomeExpr *ubExpr = 
+          Fortran::semantics::GetExpr(upperBoundsExpr);
+      
+      // Get the constant shape from the semantic expression
+      auto ubShape = Fortran::evaluate::GetShape(
+          converter.getFoldingContext(), *ubExpr);
+      
+      // Extract the constant extent from the first (only) dimension
+      const auto &extent = (*ubShape)[0];
+      auto constExtent = Fortran::evaluate::ToInt64(*extent);
+      
+      // Evaluate the upper bounds array expression - need address for element access
+      fir::ExtendedValue ubExv = converter.genExprAddr(loc, *ubExpr, stmtCtx);
+      mlir::Value ubBase = fir::getBase(ubExv);
+      
+      // Get the element type from the array
+      auto ubRefTy = mlir::dyn_cast<fir::ReferenceType>(ubBase.getType());
+      auto ubSeqTy = mlir::dyn_cast<fir::SequenceType>(ubRefTy.getEleTy());
+      mlir::Type elemTy = ubSeqTy.getEleTy();
+      mlir::Type elemRefTy = builder.getRefType(elemTy);
+      
+      // Handle optional lower bounds
+      mlir::Value lbBase;
+      const Fortran::lower::SomeExpr *lbExpr = nullptr;
+      if (lowerOptBoundsExpr) {
+        lbExpr = Fortran::semantics::GetExpr(*lowerOptBoundsExpr);
+        fir::ExtendedValue lbExv = converter.genExprAddr(loc, *lbExpr, stmtCtx);
+        lbBase = fir::getBase(lbExv);
+      }
+      
+      // Extract each element from the bounds arrays
+      for (int64_t i = 0; i < constExtent; ++i) {
+        mlir::Value idx = builder.createIntegerConstant(loc, idxTy, i);
+        
+        // Extract upper bound element
+        mlir::Value ubElemAddr = fir::CoordinateOp::create(builder,
+            loc, elemRefTy, ubBase, idx);
+        mlir::Value ub = fir::LoadOp::create(builder, loc, ubElemAddr);
+        ub = builder.createConvert(loc, idxTy, ub);
+        
+        if (lbBase) {
+          // Extract lower bound element
+          mlir::Value lbElemAddr = fir::CoordinateOp::create(builder,
+              loc, elemRefTy, lbBase, idx);
+          mlir::Value lb = fir::LoadOp::create(builder, loc, lbElemAddr);
+          lb = builder.createConvert(loc, idxTy, lb);
+          lbounds.emplace_back(lb);
+          
+          // extent = ub - lb + 1
+          mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, ub, lb);
+          extents.emplace_back(
+              mlir::arith::AddIOp::create(builder, loc, diff, one));
+        } else {
+          extents.emplace_back(ub);
+        }
+      }
     }
     fir::factory::genInlinedAllocation(builder, loc, box, lbounds, extents,
                                        lenParams, mangleAlloc(alloc),
