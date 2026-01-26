@@ -242,20 +242,7 @@ Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
 }
 
 Error UnifiedOnDiskActionCache::validate() const {
-  auto ValidateRef = [this](FileOffset Offset, ArrayRef<char> Value) -> Error {
-    auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
-    auto formatError = [&](Twine Msg) {
-      return createStringError(
-          llvm::errc::illegal_byte_sequence,
-          "bad record at 0x" +
-              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
-    };
-    if (Error E = UniDB->getGraphDB().validateObjectID(ID))
-      return formatError(llvm::toString(std::move(E)));
-    return Error::success();
-  };
-  return UniDB->getKeyValueDB().validate(ValidateRef);
+  return UniDB->validateActionCache();
 }
 
 Expected<std::unique_ptr<ActionCache>>
