@@ -2,7 +2,7 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import skipIfWindowsWithoutConPTY
+from lldbsuite.test.decorators import expectedFailureWindows
 import lldbdap_testcase
 import os
 
@@ -13,7 +13,9 @@ class TestDAP_launch_shellExpandArguments_disabled(lldbdap_testcase.DAPTestCaseB
     disabled.
     """
 
-    @skipIfWindowsWithoutConPTY(bugnumber=137599)
+    @expectedFailureWindows(
+        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
+    )
     def test(self):
         program = self.getBuildArtifact("a.out")
         program_dir = os.path.dirname(program)

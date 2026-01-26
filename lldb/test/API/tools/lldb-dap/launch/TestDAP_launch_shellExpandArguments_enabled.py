@@ -4,7 +4,7 @@ Test lldb-dap launch request.
 
 from lldbsuite.test.decorators import (
     skipIfLinux,
-    skipIfWindowsWithoutConPTY,
+    expectedFailureWindows,
     expectedFailureAll,
 )
 import lldbdap_testcase
@@ -18,7 +18,9 @@ class TestDAP_launch_shellExpandArguments_enabled(lldbdap_testcase.DAPTestCaseBa
     """
 
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
-    @skipIfWindowsWithoutConPTY(bugnumber=137599)
+    @expectedFailureWindows(
+        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
+    )
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
     def test(self):
         program = self.getBuildArtifact("a.out")

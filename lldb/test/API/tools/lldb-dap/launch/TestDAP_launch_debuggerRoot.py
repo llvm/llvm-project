@@ -2,6 +2,7 @@
 Test lldb-dap launch request.
 """
 
+from lldbsuite.test.decorators import expectedFailureWindows
 from lldbsuite.test import lldbplatformutil
 import lldbdap_testcase
 import os
@@ -13,6 +14,9 @@ class TestDAP_launch_debuggerRoot(lldbdap_testcase.DAPTestCaseBase):
     the lldb-dap debug adapter.
     """
 
+    @expectedFailureWindows(
+        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
+    )
     def test(self):
         program = self.getBuildArtifact("a.out")
         program_parent_dir = os.path.realpath(os.path.dirname(os.path.dirname(program)))

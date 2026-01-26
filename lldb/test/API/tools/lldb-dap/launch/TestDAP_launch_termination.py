@@ -2,7 +2,6 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import skipIfWindowsWithoutConPTY
 import lldbdap_testcase
 
 
@@ -11,7 +10,6 @@ class TestDAP_launch_termination(lldbdap_testcase.DAPTestCaseBase):
     Tests the correct termination of lldb-dap upon a 'disconnect' request.
     """
 
-    @skipIfWindowsWithoutConPTY(bugnumber=137599)
     def test(self):
         self.create_debug_adapter()
         # The underlying lldb-dap process must be alive
