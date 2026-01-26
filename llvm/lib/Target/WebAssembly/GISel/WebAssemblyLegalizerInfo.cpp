@@ -131,7 +131,8 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       //.scalarize(0)
       .minScalar(0, s32);
 
-  getActionDefinitionsBuilder({G_VECREDUCE_OR, G_VECREDUCE_AND});//.scalarize(1);
+  getActionDefinitionsBuilder(
+      {G_VECREDUCE_OR, G_VECREDUCE_AND}); //.scalarize(1);
 
   getActionDefinitionsBuilder(G_BITCAST)
       .customIf([=](const LegalityQuery &Query) {
@@ -299,9 +300,10 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(1, s32, s64)
       .lower();
 
-  getActionDefinitionsBuilder(G_FPEXT).legalFor({{s64, s32}});//.scalarize(0);
+  getActionDefinitionsBuilder(G_FPEXT).legalFor({{s64, s32}}); //.scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPTRUNC).legalFor({{s32, s64}});//.scalarize(0);
+  getActionDefinitionsBuilder(G_FPTRUNC).legalFor(
+      {{s32, s64}}); //.scalarize(0);
 
   getActionDefinitionsBuilder(G_VASTART).legalFor({p0});
   getActionDefinitionsBuilder(G_VAARG)
@@ -331,9 +333,9 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FCANONICALIZE: {
-    auto One = MRI.createGenericVirtualRegister(
-        MRI.getType(MI.getOperand(0).getReg()));
-    MIRBuilder.buildFConstant(One, 1.0);
+    auto One =
+        MIRBuilder.buildFConstant(MRI.getType(MI.getOperand(0).getReg()), 1.0)
+            .getReg(0);
 
     MIRBuilder.buildInstr(TargetOpcode::G_STRICT_FMUL)
         .addDef(MI.getOperand(0).getReg())
@@ -356,11 +358,12 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
           .addUse(MI.getOperand(2).getReg())
           .setMIFlags(MI.getFlags());
     } else {
-      auto TmpReg = MRI.createGenericVirtualRegister(s1);
+      auto Cond = MIRBuilder
+                      .buildFCmp(CmpInst::Predicate::FCMP_OLT, s1,
+                                 MI.getOperand(1), MI.getOperand(2))
+                      .getReg(0);
 
-      MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OLT, TmpReg,
-                           MI.getOperand(1), MI.getOperand(2));
-      MIRBuilder.buildSelect(MI.getOperand(0), TmpReg, MI.getOperand(1),
+      MIRBuilder.buildSelect(MI.getOperand(0), Cond, MI.getOperand(1),
                              MI.getOperand(2));
     }
     MI.eraseFromParent();
@@ -376,11 +379,12 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
           .addUse(MI.getOperand(2).getReg())
           .setMIFlags(MI.getFlags());
     } else {
-      auto TmpReg = MRI.createGenericVirtualRegister(s1);
+      auto Cond = MIRBuilder
+                      .buildFCmp(CmpInst::Predicate::FCMP_OGT, s1,
+                                 MI.getOperand(1), MI.getOperand(2))
+                      .getReg(0);
 
-      MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OGT, TmpReg,
-                           MI.getOperand(1), MI.getOperand(2));
-      MIRBuilder.buildSelect(MI.getOperand(0), TmpReg, MI.getOperand(1),
+      MIRBuilder.buildSelect(MI.getOperand(0), Cond, MI.getOperand(1),
                              MI.getOperand(2));
     }
     MI.eraseFromParent();
