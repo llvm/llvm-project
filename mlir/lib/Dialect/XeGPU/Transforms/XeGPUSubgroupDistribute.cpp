@@ -62,8 +62,7 @@ namespace {
 /// In certain cases, we may need to favor XeGPU specific distribution patterns
 /// over generic vector distribution patterns. In such cases, we can assign
 /// priorities to patterns.
-static constexpr unsigned regularPatternBenefit = 1;
-static constexpr unsigned highPatternBenefit = 2;
+enum PatternHierarchy : unsigned { Regular = 1, AboveRegular = 2 };
 
 /// Helper function to get  distributed vector type for a source vector type
 /// according to the lane_layout. We simply divide each dimension of tensor
@@ -792,9 +791,10 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     // Collect offsets.
     for (size_t i = 1; i < newRetIndices.size(); ++i)
       newPrefetchOperands.push_back(newWarpOp.getResult(newRetIndices[i]));
-    xegpu::PrefetchNdOp::create(rewriter, newWarpOp.getLoc(), TypeRange{},
-                                newPrefetchOperands, prefetchOp->getAttrs());
-    xegpu::removeLayoutAttrs(prefetchOp);
+    Operation *newPrefetchOp = xegpu::PrefetchNdOp::create(
+        rewriter, newWarpOp.getLoc(), TypeRange{}, newPrefetchOperands,
+        prefetchOp->getAttrs());
+    xegpu::removeLayoutAttrs(newPrefetchOp);
     rewriter.eraseOp(prefetchOp);
     return success();
   }
@@ -1204,6 +1204,72 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     rewriter.replaceAllUsesWith(
         distributedVal,
         resolveDistributedTy(newOp.getResult(), distResultTy, rewriter));
+    return success();
+  }
+};
+
+// Sink SG-uniform ops. An op is uniform if none
+// of its operands/results has a distribution layout attribute.
+// Non-uniform vectors are handled by dedicated patterns.
+// This pattern must have a higher priority than vector dialect distribution
+// patterns, because a distributable shape may be logically intended as
+// uniform (i.e., no layout), so we want to omit its distribution.
+struct SinkUniformOps final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    // Take the last op
+    Operation *warpRegionPreYieldOp = warpOp.getTerminator()->getPrevNode();
+    // Any ops with nested regions must be handled carefully in dedicated
+    // patterns.
+    if (!warpRegionPreYieldOp || warpRegionPreYieldOp->getNumRegions())
+      return failure();
+    int operandIdx = -1;
+    if (warpRegionPreYieldOp->getNumResults()) {
+      OpOperand *operand = getWarpResult(
+          warpOp, [&](Operation *op) { return warpRegionPreYieldOp == op; });
+      if (!operand)
+        return failure();
+      operandIdx = operand->getOperandNumber();
+      if (warpRegionPreYieldOp->getResult(0).getType() !=
+          warpOp.getResult(operandIdx).getType())
+        return rewriter.notifyMatchFailure(warpOp,
+                                           "The op result is not uniform.");
+    }
+
+    // The op must have no layout-based operands or results.
+    bool uniformValuesOnly =
+        llvm::all_of(warpRegionPreYieldOp->getResults(), [](Value v) {
+          return !xegpu::getDistributeLayoutAttr(v);
+        });
+    uniformValuesOnly &=
+        llvm::all_of(warpRegionPreYieldOp->getOpOperands(), [](OpOperand &opr) {
+          return !xegpu::getDistributeLayoutAttr(opr);
+        });
+    if (!uniformValuesOnly)
+      return rewriter.notifyMatchFailure(warpOp,
+                                         "Some values are not uniform.");
+    SmallVector<size_t> newRetIndices;
+    SmallVector<Value> operands =
+        llvm::to_vector_of<Value>(warpRegionPreYieldOp->getOperands());
+    SmallVector<Type> operandTypes =
+        llvm::to_vector_of<Type>(warpRegionPreYieldOp->getOperandTypes());
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, operands, operandTypes, newRetIndices);
+
+    rewriter.setInsertionPointAfter(newWarpOp);
+    IRMapping operandMapper;
+    for (auto [oldOperandIdx, newOperandIdx] : llvm::enumerate(newRetIndices))
+      operandMapper.map(warpRegionPreYieldOp->getOperand(oldOperandIdx),
+                        newWarpOp->getResult(newOperandIdx));
+    Operation *clonedOp = rewriter.clone(*warpRegionPreYieldOp, operandMapper);
+    if (!clonedOp->getNumResults())
+      rewriter.eraseOp(warpRegionPreYieldOp);
+    else {
+      assert(operandIdx != -1 && "Expected a warp result for the operation");
+      rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx),
+                                  clonedOp->getResult(0));
+    }
     return success();
   }
 };
@@ -2036,14 +2102,14 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                StoreMatrixDistribution,
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
-      /*pattern benefit=*/regularPatternBenefit);
+      /*pattern benefit=*/PatternHierarchy::Regular);
   // For following patterns, we need to override the regular vector distribution
   // patterns. Therefore, assign higher benefit.
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
-           VectorInsertStridedSliceDistribution, VectorBroadcastDistribution>(
-          patterns.getContext(),
-          /*pattern benefit=*/highPatternBenefit);
+           VectorInsertStridedSliceDistribution, VectorBroadcastDistribution,
+           SinkUniformOps>(patterns.getContext(),
+                           /*pattern benefit=*/PatternHierarchy::AboveRegular);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
@@ -2094,10 +2160,9 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       return AffineMap::get(val.getContext());
     // Get the layout of the vector type.
     xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(val);
-    // If no layout is specified, that means no distribution.
+    // If no layout is specified, assume uniform case (no distribution).
     if (!layout)
-      return AffineMap::getMultiDimMapWithTargets(vecRank, {},
-                                                  val.getContext());
+      return AffineMap::get(val.getContext());
     // Expecting vector and layout rank to match.
     assert(layout.getRank() == vecRank &&
            "Expecting vector and layout rank to match");
@@ -2133,11 +2198,11 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
 
   vector::populateDistributeReduction(
       patterns, warpReduction,
-      /*pattern benefit=*/regularPatternBenefit);
+      /*pattern benefit=*/PatternHierarchy::Regular);
 
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn,
-      /*pattern benefit=*/regularPatternBenefit);
+      /*pattern benefit=*/PatternHierarchy::Regular);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
     signalPassFailure();
     return;

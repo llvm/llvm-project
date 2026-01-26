@@ -17,6 +17,6 @@ include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/GPU/IR/GPUOps.td"
 include "mlir/Dialect/LLVMIR/NVVMOps.td"
 
-def : Pat<(GPU_BarrierOp), (NVVM_Barrier0Op)>;
+def : Pat<(GPU_BarrierOp : $op $memory_fence), (NVVM_Barrier0Op)>;
 
 #endif // MLIR_CONVERSION_GPUTONVVM_TD

@@ -4,6 +4,7 @@ module std_config [system] {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
+  textual header "__configuration/attributes.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
   textual header "__configuration/experimental.h"

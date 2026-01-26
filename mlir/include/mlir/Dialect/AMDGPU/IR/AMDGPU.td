@@ -956,9 +956,18 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
+    **DEPRECATION NOTICE**: Unless you need the inline-assembly-based workaround
+    for gfx908/MI-100, you should represent this pattern with the equivalent
+
+    ```mlir
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    ```
+
+    instead.
+
     `amdgpu.lds_barrier` is both a barrier (all workitems in a workgroup must reach
     the barrier before any of them may proceed past it) and a wait for all
-    operations that affect the Local Data Store (LDS) issued from that wrokgroup
+    operations that affect the Local Data Store (LDS) issued from that workgroup
     to complete before the workgroup may continue. Since the LDS is per-workgroup
     memory, this barrier may be used, for example, to ensure all workitems have
     written data to LDS before any workitem attempts to read from it.

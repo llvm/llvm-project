@@ -117,8 +117,6 @@ private:
 
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
-
-  bool softPromoteHalfType() const override { return false; }
 };
 
 } // End namespace llvm;
