@@ -264,6 +264,11 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
         mlir::cast_if_present<cir::DataMemberAttr>(op.getInitialValueAttr());
     loweredInit = lowerModule->getCXXABI().lowerDataMemberConstant(
         init, layout, *getTypeConverter());
+  } else if (mlir::isa<cir::MethodType>(ty)) {
+    cir::MethodAttr init =
+        mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
+    loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
+        init, layout, *getTypeConverter());
   } else {
     llvm_unreachable(
         "inputs to cir.global in ABI lowering must be data member or method");
