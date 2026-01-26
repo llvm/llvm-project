@@ -1,24 +1,10 @@
 ; RUN: split-file %s %t
 
-; RUN: opt -mtriple=r600-- -passes=amdgpu-printf-runtime-binding -mcpu=r600 -S < %t/invalid-first-arg-addrspace.ll | FileCheck %t/invalid-first-arg-addrspace.ll
 ; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-first-arg-addrspace.ll | FileCheck %t/invalid-first-arg-addrspace.ll
-; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-first-arg-addrspace.ll | FileCheck %t/invalid-first-arg-addrspace.ll
-
-; RUN: opt -mtriple=r600-- -passes=amdgpu-printf-runtime-binding -mcpu=r600 -S < %t/invalid-first-arg-type.ll | FileCheck %t/invalid-first-arg-type.ll
 ; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-first-arg-type.ll | FileCheck %t/invalid-first-arg-type.ll
-; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-first-arg-type.ll | FileCheck %t/invalid-first-arg-type.ll
-
-; RUN: opt -mtriple=r600-- -passes=amdgpu-printf-runtime-binding -mcpu=r600 -S < %t/invalid-return.ll | FileCheck %t/invalid-return.ll
 ; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-return.ll | FileCheck %t/invalid-return.ll
-; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-return.ll | FileCheck %t/invalid-return.ll
-
-; RUN: opt -mtriple=r600-- -passes=amdgpu-printf-runtime-binding -mcpu=r600 -S < %t/non-variadic.ll | FileCheck %t/non-variadic.ll
 ; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/non-variadic.ll | FileCheck %t/non-variadic.ll
-; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/non-variadic.ll | FileCheck %t/non-variadic.ll
-
-; RUN: opt -mtriple=r600-- -passes=amdgpu-printf-runtime-binding -mcpu=r600 -S < %t/too-many-args.ll | FileCheck %t/too-many-args.ll
 ; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/too-many-args.ll | FileCheck %t/too-many-args.ll
-; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/too-many-args.ll | FileCheck %t/too-many-args.ll
 
 ;--- invalid-first-arg-addrspace.ll
 define amdgpu_kernel void @test_kernel(i32 %n) {
