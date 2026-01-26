@@ -207,8 +207,8 @@ define <2 x i16> @s_add_v2i16(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GFX7-NEXT:    s_and_b32 s4, s4, 0xffff
 ; GFX7-NEXT:    s_and_b32 s5, s16, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX7-NEXT:    s_or_b32 s4, s5, s4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7-NEXT:    s_or_b32 s5, s5, s4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: s_add_v2i16:
@@ -232,8 +232,8 @@ define <2 x i16> @s_add_v2i16(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GFX8-NEXT:    s_and_b32 s4, 0xffff, s4
 ; GFX8-NEXT:    s_and_b32 s5, 0xffff, s16
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX8-NEXT:    s_or_b32 s4, s5, s4
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    s_or_b32 s5, s5, s4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: s_add_v2i16:
