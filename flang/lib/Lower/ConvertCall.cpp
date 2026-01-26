@@ -1078,7 +1078,7 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
     return hlfir::EntityWithAttributes{asExpr.getResult()};
   }
   // TODO: better scoping model in FIR.
-  // The declare for result storage allocated on the callee side must be
+  // The declare for result storage allocated on the callee side must
   // currently be emitted before the call so that MLIR level inlining does not
   // break aliasing by introducing a fir.dummy_scope between the alloca and
   // fir.declare that leads the alias analysis to think that the result
