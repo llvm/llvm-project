@@ -4861,7 +4861,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
          "VPExpandSCEVRecipes must be at the beginning of the entry block, "
-         "after any VPIRInstructions");
+         "before any VPIRInstructions");
   // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
   // to the VPIRBasicBlock.
   auto EI = Entry->begin();
