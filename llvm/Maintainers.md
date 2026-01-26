@@ -245,9 +245,6 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 #### Hexagon backend
 
-Sundeep Kushwaha \
-sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
-
 #### Lanai backend
 
 Jacques Pienaar \
@@ -557,7 +554,8 @@ Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigchees
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
 Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
-Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
+Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend \
+Sundeep Kushwaha (sundeepk@qti.qualcomm.com, [SundeepKushwaha](https://github.com/SundeepKushwaha)) -- Hexagon backend
 
 ### Former maintainers of removed components
 
