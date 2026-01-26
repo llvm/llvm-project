@@ -530,10 +530,8 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   return ModRefResult::getNoModRef();
 }
 
-/// This is mostly inspired by MLIR::LocalAliasAnalysis with 2 notable
-/// differences 1) Regions are not handled here but will be handled by a data
-/// flow analysis to come 2) Allocate and Free effects are considered
-/// modifying
+/// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
+/// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   if (auto call = llvm::dyn_cast<fir::CallOp>(op))
     return getCallModRef(call, location);
