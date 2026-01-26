@@ -121,7 +121,6 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
   new GlobalVariable(M, PredSpecIDStr->getType(), true,
                      GlobalVariable::LinkageTypes::PrivateLinkage,
                      PredSpecIDStr, "llvm.amdgcn.feature.predicate.ids");
-  M.dump();
 
   return true;
 }
