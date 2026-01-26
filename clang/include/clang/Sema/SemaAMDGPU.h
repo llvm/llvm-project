@@ -26,10 +26,6 @@ public:
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
-  /// Emits a diagnostic if the arg at \p ArgIdx of \p TheCall is not a string
-  /// literal. \returns true if a diagnostic was emitted.
-  bool checkStringLiteralArg(CallExpr *TheCall, unsigned ArgIdx);
-
   /// Emits a diagnostic if the arg at \p ArgIdx of \p TheCall is not atomic
   /// ordering encoded in the C ABI format, or if the atomic ordering is not
   /// valid for the operation type as defined by \p MayLoad and \p MayStore.

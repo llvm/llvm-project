@@ -97,34 +97,45 @@ void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,
 void test_amdgcn_load_monitor_ao_constant(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
                               global int* b32out, global v2i* b64out, global v4i* b128out, int ao)
 {
-  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, ao, ""); // expected-error {{'__builtin_amdgcn_global_load_monitor_b32' must be a constant integer}}
-  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, ao, ""); // expected-error {{'__builtin_amdgcn_global_load_monitor_b64' must be a constant integer}}
-  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, ao, ""); // expected-error {{'__builtin_amdgcn_global_load_monitor_b128' must be a constant integer}}
-  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, ao, ""); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b32' must be a constant integer}}
-  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, ao, ""); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b64' must be a constant integer}}
-  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, ao, ""); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_global_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_global_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_global_load_monitor_b128' must be a constant integer}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
 }
 
 void test_amdgcn_load_monitor_ao_valid(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
                               global int* b32out, global v2i* b64out, global v4i* b128out)
 {
-  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELEASE, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
-  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_ACQ_REL, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
-  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_ACQ_REL, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
-  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELEASE, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
-  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_ACQ_REL, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
-  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELEASE, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
 }
 
-void test_amdgcn_load_monitor_scope_literal(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
-                              global int* b32out, global v2i* b64out, global v4i* b128out, const char* scope)
+void test_amdgcn_load_monitor_scope_constant(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
+                              global int* b32out, global v2i* b64out, global v4i* b128out, int sc)
 {
-  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELAXED, scope); // expected-error {{expression is not a string literal}}
-  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_RELAXED, scope); // expected-error {{expression is not a string literal}}
-  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_RELAXED, scope); // expected-error {{expression is not a string literal}}
-  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELAXED, scope); // expected-error {{expression is not a string literal}}
-  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_RELAXED, scope); // expected-error {{expression is not a string literal}}
-  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELAXED, scope); // expected-error {{expression is not a string literal}}
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_global_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_global_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_global_load_monitor_b128' must be a constant integer}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
+}
+
+void test_amdgcn_load_monitor_scope_valid(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
+                              global int* b32out, global v2i* b64out, global v4i* b128out)
+{
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
 }
 
 void test_amdgcn_cluster_load(global int* addr32, global v2i* addr64, global v4i* addr128, global int* b32out, global v2i* b64out, global v4i* b128out, int cpol, int mask)

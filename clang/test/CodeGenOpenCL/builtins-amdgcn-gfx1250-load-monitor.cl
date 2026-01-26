@@ -12,7 +12,7 @@ typedef int    v4i   __attribute__((ext_vector_type(4)));
 //
 int test_amdgcn_global_load_monitor_b32(global int* inptr)
 {
-  return __builtin_amdgcn_global_load_monitor_b32(inptr, __ATOMIC_RELAXED, "");
+  return __builtin_amdgcn_global_load_monitor_b32(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b64(
@@ -22,7 +22,7 @@ int test_amdgcn_global_load_monitor_b32(global int* inptr)
 //
 v2i test_amdgcn_global_load_monitor_b64(global v2i* inptr)
 {
-  return __builtin_amdgcn_global_load_monitor_b64(inptr, __ATOMIC_ACQUIRE, "agent");
+  return __builtin_amdgcn_global_load_monitor_b64(inptr, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_DEVICE);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b128(
@@ -32,7 +32,7 @@ v2i test_amdgcn_global_load_monitor_b64(global v2i* inptr)
 //
 v4i test_amdgcn_global_load_monitor_b128(global v4i* inptr)
 {
-  return __builtin_amdgcn_global_load_monitor_b128(inptr, __ATOMIC_ACQUIRE, "workgroup");
+  return __builtin_amdgcn_global_load_monitor_b128(inptr, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_WRKGRP);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_flat_load_monitor_b32(
@@ -42,7 +42,7 @@ v4i test_amdgcn_global_load_monitor_b128(global v4i* inptr)
 //
 int test_amdgcn_flat_load_monitor_b32(int* inptr)
 {
-  return __builtin_amdgcn_flat_load_monitor_b32(inptr, __ATOMIC_RELAXED, "");
+  return __builtin_amdgcn_flat_load_monitor_b32(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_flat_load_monitor_b64(
@@ -52,7 +52,7 @@ int test_amdgcn_flat_load_monitor_b32(int* inptr)
 //
 v2i test_amdgcn_flat_load_monitor_b64(v2i* inptr)
 {
-  return __builtin_amdgcn_flat_load_monitor_b64(inptr, __ATOMIC_SEQ_CST, "cluster");
+  return __builtin_amdgcn_flat_load_monitor_b64(inptr, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_CLUSTR);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_flat_load_monitor_b128(
@@ -62,5 +62,5 @@ v2i test_amdgcn_flat_load_monitor_b64(v2i* inptr)
 //
 v4i test_amdgcn_flat_load_monitor_b128(v4i* inptr)
 {
-  return __builtin_amdgcn_flat_load_monitor_b128(inptr, __ATOMIC_RELAXED, "");
+  return __builtin_amdgcn_flat_load_monitor_b128(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }

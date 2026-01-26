@@ -366,11 +366,38 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
-static llvm::MetadataAsValue *getStringAsMDValue(llvm::LLVMContext &Ctx,
-                                                 const clang::Expr *E) {
-  StringRef Arg =
-      cast<clang::StringLiteral>(E->IgnoreParenCasts())->getString();
-  llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
+static llvm::MetadataAsValue *getSyncscopeIDAsMDString(llvm::LLVMContext &Ctx,
+                                                       clang::SyncScope Scope) {
+  StringRef Name;
+  switch (Scope) {
+  case clang::SyncScope::HIPSingleThread:
+  case clang::SyncScope::SingleScope:
+    Name = "singlethread";
+    break;
+  case clang::SyncScope::HIPWavefront:
+  case clang::SyncScope::OpenCLSubGroup:
+  case clang::SyncScope::WavefrontScope:
+    Name = "wavefront";
+    break;
+  case clang::SyncScope::HIPCluster:
+  case clang::SyncScope::ClusterScope:
+  case clang::SyncScope::HIPWorkgroup:
+  case clang::SyncScope::OpenCLWorkGroup:
+  case clang::SyncScope::WorkgroupScope:
+    Name = "workgroup";
+    break;
+  case clang::SyncScope::HIPAgent:
+  case clang::SyncScope::OpenCLDevice:
+  case clang::SyncScope::DeviceScope:
+    Name = "agent";
+    break;
+  case clang::SyncScope::SystemScope:
+  case clang::SyncScope::HIPSystem:
+  case clang::SyncScope::OpenCLAllSVMDevices:
+    Name = "";
+    break;
+  }
+  llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Name)});
   return llvm::MetadataAsValue::get(Ctx, MD);
 }
 
@@ -830,9 +857,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
     llvm::Value *AO = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Scope = getStringAsMDValue(Ctx, E->getArg(2));
+
+    auto Scope = dyn_cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    llvm::Value *ScopeMD = getSyncscopeIDAsMDString(
+        Ctx, static_cast<clang::SyncScope>(Scope->getZExtValue()));
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
-    return Builder.CreateCall(F, {Addr, AO, Scope});
+    return Builder.CreateCall(F, {Addr, AO, ScopeMD});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
@@ -894,7 +924,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     const unsigned ScopeArg = E->getNumArgs() - 1;
     for (unsigned i = 0; i != ScopeArg; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
-    Args.push_back(getStringAsMDValue(Ctx, E->getArg(ScopeArg)));
+    StringRef Arg = cast<StringLiteral>(E->getArg(ScopeArg)->IgnoreParenCasts())
+                        ->getString();
+    llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
+    Args.push_back(llvm::MetadataAsValue::get(Ctx, MD));
     // Intrinsic is typed based on the pointer AS. Pointer is always the first
     // argument.
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
