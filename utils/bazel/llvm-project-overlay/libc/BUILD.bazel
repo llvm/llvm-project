@@ -3484,6 +3484,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sinf",
+    hdrs = ["src/__support/math/sinf.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction",
+        ":__support_sincosf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinhfcoshf_utils",
     hdrs = ["src/__support/math/sinhfcoshf_utils.h"],
     deps = [
@@ -5082,13 +5096,7 @@ libc_math_function(
 libc_math_function(
     name = "sinf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_range_reduction",
-        ":__support_sincosf_utils",
+        ":__support_math_sinf",
     ],
 )
 
