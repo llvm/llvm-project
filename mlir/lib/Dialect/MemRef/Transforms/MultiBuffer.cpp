@@ -61,7 +61,7 @@ static LogicalResult replaceUsesAndPropagateType(RewriterBase &rewriter,
     bool typeInferenceFailed = false;
     Value replacement =
         llvm::TypeSwitch<Operation *, Value>(user)
-            .Case<memref::SubViewOp>([&](memref::SubViewOp subview) -> Value {
+            .Case([&](memref::SubViewOp subview) -> Value {
               MemRefType newType =
                   memref::SubViewOp::inferRankReducedResultType(
                       subview.getType().getShape(), srcType,
@@ -72,35 +72,33 @@ static LogicalResult replaceUsesAndPropagateType(RewriterBase &rewriter,
                   subview.getMixedOffsets(), subview.getMixedSizes(),
                   subview.getMixedStrides());
             })
-            .Case<memref::ExpandShapeOp>(
-                [&](memref::ExpandShapeOp expand) -> Value {
-                  FailureOr<MemRefType> newType =
-                      memref::ExpandShapeOp::computeExpandedType(
-                          srcType, expand.getResultType().getShape(),
-                          expand.getReassociationIndices());
-                  if (failed(newType)) {
-                    typeInferenceFailed = true;
-                    return Value();
-                  }
-                  return memref::ExpandShapeOp::create(
-                      rewriter, expand->getLoc(), *newType, val,
-                      expand.getReassociationIndices(),
-                      expand.getMixedOutputShape());
-                })
-            .Case<memref::CollapseShapeOp>(
-                [&](memref::CollapseShapeOp collapse) -> Value {
-                  FailureOr<MemRefType> newType =
-                      memref::CollapseShapeOp::computeCollapsedType(
-                          srcType, collapse.getReassociationIndices());
-                  if (failed(newType)) {
-                    typeInferenceFailed = true;
-                    return Value();
-                  }
-                  return memref::CollapseShapeOp::create(
-                      rewriter, collapse->getLoc(), *newType, val,
-                      collapse.getReassociationIndices());
-                })
-            .Case<memref::CastOp>([&](memref::CastOp cast) -> Value {
+            .Case([&](memref::ExpandShapeOp expand) -> Value {
+              FailureOr<MemRefType> newType =
+                  memref::ExpandShapeOp::computeExpandedType(
+                      srcType, expand.getResultType().getShape(),
+                      expand.getReassociationIndices());
+              if (failed(newType)) {
+                typeInferenceFailed = true;
+                return Value();
+              }
+              return memref::ExpandShapeOp::create(
+                  rewriter, expand->getLoc(), *newType, val,
+                  expand.getReassociationIndices(),
+                  expand.getMixedOutputShape());
+            })
+            .Case([&](memref::CollapseShapeOp collapse) -> Value {
+              FailureOr<MemRefType> newType =
+                  memref::CollapseShapeOp::computeCollapsedType(
+                      srcType, collapse.getReassociationIndices());
+              if (failed(newType)) {
+                typeInferenceFailed = true;
+                return Value();
+              }
+              return memref::CollapseShapeOp::create(
+                  rewriter, collapse->getLoc(), *newType, val,
+                  collapse.getReassociationIndices());
+            })
+            .Case([&](memref::CastOp cast) -> Value {
               if (!memref::CastOp::areCastCompatible(srcType, cast.getType())) {
                 typeInferenceFailed = true;
                 return Value();
@@ -111,7 +109,7 @@ static LogicalResult replaceUsesAndPropagateType(RewriterBase &rewriter,
             .Default([&](Operation *) -> Value { return Value(); });
 
     if (typeInferenceFailed) {
-      user->emitError(
+      user->emitOpError(
           "failed to compute view-like result type after multi-buffering");
       return failure();
     }
