@@ -281,7 +281,7 @@ bool cuf::KernelOp::canMoveFromDescendant(mlir::Operation *descendant,
 }
 
 bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
-  // In general, some movement of operationds out cuf.kernel is allowed.
+  // In general, some movement of operations out of cuf.kernel is allowed.
   if (!candidate)
     return true;
 
