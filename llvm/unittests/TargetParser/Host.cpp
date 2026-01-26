@@ -605,6 +605,9 @@ TEST(HostTest, AIXTargetVersionDetect) {
   if (ConfiguredTargetTriple.getOSMajorVersion())
     GTEST_SKIP(); // The version was configured explicitly; skip.
 
+  if (const char *EnvTriple = std::getenv(LLVM_TARGET_TRIPLE_ENV))
+    GTEST_SKIP(); // The target was configured by env; skip.
+
   VersionTuple SystemVersion;
   getAIXSystemVersion(SystemVersion);
   VersionTuple TargetVersion = TargetTriple.getOSVersion();
