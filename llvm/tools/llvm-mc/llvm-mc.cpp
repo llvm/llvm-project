@@ -653,12 +653,6 @@ int main(int argc, char **argv) {
       Str->switchSection(
           Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
 
-    Triple T(TripleName);
-    if (T.isLFI()) {
-      Str->initSections(NoExecStack, *STI);
-      initializeLFIMCStreamer(*Str.get(), Ctx, T);
-    }
-
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }
