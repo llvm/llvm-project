@@ -70,6 +70,9 @@ ELF Improvements
 * For LoongArch, ``-r`` now synthesizes ``R_LARCH_ALIGN`` at input section
   start to preserve alignment information.
   (`#153935 <https://github.com/llvm/llvm-project/pull/153935>`_)
+* For LoongArch, added relocation types for LA32R/LA32S.
+  (`#172618 <https://github.com/llvm/llvm-project/pull/172618>`_)
+  (`#176312 <https://github.com/llvm/llvm-project/pull/176312>`_)
 * For RISC-V, added infrastructure for handling vendor-specific relocations.
   (`#159987 <https://github.com/llvm/llvm-project/pull/159987>`_)
 * For RISC-V, added support for statically resolved vendor-specific relocations.
