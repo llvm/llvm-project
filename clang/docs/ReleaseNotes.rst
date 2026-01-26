@@ -740,6 +740,8 @@ LoongArch Support
 - DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the LoongArch platform.
 
+- Add support for LoongArch32, including toolchain options and pre-defined macros.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 
