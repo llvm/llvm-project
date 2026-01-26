@@ -336,8 +336,7 @@ struct DecompEntry {
   int64_t Coefficient;
   Value *Variable;
 
-  DecompEntry(int64_t Coefficient, Value *Variable,
-              bool IsKnownNonNegative = false)
+  DecompEntry(int64_t Coefficient, Value *Variable)
       : Coefficient(Coefficient), Variable(Variable) {}
 };
 
