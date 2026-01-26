@@ -2561,10 +2561,6 @@ static void licm(VPlan &Plan) {
 #endif
   // Sink recipes with no users inside the vector loop region into a dedicated
   // exit block.
-  // TODO: Sinking to non-dedicated exits is not supported yet, as it would
-  // require splitting the edge to create a dedicated exit block. Without this,
-  // the sunk instruction would incorrectly execute on paths entering the exit
-  // block from other predecessors.
   // TODO: Extend to sink recipes from inner loops.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_post_order_shallow(LoopRegion->getEntry()))) {
