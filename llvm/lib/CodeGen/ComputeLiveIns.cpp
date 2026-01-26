@@ -1,4 +1,5 @@
-//===- ComputeLiveIns.cpp - Compute live-ins for all basic blocks ---------===//
+//===---------------= Compute live-ins for all basic blocks
+//----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,9 +29,7 @@ class ComputeLiveIns : public MachineFunctionPass {
 public:
   static char ID;
 
-  ComputeLiveIns() : MachineFunctionPass(ID) {
-    initializeComputeLiveInsPass(*PassRegistry::getPassRegistry());
-  }
+  ComputeLiveIns() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (MF.empty())
@@ -41,12 +40,12 @@ public:
       return false;
 
     Props.setTracksLiveness();
-    std::vector<MachineBasicBlock *> MBBs;
-    MBBs.reserve(MF.size());
-    for (MachineBasicBlock &MBB : MF)
-      MBBs.push_back(&MBB);
+    SmallVector<MachineBasicBlock *> AllMBBsInPostOrder;
+    AllMBBsInPostOrder.reserve(MF.getNumBlockIDs());
+    for (MachineBasicBlock *MBB : post_order(MF))
+      AllMBBsInPostOrder.push_back(MBB);
 
-    fullyRecomputeLiveIns(MBBs);
+    fullyRecomputeLiveIns(AllMBBsInPostOrder);
 
     return true;
   }
