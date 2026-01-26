@@ -740,6 +740,7 @@ namespace GH176536 {
     return n > 1 ? foo(n - 1) : 0; // both-error {{left operand to ? is void, but right operand is of type 'int'}}
   }
   static_assert((foo(2), true), ""); // both-error {{static assertion expression is not an integral constant expression}}
+}
 
 namespace NestedDiags {
   constexpr int foo() { // both-error {{never produces a constant expression}}
