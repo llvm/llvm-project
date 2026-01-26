@@ -143,8 +143,6 @@ public:
 
   Generation getGeneration() const { return (Generation)Gen; }
 
-  bool isGFX10Plus() const { return getGeneration() >= GFX10; }
-
   bool isGFX11Plus() const { return getGeneration() >= GFX11; }
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -1009,6 +1007,10 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const {
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
+  }
+
+  bool requiresWaitOnWorkgroupReleaseFence() const {
+    return getGeneration() >= GFX10 || isTgSplitEnabled();
   }
 };
 
