@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/Semilattice.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -248,6 +250,31 @@ private:
   bool IsNe = false;
 };
 
+class KnownBitsUpdater {
+  const DataLayout &DL;
+  Semilattice CacheLat;
+
+  template <typename ContainterT> void compute(ContainterT Nodes) const {
+    for (auto *N : Nodes)
+      computeKnownBits(N->getValue(), {DL, &CacheLat});
+  }
+
+public:
+  KnownBitsUpdater(Function &F) : DL(F.getDataLayout()), CacheLat(F) {
+    SetVector<SemilatticeNode *> BFSNodes;
+    for (auto *N : drop_begin(breadth_first(CacheLat.getRootNode())))
+      BFSNodes.insert(N);
+    compute(reverse(BFSNodes));
+  }
+  void rauw(Value *OldV, Value *NewV) {
+    OldV->replaceAllUsesWith(NewV);
+    compute(CacheLat.rauw(OldV, NewV));
+  }
+  KnownBits getKnownBits(const Value *V) const {
+    return CacheLat.getKnownBits(V);
+  }
+};
+
 /// Wrapper encapsulating separate constraint systems and corresponding value
 /// mappings for both unsigned and signed information. Facts are added to and
 /// conditions are checked against the corresponding system depending on the
@@ -262,8 +289,9 @@ class ConstraintInfo {
   const DataLayout &DL;
 
 public:
-  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
-      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
+  ConstraintInfo(Function &F, ArrayRef<Value *> FunctionArgs)
+      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(F.getDataLayout()),
+        KBUpdater(F) {
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs) {
@@ -322,6 +350,8 @@ public:
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack);
 
+  KnownBitsUpdater KBUpdater;
+
 private:
   /// Adds facts into constraint system. \p ForceSignedSystem can be set when
   /// the \p Pred is eq/ne, and signed constraint system is used when it's
@@ -335,13 +365,9 @@ private:
 struct DecompEntry {
   int64_t Coefficient;
   Value *Variable;
-  /// True if the variable is known positive in the current constraint.
-  bool IsKnownNonNegative;
 
-  DecompEntry(int64_t Coefficient, Value *Variable,
-              bool IsKnownNonNegative = false)
-      : Coefficient(Coefficient), Variable(Variable),
-        IsKnownNonNegative(IsKnownNonNegative) {}
+  DecompEntry(int64_t Coefficient, Value *Variable)
+      : Coefficient(Coefficient), Variable(Variable) {}
 };
 
 /// Represents an Offset + Coefficient1 * Variable1 + ... decomposition.
@@ -350,9 +376,7 @@ struct Decomposition {
   SmallVector<DecompEntry, 3> Vars;
 
   Decomposition(int64_t Offset) : Offset(Offset) {}
-  Decomposition(Value *V, bool IsKnownNonNegative = false) {
-    Vars.emplace_back(1, V, IsKnownNonNegative);
-  }
+  Decomposition(Value *V) { Vars.emplace_back(1, V); }
   Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
       : Offset(Offset), Vars(Vars) {}
 
@@ -522,8 +546,6 @@ static Decomposition decompose(Value *V,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
-  bool IsKnownNonNegative = false;
-
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -537,7 +559,6 @@ static Decomposition decompose(Value *V,
       V = Op0;
     else if (match(V, m_NNegZExt(m_Value(Op0)))) {
       V = Op0;
-      IsKnownNonNegative = true;
     } else if (match(V, m_NSWTrunc(m_Value(Op0)))) {
       if (Op0->getType()->getScalarSizeInBits() <= 64)
         V = Op0;
@@ -546,7 +567,7 @@ static Decomposition decompose(Value *V,
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
-      return {V, IsKnownNonNegative};
+      return V;
     }
 
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
@@ -554,7 +575,7 @@ static Decomposition decompose(Value *V,
       auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
       if (!ResA.sub(ResB))
         return ResA;
-      return {V, IsKnownNonNegative};
+      return V;
     }
 
     ConstantInt *CI;
@@ -562,7 +583,7 @@ static Decomposition decompose(Value *V,
       auto Result = decompose(Op0, Preconditions, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
-      return {V, IsKnownNonNegative};
+      return V;
     }
 
     // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
@@ -574,11 +595,11 @@ static Decomposition decompose(Value *V,
         auto Result = decompose(Op0, Preconditions, IsSigned, DL);
         if (!Result.mul(int64_t(1) << Shift))
           return Result;
-        return {V, IsKnownNonNegative};
+        return V;
       }
     }
 
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -589,7 +610,6 @@ static Decomposition decompose(Value *V,
 
   Value *Op0;
   if (match(V, m_ZExt(m_Value(Op0)))) {
-    IsKnownNonNegative = true;
     V = Op0;
   } else if (match(V, m_SExt(m_Value(Op0)))) {
     V = Op0;
@@ -611,7 +631,7 @@ static Decomposition decompose(Value *V,
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
@@ -621,7 +641,7 @@ static Decomposition decompose(Value *V,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
     if (auto Decomp = MergeResults(Op0, CI, true))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
@@ -634,23 +654,23 @@ static Decomposition decompose(Value *V,
 
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   // Decompose or as an add if there are no common bits between the operands.
   if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI)))) {
     if (auto Decomp = MergeResults(Op0, CI, IsSigned))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
-      return {V, IsKnownNonNegative};
+      return V;
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
     if (!Result.mul(int64_t{1} << CI->getSExtValue()))
       return Result;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
@@ -658,7 +678,7 @@ static Decomposition decompose(Value *V,
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
     if (!Result.mul(CI->getSExtValue()))
       return Result;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1)))) {
@@ -666,10 +686,23 @@ static Decomposition decompose(Value *V,
     auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
     if (!ResA.sub(ResB))
       return ResA;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
-  return {V, IsKnownNonNegative};
+  return V;
+}
+
+static std::pair<int64_t, int64_t>
+getBoundsFromKnownBits(const KnownBits &Known, bool IsSigned) {
+  int64_t Min = MinSignedConstraintValue;
+  int64_t Max = MaxConstraintValue;
+  if (Known.isUnknown())
+    return {Min, Max};
+  Min = IsSigned ? Known.getSignedMinValue().getSExtValue()
+                 : Known.getMinValue().getZExtValue();
+  Max = IsSigned ? Known.getMaxValue().getSExtValue()
+                 : Known.getSignedMaxValue().getZExtValue();
+  return {Min, Max};
 }
 
 ConstraintTy
@@ -758,22 +791,18 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       IsSigned, IsEq, IsNe);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
-  SmallDenseMap<Value *, bool> KnownNonNegativeVariables;
+  SmallPtrSet<Value *, 8> UniqVariables;
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA) {
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
-    auto I =
-        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
-    I.first->second &= KV.IsKnownNonNegative;
+    UniqVariables.insert(KV.Variable);
   }
 
   for (const auto &KV : VariablesB) {
     auto &Coeff = R[GetOrAddIndex(KV.Variable)];
     if (SubOverflow(Coeff, KV.Coefficient, Coeff))
       return {};
-    auto I =
-        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
-    I.first->second &= KV.IsKnownNonNegative;
+    UniqVariables.insert(KV.Variable);
   }
 
   int64_t OffsetSum;
@@ -796,14 +825,30 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     NewIndexMap.erase(RemovedV);
   }
 
-  // Add extra constraints for variables that are known positive.
-  for (auto &KV : KnownNonNegativeVariables) {
-    if (!KV.second ||
-        (!Value2Index.contains(KV.first) && !NewIndexMap.contains(KV.first)))
+  // Add extra constraints for Min and Max values of variables from KnownBits.
+  for (Value *V : UniqVariables) {
+    if (match(V, m_Constant()) || !V->getType()->isIntegerTy() ||
+        V->getType()->getIntegerBitWidth() > 64)
       continue;
-    auto &C = Res.ExtraInfo.emplace_back(
-        Value2Index.size() + NewVariables.size() + 1, 0);
-    C[GetOrAddIndex(KV.first)] = -1;
+    if (!Value2Index.contains(V) && !NewIndexMap.contains(V))
+      continue;
+
+    const KnownBits &Known = KBUpdater.getKnownBits(V);
+    auto [Min, Max] = getBoundsFromKnownBits(Known, IsSigned);
+
+    if (Min != MinSignedConstraintValue) {
+      auto &C = Res.ExtraInfo.emplace_back(
+          Value2Index.size() + NewVariables.size() + 1, 0);
+      C[0] = -Min;
+      C[GetOrAddIndex(V)] = -1;
+    }
+
+    if (Max != MaxConstraintValue) {
+      auto &C = Res.ExtraInfo.emplace_back(
+          Value2Index.size() + NewVariables.size() + 1, 0);
+      C[0] = Max;
+      C[GetOrAddIndex(V)] = 1;
+    }
   }
   return Res;
 }
@@ -1608,7 +1653,7 @@ static bool checkAndReplaceMinMax(MinMaxIntrinsic *MinMax, ConstraintInfo &Info,
                                   SmallVectorImpl<Instruction *> &ToRemove) {
   auto ReplaceMinMaxWithOperand = [&](MinMaxIntrinsic *MinMax, bool UseLHS) {
     // TODO: generate reproducer for min/max.
-    MinMax->replaceAllUsesWith(MinMax->getOperand(UseLHS ? 0 : 1));
+    Info.KBUpdater.rauw(MinMax, MinMax->getOperand(UseLHS ? 0 : 1));
     ToRemove.push_back(MinMax);
     return true;
   };
@@ -1629,17 +1674,17 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
   if (checkCondition(I->getGTPredicate(), LHS, RHS, I, Info).value_or(false)) {
-    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 1));
+    Info.KBUpdater.rauw(I, ConstantInt::get(I->getType(), 1));
     ToRemove.push_back(I);
     return true;
   }
   if (checkCondition(I->getLTPredicate(), LHS, RHS, I, Info).value_or(false)) {
-    I->replaceAllUsesWith(ConstantInt::getSigned(I->getType(), -1));
+    Info.KBUpdater.rauw(I, ConstantInt::getSigned(I->getType(), -1));
     ToRemove.push_back(I);
     return true;
   }
   if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info).value_or(false)) {
-    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 0));
+    Info.KBUpdater.rauw(I, ConstantInt::get(I->getType(), 0));
     ToRemove.push_back(I);
     return true;
   }
@@ -1720,10 +1765,10 @@ static bool checkOrAndOpImpliedByOther(
           checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
                          CmpToCheck->getOperand(1), CmpToCheck, Info)) {
     if (IsOr == *ImpliedCondition)
-      JoinOp->replaceAllUsesWith(
-          ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
+      Info.KBUpdater.rauw(
+          JoinOp, ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
     else
-      JoinOp->replaceAllUsesWith(JoinOp->getOperand(OtherOpIdx));
+      Info.KBUpdater.rauw(JoinOp, JoinOp->getOperand(OtherOpIdx));
     ToRemove.push_back(JoinOp);
     return true;
   }
@@ -1804,6 +1849,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 }
 
 static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
+                                   ConstraintInfo &Info,
                                    SmallVectorImpl<Instruction *> &ToRemove) {
   bool Changed = false;
   IRBuilder<> Builder(II->getParent(), II->getIterator());
@@ -1812,10 +1858,10 @@ static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
     if (match(U, m_ExtractValue<0>(m_Value()))) {
       if (!Sub)
         Sub = Builder.CreateSub(A, B);
-      U->replaceAllUsesWith(Sub);
+      Info.KBUpdater.rauw(U, Sub);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(Builder.getFalse());
+      Info.KBUpdater.rauw(U, Builder.getFalse());
       Changed = true;
     } else
       continue;
@@ -1858,7 +1904,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
         !DoesConditionHold(CmpInst::ICMP_SGE, B,
                            ConstantInt::get(A->getType(), 0), Info))
       return false;
-    Changed = replaceSubOverflowUses(II, A, B, ToRemove);
+    Changed = replaceSubOverflowUses(II, A, B, Info, ToRemove);
   }
   return Changed;
 }
@@ -1870,7 +1916,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
-  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
+  ConstraintInfo Info(F, FunctionArgs);
   State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);

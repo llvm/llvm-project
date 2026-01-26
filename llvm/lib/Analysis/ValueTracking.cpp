@@ -2519,6 +2519,12 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   // Start out not knowing anything.
   Known.resetAll();
 
+  // Return cached value, if there is one.
+  if (Q.CacheLat && Q.CacheLat->hasKnownBits(V)) {
+    Known = Q.CacheLat->getKnownBits(V);
+    return;
+  }
+
   // We can't imply anything about undefs.
   if (isa<UndefValue>(V))
     return;
@@ -2561,6 +2567,9 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
 
   // Check whether we can determine known bits from context such as assumes.
   computeKnownBitsFromContext(V, Known, Q, Depth);
+
+  if (Q.CacheLat)
+    Q.CacheLat->updateKnownBits(V, Known);
 }
 
 /// Try to detect a recurrence that the value of the induction variable is

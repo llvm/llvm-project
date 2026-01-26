@@ -51,6 +51,7 @@ set(ANALYSIS_TEST_SOURCES
   ProfileSummaryInfoTest.cpp
   ReplaceWithVecLibTest.cpp
   ScalarEvolutionTest.cpp
+  SemilatticeTest.cpp
   SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
   TensorSpecTest.cpp
