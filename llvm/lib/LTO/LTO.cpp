@@ -495,7 +495,8 @@ void llvm::thinLTOResolvePrevailingInIndex(
 static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNames) {
   // Before performing index-based internalization and promotion for this GUID,
   // the local flag should be consistent with the summary list linkage types.
   VI.verifyLocal();
@@ -504,12 +505,24 @@ static void thinLTOInternalizeAndPromoteGUID(
       VI.getSummaryList().size() == 1 &&
       !GlobalValue::isLocalLinkage(VI.getSummaryList().front()->linkage());
 
+  bool NameRecorded = false;
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
     // exported.
     if (isExported(S->modulePath(), VI)) {
-      if (GlobalValue::isLocalLinkage(S->linkage()))
+      if (GlobalValue::isLocalLinkage(S->linkage())) {
+        // Only the first local GlobalValue in a list of summaries does not
+        // need renaming. In rare cases if there exist more than one summaries
+        // in the list, the rest of them must have renaming (through promotion)
+        // to avoid conflict.
+        if (ExternallyVisibleSymbolNames && !NameRecorded) {
+          NameRecorded = true;
+          if (ExternallyVisibleSymbolNames->insert(VI.name()).second)
+            S->setRenameOnPromotion(false);
+        }
+
         S->promote();
+      }
       continue;
     }
 
@@ -579,11 +592,14 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
   assert(!Index.withInternalizeAndPromote());
+
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
-                                     isPrevailing);
+                                     isPrevailing,
+                                     ExternallyVisibleSymbolNamesPtr);
   Index.setWithInternalizeAndPromote();
 }
 
@@ -2031,8 +2047,13 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // no index entries in the typeIdMetadata map (e.g. if we are instead
   // performing IR-based WPD in hybrid regular/thin LTO mode).
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
+  DenseSet<StringRef> ExternallyVisibleSymbolNames;
+  DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr =
+      WholeProgramVisibilityEnabledInLTO ? &ExternallyVisibleSymbolNames
+                                         : nullptr;
   runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
-                               LocalWPDTargetsMap);
+                               LocalWPDTargetsMap,
+                               ExternallyVisibleSymbolNamesPtr);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
@@ -2085,10 +2106,27 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Update local devirtualized targets that were exported by cross-module
   // importing or by other devirtualizations marked in the ExportedGUIDs set.
   updateIndexWPDForExports(ThinLTO.CombinedIndex, isExported,
-                           LocalWPDTargetsMap);
+                           LocalWPDTargetsMap, ExternallyVisibleSymbolNamesPtr);
+
+  if (ExternallyVisibleSymbolNamesPtr) {
+    // Add to ExternallyVisibleSymbolNames the set of unique names used by all
+    // externally visible symbols in the index.
+    for (auto &I : ThinLTO.CombinedIndex) {
+      ValueInfo VI = ThinLTO.CombinedIndex.getValueInfo(I);
+      for (const auto &Summary : VI.getSummaryList()) {
+        const GlobalValueSummary *Base = Summary->getBaseObject();
+        if (GlobalValue::isLocalLinkage(Base->linkage()))
+          continue;
+
+        ExternallyVisibleSymbolNamesPtr->insert(VI.name());
+        break;
+      }
+    }
+  }
 
   thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported,
-                                      isPrevailing);
+                                      isPrevailing,
+                                      ExternallyVisibleSymbolNamesPtr);
 
   auto recordNewLinkage = [&](StringRef ModuleIdentifier,
                               GlobalValue::GUID GUID,

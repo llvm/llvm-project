@@ -271,14 +271,16 @@ LLVM_ABI void getVisibleToRegularObjVtableGUIDs(
 /// devirtualized target name will need adjustment).
 LLVM_ABI void runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
-    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap);
+    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
 
 /// Call after cross-module importing to update the recorded single impl
 /// devirt target names for any locals that were exported.
 LLVM_ABI void updateIndexWPDForExports(
     ModuleSummaryIndex &Summary,
     function_ref<bool(StringRef, ValueInfo)> isExported,
-    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap);
+    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
 
 } // end namespace llvm
 
