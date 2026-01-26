@@ -507,6 +507,16 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     return true;
   }
+  case G_PTRMASK: {
+    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
+           "G_PTRMASK selection fell-through with non-pointer?");
+
+    I.setDesc(TII.get(PtrIsI64 ? WebAssembly::AND_I64 : WebAssembly::AND_I32));
+    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
+           "Couldn't constrain registers for instruction");
+
+    return true;
+  }
   case G_FRAME_INDEX: {
     MachineIRBuilder B(I);
 

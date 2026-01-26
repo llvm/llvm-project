@@ -313,6 +313,7 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_ASHR:
   case G_LSHR:
   case G_PTR_ADD:
+  case G_PTRMASK:
   case G_INTTOPTR:
   case G_PTRTOINT:
   case G_ADD:

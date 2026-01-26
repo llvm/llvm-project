@@ -198,7 +198,9 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({p0, p0s})
       .customForCartesianProduct({p0}, {s32, s64});
+
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, p0s}});
+  getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, p0s}});
 
   getActionDefinitionsBuilder(G_LOAD)
       .legalForTypesWithMemDesc(
