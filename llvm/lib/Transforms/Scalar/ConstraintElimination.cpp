@@ -750,9 +750,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   // Collect variables that are known to be positive in all uses in the
   // constraint.
   auto &R = Res.Coefficients;
-  for (const auto &KV : VariablesA) {
+  for (const auto &KV : VariablesA)
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
-  }
 
   for (const auto &KV : VariablesB) {
     auto &Coeff = R[GetOrAddIndex(KV.Variable)];
