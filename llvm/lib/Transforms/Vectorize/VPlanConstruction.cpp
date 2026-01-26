@@ -1406,12 +1406,14 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 }
 
 /// For an argmin/argmax reduction with strict predicate \p MinOrMaxPhiR,
-/// convert the FindLastIV reduction \p FindLastIVPhiR of induction \p WideIV to
-/// a new UMin reduction of a wide canonical IV. If the original IV was not
-/// canonical, a new canonical wide IV is added, and the final result is scaled
-/// back to the original IV. \p MinOrMaxResult computes the final value of \p
-/// MinOrMaxPhiR and \p FindIVSelect, \p FindIVCmp, \p FindIVRdxResult compute
-/// the final value of \p FindLastIVPhiR.
+/// update the FindLastIV reduction \p FindLastIVPhiR of induction \p WideIV to
+/// to select the first index of the wide canonical IV outside the loop using
+/// UMin or \p FindLastIVPhiR's start value, if \p MinMaxResult equals \p
+/// MinOrMaxPhiR's start value. If \p WideIV was not canonical, a new canonical
+/// wide IV is added, and the final result is scaled back to the original IV. \p
+/// MinOrMaxResult computes the final value of \p MinOrMaxPhiR and \p
+/// FindIVSelect, \p FindIVCmp, \p FindIVRdxResult compute the final value of \p
+/// FindLastIVPhiR.
 static bool handleFirstArgMinOrMax(
     VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
     VPReductionPHIRecipe *FindLastIVPhiR, VPWidenIntOrFpInductionRecipe *WideIV,
@@ -1422,13 +1424,18 @@ static bool handleFirstArgMinOrMax(
   if (Ty != VPTypeAnalysis(Plan).inferScalarType(WideIV))
     return false;
 
-  // If the original wide IV is not canonical, create a new one. The wide IV is
-  // guaranteed to not wrap for all lanes that are active in the vector loop.
   auto *FindIVSelectR = cast<VPSingleDefRecipe>(
       FindLastIVPhiR->getBackedgeValue()->getDefiningRecipe());
   assert(
       match(FindIVSelectR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
       "backedge value must be a select");
+  if (FindIVSelectR->getOperand(1) != WideIV &&
+      FindIVSelectR->getOperand(2) != WideIV)
+    return false;
+
+  // If the original wide IV is not canonical, create a new one. The canonical
+  // wide IV is guaranteed to not wrap for all lanes that are active in the
+  // vector loop.
   if (!WideIV->isCanonical()) {
     VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
     VPIRValue *One = Plan.getConstantInt(Ty, 1);
@@ -1454,12 +1461,7 @@ static bool handleFirstArgMinOrMax(
          "FindIV reduction must not be scaled");
   VPValue *MaxIV =
       Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
-  ReductionStyle Style = RdxUnordered{1};
-  auto *FirstIdxPhiR = new VPReductionPHIRecipe(
-      dyn_cast_or_null<PHINode>(FindLastIVPhiR->getUnderlyingValue()),
-      RecurKind::UMin, *MaxIV, *FindIVSelectR, Style,
-      FindLastIVPhiR->hasUsesOutsideReductionChain());
-  FirstIdxPhiR->insertBefore(FindLastIVPhiR);
+  FindLastIVPhiR->setOperand(0, MaxIV);
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:
@@ -1473,7 +1475,7 @@ static bool handleFirstArgMinOrMax(
   //     the original IV using VPDerivedIVRecipe.
   //  5. If the overall min/max is equal to the start value, the condition in
   //     the loop was always false, due to being strict; return the start value
-  //     in that case.
+  //     of FindLastIVPhiR in that case.
   //
   // For example, this transforms two independent constructs
   // vp<%min.result> = compute-reduction-result (min/max) ir<%min.val.next>
@@ -1527,14 +1529,12 @@ static bool handleFirstArgMinOrMax(
                                             MinOrMaxPhiR->getStartValue());
   VPValue *FinalIV = Builder.createSelect(
       AlwaysFalse, FindIVSelect->getOperand(2), FinalCanIV);
-  FindLastIVPhiR->replaceAllUsesWith(FirstIdxPhiR);
   FindIVSelect->replaceAllUsesWith(FinalIV);
 
   // Erase the old FindIV result pattern which is now dead.
   FindIVSelect->eraseFromParent();
   FindIVCmp->eraseFromParent();
   FindIVRdxResult->eraseFromParent();
-  FindLastIVPhiR->eraseFromParent();
   return true;
 }
 
