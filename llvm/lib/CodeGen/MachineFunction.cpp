@@ -503,14 +503,9 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
           MachineBasicBlock(*this, BB);
   // Set BBID for `-basic-block-sections=list` and `-basic-block-address-map` to
   // allow robust mapping of profiles to basic blocks.
-  if ((Target.Options.BBAddrMap ||
-       Target.getBBSectionsType() == BasicBlockSection::List)) {
-    if (BBID)
-      MBB->setBBID(*BBID);
-    else if (BB)
-      MBB->setBBID(UniqueBBID{NextBBID++, 0});
-  }
-
+  if (Target.Options.BBAddrMap ||
+      Target.getBBSectionsType() == BasicBlockSection::List)
+    MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;
 }
 
