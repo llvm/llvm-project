@@ -403,9 +403,9 @@ std::optional<APInt> constantTripCount(
     tripCount = tripCount + 1;
   LDBG() << "constantTripCount found: " << tripCount;
 
-  // For unsigned narrow types, zero-extend to 64 bits to avoid misinterpretation
-  // when callers use getSExtValue(). This ensures values like 255 (0xFF in 8-bit)
-  // are treated as positive when sign-extended.
+  // For unsigned narrow types, zero-extend to 64 bits to avoid
+  // misinterpretation when callers use getSExtValue(). This ensures values like
+  // 255 (0xFF in 8-bit) are treated as positive when sign-extended.
   APInt result = tripCount;
   if (!isSigned && bitwidth < 64)
     result = result.zext(64);
