@@ -206,3 +206,20 @@ func.func @bufferize_softmax(%arg0: tensor<2x16x32xf32>, %arg1: tensor<2x16x32xf
       outs(%arg1: tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
   return %1 : tensor<2x16x32xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @bufferize_pack(
+// CHECK-SAME:   %[[SRC:.*]]: tensor<128x256xf32>, %[[DST:.*]]: tensor<16x8x8x32xf32>) -> tensor<16x8x8x32xf32> {
+// CHECK-DAG:     %[[SRC_BUF:.*]] = bufferization.to_buffer %[[SRC]] : tensor<128x256xf32> to memref<128x256xf32>
+// CHECK-DAG:     %[[DST_BUF:.*]] = memref.alloc() {{.*}} : memref<16x8x8x32xf32>
+// CHECK-NOT:     memref.copy
+// CHECK:         linalg.pack %[[SRC_BUF]] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[DST_BUF]] : memref<128x256xf32> -> memref<16x8x8x32xf32>
+// CHECK:         %[[RESULT:.*]] = bufferization.to_tensor %[[DST_BUF]] : memref<16x8x8x32xf32> to tensor<16x8x8x32xf32>
+// CHECK:         return %[[RESULT]] : tensor<16x8x8x32xf32>
+func.func @bufferize_pack(%source: tensor<128x256xf32>, %dest: tensor<16x8x8x32xf32>) -> tensor<16x8x8x32xf32> {
+  %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+      into %dest : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+  return %0 : tensor<16x8x8x32xf32>
+}
+
