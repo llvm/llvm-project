@@ -3160,7 +3160,7 @@ class CompletionChunk:
     __deprecation_message = (
         "'CompletionChunk.{}' will be removed in a future release. "
         "All uses of 'CompletionChunk.{}' should be replaced by checking "
-        "if the 'CompletionChunk's kind is 'CompletionChunkKind.{}'."
+        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
     )
 
     def isKindOptional(self) -> bool:
