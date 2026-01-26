@@ -24291,8 +24291,9 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
       // first: the best TreeSize from all prior loops over CandidateVFs, gets
-      // updated after looping through CandidateVFs second: the best TreeSize
-      // from all prior loops including the current one
+      // updated after looping through CandidateVFs
+      // second: the best TreeSize from all prior loops including the current
+      // one
       llvm::SmallVector<std::pair<unsigned, unsigned>> RangeSizesStorage(
           Operands.size(), {1, 1});
       // The `slice` and `drop_front` interfaces are convenient
