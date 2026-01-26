@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/TargetParser/AVRTargetParser.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Errc.h"
 #include <map>
 
 using namespace llvm;
 
-std::string AVR::getFeatureSetForEFlag(unsigned EFlag) {
+Expected<std::string> AVR::getFeatureSetFromEFlag(unsigned EFlag) {
   static const std::map<unsigned, StringRef> EFlagToFeatureSet = {
       {ELF::EF_AVR_ARCH_AVR1, "avr1"},
       {ELF::EF_AVR_ARCH_AVR2, "avr2"},
@@ -41,5 +42,5 @@ std::string AVR::getFeatureSetForEFlag(unsigned EFlag) {
   if (It != EFlagToFeatureSet.end())
     return It->second.str();
 
-  return "avr0";
+  return make_error<StringError>("Not valid e_flags", errc::invalid_argument);
 }
