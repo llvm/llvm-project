@@ -71,6 +71,10 @@ public:
                                              const ParmVarDecl *ParmToAnnotate,
                                              const Expr *EscapeExpr) {}
 
+  // Reports misuse of [[clang::noescape]] when parameter escapes through return
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const Expr *EscapeExpr) {}
+
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                                   const CXXMethodDecl *MD,
