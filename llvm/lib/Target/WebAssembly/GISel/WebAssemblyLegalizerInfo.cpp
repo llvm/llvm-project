@@ -13,11 +13,13 @@
 #include "WebAssemblyLegalizerInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Intrinsics.h"
 
 #define DEBUG_TYPE "wasm-legalinfo"
 
@@ -307,8 +309,15 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
   getActionDefinitionsBuilder(G_VASTART).legalFor({p0});
   getActionDefinitionsBuilder(G_VAARG)
-      .legalForCartesianProduct({s32, s64}, {p0})
-      .clampScalar(0, s32, s64);
+      .customIf(([=](const LegalityQuery &Query) {
+        return Query.Types[1] == p0 && (Query.Types[0].isScalar());
+      })) // TODO: replace this with typical lowerForCartesianProduct once widen
+          // and narrow scalar works
+      .clampScalar(
+          0, s32,
+          s64) // Note: currently not functional (not implemented in core)
+      .widenScalarToNextPow2(0, /*Min*/ 8); // Note: currently not functional
+                                            // (not implemented in core)
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lowerFor({{p0, p0s}});
 
@@ -628,8 +637,85 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_VAARG: {
+    MachineFunction &MF = MIRBuilder.getMF();
+    Align Alignment(MI.getOperand(2).getImm());
+    Register Dst = MI.getOperand(0).getReg();
+    Register ListPtr = MI.getOperand(1).getReg();
+
+    LLT PtrTy = MRI.getType(ListPtr);
+    LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+
+    const unsigned PtrSize = PtrTy.getSizeInBits() / 8;
+    const Align PtrAlign = Align(PtrSize);
+    auto List = MIRBuilder.buildLoad(
+        PtrTy, ListPtr,
+        *MF.getMachineMemOperand(MachinePointerInfo(),
+                                 MachineMemOperand::MOLoad, PtrTy, PtrAlign));
+
+    MachineInstrBuilder DstPtr;
+    if (Alignment > PtrAlign) {
+      // Realign the list to the actual required alignment.
+      auto AlignMinus1 =
+          MIRBuilder.buildConstant(IntPtrTy, Alignment.value() - 1);
+      auto ListTmp = MIRBuilder.buildPtrAdd(PtrTy, List, AlignMinus1.getReg(0));
+      DstPtr = MIRBuilder.buildMaskLowPtrBits(PtrTy, ListTmp, Log2(Alignment));
+    } else
+      DstPtr = List;
+
+    LLT ValTy = MRI.getType(Dst);
+    uint64_t ValSize = ValTy.getSizeInBits() / 8;
+    MIRBuilder.buildLoad(Dst, DstPtr,
+                         *MF.getMachineMemOperand(
+                             MachinePointerInfo(), MachineMemOperand::MOLoad,
+                             ValTy, std::max(Alignment, PtrAlign)));
+
+    auto Size = MIRBuilder.buildConstant(IntPtrTy, alignTo(ValSize, PtrAlign));
+
+    auto NewList = MIRBuilder.buildPtrAdd(PtrTy, DstPtr, Size.getReg(0));
+
+    MIRBuilder.buildStore(NewList, ListPtr,
+                          *MF.getMachineMemOperand(MachinePointerInfo(),
+                                                   MachineMemOperand::MOStore,
+                                                   PtrTy, PtrAlign));
+
+    MI.eraseFromParent();
+
+    return true;
+  }
   default:
     break;
   }
   return false;
+}
+
+bool WebAssemblyLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                                 MachineInstr &MI) const {
+  auto &MRI = *Helper.MIRBuilder.getMRI();
+  auto &MIRBuilder = Helper.MIRBuilder;
+
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  default:
+    return true;
+  case Intrinsic::vacopy: {
+    auto PointerWidth = MI.getMF()->getDataLayout().getPointerSize();
+
+    MachineFunction &MF = *MI.getMF();
+    auto Val = MF.getRegInfo().createGenericVirtualRegister(
+        LLT::scalar(PointerWidth * 8));
+
+    MIRBuilder.buildLoad(Val, MI.getOperand(2),
+                         *MF.getMachineMemOperand(
+                             MachinePointerInfo(), MachineMemOperand::MOLoad,
+                             PointerWidth, Align(PointerWidth)));
+    MIRBuilder.buildStore(Val, MI.getOperand(1),
+                          *MF.getMachineMemOperand(
+                              MachinePointerInfo(), MachineMemOperand::MOStore,
+                              PointerWidth, Align(PointerWidth)));
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::clear_cache:
+    reportFatalUsageError("llvm.clear_cache is not supported on wasm");
+  }
 }

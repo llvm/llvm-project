@@ -279,9 +279,7 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_INTRINSIC:
   case G_INTRINSIC_W_SIDE_EFFECTS: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-    case Intrinsic::clear_cache:
-      reportFatalUsageError("llvm.clear_cache is not supported on wasm");
-      break;
+      default: break;
     }
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, nullptr, 0);
   }

@@ -589,6 +589,31 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     return true;
   }
+  case G_VASTART: {
+    MachineIRBuilder B(I);
+
+    auto *OldMMO = I.memoperands()[0];
+
+    auto *NewMMO = MF.getMachineMemOperand(
+        OldMMO->getPointerInfo(), MachineMemOperand::Flags::MOStore,
+        OldMMO->getSize(), MF.getDataLayout().getPointerABIAlignment(0));
+
+    auto MIB = B.buildInstr(PtrIsI64 ? WebAssembly::STORE_I64_A64
+                                     : WebAssembly::STORE_I32_A32)
+                   .addImm(0) // alignment; rewritten in later pass
+                   .addImm(0) // offset
+                   .addReg(I.getOperand(0).getReg()) // base
+                   .addReg(MF.getInfo<WebAssemblyFunctionInfo>()
+                               ->getVarargBufferVreg()) // value
+                   .addMemOperand(NewMMO);
+
+    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
+           "Couldn't constrain registers for instruction");
+
+    I.eraseFromParent();
+
+    return true;
+  }
   }
 
   return false;
