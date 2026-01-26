@@ -114,7 +114,6 @@ export (
 
 if (BENCHMARK_ENABLE_INSTALL)
   # Install target (will install the library to specified CMAKE_INSTALL_PREFIX variable)
-  # TODO: Use RUNTIMES_INSTALL_RESOURCE_LIB_PATH instead
   install(
     TARGETS ${targets_to_export}
     EXPORT ${targets_export_name}

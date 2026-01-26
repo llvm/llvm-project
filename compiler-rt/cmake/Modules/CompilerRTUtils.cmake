@@ -465,9 +465,9 @@ function(get_compiler_rt_target arch variable)
     # Use exact spelling when building only for the target specified to CMake.
     set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
   else()
-    get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" result)
+    get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" target)
   endif()
-  set(${variable} "${result}" PARENT_SCOPE)
+  set(${variable} "${target}" PARENT_SCOPE)
 endfunction()
 
 function(get_compiler_rt_install_dir arch install_dir)

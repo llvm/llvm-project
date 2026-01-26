@@ -35,6 +35,7 @@ if (OPENMP_STANDALONE_BUILD)
   set(OPENMP_LIBDIR_SUFFIX "" CACHE STRING
     "Suffix of lib installation directory, e.g. 64 => lib64")
   # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
+  # TODO: Use common runtimes infrastructure for output and install paths
   set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}" CACHE STRING
       "Path where built OpenMP libraries should be installed.")
 
@@ -63,7 +64,7 @@ else()
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
   # When building in tree we install the runtime according to the LLVM settings.
-  # TODO: Use RUNTIMES_INSTALL_RESOURCE_LIB_PATH instead
+  # TODO: Use common runtimes infrastructure for output and install paths
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     set(OPENMP_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
         "Path where built openmp libraries should be installed.")
