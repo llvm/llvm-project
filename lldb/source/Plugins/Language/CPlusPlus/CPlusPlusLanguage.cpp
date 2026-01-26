@@ -1522,23 +1522,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
-
-  AddCXXSummary(
-      cpp_category_sp,
-      lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider,
-      "libstdc++ std::partial_ordering summary provider",
-      "std::partial_ordering", eTypeOptionHideChildren | eTypeOptionHideValue,
-      false);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider,
-                "libstdc++ std::weak_ordering summary provider",
-                "std::weak_ordering",
-                eTypeOptionHideChildren | eTypeOptionHideValue, false);
-  AddCXXSummary(
-      cpp_category_sp,
-      lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider,
-      "libstdc++ std::strong_ordering summary provider", "std::strong_ordering",
-      eTypeOptionHideChildren | eTypeOptionHideValue, false);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
@@ -1704,6 +1687,30 @@ GenericSpanSyntheticFrontEndCreator(CXXSyntheticChildren *children,
   if (IsMsvcStlSpan(*valobj_sp))
     return MsvcStlSpanSyntheticFrontEndCreator(children, valobj_sp);
   return LibStdcppSpanSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool
+GenericPartialOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
+                                      const TypeSummaryOptions &options) {
+  if (IsMsvcStlOrdering(valobj))
+    return MsvcStlPartialOrderingSummaryProvider(valobj, stream, options);
+  return LibStdcppPartialOrderingSummaryProvider(valobj, stream, options);
+}
+
+static bool
+GenericWeakOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options) {
+  if (IsMsvcStlOrdering(valobj))
+    return MsvcStlWeakOrderingSummaryProvider(valobj, stream, options);
+  return LibStdcppWeakOrderingSummaryProvider(valobj, stream, options);
+}
+
+static bool
+GenericStrongOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  if (IsMsvcStlOrdering(valobj))
+    return MsvcStlStrongOrderingSummaryProvider(valobj, stream, options);
+  return LibStdcppStrongOrderingSummaryProvider(valobj, stream, options);
 }
 
 /// Load formatters that are formatting types from more than one STL
@@ -1916,6 +1923,18 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstd++ std::span summary provider",
                 "^std::span<.+>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericPartialOrderingSummaryProvider,
+                "MSVC STL/libstdc++ std::partial_ordering summary provider",
+                "std::partial_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(cpp_category_sp, GenericWeakOrderingSummaryProvider,
+                "MSVC STL/libstdc++ std::weak_ordering summary provider",
+                "std::weak_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(cpp_category_sp, GenericStrongOrderingSummaryProvider,
+                "MSVC STL/libstdc++ std::strong_ordering summary provider",
+                "std::strong_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
