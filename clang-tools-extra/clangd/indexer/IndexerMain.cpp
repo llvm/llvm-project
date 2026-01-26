@@ -14,6 +14,7 @@
 #include "Compiler.h"
 #include "GlobalCompilationDatabase.h"
 #include "index/Background.h"
+#include "index/FileIndex.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
 #include "index/Ref.h"
@@ -21,6 +22,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolCollector.h"
 #include "support/Logger.h"
+#include "URI.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
@@ -164,6 +166,54 @@ public:
   ShardedIndexActionFactory(BackgroundIndexStorage &Storage)
       : Storage(Storage) {}
 
+  std::unique_ptr<FrontendAction> create() override {
+    SymbolCollector::Options Opts;
+    Opts.CountReferences = true;
+    Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
+      const auto F = SM.getFileEntryRefForID(FID);
+      if (!F)
+        return false; // Skip invalid files.
+      auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
+      if (!AbsPath)
+        return false; // Skip files without absolute path.
+      std::lock_guard<std::mutex> Lock(FilesMu);
+      return Files.insert(*AbsPath).second; // Skip already processed files.
+    };
+    return createStaticIndexingAction(
+        Opts,
+        [&](SymbolSlab S) {
+          // Merge as we go.
+          std::lock_guard<std::mutex> Lock(SymbolsMu);
+          for (const auto &Sym : S) {
+            if (const auto *Existing = Symbols->find(Sym.ID))
+              Symbols->insert(mergeSymbol(*Existing, Sym));
+            else
+              Symbols->insert(Sym);
+          }
+        },
+        [&](RefSlab S) {
+          std::lock_guard<std::mutex> Lock(RefsMu);
+          for (const auto &Sym : S) {
+            // Deduplication happens during insertion.
+            for (const auto &Ref : Sym.second)
+              Refs->insert(Sym.first, Ref);
+          }
+        },
+        [&](RelationSlab S) {
+          std::lock_guard<std::mutex> Lock(RelsMu);
+          for (const auto &R : S) {
+            Relations->insert(R);
+          }
+        },
+        [&](IncludeGraph IG) {
+          std::lock_guard<std::mutex> Lock(SourcesMu);
+          for (auto &Entry : IG) {
+            // Merge include graphs from different TUs.
+            Sources.try_emplace(Entry.first(), Entry.second);
+          }
+        });
+  }
+
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *Files,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -178,15 +228,16 @@ public:
     bool Success = tooling::FrontendActionFactory::runInvocation(
         std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
 
-    // After processing, write a shard for this file.
+    // After processing, write shards for all files in this TU.
     if (Success && !MainFile.empty())
-      writeShardForFile(MainFile);
+      writeShardsForTU(MainFile);
 
     return Success;
   }
 
 private:
-  void writeShardForFile(llvm::StringRef MainFile) {
+  void writeShardsForTU(llvm::StringRef MainFile) {
+    // Build the complete index data for this TU.
     IndexFileIn Data;
     {
       std::lock_guard<std::mutex> Lock(SymbolsMu);
@@ -203,20 +254,54 @@ private:
       Data.Relations = std::move(*Relations).build();
       Relations = std::make_unique<RelationSlab::Builder>();
     }
-
-    IndexFileOut Out(Data);
-    Out.Format = IndexFileFormat::RIFF; // Shards use RIFF format.
-
-    if (auto Err = Storage.storeShard(MainFile, Out)) {
-      elog("Failed to write shard for {0}: {1}", MainFile, std::move(Err));
-    } else {
-      std::lock_guard<std::mutex> Lock(FilesMu);
-      ++ShardsWritten;
-      log("Wrote shard for {0} ({1} total)", MainFile, ShardsWritten);
+    {
+      std::lock_guard<std::mutex> Lock(SourcesMu);
+      Data.Sources = std::move(Sources);
+      Sources.clear();
     }
+
+    // Shard the index data per-file.
+    FileShardedIndex ShardedIndex(std::move(Data));
+
+    // Write a shard for each file.
+    unsigned TUShardsWritten = 0;
+    for (llvm::StringRef Uri : ShardedIndex.getAllSources()) {
+      auto Shard = ShardedIndex.getShard(Uri);
+      if (!Shard) {
+        elog("Failed to get shard for {0}", Uri);
+        continue;
+      }
+
+      // Resolve URI to absolute path.
+      auto AbsPath = URI::resolve(Uri, MainFile);
+      if (!AbsPath) {
+        elog("Failed to resolve URI {0}: {1}", Uri, AbsPath.takeError());
+        continue;
+      }
+
+      // Only store command line for the main file.
+      if (*AbsPath != MainFile)
+        Shard->Cmd.reset();
+
+      IndexFileOut Out(*Shard);
+      Out.Format = IndexFileFormat::RIFF; // Shards use RIFF format.
+
+      if (auto Err = Storage.storeShard(*AbsPath, Out)) {
+        elog("Failed to write shard for {0}: {1}", *AbsPath, std::move(Err));
+      } else {
+        ++TUShardsWritten;
+      }
+    }
+
+    std::lock_guard<std::mutex> Lock(FilesMu);
+    ShardsWritten += TUShardsWritten;
+    log("Wrote {0} shards for TU {1} ({2} total)", TUShardsWritten, MainFile,
+        ShardsWritten);
   }
 
   BackgroundIndexStorage &Storage;
+  std::mutex SourcesMu;
+  IncludeGraph Sources;
   unsigned ShardsWritten = 0;
 };
 
