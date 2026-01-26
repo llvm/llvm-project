@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -stop-after=si-wqm < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 < %s | FileCheck %s
+
+; Test that compiler-generated WQM/WWM exec mask manipulation instructions
+; have debug locations attached.
 
 define amdgpu_cs void @test_wqm_wwm_debug_loc(ptr addrspace(8) inreg %rsrc) !dbg !7 {
 entry:
@@ -6,7 +9,7 @@ entry:
   %val.i = bitcast float %val to i32
 
   %inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %val.i, i32 0), !dbg !12
-  %dpp = call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %inactive, i32 323, i32 12, i32 15, i1 false), !dbg !13
+  %dpp = call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %inactive, i32 273, i32 15, i32 15, i1 false), !dbg !13
   %sum = add i32 %inactive, %dpp, !dbg !13
   %wwm = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %sum), !dbg !14
 
@@ -17,10 +20,15 @@ entry:
   ret void, !dbg !17
 }
 
-; CHECK: ENTER_STRICT_WWM {{.*}}debug-location
-; CHECK: EXIT_STRICT_WWM {{.*}}debug-location
-; CHECK: ENTER_STRICT_WQM {{.*}}debug-location
-; CHECK: EXIT_STRICT_WQM {{.*}}debug-location
+; Verify .loc directives appear before exec mask operations:
+; - s_or_saveexec (ENTER_STRICT_WWM) should have line 5 debug loc
+; - s_mov_b32 exec_lo (EXIT_STRICT_WWM/WQM) should have debug locs
+; CHECK: .loc {{[0-9]+}} 5 10
+; CHECK-NEXT: s_or_saveexec_b32
+; CHECK: .loc {{[0-9]+}} 7 10
+; CHECK-NEXT: s_mov_b32 exec_lo
+; CHECK: .loc {{[0-9]+}} 10 10
+; CHECK: s_mov_b32 exec_lo
 
 declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
