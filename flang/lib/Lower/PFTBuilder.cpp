@@ -25,16 +25,13 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     "no-structured-fir", llvm::cl::desc("disable generation of structured FIR"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
-namespace Fortran::lower {
-llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
-    "lower-do-while-to-scf-while", llvm::cl::init(false),
-    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
-    llvm::cl::Hidden);
-} // namespace Fortran::lower
-
 using namespace Fortran;
 
 namespace {
+static llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
+    "lower-do-while-to-scf-while", llvm::cl::init(false),
+    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
+    llvm::cl::Hidden);
 /// Helpers to unveil parser node inside Fortran::parser::Statement<>,
 /// Fortran::parser::UnlabeledStatement, and Fortran::common::Indirection<>
 template <typename A>
@@ -1069,7 +1066,7 @@ private:
                            &loopControl->u)) {
               // Leave DO WHILE structured when -lower-do-while-to-scf-while is
               // enabled; branch analysis will mark unstructured cases.
-              if (!Fortran::lower::lowerDoWhileToSCFWhile)
+              if (!lowerDoWhileToSCFWhile)
                 eval.isUnstructured = true; // while loop
             }
           },
