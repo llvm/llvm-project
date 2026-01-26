@@ -112,9 +112,99 @@ entry:
   ret void
 }
 
+define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %value2, ptr nocapture %resp) {
+; CHECK-LABEL: test_lwat_csne:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    mr r30, r6
+; CHECK-NEXT:    mr r6, r3
+; CHECK-NEXT:    clrldi r4, r4, 32
+; CHECK-NEXT:    clrldi r5, r5, 32
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    lwat r3, r6, 16
+; CHECK-NEXT:    stw r3, 0(r30)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_lwat_csne:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mflr r0
+; CHECK-BE-NEXT:    stdu r1, -128(r1)
+; CHECK-BE-NEXT:    std r0, 144(r1)
+; CHECK-BE-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    mr r31, r6
+; CHECK-BE-NEXT:    mr r6, r3
+; CHECK-BE-NEXT:    li r3, 0
+; CHECK-BE-NEXT:    clrldi r4, r4, 32
+; CHECK-BE-NEXT:    clrldi r5, r5, 32
+; CHECK-BE-NEXT:    lwat r3, r6, 16
+; CHECK-BE-NEXT:    stw r3, 0(r31)
+; CHECK-BE-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
+; CHECK-BE-NEXT:    addi r1, r1, 128
+; CHECK-BE-NEXT:    ld r0, 16(r1)
+; CHECK-BE-NEXT:    mtlr r0
+; CHECK-BE-NEXT:    blr
+entry:
+  %0 = tail call i32 @llvm.ppc.amo.lwat.csne(ptr %ptr, i32 %value1, i32 %value2)
+  store i32 %0, ptr %resp, align 4
+  ret void
+}
+
+define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %value2, ptr nocapture %resp) {
+; CHECK-LABEL: test_ldat_csne:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    mr r30, r6
+; CHECK-NEXT:    mr r6, r3
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    ldat r3, r6, 16
+; CHECK-NEXT:    std r3, 0(r30)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_ldat_csne:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mflr r0
+; CHECK-BE-NEXT:    stdu r1, -128(r1)
+; CHECK-BE-NEXT:    std r0, 144(r1)
+; CHECK-BE-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    mr r31, r6
+; CHECK-BE-NEXT:    mr r6, r3
+; CHECK-BE-NEXT:    ldat r3, r6, 16
+; CHECK-BE-NEXT:    std r3, 0(r31)
+; CHECK-BE-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
+; CHECK-BE-NEXT:    addi r1, r1, 128
+; CHECK-BE-NEXT:    ld r0, 16(r1)
+; CHECK-BE-NEXT:    mtlr r0
+; CHECK-BE-NEXT:    blr
+entry:
+  %0 = tail call i64 @llvm.ppc.amo.ldat.csne(ptr %ptr, i64 %value1, i64 %value2)
+  store i64 %0, ptr %resp, align 8
+  ret void
+}
+
 declare i64 @llvm.ppc.amo.ldat(ptr, i64, i32 immarg)
 declare i32 @llvm.ppc.amo.lwat(ptr, i32, i32 immarg)
 declare i64 @llvm.ppc.amo.ldat.cond(ptr, i32 immarg)
 declare i32 @llvm.ppc.amo.lwat.cond(ptr, i32 immarg)
 declare void @llvm.ppc.amo.stwat(ptr, i32, i32 immarg)
 declare void @llvm.ppc.amo.stdat(ptr, i64, i32 immarg)
+declare i64 @llvm.ppc.amo.ldat.csne(ptr, i64, i64)
+declare i32 @llvm.ppc.amo.lwat.csne(ptr, i32, i32)
