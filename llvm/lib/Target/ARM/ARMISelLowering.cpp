@@ -10047,7 +10047,7 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
     SDLoc dl(Op);
 
     auto Pair =
-        makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(), Opts, dl);
+        makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(), Opts, dl, LD->getChain());
 
     // If necessary, extend the node to 64bit
     if (LD->getExtensionType() != ISD::NON_EXTLOAD) {
@@ -10097,7 +10097,7 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
 
     MakeLibCallOptions Opts;
     auto CallResult = makeLibCall(DAG, LC, MVT::isVoid,
-                                  {StoreVal, ST->getBasePtr()}, Opts, dl);
+                                  {StoreVal, ST->getBasePtr()}, Opts, dl, ST->getChain());
 
     return CallResult.second;
   }
@@ -10163,7 +10163,7 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
     SDValue Hi = Result.getValue(DAG.getDataLayout().isLittleEndian() ? 1 : 0);
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
     Results.append({Pair, Result.getValue(2)});
-  } else if ((MemVT == MVT::i32 || MemVT == MVT::i64)) {
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
     auto Pair = LowerAEABIUnalignedLoad(SDValue(N, 0), DAG);
     if (Pair.first) {
       Results.push_back(Pair.first);
@@ -10238,7 +10238,7 @@ SDValue ARMTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG,
              ((MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
                MemVT == MVT::v16i1))) {
     return LowerPredicateStore(Op, DAG);
-  } else if ((MemVT == MVT::i32 || MemVT == MVT::i64)) {
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
     return LowerAEABIUnalignedStore(Op, DAG);
   }
   return SDValue();
@@ -10776,8 +10776,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     auto *LD = cast<LoadSDNode>(Op);
     EVT MemVT = LD->getMemoryVT();
     if (Subtarget->hasMVEIntegerOps() &&
-        ((MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
-          MemVT == MVT::v16i1)))
+        (MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
+          MemVT == MVT::v16i1))
       return LowerPredicateLoad(Op, DAG);
 
     auto Pair = LowerAEABIUnalignedLoad(Op, DAG);
