@@ -75,6 +75,10 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
+    InterfaceMethod<"Check if the global variable is device data",
+      "bool", "isDeviceData", (ins), [{
+        return false;
+      }]>,
   ];
 }
 

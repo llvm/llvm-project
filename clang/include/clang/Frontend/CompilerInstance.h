@@ -738,9 +738,9 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ModuleHash);
+  std::string getSpecificModuleCachePath(StringRef ContextHash);
   std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().getModuleHash());
+    return getSpecificModuleCachePath(getInvocation().computeContextHash());
   }
 
   /// Create the AST context.
@@ -905,7 +905,7 @@ private:
   /// load it.
   ModuleLoadResult findOrCompileModuleAndReadAST(StringRef ModuleName,
                                                  SourceLocation ImportLoc,
-                                                 SourceLocation ModuleNameLoc,
+                                                 SourceRange ModuleNameRange,
                                                  bool IsInclusionDirective);
 
   /// Creates a \c CompilerInstance for compiling a module.
