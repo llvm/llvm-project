@@ -27,6 +27,8 @@
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
@@ -1035,6 +1037,33 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
   // The current thinking is that wasm engines will perform this optimization,
   // so we can save on code size.
   return true;
+}
+
+bool WebAssemblyTargetLowering::shouldLocalize(
+    const MachineInstr &MI, const TargetTransformInfo *TTI) const {
+
+  // Rebalancing to prioritize code-size
+  // We only sink constants if they have a single-user
+
+  auto &MF = *MI.getMF();
+  auto &MRI = MF.getRegInfo();
+
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FRAME_INDEX:
+  case TargetOpcode::G_INTTOPTR:
+  case TargetOpcode::G_PTR_ADD:
+  case TargetOpcode::G_GLOBAL_VALUE: {
+    // We only sink single-uses, so no need to be PIC aware for globals
+
+    Register Reg = MI.getOperand(0).getReg();
+    return MRI.hasAtMostUserInstrs(Reg, 1);
+  }
+  }
+  return TargetLoweringBase::shouldLocalize(MI, TTI);
 }
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
