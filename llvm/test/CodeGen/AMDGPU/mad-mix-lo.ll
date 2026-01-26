@@ -136,9 +136,9 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
@@ -197,9 +197,9 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush(half %src0, half %src1, 
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
@@ -252,8 +252,8 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32(half %src0, half %src1, float %src2
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
@@ -304,11 +304,15 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %sr
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_max_f32_e32 v0, 0, v0
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -378,8 +382,8 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src
 ; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
@@ -469,12 +473,12 @@ define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v3, v5, v4
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v3
@@ -601,15 +605,15 @@ define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v6, v8, v7
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v4, v0, v2
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v6
@@ -777,36 +781,36 @@ define <4 x half> @v_mad_mix_v4f32(<4 x half> %src0, <4 x half> %src1, <4 x half
 ; SDAG-CI-LABEL: v_mad_mix_v4f32:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v4
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v5
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-CI-NEXT:    v_mac_f32_e32 v9, v11, v10
-; SDAG-CI-NEXT:    v_mac_f32_e32 v6, v8, v7
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; SDAG-CI-NEXT:    v_mac_f32_e32 v6, v10, v8
+; SDAG-CI-NEXT:    v_mac_f32_e32 v7, v11, v9
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v4, v0, v2
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v9
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v5, v1, v3
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v4
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v6
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v7
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v6
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v4
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v5
-; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; SDAG-CI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SDAG-CI-NEXT:    v_or_b32_e32 v1, v3, v4
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-LABEL: v_mad_mix_v4f32:
@@ -971,22 +975,30 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %s
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_mac_f32_e32 v3, v5, v4
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_max_f32_e32 v1, 0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-CI-NEXT:    v_max_f32_e32 v0, 0, v0
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_mac_f32_e32 v3, v5, v4
-; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v3
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v1, v1 clamp
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_min_f32_e32 v1, 1.0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SDAG-CI-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-LABEL: v_mad_mix_v2f32_clamp_postcvt:
@@ -1140,29 +1152,41 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v6, v8, v7
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v4, v0, v2
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v6
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v4
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v5, v1, v3
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v2, v2 clamp
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v1, v1 clamp
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v4
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v5
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v6
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_max_f32_e32 v1, 0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SDAG-CI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SDAG-CI-NEXT:    v_max_f32_e32 v0, 0, v0
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_max_f32_e32 v2, 0, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_min_f32_e32 v1, 1.0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v1
+; SDAG-CI-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_min_f32_e32 v1, 1.0, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-LABEL: v_mad_mix_v3f32_clamp_postcvt:
@@ -1357,42 +1381,58 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %s
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v5
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v3
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-CI-NEXT:    v_mac_f32_e32 v6, v8, v7
-; SDAG-CI-NEXT:    v_mac_f32_e32 v9, v11, v10
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_mac_f32_e32 v6, v10, v8
+; SDAG-CI-NEXT:    v_mac_f32_e32 v7, v11, v9
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v4, v0, v2
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v6
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v5, v1, v3
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v4
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v9
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v4
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v1, v1 clamp
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v2, v2 clamp
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v3, v3 clamp
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v6
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v7
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_max_f32_e32 v0, 0, v0
+; SDAG-CI-NEXT:    v_max_f32_e32 v1, 0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_max_f32_e32 v2, 0, v2
+; SDAG-CI-NEXT:    v_max_f32_e32 v3, 0, v3
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_min_f32_e32 v1, 1.0, v1
+; SDAG-CI-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_min_f32_e32 v3, 1.0, v3
+; SDAG-CI-NEXT:    v_min_f32_e32 v2, 1.0, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; SDAG-CI-NEXT:    v_or_b32_e32 v1, v3, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1560,22 +1600,26 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half>
 ; SDAG-CI-LABEL: v_mad_mix_v2f32_clamp_postcvt_lo:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v5, v4
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_mac_f32_e32 v5, v3, v4
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v5
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v2, v2 clamp
-; SDAG-CI-NEXT:    v_mac_f32_e32 v3, v0, v1
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v3
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; SDAG-CI-NEXT:    v_max_f32_e32 v3, 0, v3
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SDAG-CI-NEXT:    v_min_f32_e32 v1, 1.0, v3
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1727,18 +1771,22 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v3, v5, v4
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v3, v3 clamp
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_max_f32_e32 v3, 0, v3
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_min_f32_e32 v0, 1.0, v3
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
@@ -1906,12 +1954,12 @@ define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %sr
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-CI-NEXT:    v_mad_f32 v3, v5, v4, v3 clamp
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v3
@@ -2078,15 +2126,15 @@ define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %sr
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; SDAG-CI-NEXT:    v_mad_f32 v6, v8, v7, v6 clamp
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v2, v4 clamp
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v6
@@ -2284,35 +2332,35 @@ define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %sr
 ; SDAG-CI-LABEL: v_mad_mix_v4f32_clamp_precvt:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v3
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
+; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v3
-; SDAG-CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-CI-NEXT:    v_mad_f32 v6, v8, v7, v6 clamp
-; SDAG-CI-NEXT:    v_mad_f32 v9, v11, v10, v9 clamp
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-CI-NEXT:    v_mad_f32 v6, v10, v8, v6 clamp
+; SDAG-CI-NEXT:    v_mad_f32 v7, v11, v9, v7 clamp
+; SDAG-CI-NEXT:    v_mad_f32 v1, v1, v3, v5 clamp
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v2, v4 clamp
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v6
-; SDAG-CI-NEXT:    v_mad_f32 v1, v1, v3, v5 clamp
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v7
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v9
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SDAG-CI-NEXT:    v_or_b32_e32 v0, v0, v2
-; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; SDAG-CI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;

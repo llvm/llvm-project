@@ -94,7 +94,6 @@ define amdgpu_kernel void @fneg_fabs_fmul_f16(ptr addrspace(1) %out, half %x, ha
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_lshr_b32 s1, s0, 16
-; CI-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, s1
 ; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|s0|
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
