@@ -30,16 +30,27 @@
 
 namespace clang {
 namespace clangd {
+
+enum class IndexOutputMode { Monolithic, Sharded };
+
 namespace {
 
-static llvm::cl::opt<IndexFileFormat> Format(
-    "format", llvm::cl::desc("Format of the index to be written"),
+static llvm::cl::opt<IndexFileFormat>
+    Format("format", llvm::cl::desc("Format of the index to be written"),
+           llvm::cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
+                                       "human-readable YAML format"),
+                            clEnumValN(IndexFileFormat::RIFF, "binary",
+                                       "binary RIFF format")),
+           llvm::cl::init(IndexFileFormat::RIFF));
+
+static llvm::cl::opt<IndexOutputMode> OutputMode(
+    "index-type", llvm::cl::desc("Type of index output"),
     llvm::cl::values(
-        clEnumValN(IndexFileFormat::YAML, "yaml", "human-readable YAML format"),
-        clEnumValN(IndexFileFormat::RIFF, "binary", "binary RIFF format"),
-        clEnumValN(IndexFileFormat::SHARDED, "sharded",
-                   "Sharded index format for language servers")),
-    llvm::cl::init(IndexFileFormat::RIFF));
+        clEnumValN(IndexOutputMode::Monolithic, "monolithic",
+                   "Single merged index file written to stdout (default)"),
+        clEnumValN(IndexOutputMode::Sharded, "sharded",
+                   "Per-file shards written to disk")),
+    llvm::cl::init(IndexOutputMode::Monolithic));
 
 static llvm::cl::list<std::string> QueryDriverGlobs{
     "query-driver",
@@ -54,7 +65,7 @@ static llvm::cl::list<std::string> QueryDriverGlobs{
 static llvm::cl::opt<std::string> ProjectRoot{
     "project-root",
     llvm::cl::desc(
-        "Path to the project root for --format=sharded. "
+        "Path to the project root for --index-type=sharded. "
         "Determines where to store index shards. Shards are stored in "
         "<project-root>/.cache/clangd/index/. "
         "Defaults to current directory if not specified."),
@@ -227,9 +238,9 @@ int main(int argc, const char **argv) {
 
   $ clangd-indexer File1.cpp File2.cpp ... FileN.cpp > clangd.dex
 
-  Example usage for sharded index format (writes shards to disk):
+  Example usage for sharded index (writes shards to disk):
 
-  $ clangd-indexer --format=sharded --executor=all-TUs build/
+  $ clangd-indexer --index-type=sharded --executor=all-TUs build/
 
   This writes index shards to .cache/clangd/index/ in the current directory.
   Use --project-root to specify a different location for the shards.
@@ -260,8 +271,8 @@ int main(int argc, const char **argv) {
         return Cmd.CommandLine;
       });
 
-  // Handle sharded index format separately - writes per-file shards.
-  if (clang::clangd::Format == clang::clangd::IndexFileFormat::SHARDED) {
+  // Handle sharded index type separately - writes per-file shards.
+  if (clang::clangd::OutputMode == clang::clangd::IndexOutputMode::Sharded) {
     // Default to current directory if --project-root not specified.
     std::string Root = clang::clangd::ProjectRoot;
     if (Root.empty()) {
@@ -292,7 +303,7 @@ int main(int argc, const char **argv) {
       return 1;
     }
 
-    llvm::errs() << "Background index shards written to " << Root
+    llvm::errs() << "Index shards written to " << Root
                  << "/.cache/clangd/index/\n";
     return 0;
   }
