@@ -170,17 +170,15 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     // the entry block.
     SmallVector<RegionSuccessor> successors;
     branch.getSuccessorRegions(RegionBranchPoint::parent(), successors);
-    RegionSuccessor regionSuccessor(region);
-    bool found = false;
+    RegionSuccessor regionSuccessor = RegionSuccessor::parent();
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() == region) {
         LDBG() << "  Found matching region successor: " << successor;
-        found = true;
         regionSuccessor = successor;
         break;
       }
     }
-    if (!found) {
+    if (regionSuccessor.isParent()) {
       LDBG()
           << "  No matching region successor found, adding argument to output";
       output.push_back(arg);
