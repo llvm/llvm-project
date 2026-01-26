@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
-
 
 namespace llvm {
   class Function;
@@ -65,7 +65,7 @@ class SwiftErrorValueTracking {
 
 public:
   /// Initialize data structures for specified new function.
-  void setFunction(MachineFunction &MF);
+  LLVM_ABI void setFunction(MachineFunction &MF);
 
   /// Get the (unique) function argument that was marked swifterror, or nullptr
   /// if this function has no swifterror args.
@@ -75,32 +75,36 @@ public:
 
   /// Get or create the swifterror value virtual register in
   /// VRegDefMap for this basic block.
-  Register getOrCreateVReg(const MachineBasicBlock *, const Value *);
+  LLVM_ABI Register getOrCreateVReg(const MachineBasicBlock *, const Value *);
 
   /// Set the swifterror virtual register in the VRegDefMap for this
   /// basic block.
-  void setCurrentVReg(const MachineBasicBlock *MBB, const Value *, Register);
+  LLVM_ABI void setCurrentVReg(const MachineBasicBlock *MBB, const Value *,
+                               Register);
 
   /// Get or create the swifterror value virtual register for a def of a
   /// swifterror by an instruction.
-  Register getOrCreateVRegDefAt(const Instruction *, const MachineBasicBlock *,
-                                const Value *);
+  LLVM_ABI Register getOrCreateVRegDefAt(const Instruction *,
+                                         const MachineBasicBlock *,
+                                         const Value *);
 
   /// Get or create the swifterror value virtual register for a use of a
   /// swifterror by an instruction.
-  Register getOrCreateVRegUseAt(const Instruction *, const MachineBasicBlock *,
-                                const Value *);
+  LLVM_ABI Register getOrCreateVRegUseAt(const Instruction *,
+                                         const MachineBasicBlock *,
+                                         const Value *);
 
   /// Create initial definitions of swifterror values in the entry block of the
   /// current function.
-  bool createEntriesInEntryBlock(DebugLoc DbgLoc);
+  LLVM_ABI bool createEntriesInEntryBlock(DebugLoc DbgLoc);
 
   /// Propagate assigned swifterror vregs through a function, synthesizing PHI
   /// nodes when needed to maintain consistency.
-  void propagateVRegs();
+  LLVM_ABI void propagateVRegs();
 
-  void preassignVRegs(MachineBasicBlock *MBB, BasicBlock::const_iterator Begin,
-                      BasicBlock::const_iterator End);
+  LLVM_ABI void preassignVRegs(MachineBasicBlock *MBB,
+                               BasicBlock::const_iterator Begin,
+                               BasicBlock::const_iterator End);
 };
 
 }

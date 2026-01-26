@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_INDIRECTBREXPAND_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -20,7 +21,7 @@ class IndirectBrExpandPass : public PassInfoMixin<IndirectBrExpandPass> {
 
 public:
   IndirectBrExpandPass(const TargetMachine &TM) : TM(&TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

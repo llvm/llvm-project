@@ -20,13 +20,14 @@
 #define LLVM_TRANSFORMS_IPO_CALLEDVALUEPROPAGATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class CalledValuePropagationPass
     : public PassInfoMixin<CalledValuePropagationPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 } // namespace llvm
 

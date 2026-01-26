@@ -10,14 +10,15 @@
 #define LLVM_CODEGEN_REMOVELOADSINTOFAKEUSES_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class RemoveLoadsIntoFakeUsesPass
     : public PassInfoMixin<RemoveLoadsIntoFakeUsesPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoVRegs();

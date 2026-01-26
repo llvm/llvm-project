@@ -15,11 +15,12 @@
 
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
 namespace llvm {
 
-class BasicBlockMatchingAndInference : public MachineFunctionPass {
+class LLVM_ABI BasicBlockMatchingAndInference : public MachineFunctionPass {
 private:
   using Edge = std::pair<const MachineBasicBlock *, const MachineBasicBlock *>;
   using BlockWeightMap = DenseMap<const MachineBasicBlock *, uint64_t>;

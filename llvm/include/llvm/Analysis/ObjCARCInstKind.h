@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_OBJCARCINSTKIND_H
 
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace objcarc {
@@ -53,48 +54,48 @@ enum class ARCInstKind {
   None                      ///< anything that is inert from an ARC perspective.
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ARCInstKind Class);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const ARCInstKind Class);
 
 /// Test if the given class is a kind of user.
-bool IsUser(ARCInstKind Class);
+LLVM_ABI bool IsUser(ARCInstKind Class);
 
 /// Test if the given class is objc_retain or equivalent.
-bool IsRetain(ARCInstKind Class);
+LLVM_ABI bool IsRetain(ARCInstKind Class);
 
 /// Test if the given class is objc_autorelease or equivalent.
-bool IsAutorelease(ARCInstKind Class);
+LLVM_ABI bool IsAutorelease(ARCInstKind Class);
 
 /// Test if the given class represents instructions which return their
 /// argument verbatim.
-bool IsForwarding(ARCInstKind Class);
+LLVM_ABI bool IsForwarding(ARCInstKind Class);
 
 /// Test if the given class represents instructions which do nothing if
 /// passed a null pointer.
-bool IsNoopOnNull(ARCInstKind Class);
+LLVM_ABI bool IsNoopOnNull(ARCInstKind Class);
 
 /// Test if the given class represents instructions which do nothing if
 /// passed a global variable.
-bool IsNoopOnGlobal(ARCInstKind Class);
+LLVM_ABI bool IsNoopOnGlobal(ARCInstKind Class);
 
 /// Test if the given class represents instructions which are always safe
 /// to mark with the "tail" keyword.
-bool IsAlwaysTail(ARCInstKind Class);
+LLVM_ABI bool IsAlwaysTail(ARCInstKind Class);
 
 /// Test if the given class represents instructions which are never safe
 /// to mark with the "tail" keyword.
-bool IsNeverTail(ARCInstKind Class);
+LLVM_ABI bool IsNeverTail(ARCInstKind Class);
 
 /// Test if the given class represents instructions which are always safe
 /// to mark with the nounwind attribute.
-bool IsNoThrow(ARCInstKind Class);
+LLVM_ABI bool IsNoThrow(ARCInstKind Class);
 
 /// Test whether the given instruction can autorelease any pointer or cause an
 /// autoreleasepool pop.
-bool CanInterruptRV(ARCInstKind Class);
+LLVM_ABI bool CanInterruptRV(ARCInstKind Class);
 
 /// Determine if F is one of the special known Functions.  If it isn't,
 /// return ARCInstKind::CallOrUser.
-ARCInstKind GetFunctionClass(const Function *F);
+LLVM_ABI ARCInstKind GetFunctionClass(const Function *F);
 
 /// Determine which objc runtime call instruction class V belongs to.
 ///
@@ -114,11 +115,11 @@ inline ARCInstKind GetBasicARCInstKind(const Value *V) {
 }
 
 /// Map V to its ARCInstKind equivalence class.
-ARCInstKind GetARCInstKind(const Value *V);
+LLVM_ABI ARCInstKind GetARCInstKind(const Value *V);
 
 /// Returns false if conservatively we can prove that any instruction mapped to
 /// this kind can not decrement ref counts. Returns true otherwise.
-bool CanDecrementRefCount(ARCInstKind Kind);
+LLVM_ABI bool CanDecrementRefCount(ARCInstKind Kind);
 
 } // end namespace objcarc
 } // end namespace llvm

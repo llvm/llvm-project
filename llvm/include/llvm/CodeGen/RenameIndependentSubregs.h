@@ -10,14 +10,15 @@
 #define LLVM_CODEGEN_RENAME_INDEPENDENT_SUBREGS_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class RenameIndependentSubregsPass
     : public PassInfoMixin<RenameIndependentSubregsPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

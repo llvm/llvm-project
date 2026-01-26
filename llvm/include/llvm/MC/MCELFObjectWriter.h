@@ -15,6 +15,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -50,7 +51,7 @@ struct ELFRelocationEntry {
   LLVM_DUMP_METHOD void dump() const { print(errs()); }
 };
 
-class MCELFObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCELFObjectTargetWriter : public MCObjectTargetWriter {
   const uint8_t OSABI;
   const uint8_t ABIVersion;
   const uint16_t EMachine;
@@ -139,7 +140,7 @@ public:
   }
 };
 
-class ELFObjectWriter final : public MCObjectWriter {
+class LLVM_ABI ELFObjectWriter final : public MCObjectWriter {
   unsigned ELFHeaderEFlags = 0;
 
 public:

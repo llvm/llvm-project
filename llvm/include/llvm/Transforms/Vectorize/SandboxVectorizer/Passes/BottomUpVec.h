@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
@@ -32,7 +33,7 @@ namespace llvm::sandboxir {
 /// profitable or not. For now profitability is checked at the end of the region
 /// pass pipeline by a dedicated pass that accepts or rejects the IR
 /// transaction, depending on the cost.
-class BottomUpVec final : public RegionPass {
+class LLVM_ABI BottomUpVec final : public RegionPass {
   bool Change = false;
   /// The original instructions that are potentially dead after vectorization.
   DenseSet<Instruction *> DeadInstrCandidates;

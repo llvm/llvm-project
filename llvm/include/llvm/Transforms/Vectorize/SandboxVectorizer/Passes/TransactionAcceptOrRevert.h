@@ -16,10 +16,11 @@
 
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/Region.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
-class TransactionAcceptOrRevert : public RegionPass {
+class LLVM_ABI TransactionAcceptOrRevert : public RegionPass {
 public:
   TransactionAcceptOrRevert() : RegionPass("tr-accept-or-revert") {}
   bool runOnRegion(Region &Rgn, const Analyses &A) final;

@@ -13,11 +13,12 @@
 #include "llvm/Analysis/DominanceFrontierImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
 
-class MachineDominanceFrontier : public MachineFunctionPass {
+class LLVM_ABI MachineDominanceFrontier : public MachineFunctionPass {
   ForwardDominanceFrontierBase<MachineBasicBlock> Base;
 
 public:

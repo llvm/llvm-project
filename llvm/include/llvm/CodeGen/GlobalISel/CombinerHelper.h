@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
@@ -124,10 +125,10 @@ protected:
   const TargetRegisterInfo *TRI;
 
 public:
-  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                 bool IsPreLegalize, GISelValueTracking *VT = nullptr,
-                 MachineDominatorTree *MDT = nullptr,
-                 const LegalizerInfo *LI = nullptr);
+  LLVM_ABI CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
+                          bool IsPreLegalize, GISelValueTracking *VT = nullptr,
+                          MachineDominatorTree *MDT = nullptr,
+                          const LegalizerInfo *LI = nullptr);
 
   GISelValueTracking *getValueTracking() const { return VT; }
 
@@ -135,66 +136,69 @@ public:
     return Builder;
   }
 
-  const TargetLowering &getTargetLowering() const;
+  LLVM_ABI const TargetLowering &getTargetLowering() const;
 
-  const MachineFunction &getMachineFunction() const;
+  LLVM_ABI const MachineFunction &getMachineFunction() const;
 
-  const DataLayout &getDataLayout() const;
+  LLVM_ABI const DataLayout &getDataLayout() const;
 
-  LLVMContext &getContext() const;
+  LLVM_ABI LLVMContext &getContext() const;
 
   /// \returns true if the combiner is running pre-legalization.
-  bool isPreLegalize() const;
+  LLVM_ABI bool isPreLegalize() const;
 
   /// \returns true if \p Query is legal on the target.
-  bool isLegal(const LegalityQuery &Query) const;
+  LLVM_ABI bool isLegal(const LegalityQuery &Query) const;
 
   /// \return true if the combine is running prior to legalization, or if \p
   /// Query is legal on the target.
-  bool isLegalOrBeforeLegalizer(const LegalityQuery &Query) const;
+  LLVM_ABI bool isLegalOrBeforeLegalizer(const LegalityQuery &Query) const;
 
   /// \return true if \p Query is legal on the target, or if \p Query will
   /// perform WidenScalar action on the target.
-  bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
+  LLVM_ABI bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
-  bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
+  LLVM_ABI bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
-  void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
+  LLVM_ABI void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
+                               Register ToReg) const;
 
   /// Replace a single register operand with a new register and inform the
   /// observer of the changes.
-  void replaceRegOpWith(MachineRegisterInfo &MRI, MachineOperand &FromRegOp,
-                        Register ToReg) const;
+  LLVM_ABI void replaceRegOpWith(MachineRegisterInfo &MRI,
+                                 MachineOperand &FromRegOp,
+                                 Register ToReg) const;
 
   /// Replace the opcode in instruction with a new opcode and inform the
   /// observer of the changes.
-  void replaceOpcodeWith(MachineInstr &FromMI, unsigned ToOpcode) const;
+  LLVM_ABI void replaceOpcodeWith(MachineInstr &FromMI,
+                                  unsigned ToOpcode) const;
 
   /// Get the register bank of \p Reg.
   /// If Reg has not been assigned a register, a register class,
   /// or a register bank, then this returns nullptr.
   ///
   /// \pre Reg.isValid()
-  const RegisterBank *getRegBank(Register Reg) const;
+  LLVM_ABI const RegisterBank *getRegBank(Register Reg) const;
 
   /// Set the register bank of \p Reg.
   /// Does nothing if the RegBank is null.
   /// This is the counterpart to getRegBank.
-  void setRegBank(Register Reg, const RegisterBank *RegBank) const;
+  LLVM_ABI void setRegBank(Register Reg, const RegisterBank *RegBank) const;
 
   /// If \p MI is COPY, try to combine it.
   /// Returns true if MI changed.
-  bool tryCombineCopy(MachineInstr &MI) const;
-  bool matchCombineCopy(MachineInstr &MI) const;
-  void applyCombineCopy(MachineInstr &MI) const;
+  LLVM_ABI bool tryCombineCopy(MachineInstr &MI) const;
+  LLVM_ABI bool matchCombineCopy(MachineInstr &MI) const;
+  LLVM_ABI void applyCombineCopy(MachineInstr &MI) const;
 
   /// Returns true if \p DefMI precedes \p UseMI or they are the same
   /// instruction. Both must be in the same basic block.
-  bool isPredecessor(const MachineInstr &DefMI,
-                     const MachineInstr &UseMI) const;
+  LLVM_ABI bool isPredecessor(const MachineInstr &DefMI,
+                              const MachineInstr &UseMI) const;
 
   /// Returns true if \p DefMI dominates \p UseMI. By definition an
   /// instruction dominates itself.
@@ -202,50 +206,57 @@ public:
   /// If we haven't been provided with a MachineDominatorTree during
   /// construction, this function returns a conservative result that tracks just
   /// a single basic block.
-  bool dominates(const MachineInstr &DefMI, const MachineInstr &UseMI) const;
+  LLVM_ABI bool dominates(const MachineInstr &DefMI,
+                          const MachineInstr &UseMI) const;
 
   /// If \p MI is extend that consumes the result of a load, try to combine it.
   /// Returns true if MI changed.
-  bool tryCombineExtendingLoads(MachineInstr &MI) const;
-  bool matchCombineExtendingLoads(MachineInstr &MI,
-                                  PreferredTuple &MatchInfo) const;
-  void applyCombineExtendingLoads(MachineInstr &MI,
-                                  PreferredTuple &MatchInfo) const;
+  LLVM_ABI bool tryCombineExtendingLoads(MachineInstr &MI) const;
+  LLVM_ABI bool matchCombineExtendingLoads(MachineInstr &MI,
+                                           PreferredTuple &MatchInfo) const;
+  LLVM_ABI void applyCombineExtendingLoads(MachineInstr &MI,
+                                           PreferredTuple &MatchInfo) const;
 
   /// Match (and (load x), mask) -> zextload x
-  bool matchCombineLoadWithAndMask(MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineLoadWithAndMask(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const;
 
   /// Combine a G_EXTRACT_VECTOR_ELT of a load into a narrowed
   /// load.
-  bool matchCombineExtractedVectorLoad(MachineInstr &MI,
-                                       BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineExtractedVectorLoad(MachineInstr &MI,
+                                                BuildFnTy &MatchInfo) const;
 
-  bool matchCombineIndexedLoadStore(MachineInstr &MI,
-                                    IndexedLoadStoreMatchInfo &MatchInfo) const;
-  void applyCombineIndexedLoadStore(MachineInstr &MI,
-                                    IndexedLoadStoreMatchInfo &MatchInfo) const;
+  LLVM_ABI bool
+  matchCombineIndexedLoadStore(MachineInstr &MI,
+                               IndexedLoadStoreMatchInfo &MatchInfo) const;
+  LLVM_ABI void
+  applyCombineIndexedLoadStore(MachineInstr &MI,
+                               IndexedLoadStoreMatchInfo &MatchInfo) const;
 
-  bool matchSextTruncSextLoad(MachineInstr &MI) const;
-  void applySextTruncSextLoad(MachineInstr &MI) const;
+  LLVM_ABI bool matchSextTruncSextLoad(MachineInstr &MI) const;
+  LLVM_ABI void applySextTruncSextLoad(MachineInstr &MI) const;
 
   /// Match sext_inreg(load p), imm -> sextload p
-  bool matchSextInRegOfLoad(MachineInstr &MI,
-                            std::tuple<Register, unsigned> &MatchInfo) const;
-  void applySextInRegOfLoad(MachineInstr &MI,
-                            std::tuple<Register, unsigned> &MatchInfo) const;
+  LLVM_ABI bool
+  matchSextInRegOfLoad(MachineInstr &MI,
+                       std::tuple<Register, unsigned> &MatchInfo) const;
+  LLVM_ABI void
+  applySextInRegOfLoad(MachineInstr &MI,
+                       std::tuple<Register, unsigned> &MatchInfo) const;
 
   /// Try to combine G_[SU]DIV and G_[SU]REM into a single G_[SU]DIVREM
   /// when their source operands are identical.
-  bool matchCombineDivRem(MachineInstr &MI, MachineInstr *&OtherMI) const;
-  void applyCombineDivRem(MachineInstr &MI, MachineInstr *&OtherMI) const;
+  LLVM_ABI bool matchCombineDivRem(MachineInstr &MI,
+                                   MachineInstr *&OtherMI) const;
+  LLVM_ABI void applyCombineDivRem(MachineInstr &MI,
+                                   MachineInstr *&OtherMI) const;
 
   /// If a brcond's true block is not the fallthrough, make it so by inverting
   /// the condition and swapping operands.
-  bool matchOptBrCondByInvertingCond(MachineInstr &MI,
-                                     MachineInstr *&BrCond) const;
-  void applyOptBrCondByInvertingCond(MachineInstr &MI,
-                                     MachineInstr *&BrCond) const;
+  LLVM_ABI bool matchOptBrCondByInvertingCond(MachineInstr &MI,
+                                              MachineInstr *&BrCond) const;
+  LLVM_ABI void applyOptBrCondByInvertingCond(MachineInstr &MI,
+                                              MachineInstr *&BrCond) const;
 
   /// If \p MI is G_CONCAT_VECTORS, try to combine it.
   /// Returns true if MI changed.
@@ -261,39 +272,39 @@ public:
   /// needed to produce the flattened build_vector.
   ///
   /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool matchCombineConcatVectors(MachineInstr &MI,
-                                 SmallVector<Register> &Ops) const;
+  LLVM_ABI bool matchCombineConcatVectors(MachineInstr &MI,
+                                          SmallVector<Register> &Ops) const;
   /// Replace \p MI with a flattened build_vector with \p Ops
   /// or an implicit_def if \p Ops is empty.
-  void applyCombineConcatVectors(MachineInstr &MI,
-                                 SmallVector<Register> &Ops) const;
+  LLVM_ABI void applyCombineConcatVectors(MachineInstr &MI,
+                                          SmallVector<Register> &Ops) const;
 
-  bool matchCombineShuffleConcat(MachineInstr &MI,
-                                 SmallVector<Register> &Ops) const;
+  LLVM_ABI bool matchCombineShuffleConcat(MachineInstr &MI,
+                                          SmallVector<Register> &Ops) const;
   /// Replace \p MI with a flattened build_vector with \p Ops
   /// or an implicit_def if \p Ops is empty.
-  void applyCombineShuffleConcat(MachineInstr &MI,
-                                 SmallVector<Register> &Ops) const;
+  LLVM_ABI void applyCombineShuffleConcat(MachineInstr &MI,
+                                          SmallVector<Register> &Ops) const;
 
   /// Replace \p MI with a build_vector.
-  void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+  LLVM_ABI void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
   /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
-  bool tryCombineShuffleVector(MachineInstr &MI) const;
+  LLVM_ABI bool tryCombineShuffleVector(MachineInstr &MI) const;
   /// Check if the G_SHUFFLE_VECTOR \p MI can be replaced by a
   /// concat_vectors.
   /// \p Ops will contain the operands needed to produce the flattened
   /// concat_vectors.
   ///
   /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
-  bool matchCombineShuffleVector(MachineInstr &MI,
-                                 SmallVectorImpl<Register> &Ops) const;
+  LLVM_ABI bool matchCombineShuffleVector(MachineInstr &MI,
+                                          SmallVectorImpl<Register> &Ops) const;
   /// Replace \p MI with a concat_vectors with \p Ops.
-  void applyCombineShuffleVector(MachineInstr &MI,
-                                 ArrayRef<Register> Ops) const;
+  LLVM_ABI void applyCombineShuffleVector(MachineInstr &MI,
+                                          ArrayRef<Register> Ops) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
@@ -325,111 +336,124 @@ public:
   ///     $addr = G_INDEXED_STORE $val, $base, $offset
   ///     [...]
   ///     $whatever = COPY $addr
-  bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0) const;
+  LLVM_ABI bool tryCombineMemCpyFamily(MachineInstr &MI,
+                                       unsigned MaxLen = 0) const;
 
-  bool matchPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo) const;
-  void applyPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo) const;
+  LLVM_ABI bool matchPtrAddImmedChain(MachineInstr &MI,
+                                      PtrAddChain &MatchInfo) const;
+  LLVM_ABI void applyPtrAddImmedChain(MachineInstr &MI,
+                                      PtrAddChain &MatchInfo) const;
 
   /// Fold (shift (shift base, x), y) -> (shift base (x+y))
-  bool matchShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo) const;
-  void applyShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo) const;
+  LLVM_ABI bool matchShiftImmedChain(MachineInstr &MI,
+                                     RegisterImmPair &MatchInfo) const;
+  LLVM_ABI void applyShiftImmedChain(MachineInstr &MI,
+                                     RegisterImmPair &MatchInfo) const;
 
   /// If we have a shift-by-constant of a bitwise logic op that itself has a
   /// shift-by-constant operand with identical opcode, we may be able to convert
   /// that into 2 independent shifts followed by the logic op.
-  bool matchShiftOfShiftedLogic(MachineInstr &MI,
-                                ShiftOfShiftedLogic &MatchInfo) const;
-  void applyShiftOfShiftedLogic(MachineInstr &MI,
-                                ShiftOfShiftedLogic &MatchInfo) const;
+  LLVM_ABI bool matchShiftOfShiftedLogic(MachineInstr &MI,
+                                         ShiftOfShiftedLogic &MatchInfo) const;
+  LLVM_ABI void applyShiftOfShiftedLogic(MachineInstr &MI,
+                                         ShiftOfShiftedLogic &MatchInfo) const;
 
-  bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
-  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo,
-                              MachineInstr &ShiftMI) const;
-  void applyLshrOfTruncOfLshr(MachineInstr &MI,
-                              LshrOfTruncOfLshr &MatchInfo) const;
+  LLVM_ABI bool matchLshrOfTruncOfLshr(MachineInstr &MI,
+                                       LshrOfTruncOfLshr &MatchInfo,
+                                       MachineInstr &ShiftMI) const;
+  LLVM_ABI void applyLshrOfTruncOfLshr(MachineInstr &MI,
+                                       LshrOfTruncOfLshr &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
-  bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
-  void applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
+  LLVM_ABI bool matchCombineMulToShl(MachineInstr &MI,
+                                     unsigned &ShiftVal) const;
+  LLVM_ABI void applyCombineMulToShl(MachineInstr &MI,
+                                     unsigned &ShiftVal) const;
 
   // Transform a G_SUB with constant on the RHS to G_ADD.
-  bool matchCombineSubToAdd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineSubToAdd(MachineInstr &MI,
+                                     BuildFnTy &MatchInfo) const;
 
   // Transform a G_SHL with an extended source into a narrower shift if
   // possible.
-  bool matchCombineShlOfExtend(MachineInstr &MI,
-                               RegisterImmPair &MatchData) const;
-  void applyCombineShlOfExtend(MachineInstr &MI,
-                               const RegisterImmPair &MatchData) const;
+  LLVM_ABI bool matchCombineShlOfExtend(MachineInstr &MI,
+                                        RegisterImmPair &MatchData) const;
+  LLVM_ABI void applyCombineShlOfExtend(MachineInstr &MI,
+                                        const RegisterImmPair &MatchData) const;
 
   /// Fold away a merge of an unmerge of the corresponding values.
-  bool matchCombineMergeUnmerge(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI bool matchCombineMergeUnmerge(MachineInstr &MI,
+                                         Register &MatchInfo) const;
 
   /// Reduce a shift by a constant to an unmerge and a shift on a half sized
   /// type. This will not produce a shift smaller than \p TargetShiftSize.
-  bool matchCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftSize,
-                                  unsigned &ShiftVal) const;
-  void applyCombineShiftToUnmerge(MachineInstr &MI,
-                                  const unsigned &ShiftVal) const;
-  bool tryCombineShiftToUnmerge(MachineInstr &MI,
-                                unsigned TargetShiftAmount) const;
+  LLVM_ABI bool matchCombineShiftToUnmerge(MachineInstr &MI,
+                                           unsigned TargetShiftSize,
+                                           unsigned &ShiftVal) const;
+  LLVM_ABI void applyCombineShiftToUnmerge(MachineInstr &MI,
+                                           const unsigned &ShiftVal) const;
+  LLVM_ABI bool tryCombineShiftToUnmerge(MachineInstr &MI,
+                                         unsigned TargetShiftAmount) const;
 
   /// Transform <ty,...> G_UNMERGE(G_MERGE ty X, Y, Z) -> ty X, Y, Z.
-  bool matchCombineUnmergeMergeToPlainValues(
+  LLVM_ABI bool matchCombineUnmergeMergeToPlainValues(
       MachineInstr &MI, SmallVectorImpl<Register> &Operands) const;
-  void applyCombineUnmergeMergeToPlainValues(
+  LLVM_ABI void applyCombineUnmergeMergeToPlainValues(
       MachineInstr &MI, SmallVectorImpl<Register> &Operands) const;
 
   /// Transform G_UNMERGE Constant -> Constant1, Constant2, ...
-  bool matchCombineUnmergeConstant(MachineInstr &MI,
-                                   SmallVectorImpl<APInt> &Csts) const;
-  void applyCombineUnmergeConstant(MachineInstr &MI,
-                                   SmallVectorImpl<APInt> &Csts) const;
+  LLVM_ABI bool matchCombineUnmergeConstant(MachineInstr &MI,
+                                            SmallVectorImpl<APInt> &Csts) const;
+  LLVM_ABI void applyCombineUnmergeConstant(MachineInstr &MI,
+                                            SmallVectorImpl<APInt> &Csts) const;
 
   /// Transform G_UNMERGE G_IMPLICIT_DEF -> G_IMPLICIT_DEF, G_IMPLICIT_DEF, ...
-  bool matchCombineUnmergeUndef(
+  LLVM_ABI bool matchCombineUnmergeUndef(
       MachineInstr &MI,
       std::function<void(MachineIRBuilder &)> &MatchInfo) const;
 
   /// Transform X, Y<dead> = G_UNMERGE Z -> X = G_TRUNC Z.
-  bool matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) const;
-  void applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) const;
+  LLVM_ABI bool matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) const;
+  LLVM_ABI void applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) const;
 
   /// Transform X, Y = G_UNMERGE(G_ZEXT(Z)) -> X = G_ZEXT(Z); Y = G_CONSTANT 0
-  bool matchCombineUnmergeZExtToZExt(MachineInstr &MI) const;
-  void applyCombineUnmergeZExtToZExt(MachineInstr &MI) const;
+  LLVM_ABI bool matchCombineUnmergeZExtToZExt(MachineInstr &MI) const;
+  LLVM_ABI void applyCombineUnmergeZExtToZExt(MachineInstr &MI) const;
 
   /// Transform fp_instr(cst) to constant result of the fp operation.
-  void applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                       const ConstantFP *Cst) const;
+  LLVM_ABI void applyCombineConstantFoldFpUnary(MachineInstr &MI,
+                                                const ConstantFP *Cst) const;
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
-  bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
-  void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
+  LLVM_ABI bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
+  LLVM_ABI void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
 
   /// Transform PtrToInt(IntToPtr(x)) to x.
-  void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) const;
+  LLVM_ABI void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) const;
 
   /// Transform G_ADD (G_PTRTOINT x), y -> G_PTRTOINT (G_PTR_ADD x, y)
   /// Transform G_ADD y, (G_PTRTOINT x) -> G_PTRTOINT (G_PTR_ADD x, y)
-  bool
+  LLVM_ABI bool
   matchCombineAddP2IToPtrAdd(MachineInstr &MI,
                              std::pair<Register, bool> &PtrRegAndCommute) const;
-  void
+  LLVM_ABI void
   applyCombineAddP2IToPtrAdd(MachineInstr &MI,
                              std::pair<Register, bool> &PtrRegAndCommute) const;
 
   // Transform G_PTR_ADD (G_PTRTOINT C1), C2 -> C1 + C2
-  bool matchCombineConstPtrAddToI2P(MachineInstr &MI, APInt &NewCst) const;
-  void applyCombineConstPtrAddToI2P(MachineInstr &MI, APInt &NewCst) const;
+  LLVM_ABI bool matchCombineConstPtrAddToI2P(MachineInstr &MI,
+                                             APInt &NewCst) const;
+  LLVM_ABI void applyCombineConstPtrAddToI2P(MachineInstr &MI,
+                                             APInt &NewCst) const;
 
   /// Transform anyext(trunc(x)) to x.
-  bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) const;
+  LLVM_ABI bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) const;
 
   /// Transform zext(trunc(x)) to x.
-  bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg) const;
+  LLVM_ABI bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg) const;
 
   /// Transform trunc (shl x, K) to shl (trunc x), K
   ///    if K < VT.getScalarSizeInBits().
@@ -438,121 +462,130 @@ public:
   ///    if K <= (MidVT.getScalarSizeInBits() - VT.getScalarSizeInBits())
   /// MidVT is obtained by finding a legal type between the trunc's src and dst
   /// types.
-  bool
+  LLVM_ABI bool
   matchCombineTruncOfShift(MachineInstr &MI,
                            std::pair<MachineInstr *, LLT> &MatchInfo) const;
-  void
+  LLVM_ABI void
   applyCombineTruncOfShift(MachineInstr &MI,
                            std::pair<MachineInstr *, LLT> &MatchInfo) const;
 
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
-  bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
+  LLVM_ABI bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
 
   /// Return true if all register explicit use operands on \p MI are defined by
   /// a G_IMPLICIT_DEF.
-  bool matchAllExplicitUsesAreUndef(MachineInstr &MI) const;
+  LLVM_ABI bool matchAllExplicitUsesAreUndef(MachineInstr &MI) const;
 
   /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
-  bool matchUndefShuffleVectorMask(MachineInstr &MI) const;
+  LLVM_ABI bool matchUndefShuffleVectorMask(MachineInstr &MI) const;
 
   /// Return true if a G_STORE instruction \p MI is storing an undef value.
-  bool matchUndefStore(MachineInstr &MI) const;
+  LLVM_ABI bool matchUndefStore(MachineInstr &MI) const;
 
   /// Return true if a G_SELECT instruction \p MI has an undef comparison.
-  bool matchUndefSelectCmp(MachineInstr &MI) const;
+  LLVM_ABI bool matchUndefSelectCmp(MachineInstr &MI) const;
 
   /// Return true if a G_{EXTRACT,INSERT}_VECTOR_ELT has an out of range index.
-  bool matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) const;
+  LLVM_ABI bool matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) const;
 
   /// Return true if a G_SELECT instruction \p MI has a constant comparison. If
   /// true, \p OpIdx will store the operand index of the known selected value.
-  bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) const;
+  LLVM_ABI bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) const;
 
   /// Replace an instruction with a G_FCONSTANT with value \p C.
-  void replaceInstWithFConstant(MachineInstr &MI, double C) const;
+  LLVM_ABI void replaceInstWithFConstant(MachineInstr &MI, double C) const;
 
   /// Replace an instruction with an G_FCONSTANT with value \p CFP.
-  void replaceInstWithFConstant(MachineInstr &MI, ConstantFP *CFP) const;
+  LLVM_ABI void replaceInstWithFConstant(MachineInstr &MI,
+                                         ConstantFP *CFP) const;
 
   /// Replace an instruction with a G_CONSTANT with value \p C.
-  void replaceInstWithConstant(MachineInstr &MI, int64_t C) const;
+  LLVM_ABI void replaceInstWithConstant(MachineInstr &MI, int64_t C) const;
 
   /// Replace an instruction with a G_CONSTANT with value \p C.
-  void replaceInstWithConstant(MachineInstr &MI, APInt C) const;
+  LLVM_ABI void replaceInstWithConstant(MachineInstr &MI, APInt C) const;
 
   /// Replace an instruction with a G_IMPLICIT_DEF.
-  void replaceInstWithUndef(MachineInstr &MI) const;
+  LLVM_ABI void replaceInstWithUndef(MachineInstr &MI) const;
 
   /// Delete \p MI and replace all of its uses with its \p OpIdx-th operand.
-  void replaceSingleDefInstWithOperand(MachineInstr &MI, unsigned OpIdx) const;
+  LLVM_ABI void replaceSingleDefInstWithOperand(MachineInstr &MI,
+                                                unsigned OpIdx) const;
 
   /// Delete \p MI and replace all of its uses with \p Replacement.
-  void replaceSingleDefInstWithReg(MachineInstr &MI,
-                                   Register Replacement) const;
+  LLVM_ABI void replaceSingleDefInstWithReg(MachineInstr &MI,
+                                            Register Replacement) const;
 
   /// @brief Replaces the shift amount in \p MI with ShiftAmt % BW
   /// @param MI
-  void applyFunnelShiftConstantModulo(MachineInstr &MI) const;
+  LLVM_ABI void applyFunnelShiftConstantModulo(MachineInstr &MI) const;
 
   /// Return true if \p MOP1 and \p MOP2 are register operands are defined by
   /// equivalent instructions.
-  bool matchEqualDefs(const MachineOperand &MOP1,
-                      const MachineOperand &MOP2) const;
+  LLVM_ABI bool matchEqualDefs(const MachineOperand &MOP1,
+                               const MachineOperand &MOP2) const;
 
   /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value equal to
   /// \p C.
-  bool matchConstantOp(const MachineOperand &MOP, int64_t C) const;
+  LLVM_ABI bool matchConstantOp(const MachineOperand &MOP, int64_t C) const;
 
   /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value exactly
   /// equal to \p C.
-  bool matchConstantFPOp(const MachineOperand &MOP, double C) const;
+  LLVM_ABI bool matchConstantFPOp(const MachineOperand &MOP, double C) const;
 
   /// @brief Checks if constant at \p ConstIdx is larger than \p MI 's bitwidth
   /// @param ConstIdx Index of the constant
-  bool matchConstantLargerBitWidth(MachineInstr &MI, unsigned ConstIdx) const;
+  LLVM_ABI bool matchConstantLargerBitWidth(MachineInstr &MI,
+                                            unsigned ConstIdx) const;
 
   /// Optimize (cond ? x : x) -> x
-  bool matchSelectSameVal(MachineInstr &MI) const;
+  LLVM_ABI bool matchSelectSameVal(MachineInstr &MI) const;
 
   /// Optimize (x op x) -> x
-  bool matchBinOpSameVal(MachineInstr &MI) const;
+  LLVM_ABI bool matchBinOpSameVal(MachineInstr &MI) const;
 
   /// Check if operand \p OpIdx is zero.
-  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
+  LLVM_ABI bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p OpIdx is undef.
-  bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
+  LLVM_ABI bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p OpIdx is known to be a power of 2.
-  bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
-                                          unsigned OpIdx) const;
+  LLVM_ABI bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
+                                                   unsigned OpIdx) const;
 
   /// Erase \p MI
-  void eraseInst(MachineInstr &MI) const;
+  LLVM_ABI void eraseInst(MachineInstr &MI) const;
 
   /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
-  bool matchSimplifyAddToSub(MachineInstr &MI,
-                             std::tuple<Register, Register> &MatchInfo) const;
-  void applySimplifyAddToSub(MachineInstr &MI,
-                             std::tuple<Register, Register> &MatchInfo) const;
+  LLVM_ABI bool
+  matchSimplifyAddToSub(MachineInstr &MI,
+                        std::tuple<Register, Register> &MatchInfo) const;
+  LLVM_ABI void
+  applySimplifyAddToSub(MachineInstr &MI,
+                        std::tuple<Register, Register> &MatchInfo) const;
 
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
-  bool matchHoistLogicOpWithSameOpcodeHands(
+  LLVM_ABI bool matchHoistLogicOpWithSameOpcodeHands(
       MachineInstr &MI, InstructionStepsMatchInfo &MatchInfo) const;
 
   /// Replace \p MI with a series of instructions described in \p MatchInfo.
-  void applyBuildInstructionSteps(MachineInstr &MI,
-                                  InstructionStepsMatchInfo &MatchInfo) const;
+  LLVM_ABI void
+  applyBuildInstructionSteps(MachineInstr &MI,
+                             InstructionStepsMatchInfo &MatchInfo) const;
 
   /// Match ashr (shl x, C), C -> sext_inreg (C)
-  bool matchAshrShlToSextInreg(MachineInstr &MI,
-                               std::tuple<Register, int64_t> &MatchInfo) const;
-  void applyAshShlToSextInreg(MachineInstr &MI,
-                              std::tuple<Register, int64_t> &MatchInfo) const;
+  LLVM_ABI bool
+  matchAshrShlToSextInreg(MachineInstr &MI,
+                          std::tuple<Register, int64_t> &MatchInfo) const;
+  LLVM_ABI void
+  applyAshShlToSextInreg(MachineInstr &MI,
+                         std::tuple<Register, int64_t> &MatchInfo) const;
 
   /// Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
-  bool matchOverlappingAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchOverlappingAnd(MachineInstr &MI,
+                                    BuildFnTy &MatchInfo) const;
 
   /// \return true if \p MI is a G_AND instruction whose operands are x and y
   /// where x & y == x or x & y == y. (E.g., one of operands is all-ones value.)
@@ -560,7 +593,8 @@ public:
   /// \param [in] MI - The G_AND instruction.
   /// \param [out] Replacement - A register the G_AND should be replaced with on
   /// success.
-  bool matchRedundantAnd(MachineInstr &MI, Register &Replacement) const;
+  LLVM_ABI bool matchRedundantAnd(MachineInstr &MI,
+                                  Register &Replacement) const;
 
   /// \return true if \p MI is a G_OR instruction whose operands are x and y
   /// where x | y == x or x | y == y. (E.g., one of operands is all-zeros
@@ -569,45 +603,50 @@ public:
   /// \param [in] MI - The G_OR instruction.
   /// \param [out] Replacement - A register the G_OR should be replaced with on
   /// success.
-  bool matchRedundantOr(MachineInstr &MI, Register &Replacement) const;
+  LLVM_ABI bool matchRedundantOr(MachineInstr &MI, Register &Replacement) const;
 
   /// \return true if \p MI is a G_SEXT_INREG that can be erased.
-  bool matchRedundantSExtInReg(MachineInstr &MI) const;
+  LLVM_ABI bool matchRedundantSExtInReg(MachineInstr &MI) const;
 
   /// Combine inverting a result of a compare into the opposite cond code.
-  bool matchNotCmp(MachineInstr &MI,
-                   SmallVectorImpl<Register> &RegsToNegate) const;
-  void applyNotCmp(MachineInstr &MI,
-                   SmallVectorImpl<Register> &RegsToNegate) const;
+  LLVM_ABI bool matchNotCmp(MachineInstr &MI,
+                            SmallVectorImpl<Register> &RegsToNegate) const;
+  LLVM_ABI void applyNotCmp(MachineInstr &MI,
+                            SmallVectorImpl<Register> &RegsToNegate) const;
 
   /// Fold (xor (and x, y), y) -> (and (not x), y)
   ///{
-  bool matchXorOfAndWithSameReg(MachineInstr &MI,
-                                std::pair<Register, Register> &MatchInfo) const;
-  void applyXorOfAndWithSameReg(MachineInstr &MI,
-                                std::pair<Register, Register> &MatchInfo) const;
+  LLVM_ABI bool
+  matchXorOfAndWithSameReg(MachineInstr &MI,
+                           std::pair<Register, Register> &MatchInfo) const;
+  LLVM_ABI void
+  applyXorOfAndWithSameReg(MachineInstr &MI,
+                           std::pair<Register, Register> &MatchInfo) const;
   ///}
 
   /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
-  bool matchPtrAddZero(MachineInstr &MI) const;
-  void applyPtrAddZero(MachineInstr &MI) const;
+  LLVM_ABI bool matchPtrAddZero(MachineInstr &MI) const;
+  LLVM_ABI void applyPtrAddZero(MachineInstr &MI) const;
 
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
-  void applySimplifyURemByPow2(MachineInstr &MI) const;
+  LLVM_ABI void applySimplifyURemByPow2(MachineInstr &MI) const;
 
   /// Push a binary operator through a select on constants.
   ///
   /// binop (select cond, K0, K1), K2 ->
   ///   select cond, (binop K0, K2), (binop K1, K2)
-  bool matchFoldBinOpIntoSelect(MachineInstr &MI, unsigned &SelectOpNo) const;
-  void applyFoldBinOpIntoSelect(MachineInstr &MI,
-                                const unsigned &SelectOpNo) const;
+  LLVM_ABI bool matchFoldBinOpIntoSelect(MachineInstr &MI,
+                                         unsigned &SelectOpNo) const;
+  LLVM_ABI void applyFoldBinOpIntoSelect(MachineInstr &MI,
+                                         const unsigned &SelectOpNo) const;
 
-  bool matchCombineInsertVecElts(MachineInstr &MI,
-                                 SmallVectorImpl<Register> &MatchInfo) const;
+  LLVM_ABI bool
+  matchCombineInsertVecElts(MachineInstr &MI,
+                            SmallVectorImpl<Register> &MatchInfo) const;
 
-  void applyCombineInsertVecElts(MachineInstr &MI,
-                                 SmallVectorImpl<Register> &MatchInfo) const;
+  LLVM_ABI void
+  applyCombineInsertVecElts(MachineInstr &MI,
+                            SmallVectorImpl<Register> &MatchInfo) const;
 
   /// Match expression trees of the form
   ///
@@ -618,174 +657,196 @@ public:
   ///
   /// And check if the tree can be replaced with a M-bit load + possibly a
   /// bswap.
-  bool matchLoadOrCombine(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchLoadOrCombine(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
 
-  bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI) const;
-  void applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI) const;
+  LLVM_ABI bool matchExtendThroughPhis(MachineInstr &MI,
+                                       MachineInstr *&ExtMI) const;
+  LLVM_ABI void applyExtendThroughPhis(MachineInstr &MI,
+                                       MachineInstr *&ExtMI) const;
 
-  bool matchExtractVecEltBuildVec(MachineInstr &MI, Register &Reg) const;
-  void applyExtractVecEltBuildVec(MachineInstr &MI, Register &Reg) const;
+  LLVM_ABI bool matchExtractVecEltBuildVec(MachineInstr &MI,
+                                           Register &Reg) const;
+  LLVM_ABI void applyExtractVecEltBuildVec(MachineInstr &MI,
+                                           Register &Reg) const;
 
-  bool matchExtractAllEltsFromBuildVector(
+  LLVM_ABI bool matchExtractAllEltsFromBuildVector(
       MachineInstr &MI,
       SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo) const;
-  void applyExtractAllEltsFromBuildVector(
+  LLVM_ABI void applyExtractAllEltsFromBuildVector(
       MachineInstr &MI,
       SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo) const;
 
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction \p MI from the function.
-  void applyBuildFn(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI void applyBuildFn(MachineInstr &MI, BuildFnTy &MatchInfo) const;
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// This variant does not erase \p MI after calling the build function.
-  void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI void applyBuildFnNoErase(MachineInstr &MI,
+                                    BuildFnTy &MatchInfo) const;
 
-  bool matchOrShiftToFunnelShift(MachineInstr &MI, bool AllowScalarConstants,
-                                 BuildFnTy &MatchInfo) const;
-  bool matchFunnelShiftToRotate(MachineInstr &MI) const;
-  void applyFunnelShiftToRotate(MachineInstr &MI) const;
-  bool matchRotateOutOfRange(MachineInstr &MI) const;
-  void applyRotateOutOfRange(MachineInstr &MI) const;
+  LLVM_ABI bool matchOrShiftToFunnelShift(MachineInstr &MI,
+                                          bool AllowScalarConstants,
+                                          BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchFunnelShiftToRotate(MachineInstr &MI) const;
+  LLVM_ABI void applyFunnelShiftToRotate(MachineInstr &MI) const;
+  LLVM_ABI bool matchRotateOutOfRange(MachineInstr &MI) const;
+  LLVM_ABI void applyRotateOutOfRange(MachineInstr &MI) const;
 
-  bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                Register &UnmergeSrc) const;
-  void applyCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                MachineIRBuilder &B,
-                                Register &UnmergeSrc) const;
+  LLVM_ABI bool matchCombineBuildUnmerge(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         Register &UnmergeSrc) const;
+  LLVM_ABI void applyCombineBuildUnmerge(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B,
+                                         Register &UnmergeSrc) const;
 
-  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
-  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI bool matchUseVectorTruncate(MachineInstr &MI,
+                                       Register &MatchInfo) const;
+  LLVM_ABI void applyUseVectorTruncate(MachineInstr &MI,
+                                       Register &MatchInfo) const;
 
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
-  bool matchICmpToTrueFalseKnownBits(MachineInstr &MI,
-                                     int64_t &MatchInfo) const;
+  LLVM_ABI bool matchICmpToTrueFalseKnownBits(MachineInstr &MI,
+                                              int64_t &MatchInfo) const;
 
   /// \returns true if a G_ICMP \p MI can be replaced with its LHS based off of
   /// KnownBits information.
-  bool matchICmpToLHSKnownBits(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchICmpToLHSKnownBits(MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) const;
 
   /// \returns true if (and (or x, c1), c2) can be replaced with (and x, c2)
-  bool matchAndOrDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchAndOrDisjointMask(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
 
-  bool matchBitfieldExtractFromSExtInReg(MachineInstr &MI,
-                                         BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchBitfieldExtractFromSExtInReg(MachineInstr &MI,
+                                                  BuildFnTy &MatchInfo) const;
   /// Match: and (lshr x, cst), mask -> ubfx x, cst, width
-  bool matchBitfieldExtractFromAnd(MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchBitfieldExtractFromAnd(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const;
 
   /// Match: shr (shl x, n), k -> sbfx/ubfx x, pos, width
-  bool matchBitfieldExtractFromShr(MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchBitfieldExtractFromShr(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const;
 
   /// Match: shr (and x, n), k -> ubfx x, pos, width
-  bool matchBitfieldExtractFromShrAnd(MachineInstr &MI,
-                                      BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchBitfieldExtractFromShrAnd(MachineInstr &MI,
+                                               BuildFnTy &MatchInfo) const;
 
   // Helpers for reassociation:
-  bool matchReassocConstantInnerRHS(GPtrAdd &MI, MachineInstr *RHS,
-                                    BuildFnTy &MatchInfo) const;
-  bool matchReassocFoldConstantsInSubTree(GPtrAdd &MI, MachineInstr *LHS,
-                                          MachineInstr *RHS,
-                                          BuildFnTy &MatchInfo) const;
-  bool matchReassocConstantInnerLHS(GPtrAdd &MI, MachineInstr *LHS,
-                                    MachineInstr *RHS,
-                                    BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchReassocConstantInnerRHS(GPtrAdd &MI, MachineInstr *RHS,
+                                             BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchReassocFoldConstantsInSubTree(GPtrAdd &MI,
+                                                   MachineInstr *LHS,
+                                                   MachineInstr *RHS,
+                                                   BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchReassocConstantInnerLHS(GPtrAdd &MI, MachineInstr *LHS,
+                                             MachineInstr *RHS,
+                                             BuildFnTy &MatchInfo) const;
   /// Reassociate pointer calculations with G_ADD involved, to allow better
   /// addressing mode usage.
-  bool matchReassocPtrAdd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchReassocPtrAdd(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
 
   /// Try to reassociate to reassociate operands of a commutative binop.
-  bool tryReassocBinOp(unsigned Opc, Register DstReg, Register Op0,
-                       Register Op1, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool tryReassocBinOp(unsigned Opc, Register DstReg, Register Op0,
+                                Register Op1, BuildFnTy &MatchInfo) const;
   /// Reassociate commutative binary operations like G_ADD.
-  bool matchReassocCommBinOp(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchReassocCommBinOp(MachineInstr &MI,
+                                      BuildFnTy &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.
-  bool matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo) const;
+  LLVM_ABI bool matchConstantFoldCastOp(MachineInstr &MI,
+                                        APInt &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.
-  bool matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) const;
+  LLVM_ABI bool matchConstantFoldBinOp(MachineInstr &MI,
+                                       APInt &MatchInfo) const;
 
   /// Do constant FP folding when opportunities are exposed after MIR building.
-  bool matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP *&MatchInfo) const;
+  LLVM_ABI bool matchConstantFoldFPBinOp(MachineInstr &MI,
+                                         ConstantFP *&MatchInfo) const;
 
   /// Constant fold G_FMA/G_FMAD.
-  bool matchConstantFoldFMA(MachineInstr &MI, ConstantFP *&MatchInfo) const;
+  LLVM_ABI bool matchConstantFoldFMA(MachineInstr &MI,
+                                     ConstantFP *&MatchInfo) const;
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
-  bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchNarrowBinopFeedingAnd(MachineInstr &MI,
+                                           BuildFnTy &MatchInfo) const;
 
   /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
   /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildUDivOrURemUsingMul(MachineInstr &MI) const;
+  LLVM_ABI MachineInstr *buildUDivOrURemUsingMul(MachineInstr &MI) const;
   /// Combine G_UDIV or G_UREM by constant into a multiply by magic constant.
-  bool matchUDivOrURemByConst(MachineInstr &MI) const;
-  void applyUDivOrURemByConst(MachineInstr &MI) const;
+  LLVM_ABI bool matchUDivOrURemByConst(MachineInstr &MI) const;
+  LLVM_ABI void applyUDivOrURemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI or G_SREM \p MI expressing a signed divide by
   /// constant, return an expression that implements it by multiplying by a
   /// magic number. Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's
   /// Guide".
-  MachineInstr *buildSDivOrSRemUsingMul(MachineInstr &MI) const;
+  LLVM_ABI MachineInstr *buildSDivOrSRemUsingMul(MachineInstr &MI) const;
   /// Combine G_SDIV or G_SREM by constant into a multiply by magic constant.
-  bool matchSDivOrSRemByConst(MachineInstr &MI) const;
-  void applySDivOrSRemByConst(MachineInstr &MI) const;
+  LLVM_ABI bool matchSDivOrSRemByConst(MachineInstr &MI) const;
+  LLVM_ABI void applySDivOrSRemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
   /// return expressions that implements it by shifting.
-  bool matchDivByPow2(MachineInstr &MI, bool IsSigned) const;
-  void applySDivByPow2(MachineInstr &MI) const;
+  LLVM_ABI bool matchDivByPow2(MachineInstr &MI, bool IsSigned) const;
+  LLVM_ABI void applySDivByPow2(MachineInstr &MI) const;
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
-  void applyUDivByPow2(MachineInstr &MI) const;
+  LLVM_ABI void applyUDivByPow2(MachineInstr &MI) const;
 
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
-  bool matchUMulHToLShr(MachineInstr &MI) const;
-  void applyUMulHToLShr(MachineInstr &MI) const;
+  LLVM_ABI bool matchUMulHToLShr(MachineInstr &MI) const;
+  LLVM_ABI void applyUMulHToLShr(MachineInstr &MI) const;
 
   // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
   // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
-  bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
-  void applyTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI void applyTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
 
   // Combine trunc(smin(smax(x, 0), C)) -> truncssat_u(x)
   // or      trunc(smax(smin(x, C), 0)) -> truncssat_u(x)
   // or      trunc(umin(smax(x, 0), C)) -> truncssat_u(x)
-  bool matchTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
-  void applyTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI bool matchTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI void applyTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
 
   // Combine trunc(umin(x, C)) -> truncusat_u(x).
-  bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
+  LLVM_ABI bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
 
   // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
-  bool matchTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
+  LLVM_ABI bool matchTruncUSatUToFPTOUISat(MachineInstr &MI,
+                                           MachineInstr &SrcMI) const;
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
-  bool tryCombine(MachineInstr &MI) const;
+  LLVM_ABI bool tryCombine(MachineInstr &MI) const;
 
   /// Emit loads and stores that perform the given memcpy.
   /// Assumes \p MI is a G_MEMCPY_INLINE
   /// TODO: implement dynamically sized inline memcpy,
   ///       and rename: s/bool tryEmit/void emit/
-  bool tryEmitMemcpyInline(MachineInstr &MI) const;
+  LLVM_ABI bool tryEmitMemcpyInline(MachineInstr &MI) const;
 
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)
-  bool matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match:
   /// (G_*MULO x, 0) -> 0 + no carry out
-  bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match:
   /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
   /// (G_*SUBE x, y, 0) -> (G_*SUBO x, y)
-  bool matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Transform (fadd x, fneg(y)) -> (fsub x, y)
   ///           (fadd fneg(x), y) -> (fsub y, x)
@@ -794,89 +855,97 @@ public:
   ///           (fdiv fneg(x), fneg(y)) -> (fdiv x, y)
   ///           (fmad fneg(x), fneg(y), z) -> (fmad x, y, z)
   ///           (fma fneg(x), fneg(y), z) -> (fma x, y, z)
-  bool matchRedundantNegOperands(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchRedundantNegOperands(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
 
-  bool matchFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
-  void applyFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI bool matchFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI void applyFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
 
-  bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
-                           bool &HasFMAD, bool &Aggressive,
-                           bool CanReassociate = false) const;
+  LLVM_ABI bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
+                                    bool &HasFMAD, bool &Aggressive,
+                                    bool CanReassociate = false) const;
 
   /// Transform (fadd (fmul x, y), z) -> (fma x, y, z)
   ///           (fadd (fmul x, y), z) -> (fmad x, y, z)
-  bool matchCombineFAddFMulToFMadOrFMA(MachineInstr &MI,
-                                       BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineFAddFMulToFMadOrFMA(MachineInstr &MI,
+                                                BuildFnTy &MatchInfo) const;
 
   /// Transform (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
   ///           (fadd (fpext (fmul x, y)), z) -> (fmad (fpext x), (fpext y), z)
-  bool matchCombineFAddFpExtFMulToFMadOrFMA(MachineInstr &MI,
-                                            BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool
+  matchCombineFAddFpExtFMulToFMadOrFMA(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
 
   /// Transform (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
   ///          (fadd (fmad x, y, (fmul u, v)), z) -> (fmad x, y, (fmad u, v, z))
-  bool matchCombineFAddFMAFMulToFMadOrFMA(MachineInstr &MI,
-                                          BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineFAddFMAFMulToFMadOrFMA(MachineInstr &MI,
+                                                   BuildFnTy &MatchInfo) const;
 
   // Transform (fadd (fma x, y, (fpext (fmul u, v))), z)
   //            -> (fma x, y, (fma (fpext u), (fpext v), z))
   //           (fadd (fmad x, y, (fpext (fmul u, v))), z)
   //            -> (fmad x, y, (fmad (fpext u), (fpext v), z))
-  bool
+  LLVM_ABI bool
   matchCombineFAddFpExtFMulToFMadOrFMAAggressive(MachineInstr &MI,
                                                  BuildFnTy &MatchInfo) const;
 
   /// Transform (fsub (fmul x, y), z) -> (fma x, y, -z)
   ///           (fsub (fmul x, y), z) -> (fmad x, y, -z)
-  bool matchCombineFSubFMulToFMadOrFMA(MachineInstr &MI,
-                                       BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineFSubFMulToFMadOrFMA(MachineInstr &MI,
+                                                BuildFnTy &MatchInfo) const;
 
   /// Transform (fsub (fneg (fmul, x, y)), z) -> (fma (fneg x), y, (fneg z))
   ///           (fsub (fneg (fmul, x, y)), z) -> (fmad (fneg x), y, (fneg z))
-  bool matchCombineFSubFNegFMulToFMadOrFMA(MachineInstr &MI,
-                                           BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCombineFSubFNegFMulToFMadOrFMA(MachineInstr &MI,
+                                                    BuildFnTy &MatchInfo) const;
 
   /// Transform (fsub (fpext (fmul x, y)), z)
   ///           -> (fma (fpext x), (fpext y), (fneg z))
   ///           (fsub (fpext (fmul x, y)), z)
   ///           -> (fmad (fpext x), (fpext y), (fneg z))
-  bool matchCombineFSubFpExtFMulToFMadOrFMA(MachineInstr &MI,
-                                            BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool
+  matchCombineFSubFpExtFMulToFMadOrFMA(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
 
   /// Transform (fsub (fpext (fneg (fmul x, y))), z)
   ///           -> (fneg (fma (fpext x), (fpext y), z))
   ///           (fsub (fpext (fneg (fmul x, y))), z)
   ///           -> (fneg (fmad (fpext x), (fpext y), z))
-  bool matchCombineFSubFpExtFNegFMulToFMadOrFMA(MachineInstr &MI,
-                                                BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool
+  matchCombineFSubFpExtFNegFMulToFMadOrFMA(MachineInstr &MI,
+                                           BuildFnTy &MatchInfo) const;
 
-  bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
+  LLVM_ABI bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
 
-  bool matchRepeatedFPDivisor(MachineInstr &MI,
-                              SmallVector<MachineInstr *> &MatchInfo) const;
-  void applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
+  LLVM_ABI bool
+  matchRepeatedFPDivisor(MachineInstr &MI,
+                         SmallVector<MachineInstr *> &MatchInfo) const;
+  LLVM_ABI void
+  applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
   /// Transform G_ADD(G_SUB(y, x), x) to y.
-  bool matchAddSubSameReg(MachineInstr &MI, Register &Src) const;
+  LLVM_ABI bool matchAddSubSameReg(MachineInstr &MI, Register &Src) const;
 
-  bool matchBuildVectorIdentityFold(MachineInstr &MI,
-                                    Register &MatchInfo) const;
-  bool matchTruncBuildVectorFold(MachineInstr &MI, Register &MatchInfo) const;
-  bool matchTruncLshrBuildVectorFold(MachineInstr &MI,
-                                     Register &MatchInfo) const;
+  LLVM_ABI bool matchBuildVectorIdentityFold(MachineInstr &MI,
+                                             Register &MatchInfo) const;
+  LLVM_ABI bool matchTruncBuildVectorFold(MachineInstr &MI,
+                                          Register &MatchInfo) const;
+  LLVM_ABI bool matchTruncLshrBuildVectorFold(MachineInstr &MI,
+                                              Register &MatchInfo) const;
 
   /// Transform:
   ///   (x + y) - y -> x
   ///   (x + y) - x -> y
   ///   x - (y + x) -> 0 - y
   ///   x - (x + z) -> 0 - z
-  bool matchSubAddSameReg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSubAddSameReg(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
 
   /// \returns true if it is possible to simplify a select instruction \p MI
   /// to a min/max instruction of some sort.
-  bool matchSimplifySelectToMinMax(MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSimplifySelectToMinMax(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const;
 
   /// Transform:
   ///   (X + Y) == X -> Y == 0
@@ -885,170 +954,193 @@ public:
   ///   (X + Y) != X -> Y != 0
   ///   (X - Y) != X -> Y != 0
   ///   (X ^ Y) != X -> Y != 0
-  bool matchRedundantBinOpInEquality(MachineInstr &MI,
-                                     BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchRedundantBinOpInEquality(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) const;
 
   /// Match shifts greater or equal to the range (the bitwidth of the result
   /// datatype, or the effective bitwidth of the source value).
-  bool matchShiftsTooBig(MachineInstr &MI,
-                         std::optional<int64_t> &MatchInfo) const;
+  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI,
+                                  std::optional<int64_t> &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
-  bool matchCommuteConstantToRHS(MachineInstr &MI) const;
+  LLVM_ABI bool matchCommuteConstantToRHS(MachineInstr &MI) const;
 
   /// Combine sext of trunc.
-  bool matchSextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSextOfTrunc(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
 
   /// Combine zext of trunc.
-  bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchZextOfTrunc(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
 
   /// Combine zext nneg to sext.
-  bool matchNonNegZext(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchNonNegZext(const MachineOperand &MO,
+                                BuildFnTy &MatchInfo) const;
 
   /// Match constant LHS FP ops that should be commuted.
-  bool matchCommuteFPConstantToRHS(MachineInstr &MI) const;
+  LLVM_ABI bool matchCommuteFPConstantToRHS(MachineInstr &MI) const;
 
   // Given a binop \p MI, commute operands 1 and 2.
-  void applyCommuteBinOpOperands(MachineInstr &MI) const;
+  LLVM_ABI void applyCommuteBinOpOperands(MachineInstr &MI) const;
 
   /// Combine select to integer min/max.
-  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSelectIMinMax(const MachineOperand &MO,
+                                   BuildFnTy &MatchInfo) const;
 
   /// Tranform (neg (min/max x, (neg x))) into (max/min x, (neg x)).
-  bool matchSimplifyNegMinMax(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSimplifyNegMinMax(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
 
   /// Combine selects.
-  bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Combine ands.
-  bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Combine ors.
-  bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// trunc (binop X, C) --> binop (trunc X, trunc C).
-  bool matchNarrowBinop(const MachineInstr &TruncMI,
-                        const MachineInstr &BinopMI,
-                        BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchNarrowBinop(const MachineInstr &TruncMI,
+                                 const MachineInstr &BinopMI,
+                                 BuildFnTy &MatchInfo) const;
 
-  bool matchCastOfInteger(const MachineInstr &CastMI, APInt &MatchInfo) const;
+  LLVM_ABI bool matchCastOfInteger(const MachineInstr &CastMI,
+                                   APInt &MatchInfo) const;
 
   /// Combine addos.
-  bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Combine extract vector element.
-  bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchExtractVectorElement(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
-                                                const MachineInstr &MI2,
-                                                BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool
+  matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                           const MachineInstr &MI2,
+                                           BuildFnTy &MatchInfo) const;
 
   /// Combine extract vector element with a build vector trunc on the vector
   /// register.
-  bool
+  LLVM_ABI bool
   matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
                                                 BuildFnTy &MatchInfo) const;
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
-                                                  const MachineInstr &MI2,
-                                                  BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool
+  matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                             const MachineInstr &MI2,
+                                             BuildFnTy &MatchInfo) const;
 
   /// Combine extract vector element with a insert vector element on the vector
   /// register and different indices.
-  bool
+  LLVM_ABI bool
   matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                 BuildFnTy &MatchInfo) const;
 
   /// Remove references to rhs if it is undef
-  bool matchShuffleUndefRHS(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchShuffleUndefRHS(MachineInstr &MI,
+                                     BuildFnTy &MatchInfo) const;
 
   /// Turn shuffle a, b, mask -> shuffle undef, b, mask iff mask does not
   /// reference a.
-  bool matchShuffleDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchShuffleDisjointMask(MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
 
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
-  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI void applyBuildFnMO(const MachineOperand &MO,
+                               BuildFnTy &MatchInfo) const;
 
   /// Match FPOWI if it's safe to extend it into a series of multiplications.
-  bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent) const;
+  LLVM_ABI bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent) const;
 
   /// Expands FPOWI into a series of multiplications and a division if the
   /// exponent is negative.
-  void applyExpandFPowI(MachineInstr &MI, int64_t Exponent) const;
+  LLVM_ABI void applyExpandFPowI(MachineInstr &MI, int64_t Exponent) const;
 
   /// Combine insert vector element OOB.
-  bool matchInsertVectorElementOOB(MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchInsertVectorElementOOB(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const;
 
-  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
-                                             BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool
+  matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) const;
 
-  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchAddOfVScale(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
 
-  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchMulOfVScale(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
 
-  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSubOfVScale(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
 
-  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchShlOfVScale(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
 
   /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
-  bool matchTruncateOfExt(const MachineInstr &Root, const MachineInstr &ExtMI,
-                          BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchTruncateOfExt(const MachineInstr &Root,
+                                   const MachineInstr &ExtMI,
+                                   BuildFnTy &MatchInfo) const;
 
-  bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
-                         BuildFnTy &MatchInfo) const;
-  bool matchFoldAPlusC1MinusC2(const MachineInstr &MI,
-                               BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCastOfSelect(const MachineInstr &Cast,
+                                  const MachineInstr &SelectMI,
+                                  BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchFoldAPlusC1MinusC2(const MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) const;
 
-  bool matchFoldC2MinusAPlusC1(const MachineInstr &MI,
-                               BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchFoldC2MinusAPlusC1(const MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) const;
 
-  bool matchFoldAMinusC1MinusC2(const MachineInstr &MI,
-                                BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchFoldAMinusC1MinusC2(const MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
 
-  bool matchFoldC1Minus2MinusC2(const MachineInstr &MI,
-                                BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchFoldC1Minus2MinusC2(const MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
 
   // fold ((A-C1)+C2) -> (A+(C2-C1))
-  bool matchFoldAMinusC1PlusC2(const MachineInstr &MI,
-                               BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchFoldAMinusC1PlusC2(const MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) const;
 
-  bool matchExtOfExt(const MachineInstr &FirstMI, const MachineInstr &SecondMI,
-                     BuildFnTy &MatchInfo) const;
-
-  bool matchCastOfBuildVector(const MachineInstr &CastMI,
-                              const MachineInstr &BVMI,
+  LLVM_ABI bool matchExtOfExt(const MachineInstr &FirstMI,
+                              const MachineInstr &SecondMI,
                               BuildFnTy &MatchInfo) const;
 
-  bool matchCanonicalizeICmp(const MachineInstr &MI,
-                             BuildFnTy &MatchInfo) const;
-  bool matchCanonicalizeFCmp(const MachineInstr &MI,
-                             BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCastOfBuildVector(const MachineInstr &CastMI,
+                                       const MachineInstr &BVMI,
+                                       BuildFnTy &MatchInfo) const;
+
+  LLVM_ABI bool matchCanonicalizeICmp(const MachineInstr &MI,
+                                      BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCanonicalizeFCmp(const MachineInstr &MI,
+                                      BuildFnTy &MatchInfo) const;
 
   // unmerge_values(anyext(build vector)) -> build vector(anyext)
-  bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
-                                           BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                                    BuildFnTy &MatchInfo) const;
 
   // merge_values(_, undef) -> anyext
-  bool matchMergeXAndUndef(const MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchMergeXAndUndef(const MachineInstr &MI,
+                                    BuildFnTy &MatchInfo) const;
 
   // merge_values(_, zero) -> zext
-  bool matchMergeXAndZero(const MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchMergeXAndZero(const MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
 
   // overflow sub
-  bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSuboCarryOut(const MachineInstr &MI,
+                                  BuildFnTy &MatchInfo) const;
 
   // (sext_inreg (sext_inreg x, K0), K1)
-  bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
-                               BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
+                                        BuildFnTy &MatchInfo) const;
 
   // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
   // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
-  bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

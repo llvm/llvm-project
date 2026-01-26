@@ -104,7 +104,7 @@ namespace llvm {
   ///  - guarded-control-stack
   ///  - sign-return-address
   ///  - sign-return-address-with-bkey
-  void copyModuleAttrToFunctions(Module &M);
+  LLVM_ABI void copyModuleAttrToFunctions(Module &M);
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {

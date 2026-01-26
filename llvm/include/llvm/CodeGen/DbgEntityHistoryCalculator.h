@@ -13,6 +13,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -29,12 +30,12 @@ class TargetRegisterInfo;
 /// calling initialize.
 class InstructionOrdering {
 public:
-  void initialize(const MachineFunction &MF);
+  LLVM_ABI void initialize(const MachineFunction &MF);
   void clear() { InstNumberMap.clear(); }
 
   /// Check if instruction \p A comes before \p B, where \p A and \p B both
   /// belong to the MachineFunction passed to initialize().
-  bool isBefore(const MachineInstr *A, const MachineInstr *B) const;
+  LLVM_ABI bool isBefore(const MachineInstr *A, const MachineInstr *B) const;
 
 private:
   /// Each instruction is assigned an order number.
@@ -86,7 +87,7 @@ public:
     bool isDbgValue() const { return getEntryKind() == DbgValue; }
     bool isClosed() const { return EndIndex != NoEntry; }
 
-    void endEntry(EntryIndex EndIndex);
+    LLVM_ABI void endEntry(EntryIndex EndIndex);
 
   private:
     PointerIntPair<const MachineInstr *, 1, EntryKind> Instr;
@@ -100,9 +101,9 @@ private:
   EntriesMap VarEntries;
 
 public:
-  bool startDbgValue(InlinedEntity Var, const MachineInstr &MI,
-                     EntryIndex &NewIndex);
-  EntryIndex startClobber(InlinedEntity Var, const MachineInstr &MI);
+  LLVM_ABI bool startDbgValue(InlinedEntity Var, const MachineInstr &MI,
+                              EntryIndex &NewIndex);
+  LLVM_ABI EntryIndex startClobber(InlinedEntity Var, const MachineInstr &MI);
 
   Entry &getEntry(InlinedEntity Var, EntryIndex Index) {
     auto &Entries = VarEntries[Var];
@@ -111,11 +112,12 @@ public:
 
   /// Test whether a vector of entries features any non-empty locations. It
   /// could have no entries, or only DBG_VALUE $noreg entries.
-  bool hasNonEmptyLocation(const Entries &Entries) const;
+  LLVM_ABI bool hasNonEmptyLocation(const Entries &Entries) const;
 
   /// Drop location ranges which exist entirely outside each variable's scope.
-  void trimLocationRanges(const MachineFunction &MF, LexicalScopes &LScopes,
-                          const InstructionOrdering &Ordering);
+  LLVM_ABI void trimLocationRanges(const MachineFunction &MF,
+                                   LexicalScopes &LScopes,
+                                   const InstructionOrdering &Ordering);
   bool empty() const { return VarEntries.empty(); }
   void clear() { VarEntries.clear(); }
   EntriesMap::const_iterator begin() const { return VarEntries.begin(); }
@@ -138,7 +140,7 @@ private:
   InstrMap LabelInstr;
 
 public:
-  void  addInstr(InlinedEntity Label, const MachineInstr &MI);
+  LLVM_ABI void addInstr(InlinedEntity Label, const MachineInstr &MI);
 
   bool empty() const { return LabelInstr.empty(); }
   void clear() { LabelInstr.clear(); }
@@ -146,10 +148,10 @@ public:
   InstrMap::const_iterator end() const { return LabelInstr.end(); }
 };
 
-void calculateDbgEntityHistory(const MachineFunction *MF,
-                               const TargetRegisterInfo *TRI,
-                               DbgValueHistoryMap &DbgValues,
-                               DbgLabelInstrMap &DbgLabels);
+LLVM_ABI void calculateDbgEntityHistory(const MachineFunction *MF,
+                                        const TargetRegisterInfo *TRI,
+                                        DbgValueHistoryMap &DbgValues,
+                                        DbgLabelInstrMap &DbgLabels);
 
 } // end namespace llvm
 

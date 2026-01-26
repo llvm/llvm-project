@@ -11,13 +11,14 @@
 
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {
 
 class NativeSession;
 
-class NativeLineNumber : public IPDBLineNumber {
+class LLVM_ABI NativeLineNumber : public IPDBLineNumber {
 public:
   explicit NativeLineNumber(const NativeSession &Session,
                             const codeview::LineInfo Line,

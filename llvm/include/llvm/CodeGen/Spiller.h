@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -30,7 +31,7 @@ class AllocationOrder;
 ///
 /// Implementations are utility classes which insert spill or remat code on
 /// demand.
-class Spiller {
+class LLVM_ABI Spiller {
   virtual void anchor();
 
 public:
@@ -58,10 +59,10 @@ public:
 
 /// Create and return a spiller that will insert spill code directly instead
 /// of deferring though VirtRegMap.
-Spiller *createInlineSpiller(const Spiller::RequiredAnalyses &Analyses,
-                             MachineFunction &MF, VirtRegMap &VRM,
-                             VirtRegAuxInfo &VRAI,
-                             LiveRegMatrix *Matrix = nullptr);
+LLVM_ABI Spiller *createInlineSpiller(const Spiller::RequiredAnalyses &Analyses,
+                                      MachineFunction &MF, VirtRegMap &VRM,
+                                      VirtRegAuxInfo &VRAI,
+                                      LiveRegMatrix *Matrix = nullptr);
 
 } // end namespace llvm
 

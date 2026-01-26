@@ -22,6 +22,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ModRef.h"
 #include <map>
 #include <optional>
@@ -198,19 +199,21 @@ namespace llvm {
         : Context(Context), OPLex(F, SM, Err, Context),
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
           BlockAddressPFS(nullptr), ParserContext(ParserContext) {}
-    bool Run(
+    LLVM_ABI bool Run(
         bool UpgradeDebugInfo,
         DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
           return std::nullopt;
         });
 
-    bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
+    LLVM_ABI bool parseStandaloneConstantValue(Constant *&C,
+                                               const SlotMapping *Slots);
 
-    bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
-                              const SlotMapping *Slots);
+    LLVM_ABI bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
+                                       const SlotMapping *Slots);
 
-    bool parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
-                                          const SlotMapping *Slots);
+    LLVM_ABI bool parseDIExpressionBodyAtBeginning(MDNode *&Result,
+                                                   unsigned &Read,
+                                                   const SlotMapping *Slots);
 
     LLVMContext &getContext() { return Context; }
 
@@ -276,12 +279,12 @@ namespace llvm {
       return false;
     }
     bool parseStringConstant(std::string &Result);
-    bool parseUInt32(unsigned &Val);
+    LLVM_ABI bool parseUInt32(unsigned &Val);
     bool parseUInt32(unsigned &Val, LocTy &Loc) {
       Loc = Lex.getLoc();
       return parseUInt32(Val);
     }
-    bool parseUInt64(uint64_t &Val);
+    LLVM_ABI bool parseUInt64(uint64_t &Val);
     bool parseUInt64(uint64_t &Val, LocTy &Loc) {
       Loc = Lex.getLoc();
       return parseUInt64(Val);
@@ -293,14 +296,15 @@ namespace llvm {
     bool parseTLSModel(GlobalVariable::ThreadLocalMode &TLM);
     bool parseOptionalThreadLocal(GlobalVariable::ThreadLocalMode &TLM);
     bool parseOptionalUnnamedAddr(GlobalVariable::UnnamedAddr &UnnamedAddr);
-    bool parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS = 0);
+    LLVM_ABI bool parseOptionalAddrSpace(unsigned &AddrSpace,
+                                         unsigned DefaultAS = 0);
     bool parseOptionalProgramAddrSpace(unsigned &AddrSpace) {
       return parseOptionalAddrSpace(
           AddrSpace, M->getDataLayout().getProgramAddressSpace());
     };
     bool parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
                             bool InAttrGroup);
-    bool parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam);
+    LLVM_ABI bool parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam);
     bool parseOptionalParamAttrs(AttrBuilder &B) {
       return parseOptionalParamOrReturnAttrs(B, true);
     }
@@ -337,8 +341,8 @@ namespace llvm {
     bool parseAllocSizeArguments(unsigned &BaseSizeArg,
                                  std::optional<unsigned> &HowManyArg);
     bool parseVScaleRangeArguments(unsigned &MinValue, unsigned &MaxValue);
-    bool parseIndexList(SmallVectorImpl<unsigned> &Indices,
-                        bool &AteExtraComma);
+    LLVM_ABI bool parseIndexList(SmallVectorImpl<unsigned> &Indices,
+                                 bool &AteExtraComma);
     bool parseIndexList(SmallVectorImpl<unsigned> &Indices) {
       bool AteExtraComma;
       if (parseIndexList(Indices, AteExtraComma))
@@ -452,7 +456,8 @@ namespace llvm {
     bool parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites);
 
     // Type Parsing.
-    bool parseType(Type *&Result, const Twine &Msg, bool AllowVoid = false);
+    LLVM_ABI bool parseType(Type *&Result, const Twine &Msg,
+                            bool AllowVoid = false);
     bool parseType(Type *&Result, bool AllowVoid = false) {
       return parseType(Result, "expected type", AllowVoid);
     }
@@ -488,37 +493,38 @@ namespace llvm {
       int FunctionNumber;
 
     public:
-      PerFunctionState(LLParser &p, Function &f, int functionNumber,
-                       ArrayRef<unsigned> UnnamedArgNums);
-      ~PerFunctionState();
+      LLVM_ABI PerFunctionState(LLParser &p, Function &f, int functionNumber,
+                                ArrayRef<unsigned> UnnamedArgNums);
+      LLVM_ABI ~PerFunctionState();
 
       Function &getFunction() const { return F; }
 
-      bool finishFunction();
+      LLVM_ABI bool finishFunction();
 
       /// GetVal - Get a value with the specified name or ID, creating a
       /// forward reference record if needed.  This can return null if the value
       /// exists but does not have the right type.
-      Value *getVal(const std::string &Name, Type *Ty, LocTy Loc);
-      Value *getVal(unsigned ID, Type *Ty, LocTy Loc);
+      LLVM_ABI Value *getVal(const std::string &Name, Type *Ty, LocTy Loc);
+      LLVM_ABI Value *getVal(unsigned ID, Type *Ty, LocTy Loc);
 
       /// setInstName - After an instruction is parsed and inserted into its
       /// basic block, this installs its name.
-      bool setInstName(int NameID, const std::string &NameStr, LocTy NameLoc,
-                       Instruction *Inst);
+      LLVM_ABI bool setInstName(int NameID, const std::string &NameStr,
+                                LocTy NameLoc, Instruction *Inst);
 
       /// GetBB - Get a basic block with the specified name or ID, creating a
       /// forward reference record if needed.  This can return null if the value
       /// is not a BasicBlock.
-      BasicBlock *getBB(const std::string &Name, LocTy Loc);
-      BasicBlock *getBB(unsigned ID, LocTy Loc);
+      LLVM_ABI BasicBlock *getBB(const std::string &Name, LocTy Loc);
+      LLVM_ABI BasicBlock *getBB(unsigned ID, LocTy Loc);
 
       /// DefineBB - Define the specified basic block, which is either named or
       /// unnamed.  If there is an error, this returns null otherwise it returns
       /// the block being defined.
-      BasicBlock *defineBB(const std::string &Name, int NameID, LocTy Loc);
+      LLVM_ABI BasicBlock *defineBB(const std::string &Name, int NameID,
+                                    LocTy Loc);
 
-      bool resolveForwardRefBlockAddresses();
+      LLVM_ABI bool resolveForwardRefBlockAddresses();
     };
 
     bool convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
@@ -528,7 +534,7 @@ namespace llvm {
                                   Value *Val);
 
     bool parseConstantValue(Type *Ty, Constant *&C);
-    bool parseValue(Type *Ty, Value *&V, PerFunctionState *PFS);
+    LLVM_ABI bool parseValue(Type *Ty, Value *&V, PerFunctionState *PFS);
     bool parseValue(Type *Ty, Value *&V, PerFunctionState &PFS) {
       return parseValue(Ty, V, &PFS);
     }
@@ -538,7 +544,7 @@ namespace llvm {
       return parseValue(Ty, V, &PFS);
     }
 
-    bool parseTypeAndValue(Value *&V, PerFunctionState *PFS);
+    LLVM_ABI bool parseTypeAndValue(Value *&V, PerFunctionState *PFS);
     bool parseTypeAndValue(Value *&V, PerFunctionState &PFS) {
       return parseTypeAndValue(V, &PFS);
     }
@@ -546,8 +552,8 @@ namespace llvm {
       Loc = Lex.getLoc();
       return parseTypeAndValue(V, PFS);
     }
-    bool parseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
-                                PerFunctionState &PFS);
+    LLVM_ABI bool parseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
+                                         PerFunctionState &PFS);
     bool parseTypeAndBasicBlock(BasicBlock *&BB, PerFunctionState &PFS) {
       LocTy Loc;
       return parseTypeAndBasicBlock(BB, Loc, PFS);

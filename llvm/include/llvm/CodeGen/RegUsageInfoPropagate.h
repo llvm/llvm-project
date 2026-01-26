@@ -10,14 +10,15 @@
 #define LLVM_CODEGEN_REGUSAGEINFOPROPAGATE_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class RegUsageInfoPropagationPass
     : public PassInfoMixin<RegUsageInfoPropagationPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

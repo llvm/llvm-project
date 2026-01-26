@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_IPDBDATASTREAM_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -20,7 +21,7 @@ namespace pdb {
 /// IPDBDataStream defines an interface used to represent a stream consisting
 /// of a name and a series of records whose formats depend on the particular
 /// stream type.
-class IPDBDataStream {
+class LLVM_ABI IPDBDataStream {
 public:
   using RecordType = SmallVector<uint8_t, 32>;
 

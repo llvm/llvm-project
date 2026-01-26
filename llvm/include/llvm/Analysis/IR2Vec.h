@@ -217,9 +217,9 @@ public:
   using VocabMap = std::map<std::string, Embedding>;
   /// Parse a vocabulary section from JSON and populate the target vocabulary
   /// map.
-  static Error parseVocabSection(StringRef Key,
-                                 const json::Value &ParsedVocabValue,
-                                 VocabMap &TargetVocab, unsigned &Dim);
+  LLVM_ABI static Error parseVocabSection(StringRef Key,
+                                          const json::Value &ParsedVocabValue,
+                                          VocabMap &TargetVocab, unsigned &Dim);
 };
 
 /// Class for storing and accessing the IR2Vec vocabulary.
@@ -319,7 +319,7 @@ public:
       NumICmpPredicates + NumFCmpPredicates;
 
   Vocabulary() = default;
-  LLVM_ABI Vocabulary(VocabStorage &&Storage) : Storage(std::move(Storage)) {}
+  Vocabulary(VocabStorage &&Storage) : Storage(std::move(Storage)) {}
 
   Vocabulary(const Vocabulary &) = delete;
   Vocabulary &operator=(const Vocabulary &) = delete;
@@ -337,11 +337,9 @@ public:
                                                 float TypeWeight = 0.5,
                                                 float ArgWeight = 0.2);
 
-  LLVM_ABI bool isValid() const {
-    return Storage.size() == NumCanonicalEntries;
-  }
+  bool isValid() const { return Storage.size() == NumCanonicalEntries; }
 
-  LLVM_ABI unsigned getDimension() const {
+  unsigned getDimension() const {
     assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Storage.getDimension();
   }
@@ -354,12 +352,12 @@ public:
   LLVM_ABI static StringRef getVocabKeyForOpcode(unsigned Opcode);
 
   /// Function to get vocabulary key for a given TypeID
-  LLVM_ABI static StringRef getVocabKeyForTypeID(Type::TypeID TypeID) {
+  static StringRef getVocabKeyForTypeID(Type::TypeID TypeID) {
     return getVocabKeyForCanonicalTypeID(getCanonicalTypeID(TypeID));
   }
 
   /// Function to get vocabulary key for a given OperandKind
-  LLVM_ABI static StringRef getVocabKeyForOperandKind(OperandKind Kind) {
+  static StringRef getVocabKeyForOperandKind(OperandKind Kind) {
     unsigned Index = static_cast<unsigned>(Kind);
     assert(Index < MaxOperandKinds && "Invalid OperandKind");
     return OperandKindNames[Index];
@@ -372,45 +370,45 @@ public:
   LLVM_ABI static StringRef getVocabKeyForPredicate(CmpInst::Predicate P);
 
   /// Functions to return flat index
-  LLVM_ABI static unsigned getIndex(unsigned Opcode) {
+  static unsigned getIndex(unsigned Opcode) {
     assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
     return Opcode - 1; // Convert to zero-based index
   }
 
-  LLVM_ABI static unsigned getIndex(Type::TypeID TypeID) {
+  static unsigned getIndex(Type::TypeID TypeID) {
     assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
     return MaxOpcodes + static_cast<unsigned>(getCanonicalTypeID(TypeID));
   }
 
-  LLVM_ABI static unsigned getIndex(const Value &Op) {
+  static unsigned getIndex(const Value &Op) {
     unsigned Index = static_cast<unsigned>(getOperandKind(&Op));
     assert(Index < MaxOperandKinds && "Invalid OperandKind");
     return OperandBaseOffset + Index;
   }
 
-  LLVM_ABI static unsigned getIndex(CmpInst::Predicate P) {
+  static unsigned getIndex(CmpInst::Predicate P) {
     return PredicateBaseOffset + getPredicateLocalIndex(P);
   }
 
   /// Accessors to get the embedding for a given entity.
-  LLVM_ABI const ir2vec::Embedding &operator[](unsigned Opcode) const {
+  const ir2vec::Embedding &operator[](unsigned Opcode) const {
     assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
     return Storage[static_cast<unsigned>(Section::Opcodes)][Opcode - 1];
   }
 
-  LLVM_ABI const ir2vec::Embedding &operator[](Type::TypeID TypeID) const {
+  const ir2vec::Embedding &operator[](Type::TypeID TypeID) const {
     assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
     unsigned LocalIndex = static_cast<unsigned>(getCanonicalTypeID(TypeID));
     return Storage[static_cast<unsigned>(Section::CanonicalTypes)][LocalIndex];
   }
 
-  LLVM_ABI const ir2vec::Embedding &operator[](const Value &Arg) const {
+  const ir2vec::Embedding &operator[](const Value &Arg) const {
     unsigned LocalIndex = static_cast<unsigned>(getOperandKind(&Arg));
     assert(LocalIndex < MaxOperandKinds && "Invalid OperandKind");
     return Storage[static_cast<unsigned>(Section::Operands)][LocalIndex];
   }
 
-  LLVM_ABI const ir2vec::Embedding &operator[](CmpInst::Predicate P) const {
+  const ir2vec::Embedding &operator[](CmpInst::Predicate P) const {
     unsigned LocalIndex = getPredicateLocalIndex(P);
     return Storage[static_cast<unsigned>(Section::Predicates)][LocalIndex];
   }
@@ -454,8 +452,9 @@ private:
       OperandBaseOffset + MaxOperandKinds;
 
   /// Functions for predicate index calculations
-  static unsigned getPredicateLocalIndex(CmpInst::Predicate P);
-  static CmpInst::Predicate getPredicateFromLocalIndex(unsigned LocalIndex);
+  LLVM_ABI static unsigned getPredicateLocalIndex(CmpInst::Predicate P);
+  LLVM_ABI static CmpInst::Predicate
+  getPredicateFromLocalIndex(unsigned LocalIndex);
 
   /// String mappings for CanonicalTypeID values
   static constexpr StringLiteral CanonicalTypeNames[] = {
@@ -502,15 +501,14 @@ private:
                 "TypeIDMapping must cover all Type::TypeID values");
 
   /// Function to get vocabulary key for canonical type by enum
-  LLVM_ABI static StringRef
-  getVocabKeyForCanonicalTypeID(CanonicalTypeID CType) {
+  static StringRef getVocabKeyForCanonicalTypeID(CanonicalTypeID CType) {
     unsigned Index = static_cast<unsigned>(CType);
     assert(Index < MaxCanonicalTypeIDs && "Invalid CanonicalTypeID");
     return CanonicalTypeNames[Index];
   }
 
   /// Function to convert TypeID to CanonicalTypeID
-  LLVM_ABI static CanonicalTypeID getCanonicalTypeID(Type::TypeID TypeID) {
+  static CanonicalTypeID getCanonicalTypeID(Type::TypeID TypeID) {
     unsigned Index = static_cast<unsigned>(TypeID);
     assert(Index < MaxTypeIDs && "Invalid TypeID");
     return TypeIDMapping[Index];
@@ -550,16 +548,16 @@ protected:
   /// in the IR instructions to generate the vector representation.
   const float OpcWeight, TypeWeight, ArgWeight;
 
-  LLVM_ABI Embedder(const Function &F, const Vocabulary &Vocab)
+  Embedder(const Function &F, const Vocabulary &Vocab)
       : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()),
         OpcWeight(ir2vec::OpcWeight), TypeWeight(ir2vec::TypeWeight),
         ArgWeight(ir2vec::ArgWeight) {}
 
   /// Function to compute embeddings.
-  Embedding computeEmbeddings() const;
+  LLVM_ABI Embedding computeEmbeddings() const;
 
   /// Function to compute the embedding for a given basic block.
-  Embedding computeEmbeddings(const BasicBlock &BB) const;
+  LLVM_ABI Embedding computeEmbeddings(const BasicBlock &BB) const;
 
   /// Function to compute the embedding for a given instruction.
   /// Specific to the kind of embeddings being computed.
@@ -574,18 +572,18 @@ public:
 
   /// Computes and returns the embedding for a given instruction in the function
   /// F
-  LLVM_ABI Embedding getInstVector(const Instruction &I) const {
+  Embedding getInstVector(const Instruction &I) const {
     return computeEmbeddings(I);
   }
 
   /// Computes and returns the embedding for a given basic block in the function
   /// F
-  LLVM_ABI Embedding getBBVector(const BasicBlock &BB) const {
+  Embedding getBBVector(const BasicBlock &BB) const {
     return computeEmbeddings(BB);
   }
 
   /// Computes and returns the embedding for the current function.
-  LLVM_ABI Embedding getFunctionVector() const { return computeEmbeddings(); }
+  Embedding getFunctionVector() const { return computeEmbeddings(); }
 
   /// Invalidate embeddings if cached. The embeddings may not be relevant
   /// anymore when the IR changes due to transformations. In such cases, the
@@ -636,7 +634,7 @@ class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
 public:
   LLVM_ABI static AnalysisKey Key;
   IR2VecVocabAnalysis() = default;
-  LLVM_ABI explicit IR2VecVocabAnalysis(ir2vec::VocabStorage &&Vocab)
+  explicit IR2VecVocabAnalysis(ir2vec::VocabStorage &&Vocab)
       : Vocab(std::move(Vocab)) {}
   using Result = ir2vec::Vocabulary;
   LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);

@@ -9,6 +9,8 @@
 #ifndef LLVM_CODEGEN_MACHINELOOPUTILS_H
 #define LLVM_CODEGEN_MACHINELOOPUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class MachineBasicBlock;
 class MachineRegisterInfo;
@@ -31,10 +33,10 @@ enum LoopPeelDirection {
 /// clone so as to execute a single iteration.
 ///
 /// The trip count of Loop is not updated.
-MachineBasicBlock *PeelSingleBlockLoop(LoopPeelDirection Direction,
-                                       MachineBasicBlock *Loop,
-                                       MachineRegisterInfo &MRI,
-                                       const TargetInstrInfo *TII);
+LLVM_ABI MachineBasicBlock *PeelSingleBlockLoop(LoopPeelDirection Direction,
+                                                MachineBasicBlock *Loop,
+                                                MachineRegisterInfo &MRI,
+                                                const TargetInstrInfo *TII);
 
 } // namespace llvm
 

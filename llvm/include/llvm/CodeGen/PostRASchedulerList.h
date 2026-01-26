@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_POSTRASCHEDULERLIST_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -18,8 +19,8 @@ class PostRASchedulerPass : public PassInfoMixin<PostRASchedulerPass> {
 
 public:
   PostRASchedulerPass(const TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoVRegs();

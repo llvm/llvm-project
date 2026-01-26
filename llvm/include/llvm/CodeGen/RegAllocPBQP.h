@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/PBQP/Solution.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -506,15 +507,15 @@ public:
   PBQPRAGraph(GraphMetadata Metadata) : BaseT(std::move(Metadata)) {}
 
   /// Dump this graph to dbgs().
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// Dump this graph to an output stream.
   /// @param OS Output stream to print on.
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
 
   /// Print a representation of this graph in DOT format.
   /// @param OS Output stream to print on.
-  void printDot(raw_ostream &OS) const;
+  LLVM_ABI void printDot(raw_ostream &OS) const;
 };
 
 inline Solution solve(PBQPRAGraph& G) {
@@ -528,7 +529,7 @@ inline Solution solve(PBQPRAGraph& G) {
 } // end namespace PBQP
 
 /// Create a PBQP register allocator instance.
-FunctionPass *
+LLVM_ABI FunctionPass *
 createPBQPRegisterAllocator(char *customPassID = nullptr);
 
 } // end namespace llvm

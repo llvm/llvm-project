@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_PREISELINTRINSICLOWERING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -25,7 +26,7 @@ struct PreISelIntrinsicLoweringPass
   const TargetMachine *TM;
 
   PreISelIntrinsicLoweringPass(const TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

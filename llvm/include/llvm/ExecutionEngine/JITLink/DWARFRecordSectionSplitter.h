@@ -10,6 +10,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_DWARFRECORDSECTIONSPLITTER_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -20,8 +21,8 @@ namespace jitlink {
 /// without EHFrameEdgeFixer, which is responsible for adding FDE-to-CIE edges.
 class DWARFRecordSectionSplitter {
 public:
-  DWARFRecordSectionSplitter(StringRef SectionName);
-  Error operator()(LinkGraph &G);
+  LLVM_ABI DWARFRecordSectionSplitter(StringRef SectionName);
+  LLVM_ABI Error operator()(LinkGraph &G);
 
 private:
   Error processBlock(LinkGraph &G, Block &B, LinkGraph::SplitBlockCache &Cache);

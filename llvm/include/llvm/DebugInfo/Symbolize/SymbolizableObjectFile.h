@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -28,7 +29,7 @@ class DataExtractor;
 
 namespace symbolize {
 
-class SymbolizableObjectFile : public SymbolizableModule {
+class LLVM_ABI SymbolizableObjectFile : public SymbolizableModule {
 public:
   static Expected<std::unique_ptr<SymbolizableObjectFile>>
   create(const object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx,

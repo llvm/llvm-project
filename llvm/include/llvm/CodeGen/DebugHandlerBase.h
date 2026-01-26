@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -44,13 +45,13 @@ struct DbgVariableLocation {
   /// and the associated DIExpression is in one of the supported forms.
   /// If these requirements are not met, the returned Optional will not
   /// have a value.
-  static std::optional<DbgVariableLocation>
+  LLVM_ABI static std::optional<DbgVariableLocation>
   extractFromMachineInstruction(const MachineInstr &Instruction);
 };
 
 /// Base class for debug information backends. Common functionality related to
 /// tracking which variables and scopes are alive at a given PC live here.
-class DebugHandlerBase : public AsmPrinterHandler {
+class LLVM_ABI DebugHandlerBase : public AsmPrinterHandler {
 protected:
   DebugHandlerBase(AsmPrinter *A);
 

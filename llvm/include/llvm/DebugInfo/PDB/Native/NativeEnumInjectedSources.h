@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBInjectedSource.h"
 #include "llvm/DebugInfo/PDB/Native/InjectedSourceStream.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {
@@ -20,7 +21,8 @@ class InjectedSourceStream;
 class PDBFile;
 class PDBStringTable;
 
-class NativeEnumInjectedSources : public IPDBEnumChildren<IPDBInjectedSource> {
+class LLVM_ABI NativeEnumInjectedSources
+    : public IPDBEnumChildren<IPDBInjectedSource> {
 public:
   NativeEnumInjectedSources(PDBFile &File, const InjectedSourceStream &IJS,
                             const PDBStringTable &Strings);

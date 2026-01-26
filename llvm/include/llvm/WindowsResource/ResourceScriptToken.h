@@ -17,6 +17,7 @@
 #define LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_RESOURCE_SCRIPTTOKEN_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -36,17 +37,17 @@ public:
 #undef SHORT_TOKEN
   };
 
-  RCToken(RCToken::Kind RCTokenKind, StringRef Value);
+  LLVM_ABI RCToken(RCToken::Kind RCTokenKind, StringRef Value);
 
   // Get an integer value of the integer token.
-  uint32_t intValue() const;
-  bool isLongInt() const;
+  LLVM_ABI uint32_t intValue() const;
+  LLVM_ABI bool isLongInt() const;
 
-  StringRef value() const;
-  Kind kind() const;
+  LLVM_ABI StringRef value() const;
+  LLVM_ABI Kind kind() const;
 
   // Check if a token describes a binary operator.
-  bool isBinaryOp() const;
+  LLVM_ABI bool isBinaryOp() const;
 
 private:
   Kind TokenKind;

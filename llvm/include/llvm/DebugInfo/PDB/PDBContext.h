@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -29,38 +30,38 @@ namespace pdb {
   /// need for a transparent interface to different debug information formats
   /// (e.g. PDB and DWARF).  More control and power over the debug information
   /// access can be had by using the PDB interfaces directly.
-  class PDBContext : public DIContext {
-  public:
-    PDBContext(const object::COFFObjectFile &Object,
-               std::unique_ptr<IPDBSession> PDBSession);
-    PDBContext(PDBContext &) = delete;
-    PDBContext &operator=(PDBContext &) = delete;
+class LLVM_ABI PDBContext : public DIContext {
+public:
+  PDBContext(const object::COFFObjectFile &Object,
+             std::unique_ptr<IPDBSession> PDBSession);
+  PDBContext(PDBContext &) = delete;
+  PDBContext &operator=(PDBContext &) = delete;
 
-    static bool classof(const DIContext *DICtx) {
-      return DICtx->getKind() == CK_PDB;
-    }
+  static bool classof(const DIContext *DICtx) {
+    return DICtx->getKind() == CK_PDB;
+  }
 
-    void dump(raw_ostream &OS, DIDumpOptions DIDumpOpts) override;
+  void dump(raw_ostream &OS, DIDumpOptions DIDumpOpts) override;
 
-    std::optional<DILineInfo> getLineInfoForAddress(
-        object::SectionedAddress Address,
-        DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-    std::optional<DILineInfo>
-    getLineInfoForDataAddress(object::SectionedAddress Address) override;
-    DILineInfoTable getLineInfoForAddressRange(
-        object::SectionedAddress Address, uint64_t Size,
-        DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-    DIInliningInfo getInliningInfoForAddress(
-        object::SectionedAddress Address,
-        DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+  std::optional<DILineInfo> getLineInfoForAddress(
+      object::SectionedAddress Address,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+  std::optional<DILineInfo>
+  getLineInfoForDataAddress(object::SectionedAddress Address) override;
+  DILineInfoTable getLineInfoForAddressRange(
+      object::SectionedAddress Address, uint64_t Size,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+  DIInliningInfo getInliningInfoForAddress(
+      object::SectionedAddress Address,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
-    std::vector<DILocal>
-    getLocalsForAddress(object::SectionedAddress Address) override;
+  std::vector<DILocal>
+  getLocalsForAddress(object::SectionedAddress Address) override;
 
-  private:
-    std::string getFunctionName(uint64_t Address, DINameKind NameKind) const;
-    std::unique_ptr<IPDBSession> Session;
-  };
+private:
+  std::string getFunctionName(uint64_t Address, DINameKind NameKind) const;
+  std::unique_ptr<IPDBSession> Session;
+};
 
 } // end namespace pdb
 

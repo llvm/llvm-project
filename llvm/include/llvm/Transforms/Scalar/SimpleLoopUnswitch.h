@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 
@@ -73,11 +74,13 @@ public:
   SimpleLoopUnswitchPass(bool NonTrivial = false, bool Trivial = true)
       : NonTrivial(NonTrivial), Trivial(Trivial) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 /// A marker analysis to determine if SimpleLoopUnswitch should run again on a
@@ -85,7 +88,7 @@ public:
 struct ShouldRunExtraSimpleLoopUnswitch
     : public ShouldRunExtraPasses<ShouldRunExtraSimpleLoopUnswitch>,
       public AnalysisInfoMixin<ShouldRunExtraSimpleLoopUnswitch> {
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 
 } // end namespace llvm

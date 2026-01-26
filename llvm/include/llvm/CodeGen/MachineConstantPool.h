@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <climits>
 #include <vector>
 
@@ -32,7 +33,7 @@ class Type;
 
 /// Abstract base class for all machine specific constantpool value subclasses.
 ///
-class MachineConstantPoolValue {
+class LLVM_ABI MachineConstantPoolValue {
   virtual void anchor();
 
   Type *Ty;
@@ -94,14 +95,14 @@ public:
 
   Align getAlign() const { return Alignment; }
 
-  unsigned getSizeInBytes(const DataLayout &DL) const;
+  LLVM_ABI unsigned getSizeInBytes(const DataLayout &DL) const;
 
   /// This method classifies the entry according to whether or not it may
   /// generate a relocation entry.  This must be conservative, so if it might
   /// codegen to a relocatable entry, it should say so.
-  bool needsRelocation() const;
+  LLVM_ABI bool needsRelocation() const;
 
-  SectionKind getSectionKind(const DataLayout *DL) const;
+  LLVM_ABI SectionKind getSectionKind(const DataLayout *DL) const;
 };
 
 /// The MachineConstantPool class keeps track of constants referenced by a
@@ -127,7 +128,7 @@ public:
   /// The only constructor.
   explicit MachineConstantPool(const DataLayout &DL)
       : PoolAlignment(1), DL(DL) {}
-  ~MachineConstantPool();
+  LLVM_ABI ~MachineConstantPool();
 
   /// Return the alignment required by the whole constant pool, of which the
   /// first element must be aligned.
@@ -136,8 +137,9 @@ public:
   /// getConstantPoolIndex - Create a new entry in the constant pool or return
   /// an existing one.  User must specify the minimum required alignment for
   /// the object.
-  unsigned getConstantPoolIndex(const Constant *C, Align Alignment);
-  unsigned getConstantPoolIndex(MachineConstantPoolValue *V, Align Alignment);
+  LLVM_ABI unsigned getConstantPoolIndex(const Constant *C, Align Alignment);
+  LLVM_ABI unsigned getConstantPoolIndex(MachineConstantPoolValue *V,
+                                         Align Alignment);
 
   /// isEmpty - Return true if this constant pool contains no constants.
   bool isEmpty() const { return Constants.empty(); }
@@ -148,10 +150,10 @@ public:
 
   /// print - Used by the MachineFunction printer to print information about
   /// constant pool objects.  Implemented in MachineFunction.cpp
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// dump - Call print(cerr) to be called from the debugger.
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace llvm

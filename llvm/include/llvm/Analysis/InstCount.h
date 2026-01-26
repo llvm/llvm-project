@@ -14,13 +14,14 @@
 #define LLVM_ANALYSIS_INSTCOUNT_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class Function;
 
 struct InstCountPass : PassInfoMixin<InstCountPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 } // end namespace llvm

@@ -11,6 +11,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -18,8 +19,9 @@ class LPMUpdater;
 class LoopNest;
 
 struct LoopInterchangePass : public PassInfoMixin<LoopInterchangePass> {
-  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

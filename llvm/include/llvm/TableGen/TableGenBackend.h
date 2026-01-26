@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TableGen/Main.h"
 #include "llvm/TableGen/Record.h"
 
@@ -51,7 +52,7 @@ struct FnT {
 /// \p ByDefault is true, then that callback is applied by default if no
 /// command line option was specified.
 struct Opt {
-  Opt(StringRef Name, FnT CB, StringRef Desc, bool ByDefault = false);
+  LLVM_ABI Opt(StringRef Name, FnT CB, StringRef Desc, bool ByDefault = false);
 };
 
 /// Convienence wrapper around `Opt` that registers `EmitterClass::run` as the
@@ -82,15 +83,16 @@ public:
 
 /// Apply callback for any command line option registered above. Returns false
 /// is no callback was applied.
-bool ApplyCallback(const RecordKeeper &Records, TableGenOutputFiles &OutFiles,
-                   StringRef FilenamePrefix);
+LLVM_ABI bool ApplyCallback(const RecordKeeper &Records,
+                            TableGenOutputFiles &OutFiles,
+                            StringRef FilenamePrefix);
 
 } // namespace TableGen::Emitter
 
 /// emitSourceFileHeader - Output an LLVM style file header to the specified
 /// raw_ostream.
-void emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
-                          const RecordKeeper &Record = RecordKeeper());
+LLVM_ABI void emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
+                                   const RecordKeeper &Record = RecordKeeper());
 
 } // namespace llvm
 

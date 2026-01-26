@@ -11,13 +11,14 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class Function;
 
 struct CountVisitsPass : PassInfoMixin<CountVisitsPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:
   StringMap<uint32_t> Counts;

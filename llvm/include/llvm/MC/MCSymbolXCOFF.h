@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -50,9 +51,9 @@ public:
 
   StringRef getUnqualifiedName() const { return getUnqualifiedName(getName()); }
 
-  MCSectionXCOFF *getRepresentedCsect() const;
+  LLVM_ABI MCSectionXCOFF *getRepresentedCsect() const;
 
-  void setRepresentedCsect(MCSectionXCOFF *C);
+  LLVM_ABI void setRepresentedCsect(MCSectionXCOFF *C);
 
   void setVisibilityType(XCOFF::VisibilityType SVT) { VisibilityType = SVT; };
 

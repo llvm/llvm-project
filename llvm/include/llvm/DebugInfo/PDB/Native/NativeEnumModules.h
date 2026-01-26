@@ -11,12 +11,13 @@
 
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
+#include "llvm/Support/Compiler.h"
 namespace llvm {
 namespace pdb {
 
 class NativeSession;
 
-class NativeEnumModules : public IPDBEnumChildren<PDBSymbol> {
+class LLVM_ABI NativeEnumModules : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumModules(NativeSession &Session, uint32_t Index = 0);
 

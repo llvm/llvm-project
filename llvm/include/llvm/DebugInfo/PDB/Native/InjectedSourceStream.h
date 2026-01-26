@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -21,8 +22,8 @@ class PDBStringTable;
 
 class InjectedSourceStream {
 public:
-  InjectedSourceStream(std::unique_ptr<msf::MappedBlockStream> Stream);
-  Error reload(const PDBStringTable &Strings);
+  LLVM_ABI InjectedSourceStream(std::unique_ptr<msf::MappedBlockStream> Stream);
+  LLVM_ABI Error reload(const PDBStringTable &Strings);
 
   using const_iterator = HashTable<SrcHeaderBlockEntry>::const_iterator;
   const_iterator begin() const { return InjectedSourceTable.begin(); }

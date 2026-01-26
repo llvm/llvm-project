@@ -25,6 +25,7 @@
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -120,7 +121,7 @@ public:
   Loop *getLoop() const { return L; }
 
   /// Traverse the loop blocks and store the DFS result.
-  void perform(const LoopInfo *LI);
+  LLVM_ABI void perform(const LoopInfo *LI);
 
   /// Return true if postorder numbers are assigned to all loop blocks.
   bool isComplete() const { return PostBlocks.size() == L->getNumBlocks(); }

@@ -23,6 +23,7 @@
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <stack>
 #include <utility>
@@ -36,7 +37,7 @@ class LVCodeViewReader;
 class LVLogicalVisitor;
 struct LVShared;
 
-class LVTypeVisitor final : public TypeVisitorCallbacks {
+class LLVM_ABI LVTypeVisitor final : public TypeVisitorCallbacks {
   ScopedPrinter &W;
   LVLogicalVisitor *LogicalVisitor;
   LazyRandomTypeCollection &Types;
@@ -82,7 +83,7 @@ public:
   Error visitUnknownType(CVType &Record) override;
 };
 
-class LVSymbolVisitorDelegate final : public SymbolVisitorDelegate {
+class LLVM_ABI LVSymbolVisitorDelegate final : public SymbolVisitorDelegate {
   LVCodeViewReader *Reader;
   const llvm::object::coff_section *CoffSection;
   StringRef SectionContents;
@@ -121,7 +122,7 @@ class LVSymbol;
 class LVType;
 
 // Visitor for CodeView symbol streams found in COFF object files and PDB files.
-class LVSymbolVisitor final : public SymbolVisitorCallbacks {
+class LLVM_ABI LVSymbolVisitor final : public SymbolVisitorCallbacks {
   LVCodeViewReader *Reader;
   ScopedPrinter &W;
   LVLogicalVisitor *LogicalVisitor;
@@ -281,8 +282,8 @@ class LVLogicalVisitor final {
   void createParents(StringRef ScopedName, LVElement *Element);
 
 public:
-  LVLogicalVisitor(LVCodeViewReader *Reader, ScopedPrinter &W,
-                   llvm::pdb::InputFile &Input);
+  LLVM_ABI LVLogicalVisitor(LVCodeViewReader *Reader, ScopedPrinter &W,
+                            llvm::pdb::InputFile &Input);
 
   // Current elements during the processing of a RecordType or RecordSymbol.
   // They are shared with the SymbolVisitor.
@@ -304,19 +305,20 @@ public:
                         std::forward_as_tuple(LineNumber, Filename));
   }
 
-  void printTypeIndex(StringRef FieldName, TypeIndex TI, uint32_t StreamIdx);
-  void printMemberAttributes(MemberAttributes Attrs);
-  void printMemberAttributes(MemberAccess Access, MethodKind Kind,
-                             MethodOptions Options);
+  LLVM_ABI void printTypeIndex(StringRef FieldName, TypeIndex TI,
+                               uint32_t StreamIdx);
+  LLVM_ABI void printMemberAttributes(MemberAttributes Attrs);
+  LLVM_ABI void printMemberAttributes(MemberAccess Access, MethodKind Kind,
+                                      MethodOptions Options);
 
-  LVElement *createElement(TypeLeafKind Kind);
-  LVElement *createElement(SymbolKind Kind);
-  LVElement *createElement(TypeIndex TI, TypeLeafKind Kind);
+  LLVM_ABI LVElement *createElement(TypeLeafKind Kind);
+  LLVM_ABI LVElement *createElement(SymbolKind Kind);
+  LLVM_ABI LVElement *createElement(TypeIndex TI, TypeLeafKind Kind);
 
   // Break down the annotation byte code and calculate code and line offsets.
-  Error inlineSiteAnnotation(LVScope *AbstractFunction,
-                             LVScope *InlinedFunction,
-                             InlineSiteSym &InlineSite);
+  LLVM_ABI Error inlineSiteAnnotation(LVScope *AbstractFunction,
+                                      LVScope *InlinedFunction,
+                                      InlineSiteSym &InlineSite);
 
   void pushScope(LVScope *Scope) {
     ScopeStack.push(ReaderParent);
@@ -336,110 +338,121 @@ public:
   }
   void setRoot(LVScope *Root) { ReaderScope = Root; }
 
-  void addElement(LVScope *Scope, bool IsCompileUnit);
-  void addElement(LVSymbol *Symbol);
-  void addElement(LVType *Type);
+  LLVM_ABI void addElement(LVScope *Scope, bool IsCompileUnit);
+  LLVM_ABI void addElement(LVSymbol *Symbol);
+  LLVM_ABI void addElement(LVType *Type);
 
   std::string getCompileUnitName() { return CompileUnitName; }
   void setCompileUnitName(std::string Name) {
     CompileUnitName = std::move(Name);
   }
 
-  LVElement *getElement(uint32_t StreamIdx, TypeIndex TI,
-                        LVScope *Parent = nullptr);
+  LLVM_ABI LVElement *getElement(uint32_t StreamIdx, TypeIndex TI,
+                                 LVScope *Parent = nullptr);
   LVShared *getShared() { return Shared.get(); }
 
   LVScope *getReaderScope() const { return ReaderScope; }
 
-  void printTypeBegin(CVType &Record, TypeIndex TI, LVElement *Element,
-                      uint32_t StreamIdx);
-  void printTypeEnd(CVType &Record);
-  void printMemberBegin(CVMemberRecord &Record, TypeIndex TI,
-                        LVElement *Element, uint32_t StreamIdx);
-  void printMemberEnd(CVMemberRecord &Record);
+  LLVM_ABI void printTypeBegin(CVType &Record, TypeIndex TI, LVElement *Element,
+                               uint32_t StreamIdx);
+  LLVM_ABI void printTypeEnd(CVType &Record);
+  LLVM_ABI void printMemberBegin(CVMemberRecord &Record, TypeIndex TI,
+                                 LVElement *Element, uint32_t StreamIdx);
+  LLVM_ABI void printMemberEnd(CVMemberRecord &Record);
 
   void startProcessArgumentList() { ProcessArgumentList = true; }
   void stopProcessArgumentList() { ProcessArgumentList = false; }
 
-  void processFiles();
-  void processLines();
-  void processNamespaces();
+  LLVM_ABI void processFiles();
+  LLVM_ABI void processLines();
+  LLVM_ABI void processNamespaces();
 
-  void printRecords(raw_ostream &OS) const;
+  LLVM_ABI void printRecords(raw_ostream &OS) const;
 
-  Error visitUnknownType(CVType &Record, TypeIndex TI);
-  Error visitKnownRecord(CVType &Record, ArgListRecord &Args, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, ArrayRecord &AT, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, BitFieldRecord &BF, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, BuildInfoRecord &BI, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, ClassRecord &Class, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, EnumRecord &Enum, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, FieldListRecord &FieldList,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownRecord(CVType &Record, FuncIdRecord &Func, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, LabelRecord &LR, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, ModifierRecord &Mod, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, MemberFuncIdRecord &Id, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, MemberFunctionRecord &MF, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, MethodOverloadListRecord &Overloads,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownRecord(CVType &Record, PointerRecord &Ptr, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, ProcedureRecord &Proc, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, UnionRecord &Union, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, TypeServer2Record &TS, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, VFTableRecord &VFT, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, VFTableShapeRecord &Shape,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownRecord(CVType &Record, StringListRecord &Strings,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownRecord(CVType &Record, StringIdRecord &String, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, UdtSourceLineRecord &SourceLine,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownRecord(CVType &Record, UdtModSourceLineRecord &ModSourceLine,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownRecord(CVType &Record, PrecompRecord &Precomp, TypeIndex TI,
-                         LVElement *Element);
-  Error visitKnownRecord(CVType &Record, EndPrecompRecord &EndPrecomp,
-                         TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitUnknownType(CVType &Record, TypeIndex TI);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, ArgListRecord &Args,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, ArrayRecord &AT, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, BitFieldRecord &BF,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, BuildInfoRecord &BI,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, ClassRecord &Class,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, EnumRecord &Enum,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, FieldListRecord &FieldList,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, FuncIdRecord &Func,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, LabelRecord &LR, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, ModifierRecord &Mod,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, MemberFuncIdRecord &Id,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, MemberFunctionRecord &MF,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record,
+                                  MethodOverloadListRecord &Overloads,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, PointerRecord &Ptr,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, ProcedureRecord &Proc,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, UnionRecord &Union,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, TypeServer2Record &TS,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, VFTableRecord &VFT,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, VFTableShapeRecord &Shape,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, StringListRecord &Strings,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, StringIdRecord &String,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record,
+                                  UdtSourceLineRecord &SourceLine, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record,
+                                  UdtModSourceLineRecord &ModSourceLine,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, PrecompRecord &Precomp,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, EndPrecompRecord &EndPrecomp,
+                                  TypeIndex TI, LVElement *Element);
 
-  Error visitUnknownMember(CVMemberRecord &Record, TypeIndex TI);
-  Error visitKnownMember(CVMemberRecord &Record, BaseClassRecord &Base,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, DataMemberRecord &Field,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, EnumeratorRecord &Enum,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, ListContinuationRecord &Cont,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, NestedTypeRecord &Nested,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, OneMethodRecord &Method,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, OverloadedMethodRecord &Method,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, StaticDataMemberRecord &Field,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, VFPtrRecord &VFTable,
-                         TypeIndex TI, LVElement *Element);
-  Error visitKnownMember(CVMemberRecord &Record, VirtualBaseClassRecord &Base,
-                         TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitUnknownMember(CVMemberRecord &Record, TypeIndex TI);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record, BaseClassRecord &Base,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  DataMemberRecord &Field, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  EnumeratorRecord &Enum, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  ListContinuationRecord &Cont, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  NestedTypeRecord &Nested, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  OneMethodRecord &Method, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  OverloadedMethodRecord &Method, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  StaticDataMemberRecord &Field, TypeIndex TI,
+                                  LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record, VFPtrRecord &VFTable,
+                                  TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownMember(CVMemberRecord &Record,
+                                  VirtualBaseClassRecord &Base, TypeIndex TI,
+                                  LVElement *Element);
 
   template <typename T>
   Error visitKnownMember(CVMemberRecord &Record,
@@ -466,10 +479,11 @@ public:
     return Error::success();
   }
 
-  Error visitMemberRecord(CVMemberRecord &Record,
-                          TypeVisitorCallbacks &Callbacks, TypeIndex TI,
-                          LVElement *Element);
-  Error finishVisitation(CVType &Record, TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitMemberRecord(CVMemberRecord &Record,
+                                   TypeVisitorCallbacks &Callbacks,
+                                   TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error finishVisitation(CVType &Record, TypeIndex TI,
+                                  LVElement *Element);
 };
 
 } // namespace logicalview

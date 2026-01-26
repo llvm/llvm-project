@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_COSTMODEL_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// Printer pass for cost modeling results.
@@ -19,7 +20,7 @@ class CostModelPrinterPass : public PassInfoMixin<CostModelPrinterPass> {
 public:
   explicit CostModelPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };

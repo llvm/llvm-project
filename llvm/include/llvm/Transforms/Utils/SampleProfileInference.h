@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -112,8 +113,8 @@ struct ProfiParams {
   const int64_t CostUnlikely = ((int64_t)1) << 30;
 };
 
-void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
-void applyFlowInference(FlowFunction &Func);
+LLVM_ABI void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
+LLVM_ABI void applyFlowInference(FlowFunction &Func);
 
 /// Sample profile inference pass.
 template <typename FT> class SampleProfileInference {

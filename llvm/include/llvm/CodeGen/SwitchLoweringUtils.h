@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -87,7 +88,7 @@ using CaseClusterVector = std::vector<CaseCluster>;
 using CaseClusterIt = CaseClusterVector::iterator;
 
 /// Sort Clusters and merge adjacent cases.
-void sortAndRangeify(CaseClusterVector &Clusters);
+LLVM_ABI void sortAndRangeify(CaseClusterVector &Clusters);
 
 struct CaseBits {
   uint64_t Mask = 0;
@@ -238,12 +239,12 @@ struct BitTestBlock {
 };
 
 /// Return the range of values within a range.
-uint64_t getJumpTableRange(const CaseClusterVector &Clusters, unsigned First,
-                           unsigned Last);
+LLVM_ABI uint64_t getJumpTableRange(const CaseClusterVector &Clusters,
+                                    unsigned First, unsigned Last);
 
 /// Return the number of cases within a range.
-uint64_t getJumpTableNumCases(const SmallVectorImpl<unsigned> &TotalCases,
-                              unsigned First, unsigned Last);
+LLVM_ABI uint64_t getJumpTableNumCases(
+    const SmallVectorImpl<unsigned> &TotalCases, unsigned First, unsigned Last);
 
 struct SwitchWorkListItem {
   MachineBasicBlock *MBB = nullptr;
@@ -278,21 +279,27 @@ public:
   /// generation information.
   std::vector<BitTestBlock> BitTestCases;
 
-  void findJumpTables(CaseClusterVector &Clusters, const SwitchInst *SI,
-                      std::optional<SDLoc> SL, MachineBasicBlock *DefaultMBB,
-                      ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI);
+  LLVM_ABI void findJumpTables(CaseClusterVector &Clusters,
+                               const SwitchInst *SI, std::optional<SDLoc> SL,
+                               MachineBasicBlock *DefaultMBB,
+                               ProfileSummaryInfo *PSI,
+                               BlockFrequencyInfo *BFI);
 
-  bool buildJumpTable(const CaseClusterVector &Clusters, unsigned First,
-                      unsigned Last, const SwitchInst *SI,
-                      const std::optional<SDLoc> &SL,
-                      MachineBasicBlock *DefaultMBB, CaseCluster &JTCluster);
+  LLVM_ABI bool buildJumpTable(const CaseClusterVector &Clusters,
+                               unsigned First, unsigned Last,
+                               const SwitchInst *SI,
+                               const std::optional<SDLoc> &SL,
+                               MachineBasicBlock *DefaultMBB,
+                               CaseCluster &JTCluster);
 
-  void findBitTestClusters(CaseClusterVector &Clusters, const SwitchInst *SI);
+  LLVM_ABI void findBitTestClusters(CaseClusterVector &Clusters,
+                                    const SwitchInst *SI);
 
   /// Build a bit test cluster from Clusters[First..Last]. Returns false if it
   /// decides it's not a good idea.
-  bool buildBitTests(CaseClusterVector &Clusters, unsigned First, unsigned Last,
-                     const SwitchInst *SI, CaseCluster &BTCluster);
+  LLVM_ABI bool buildBitTests(CaseClusterVector &Clusters, unsigned First,
+                              unsigned Last, const SwitchInst *SI,
+                              CaseCluster &BTCluster);
 
   virtual void addSuccessorWithProb(
       MachineBasicBlock *Src, MachineBasicBlock *Dst,
@@ -300,8 +307,8 @@ public:
 
   /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
   /// than each cluster in the range, its rank is 0.
-  unsigned caseClusterRank(const CaseCluster &CC, CaseClusterIt First,
-                           CaseClusterIt Last);
+  LLVM_ABI unsigned caseClusterRank(const CaseCluster &CC, CaseClusterIt First,
+                                    CaseClusterIt Last);
 
   struct SplitWorkItemInfo {
     CaseClusterIt LastLeft;
@@ -313,7 +320,8 @@ public:
   /// create a near-optimal (in terms of search time given key frequency) binary
   /// search tree. See e.g. Kurt Mehlhorn "Nearly Optimal Binary Search Trees"
   /// (1975).
-  SplitWorkItemInfo computeSplitWorkItemInfo(const SwitchWorkListItem &W);
+  LLVM_ABI SplitWorkItemInfo
+  computeSplitWorkItemInfo(const SwitchWorkListItem &W);
   virtual ~SwitchLowering() = default;
 
 private:

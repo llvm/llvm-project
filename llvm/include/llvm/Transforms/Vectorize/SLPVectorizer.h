@@ -23,6 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -73,13 +74,14 @@ struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   const DataLayout *DL = nullptr;
 
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, ScalarEvolution *SE_, TargetTransformInfo *TTI_,
-               TargetLibraryInfo *TLI_, AAResults *AA_, LoopInfo *LI_,
-               DominatorTree *DT_, AssumptionCache *AC_, DemandedBits *DB_,
-               OptimizationRemarkEmitter *ORE_);
+  LLVM_ABI bool runImpl(Function &F, ScalarEvolution *SE_,
+                        TargetTransformInfo *TTI_, TargetLibraryInfo *TLI_,
+                        AAResults *AA_, LoopInfo *LI_, DominatorTree *DT_,
+                        AssumptionCache *AC_, DemandedBits *DB_,
+                        OptimizationRemarkEmitter *ORE_);
 
 private:
   /// Collect store and getelementptr instructions and organize them

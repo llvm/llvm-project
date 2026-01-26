@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEARRAY_H
 
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -19,7 +20,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeTypeArray : public NativeRawSymbol {
+class LLVM_ABI NativeTypeArray : public NativeRawSymbol {
 public:
   NativeTypeArray(NativeSession &Session, SymIndexId Id, codeview::TypeIndex TI,
                   codeview::ArrayRecord Record);

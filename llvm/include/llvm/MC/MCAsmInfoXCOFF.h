@@ -10,10 +10,11 @@
 #define LLVM_MC_MCASMINFOXCOFF_H
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class MCAsmInfoXCOFF : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoXCOFF : public MCAsmInfo {
 protected:
   MCAsmInfoXCOFF();
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,

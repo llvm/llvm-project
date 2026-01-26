@@ -119,23 +119,26 @@ public:
 
   /// Returns true if the given \p PhysReg is a callee saved register and has
   /// not been used for allocation yet.
-  bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
+  LLVM_ABI bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
 protected:
-  RegAllocEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA);
+  LLVM_ABI RegAllocEvictionAdvisor(const MachineFunction &MF,
+                                   const RAGreedy &RA);
 
-  bool canReassign(const LiveInterval &VirtReg, MCRegister FromReg) const;
+  LLVM_ABI bool canReassign(const LiveInterval &VirtReg,
+                            MCRegister FromReg) const;
 
   // Get the upper limit of elements in the given Order we need to analize.
   // TODO: is this heuristic,  we could consider learning it.
-  std::optional<unsigned> getOrderLimit(const LiveInterval &VirtReg,
-                                        const AllocationOrder &Order,
-                                        unsigned CostPerUseLimit) const;
+  LLVM_ABI std::optional<unsigned>
+  getOrderLimit(const LiveInterval &VirtReg, const AllocationOrder &Order,
+                unsigned CostPerUseLimit) const;
 
   // Determine if it's worth trying to allocate this reg, given the
   // CostPerUseLimit
   // TODO: this is a heuristic component we could consider learning, too.
-  bool canAllocatePhysReg(unsigned CostPerUseLimit, MCRegister PhysReg) const;
+  LLVM_ABI bool canAllocatePhysReg(unsigned CostPerUseLimit,
+                                   MCRegister PhysReg) const;
 
   const MachineFunction &MF;
   const RAGreedy &RA;
@@ -196,7 +199,7 @@ private:
 ///
 /// Because we need to offer additional services in 'development' mode, the
 /// implementations of this analysis need to implement RTTI support.
-class RegAllocEvictionAdvisorAnalysisLegacy : public ImmutablePass {
+class LLVM_ABI RegAllocEvictionAdvisorAnalysisLegacy : public ImmutablePass {
 public:
   enum class AdvisorMode : int { Default, Release, Development };
 
@@ -252,7 +255,7 @@ public:
     }
   };
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MAM);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MAM);
 
 private:
   void
@@ -264,22 +267,24 @@ private:
 
 /// Specialization for the API used by the analysis infrastructure to create
 /// an instance of the eviction advisor.
-template <> Pass *callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>();
+template <>
+LLVM_ABI Pass *callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>();
 
-RegAllocEvictionAdvisorAnalysisLegacy *createReleaseModeAdvisorAnalysisLegacy();
+LLVM_ABI RegAllocEvictionAdvisorAnalysisLegacy *
+createReleaseModeAdvisorAnalysisLegacy();
 
-RegAllocEvictionAdvisorAnalysisLegacy *
+LLVM_ABI RegAllocEvictionAdvisorAnalysisLegacy *
 createDevelopmentModeAdvisorAnalysisLegacy();
 
-LLVM_ATTRIBUTE_RETURNS_NONNULL RegAllocEvictionAdvisorProvider *
+LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocEvictionAdvisorProvider *
 createReleaseModeAdvisorProvider(LLVMContext &Ctx);
 
-RegAllocEvictionAdvisorProvider *
+LLVM_ABI RegAllocEvictionAdvisorProvider *
 createDevelopmentModeAdvisorProvider(LLVMContext &Ctx);
 
 // TODO: move to RegAllocEvictionAdvisor.cpp when we move implementation
 // out of RegAllocGreedy.cpp
-class DefaultEvictionAdvisor : public RegAllocEvictionAdvisor {
+class LLVM_ABI DefaultEvictionAdvisor : public RegAllocEvictionAdvisor {
 public:
   DefaultEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA)
       : RegAllocEvictionAdvisor(MF, RA) {}

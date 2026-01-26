@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_ANNOTATION2METADATA_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -22,7 +23,7 @@ class Module;
 
 /// Pass to convert @llvm.global.annotations to !annotation metadata.
 struct Annotation2MetadataPass : public PassInfoMixin<Annotation2MetadataPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

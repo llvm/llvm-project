@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -21,7 +22,7 @@ class raw_ostream;
 namespace pdb {
 class NativeSession;
 
-class NativeTypeUDT : public NativeRawSymbol {
+class LLVM_ABI NativeTypeUDT : public NativeRawSymbol {
 public:
   NativeTypeUDT(NativeSession &Session, SymIndexId Id, codeview::TypeIndex TI,
                 codeview::ClassRecord Class);

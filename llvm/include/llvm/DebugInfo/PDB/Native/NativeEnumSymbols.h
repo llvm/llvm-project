@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 #include <vector>
 
@@ -20,7 +21,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeEnumSymbols : public IPDBEnumChildren<PDBSymbol> {
+class LLVM_ABI NativeEnumSymbols : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumSymbols(NativeSession &Session, std::vector<SymIndexId> Symbols);
 

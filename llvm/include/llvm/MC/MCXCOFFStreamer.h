@@ -10,11 +10,12 @@
 #define LLVM_MC_MCXCOFFSTREAMER_H
 
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class XCOFFObjectWriter;
 
-class MCXCOFFStreamer : public MCObjectStreamer {
+class LLVM_ABI MCXCOFFStreamer : public MCObjectStreamer {
 public:
   MCXCOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                   std::unique_ptr<MCObjectWriter> OW,

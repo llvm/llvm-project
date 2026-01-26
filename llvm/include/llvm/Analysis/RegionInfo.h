@@ -44,6 +44,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <map>
@@ -886,16 +887,16 @@ public:
 
 class Region : public RegionBase<RegionTraits<Function>> {
 public:
-  Region(BasicBlock *Entry, BasicBlock *Exit, RegionInfo *RI, DominatorTree *DT,
-         Region *Parent = nullptr);
-  ~Region();
+  LLVM_ABI Region(BasicBlock *Entry, BasicBlock *Exit, RegionInfo *RI,
+                  DominatorTree *DT, Region *Parent = nullptr);
+  LLVM_ABI ~Region();
 
   bool operator==(const RegionNode &RN) const {
     return &RN == reinterpret_cast<const RegionNode *>(this);
   }
 };
 
-class RegionInfo : public RegionInfoBase<RegionTraits<Function>> {
+class LLVM_ABI RegionInfo : public RegionInfoBase<RegionTraits<Function>> {
 public:
   using Base = RegionInfoBase<RegionTraits<Function>>;
 
@@ -937,7 +938,7 @@ public:
 #endif
 };
 
-class RegionInfoPass : public FunctionPass {
+class LLVM_ABI RegionInfoPass : public FunctionPass {
   RegionInfo RI;
 
 public:
@@ -970,7 +971,7 @@ class RegionInfoAnalysis : public AnalysisInfoMixin<RegionInfoAnalysis> {
 public:
   using Result = RegionInfo;
 
-  RegionInfo run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI RegionInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c RegionInfo.
@@ -978,16 +979,16 @@ class RegionInfoPrinterPass : public PassInfoMixin<RegionInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit RegionInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit RegionInfoPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c RegionInfo.
 struct RegionInfoVerifierPass : PassInfoMixin<RegionInfoVerifierPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

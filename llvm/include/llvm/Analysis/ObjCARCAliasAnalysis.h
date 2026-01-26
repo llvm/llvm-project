@@ -23,6 +23,7 @@
 #define LLVM_ANALYSIS_OBJCARCALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace objcarc {
@@ -49,17 +50,19 @@ public:
     return false;
   }
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI);
-  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                               bool IgnoreLocals);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI);
+  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                                        AAQueryInfo &AAQI, bool IgnoreLocals);
 
   using AAResultBase::getMemoryEffects;
-  MemoryEffects getMemoryEffects(const Function *F);
+  LLVM_ABI MemoryEffects getMemoryEffects(const Function *F);
 
   using AAResultBase::getModRefInfo;
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
@@ -70,7 +73,7 @@ class ObjCARCAA : public AnalysisInfoMixin<ObjCARCAA> {
 public:
   typedef ObjCARCAAResult Result;
 
-  ObjCARCAAResult run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI ObjCARCAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace objcarc

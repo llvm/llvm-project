@@ -19,6 +19,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
 
@@ -86,14 +87,16 @@ class MemProfContextDisambiguation
   std::unique_ptr<ICallPromotionAnalysis> ICallAnalysis;
 
 public:
+  LLVM_ABI
   MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr,
                                bool isSamplePGO = false);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  void run(ModuleSummaryIndex &Index,
-           function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-               isPrevailing);
+  LLVM_ABI void
+  run(ModuleSummaryIndex &Index,
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          isPrevailing);
 };
 
 /// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
@@ -102,7 +105,7 @@ public:
 /// transformations.
 class MemProfRemoveInfo : public PassInfoMixin<MemProfRemoveInfo> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

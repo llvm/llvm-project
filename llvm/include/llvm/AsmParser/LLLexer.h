@@ -16,6 +16,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/AsmParser/LLToken.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include <string>
@@ -62,8 +63,8 @@ namespace llvm {
     bool IgnoreColonInIdentifiers = false;
 
   public:
-    explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
-                     LLVMContext &C);
+    LLVM_ABI explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
+                              LLVMContext &C);
 
     lltok::Kind Lex() { return CurKind = LexToken(); }
 
@@ -101,11 +102,11 @@ namespace llvm {
     }
     bool ParseError(const Twine &Msg) { return ParseError(getLoc(), Msg); }
 
-    void Warning(LocTy WarningLoc, const Twine &Msg) const;
+    LLVM_ABI void Warning(LocTy WarningLoc, const Twine &Msg) const;
     void Warning(const Twine &Msg) const { return Warning(getLoc(), Msg); }
 
   private:
-    lltok::Kind LexToken();
+    LLVM_ABI lltok::Kind LexToken();
 
     int getNextChar();
     void SkipLineComment();
@@ -133,7 +134,7 @@ namespace llvm {
     void FP80HexToIntPair(const char *Buffer, const char *End,
                           uint64_t Pair[2]);
 
-    void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
+    LLVM_ABI void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
 
     void LexError(LocTy ErrorLoc, const Twine &Msg) {
       Error(ErrorLoc, Msg, ErrorPriority::Lexer);

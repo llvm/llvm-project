@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -121,7 +122,7 @@ public:
     return Names[getDesc(Opcode).NameOffset];
   }
 
-  void verifyNode(const SelectionDAG &DAG, const SDNode *N) const;
+  LLVM_ABI void verifyNode(const SelectionDAG &DAG, const SDNode *N) const;
 };
 
 } // namespace llvm

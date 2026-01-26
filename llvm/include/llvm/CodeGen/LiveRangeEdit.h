@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
@@ -39,10 +40,10 @@ class TargetRegisterInfo;
 class VirtRegMap;
 class VirtRegAuxInfo;
 
-class LiveRangeEdit : private MachineRegisterInfo::Delegate {
+class LLVM_ABI LiveRangeEdit : private MachineRegisterInfo::Delegate {
 public:
   /// Callback methods for LiveRangeEdit owners.
-  class Delegate {
+  class LLVM_ABI Delegate {
     virtual void anchor();
 
   public:

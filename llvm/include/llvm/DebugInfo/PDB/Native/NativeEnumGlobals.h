@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 #include <vector>
 
@@ -20,7 +21,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeEnumGlobals : public IPDBEnumChildren<PDBSymbol> {
+class LLVM_ABI NativeEnumGlobals : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumGlobals(NativeSession &Session,
                     std::vector<codeview::SymbolKind> Kinds);

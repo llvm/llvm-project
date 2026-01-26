@@ -14,6 +14,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Instruction;
@@ -92,13 +93,13 @@ public:
   }
   ///@}
 
-  void print(raw_ostream &OS, const Function &Fn) const;
+  LLVM_ABI void print(raw_ostream &OS, const Function &Fn) const;
 
   ///@{
   /// Non-const methods used by AssignmentTrackingAnalysis (which invalidate
   /// analysis results if called incorrectly).
-  void init(FunctionVarLocsBuilder &Builder);
-  void clear();
+  LLVM_ABI void init(FunctionVarLocsBuilder &Builder);
+  LLVM_ABI void clear();
   ///@}
 };
 
@@ -109,7 +110,7 @@ class DebugAssignmentTrackingAnalysis
 
 public:
   using Result = FunctionVarLocs;
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class DebugAssignmentTrackingPrinterPass
@@ -118,10 +119,10 @@ class DebugAssignmentTrackingPrinterPass
 
 public:
   DebugAssignmentTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class AssignmentTrackingAnalysis : public FunctionPass {
+class LLVM_ABI AssignmentTrackingAnalysis : public FunctionPass {
   std::unique_ptr<FunctionVarLocs> Results;
 
 public:

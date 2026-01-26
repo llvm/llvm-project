@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CAS/FileOffset.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::cas {
@@ -66,7 +67,7 @@ public:
 
   /// \returns the buffer that was allocated at \p create time, with size
   /// \p UserHeaderSize.
-  MutableArrayRef<uint8_t> getUserHeader() const;
+  LLVM_ABI MutableArrayRef<uint8_t> getUserHeader() const;
 
   LLVM_ABI_FOR_TEST size_t size() const;
   LLVM_ABI_FOR_TEST size_t capacity() const;

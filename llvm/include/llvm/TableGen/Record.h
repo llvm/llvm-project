@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/Timer.h"
@@ -58,7 +59,7 @@ class TGTimer;
 //  Type Classes
 //===----------------------------------------------------------------------===//
 
-class RecTy {
+class LLVM_ABI RecTy {
 public:
   /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
@@ -110,7 +111,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecTy &Ty) {
 }
 
 /// 'bit' - Represent a single bit
-class BitRecTy : public RecTy {
+class LLVM_ABI BitRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   BitRecTy(RecordKeeper &RK) : RecTy(BitRecTyKind, RK) {}
@@ -128,7 +129,7 @@ public:
 };
 
 /// 'bits<n>' - Represent a fixed number of bits
-class BitsRecTy : public RecTy {
+class LLVM_ABI BitsRecTy : public RecTy {
   unsigned Size;
 
   explicit BitsRecTy(RecordKeeper &RK, unsigned Sz)
@@ -149,7 +150,7 @@ public:
 };
 
 /// 'int' - Represent an integer value of no particular size
-class IntRecTy : public RecTy {
+class LLVM_ABI IntRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   IntRecTy(RecordKeeper &RK) : RecTy(IntRecTyKind, RK) {}
@@ -167,7 +168,7 @@ public:
 };
 
 /// 'string' - Represent an string value
-class StringRecTy : public RecTy {
+class LLVM_ABI StringRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   StringRecTy(RecordKeeper &RK) : RecTy(StringRecTyKind, RK) {}
@@ -186,7 +187,7 @@ public:
 
 /// 'list<Ty>' - Represent a list of element values, all of which must be of
 /// the specified type. The type is stored in ElementTy.
-class ListRecTy : public RecTy {
+class LLVM_ABI ListRecTy : public RecTy {
   friend const ListRecTy *RecTy::getListTy() const;
 
   const RecTy *ElementTy;
@@ -210,7 +211,7 @@ public:
 };
 
 /// 'dag' - Represent a dag fragment
-class DagRecTy : public RecTy {
+class LLVM_ABI DagRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   DagRecTy(RecordKeeper &RK) : RecTy(DagRecTyKind, RK) {}
@@ -229,9 +230,10 @@ public:
 ///
 /// The list of superclasses is non-redundant, i.e. only contains classes that
 /// are not the superclass of some other listed class.
-class RecordRecTy final : public RecTy,
-                          public FoldingSetNode,
-                          private TrailingObjects<RecordRecTy, const Record *> {
+class LLVM_ABI RecordRecTy final
+    : public RecTy,
+      public FoldingSetNode,
+      private TrailingObjects<RecordRecTy, const Record *> {
   friend TrailingObjects;
   friend class Record;
   friend detail::RecordKeeperImpl;
@@ -277,13 +279,13 @@ public:
 
 /// Find a common type that T1 and T2 convert to.
 /// Return 0 if no such type exists.
-const RecTy *resolveTypes(const RecTy *T1, const RecTy *T2);
+LLVM_ABI const RecTy *resolveTypes(const RecTy *T1, const RecTy *T2);
 
 //===----------------------------------------------------------------------===//
 //  Initializer Classes
 //===----------------------------------------------------------------------===//
 
-class Init {
+class LLVM_ABI Init {
 protected:
   /// Discriminator enum (for isa<>, dyn_cast<>, et al.)
   ///
@@ -415,7 +417,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
 
 /// This is the common superclass of types that have a specific,
 /// explicit type, stored in ValueTy.
-class TypedInit : public Init {
+class LLVM_ABI TypedInit : public Init {
   const RecTy *ValueTy;
 
 protected:
@@ -450,7 +452,7 @@ public:
 };
 
 /// '?' - Represents an uninitialized value.
-class UnsetInit final : public Init {
+class LLVM_ABI UnsetInit final : public Init {
   friend detail::RecordKeeperImpl;
 
   /// The record keeper that initialized this Init.
@@ -488,7 +490,7 @@ public:
 
 // Represent an argument.
 using ArgAuxType = std::variant<unsigned, const Init *>;
-class ArgumentInit final : public Init, public FoldingSetNode {
+class LLVM_ABI ArgumentInit final : public Init, public FoldingSetNode {
 public:
   enum Kind {
     Positional,
@@ -553,7 +555,7 @@ public:
 };
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
-class BitInit final : public TypedInit {
+class LLVM_ABI BitInit final : public TypedInit {
   friend detail::RecordKeeperImpl;
 
   bool Value;
@@ -586,9 +588,10 @@ public:
 
 /// '{ a, b, c }' - Represents an initializer for a BitsRecTy value.
 /// It contains a vector of bits, whose size is determined by the type.
-class BitsInit final : public TypedInit,
-                       public FoldingSetNode,
-                       private TrailingObjects<BitsInit, const Init *> {
+class LLVM_ABI BitsInit final
+    : public TypedInit,
+      public FoldingSetNode,
+      private TrailingObjects<BitsInit, const Init *> {
   friend TrailingObjects;
   unsigned NumBits;
 
@@ -632,7 +635,7 @@ public:
 };
 
 /// '7' - Represent an initialization by a literal integer value.
-class IntInit final : public TypedInit {
+class LLVM_ABI IntInit final : public TypedInit {
   int64_t Value;
 
   explicit IntInit(RecordKeeper &RK, int64_t V)
@@ -663,7 +666,7 @@ public:
 };
 
 /// "anonymous_n" - Represent an anonymous record name
-class AnonymousNameInit final : public TypedInit {
+class LLVM_ABI AnonymousNameInit final : public TypedInit {
   unsigned Value;
 
   explicit AnonymousNameInit(RecordKeeper &RK, unsigned V)
@@ -693,7 +696,7 @@ public:
 };
 
 /// "foo" - Represent an initialization by a string value.
-class StringInit final : public TypedInit {
+class LLVM_ABI StringInit final : public TypedInit {
 public:
   enum StringFormat {
     SF_String, // Format as "text"
@@ -746,9 +749,10 @@ public:
 
 /// [AL, AH, CL] - Represent a list of defs
 ///
-class ListInit final : public TypedInit,
-                       public FoldingSetNode,
-                       private TrailingObjects<ListInit, const Init *> {
+class LLVM_ABI ListInit final
+    : public TypedInit,
+      public FoldingSetNode,
+      private TrailingObjects<ListInit, const Init *> {
   friend TrailingObjects;
   unsigned NumElements;
 
@@ -813,7 +817,7 @@ public:
 
 /// Base class for operators
 ///
-class OpInit : public TypedInit {
+class LLVM_ABI OpInit : public TypedInit {
 protected:
   explicit OpInit(InitKind K, const RecTy *Type, uint8_t Opc)
       : TypedInit(K, Type, Opc) {}
@@ -832,7 +836,7 @@ public:
 
 /// !op (X) - Transform an init.
 ///
-class UnOpInit final : public OpInit, public FoldingSetNode {
+class LLVM_ABI UnOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum UnaryOp : uint8_t {
     TOLOWER,
@@ -882,7 +886,7 @@ public:
 };
 
 /// !op (X, Y) - Combine two inits.
-class BinOpInit final : public OpInit, public FoldingSetNode {
+class LLVM_ABI BinOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t {
     ADD,
@@ -955,7 +959,7 @@ public:
 };
 
 /// !op (X, Y, Z) - Combine two inits.
-class TernOpInit final : public OpInit, public FoldingSetNode {
+class LLVM_ABI TernOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum TernaryOp : uint8_t {
     SUBST,
@@ -1011,9 +1015,10 @@ public:
 /// !cond(condition_1: value1, ... , condition_n: value)
 /// Selects the first value for which condition is true.
 /// Otherwise reports an error.
-class CondOpInit final : public TypedInit,
-                         public FoldingSetNode,
-                         private TrailingObjects<CondOpInit, const Init *> {
+class LLVM_ABI CondOpInit final
+    : public TypedInit,
+      public FoldingSetNode,
+      private TrailingObjects<CondOpInit, const Init *> {
   friend TrailingObjects;
   unsigned NumConds;
   const RecTy *ValType;
@@ -1080,7 +1085,7 @@ public:
 };
 
 /// !foldl (a, b, expr, start, lst) - Fold over a list.
-class FoldOpInit final : public TypedInit, public FoldingSetNode {
+class LLVM_ABI FoldOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const Init *Start, *List, *A, *B, *Expr;
 
@@ -1115,7 +1120,7 @@ public:
 };
 
 /// !isa<type>(expr) - Dynamically determine the type of an expression.
-class IsAOpInit final : public TypedInit, public FoldingSetNode {
+class LLVM_ABI IsAOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *CheckType;
   const Init *Expr;
@@ -1149,7 +1154,7 @@ public:
 
 /// !exists<type>(expr) - Dynamically determine if a record of `type` named
 /// `expr` exists.
-class ExistsOpInit final : public TypedInit, public FoldingSetNode {
+class LLVM_ABI ExistsOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *CheckType;
   const Init *Expr;
@@ -1184,7 +1189,7 @@ public:
 /// !instances<type>([regex]) - Produces a list of records whose type is `type`.
 /// If `regex` is provided, only records whose name matches the regular
 /// expression `regex` will be included.
-class InstancesOpInit final : public TypedInit, public FoldingSetNode {
+class LLVM_ABI InstancesOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *Type;
   const Init *Regex;
@@ -1217,7 +1222,7 @@ public:
 };
 
 /// 'Opcode' - Represent a reference to an entire variable object.
-class VarInit final : public TypedInit {
+class LLVM_ABI VarInit final : public TypedInit {
   const Init *VarName;
 
   explicit VarInit(const Init *VN, const RecTy *T)
@@ -1254,7 +1259,7 @@ public:
 };
 
 /// Opcode{0} - Represent access to one bit of a variable or field.
-class VarBitInit final : public TypedInit {
+class LLVM_ABI VarBitInit final : public TypedInit {
   const TypedInit *TI;
   unsigned Bit;
 
@@ -1291,7 +1296,7 @@ public:
 };
 
 /// AL - Represent a reference to a 'def' in the description
-class DefInit final : public TypedInit {
+class LLVM_ABI DefInit final : public TypedInit {
   friend class Record;
 
   const Record *Def;
@@ -1322,7 +1327,7 @@ public:
 
 /// classname<targs...> - Represent an uninstantiated anonymous class
 /// instantiation.
-class VarDefInit final
+class LLVM_ABI VarDefInit final
     : public TypedInit,
       public FoldingSetNode,
       private TrailingObjects<VarDefInit, const ArgumentInit *> {
@@ -1377,7 +1382,7 @@ public:
 };
 
 /// X.Y - Represent a reference to a subfield of a variable
-class FieldInit final : public TypedInit {
+class LLVM_ABI FieldInit final : public TypedInit {
   const Init *Rec;             // Record we are referring to
   const StringInit *FieldName; // Field we are accessing
 
@@ -1420,7 +1425,7 @@ public:
 /// (v a, b) - Represent a DAG tree value. DAG inits are required
 /// to have at least one value then a (possibly empty) list of arguments. Each
 /// argument can have a name associated with it.
-class DagInit final
+class LLVM_ABI DagInit final
     : public TypedInit,
       public FoldingSetNode,
       private TrailingObjects<DagInit, const Init *, const StringInit *> {
@@ -1559,14 +1564,14 @@ private:
   SmallVector<SMRange, 0> ReferenceLocs;
 
 public:
-  RecordVal(const Init *N, const RecTy *T, FieldKind K);
-  RecordVal(const Init *N, SMLoc Loc, const RecTy *T, FieldKind K);
+  LLVM_ABI RecordVal(const Init *N, const RecTy *T, FieldKind K);
+  LLVM_ABI RecordVal(const Init *N, SMLoc Loc, const RecTy *T, FieldKind K);
 
   /// Get the record keeper used to unique this value.
   RecordKeeper &getRecordKeeper() const { return Name->getRecordKeeper(); }
 
   /// Get the name of the field as a StringRef.
-  StringRef getName() const;
+  LLVM_ABI StringRef getName() const;
 
   /// Get the name of the field as an Init.
   const Init *getNameInit() const { return Name; }
@@ -1593,16 +1598,16 @@ public:
   const RecTy *getType() const { return TyAndKind.getPointer(); }
 
   /// Get the type of the field for printing purposes.
-  std::string getPrintType() const;
+  LLVM_ABI std::string getPrintType() const;
 
   /// Get the value of the field as an Init.
   const Init *getValue() const { return Value; }
 
   /// Set the value of the field from an Init.
-  bool setValue(const Init *V);
+  LLVM_ABI bool setValue(const Init *V);
 
   /// Set the value and source location of the field.
-  bool setValue(const Init *V, SMLoc NewLoc);
+  LLVM_ABI bool setValue(const Init *V, SMLoc NewLoc);
 
   /// Add a reference to this record value.
   void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
@@ -1615,10 +1620,10 @@ public:
   void setUsed(bool Used) { IsUsed = Used; }
   bool isUsed() const { return IsUsed; }
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// Print the value to an output stream, possibly with a semicolon.
-  void print(raw_ostream &OS, bool PrintSem = true) const;
+  LLVM_ABI void print(raw_ostream &OS, bool PrintSem = true) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const RecordVal &RV) {
@@ -1678,7 +1683,7 @@ private:
 
   RecordKind Kind;
 
-  void checkName();
+  LLVM_ABI void checkName();
 
 public:
   // Constructs a record.
@@ -1703,7 +1708,7 @@ public:
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
         Kind(O.Kind) {}
 
-  static unsigned getNewUID(RecordKeeper &RK);
+  LLVM_ABI static unsigned getNewUID(RecordKeeper &RK);
 
   unsigned getID() const { return ID; }
 
@@ -1715,7 +1720,7 @@ public:
     return getNameInit()->getAsUnquotedString();
   }
 
-  void setName(const Init *Name); // Also updates RecordKeeper.
+  LLVM_ABI void setName(const Init *Name); // Also updates RecordKeeper.
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
   void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
@@ -1731,13 +1736,13 @@ public:
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
 
   // Update a class location when encountering a (re-)definition.
-  void updateClassLoc(SMLoc Loc);
+  LLVM_ABI void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
-  const RecordRecTy *getType() const;
+  LLVM_ABI const RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
-  DefInit *getDefInit() const;
+  LLVM_ABI DefInit *getDefInit() const;
 
   bool isClass() const { return Kind == RK_Class; }
 
@@ -1837,9 +1842,9 @@ public:
 
   void appendDumps(const Record *Rec) { Dumps.append(Rec->Dumps); }
 
-  void checkRecordAssertions();
-  void emitRecordDumps();
-  void checkUnusedTemplateArgs();
+  LLVM_ABI void checkRecordAssertions();
+  LLVM_ABI void emitRecordDumps();
+  LLVM_ABI void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
     for (const Record *SC : make_first_range(DirectSuperClasses)) {
@@ -1875,31 +1880,32 @@ public:
   ///
   /// This is a final resolve: any error messages, e.g. due to undefined !cast
   /// references, are generated now.
-  void resolveReferences(const Init *NewName = nullptr);
+  LLVM_ABI void resolveReferences(const Init *NewName = nullptr);
 
   /// Apply the resolver to the name of the record as well as to the
   /// initializers of all fields of the record except SkipVal.
   ///
   /// The resolver should not resolve any of the fields itself, to avoid
   /// recursion / infinite loops.
-  void resolveReferences(Resolver &R, const RecordVal *SkipVal = nullptr);
+  LLVM_ABI void resolveReferences(Resolver &R,
+                                  const RecordVal *SkipVal = nullptr);
 
   RecordKeeper &getRecords() const {
     return TrackedRecords;
   }
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   //===--------------------------------------------------------------------===//
   // High-level methods useful to tablegen back-ends
   //
 
   /// Return the source location for the named field.
-  SMLoc getFieldLoc(StringRef FieldName) const;
+  LLVM_ABI SMLoc getFieldLoc(StringRef FieldName) const;
 
   /// Return the initializer for a value with the specified name, or throw an
   /// exception if the field does not exist.
-  const Init *getValueInit(StringRef FieldName) const;
+  LLVM_ABI const Init *getValueInit(StringRef FieldName) const;
 
   /// Return true if the named field is unset.
   bool isValueUnset(StringRef FieldName) const {
@@ -1909,78 +1915,81 @@ public:
   /// This method looks up the specified field and returns its value as a
   /// string, throwing an exception if the field does not exist or if the value
   /// is not a string.
-  StringRef getValueAsString(StringRef FieldName) const;
+  LLVM_ABI StringRef getValueAsString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// string, throwing an exception if the value is not a string and
   /// std::nullopt if the field does not exist.
-  std::optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
+  LLVM_ABI std::optional<StringRef>
+  getValueAsOptionalString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// BitsInit, throwing an exception if the field does not exist or if the
   /// value is not the right type.
-  const BitsInit *getValueAsBitsInit(StringRef FieldName) const;
+  LLVM_ABI const BitsInit *getValueAsBitsInit(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// ListInit, throwing an exception if the field does not exist or if the
   /// value is not the right type.
-  const ListInit *getValueAsListInit(StringRef FieldName) const;
+  LLVM_ABI const ListInit *getValueAsListInit(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of records, throwing an exception if the field does not exist or
   /// if the value is not the right type.
-  std::vector<const Record *> getValueAsListOfDefs(StringRef FieldName) const;
+  LLVM_ABI std::vector<const Record *>
+  getValueAsListOfDefs(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of integers, throwing an exception if the field does not exist or
   /// if the value is not the right type.
-  std::vector<int64_t> getValueAsListOfInts(StringRef FieldName) const;
+  LLVM_ABI std::vector<int64_t> getValueAsListOfInts(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of strings, throwing an exception if the field does not exist or
   /// if the value is not the right type.
-  std::vector<StringRef> getValueAsListOfStrings(StringRef FieldName) const;
+  LLVM_ABI std::vector<StringRef>
+  getValueAsListOfStrings(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// Record, throwing an exception if the field does not exist or if the value
   /// is not the right type.
-  const Record *getValueAsDef(StringRef FieldName) const;
+  LLVM_ABI const Record *getValueAsDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// Record, returning null if the field exists but is "uninitialized" (i.e.
   /// set to `?`), and throwing an exception if the field does not exist or if
   /// its value is not the right type.
-  const Record *getValueAsOptionalDef(StringRef FieldName) const;
+  LLVM_ABI const Record *getValueAsOptionalDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a bit,
   /// throwing an exception if the field does not exist or if the value is not
   /// the right type.
-  bool getValueAsBit(StringRef FieldName) const;
+  LLVM_ABI bool getValueAsBit(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a bit.
   /// If the field is unset, sets Unset to true and returns false.
-  bool getValueAsBitOrUnset(StringRef FieldName, bool &Unset) const;
+  LLVM_ABI bool getValueAsBitOrUnset(StringRef FieldName, bool &Unset) const;
 
   /// This method looks up the specified field and returns its value as an
   /// int64_t, throwing an exception if the field does not exist or if the
   /// value is not the right type.
-  int64_t getValueAsInt(StringRef FieldName) const;
+  LLVM_ABI int64_t getValueAsInt(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as an Dag,
   /// throwing an exception if the field does not exist or if the value is not
   /// the right type.
-  const DagInit *getValueAsDag(StringRef FieldName) const;
+  LLVM_ABI const DagInit *getValueAsDag(StringRef FieldName) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const Record &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
 class RecordKeeper {
   using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
   using GlobalMap = std::map<std::string, const Init *, std::less<>>;
 
 public:
-  RecordKeeper();
-  ~RecordKeeper();
+  LLVM_ABI RecordKeeper();
+  LLVM_ABI ~RecordKeeper();
 
   /// Return the internal implementation of the RecordKeeper.
   detail::RecordKeeperImpl &getImpl() { return *Impl; }
@@ -2044,7 +2053,7 @@ public:
     assert(Ins && "Global already exists");
   }
 
-  const Init *getNewAnonymousName();
+  LLVM_ABI const Init *getNewAnonymousName();
 
   TGTimer &getTimer() const { return *Timer; }
 
@@ -2053,21 +2062,22 @@ public:
 
   /// Get all the concrete records that inherit from the one specified
   /// class. The class must be defined.
-  ArrayRef<const Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+  LLVM_ABI ArrayRef<const Record *>
+  getAllDerivedDefinitions(StringRef ClassName) const;
 
   /// Get all the concrete records that inherit from all the specified
   /// classes. The classes must be defined.
-  std::vector<const Record *>
+  LLVM_ABI std::vector<const Record *>
   getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const;
 
   /// Get all the concrete records that inherit from specified class, if the
   /// class is defined. Returns an empty vector if the class is not defined.
-  ArrayRef<const Record *>
+  LLVM_ABI ArrayRef<const Record *>
   getAllDerivedDefinitionsIfDefined(StringRef ClassName) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
-  void dumpAllocationStats(raw_ostream &OS) const;
+  LLVM_ABI void dumpAllocationStats(raw_ostream &OS) const;
 
 private:
   RecordKeeper(RecordKeeper &&) = delete;
@@ -2188,7 +2198,7 @@ struct LessRecordRegister {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
 
 //===----------------------------------------------------------------------===//
 //  Resolvers
@@ -2224,7 +2234,7 @@ public:
 };
 
 /// Resolve arbitrary mappings.
-class MapResolver final : public Resolver {
+class LLVM_ABI MapResolver final : public Resolver {
   struct MappedValue {
     const Init *V;
     bool Resolved;
@@ -2250,7 +2260,7 @@ public:
 };
 
 /// Resolve all variables from a record except for unset variables.
-class RecordResolver final : public Resolver {
+class LLVM_ABI RecordResolver final : public Resolver {
   DenseMap<const Init *, const Init *> Cache;
   SmallVector<const Init *, 4> Stack;
   const Init *Name = nullptr;
@@ -2287,7 +2297,7 @@ public:
 
 /// (Optionally) delegate resolving to a sub-resolver, and keep track whether
 /// there were unresolved references.
-class TrackUnresolvedResolver final : public Resolver {
+class LLVM_ABI TrackUnresolvedResolver final : public Resolver {
   Resolver *R;
   bool FoundUnresolved = false;
 
@@ -2302,7 +2312,7 @@ public:
 
 /// Do not resolve anything, but keep track of whether a given variable was
 /// referenced.
-class HasReferenceResolver final : public Resolver {
+class LLVM_ABI HasReferenceResolver final : public Resolver {
   const Init *VarNameToTrack;
   bool Found = false;
 
@@ -2315,8 +2325,8 @@ public:
   const Init *resolve(const Init *VarName) override;
 };
 
-void EmitDetailedRecords(const RecordKeeper &RK, raw_ostream &OS);
-void EmitJSON(const RecordKeeper &RK, raw_ostream &OS);
+LLVM_ABI void EmitDetailedRecords(const RecordKeeper &RK, raw_ostream &OS);
+LLVM_ABI void EmitJSON(const RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm
 

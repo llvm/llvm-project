@@ -16,6 +16,7 @@
 #define LLVM_ANALYSIS_KERNELINFO_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,7 +28,7 @@ class KernelInfoPrinter : public PassInfoMixin<KernelInfoPrinter> {
 public:
   explicit KernelInfoPrinter(TargetMachine *TM) : TM(TM) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };

@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_SCALAR_INSTSIMPLIFYPASS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -31,7 +32,7 @@ namespace llvm {
 /// `instcombine` pass instead.
 class InstSimplifyPass : public PassInfoMixin<InstSimplifyPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

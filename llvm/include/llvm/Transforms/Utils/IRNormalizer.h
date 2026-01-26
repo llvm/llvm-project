@@ -2,6 +2,7 @@
 #define LLVM_TRANSFORMS_UTILS_IRNORMALIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,7 +29,8 @@ public:
   IRNormalizerPass(IRNormalizerOptions Options = IRNormalizerOptions())
       : Options(Options) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) const;
+  LLVM_ABI PreservedAnalyses run(Function &F,
+                                 FunctionAnalysisManager &AM) const;
 };
 
 } // namespace llvm

@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_SCALAR_DROPUNNECESSARYASSUMES_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -22,7 +23,7 @@ struct DropUnnecessaryAssumesPass
   DropUnnecessaryAssumesPass(bool DropDereferenceable = false)
       : DropDereferenceable(DropDereferenceable) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   bool DropDereferenceable;

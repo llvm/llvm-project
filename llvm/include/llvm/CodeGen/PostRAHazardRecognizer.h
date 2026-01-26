@@ -10,14 +10,15 @@
 #define LLVM_CODEGEN_POSTRAHAZARDRECOGNIZER_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class PostRAHazardRecognizerPass
     : public PassInfoMixin<PostRAHazardRecognizerPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

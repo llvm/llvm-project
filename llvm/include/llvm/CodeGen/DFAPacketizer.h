@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/Support/Automaton.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -48,7 +49,7 @@ class TargetInstrInfo;
 
 // This class extends ScheduleDAGInstrs and overrides the schedule method
 // to build the dependence graph.
-class DefaultVLIWScheduler : public ScheduleDAGInstrs {
+class LLVM_ABI DefaultVLIWScheduler : public ScheduleDAGInstrs {
 private:
   AAResults *AA;
   /// Ordered list of DAG postprocessing steps.
@@ -100,19 +101,19 @@ public:
 
   // Check if the resources occupied by a MCInstrDesc are available in
   // the current state.
-  bool canReserveResources(const MCInstrDesc *MID);
+  LLVM_ABI bool canReserveResources(const MCInstrDesc *MID);
 
   // Reserve the resources occupied by a MCInstrDesc and change the current
   // state to reflect that change.
-  void reserveResources(const MCInstrDesc *MID);
+  LLVM_ABI void reserveResources(const MCInstrDesc *MID);
 
   // Check if the resources occupied by a machine instruction are available
   // in the current state.
-  bool canReserveResources(MachineInstr &MI);
+  LLVM_ABI bool canReserveResources(MachineInstr &MI);
 
   // Reserve the resources occupied by a machine instruction and change the
   // current state to reflect that change.
-  void reserveResources(MachineInstr &MI);
+  LLVM_ABI void reserveResources(MachineInstr &MI);
 
   // Return the resources used by the InstIdx'th instruction added to this
   // packet. The resources are returned as a bitvector of functional units.
@@ -121,7 +122,7 @@ public:
   // returns one arbitary valid packing.
   //
   // Requires setTrackResources(true) to have been called.
-  unsigned getUsedResources(unsigned InstIdx);
+  LLVM_ABI unsigned getUsedResources(unsigned InstIdx);
 
   const InstrItineraryData *getInstrItins() const { return InstrItins; }
 };
@@ -133,7 +134,7 @@ public:
 // in the current packet. If no dependency is found, I is added to current
 // packet and the machine resource is marked as taken. If any dependency is
 // found, a target API call is made to prune the dependence.
-class VLIWPacketizerList {
+class LLVM_ABI VLIWPacketizerList {
 protected:
   MachineFunction &MF;
   const TargetInstrInfo *TII;

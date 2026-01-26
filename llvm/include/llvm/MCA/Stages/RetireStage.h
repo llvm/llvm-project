@@ -21,11 +21,12 @@
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
 #include "llvm/MCA/Stages/Stage.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {
 
-class RetireStage final : public Stage {
+class LLVM_ABI RetireStage final : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
   RetireControlUnit &RCU;
   RegisterFile &PRF;

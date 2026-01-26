@@ -15,29 +15,32 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H
 
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class IRBuilderBase;
 
 /// Convert the given Cmpxchg into primitive load and compare.
-bool lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI);
+LLVM_ABI bool lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI);
 
 /// Emit IR to implement the given cmpxchg operation on values in registers,
 /// returning the new value.
-std::pair<Value *, Value *> buildCmpXchgValue(IRBuilderBase &Builder,
-                                              Value *Ptr, Value *Cmp,
-                                              Value *Val, Align Alignment);
+LLVM_ABI std::pair<Value *, Value *> buildCmpXchgValue(IRBuilderBase &Builder,
+                                                       Value *Ptr, Value *Cmp,
+                                                       Value *Val,
+                                                       Align Alignment);
 
 /// Convert the given RMWI into primitive load and stores,
 /// assuming that doing so is legal. Return true if the lowering
 /// succeeds.
-bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
+LLVM_ABI bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
 
 /// Emit IR to implement the given atomicrmw operation on values in registers,
 /// returning the new value.
-Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op, IRBuilderBase &Builder,
-                           Value *Loaded, Value *Val);
+LLVM_ABI Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
+                                    IRBuilderBase &Builder, Value *Loaded,
+                                    Value *Val);
 }
 
 #endif // LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H

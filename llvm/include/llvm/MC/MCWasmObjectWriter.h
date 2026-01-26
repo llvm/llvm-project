@@ -10,6 +10,7 @@
 #define LLVM_MC_MCWASMOBJECTWRITER_H
 
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -19,7 +20,7 @@ class MCSectionWasm;
 class MCValue;
 class raw_pwrite_stream;
 
-class MCWasmObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCWasmObjectTargetWriter : public MCObjectTargetWriter {
   const unsigned Is64Bit : 1;
   const unsigned IsEmscripten : 1;
 
@@ -50,11 +51,11 @@ public:
 /// \param MOTW - The target specific Wasm writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createWasmObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                        raw_pwrite_stream &OS);
 
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createWasmDwoObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                           raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
 

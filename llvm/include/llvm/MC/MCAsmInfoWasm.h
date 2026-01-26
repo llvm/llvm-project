@@ -10,9 +10,10 @@
 #define LLVM_MC_MCASMINFOWASM_H
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class MCAsmInfoWasm : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoWasm : public MCAsmInfo {
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
 

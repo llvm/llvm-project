@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_MACHINECOPYPROPAGATION_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -21,8 +22,8 @@ public:
   MachineCopyPropagationPass(bool UseCopyInstr = false)
       : UseCopyInstr(UseCopyInstr) {}
 
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoVRegs();

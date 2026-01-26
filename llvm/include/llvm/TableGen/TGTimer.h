@@ -15,6 +15,7 @@
 #define LLVM_TABLEGEN_TGTIMER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Timer.h"
 #include <memory>
 
@@ -38,17 +39,17 @@ public:
   }
 
   /// Start timing a phase. Automatically stops any previous phase timer.
-  void startTimer(StringRef Name);
+  LLVM_ABI void startTimer(StringRef Name);
 
   /// Stop timing a phase.
-  void stopTimer();
+  LLVM_ABI void stopTimer();
 
   /// Start timing the overall backend. If the backend itself starts a timer,
   /// then this timer is cleared.
-  void startBackendTimer(StringRef Name);
+  LLVM_ABI void startBackendTimer(StringRef Name);
 
   /// Stop timing the overall backend.
-  void stopBackendTimer();
+  LLVM_ABI void stopBackendTimer();
 
   /// Stop phase timing and print the report.
   void stopPhaseTiming() { TimingGroup.reset(); }

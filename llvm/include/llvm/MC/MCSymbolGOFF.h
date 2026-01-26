@@ -19,6 +19,7 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -74,7 +75,7 @@ public:
                     : GOFF::ESDBindingStrength::ESD_BST_Strong;
   }
 
-  bool setSymbolAttribute(MCSymbolAttr Attribute);
+  LLVM_ABI bool setSymbolAttribute(MCSymbolAttr Attribute);
 
   bool isInEDSection() const {
     return isInSection() && static_cast<MCSectionGOFF &>(getSection()).isED();

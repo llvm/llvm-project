@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_XCOFF_PPC64_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::jitlink {
 
@@ -24,13 +25,14 @@ namespace llvm::jitlink {
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
 ///
-Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromXCOFFObject_ppc64(
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromXCOFFObject_ppc64(
     MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// jit-link the given object buffer, which must be a XCOFF ppc64 object file.
 ///
-void link_XCOFF_ppc64(std::unique_ptr<LinkGraph> G,
-                      std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_XCOFF_ppc64(std::unique_ptr<LinkGraph> G,
+                               std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace llvm::jitlink
 

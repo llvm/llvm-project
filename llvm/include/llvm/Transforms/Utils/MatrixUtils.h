@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_UTILS_MATRIXUTILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DomTreeUpdater;
@@ -70,9 +71,9 @@ struct TileInfo {
   /// for ColumnLoop.Index = 0..NumColumns
   ///   for RowLoop.Index = 0..NumRows
   ///     for InnerLoop.Index = 0..NumInner
-  BasicBlock *CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
-                               IRBuilderBase &B, DomTreeUpdater &DTU,
-                               LoopInfo &LI);
+  LLVM_ABI BasicBlock *CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
+                                        IRBuilderBase &B, DomTreeUpdater &DTU,
+                                        LoopInfo &LI);
 
 private:
   /// Creates a new loop with header, body and latch blocks that iterates from

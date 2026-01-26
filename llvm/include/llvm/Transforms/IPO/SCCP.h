@@ -21,6 +21,7 @@
 #define LLVM_TRANSFORMS_IPO_SCCP_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -53,7 +54,7 @@ public:
 
   IPSCCPPass(IPSCCPOptions Options) : Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   bool isFuncSpecEnabled() const { return Options.AllowFuncSpec; }
 };

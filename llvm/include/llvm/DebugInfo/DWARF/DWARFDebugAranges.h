@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -22,8 +23,8 @@ class DWARFContext;
 
 class DWARFDebugAranges {
 public:
-  void generate(DWARFContext *CTX);
-  uint64_t findAddress(uint64_t Address) const;
+  LLVM_ABI void generate(DWARFContext *CTX);
+  LLVM_ABI uint64_t findAddress(uint64_t Address) const;
 
 private:
   void clear();

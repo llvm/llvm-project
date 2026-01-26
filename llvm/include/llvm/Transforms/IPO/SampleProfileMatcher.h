@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
 #include <unordered_set>
@@ -129,7 +130,7 @@ public:
       : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
         LTOPhase(LTOPhase), FuncNameToProfNameMap(&FuncNameToProfNameMap),
         SymbolMap(&SymMap), PSL(PSL) {};
-  void runOnModule();
+  LLVM_ABI void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.

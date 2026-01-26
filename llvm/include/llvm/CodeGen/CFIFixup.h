@@ -16,9 +16,10 @@
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class CFIFixup : public MachineFunctionPass {
+class LLVM_ABI CFIFixup : public MachineFunctionPass {
 public:
   static char ID;
 

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -27,13 +28,13 @@ class MBFIWrapper {
  public:
   MBFIWrapper(const MachineBlockFrequencyInfo &I) : MBFI(I) {}
 
-  BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
-  void setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F);
-  std::optional<uint64_t>
+  LLVM_ABI BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
+  LLVM_ABI void setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F);
+  LLVM_ABI std::optional<uint64_t>
   getBlockProfileCount(const MachineBasicBlock *MBB) const;
 
-  void view(const Twine &Name, bool isSimple = true);
-  BlockFrequency getEntryFreq() const;
+  LLVM_ABI void view(const Twine &Name, bool isSimple = true);
+  LLVM_ABI BlockFrequency getEntryFreq() const;
   const MachineBlockFrequencyInfo &getMBFI() const { return MBFI; }
 
 private:

@@ -229,6 +229,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
@@ -425,9 +426,9 @@ struct NodeAllocator {
     return reinterpret_cast<NodeBase *>(Blocks[BlockN] + Offset);
   }
 
-  NodeId id(const NodeBase *P) const;
-  Node New();
-  void clear();
+  LLVM_ABI NodeId id(const NodeBase *P) const;
+  LLVM_ABI Node New();
+  LLVM_ABI void clear();
 
 private:
   void startNewBlock();
@@ -449,7 +450,7 @@ private:
 
 using RegisterSet = std::set<RegisterRef, RegisterRefLess>;
 
-struct TargetOperandInfo {
+struct LLVM_ABI TargetOperandInfo {
   TargetOperandInfo(const TargetInstrInfo &tii) : TII(tii) {}
   virtual ~TargetOperandInfo() = default;
 
@@ -499,7 +500,7 @@ public:
   void setFlags(uint16_t F) { setAttrs(NodeAttrs::set_flags(getAttrs(), F)); }
 
   // Insert node NA after "this" in the circular chain.
-  void append(Node NA);
+  LLVM_ABI void append(Node NA);
 
   // Initialize all members to 0.
   void init() { memset(this, 0, sizeof *this); }
@@ -553,15 +554,15 @@ using NodeSet = std::set<NodeId>;
 struct RefNode : public NodeBase {
   RefNode() = default;
 
-  RegisterRef getRegRef(const DataFlowGraph &G) const;
+  LLVM_ABI RegisterRef getRegRef(const DataFlowGraph &G) const;
 
   MachineOperand &getOp() {
     assert(!(getFlags() & NodeAttrs::PhiRef));
     return *RefData.Op;
   }
 
-  void setRegRef(RegisterRef RR, DataFlowGraph &G);
-  void setRegRef(MachineOperand *Op, DataFlowGraph &G);
+  LLVM_ABI void setRegRef(RegisterRef RR, DataFlowGraph &G);
+  LLVM_ABI void setRegRef(MachineOperand *Op, DataFlowGraph &G);
 
   NodeId getReachingDef() const { return RefData.RD; }
   void setReachingDef(NodeId RD) { RefData.RD = RD; }
@@ -582,7 +583,7 @@ struct RefNode : public NodeBase {
   template <typename Predicate>
   Ref getNextRef(RegisterRef RR, Predicate P, bool NextOnly,
                  const DataFlowGraph &G);
-  Node getOwner(const DataFlowGraph &G);
+  LLVM_ABI Node getOwner(const DataFlowGraph &G);
 };
 
 struct DefNode : public RefNode {
@@ -591,11 +592,11 @@ struct DefNode : public RefNode {
   NodeId getReachedUse() const { return RefData.Def.DU; }
   void setReachedUse(NodeId U) { RefData.Def.DU = U; }
 
-  void linkToDef(NodeId Self, Def DA);
+  LLVM_ABI void linkToDef(NodeId Self, Def DA);
 };
 
 struct UseNode : public RefNode {
-  void linkToDef(NodeId Self, Def DA);
+  LLVM_ABI void linkToDef(NodeId Self, Def DA);
 };
 
 struct PhiUseNode : public UseNode {
@@ -615,19 +616,19 @@ struct CodeNode : public NodeBase {
   }
   void setCode(void *C) { CodeData.CP = C; }
 
-  Node getFirstMember(const DataFlowGraph &G) const;
-  Node getLastMember(const DataFlowGraph &G) const;
-  void addMember(Node NA, const DataFlowGraph &G);
-  void addMemberAfter(Node MA, Node NA, const DataFlowGraph &G);
-  void removeMember(Node NA, const DataFlowGraph &G);
+  LLVM_ABI Node getFirstMember(const DataFlowGraph &G) const;
+  LLVM_ABI Node getLastMember(const DataFlowGraph &G) const;
+  LLVM_ABI void addMember(Node NA, const DataFlowGraph &G);
+  LLVM_ABI void addMemberAfter(Node MA, Node NA, const DataFlowGraph &G);
+  LLVM_ABI void removeMember(Node NA, const DataFlowGraph &G);
 
-  NodeList members(const DataFlowGraph &G) const;
+  LLVM_ABI NodeList members(const DataFlowGraph &G) const;
   template <typename Predicate>
   NodeList members_if(Predicate P, const DataFlowGraph &G) const;
 };
 
 struct InstrNode : public CodeNode {
-  Node getOwner(const DataFlowGraph &G);
+  LLVM_ABI Node getOwner(const DataFlowGraph &G);
 };
 
 struct PhiNode : public InstrNode {
@@ -645,7 +646,7 @@ struct BlockNode : public CodeNode {
     return CodeNode::getCode<MachineBasicBlock *>();
   }
 
-  void addPhi(Phi PA, const DataFlowGraph &G);
+  LLVM_ABI void addPhi(Phi PA, const DataFlowGraph &G);
 };
 
 struct FuncNode : public CodeNode {
@@ -653,18 +654,21 @@ struct FuncNode : public CodeNode {
     return CodeNode::getCode<MachineFunction *>();
   }
 
-  Block findBlock(const MachineBasicBlock *BB, const DataFlowGraph &G) const;
-  Block getEntryBlock(const DataFlowGraph &G);
+  LLVM_ABI Block findBlock(const MachineBasicBlock *BB,
+                           const DataFlowGraph &G) const;
+  LLVM_ABI Block getEntryBlock(const DataFlowGraph &G);
 };
 
 struct DataFlowGraph {
-  DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
-                const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
-                const MachineDominanceFrontier &mdf);
-  DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
-                const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
-                const MachineDominanceFrontier &mdf,
-                const TargetOperandInfo &toi);
+  LLVM_ABI DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
+                         const TargetRegisterInfo &tri,
+                         const MachineDominatorTree &mdt,
+                         const MachineDominanceFrontier &mdf);
+  LLVM_ABI DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
+                         const TargetRegisterInfo &tri,
+                         const MachineDominatorTree &mdt,
+                         const MachineDominanceFrontier &mdf,
+                         const TargetOperandInfo &toi);
 
   struct Config {
     Config() = default;
@@ -679,12 +683,12 @@ struct DataFlowGraph {
     std::set<RegisterId> TrackRegs;
   };
 
-  NodeBase *ptr(NodeId N) const;
+  LLVM_ABI NodeBase *ptr(NodeId N) const;
   template <typename T> T ptr(NodeId N) const { //
     return static_cast<T>(ptr(N));
   }
 
-  NodeId id(const NodeBase *P) const;
+  LLVM_ABI NodeId id(const NodeBase *P) const;
 
   template <typename T> NodeAddr<T> addr(NodeId N) const {
     return {ptr<T>(N), N};
@@ -732,7 +736,7 @@ struct DataFlowGraph {
     private:
       friend struct DefStack;
 
-      Iterator(const DefStack &S, bool Top);
+      LLVM_ABI Iterator(const DefStack &S, bool Top);
 
       // Pos-1 is the index in the StorageType object that corresponds to
       // the top of the DefStack.
@@ -745,12 +749,12 @@ struct DataFlowGraph {
 
     iterator top() const { return Iterator(*this, true); }
     iterator bottom() const { return Iterator(*this, false); }
-    unsigned size() const;
+    LLVM_ABI unsigned size() const;
 
     void push(Def DA) { Stack.push_back(DA); }
-    void pop();
-    void start_block(NodeId N);
-    void clear_block(NodeId N);
+    LLVM_ABI void pop();
+    LLVM_ABI void start_block(NodeId N);
+    LLVM_ABI void clear_block(NodeId N);
 
   private:
     friend struct Iterator;
@@ -761,8 +765,8 @@ struct DataFlowGraph {
       return (P.Addr == nullptr) && (N == 0 || P.Id == N);
     }
 
-    unsigned nextUp(unsigned P) const;
-    unsigned nextDown(unsigned P) const;
+    LLVM_ABI unsigned nextUp(unsigned P) const;
+    LLVM_ABI unsigned nextDown(unsigned P) const;
 
     StorageType Stack;
   };
@@ -771,12 +775,12 @@ struct DataFlowGraph {
   // Map: Register (physical or virtual) -> DefStack
   using DefStackMap = std::unordered_map<RegisterId, DefStack>;
 
-  void build(const Config &config);
+  LLVM_ABI void build(const Config &config);
   void build() { build(Config()); }
 
-  void pushAllDefs(Instr IA, DefStackMap &DM);
-  void markBlock(NodeId B, DefStackMap &DefM);
-  void releaseBlock(NodeId B, DefStackMap &DefM);
+  LLVM_ABI void pushAllDefs(Instr IA, DefStackMap &DM);
+  LLVM_ABI void markBlock(NodeId B, DefStackMap &DefM);
+  LLVM_ABI void releaseBlock(NodeId B, DefStackMap &DefM);
 
   PackedRegisterRef pack(RegisterRef RR) {
     return {RR.Id, LMI.getIndexForLaneMask(RR.Mask)};
@@ -788,13 +792,13 @@ struct DataFlowGraph {
     return RegisterRef(PR.Id, LMI.getLaneMaskForIndex(PR.MaskId));
   }
 
-  RegisterRef makeRegRef(unsigned Reg, unsigned Sub) const;
-  RegisterRef makeRegRef(const MachineOperand &Op) const;
+  LLVM_ABI RegisterRef makeRegRef(unsigned Reg, unsigned Sub) const;
+  LLVM_ABI RegisterRef makeRegRef(const MachineOperand &Op) const;
 
-  Ref getNextRelated(Instr IA, Ref RA) const;
-  Ref getNextShadow(Instr IA, Ref RA, bool Create);
+  LLVM_ABI Ref getNextRelated(Instr IA, Ref RA) const;
+  LLVM_ABI Ref getNextShadow(Instr IA, Ref RA, bool Create);
 
-  NodeList getRelatedRefs(Instr IA, Ref RA) const;
+  LLVM_ABI NodeList getRelatedRefs(Instr IA, Ref RA) const;
 
   Block findBlock(MachineBasicBlock *BB) const { return BlockNodes.at(BB); }
 
@@ -810,8 +814,8 @@ struct DataFlowGraph {
       removeFromOwner(DA);
   }
 
-  bool isTracked(RegisterRef RR) const;
-  bool hasUntrackedRef(Stmt S, bool IgnoreReserved = true) const;
+  LLVM_ABI bool isTracked(RegisterRef RR) const;
+  LLVM_ABI bool hasUntrackedRef(Stmt S, bool IgnoreReserved = true) const;
 
   // Some useful filters.
   template <uint16_t Kind> static bool IsRef(const Node BA) {
@@ -877,8 +881,8 @@ private:
   void linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P);
   void linkBlockRefs(DefStackMap &DefM, BlockRefsMap &PhiClobberM, Block BA);
 
-  void unlinkUseDF(Use UA);
-  void unlinkDefDF(Def DA);
+  LLVM_ABI void unlinkUseDF(Use UA);
+  LLVM_ABI void unlinkDefDF(Def DA);
 
   void removeFromOwner(Ref RA) {
     Instr IA = RA.Addr->getOwner(*this);
@@ -972,23 +976,23 @@ template <typename T> struct PrintNode : Print<NodeAddr<T>> {
       : Print<NodeAddr<T>>(x, g) {}
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Def> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Use> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<PhiUse> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Ref> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeList> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeSet> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Phi> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Stmt> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Instr> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<Func> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterSet> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterAggr> &P);
-raw_ostream &operator<<(raw_ostream &OS,
-                        const Print<DataFlowGraph::DefStack> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Def> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Use> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<PhiUse> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Ref> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<NodeList> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<NodeSet> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Phi> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Stmt> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Instr> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<Func> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterSet> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterAggr> &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const Print<DataFlowGraph::DefStack> &P);
 
 } // end namespace rdf
 } // end namespace llvm

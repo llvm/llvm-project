@@ -10,6 +10,7 @@
 
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCSymbolELF : public MCSymbol {
@@ -25,28 +26,28 @@ public:
 
   const MCExpr *getSize() const { return SymbolSize; }
 
-  void setVisibility(unsigned Visibility);
-  unsigned getVisibility() const;
+  LLVM_ABI void setVisibility(unsigned Visibility);
+  LLVM_ABI unsigned getVisibility() const;
 
-  void setOther(unsigned Other);
-  unsigned getOther() const;
+  LLVM_ABI void setOther(unsigned Other);
+  LLVM_ABI unsigned getOther() const;
 
-  void setType(unsigned Type) const;
-  unsigned getType() const;
+  LLVM_ABI void setType(unsigned Type) const;
+  LLVM_ABI unsigned getType() const;
 
-  void setBinding(unsigned Binding) const;
-  unsigned getBinding() const;
+  LLVM_ABI void setBinding(unsigned Binding) const;
+  LLVM_ABI unsigned getBinding() const;
 
-  bool isBindingSet() const;
+  LLVM_ABI bool isBindingSet() const;
 
-  void setIsWeakref() const;
-  bool isWeakref() const;
+  LLVM_ABI void setIsWeakref() const;
+  LLVM_ABI bool isWeakref() const;
 
-  void setIsSignature() const;
-  bool isSignature() const;
+  LLVM_ABI void setIsSignature() const;
+  LLVM_ABI bool isSignature() const;
 
-  void setMemtag(bool Tagged);
-  bool isMemtag() const;
+  LLVM_ABI void setMemtag(bool Tagged);
+  LLVM_ABI bool isMemtag() const;
 
 private:
   void setIsBindingSet() const;

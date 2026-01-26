@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CycleInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -116,7 +117,7 @@ struct ControlFlowHub {
 
   /// Return the unified loop exit block and a flag indicating if the CFG was
   /// changed at all.
-  std::pair<BasicBlock *, bool>
+  LLVM_ABI std::pair<BasicBlock *, bool>
   finalize(DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
            const StringRef Prefix,
            std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);

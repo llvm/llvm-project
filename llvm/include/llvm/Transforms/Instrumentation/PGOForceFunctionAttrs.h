@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_PGOFORCEFUNCTIONATTRS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/PGOOptions.h"
 
 namespace llvm {
@@ -18,7 +19,7 @@ struct PGOForceFunctionAttrsPass
     : public PassInfoMixin<PGOForceFunctionAttrsPass> {
   PGOForceFunctionAttrsPass(PGOOptions::ColdFuncOpt ColdType)
       : ColdType(ColdType) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   PGOOptions::ColdFuncOpt ColdType;

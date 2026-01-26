@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -35,8 +36,8 @@ public:
   void setVerbose(bool Verbose) { IsVerbose = Verbose; }
   void setNullAtEnd(bool NullAtEnd) { AppendNull = NullAtEnd; }
 
-  Error process(StringRef InputData,
-    std::unique_ptr<raw_fd_ostream> OutputStream);
+  LLVM_ABI Error process(StringRef InputData,
+                         std::unique_ptr<raw_fd_ostream> OutputStream);
 
 private:
   StringRef InputData;

@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_ELIMAVAILEXTERN_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -24,7 +25,7 @@ class Module;
 class EliminateAvailableExternallyPass
     : public PassInfoMixin<EliminateAvailableExternallyPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

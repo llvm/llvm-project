@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_COROUTINES_COROCONDITIONALWRAPPER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -18,11 +19,12 @@ class Module;
 // Only runs passes in the contained pass manager if the module contains any
 // coroutine intrinsic declarations.
 struct CoroConditionalWrapper : PassInfoMixin<CoroConditionalWrapper> {
-  CoroConditionalWrapper(ModulePassManager &&);
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI CoroConditionalWrapper(ModulePassManager &&);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   ModulePassManager PM;

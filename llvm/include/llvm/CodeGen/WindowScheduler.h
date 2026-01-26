@@ -47,6 +47,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -58,7 +59,7 @@ enum WindowSchedulingFlag {
 
 /// The main class in the implementation of the target independent window
 /// scheduler.
-class WindowScheduler {
+class LLVM_ABI WindowScheduler {
 protected:
   MachineSchedContext *Context = nullptr;
   MachineFunction *MF = nullptr;

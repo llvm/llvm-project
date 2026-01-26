@@ -11,11 +11,12 @@
 
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {
 
-class NativeCompilandSymbol : public NativeRawSymbol {
+class LLVM_ABI NativeCompilandSymbol : public NativeRawSymbol {
 public:
   NativeCompilandSymbol(NativeSession &Session, SymIndexId SymbolId,
                         DbiModuleDescriptor MI);

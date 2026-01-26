@@ -22,6 +22,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {
@@ -42,27 +43,27 @@ class WriteRef {
   MCPhysReg RegisterID;
   WriteState *Write;
 
-  static const unsigned INVALID_IID;
+  LLVM_ABI static const unsigned INVALID_IID;
 
 public:
   WriteRef()
       : IID(INVALID_IID), WriteBackCycle(), WriteResID(), RegisterID(),
         Write() {}
-  WriteRef(unsigned SourceIndex, WriteState *WS);
+  LLVM_ABI WriteRef(unsigned SourceIndex, WriteState *WS);
 
   unsigned getSourceIndex() const { return IID; }
-  unsigned getWriteBackCycle() const;
+  LLVM_ABI unsigned getWriteBackCycle() const;
 
   const WriteState *getWriteState() const { return Write; }
   WriteState *getWriteState() { return Write; }
-  unsigned getWriteResourceID() const;
-  MCPhysReg getRegisterID() const;
+  LLVM_ABI unsigned getWriteResourceID() const;
+  LLVM_ABI MCPhysReg getRegisterID() const;
 
-  void commit();
-  void notifyExecuted(unsigned Cycle);
+  LLVM_ABI void commit();
+  LLVM_ABI void notifyExecuted(unsigned Cycle);
 
-  bool hasKnownWriteBackCycle() const;
-  bool isWriteZero() const;
+  LLVM_ABI bool hasKnownWriteBackCycle() const;
+  LLVM_ABI bool isWriteZero() const;
   bool isValid() const { return getSourceIndex() != INVALID_IID; }
 
   /// Returns true if this register write has been executed, and the new
@@ -229,13 +230,13 @@ class RegisterFile : public HardwareUnit {
   void initialize(const MCSchedModel &SM, unsigned NumRegs);
 
 public:
-  RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
-               unsigned NumRegs = 0);
+  LLVM_ABI RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
+                        unsigned NumRegs = 0);
 
   // Collects writes that are in a RAW dependency with RS.
-  void collectWrites(const MCSubtargetInfo &STI, const ReadState &RS,
-                     SmallVectorImpl<WriteRef> &Writes,
-                     SmallVectorImpl<WriteRef> &CommittedWrites) const;
+  LLVM_ABI void collectWrites(const MCSubtargetInfo &STI, const ReadState &RS,
+                              SmallVectorImpl<WriteRef> &Writes,
+                              SmallVectorImpl<WriteRef> &CommittedWrites) const;
   struct RAWHazard {
     MCPhysReg RegisterID = 0;
     int CyclesLeft = 0;
@@ -245,29 +246,31 @@ public:
     bool hasUnknownCycles() const { return CyclesLeft < 0; }
   };
 
-  RAWHazard checkRAWHazards(const MCSubtargetInfo &STI,
-                            const ReadState &RS) const;
+  LLVM_ABI RAWHazard checkRAWHazards(const MCSubtargetInfo &STI,
+                                     const ReadState &RS) const;
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of
   // allocated physical registers in each register file modified by the write.
   // No physical regiser is allocated if this write is from a zero-idiom.
-  void addRegisterWrite(WriteRef Write, MutableArrayRef<unsigned> UsedPhysRegs);
+  LLVM_ABI void addRegisterWrite(WriteRef Write,
+                                 MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Collect writes that are in a data dependency with RS, and update RS
   // internal state.
-  void addRegisterRead(ReadState &RS, const MCSubtargetInfo &STI) const;
+  LLVM_ABI void addRegisterRead(ReadState &RS,
+                                const MCSubtargetInfo &STI) const;
 
   // Removes write \param WS from the register mappings.
   // Physical registers may be released to reflect this update.
   // No registers are released if this write is from a zero-idiom.
-  void removeRegisterWrite(const WriteState &WS,
-                           MutableArrayRef<unsigned> FreedPhysRegs);
+  LLVM_ABI void removeRegisterWrite(const WriteState &WS,
+                                    MutableArrayRef<unsigned> FreedPhysRegs);
 
   // Returns true if the PRF at index `PRFIndex` can eliminate a move from RS to
   // WS.
-  bool canEliminateMove(const WriteState &WS, const ReadState &RS,
-                        unsigned PRFIndex) const;
+  LLVM_ABI bool canEliminateMove(const WriteState &WS, const ReadState &RS,
+                                 unsigned PRFIndex) const;
 
   // Returns true if this instruction can be fully eliminated at register
   // renaming stage. On success, this method updates the internal state of each
@@ -275,8 +278,8 @@ public:
   // flag for known zero registers. It internally uses `canEliminateMove` to
   // determine if a read/write pair can be eliminated. By default, it assumes a
   // register swap if there is more than one register definition.
-  bool tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
-                              MutableArrayRef<ReadState> Reads);
+  LLVM_ABI bool tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
+                                       MutableArrayRef<ReadState> Reads);
 
   // Checks if there are enough physical registers in the register files.
   // Returns a "response mask" where each bit represents the response from a
@@ -287,17 +290,17 @@ public:
   //
   // Current implementation can simulate up to 32 register files (including the
   // special register file at index #0).
-  unsigned isAvailable(ArrayRef<MCPhysReg> Regs) const;
+  LLVM_ABI unsigned isAvailable(ArrayRef<MCPhysReg> Regs) const;
 
   // Returns the number of PRFs implemented by this processor.
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
-  unsigned getElapsedCyclesFromWriteBack(const WriteRef &WR) const;
+  LLVM_ABI unsigned getElapsedCyclesFromWriteBack(const WriteRef &WR) const;
 
-  void onInstructionExecuted(Instruction *IS);
+  LLVM_ABI void onInstructionExecuted(Instruction *IS);
 
   // Notify each PRF that a new cycle just started.
-  void cycleStart();
+  LLVM_ABI void cycleStart();
 
   void cycleEnd() { ++CurrentCycle; }
 

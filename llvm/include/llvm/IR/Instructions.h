@@ -4972,10 +4972,11 @@ protected:
   friend class Instruction;
 
   /// Clone an identical PtrToAddrInst.
-  PtrToAddrInst *cloneImpl() const;
+  LLVM_ABI PtrToAddrInst *cloneImpl() const;
 
 public:
   /// Constructor with insert-before-instruction semantics
+  LLVM_ABI
   PtrToAddrInst(Value *S,                  ///< The value to be converted
                 Type *Ty,                  ///< The type to convert to
                 const Twine &NameStr = "", ///< A name for the new instruction

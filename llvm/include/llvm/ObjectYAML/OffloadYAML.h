@@ -17,6 +17,7 @@
 
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <optional>
 
@@ -54,23 +55,23 @@ namespace llvm {
 namespace yaml {
 
 template <> struct ScalarEnumerationTraits<object::ImageKind> {
-  static void enumeration(IO &IO, object::ImageKind &Value);
+  LLVM_ABI static void enumeration(IO &IO, object::ImageKind &Value);
 };
 
 template <> struct ScalarEnumerationTraits<object::OffloadKind> {
-  static void enumeration(IO &IO, object::OffloadKind &Value);
+  LLVM_ABI static void enumeration(IO &IO, object::OffloadKind &Value);
 };
 
 template <> struct MappingTraits<OffloadYAML::Binary> {
-  static void mapping(IO &IO, OffloadYAML::Binary &O);
+  LLVM_ABI static void mapping(IO &IO, OffloadYAML::Binary &O);
 };
 
 template <> struct MappingTraits<OffloadYAML::Binary::StringEntry> {
-  static void mapping(IO &IO, OffloadYAML::Binary::StringEntry &M);
+  LLVM_ABI static void mapping(IO &IO, OffloadYAML::Binary::StringEntry &M);
 };
 
 template <> struct MappingTraits<OffloadYAML::Binary::Member> {
-  static void mapping(IO &IO, OffloadYAML::Binary::Member &M);
+  LLVM_ABI static void mapping(IO &IO, OffloadYAML::Binary::Member &M);
 };
 
 } // end namespace yaml

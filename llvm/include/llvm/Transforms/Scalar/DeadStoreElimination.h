@@ -18,6 +18,7 @@
 #define LLVM_TRANSFORMS_SCALAR_DEADSTOREELIMINATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,7 +28,7 @@ class Function;
 /// only the redundant stores that are local to a single Basic Block.
 class DSEPass : public PassInfoMixin<DSEPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // end namespace llvm

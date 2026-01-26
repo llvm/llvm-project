@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_INLINEASMLOWERING_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
@@ -25,7 +26,7 @@ class Register;
 class TargetLowering;
 class Value;
 
-class InlineAsmLowering {
+class LLVM_ABI InlineAsmLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();

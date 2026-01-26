@@ -36,39 +36,39 @@ class LiveDebugVariables {
 
 public:
   class LDVImpl;
-  LiveDebugVariables();
-  ~LiveDebugVariables();
-  LiveDebugVariables(LiveDebugVariables &&);
+  LLVM_ABI LiveDebugVariables();
+  LLVM_ABI ~LiveDebugVariables();
+  LLVM_ABI LiveDebugVariables(LiveDebugVariables &&);
 
-  void analyze(MachineFunction &MF, LiveIntervals *LIS);
+  LLVM_ABI void analyze(MachineFunction &MF, LiveIntervals *LIS);
   /// splitRegister - Move any user variables in OldReg to the live ranges in
   /// NewRegs where they are live. Mark the values as unavailable where no new
   /// register is live.
-  void splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
-                     LiveIntervals &LIS);
+  LLVM_ABI void splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
+                              LiveIntervals &LIS);
 
   /// emitDebugValues - Emit new DBG_VALUE instructions reflecting the changes
   /// that happened during register allocation.
   /// @param VRM Rename virtual registers according to map.
-  void emitDebugValues(VirtRegMap *VRM);
+  LLVM_ABI void emitDebugValues(VirtRegMap *VRM);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().
   void dump() const;
 #endif
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
 
-  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &Inv);
 
 private:
   std::unique_ptr<LDVImpl> PImpl;
 };
 
-class LiveDebugVariablesWrapperLegacy : public MachineFunctionPass {
+class LLVM_ABI LiveDebugVariablesWrapperLegacy : public MachineFunctionPass {
   std::unique_ptr<LiveDebugVariables> Impl;
 
 public:
@@ -104,7 +104,8 @@ public:
     return MachineFunctionProperties().setTracksDebugUserValues();
   }
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 class LiveDebugVariablesPrinterPass
@@ -114,8 +115,8 @@ class LiveDebugVariablesPrinterPass
 public:
   LiveDebugVariablesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 } // end namespace llvm
 

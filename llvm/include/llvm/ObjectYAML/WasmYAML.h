@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -184,7 +185,7 @@ struct Comdat {
   std::vector<ComdatEntry> Entries;
 };
 
-struct Section {
+struct LLVM_ABI Section {
   explicit Section(SectionType SecType) : Type(SecType) {}
   virtual ~Section();
 
@@ -452,151 +453,153 @@ namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<WasmYAML::FileHeader> {
-  static void mapping(IO &IO, WasmYAML::FileHeader &FileHdr);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::FileHeader &FileHdr);
 };
 
 template <> struct MappingTraits<std::unique_ptr<WasmYAML::Section>> {
-  static void mapping(IO &IO, std::unique_ptr<WasmYAML::Section> &Section);
+  LLVM_ABI static void mapping(IO &IO,
+                               std::unique_ptr<WasmYAML::Section> &Section);
 };
 
 template <> struct MappingTraits<WasmYAML::Object> {
-  static void mapping(IO &IO, WasmYAML::Object &Object);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Object &Object);
 };
 
 template <> struct MappingTraits<WasmYAML::Import> {
-  static void mapping(IO &IO, WasmYAML::Import &Import);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Import &Import);
 };
 
 template <> struct MappingTraits<WasmYAML::Export> {
-  static void mapping(IO &IO, WasmYAML::Export &Export);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Export &Export);
 };
 
 template <> struct MappingTraits<WasmYAML::Global> {
-  static void mapping(IO &IO, WasmYAML::Global &Global);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Global &Global);
 };
 
 template <> struct ScalarBitSetTraits<WasmYAML::LimitFlags> {
-  static void bitset(IO &IO, WasmYAML::LimitFlags &Value);
+  LLVM_ABI static void bitset(IO &IO, WasmYAML::LimitFlags &Value);
 };
 
 template <> struct ScalarBitSetTraits<WasmYAML::SymbolFlags> {
-  static void bitset(IO &IO, WasmYAML::SymbolFlags &Value);
+  LLVM_ABI static void bitset(IO &IO, WasmYAML::SymbolFlags &Value);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::SymbolKind> {
-  static void enumeration(IO &IO, WasmYAML::SymbolKind &Kind);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::SymbolKind &Kind);
 };
 
 template <> struct ScalarBitSetTraits<WasmYAML::SegmentFlags> {
-  static void bitset(IO &IO, WasmYAML::SegmentFlags &Value);
+  LLVM_ABI static void bitset(IO &IO, WasmYAML::SegmentFlags &Value);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::SectionType> {
-  static void enumeration(IO &IO, WasmYAML::SectionType &Type);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::SectionType &Type);
 };
 
 template <> struct MappingTraits<WasmYAML::Signature> {
-  static void mapping(IO &IO, WasmYAML::Signature &Signature);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Signature &Signature);
 };
 
 template <> struct MappingTraits<WasmYAML::Table> {
-  static void mapping(IO &IO, WasmYAML::Table &Table);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Table &Table);
 };
 
 template <> struct MappingTraits<WasmYAML::Limits> {
-  static void mapping(IO &IO, WasmYAML::Limits &Limits);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Limits &Limits);
 };
 
 template <> struct MappingTraits<WasmYAML::Function> {
-  static void mapping(IO &IO, WasmYAML::Function &Function);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Function &Function);
 };
 
 template <> struct MappingTraits<WasmYAML::Relocation> {
-  static void mapping(IO &IO, WasmYAML::Relocation &Relocation);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Relocation &Relocation);
 };
 
 template <> struct MappingTraits<WasmYAML::NameEntry> {
-  static void mapping(IO &IO, WasmYAML::NameEntry &NameEntry);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::NameEntry &NameEntry);
 };
 
 template <> struct MappingTraits<WasmYAML::ProducerEntry> {
-  static void mapping(IO &IO, WasmYAML::ProducerEntry &ProducerEntry);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::ProducerEntry &ProducerEntry);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::FeaturePolicyPrefix> {
-  static void enumeration(IO &IO, WasmYAML::FeaturePolicyPrefix &Prefix);
+  LLVM_ABI static void enumeration(IO &IO,
+                                   WasmYAML::FeaturePolicyPrefix &Prefix);
 };
 
 template <> struct MappingTraits<WasmYAML::FeatureEntry> {
-  static void mapping(IO &IO, WasmYAML::FeatureEntry &FeatureEntry);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::FeatureEntry &FeatureEntry);
 };
 
 template <> struct MappingTraits<WasmYAML::SegmentInfo> {
-  static void mapping(IO &IO, WasmYAML::SegmentInfo &SegmentInfo);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::SegmentInfo &SegmentInfo);
 };
 
 template <> struct MappingTraits<WasmYAML::LocalDecl> {
-  static void mapping(IO &IO, WasmYAML::LocalDecl &LocalDecl);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::LocalDecl &LocalDecl);
 };
 
 template <> struct MappingTraits<WasmYAML::InitExpr> {
-  static void mapping(IO &IO, WasmYAML::InitExpr &Expr);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::InitExpr &Expr);
 };
 
 template <> struct MappingTraits<WasmYAML::DataSegment> {
-  static void mapping(IO &IO, WasmYAML::DataSegment &Segment);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::DataSegment &Segment);
 };
 
 template <> struct MappingTraits<WasmYAML::ElemSegment> {
-  static void mapping(IO &IO, WasmYAML::ElemSegment &Segment);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::ElemSegment &Segment);
 };
 
 template <> struct MappingTraits<WasmYAML::SymbolInfo> {
-  static void mapping(IO &IO, WasmYAML::SymbolInfo &Info);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::SymbolInfo &Info);
 };
 
 template <> struct MappingTraits<WasmYAML::InitFunction> {
-  static void mapping(IO &IO, WasmYAML::InitFunction &Init);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::InitFunction &Init);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::ComdatKind> {
-  static void enumeration(IO &IO, WasmYAML::ComdatKind &Kind);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::ComdatKind &Kind);
 };
 
 template <> struct MappingTraits<WasmYAML::ComdatEntry> {
-  static void mapping(IO &IO, WasmYAML::ComdatEntry &ComdatEntry);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::ComdatEntry &ComdatEntry);
 };
 
 template <> struct MappingTraits<WasmYAML::Comdat> {
-  static void mapping(IO &IO, WasmYAML::Comdat &Comdat);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::Comdat &Comdat);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::ValueType> {
-  static void enumeration(IO &IO, WasmYAML::ValueType &Type);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::ValueType &Type);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::ExportKind> {
-  static void enumeration(IO &IO, WasmYAML::ExportKind &Kind);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::ExportKind &Kind);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::TableType> {
-  static void enumeration(IO &IO, WasmYAML::TableType &Type);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::TableType &Type);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::Opcode> {
-  static void enumeration(IO &IO, WasmYAML::Opcode &Opcode);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::Opcode &Opcode);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::RelocType> {
-  static void enumeration(IO &IO, WasmYAML::RelocType &Kind);
+  LLVM_ABI static void enumeration(IO &IO, WasmYAML::RelocType &Kind);
 };
 
 template <> struct MappingTraits<WasmYAML::DylinkImportInfo> {
-  static void mapping(IO &IO, WasmYAML::DylinkImportInfo &Info);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::DylinkImportInfo &Info);
 };
 
 template <> struct MappingTraits<WasmYAML::DylinkExportInfo> {
-  static void mapping(IO &IO, WasmYAML::DylinkExportInfo &Info);
+  LLVM_ABI static void mapping(IO &IO, WasmYAML::DylinkExportInfo &Info);
 };
 
 } // end namespace yaml
