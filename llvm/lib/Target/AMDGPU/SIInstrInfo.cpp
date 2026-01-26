@@ -1313,10 +1313,10 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
   return Reg;
 }
 
-MachineInstr *
+std::pair<MachineInstr *, unsigned>
 SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
   if (MI.getOpcode() != AMDGPU::REG_SEQUENCE || MI.getNumOperands() != 5)
-    return nullptr;
+    return std::make_pair(nullptr,0);
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   int64_t SubRegValues[2];
@@ -1336,9 +1336,9 @@ SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
                     ->MC->getSizeInBits() *
                 2 ==
             MRI.getRegClass(MI.getOperand(0).getReg())->MC->getSizeInBits())
-      return RealDefs[(I + 1) % 2];
+      return std::make_pair(RealDefs[(I + 1) % 2],(I+1)%2);
 
-  return nullptr;
+  return std::make_pair(nullptr,0);
 }
 
 bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
@@ -11016,7 +11016,62 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
-  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+  const auto replaceSourceReg = [](MachineInstr &MI, Register Old, Register New) {
+    for (int I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
+      {
+        MI.getOperand(I).setReg(New);
+        break;
+      }
+  };
+
+  const auto replaceSourceImm = [](MachineInstr &MI, uint64_t Old, uint64_t New) {
+    for (int I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isImm() && MI.getOperand(I).getImm() == Old)
+      {
+        MI.getOperand(I).setImm(New);
+        break;
+      }
+  };
+
+  const auto strengthReduceSCMP = [&CmpInstr, &SrcReg, &CmpValue, MRI,
+                                   this, &replaceSourceReg,&replaceSourceImm]() -> bool {
+    MachineInstr *Def = MRI->getVRegDef(SrcReg);
+    if (!Def)
+      return false;
+
+    auto RegSequence = pierceThroughRegSequence(*Def);
+    if (!RegSequence.first)
+      return false;
+
+    unsigned OrigOpcode = CmpInstr.getOpcode();
+    if (OrigOpcode != AMDGPU::S_CMP_EQ_U64 &&
+        OrigOpcode != AMDGPU::S_CMP_LG_U64)
+      return false;
+
+    if(!RegSequence.second) //Lower 32 bits nonzero
+      if (CmpValue > UINT32_MAX) {
+        //Build MOV instruction to hard-code EQ ? 0 : 1
+      } else {
+        CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
+        replaceSourceReg(CmpInstr, SrcReg,
+                         RegSequence.first->getOperand(0).getReg());
+        SrcReg = RegSequence.first->getOperand(0).getReg();
+      }
+    else // Upper 32 bits nonzero
+      if (CmpValue % UINT32_MAX) {
+        // Build MOV instruction to hard-code EQ ? 0 : 1
+      } else {
+        CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
+        replaceSourceReg(CmpInstr,SrcReg,RegSequence.first->getOperand(0).getReg());
+        replaceSourceImm(CmpInstr, CmpValue, (uint64_t)CmpValue >> 32);
+        RegSequence.first->getOperand(0).getReg();
+        CmpValue = (uint64_t)CmpValue >> 32;
+      }
+    return true;
+  };
+
+  const auto optimizeCmpSelect = [&CmpInstr, &SrcReg, &CmpValue, MRI,
                                   this](bool NeedInversion) -> bool {
     if (CmpValue != 0)
       return false;
@@ -11024,9 +11079,6 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
     if (!Def)
       return false;
-
-    if (MachineInstr *RegSequenceDef = pierceThroughRegSequence(*Def))
-      Def = RegSequenceDef;
 
     // For S_OP that set SCC = DST!=0, do the transformation
     //
@@ -11199,7 +11251,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GE_I32:
     return optimizeCmpAnd(1, 32, false, true);
   case AMDGPU::S_CMP_EQ_U64:
-    return optimizeCmpAnd(1, 64, true, false);
+    return strengthReduceSCMP() | optimizeCmpAnd(1, 64, true, false);
   case AMDGPU::S_CMP_LG_U32:
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
@@ -11213,7 +11265,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false) ||
+    return optimizeCmpAnd(0, 64, true, false) |
+           strengthReduceSCMP() |
            optimizeCmpSelect(/*NeedInversion=*/false);
   }
 
