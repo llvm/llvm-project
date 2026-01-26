@@ -3778,17 +3778,14 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
     bool IsBlockComment = false;
     if (Trimmed.starts_with("/*")) {
       IsBlockComment = true;
-      // Only skip multi-line comments if we haven't started collecting imports yet.
-      // Comments between imports should be associated with the import below.
-      if (ImportsInBlock.empty()) {
+      // Skip block comments before imports start.
+      if (ImportsInBlock.empty())
         Pos = Code.find("*/", SearchFrom + 2);
-      }
     }
 
-    // Check if we've encountered a type declaration - we're past imports.
-    if (!IsBlockComment && TypeDeclRegex.match(Trimmed)) {
+    // Check if we've encountered a type declaration.
+    if (!IsBlockComment && TypeDeclRegex.match(Trimmed))
       break;
-    }
 
     if (!IsBlockComment && ImportRegex.match(Line, &Matches)) {
       if (FormattingOff) {
