@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr fputil::ExceptValues<float16, 17> SINHF16_EXCEPTS_POS = {{
+LIBC_INLINE_VAR static constexpr fputil::ExceptValues<float16, 17> SINHF16_EXCEPTS_POS = {{
     // x = 0x1.714p-5, sinhf16(x) = 0x1.714p-5 (RZ)
     {0x29c5U, 0x29c5U, 1U, 0U, 1U},
     // x = 0x1.25p-4, sinhf16(x) = 0x1.25p-4 (RZ)
@@ -66,7 +66,7 @@ static constexpr fputil::ExceptValues<float16, 17> SINHF16_EXCEPTS_POS = {{
     {0x40f2U, 0x45e2U, 1U, 0U, 1U},
 }};
 
-static constexpr fputil::ExceptValues<float16, 13> SINHF16_EXCEPTS_NEG = {{
+LIBC_INLINE_VAR static constexpr fputil::ExceptValues<float16, 13> SINHF16_EXCEPTS_NEG = {{
     // x = -0x1.714p-5, sinhf16(x) = -0x1.714p-5 (RZ)
     {0xa9c5U, 0xa9c5U, 0U, 1U, 1U},
     // x = -0x1.25p-4, sinhf16(x) = -0x1.25p-4 (RZ)
@@ -96,7 +96,7 @@ static constexpr fputil::ExceptValues<float16, 13> SINHF16_EXCEPTS_NEG = {{
 }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-static constexpr float16 sinhf16(float16 x) {
+LIBC_INLINE static constexpr float16 sinhf16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
