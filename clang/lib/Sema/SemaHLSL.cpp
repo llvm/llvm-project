@@ -3590,8 +3590,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // Ensure input expr type is a scalar/vector and then
     // set the return type to the arg type
     QualType ArgType = TheCall->getArg(0)->getType();
-    auto *VTy = ArgType->getAs<VectorType>();
-    // not the scalar or vector<scalar>
+
     if (!(ArgType->isScalarType())) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_typecheck_expect_any_scalar_or_vector)
