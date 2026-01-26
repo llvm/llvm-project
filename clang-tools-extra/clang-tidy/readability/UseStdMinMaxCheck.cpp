@@ -85,23 +85,21 @@ static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
       RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
   QualType GlobalImplicitCastType;
   if (LhsCanonicalType != RhsCanonicalType) {
-    if (llvm::isa<IntegerLiteral>(CondRhs)) {
+    if (llvm::isa<IntegerLiteral>(CondRhs))
       GlobalImplicitCastType = getNonTemplateAlias(LhsType);
-    } else if (llvm::isa<IntegerLiteral>(CondLhs)) {
+    else if (llvm::isa<IntegerLiteral>(CondLhs))
       GlobalImplicitCastType = getNonTemplateAlias(RhsType);
-    } else {
+    else
       GlobalImplicitCastType = getNonTemplateAlias(ComparedType);
-    }
   }
   return GlobalImplicitCastType;
 }
 
-static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
-                                     const Expr *AssignLhs,
-                                     const SourceManager &Source,
-                                     const LangOptions &LO,
-                                     StringRef FunctionName,
-                                     const BinaryOperator *BO) {
+static std::string
+createReplacement(const Expr *CondLhs, const Expr *CondRhs,
+                  const Expr *AssignLhs, const SourceManager &Source,
+                  const LangOptions &LO, StringRef FunctionName,
+                  const BinaryOperator *BO, StringRef Comment = "") {
   const llvm::StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const llvm::StringRef CondRhsStr = Lexer::getSourceText(
@@ -116,7 +114,8 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
           (!GlobalImplicitCastType.isNull()
                ? "<" + GlobalImplicitCastType.getAsString() + ">("
                : "(") +
-          CondLhsStr + ", " + CondRhsStr + ");")
+          CondLhsStr + ", " + CondRhsStr + ");" + (Comment.empty() ? "" : " ") +
+          Comment)
       .str();
 }
 
@@ -172,13 +171,65 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
     const SourceManager &Source = *Result.SourceManager;
+    llvm::SmallString<64> Comment;
+
+    const auto AppendNormalized = [&](llvm::StringRef Text) {
+      Text = Text.ltrim();
+      if (!Text.empty()) {
+        if (!Comment.empty())
+          Comment += " ";
+        Comment += Text;
+      }
+    };
+
+    const auto GetSourceText = [&](SourceLocation StartLoc,
+                                   SourceLocation EndLoc) {
+      return Lexer::getSourceText(
+          CharSourceRange::getCharRange(
+              Lexer::getLocForEndOfToken(StartLoc, 0, Source, LO), EndLoc),
+          Source, LO);
+    };
+
+    // Captures:
+    // if (cond) // Comment A
+    // if (cond) /* Comment A */ { ... }
+    // if (cond) /* Comment A */ x = y;
+    AppendNormalized(
+        GetSourceText(If->getRParenLoc(), If->getThen()->getBeginLoc()));
+
+    if (const auto *CS = dyn_cast<CompoundStmt>(If->getThen())) {
+      const Stmt *Inner = CS->body_front();
+
+      // Captures:
+      // if (cond) { // Comment B
+      // ...
+      // }
+      // if (cond) { /* Comment B */ x = y; }
+      AppendNormalized(GetSourceText(CS->getBeginLoc(), Inner->getBeginLoc()));
+
+      // Captures:
+      // if (cond) { x = y; // Comment C }
+      // if (cond) { x = y; /* Comment C */ }
+      llvm::StringRef PostInner =
+          GetSourceText(Inner->getEndLoc(), CS->getEndLoc());
+
+      // Strip the trailing semicolon to avoid fixes like:
+      // x = std::min(x, y);; // comment
+      const size_t Semi = PostInner.find(';');
+      if (Semi != llvm::StringRef::npos &&
+          PostInner.take_front(Semi).trim().empty()) {
+        PostInner = PostInner.drop_front(Semi + 1);
+      }
+      AppendNormalized(PostInner);
+    }
+
     diag(IfLocation, "use `%0` instead of `%1`")
         << FunctionName << BinaryOp->getOpcodeStr()
         << FixItHint::CreateReplacement(
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
                createReplacement(CondLhs, CondRhs, AssignLhs, Source, LO,
-                                 FunctionName, BinaryOp))
+                                 FunctionName, BinaryOp, Comment))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };

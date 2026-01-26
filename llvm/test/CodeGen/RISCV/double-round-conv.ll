@@ -1388,8 +1388,3 @@ define double @test_roundeven_double(double %x) {
   ret double %a
 }
 
-declare double @llvm.floor.f64(double)
-declare double @llvm.ceil.f64(double)
-declare double @llvm.trunc.f64(double)
-declare double @llvm.round.f64(double)
-declare double @llvm.roundeven.f64(double)

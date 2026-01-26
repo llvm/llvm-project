@@ -364,7 +364,7 @@ private:
   void storeTopLevelDecls(DeclGroupRef DG);
 
   /// Check if we should skip (not analyze) the given function.
-  AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
+  AnalysisMode getModeForDecl(const Decl *D, AnalysisMode Mode) const;
   void runAnalysisOnTranslationUnit(ASTContext &C);
 
   /// Print \p S to stderr if \c Opts.AnalyzerDisplayProgress is set.
@@ -637,8 +637,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   // FIXME: This should be replaced with something that doesn't rely on
   // side-effects in PathDiagnosticConsumer's destructor. This is required when
   // used with option -disable-free.
-  const auto DiagFlusherScopeExit =
-      llvm::make_scope_exit([this] { Mgr.reset(); });
+  const llvm::scope_exit DiagFlusherScopeExit([this] { Mgr.reset(); });
 
   if (Opts.ShouldIgnoreBisonGeneratedFiles &&
       fileContainsString("/* A Bison parser, made by", C)) {
@@ -677,7 +676,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 }
 
 AnalysisConsumer::AnalysisMode
-AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
+AnalysisConsumer::getModeForDecl(const Decl *D, AnalysisMode Mode) const {
   if (!Opts.AnalyzeSpecificFunction.empty() &&
       AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction &&
       cross_tu::CrossTranslationUnitContext::getLookupName(D).value_or("") !=
@@ -695,7 +694,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 
   const SourceManager &SM = Ctx->getSourceManager();
 
-  const SourceLocation Loc = [&SM](Decl *D) -> SourceLocation {
+  const SourceLocation Loc = [&SM](const Decl *D) -> SourceLocation {
     const Stmt *Body = D->getBody();
     SourceLocation SL = Body ? Body->getBeginLoc() : D->getLocation();
     return SM.getExpansionLoc(SL);

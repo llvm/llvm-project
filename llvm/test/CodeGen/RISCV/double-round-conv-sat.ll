@@ -1502,13 +1502,3 @@ define i64 @test_rint_ui64(double %x) nounwind {
   ret i64 %b
 }
 
-declare double @llvm.floor.f64(double)
-declare double @llvm.ceil.f64(double)
-declare double @llvm.trunc.f64(double)
-declare double @llvm.round.f64(double)
-declare double @llvm.roundeven.f64(double)
-declare double @llvm.rint.f64(double)
-declare i32 @llvm.fptosi.sat.i32.f64(double)
-declare i64 @llvm.fptosi.sat.i64.f64(double)
-declare i32 @llvm.fptoui.sat.i32.f64(double)
-declare i64 @llvm.fptoui.sat.i64.f64(double)

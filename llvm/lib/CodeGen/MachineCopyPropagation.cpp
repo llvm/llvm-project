@@ -137,8 +137,8 @@ public:
       PreservedRegUnits.resize(TRI.getNumRegUnits());
       for (unsigned SafeReg = 0, E = TRI.getNumRegs(); SafeReg < E; ++SafeReg)
         if (!RegMaskOp.clobbersPhysReg(SafeReg))
-          for (auto SafeUnit : TRI.regunits(SafeReg))
-            PreservedRegUnits.set(SafeUnit);
+          for (MCRegUnit SafeUnit : TRI.regunits(SafeReg))
+            PreservedRegUnits.set(static_cast<unsigned>(SafeUnit));
 
       return PreservedRegUnits;
     }
@@ -995,8 +995,8 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // Invalidate all entries in the copy map which are not preserved by
         // this register mask.
         bool MIRefedinCopyInfo = false;
-        for (unsigned RegUnit : TRI->regunits(Reg)) {
-          if (!PreservedRegUnits.test(RegUnit))
+        for (MCRegUnit RegUnit : TRI->regunits(Reg)) {
+          if (!PreservedRegUnits.test(static_cast<unsigned>(RegUnit)))
             Tracker.clobberRegUnit(RegUnit, *TRI, *TII, UseCopyInstr);
           else {
             if (MaybeDead == Tracker.findCopyForUnit(RegUnit, *TRI)) {

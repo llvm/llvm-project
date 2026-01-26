@@ -404,6 +404,14 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
     Ret["locations"] = std::move(Locs);
   }
 
+  if (!Result.RelatedLocations.empty()) {
+    json::Array ReLocs;
+    for (auto &Range : Result.RelatedLocations) {
+      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
+    }
+    Ret["relatedLocations"] = std::move(ReLocs);
+  }
+
   if (!Result.PartialFingerprints.empty()) {
     json::Object fingerprints = {};
     for (auto &pair : Result.PartialFingerprints) {

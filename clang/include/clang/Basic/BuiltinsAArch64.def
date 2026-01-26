@@ -96,6 +96,10 @@ TARGET_BUILTIN(__builtin_arm_jcvt, "Zid", "nc", "v8.3a")
 // Prefetch
 BUILTIN(__builtin_arm_prefetch, "vvC*UiUiUiUi", "nc")
 
+// Range Prefetch
+BUILTIN(__builtin_arm_range_prefetch_x, "vvC*UiUiiUiiz", "n")
+BUILTIN(__builtin_arm_range_prefetch, "vvC*UiUiWUi", "n")
+
 // System Registers
 BUILTIN(__builtin_arm_rsr, "UicC*", "nc")
 BUILTIN(__builtin_arm_rsr64, "WUicC*", "nc")
@@ -108,12 +112,6 @@ BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 
 // Misc
 BUILTIN(__builtin_sponentry, "v*", "c")
-
-// Transactional Memory Extension
-BUILTIN(__builtin_arm_tstart, "WUi", "nj")
-BUILTIN(__builtin_arm_tcommit, "v", "n")
-BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
-BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
 // Armv8.5-A FP rounding intrinsics
 TARGET_BUILTIN(__builtin_arm_rint32zf, "ff", "", "v8.5a")

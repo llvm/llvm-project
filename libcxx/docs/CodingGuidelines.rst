@@ -165,6 +165,8 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
   This protects programmers from assuming too much about how the internals of a function work, making code more robust
   in the presence of future optimizations.
 
+``[[nodiscard]]`` should not be applied to conversion functions because Clang already diagnoses unused cast results.
+
 Applications of ``[[nodiscard]]`` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a ``.verify.cpp`` test. Many examples are available. Just look for tests with the suffix
 ``.nodiscard.verify.cpp``.

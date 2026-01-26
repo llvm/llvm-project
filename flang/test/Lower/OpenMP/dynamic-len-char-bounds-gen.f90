@@ -10,7 +10,7 @@ end subroutine TestCharLenBounds
 
 !CHECK: %[[DUMMY:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK: %[[UNBOX:.*]]:2 = fir.unboxchar %{{.*}} : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[UNBOX]]#0 typeparams %2#1 dummy_scope %[[DUMMY]] {uniq_name = "_QFtestcharlenboundsEclen"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[UNBOX]]#0 typeparams %2#1 dummy_scope %[[DUMMY]] arg {{[0-9]+}} {uniq_name = "_QFtestcharlenboundsEclen"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 !CHECK: %[[LB_START_IDX:.*]] = arith.constant 0 : index
 !CHECK: %[[STRIDE:.*]] = arith.constant 1 : index
 !CHECK: %[[EXTENT:.*]]:2 = fir.unboxchar %[[DECLARE]]#0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)

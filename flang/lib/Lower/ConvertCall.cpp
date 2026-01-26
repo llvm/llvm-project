@@ -298,6 +298,50 @@ getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
       lengths.push_back(len);
 }
 
+// Go through the args. Any descriptor args that have ignore_tkr(c) cause
+// function type modification to avoid changing the descriptor args.
+static std::optional<mlir::FunctionType>
+getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
+                      Fortran::lower::CallerInterface &caller,
+                      mlir::MLIRContext *context) {
+  llvm::SmallVector<mlir::Type> newInputs =
+      llvm::to_vector(funcType.getInputs());
+  bool typeChanged = false;
+  for (const auto &arg : caller.getPassedArguments()) {
+    if (arg.firArgument >= 0 &&
+        arg.firArgument < static_cast<int>(newInputs.size())) {
+
+      // Only need to change the arg type for ignore_tkr(c)
+      if (!arg.testTKR(Fortran::common::IgnoreTKR::Contiguous))
+        continue;
+
+      mlir::Type expectedType = newInputs[arg.firArgument];
+      // Cast is only needed for descriptors
+      if (!fir::isa_box_type(expectedType))
+        continue;
+
+      // Handle ignore_tkr(c) for descriptors
+      mlir::Value actual = caller.getInput(arg);
+      if (!actual)
+        continue;
+
+      mlir::Type actualType = actual.getType();
+      if (fir::isBoxAddress(actualType)) {
+        newInputs[arg.firArgument] = actualType;
+        typeChanged = true;
+      }
+    }
+  }
+
+  if (typeChanged) {
+    // At least one of the arguments had its type changed, so need to
+    // create a new function type to be used in a cast.
+    return mlir::FunctionType::get(context, newInputs, funcType.getResults());
+  }
+
+  return std::nullopt;
+}
+
 std::pair<Fortran::lower::LoweredResult, bool>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -495,6 +539,29 @@ Fortran::lower::genCallOpAndResult(
 
   mlir::FunctionType funcType =
       funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
+
+  // If we have any ignore_tkr(c) dummy args, adjust the function type to
+  // have these args match the caller.
+  if (auto modifiedFuncType =
+          getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
+    // Note: funcPointer would only be non-null here, if we are already
+    // processing indirect function call. In such case we can re-use the same
+    // funcPointer and we'll cast it below the the modified funcType.
+    if (!funcPointer) {
+      // We want to cast the function to a different type, in order to avoid
+      // changing/casting some of the args. The cast will generate a new
+      // function pointer, so that we would make a function call not through
+      // the original function symbol, but through the new function pointer
+      // (an indirect function call).
+      mlir::SymbolRefAttr symbolAttr =
+          builder.getSymbolRefAttr(caller.getMangledName());
+      // Create pointer to original function. This pointer will be cast later.
+      funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
+      funcSymbolAttr = {}; // This marks it as indirect call
+    }
+    funcType = *modifiedFuncType;
+  }
+
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to
   // required function type for the call to handle procedures that have a
@@ -673,10 +740,13 @@ Fortran::lower::genCallOpAndResult(
       // passed object because interface mismatch issues may have inserted a
       // cast to the operand with a different declared type, which would break
       // later type bound call resolution in the FIR to FIR pass.
+      mlir::Value passActual = caller.getInputs()[*passArg];
+      if (std::optional<mlir::Value> original = caller.getOriginalPassArg())
+        passActual = *original;
       dispatch = fir::DispatchOp::create(
           builder, loc, funcType.getResults(), builder.getStringAttr(procName),
-          caller.getInputs()[*passArg], operands,
-          builder.getI32IntegerAttr(*passArg), /*arg_attrs=*/nullptr,
+          passActual, operands, builder.getI32IntegerAttr(*passArg),
+          /*arg_attrs=*/nullptr,
           /*res_attrs=*/nullptr, procAttrs);
     } else {
       // NOPASS
@@ -713,7 +783,8 @@ Fortran::lower::genCallOpAndResult(
           builder.getContext(), fir::FortranInlineEnum::always_inline);
     auto call = fir::CallOp::create(
         builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+        /*accessGroups=*/mlir::ArrayAttr{});
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -1253,6 +1324,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
+  if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
+      actual.isBoxAddress()) {
+    // With ignore_tkr(c), pointer to a descriptor should be passed as is
+    return PreparedDummyArgument{actual, /*cleanups=*/{}};
+  }
+
   // Handle procedure arguments (procedure pointers should go through
   // prepareProcedurePointerActualArgument).
   if (hlfir::isFortranProcedureValue(dummyType)) {
@@ -1296,10 +1373,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
 
-    bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
-    bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
+    bool suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
+                             arg.entity, arg.characteristics, foldingContext,
+                             /*forCopyOut=*/false)
+                             .value_or(true);
+    bool suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
+                              arg.entity, arg.characteristics, foldingContext,
+                              /*forCopyOut=*/true)
+                              .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }
@@ -1631,8 +1712,12 @@ void prepareUserCallArguments(
   mlir::Location loc = callContext.loc;
   bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
+  std::optional<unsigned> passArg = caller.getPassArgIndex();
+  int argIndex = -1;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
+    ++argIndex;
+    bool thisIsPassArg = passArg && argIndex == static_cast<int>(*passArg);
     mlir::Type argTy = callSiteType.getInput(arg.firArgument);
     if (!preparedActual) {
       // Optional dummy argument for which there is no actual argument.
@@ -1744,8 +1829,14 @@ void prepareUserCallArguments(
         caller.placeInput(arg, boxStorage);
         continue;
       }
+      if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
+          actual.isBoxAddress()) {
+        // With ignore_tkr(c), pointer to a descriptor should be passed as is
+        caller.placeInput(arg, actual);
+        continue;
+      }
       if (fir::isPointerType(argTy) &&
-          !Fortran::evaluate::IsObjectPointer(*expr)) {
+          (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
@@ -1753,6 +1844,8 @@ void prepareUserCallArguments(
         fir::ExtendedValue actualExv = Fortran::lower::convertToAddress(
             loc, callContext.converter, actual, callContext.stmtCtx,
             hlfir::getFortranElementType(dataTy));
+        if (thisIsPassArg)
+          caller.setOriginalPassArg(fir::getBase(actualExv));
         // If the dummy is an assumed-rank pointer, allocate a pointer
         // descriptor with the actual argument rank (if it is not assumed-rank
         // itself).

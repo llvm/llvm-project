@@ -5,9 +5,9 @@ abseil-faster-strsplit-delimiter
 
 Finds instances of ``absl::StrSplit()`` or ``absl::MaxSplits()`` where the
 delimiter is a single character string literal and replaces with a character.
-The check will offer a suggestion to change the string literal into a character.
-It will also catch code using ``absl::ByAnyChar()`` for just a single character
-and will transform that into a single character as well.
+The check will offer a suggestion to change the string literal into a
+character. It will also catch code using ``absl::ByAnyChar()`` for just a
+single character and will transform that into a single character as well.
 
 These changes will give the same result, but using characters rather than
 single character string literals is more efficient and readable.

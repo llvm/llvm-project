@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <2 x i8> @llvm.vp.mul.nxv2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
-declare <2 x i8> @llvm.vp.sub.nxv2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
-declare <2 x i8> @llvm.vp.merge.nxv2i8(<2 x i1>, <2 x i8>, <2 x i8>, i32)
-declare <2 x i8> @llvm.vp.select.nxv2i8(<2 x i1>, <2 x i8>, <2 x i8>, i32)
-
 define <2 x i8> @vnmsac_vv_nxv2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c,  <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv2i8:
 ; CHECK:       # %bb.0:
@@ -92,11 +87,6 @@ define <2 x i8> @vnmsac_vx_nxv2i8_ta(<2 x i8> %a, i8 %b, <2 x i8> %c,  <2 x i1> 
   %u = call <2 x i8> @llvm.vp.select.nxv2i8(<2 x i1> %m, <2 x i8> %y, <2 x i8> %c, i32 %evl)
   ret <2 x i8> %u
 }
-
-declare <4 x i8> @llvm.vp.mul.nxv4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
-declare <4 x i8> @llvm.vp.sub.nxv4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
-declare <4 x i8> @llvm.vp.merge.nxv4i8(<4 x i1>, <4 x i8>, <4 x i8>, i32)
-declare <4 x i8> @llvm.vp.select.nxv4i8(<4 x i1>, <4 x i8>, <4 x i8>, i32)
 
 define <4 x i8> @vnmsac_vv_nxv4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c,  <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv4i8:
@@ -182,11 +172,6 @@ define <4 x i8> @vnmsac_vx_nxv4i8_ta(<4 x i8> %a, i8 %b, <4 x i8> %c,  <4 x i1> 
   ret <4 x i8> %u
 }
 
-declare <8 x i8> @llvm.vp.mul.nxv8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
-declare <8 x i8> @llvm.vp.sub.nxv8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
-declare <8 x i8> @llvm.vp.merge.nxv8i8(<8 x i1>, <8 x i8>, <8 x i8>, i32)
-declare <8 x i8> @llvm.vp.select.nxv8i8(<8 x i1>, <8 x i8>, <8 x i8>, i32)
-
 define <8 x i8> @vnmsac_vv_nxv8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c,  <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv8i8:
 ; CHECK:       # %bb.0:
@@ -270,11 +255,6 @@ define <8 x i8> @vnmsac_vx_nxv8i8_ta(<8 x i8> %a, i8 %b, <8 x i8> %c,  <8 x i1> 
   %u = call <8 x i8> @llvm.vp.select.nxv8i8(<8 x i1> %m, <8 x i8> %y, <8 x i8> %c, i32 %evl)
   ret <8 x i8> %u
 }
-
-declare <16 x i8> @llvm.vp.mul.nxv16i8(<16 x i8>, <16 x i8>, <16 x i1>, i32)
-declare <16 x i8> @llvm.vp.sub.nxv16i8(<16 x i8>, <16 x i8>, <16 x i1>, i32)
-declare <16 x i8> @llvm.vp.merge.nxv16i8(<16 x i1>, <16 x i8>, <16 x i8>, i32)
-declare <16 x i8> @llvm.vp.select.nxv16i8(<16 x i1>, <16 x i8>, <16 x i8>, i32)
 
 define <16 x i8> @vnmsac_vv_nxv16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,  <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv16i8:
@@ -360,11 +340,6 @@ define <16 x i8> @vnmsac_vx_nxv16i8_ta(<16 x i8> %a, i8 %b, <16 x i8> %c,  <16 x
   ret <16 x i8> %u
 }
 
-declare <32 x i8> @llvm.vp.mul.nxv32i8(<32 x i8>, <32 x i8>, <32 x i1>, i32)
-declare <32 x i8> @llvm.vp.sub.nxv32i8(<32 x i8>, <32 x i8>, <32 x i1>, i32)
-declare <32 x i8> @llvm.vp.merge.nxv32i8(<32 x i1>, <32 x i8>, <32 x i8>, i32)
-declare <32 x i8> @llvm.vp.select.nxv32i8(<32 x i1>, <32 x i8>, <32 x i8>, i32)
-
 define <32 x i8> @vnmsac_vv_nxv32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c,  <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv32i8:
 ; CHECK:       # %bb.0:
@@ -448,11 +423,6 @@ define <32 x i8> @vnmsac_vx_nxv32i8_ta(<32 x i8> %a, i8 %b, <32 x i8> %c,  <32 x
   %u = call <32 x i8> @llvm.vp.select.nxv32i8(<32 x i1> %m, <32 x i8> %y, <32 x i8> %c, i32 %evl)
   ret <32 x i8> %u
 }
-
-declare <64 x i8> @llvm.vp.mul.nxv64i8(<64 x i8>, <64 x i8>, <64 x i1>, i32)
-declare <64 x i8> @llvm.vp.sub.nxv64i8(<64 x i8>, <64 x i8>, <64 x i1>, i32)
-declare <64 x i8> @llvm.vp.merge.nxv64i8(<64 x i1>, <64 x i8>, <64 x i8>, i32)
-declare <64 x i8> @llvm.vp.select.nxv64i8(<64 x i1>, <64 x i8>, <64 x i8>, i32)
 
 define <64 x i8> @vnmsac_vv_nxv64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c,  <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv64i8:
@@ -538,11 +508,6 @@ define <64 x i8> @vnmsac_vx_nxv64i8_ta(<64 x i8> %a, i8 %b, <64 x i8> %c,  <64 x
   ret <64 x i8> %u
 }
 
-declare <2 x i16> @llvm.vp.mul.nxv2i16(<2 x i16>, <2 x i16>, <2 x i1>, i32)
-declare <2 x i16> @llvm.vp.sub.nxv2i16(<2 x i16>, <2 x i16>, <2 x i1>, i32)
-declare <2 x i16> @llvm.vp.merge.nxv2i16(<2 x i1>, <2 x i16>, <2 x i16>, i32)
-declare <2 x i16> @llvm.vp.select.nxv2i16(<2 x i1>, <2 x i16>, <2 x i16>, i32)
-
 define <2 x i16> @vnmsac_vv_nxv2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c,  <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -626,11 +591,6 @@ define <2 x i16> @vnmsac_vx_nxv2i16_ta(<2 x i16> %a, i16 %b, <2 x i16> %c,  <2 x
   %u = call <2 x i16> @llvm.vp.select.nxv2i16(<2 x i1> %m, <2 x i16> %y, <2 x i16> %c, i32 %evl)
   ret <2 x i16> %u
 }
-
-declare <4 x i16> @llvm.vp.mul.nxv4i16(<4 x i16>, <4 x i16>, <4 x i1>, i32)
-declare <4 x i16> @llvm.vp.sub.nxv4i16(<4 x i16>, <4 x i16>, <4 x i1>, i32)
-declare <4 x i16> @llvm.vp.merge.nxv4i16(<4 x i1>, <4 x i16>, <4 x i16>, i32)
-declare <4 x i16> @llvm.vp.select.nxv4i16(<4 x i1>, <4 x i16>, <4 x i16>, i32)
 
 define <4 x i16> @vnmsac_vv_nxv4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c,  <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv4i16:
@@ -716,11 +676,6 @@ define <4 x i16> @vnmsac_vx_nxv4i16_ta(<4 x i16> %a, i16 %b, <4 x i16> %c,  <4 x
   ret <4 x i16> %u
 }
 
-declare <8 x i16> @llvm.vp.mul.nxv8i16(<8 x i16>, <8 x i16>, <8 x i1>, i32)
-declare <8 x i16> @llvm.vp.sub.nxv8i16(<8 x i16>, <8 x i16>, <8 x i1>, i32)
-declare <8 x i16> @llvm.vp.merge.nxv8i16(<8 x i1>, <8 x i16>, <8 x i16>, i32)
-declare <8 x i16> @llvm.vp.select.nxv8i16(<8 x i1>, <8 x i16>, <8 x i16>, i32)
-
 define <8 x i16> @vnmsac_vv_nxv8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c,  <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -804,11 +759,6 @@ define <8 x i16> @vnmsac_vx_nxv8i16_ta(<8 x i16> %a, i16 %b, <8 x i16> %c,  <8 x
   %u = call <8 x i16> @llvm.vp.select.nxv8i16(<8 x i1> %m, <8 x i16> %y, <8 x i16> %c, i32 %evl)
   ret <8 x i16> %u
 }
-
-declare <16 x i16> @llvm.vp.mul.nxv16i16(<16 x i16>, <16 x i16>, <16 x i1>, i32)
-declare <16 x i16> @llvm.vp.sub.nxv16i16(<16 x i16>, <16 x i16>, <16 x i1>, i32)
-declare <16 x i16> @llvm.vp.merge.nxv16i16(<16 x i1>, <16 x i16>, <16 x i16>, i32)
-declare <16 x i16> @llvm.vp.select.nxv16i16(<16 x i1>, <16 x i16>, <16 x i16>, i32)
 
 define <16 x i16> @vnmsac_vv_nxv16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c,  <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv16i16:
@@ -894,11 +844,6 @@ define <16 x i16> @vnmsac_vx_nxv16i16_ta(<16 x i16> %a, i16 %b, <16 x i16> %c,  
   ret <16 x i16> %u
 }
 
-declare <32 x i16> @llvm.vp.mul.nxv32i16(<32 x i16>, <32 x i16>, <32 x i1>, i32)
-declare <32 x i16> @llvm.vp.sub.nxv32i16(<32 x i16>, <32 x i16>, <32 x i1>, i32)
-declare <32 x i16> @llvm.vp.merge.nxv32i16(<32 x i1>, <32 x i16>, <32 x i16>, i32)
-declare <32 x i16> @llvm.vp.select.nxv32i16(<32 x i1>, <32 x i16>, <32 x i16>, i32)
-
 define <32 x i16> @vnmsac_vv_nxv32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c,  <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv32i16:
 ; CHECK:       # %bb.0:
@@ -982,11 +927,6 @@ define <32 x i16> @vnmsac_vx_nxv32i16_ta(<32 x i16> %a, i16 %b, <32 x i16> %c,  
   %u = call <32 x i16> @llvm.vp.select.nxv32i16(<32 x i1> %m, <32 x i16> %y, <32 x i16> %c, i32 %evl)
   ret <32 x i16> %u
 }
-
-declare <2 x i32> @llvm.vp.mul.nxv2i32(<2 x i32>, <2 x i32>, <2 x i1>, i32)
-declare <2 x i32> @llvm.vp.sub.nxv2i32(<2 x i32>, <2 x i32>, <2 x i1>, i32)
-declare <2 x i32> @llvm.vp.merge.nxv2i32(<2 x i1>, <2 x i32>, <2 x i32>, i32)
-declare <2 x i32> @llvm.vp.select.nxv2i32(<2 x i1>, <2 x i32>, <2 x i32>, i32)
 
 define <2 x i32> @vnmsac_vv_nxv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c,  <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv2i32:
@@ -1072,11 +1012,6 @@ define <2 x i32> @vnmsac_vx_nxv2i32_ta(<2 x i32> %a, i32 %b, <2 x i32> %c,  <2 x
   ret <2 x i32> %u
 }
 
-declare <4 x i32> @llvm.vp.mul.nxv4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-declare <4 x i32> @llvm.vp.sub.nxv4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-declare <4 x i32> @llvm.vp.merge.nxv4i32(<4 x i1>, <4 x i32>, <4 x i32>, i32)
-declare <4 x i32> @llvm.vp.select.nxv4i32(<4 x i1>, <4 x i32>, <4 x i32>, i32)
-
 define <4 x i32> @vnmsac_vv_nxv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,  <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv4i32:
 ; CHECK:       # %bb.0:
@@ -1160,11 +1095,6 @@ define <4 x i32> @vnmsac_vx_nxv4i32_ta(<4 x i32> %a, i32 %b, <4 x i32> %c,  <4 x
   %u = call <4 x i32> @llvm.vp.select.nxv4i32(<4 x i1> %m, <4 x i32> %y, <4 x i32> %c, i32 %evl)
   ret <4 x i32> %u
 }
-
-declare <8 x i32> @llvm.vp.mul.nxv8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
-declare <8 x i32> @llvm.vp.sub.nxv8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
-declare <8 x i32> @llvm.vp.merge.nxv8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)
-declare <8 x i32> @llvm.vp.select.nxv8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)
 
 define <8 x i32> @vnmsac_vv_nxv8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c,  <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv8i32:
@@ -1250,11 +1180,6 @@ define <8 x i32> @vnmsac_vx_nxv8i32_ta(<8 x i32> %a, i32 %b, <8 x i32> %c,  <8 x
   ret <8 x i32> %u
 }
 
-declare <16 x i32> @llvm.vp.mul.nxv16i32(<16 x i32>, <16 x i32>, <16 x i1>, i32)
-declare <16 x i32> @llvm.vp.sub.nxv16i32(<16 x i32>, <16 x i32>, <16 x i1>, i32)
-declare <16 x i32> @llvm.vp.merge.nxv16i32(<16 x i1>, <16 x i32>, <16 x i32>, i32)
-declare <16 x i32> @llvm.vp.select.nxv16i32(<16 x i1>, <16 x i32>, <16 x i32>, i32)
-
 define <16 x i32> @vnmsac_vv_nxv16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c,  <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv16i32:
 ; CHECK:       # %bb.0:
@@ -1338,11 +1263,6 @@ define <16 x i32> @vnmsac_vx_nxv16i32_ta(<16 x i32> %a, i32 %b, <16 x i32> %c,  
   %u = call <16 x i32> @llvm.vp.select.nxv16i32(<16 x i1> %m, <16 x i32> %y, <16 x i32> %c, i32 %evl)
   ret <16 x i32> %u
 }
-
-declare <2 x i64> @llvm.vp.mul.nxv2i64(<2 x i64>, <2 x i64>, <2 x i1>, i32)
-declare <2 x i64> @llvm.vp.sub.nxv2i64(<2 x i64>, <2 x i64>, <2 x i1>, i32)
-declare <2 x i64> @llvm.vp.merge.nxv2i64(<2 x i1>, <2 x i64>, <2 x i64>, i32)
-declare <2 x i64> @llvm.vp.select.nxv2i64(<2 x i1>, <2 x i64>, <2 x i64>, i32)
 
 define <2 x i64> @vnmsac_vv_nxv2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c,  <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv2i64:
@@ -1476,11 +1396,6 @@ define <2 x i64> @vnmsac_vx_nxv2i64_ta(<2 x i64> %a, i64 %b, <2 x i64> %c,  <2 x
   ret <2 x i64> %u
 }
 
-declare <4 x i64> @llvm.vp.mul.nxv4i64(<4 x i64>, <4 x i64>, <4 x i1>, i32)
-declare <4 x i64> @llvm.vp.sub.nxv4i64(<4 x i64>, <4 x i64>, <4 x i1>, i32)
-declare <4 x i64> @llvm.vp.merge.nxv4i64(<4 x i1>, <4 x i64>, <4 x i64>, i32)
-declare <4 x i64> @llvm.vp.select.nxv4i64(<4 x i1>, <4 x i64>, <4 x i64>, i32)
-
 define <4 x i64> @vnmsac_vv_nxv4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c,  <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv4i64:
 ; CHECK:       # %bb.0:
@@ -1612,11 +1527,6 @@ define <4 x i64> @vnmsac_vx_nxv4i64_ta(<4 x i64> %a, i64 %b, <4 x i64> %c,  <4 x
   %u = call <4 x i64> @llvm.vp.select.nxv4i64(<4 x i1> %m, <4 x i64> %y, <4 x i64> %c, i32 %evl)
   ret <4 x i64> %u
 }
-
-declare <8 x i64> @llvm.vp.mul.nxv8i64(<8 x i64>, <8 x i64>, <8 x i1>, i32)
-declare <8 x i64> @llvm.vp.sub.nxv8i64(<8 x i64>, <8 x i64>, <8 x i1>, i32)
-declare <8 x i64> @llvm.vp.merge.nxv8i64(<8 x i1>, <8 x i64>, <8 x i64>, i32)
-declare <8 x i64> @llvm.vp.select.nxv8i64(<8 x i1>, <8 x i64>, <8 x i64>, i32)
 
 define <8 x i64> @vnmsac_vv_nxv8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c,  <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vnmsac_vv_nxv8i64:

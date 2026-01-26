@@ -33,6 +33,10 @@ constexpr int b = b; // both-error {{must be initialized by a constant expressio
                                                       // both-note {{declared here}}
 
 
+  void func();
+  constexpr int (&fp4)() = (int(&)())func; // both-error {{constant expression}} \
+                                           // both-note {{reinterpret_cast}}
+
 struct S {
   int m;
 };
@@ -397,4 +401,25 @@ namespace PointerCast {
     int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
                                           // expected-note {{cast that performs the conversions of a reinterpret_cast}}
   };
+}
+
+namespace DummyToGlobalBlockMove {
+  struct Baz {
+    unsigned int n;
+  };
+
+  struct AP {
+    const AP *p;
+    const Baz *lp;
+  };
+
+  class Bar {
+  public:
+    static Baz _m[];
+    static const AP m;
+  };
+
+  const AP Bar::m = {0, &Bar::_m[0]};
+  Baz Bar::_m[] = {{0}};
+  const AP m = {&Bar ::m};
 }

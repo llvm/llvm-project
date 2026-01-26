@@ -9,14 +9,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %1 = cuf.shared_memory [%c4 : i32] i32 {bindc_name = "b", uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
       llvm.return
     }
-    llvm.mlir.global common @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<28 x i8>
+    llvm.mlir.global common @_QPshared_static__shared_mem__(dense<0> : vector<28xi8>) {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<28 x i8>
   }
 }
 
 // CHECK-LABEL: llvm.func @_QPshared_static()
-// CHECK: %[[ADDR0:.*]] = llvm.mlir.addressof @_QPshared_static__shared_mem : !llvm.ptr<3>
+// CHECK: %[[ADDR0:.*]] = llvm.mlir.addressof @_QPshared_static__shared_mem__ : !llvm.ptr<3>
 // CHECK: %[[ADDRCAST0:.*]] = llvm.addrspacecast %[[ADDR0]] : !llvm.ptr<3> to !llvm.ptr
 // CHECK: %[[A:.*]] = llvm.getelementptr %[[ADDRCAST0]][%c0{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, i8
-// CHECK: %[[ADDR1:.*]] = llvm.mlir.addressof @_QPshared_static__shared_mem : !llvm.ptr<3>
+// CHECK: %[[ADDR1:.*]] = llvm.mlir.addressof @_QPshared_static__shared_mem__ : !llvm.ptr<3>
 // CHECK: %[[ADDRCAST1:.*]] = llvm.addrspacecast %[[ADDR1]] : !llvm.ptr<3> to !llvm.ptr
 // CHECK: %[[B:.*]] = llvm.getelementptr %[[ADDRCAST1]][%c4{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, i8

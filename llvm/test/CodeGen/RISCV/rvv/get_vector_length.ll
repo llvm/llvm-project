@@ -2,10 +2,6 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+m,+v -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv64 -mattr=+m,+v -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare i32 @llvm.experimental.get.vector.length.i16(i16, i32, i1)
-declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)
-declare i32 @llvm.experimental.get.vector.length.i64(i64, i32, i1)
-
 define i32 @vector_length_i16(i16 zeroext %tc) {
 ; CHECK-LABEL: vector_length_i16:
 ; CHECK:       # %bb.0:

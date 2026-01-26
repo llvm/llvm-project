@@ -19,7 +19,7 @@ def OryonModel : SchedMachineModel {
   let MicroOpBufferSize     = 376;
   let LoadLatency           =   4;
   let MispredictPenalty     =  13; // 13 cycles for mispredicted branch.
-  let LoopMicroOpBufferSize =   0; // Do not have a LoopMicroOpBuffer
+  let LoopMicroOpBufferSize =   16; // Oryon-1 does not have loop micro op buffer, we enable this pseudo value to allow for aggressive unrolling based on runtime TC.
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
 

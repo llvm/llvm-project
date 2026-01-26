@@ -7,7 +7,7 @@ int *t;
 int main() {
   int r;
   t = (int *)(((char *)&r) + 1);
-  // CHECK: ubsan: type-mismatch by 0x{{[[:xdigit:]]+}} address 0x{{[[:xdigit:]]+$}}
+  // CHECK: ubsan: type-mismatch by 0x{{[[:xdigit:]]+}}
   // CHECK-NOT: type-mismatch
   f(*t);
 }

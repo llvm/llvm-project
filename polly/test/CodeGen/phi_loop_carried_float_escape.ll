@@ -1,8 +1,6 @@
-; RUN: opt %loadNPMPolly -S \
-; RUN: -polly-analyze-read-only-scalars=false -passes=polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -polly-analyze-read-only-scalars=false '-passes=polly<no-default-opts>' < %s | FileCheck %s
 
-; RUN: opt %loadNPMPolly -S \
-; RUN: -polly-analyze-read-only-scalars=true -passes=polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -polly-analyze-read-only-scalars=true '-passes=polly<no-default-opts>' < %s | FileCheck %s
 ;
 ;    float f(float *A, int N) {
 ;      float tmp = 0;

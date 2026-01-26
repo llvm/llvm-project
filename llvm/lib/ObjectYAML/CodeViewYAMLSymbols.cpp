@@ -386,7 +386,7 @@ template <> void SymbolRecordImpl<InlineSiteSym>::map(IO &IO) {
   IO.mapOptional("PtrParent", Symbol.Parent, 0U);
   IO.mapOptional("PtrEnd", Symbol.End, 0U);
   IO.mapRequired("Inlinee", Symbol.Inlinee);
-  // TODO: The binary annotations
+  IO.mapOptional("AnnotationData", Symbol.AnnotationData);
 }
 
 template <> void SymbolRecordImpl<LocalSym>::map(IO &IO) {

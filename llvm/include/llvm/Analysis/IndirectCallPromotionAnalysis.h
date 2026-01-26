@@ -52,11 +52,14 @@ public:
   /// The \p TotalCount and \p NumCandidates are set to the the total profile
   /// count of the indirect call \p I and the number of profitable candidates
   /// in the given array (which is sorted in reverse order of profitability).
+  /// The value of \p MaxNumValueData can be used to override the max set
+  /// from the -icp-max-prom option with a larger value.
   ///
   /// The returned array space is owned by this class, and overwritten on
   /// subsequent calls.
   MutableArrayRef<InstrProfValueData> getPromotionCandidatesForInstruction(
-      const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates);
+      const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates,
+      unsigned MaxNumValueData = 0);
 };
 
 } // end namespace llvm

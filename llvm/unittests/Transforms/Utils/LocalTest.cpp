@@ -679,7 +679,6 @@ TEST(Local, FindDbgRecords) {
   findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
-  SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.

@@ -615,8 +615,7 @@ public:
 
     // Next, propagate the value stored by the store to the users of the load.
     // Also for the first iteration, generate the initial value of the load.
-    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getDataLayout(),
-                     "storeforward");
+    SCEVExpander SEE(*PSE.getSE(), "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);
     NumLoopLoadEliminted += Candidates.size();

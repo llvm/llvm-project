@@ -618,16 +618,18 @@ template <> class FloatToString<long double> {
   fputil::FPBits<long double> float_bits;
   bool is_negative = 0;
   int exponent = 0;
-  FPBits::StorageType mantissa = 0;
+  fputil::FPBits<long double>::StorageType mantissa = 0;
 
   static constexpr int FRACTION_LEN = fputil::FPBits<long double>::FRACTION_LEN;
   static constexpr int EXP_BIAS = fputil::FPBits<long double>::EXP_BIAS;
   static constexpr size_t UINT_WORD_SIZE = 64;
 
   static constexpr size_t FLOAT_AS_INT_WIDTH =
-      internal::div_ceil(fputil::FPBits<long double>::MAX_BIASED_EXPONENT -
-                             FPBits::EXP_BIAS,
-                         UINT_WORD_SIZE) *
+      internal::div_ceil(
+          fputil::FPBits<long double>::MAX_BIASED_EXPONENT -
+              fputil::FPBits<long double>::EXP_BIAS +
+              FRACTION_LEN, // Add fraction len to provide space for subnormals.
+          UINT_WORD_SIZE) *
       UINT_WORD_SIZE;
   static constexpr size_t EXTRA_INT_WIDTH =
       internal::div_ceil(sizeof(long double) * CHAR_BIT, UINT_WORD_SIZE) *
@@ -699,12 +701,11 @@ template <> class FloatToString<long double> {
       float_as_fixed = mantissa;
 
       const int SHIFT_AMOUNT = FLOAT_AS_INT_WIDTH + exponent;
+      // if the shift amount would be negative, then the shift would cause a
+      // loss of precision.
+      LIBC_ASSERT(SHIFT_AMOUNT >= 0);
       static_assert(EXTRA_INT_WIDTH >= sizeof(long double) * 8);
-      if (SHIFT_AMOUNT > 0) {
-        float_as_fixed <<= SHIFT_AMOUNT;
-      } else {
-        float_as_fixed >>= -SHIFT_AMOUNT;
-      }
+      float_as_fixed <<= SHIFT_AMOUNT;
 
       // If there are still digits above the decimal point, handle those.
       if (cpp::countl_zero(float_as_fixed) <

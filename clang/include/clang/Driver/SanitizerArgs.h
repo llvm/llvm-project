@@ -28,6 +28,7 @@ class SanitizerArgs {
   SanitizerSet MergeHandlers;
   SanitizerMaskCutoffs SkipHotCutoffs;
   SanitizerSet AnnotateDebugInfo;
+  SanitizerSet SuppressUBSanFeature;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -67,6 +68,8 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  bool TysanOutlineInstrumentation = true;
+  bool HandlerPreserveAllRegs = false;
   // True if cross-dso CFI support if provided by the system (i.e. Android).
   bool ImplicitCfiRuntime = false;
   bool NeedsMemProfRt = false;

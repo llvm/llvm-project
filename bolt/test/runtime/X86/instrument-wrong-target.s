@@ -19,6 +19,13 @@ _start:
     ret
     .size _start, .-_start
 
+    .globl _init
+    .type _init, %function
+    # Force DT_INIT to be created (needed for instrumentation).
+_init:
+    ret
+    .size _init, .-_init
+
     .globl _fini
     .type _fini, %function
     # Force DT_FINI to be created (needed for instrumentation).

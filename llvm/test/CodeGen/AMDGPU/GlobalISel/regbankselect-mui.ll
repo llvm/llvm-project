@@ -491,7 +491,7 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; OLD_RBS-NEXT:    s_branch .LBB16_3
 ; OLD_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; OLD_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; OLD_RBS-NEXT:    s_waitcnt_depctr 0xffe3
+; OLD_RBS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; OLD_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; OLD_RBS-NEXT:    s_andn2_b32 s1, s1, exec_lo
 ; OLD_RBS-NEXT:    s_and_b32 s3, exec_lo, s4
@@ -553,7 +553,7 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    s_branch .LBB16_3
 ; NEW_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    s_waitcnt_depctr 0xffe3
+; NEW_RBS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s7
 ; NEW_RBS-NEXT:    s_andn2_b32 s2, s5, exec_lo
 ; NEW_RBS-NEXT:    s_and_b32 s3, exec_lo, s6

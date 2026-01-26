@@ -73,10 +73,13 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
 
   if (Is("bitcode-strip") || Is("bitcode_strip"))
     return parseBitcodeStripOptions(Args, reportWarning);
+  
   if (Is("strip"))
     return parseStripOptions(Args, reportWarning);
+  
   if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
+  
   if (Is("llvm-extract-bundle-entry"))
     return parseExtractBundleEntryOptions(Args, reportWarning);
 

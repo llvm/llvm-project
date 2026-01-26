@@ -197,7 +197,7 @@ public:
   // Sets the iterate to the specified position.
   void seek(ValueRange vals) {
     assert(vals.size() == cursorValsCnt);
-    std::copy(vals.begin(), vals.end(), cursorValsStorageRef.begin());
+    llvm::copy(vals, cursorValsStorageRef.begin());
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }

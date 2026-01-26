@@ -219,21 +219,17 @@ define <4 x i32> @smull_zext_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-NEON-LABEL: smull_zext_v2i32_v2i64:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    ldrh w8, [x0, #2]
-; CHECK-NEON-NEXT:    ldr h0, [x0]
+; CHECK-NEON-NEXT:    ldr s0, [x0]
 ; CHECK-NEON-NEXT:    ldr d1, [x1]
-; CHECK-NEON-NEXT:    mov v0.d[1], x8
-; CHECK-NEON-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEON-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEON-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: smull_zext_v2i32_v2i64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ldrh w8, [x0, #2]
-; CHECK-SVE-NEXT:    ldr h0, [x0]
+; CHECK-SVE-NEXT:    ldr s0, [x0]
 ; CHECK-SVE-NEXT:    ldr d1, [x1]
-; CHECK-SVE-NEXT:    mov v0.d[1], x8
-; CHECK-SVE-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SVE-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SVE-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-SVE-NEXT:    ret
 ;

@@ -4,10 +4,10 @@ bugprone-random-generator-seed
 ==============================
 
 Flags all pseudo-random number engines, engine adaptor
-instantiations and ``srand()`` when initialized or seeded with default argument,
-constant expression or any user-configurable type. Pseudo-random number
-engines seeded with a predictable value may cause vulnerabilities e.g. in
-security protocols.
+instantiations and ``srand()`` when initialized or seeded with default
+argument, constant expression or any user-configurable type. Pseudo-random
+number engines seeded with a predictable value may cause vulnerabilities
+e.g. in security protocols.
 
 Examples:
 

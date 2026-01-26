@@ -53,17 +53,14 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP7]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP8]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP15]], [[TMP18]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP6]], [[TMP9]]
@@ -130,10 +127,10 @@ define float @test_fmax_and_fmin(ptr %src.0, ptr %src.1, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_0]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_1]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC_0]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC_0]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC_0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC_1]], i32 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC_1]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[GEP_SRC_1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI2]], <4 x float> [[WIDE_LOAD]])
@@ -141,14 +138,10 @@ define float @test_fmax_and_fmin(ptr %src.0, ptr %src.1, i64 %n) {
 ; CHECK-NEXT:    [[TMP6]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD5]])
 ; CHECK-NEXT:    [[TMP7]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD5]], [[WIDE_LOAD5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD4]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP8]], [[TMP14]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP9]], [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = freeze <4 x i1> [[TMP12]]
-; CHECK-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP13]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD5]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze <4 x i1> [[TMP8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP9]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP18]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -213,3 +206,161 @@ exit:
   %sub = fsub float %max.next, %min.next
   ret float %sub
 }
+
+; Test fmax reduction with tail folding (optsize + variable trip count).
+define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
+; CHECK-LABEL: define float @fmaxnum_tailfold(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 7
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP51:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP52:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
+; CHECK:       [[PRED_LOAD_IF]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i32 0
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
+; CHECK:       [[PRED_LOAD_CONTINUE]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x float> [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
+; CHECK:       [[PRED_LOAD_IF2]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP12]], i32 1
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
+; CHECK:       [[PRED_LOAD_CONTINUE3]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x float> [ [[TMP8]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP13]], %[[PRED_LOAD_IF2]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
+; CHECK:       [[PRED_LOAD_IF4]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP18]], i32 2
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
+; CHECK:       [[PRED_LOAD_CONTINUE5]]:
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x float> [ [[TMP14]], %[[PRED_LOAD_CONTINUE3]] ], [ [[TMP19]], %[[PRED_LOAD_IF4]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_LOAD_IF6:.*]], label %[[PRED_LOAD_CONTINUE7:.*]]
+; CHECK:       [[PRED_LOAD_IF6]]:
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load float, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x float> [[TMP20]], float [[TMP24]], i32 3
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
+; CHECK:       [[PRED_LOAD_CONTINUE7]]:
+; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x float> [ [[TMP20]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP25]], %[[PRED_LOAD_IF6]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    br i1 [[TMP27]], label %[[PRED_LOAD_IF8:.*]], label %[[PRED_LOAD_CONTINUE9:.*]]
+; CHECK:       [[PRED_LOAD_IF8]]:
+; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = load float, ptr [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x float> poison, float [[TMP30]], i32 0
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE9]]
+; CHECK:       [[PRED_LOAD_CONTINUE9]]:
+; CHECK-NEXT:    [[TMP32:%.*]] = phi <4 x float> [ poison, %[[PRED_LOAD_CONTINUE7]] ], [ [[TMP31]], %[[PRED_LOAD_IF8]] ]
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    br i1 [[TMP33]], label %[[PRED_LOAD_IF10:.*]], label %[[PRED_LOAD_CONTINUE11:.*]]
+; CHECK:       [[PRED_LOAD_IF10]]:
+; CHECK-NEXT:    [[TMP34:%.*]] = add i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP36:%.*]] = load float, ptr [[TMP35]], align 4
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP36]], i32 1
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE11]]
+; CHECK:       [[PRED_LOAD_CONTINUE11]]:
+; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x float> [ [[TMP32]], %[[PRED_LOAD_CONTINUE9]] ], [ [[TMP37]], %[[PRED_LOAD_IF10]] ]
+; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
+; CHECK-NEXT:    br i1 [[TMP39]], label %[[PRED_LOAD_IF12:.*]], label %[[PRED_LOAD_CONTINUE13:.*]]
+; CHECK:       [[PRED_LOAD_IF12]]:
+; CHECK-NEXT:    [[TMP40:%.*]] = add i64 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP40]]
+; CHECK-NEXT:    [[TMP42:%.*]] = load float, ptr [[TMP41]], align 4
+; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <4 x float> [[TMP38]], float [[TMP42]], i32 2
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE13]]
+; CHECK:       [[PRED_LOAD_CONTINUE13]]:
+; CHECK-NEXT:    [[TMP44:%.*]] = phi <4 x float> [ [[TMP38]], %[[PRED_LOAD_CONTINUE11]] ], [ [[TMP43]], %[[PRED_LOAD_IF12]] ]
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
+; CHECK-NEXT:    br i1 [[TMP45]], label %[[PRED_LOAD_IF14:.*]], label %[[PRED_LOAD_CONTINUE15]]
+; CHECK:       [[PRED_LOAD_IF14]]:
+; CHECK-NEXT:    [[TMP46:%.*]] = add i64 [[INDEX]], 7
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP46]]
+; CHECK-NEXT:    [[TMP48:%.*]] = load float, ptr [[TMP47]], align 4
+; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <4 x float> [[TMP44]], float [[TMP48]], i32 3
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE15]]
+; CHECK:       [[PRED_LOAD_CONTINUE15]]:
+; CHECK-NEXT:    [[TMP50:%.*]] = phi <4 x float> [ [[TMP44]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP49]], %[[PRED_LOAD_IF14]] ]
+; CHECK-NEXT:    [[TMP51]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP26]])
+; CHECK-NEXT:    [[TMP52]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP50]])
+; CHECK-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP51]], <4 x float> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP52]], <4 x float> [[VEC_PHI1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP55:%.*]] = fcmp uno <4 x float> [[TMP26]], [[TMP50]]
+; CHECK-NEXT:    [[TMP56:%.*]] = freeze <4 x i1> [[TMP55]]
+; CHECK-NEXT:    [[TMP57:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP56]])
+; CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP59:%.*]] = or i1 [[TMP57]], [[TMP58]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP60:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP53]]
+; CHECK-NEXT:    [[TMP61:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP54]]
+; CHECK-NEXT:    [[TMP62:%.*]] = select i1 [[TMP57]], i64 [[INDEX]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP60]], <4 x float> [[TMP61]])
+; CHECK-NEXT:    [[TMP63:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX]])
+; CHECK-NEXT:    [[TMP64:%.*]] = xor i1 [[TMP57]], true
+; CHECK-NEXT:    [[TMP65:%.*]] = and i1 true, [[TMP64]]
+; CHECK-NEXT:    br i1 [[TMP65]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP62]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ [[TMP63]], %[[SCALAR_PH]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[MAX_NEXT]] = tail call float @llvm.maxnum.f32(float [[MAX]], float [[L]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ], [ [[TMP63]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret float [[MAX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %max = phi float [ 0.000000e+00, %entry ], [ %max.next, %loop ]
+  %gep = getelementptr inbounds float, ptr %src, i64 %iv
+  %l = load float, ptr %gep, align 4
+  %max.next = tail call float @llvm.maxnum.f32(float %max, float %l)
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret float %max.next
+}
+
+attributes #0 = { optsize }

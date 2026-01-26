@@ -16,4 +16,4 @@ end program
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | Modifier -> OmpAutomapModifier -> Value = Automap
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

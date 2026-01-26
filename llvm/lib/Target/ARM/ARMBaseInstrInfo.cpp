@@ -619,6 +619,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
     return getInstBundleLength(MI);
+  case TargetOpcode::COPY:
+    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
+      return 4;
+    else
+      return 2;
   case ARM::CONSTPOOL_ENTRY:
   case ARM::JUMPTABLE_INSTS:
   case ARM::JUMPTABLE_ADDRS:
@@ -932,7 +937,7 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
 const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
                                                      unsigned Reg,
                                                      unsigned SubIdx,
-                                                     unsigned State) const {
+                                                     RegState State) const {
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
@@ -1012,7 +1017,7 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         if (Subtarget.hasV5TEOps()) {
           MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::STRD));
           AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
-          AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
+          AddDReg(MIB, SrcReg, ARM::gsub_1, {});
           MIB.addFrameIndex(FI).addReg(0).addImm(0).addMemOperand(MMO)
              .add(predOps(ARMCC::AL));
         } else {
@@ -1023,7 +1028,7 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .addMemOperand(MMO)
                                         .add(predOps(ARMCC::AL));
           AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
-          AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
+          AddDReg(MIB, SrcReg, ARM::gsub_1, {});
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1074,8 +1079,8 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
           MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
-          AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, {});
+          AddDReg(MIB, SrcReg, ARM::dsub_2, {});
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1106,9 +1111,9 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
           MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
-                AddDReg(MIB, SrcReg, ARM::dsub_3, 0);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, {});
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, {});
+          AddDReg(MIB, SrcReg, ARM::dsub_3, {});
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1126,13 +1131,13 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       .add(predOps(ARMCC::AL))
                                       .addMemOperand(MMO);
         MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_3, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_4, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_5, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_6, 0);
-              AddDReg(MIB, SrcReg, ARM::dsub_7, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_3, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_4, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_5, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_6, {});
+        AddDReg(MIB, SrcReg, ARM::dsub_7, {});
       } else
         llvm_unreachable("Unknown reg class!");
       break;
@@ -1212,7 +1217,7 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator I,
                                             Register DestReg, int FI,
                                             const TargetRegisterClass *RC,
-                                            Register VReg,
+                                            Register VReg, unsigned SubReg,
                                             MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
@@ -6551,7 +6556,7 @@ class ARMPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   static int constexpr LAST_IS_USE = MAX_STAGES;
   static int constexpr SEEN_AS_LIVE = MAX_STAGES + 1;
   typedef std::bitset<MAX_STAGES + 2> IterNeed;
-  typedef std::map<unsigned, IterNeed> IterNeeds;
+  typedef std::map<Register, IterNeed> IterNeeds;
 
   void bumpCrossIterationPressure(RegPressureTracker &RPT,
                                   const IterNeeds &CIN);
@@ -6625,14 +6630,14 @@ void ARMPipelinerLoopInfo::bumpCrossIterationPressure(RegPressureTracker &RPT,
   for (const auto &N : CIN) {
     int Cnt = N.second.count() - N.second[SEEN_AS_LIVE] * 2;
     for (int I = 0; I < Cnt; ++I)
-      RPT.increaseRegPressure(Register(N.first), LaneBitmask::getNone(),
+      RPT.increaseRegPressure(VirtRegOrUnit(N.first), LaneBitmask::getNone(),
                               LaneBitmask::getAll());
   }
   // Decrease pressure by the amounts in CrossIterationNeeds
   for (const auto &N : CIN) {
     int Cnt = N.second.count() - N.second[SEEN_AS_LIVE] * 2;
     for (int I = 0; I < Cnt; ++I)
-      RPT.decreaseRegPressure(Register(N.first), LaneBitmask::getAll(),
+      RPT.decreaseRegPressure(VirtRegOrUnit(N.first), LaneBitmask::getAll(),
                               LaneBitmask::getNone());
   }
 }

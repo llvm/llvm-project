@@ -27,6 +27,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
@@ -296,10 +300,9 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplaceable = true;
-      if (all_of(PHI->incoming_values(), [&](Value *V) {
-            if (!isa<Instruction>(V))
-              return IsReplaceable = false;
+      bool IsReplaceable = all_of(PHI->incoming_values(),
+                                  [](Value *V) { return isa<Instruction>(V); });
+      if (IsReplaceable && all_of(PHI->incoming_values(), [&](Value *V) {
             return isAvailable(cast<Instruction>(V));
           })) {
         UsersToReplace.insert(PHI);
@@ -873,20 +876,9 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
     // If we know how big this object is, and it is less than MaxSize, continue
     // searching. Otherwise, return false.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(P)) {
-      if (!AI->getAllocatedType()->isSized())
-        return false;
-
-      ConstantInt *CS = dyn_cast<ConstantInt>(AI->getArraySize());
-      if (!CS)
-        return false;
-
-      TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
-      if (TS.isScalable())
-        return false;
-      // Make sure that, even if the multiplication below would wrap as an
-      // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedValue()))
-              .ugt(MaxSize))
+      std::optional<TypeSize> AllocSize = AI->getAllocationSize(DL);
+      if (!AllocSize || AllocSize->isScalable() ||
+          AllocSize->getFixedValue() > MaxSize)
         return false;
       continue;
     }
@@ -895,7 +887,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
       if (!GV->hasDefinitiveInitializer() || !GV->isConstant())
         return false;
 
-      uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+      uint64_t InitSize = GV->getGlobalSize(DL);
       if (InitSize > MaxSize)
         return false;
       continue;
@@ -1138,19 +1130,35 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     // but it would not be valid if we transformed it to load from null
     // unconditionally.
     //
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op)) {
+
+    AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Op);
+    Value *SelectOp = Op;
+    if (ASC && ASC->getOperand(0)->hasOneUse())
+      SelectOp = ASC->getOperand(0);
+    if (SelectInst *SI = dyn_cast<SelectInst>(SelectOp)) {
       // load (select (Cond, &V1, &V2))  --> select(Cond, load &V1, load &V2).
+      // or
+      // load (addrspacecast(select (Cond, &V1, &V2))) -->
+      //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
                                       Alignment, DL, SI) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
                                       Alignment, DL, SI)) {
-        LoadInst *V1 =
-            Builder.CreateLoad(LI.getType(), SI->getOperand(1),
-                               SI->getOperand(1)->getName() + ".val");
-        LoadInst *V2 =
-            Builder.CreateLoad(LI.getType(), SI->getOperand(2),
-                               SI->getOperand(2)->getName() + ".val");
+
+        auto MaybeCastedLoadOperand = [&](Value *Op) {
+          if (ASC)
+            return Builder.CreateAddrSpaceCast(Op, ASC->getType(),
+                                               Op->getName() + ".cast");
+          return Op;
+        };
+        Value *LoadOp1 = MaybeCastedLoadOperand(SI->getOperand(1));
+        LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
+                                          LoadOp1->getName() + ".val");
+
+        Value *LoadOp2 = MaybeCastedLoadOperand(SI->getOperand(2));
+        LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
+                                          LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
         V1->setAlignment(Alignment);
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
@@ -1160,7 +1168,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        return SelectInst::Create(SI->getCondition(), V1, V2);
+        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
+                                  ProfcheckDisableMetadataFixes ? nullptr : SI);
       }
     }
   }

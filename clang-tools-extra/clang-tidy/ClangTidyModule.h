@@ -12,6 +12,7 @@
 #include "ClangTidyOptions.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Registry.h"
 #include <functional>
 #include <memory>
 
@@ -95,6 +96,12 @@ public:
   virtual ClangTidyOptions getModuleOptions();
 };
 
+using ClangTidyModuleRegistry = llvm::Registry<ClangTidyModule>;
+
 } // namespace clang::tidy
+
+namespace llvm {
+extern template class Registry<clang::tidy::ClangTidyModule>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULE_H

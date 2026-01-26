@@ -294,8 +294,6 @@ public:
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;
 
-  bool enableTerminalRule() const override { return true; }
-
   // Always use the TargetLowering default scheduler.
   // FIXME: This will use the vliw scheduler which is probably just hurting
   // compiler time and will be removed eventually anyway.
@@ -346,7 +344,11 @@ public:
   ArrayRef<MVT> getHVXElementTypes() const {
     static MVT Types[] = {MVT::i8, MVT::i16, MVT::i32};
     static MVT TypesV68[] = {MVT::i8, MVT::i16, MVT::i32, MVT::f16, MVT::f32};
+    static MVT TypesV81[] = {MVT::i8,  MVT::i16,  MVT::i32,
+                             MVT::f16, MVT::bf16, MVT::f32};
 
+    if (useHVXV81Ops() && useHVXFloatingPoint())
+      return ArrayRef(TypesV81);
     if (useHVXV68Ops() && useHVXFloatingPoint())
       return ArrayRef(TypesV68);
     return ArrayRef(Types);
