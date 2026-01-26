@@ -367,9 +367,17 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
-    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+    const ASTContext &AC = S.getASTContext();
+    unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
+    if (ElemSize != WCharSize) {
+      if (S.diagnosing()) {
+        //  a dedicated diagnostic
+        diagnoseNonConstexprBuiltin(S, OpPC, ID);
+      }
+      return false;
+    }
   }
+
 
   size_t Len = 0;
   for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
