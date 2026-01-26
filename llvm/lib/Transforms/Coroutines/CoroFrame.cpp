@@ -1057,6 +1057,37 @@ static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
   return GEP;
 }
 
+/// Find dbg.declare or dbg.declare_value records referencing `Def`. If none are
+/// found, walk up the load chain to find one.
+template <DbgVariableRecord::LocationType record_type>
+static TinyPtrVector<DbgVariableRecord *>
+findDbgRecordsThroughLoads(Function &F, Value *Def) {
+  static_assert(record_type == DbgVariableRecord::LocationType::Declare ||
+                record_type == DbgVariableRecord::LocationType::DeclareValue);
+  constexpr auto FindFunc =
+      record_type == DbgVariableRecord::LocationType::Declare
+          ? findDVRDeclares
+          : findDVRDeclareValues;
+
+  TinyPtrVector<DbgVariableRecord *> Records = FindFunc(Def);
+
+  if (!F.getSubprogram())
+    return Records;
+
+  Value *CurDef = Def;
+  while (Records.empty() && isa<LoadInst>(CurDef)) {
+    auto *LdInst = cast<LoadInst>(CurDef);
+    if (!LdInst->getType()->isPointerTy())
+      break;
+    CurDef = LdInst->getPointerOperand();
+    if (!isa<AllocaInst, LoadInst>(CurDef))
+      break;
+    Records = FindFunc(CurDef);
+  }
+
+  return Records;
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1132,23 +1163,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           CurrentReload = LI;
         }
 
-        TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(Def);
-        // Try best to find dbg.declare. If the spill is a temp, there may not
-        // be a direct dbg.declare. Walk up the load chain to find one from an
-        // alias.
-        if (F->getSubprogram()) {
-          auto *CurDef = Def;
-          while (DVRs.empty() && isa<LoadInst>(CurDef)) {
-            auto *LdInst = cast<LoadInst>(CurDef);
-            // Only consider ptr to ptr same type load.
-            if (LdInst->getPointerOperandType() != LdInst->getType())
-              break;
-            CurDef = LdInst->getPointerOperand();
-            if (!isa<AllocaInst, LoadInst>(CurDef))
-              break;
-            DVRs = findDVRDeclares(CurDef);
-          }
-        }
+        TinyPtrVector<DbgVariableRecord *> DVRs = findDbgRecordsThroughLoads<
+            DbgVariableRecord::LocationType::Declare>(*F, Def);
 
         auto SalvageOne = [&](DbgVariableRecord *DDI) {
           // This dbg.declare is preserved for all coro-split function
@@ -1168,23 +1184,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       }
 
       TinyPtrVector<DbgVariableRecord *> DVRDeclareValues =
-          findDVRDeclareValues(Def);
-      // Try best to find dbg.declare_value. If the spill is a temp, there may
-      // not be a direct dbg.declare_value. Walk up the load chain to find one
-      // from an alias.
-      if (F->getSubprogram()) {
-        auto *CurDef = Def;
-        while (DVRDeclareValues.empty() && isa<LoadInst>(CurDef)) {
-          auto *LdInst = cast<LoadInst>(CurDef);
-          // Only consider ptr to ptr same type load.
-          if (LdInst->getPointerOperandType() != LdInst->getType())
-            break;
-          CurDef = LdInst->getPointerOperand();
-          if (!isa<AllocaInst, LoadInst>(CurDef))
-            break;
-          DVRDeclareValues = findDVRDeclareValues(CurDef);
-        }
-      }
+          findDbgRecordsThroughLoads<
+              DbgVariableRecord::LocationType::DeclareValue>(*F, Def);
 
       auto SalvageOneCoro = [&](auto *DDI) {
         // This dbg.declare_value is preserved for all coro-split function
