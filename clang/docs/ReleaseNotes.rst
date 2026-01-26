@@ -194,6 +194,8 @@ Bug Fixes in This Version
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
 
+- Clang now outputs relative paths of embeds for dependency output. (#GH161950)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
