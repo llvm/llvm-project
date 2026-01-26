@@ -3642,7 +3642,22 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   return false;
 }
 
-static bool analyzeCandidate(outliner::Candidate &C) {
+bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
+  // If the expansion register for tail calls is live across the candidate
+  // outlined call site, we cannot outline that candidate as the expansion
+  // would clobber the register.
+  MCRegister TailExpandUseReg =
+      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+  if (C.back().isReturn() &&
+      !C.isAvailableAcrossAndOutOfSeq(TailExpandUseReg, RegInfo)) {
+    LLVM_DEBUG(dbgs() << "MBB:\n" << *C.getMBB());
+    LLVM_DEBUG(dbgs() << "Cannot be outlined between: " << C.front() << "and "
+                      << C.back());
+    LLVM_DEBUG(dbgs() << "Because the tail-call register is live across "
+                         "the proposed outlined function call\n");
+    return true;
+  }
+
   // If last instruction is return then we can rely on
   // the verification already performed in the getOutliningTypeImpl.
   if (C.back().isReturn()) {
@@ -3654,13 +3669,12 @@ static bool analyzeCandidate(outliner::Candidate &C) {
 
   // Filter out candidates where the X5 register (t0) can't be used to setup
   // the function call.
-  const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
-  if (llvm::any_of(C, [TRI](const MachineInstr &MI) {
-        return isMIModifiesReg(MI, TRI, RISCV::X5);
+  if (llvm::any_of(C, [this](const MachineInstr &MI) {
+        return isMIModifiesReg(MI, &RegInfo, RISCV::X5);
       }))
     return true;
 
-  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
+  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo);
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -3670,7 +3684,9 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     unsigned MinRepeats) const {
 
   // Analyze each candidate and erase the ones that are not viable.
-  llvm::erase_if(RepeatedSequenceLocs, analyzeCandidate);
+  llvm::erase_if(RepeatedSequenceLocs, [this](auto Candidate) {
+    return analyzeCandidate(Candidate);
+  });
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < MinRepeats)
