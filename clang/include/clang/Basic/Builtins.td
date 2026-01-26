@@ -1665,13 +1665,13 @@ def ReduceAdd : Builtin {
 }
 
 def ReduceAddf : Builtin {
-  let Spellings = ["__builtin_reduce_addf"];
+  let Spellings = ["__builtin_reduce_fadd"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def OrderedReduceAddf : Builtin {
-  let Spellings = ["__builtin_ordered_reduce_addf"];
+  let Spellings = ["__builtin_ordered_reduce_fadd"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

@@ -946,8 +946,8 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                                semantics, see `LangRef
                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                for the comparison.
- ET __builtin_reduce_addf(VT a)                unordered floating-point add reduction.                                floating point types
- ET __builtin_ordered_reduce_addf(VT a, ET s)  ordered floating-point add reduction, initializing the accumulator     floating point types
+ ET __builtin_reduce_fadd(VT a)                unordered floating-point add reduction.                                floating point types
+ ET __builtin_ordered_reduce_fadd(VT a, ET s)  ordered floating-point add reduction, initializing the accumulator     floating point types
                                                with `(ET)s`, then adding each lane of the `a` in-order, starting
                                                from lane 0.
 ============================================= ====================================================================== ==================================
@@ -979,15 +979,15 @@ Example:
     using v8i = int [[clang::ext_vector_type(8)]];
 
     v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
-    
+
     v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
-    
+
     void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
-    
+
     void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
     }
@@ -1079,7 +1079,7 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
 
 The matrix type extension supports column and row major memory layouts, but not
 all builtins are supported with row-major layout. The layout defaults to column
-major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major and can be specified using `-fmatrix-memory-layout`. To enable column
 major layout, use `-fmatrix-memory-layout=column-major`, and for row major
 layout use `-fmatrix-memory-layout=row-major`
 
