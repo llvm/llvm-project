@@ -162,10 +162,15 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
                     ),
                     CompletionItem(
                         label="region",
-                        detail="Get information on the memory region containing an address in the current target process.",
+                        detail="Get information on the memory region containing an address "
+                        "in the current target process.\nIf this command is given an "
+                        "<address-expression> once and then repeated without options, "
+                        "it will try to print the memory region that follows the "
+                        "previously printed region. The command can be repeated "
+                        "until the end of the address range is reached.",
                     ),
                 },
-            )
+            ),
         )
 
         # Provides completions for parameter values of commands

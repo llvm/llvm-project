@@ -1651,12 +1651,18 @@ public:
   };
 
   CommandObjectMemoryRegion(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "memory region",
-                            "Get information on the memory region containing "
-                            "an address in the current target process.",
-                            "memory region <address-expression> (or --all)",
-                            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                                eCommandProcessMustBeLaunched) {
+      : CommandObjectParsed(
+            interpreter, "memory region",
+            "Get information on the memory region containing "
+            "an address in the current target process.\n"
+            "If this command is given an <address-expression> once "
+            "and then repeated without options, it will try to print "
+            "the memory region that follows the previously printed "
+            "region. The command can be repeated until the end of "
+            "the address range is reached.",
+            "memory region <address-expression> (or --all)",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched) {
     // Address in option set 1.
     m_arguments.push_back(CommandArgumentEntry{CommandArgumentData(
         eArgTypeAddressOrExpression, eArgRepeatPlain, LLDB_OPT_SET_1)});
@@ -1747,8 +1753,9 @@ protected:
             // we must be at the end of the mappable range.
             (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
           result.AppendErrorWithFormat(
-              "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
-              m_cmd_name.c_str(), m_cmd_syntax.c_str());
+              "No next region address set: one address expression argument or "
+              "\"--all\" option required:\nUsage: %s\n",
+              m_cmd_syntax.c_str());
           return;
         }
       }

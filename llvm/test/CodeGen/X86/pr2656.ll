@@ -61,9 +61,9 @@ define double @PR22371(double %x) {
 ; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
-  %call = tail call double @fabs(double %x) #0
+  %call = tail call double @llvm.fabs.f64(double %x) #0
   ret double %call
 }
 
-declare double @fabs(double) #0
+declare double @llvm.fabs.f64(double) #0
 attributes #0 = { readnone }

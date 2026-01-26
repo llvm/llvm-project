@@ -6187,3 +6187,167 @@ define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(ptr addrspace
   store volatile i32 %after.offset, ptr addrspace(1) %out, align 4
   ret void
 }
+
+define amdgpu_kernel void @f16_arg(half %arg, ptr addrspace(1) %ptr) {
+; SI-LABEL: f16_arg:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s6, s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, s6
+; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: f16_arg:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    flat_store_short v[0:1], v2
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: f16_arg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; EG-LABEL: f16_arg:
+; EG:       ; %bb.0:
+; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
+; EG-NEXT:    TEX 0 @6
+; EG-NEXT:    ALU 11, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+; EG-NEXT:    Fetch clause starting at 6:
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 36, #3
+; EG-NEXT:    ALU clause starting at 8:
+; EG-NEXT:     MOV * T0.X, 0.0,
+; EG-NEXT:    ALU clause starting at 9:
+; EG-NEXT:     AND_INT T0.W, KC0[2].Z, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.y,
+; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     LSHL T0.X, T1.W, PV.W,
+; EG-NEXT:     LSHL * T0.W, literal.x, PV.W,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     MOV T0.Y, 0.0,
+; EG-NEXT:     MOV * T0.Z, 0.0,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+;
+; CM-LABEL: f16_arg:
+; CM:       ; %bb.0:
+; CM-NEXT:    ALU 0, @8, KC0[], KC1[]
+; CM-NEXT:    TEX 0 @6
+; CM-NEXT:    ALU 11, @9, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+; CM-NEXT:    Fetch clause starting at 6:
+; CM-NEXT:     VTX_READ_16 T0.X, T0.X, 36, #3
+; CM-NEXT:    ALU clause starting at 8:
+; CM-NEXT:     MOV * T0.X, 0.0,
+; CM-NEXT:    ALU clause starting at 9:
+; CM-NEXT:     AND_INT * T0.W, KC0[2].Z, literal.x,
+; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; CM-NEXT:     AND_INT T0.Z, T0.X, literal.x,
+; CM-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
+; CM-NEXT:     LSHL T0.X, PV.Z, PV.W,
+; CM-NEXT:     LSHL * T0.W, literal.x, PV.W,
+; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; CM-NEXT:     MOV T0.Y, 0.0,
+; CM-NEXT:     MOV * T0.Z, 0.0,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
+; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+  store half %arg, ptr addrspace(1) %ptr
+  ret void
+}
+
+define amdgpu_kernel void @v2f16_arg(<2 x half> %arg, ptr addrspace(1) %ptr) {
+; SI-LABEL: v2f16_arg:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s6, s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, s6
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: v2f16_arg:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: v2f16_arg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; EG-LABEL: v2f16_arg:
+; EG:       ; %bb.0:
+; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
+; EG-NEXT:    TEX 1 @6
+; EG-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+; EG-NEXT:    Fetch clause starting at 6:
+; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 38, #3
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 36, #3
+; EG-NEXT:    ALU clause starting at 10:
+; EG-NEXT:     MOV * T0.X, 0.0,
+; EG-NEXT:    ALU clause starting at 11:
+; EG-NEXT:     LSHL * T0.W, T1.X, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     OR_INT T0.X, T0.X, PV.W,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+;
+; CM-LABEL: v2f16_arg:
+; CM:       ; %bb.0:
+; CM-NEXT:    ALU 0, @10, KC0[], KC1[]
+; CM-NEXT:    TEX 1 @6
+; CM-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+; CM-NEXT:    Fetch clause starting at 6:
+; CM-NEXT:     VTX_READ_16 T1.X, T0.X, 38, #3
+; CM-NEXT:     VTX_READ_16 T0.X, T0.X, 36, #3
+; CM-NEXT:    ALU clause starting at 10:
+; CM-NEXT:     MOV * T0.X, 0.0,
+; CM-NEXT:    ALU clause starting at 11:
+; CM-NEXT:     LSHL * T0.W, T1.X, literal.x,
+; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; CM-NEXT:     OR_INT * T0.X, T0.X, PV.W,
+; CM-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
+; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+  store <2 x half> %arg, ptr addrspace(1) %ptr
+  ret void
+}

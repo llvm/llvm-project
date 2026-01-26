@@ -6,7 +6,7 @@ define double @fabs(double %f) {
 ; CHECK-NEXT:    fabs f1, f1
 ; CHECK-NEXT:    blr
 ;
-  %t = tail call double @fabs( double %f ) readnone
+  %t = tail call double @llvm.fabs.f64( double %f ) readnone
   ret double %t
 }
 

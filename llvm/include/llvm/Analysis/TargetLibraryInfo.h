@@ -400,23 +400,15 @@ public:
     case LibFunc_asin:         case LibFunc_asinf:      case LibFunc_asinl:
     case LibFunc_atan2:        case LibFunc_atan2f:     case LibFunc_atan2l:
     case LibFunc_atan:         case LibFunc_atanf:      case LibFunc_atanl:
-    case LibFunc_ceil:         case LibFunc_ceilf:      case LibFunc_ceill:
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
     case LibFunc_cosh:         case LibFunc_coshf:      case LibFunc_coshl:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
     case LibFunc_exp10:        case LibFunc_exp10f:     case LibFunc_exp10l:
-    case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
-    case LibFunc_floor:        case LibFunc_floorf:     case LibFunc_floorl:
-    case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:
-    case LibFunc_fmin:         case LibFunc_fminf:      case LibFunc_fminl:
     case LibFunc_ldexp:        case LibFunc_ldexpf:     case LibFunc_ldexpl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
-    case LibFunc_nearbyint:    case LibFunc_nearbyintf: case LibFunc_nearbyintl:
-    case LibFunc_rint:         case LibFunc_rintf:      case LibFunc_rintl:
-    case LibFunc_round:        case LibFunc_roundf:     case LibFunc_roundl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_sinh:         case LibFunc_sinhf:      case LibFunc_sinhl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
@@ -426,8 +418,7 @@ public:
     case LibFunc_strnlen:      case LibFunc_strstr:     case LibFunc_memchr:
     case LibFunc_mempcpy:      case LibFunc_tan:        case LibFunc_tanf:
     case LibFunc_tanl:         case LibFunc_tanh:       case LibFunc_tanhf:
-    case LibFunc_tanhl:        case LibFunc_trunc:      case LibFunc_truncf:
-    case LibFunc_truncl:
+    case LibFunc_tanhl:
       // clang-format on
       return true;
     }

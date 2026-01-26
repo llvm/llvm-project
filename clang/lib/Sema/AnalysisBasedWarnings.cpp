@@ -2940,6 +2940,17 @@ public:
         << EscapeExpr->getSourceRange();
   }
 
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const Expr *EscapeExpr) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
     S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
   }
@@ -3088,6 +3099,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
                        D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_strict,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
                        D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&

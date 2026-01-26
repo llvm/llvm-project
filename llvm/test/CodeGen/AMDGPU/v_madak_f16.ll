@@ -11,22 +11,25 @@ define amdgpu_kernel void @madak_f16(
 ; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s14, s6
+; SI-NEXT:    s_mov_b32 s10, s6
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s12, s2
 ; SI-NEXT:    s_mov_b32 s13, s3
+; SI-NEXT:    s_mov_b32 s14, s6
 ; SI-NEXT:    s_mov_b32 s15, s7
-; SI-NEXT:    s_mov_b32 s10, s6
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    buffer_load_ushort v0, off, s[12:15], 0
-; SI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
+; SI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; SI-NEXT:    buffer_load_ushort v1, off, s[12:15], 0
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_madak_f32 v0, v0, v1, 0x41200000
+; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_add_f32_e32 v0, 0x41200000, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -140,7 +143,6 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_load_ushort v2, off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v3, 0x41200000
 ; SI-NEXT:    s_mov_b32 s0, s8
 ; SI-NEXT:    s_mov_b32 s1, s9
 ; SI-NEXT:    s_mov_b32 s4, s10
@@ -148,12 +150,18 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-NEXT:    v_madak_f32 v1, v0, v1, 0x41200000
-; SI-NEXT:    v_mac_f32_e32 v3, v0, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v3
-; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; SI-NEXT:    buffer_store_short v1, off, s[4:7], 0
+; SI-NEXT:    v_mul_f32_e32 v1, v0, v1
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
+; SI-NEXT:    v_add_f32_e32 v0, 0x41200000, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    buffer_store_short v1, off, s[0:3], 0
+; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: madak_f16_use_2:

@@ -17,6 +17,7 @@ define void @f16_arg(half %arg, ptr %ptr) #0 {
 ; GFX7-LABEL: f16_arg:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    flat_store_dword v[1:2], v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -30,13 +31,14 @@ define void @v2f16_arg(<2 x half> %arg, ptr %ptr) #0 {
 ; GFX7-LABEL: v2f16_arg:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v4, v0
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 4, v1
-; GFX7-NEXT:    flat_store_dword v[1:2], v3
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
-; GFX7-NEXT:    flat_store_dword v[0:1], v4
+; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v3
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_add_i32_e32 v3, vcc, 4, v1
+; GFX7-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
+; GFX7-NEXT:    flat_store_dword v[3:4], v5
+; GFX7-NEXT:    flat_store_dword v[1:2], v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fpext = call <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half> %arg, metadata !"fpexcept.strict")
@@ -48,17 +50,19 @@ define void @v3f16_arg(<3 x half> %arg, ptr %ptr) #0 {
 ; GFX7-LABEL: v3f16_arg:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v1
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v4, v0
+; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff, v0
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v0
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 8, v2
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX7-NEXT:    flat_store_dword v[0:1], v6
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 4, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX7-NEXT:    flat_store_dword v[2:3], v4
 ; GFX7-NEXT:    flat_store_dword v[0:1], v5
+; GFX7-NEXT:    flat_store_dword v[2:3], v4
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fpext = call <3 x float> @llvm.experimental.constrained.fpext.v3f32.v3f16(<3 x half> %arg, metadata !"fpexcept.strict")
@@ -70,22 +74,24 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; GFX7-LABEL: v4f16_arg:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v1
-; GFX7-NEXT:    flat_store_dword v[2:3], v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v7, v1
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 12, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; GFX7-NEXT:    flat_store_dword v[0:1], v5
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; GFX7-NEXT:    flat_store_dword v[0:1], v4
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 8, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX7-NEXT:    flat_store_dword v[0:1], v6
+; GFX7-NEXT:    flat_store_dword v[0:1], v7
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 4, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX7-NEXT:    flat_store_dword v[0:1], v4
+; GFX7-NEXT:    flat_store_dword v[0:1], v5
+; GFX7-NEXT:    flat_store_dword v[2:3], v6
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fpext = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %arg, metadata !"fpexcept.strict")
@@ -98,9 +104,6 @@ define half @f16_return(float %arg) #0 {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fptrunc = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %fptrunc
@@ -112,13 +115,8 @@ define <2 x half> @v2f16_return(<2 x float> %arg) #0 {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fptrunc = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -129,19 +127,12 @@ define <3 x half> @v3f16_return(<3 x float> %arg) #0 {
 ; GFX7-LABEL: v3f16_return:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fptrunc = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -153,25 +144,15 @@ define <4 x half> @v4f16_return(<4 x float> %arg) #0 {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; GFX7-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX7-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %fptrunc = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <4 x half> %fptrunc
@@ -421,15 +402,10 @@ define half @call_split_type_used_outside_block_v8f16() #0 {
 ; GFX7-NEXT:    s_addk_i32 s32, 0x400
 ; GFX7-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX7-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX7-NEXT:    s_mov_b32 s32, s33
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_readlane_b32 s4, v40, 2
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX7-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX7-NEXT:    s_mov_b64 exec, s[6:7]

@@ -1480,6 +1480,9 @@ SDValue R600TargetLowering::LowerFormalArguments(
       MemVT = MemVT.getVectorElementType();
     }
 
+    if (VT.isInteger() && !MemVT.isInteger())
+      MemVT = MemVT.changeTypeToInteger();
+
     if (AMDGPU::isShader(CallConv)) {
       Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
