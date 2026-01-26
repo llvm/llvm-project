@@ -235,6 +235,7 @@ defset list<DXILOpClass> OpClasses = {
   def waveMatrix_StoreRawBuf : DXILOpClass;
   def waveMultiPrefixBitCount : DXILOpClass;
   def waveMultiPrefixOp : DXILOpClass;
+  def wavePrefixBitCount : DXILOpClass;
   def wavePrefixOp : DXILOpClass;
   def waveReadLaneAt : DXILOpClass;
   def waveReadLaneFirst : DXILOpClass;
@@ -316,6 +317,8 @@ defvar WaveOpKind_Sum = 0;
 defvar WaveOpKind_Product = 1;
 defvar WaveOpKind_Min = 2;
 defvar WaveOpKind_Max = 3;
+
+defvar WavePrefixOpKind_BitCount = 136;
 
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
@@ -1120,6 +1123,29 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let overloads = [
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
   ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def WavePrefixOp : DXILOp<121, wavePrefixOp> {
+  let Doc = "returns the result of the operation on prior lanes";
+
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_prefix_bit_count,
+      [ 
+        IntrinArgI32<WavePrefixOpKind_BitCount>, IntrinArgIndex<0>, 
+        IntrinArgI8<SignedOpKind_Unsigned> 
+      ]>
+  ];
+
+  let arguments = [    
+    Int32Ty,      // prefix op kind
+    Int1Ty,      // value
+    Int8Ty       // signedness
+  ];
+
+  let result = Int32Ty;
+
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, []>];
 }

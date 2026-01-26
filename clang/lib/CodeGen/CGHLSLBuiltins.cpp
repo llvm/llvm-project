@@ -331,6 +331,40 @@ static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
+// select and return a specific wave prefix op intrinsic,
+// based on the provided op kind.
+// OpKinds:
+// CountBits = 136, count all bits set in previous threads
+// This is the only operation in DXIL so far under this class
+static Intrinsic::ID getPrefixOpIntrinsic(int OpKind,
+                                          llvm::Triple::ArchType Arch,
+                                          CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    switch (OpKind) {
+    case 136: {
+      return Intrinsic::spv_subgroup_prefix_bit_count;
+    }
+    default: {
+      llvm_unreachable("Unexpected SubOp ID");
+    }
+    }
+  case llvm::Triple::dxil: {
+    switch (OpKind) {
+    case 136: {
+      return Intrinsic::dx_wave_prefix_bit_count;
+    }
+    default: {
+      llvm_unreachable("Unexpected SubOp ID");
+    }
+    }
+  }
+  default:
+    llvm_unreachable(
+        "WavePrefixOp instruction not supported by target architecture");
+  }
+}
+
 // Returns the mangled name for a builtin function that the SPIR-V backend
 // will expand into a spec Constant.
 static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
@@ -807,6 +841,19 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/Op0->getType(),
         CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.saturate");
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy(1) &&
+           "WavePrefixBitCount operand must be a boolean type");
+
+    Intrinsic::ID IID = getPrefixOpIntrinsic(
+        /* OpKind */ 136, getTarget().getTriple().getArch(),
+        CGM.getHLSLRuntime(), E->getArg(0)->getType());
+
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), IID), ArrayRef{Op},
+        "hlsl.wave.prefix.bit.count");
   }
   case Builtin::BI__builtin_hlsl_select: {
     Value *OpCond = EmitScalarExpr(E->getArg(0));

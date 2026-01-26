@@ -55,6 +55,7 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:
+  case Intrinsic::dx_wave_prefix_bit_count:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_min:
