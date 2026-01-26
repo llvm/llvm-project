@@ -4556,7 +4556,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
   
   // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
   const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
-  const auto &upperBoundExpr{parser::UnwrapRef<parser::Expr>(upperBound)};
+  const auto &upperBoundExpr{upperBound.thing};
   
   if(MaybeExpr analyzedExpr = Analyze(upperBoundExpr)) {
     if(analyzedExpr->Rank() == 1) {
@@ -4567,7 +4567,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
   // Check lower bound if it exists
   const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
   if(lowerBoundOpt) {
-    const auto &lowerBoundExpr = parser::UnwrapRef<parser::Expr>(*lowerBoundOpt);
+    const auto &lowerBoundExpr{lowerBoundOpt->thing};
     if(MaybeExpr analyzedExpr = Analyze(lowerBoundExpr)) {
       if(analyzedExpr->Rank() == 1) {
         foundArray = true;
