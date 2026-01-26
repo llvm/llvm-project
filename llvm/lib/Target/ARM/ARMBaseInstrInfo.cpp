@@ -619,6 +619,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
     return getInstBundleLength(MI);
+  case TargetOpcode::COPY:
+    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
+      return 4;
+    else
+      return 2;
   case ARM::CONSTPOOL_ENTRY:
   case ARM::JUMPTABLE_INSTS:
   case ARM::JUMPTABLE_ADDRS:
