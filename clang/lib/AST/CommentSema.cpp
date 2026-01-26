@@ -288,6 +288,12 @@ TParamCommandComment *Sema::actOnTParamCommandStart(
       new (Allocator) TParamCommandComment(LocBegin, LocEnd, CommandID,
                                            CommandMarker);
 
+  if (isExplicitInstantiation()) {
+    // Do not warn on explicit instantiations, since the documentation
+    // comments are on the primary template.
+    return Command;
+  }
+
   if (!isTemplateOrSpecialization())
     Diag(Command->getLocation(),
          diag::warn_doc_tparam_not_attached_to_a_template_decl)
@@ -307,6 +313,12 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
   Command->setArgs(ArrayRef(A, 1));
+
+  if (isExplicitInstantiation()) {
+    // Do not warn on explicit instantiations, since the documentation
+    // comments are on the primary template.
+    return;
+  }
 
   if (!isTemplateOrSpecialization()) {
     // We already warned that this \\tparam is not attached to a template decl.
@@ -854,6 +866,19 @@ bool Sema::isTemplateOrSpecialization() {
   if (!ThisDeclInfo->IsFilled)
     inspectThisDecl();
   return ThisDeclInfo->getTemplateKind() != DeclInfo::NotTemplate;
+}
+
+bool Sema::isExplicitInstantiation() {
+  if (!ThisDeclInfo)
+    return false;
+  if (!ThisDeclInfo->IsFilled)
+    inspectThisDecl();
+  if (const auto *FD = dyn_cast<FunctionDecl>(ThisDeclInfo->CurrentDecl)) {
+    TemplateSpecializationKind TSK = FD->getTemplateSpecializationKind();
+    return (TSK == TSK_ExplicitInstantiationDeclaration) ||
+           (TSK == TSK_ExplicitInstantiationDefinition);
+  }
+  return false;
 }
 
 bool Sema::isRecordLikeDecl() {

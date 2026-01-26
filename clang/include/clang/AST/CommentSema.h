@@ -211,6 +211,7 @@ private:
   bool isObjCMethodDecl();
   bool isObjCPropertyDecl();
   bool isTemplateOrSpecialization();
+  bool isExplicitInstantiation();
   bool isRecordLikeDecl();
   bool isClassOrStructDecl();
   /// \return \c true if the declaration that this comment is attached to
