@@ -47,7 +47,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y,
 #endif
 
   // Octant 0 result
-  __CLC_GENTYPE a = __clc_mad(p, MATH_RECIP(q), vbyu);
+  __CLC_GENTYPE a = __clc_mad(p, __clc_native_recip(q), vbyu);
 
   // Fix up 3 other octants
   __CLC_GENTYPE at = piby2 - a;

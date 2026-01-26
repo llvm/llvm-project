@@ -31,7 +31,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2pi(__CLC_GENTYPE y,
       __clc_mad(vbyu2, __clc_mad(vbyu2, 0x1.1a714cp-2f, 0x1.287c56p+0f), 1.0f);
 
   // Octant 0 result
-  __CLC_GENTYPE a = MATH_DIVIDE(__clc_mad(p, MATH_RECIP(q), vbyu), pi);
+  __CLC_GENTYPE a = MATH_DIVIDE(__clc_mad(p, __clc_native_recip(q), vbyu), pi);
 
   // Fix up 3 other octants
   __CLC_GENTYPE at = 0.5f - a;
