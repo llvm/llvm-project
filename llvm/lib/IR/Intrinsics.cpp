@@ -364,23 +364,10 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
       return;
     }
 
-    if (NextElt < Infos.size() && Infos[NextElt] == IIT_NONETYPE) {
-      NextElt++;
-
-      unsigned NumTypes = Infos[NextElt++];
-      OutputTable.push_back(
-          IITDescriptor::get(IITDescriptor::ArgumentTypeExclusion, NumTypes));
-
-      for (unsigned i = 0; i < NumTypes; ++i)
-        DecodeIITType(NextElt, Infos, Info, OutputTable);
-      return;
-    }
     return;
   }
   case IIT_ANYTYPE:
     llvm_unreachable("IIT_ANYTYPE must follow IIT_ARG");
-  case IIT_NONETYPE:
-    llvm_unreachable("IIT_NONETYPE must follow IIT_ARG");
   case IIT_EXTEND_ARG: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(
@@ -608,9 +595,6 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::ArgumentTypeConstraint:
     llvm_unreachable(
         "ArgumentTypeConstraint should not appear in DecodeFixedType");
-  case IITDescriptor::ArgumentTypeExclusion:
-    llvm_unreachable(
-        "ArgumentTypeExclusion should not appear in DecodeFixedType");
   }
   llvm_unreachable("unhandled");
 }
@@ -632,15 +616,6 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
       (void)DecodeFixedType(TableRef, Tys, Context);
   }
 
-  if (!TableRef.empty() &&
-      TableRef[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-    unsigned NumExclusions = TableRef[0].getArgumentNumExclusions();
-    TableRef = TableRef.slice(1);
-
-    for (unsigned i = 0; i < NumExclusions; ++i)
-      (void)DecodeFixedType(TableRef, Tys, Context);
-  }
-
   SmallVector<Type *, 8> ArgTys;
   while (!TableRef.empty()) {
     ArgTys.push_back(DecodeFixedType(TableRef, Tys, Context));
@@ -651,15 +626,6 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
       TableRef = TableRef.slice(1);
 
       for (unsigned i = 0; i < NumConstraints; ++i)
-        (void)DecodeFixedType(TableRef, Tys, Context);
-    }
-
-    if (!TableRef.empty() &&
-        TableRef[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-      unsigned NumExclusions = TableRef[0].getArgumentNumExclusions();
-      TableRef = TableRef.slice(1);
-
-      for (unsigned i = 0; i < NumExclusions; ++i)
         (void)DecodeFixedType(TableRef, Tys, Context);
     }
   }
@@ -944,14 +910,6 @@ skipDescriptorsForSingleType(ArrayRef<Intrinsic::IITDescriptor> &Infos) {
       for (unsigned i = 0; i < NumConstraints; ++i)
         Count += skipDescriptorsForSingleType(Infos);
     }
-    if (!Infos.empty() &&
-        Infos[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-      unsigned NumExclusions = Infos[0].getArgumentNumExclusions();
-      Count++;
-      Infos = Infos.slice(1);
-      for (unsigned i = 0; i < NumExclusions; ++i)
-        Count += skipDescriptorsForSingleType(Infos);
-    }
     break;
 
   default:
@@ -960,6 +918,16 @@ skipDescriptorsForSingleType(ArrayRef<Intrinsic::IITDescriptor> &Infos) {
   return Count;
 }
 
+// Forward declarations for constraint validation helpers.
+static std::string typeToString(Type *Ty);
+static bool
+verifyTypeAgainstConstraints(Type *Ty, unsigned NumConstraints,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos);
+static bool
+validateAndConsumeConstraint(Type *Ty,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             const Twine &Constraint, std::string &ErrMsg);
+
 using DeferredIntrinsicMatchPair =
     std::pair<Type *, ArrayRef<Intrinsic::IITDescriptor>>;
 
@@ -967,7 +935,7 @@ static bool
 matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
                    SmallVectorImpl<Type *> &ArgTys,
                    SmallVectorImpl<DeferredIntrinsicMatchPair> &DeferredChecks,
-                   bool IsDeferredCheck) {
+                   bool IsDeferredCheck, std::string *ErrMsg = nullptr) {
   using namespace Intrinsic;
 
   // If we ran out of descriptors, there are too many arguments.
@@ -1021,7 +989,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     VectorType *VT = dyn_cast<VectorType>(Ty);
     return !VT || VT->getElementCount() != D.Vector_Width ||
            matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
-                              DeferredChecks, IsDeferredCheck);
+                              DeferredChecks, IsDeferredCheck, ErrMsg);
   }
   case IITDescriptor::Pointer: {
     PointerType *PT = dyn_cast<PointerType>(Ty);
@@ -1036,7 +1004,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
     for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
       if (matchIntrinsicType(ST->getElementType(i), Infos, ArgTys,
-                             DeferredChecks, IsDeferredCheck))
+                             DeferredChecks, IsDeferredCheck, ErrMsg))
         return true;
     return false;
   }
@@ -1080,24 +1048,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
     if (!Infos.empty() &&
         Infos[0].Kind == IITDescriptor::ArgumentTypeConstraint) {
-      unsigned NumConstraints = Infos[0].getArgumentNumConstraints();
-      Infos = Infos.slice(1);
-
-      for (unsigned i = 0; i < NumConstraints; ++i)
-        skipDescriptorsForSingleType(Infos);
-
-      return false;
-    }
-
-    if (!Infos.empty() &&
-        Infos[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-      unsigned NumExclusions = Infos[0].getArgumentNumExclusions();
-      Infos = Infos.slice(1);
-
-      for (unsigned i = 0; i < NumExclusions; ++i)
-        skipDescriptorsForSingleType(Infos);
-
-      return false;
+      if (ErrMsg) {
+        if (!validateAndConsumeConstraint(Ty, Infos,
+                                          Twine("Overloaded Argument ") +
+                                              Twine(D.getArgumentNumber()),
+                                          *ErrMsg))
+          return true;
+      } else {
+        unsigned NumConstraints = Infos[0].getArgumentNumConstraints();
+        Infos = Infos.slice(1);
+        for (unsigned i = 0; i < NumConstraints; ++i)
+          skipDescriptorsForSingleType(Infos);
+      }
     }
 
     return false;
@@ -1162,7 +1124,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       EltTy = ThisArgType->getElementType();
     }
     return matchIntrinsicType(EltTy, Infos, ArgTys, DeferredChecks,
-                              IsDeferredCheck);
+                              IsDeferredCheck, ErrMsg);
   }
   case IITDescriptor::VecOfAnyPtrsToElt: {
     unsigned RefArgNumber = D.getRefArgNumber();
@@ -1223,32 +1185,28 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::ArgumentTypeConstraint:
     llvm_unreachable(
         "ArgumentTypeConstraint should be handled in Argument case");
-  case IITDescriptor::ArgumentTypeExclusion:
-    llvm_unreachable(
-        "ArgumentTypeExclusion should be handled in Argument case");
   }
   llvm_unreachable("unhandled");
 }
 
-Intrinsic::MatchIntrinsicTypesResult
-Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
-                                   ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                   SmallVectorImpl<Type *> &ArgTys) {
+Intrinsic::MatchIntrinsicTypesResult Intrinsic::matchIntrinsicSignature(
+    FunctionType *FTy, ArrayRef<Intrinsic::IITDescriptor> &Infos,
+    SmallVectorImpl<Type *> &ArgTys, std::string *ErrMsg) {
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
   if (matchIntrinsicType(FTy->getReturnType(), Infos, ArgTys, DeferredChecks,
-                         false))
+                         false, ErrMsg))
     return MatchIntrinsicTypes_NoMatchRet;
 
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
 
   for (auto *Ty : FTy->params())
-    if (matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks, false))
+    if (matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks, false, ErrMsg))
       return MatchIntrinsicTypes_NoMatchArg;
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
     DeferredIntrinsicMatchPair &Check = DeferredChecks[I];
     if (matchIntrinsicType(Check.first, Check.second, ArgTys, DeferredChecks,
-                           true))
+                           true, ErrMsg))
       return I < NumDeferredReturnChecks ? MatchIntrinsicTypes_NoMatchRet
                                          : MatchIntrinsicTypes_NoMatchArg;
   }
@@ -1290,205 +1248,28 @@ static std::string typeToString(Type *Ty) {
   return Str;
 }
 
-enum class ConstraintKind {
-  Allowed,
-  Excluded,
-};
-
+// Validate and consume an AnyTypeOf constraint if present
+// at the current position.
 static bool
-checkAndConsumeConstraintBlock(Type *Ty, ConstraintKind Kind,
-                               ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                               const Twine &Constraint, std::string &ErrMsg) {
+validateAndConsumeConstraint(Type *Ty,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             const Twine &Constraint, std::string &ErrMsg) {
   using namespace Intrinsic;
 
-  unsigned Count = Kind == ConstraintKind::Allowed
-                       ? Infos.front().getArgumentNumConstraints()
-                       : Infos.front().getArgumentNumExclusions();
+  if (Infos.empty() || Infos[0].Kind != IITDescriptor::ArgumentTypeConstraint)
+    return true;
+
+  unsigned Count = Infos.front().getArgumentNumConstraints();
   Infos = Infos.slice(1);
 
   bool Matches = verifyTypeAgainstConstraints(Ty, Count, Infos);
-  bool Violates = Kind == ConstraintKind::Allowed ? !Matches : Matches;
-  if (!Violates)
+  if (Matches)
     return true;
 
   ErrMsg = (Constraint + " type '" + typeToString(Ty) + "'" +
-            (Kind == ConstraintKind::Allowed ? " not in allowed types"
-                                             : " is in excluded types"))
+            " not in allowed types")
                .str();
   return false;
-}
-
-// Verify the Struct return types.
-static bool
-verifyIntrinsicStructOutputTypes(Type *RetTy,
-                                 ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                 std::string &ErrMsg) {
-  using namespace Intrinsic;
-
-  auto *STy = dyn_cast<StructType>(RetTy);
-  if (!STy) {
-    skipDescriptorsForSingleType(Infos);
-    return false;
-  }
-
-  if (Infos.empty() || Infos[0].Kind != IITDescriptor::Struct) {
-    ErrMsg = "Return type struct encoding is malformed";
-    return false;
-  }
-
-  unsigned NumElements = Infos[0].Struct_NumElements;
-  Infos = Infos.slice(1);
-
-  for (unsigned ElemIdx = 0; ElemIdx < NumElements; ++ElemIdx) {
-    if (Infos.empty())
-      break;
-
-    if (Infos[0].Kind == IITDescriptor::Argument) {
-      Infos = Infos.slice(1);
-
-      Type *ElemTy = STy->getElementType(ElemIdx);
-
-      if (!Infos.empty() &&
-          Infos[0].Kind == IITDescriptor::ArgumentTypeConstraint) {
-        if (!checkAndConsumeConstraintBlock(
-                ElemTy, ConstraintKind::Allowed, Infos,
-                Twine("Return type struct element ") + Twine(ElemIdx), ErrMsg))
-          return false;
-      } else if (!Infos.empty() &&
-                 Infos[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-        if (!checkAndConsumeConstraintBlock(
-                ElemTy, ConstraintKind::Excluded, Infos,
-                Twine("Return type struct element ") + Twine(ElemIdx), ErrMsg))
-          return false;
-      }
-    } else
-      skipDescriptorsForSingleType(Infos);
-  }
-
-  return true;
-}
-
-// Verify the non struct return types.
-static bool
-verifyIntrinsicNonStructOutputTypes(Type *RetTy,
-                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                    std::string &ErrMsg) {
-  using namespace Intrinsic;
-
-  if (Infos.empty())
-    return true;
-
-  if (Infos[0].Kind != IITDescriptor::Argument) {
-    skipDescriptorsForSingleType(Infos);
-    return true;
-  }
-
-  Infos = Infos.slice(1);
-
-  if (!Infos.empty() &&
-      Infos[0].Kind == IITDescriptor::ArgumentTypeConstraint) {
-    if (!checkAndConsumeConstraintBlock(RetTy, ConstraintKind::Allowed, Infos,
-                                        "Return type", ErrMsg))
-      return false;
-  } else if (!Infos.empty() &&
-             Infos[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-    if (!checkAndConsumeConstraintBlock(RetTy, ConstraintKind::Excluded, Infos,
-                                        "Return type", ErrMsg))
-      return false;
-  }
-
-  return true;
-}
-
-// Verify the return types.
-static bool
-verifyIntrinsicOutputTypes(Intrinsic::ID id, FunctionType *FTy,
-                           ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                           std::string &ErrMsg) {
-
-  Type *RetTy = FTy->getReturnType();
-  if (RetTy->isStructTy())
-    return verifyIntrinsicStructOutputTypes(RetTy, Infos, ErrMsg);
-
-  return verifyIntrinsicNonStructOutputTypes(RetTy, Infos, ErrMsg);
-}
-
-// Verify the input parameters.
-static bool verifyIntrinsicInputTypes(Intrinsic::ID id, FunctionType *FTy,
-                                      ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                      std::string &ErrMsg) {
-  using namespace Intrinsic;
-
-  SmallVector<Type *, 4> ArgTys;
-
-  for (unsigned ParamIdx = 0; ParamIdx < FTy->getNumParams(); ++ParamIdx) {
-    if (Infos.empty())
-      break;
-
-    Type *ParamTy = FTy->getParamType(ParamIdx);
-
-    if (Infos[0].Kind == IITDescriptor::Argument) {
-      unsigned ArgNum = Infos[0].getArgumentNumber();
-      Infos = Infos.slice(1);
-
-      if (!Infos.empty() &&
-          Infos[0].Kind == IITDescriptor::ArgumentTypeConstraint) {
-        if (!checkAndConsumeConstraintBlock(
-                ParamTy, ConstraintKind::Allowed, Infos,
-                Twine("Parameter ") + Twine(ParamIdx), ErrMsg))
-          return false;
-        if (ArgNum == ArgTys.size())
-          ArgTys.push_back(ParamTy);
-      } else if (!Infos.empty() &&
-                 Infos[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
-        if (!checkAndConsumeConstraintBlock(
-                ParamTy, ConstraintKind::Excluded, Infos,
-                Twine("Parameter ") + Twine(ParamIdx), ErrMsg))
-          return false;
-        if (ArgNum == ArgTys.size())
-          ArgTys.push_back(ParamTy);
-      }
-    } else
-      skipDescriptorsForSingleType(Infos);
-  }
-
-  return true;
-}
-
-bool Intrinsic::verifyIntrinsicTypeConstraints(ID id, FunctionType *FTy,
-                                               std::string &ErrMsg) {
-  if (id == 0 || id >= Intrinsic::num_intrinsics)
-    return true;
-
-  if (!isOverloaded(id))
-    return true;
-
-  SmallVector<IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(id, Table);
-  if (Table.empty())
-    return true;
-
-  ArrayRef<IITDescriptor> Infos = Table;
-
-  // if there are no constraint descriptors, skip verification.
-  bool HasConstraints = false;
-  for (const auto &D : Infos) {
-    if (D.Kind == IITDescriptor::ArgumentTypeConstraint ||
-        D.Kind == IITDescriptor::ArgumentTypeExclusion) {
-      HasConstraints = true;
-      break;
-    }
-  }
-  if (!HasConstraints)
-    return true;
-
-  if (!verifyIntrinsicOutputTypes(id, FTy, Infos, ErrMsg))
-    return false;
-
-  if (!verifyIntrinsicInputTypes(id, FTy, Infos, ErrMsg))
-    return false;
-
-  return true;
 }
 
 bool Intrinsic::matchIntrinsicVarArg(
@@ -1511,7 +1292,8 @@ bool Intrinsic::matchIntrinsicVarArg(
 }
 
 bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
-                                      SmallVectorImpl<Type *> &ArgTys) {
+                                      SmallVectorImpl<Type *> &ArgTys,
+                                      std::string *ErrMsg) {
   if (!ID)
     return false;
 
@@ -1519,7 +1301,7 @@ bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
   getIntrinsicInfoTableEntries(ID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
-  if (Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys) !=
+  if (Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys, ErrMsg) !=
       Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
     return false;
   }
@@ -1529,9 +1311,10 @@ bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
 }
 
 bool Intrinsic::getIntrinsicSignature(Function *F,
-                                      SmallVectorImpl<Type *> &ArgTys) {
+                                      SmallVectorImpl<Type *> &ArgTys,
+                                      std::string *ErrMsg) {
   return getIntrinsicSignature(F->getIntrinsicID(), F->getFunctionType(),
-                               ArgTys);
+                               ArgTys, ErrMsg);
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
