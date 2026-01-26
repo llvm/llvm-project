@@ -27,6 +27,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -193,6 +194,36 @@ DeclBindingInfo *ResourceBindings::getDeclBindingInfo(const VarDecl *VD,
 
 bool ResourceBindings::hasBindingInfoForDecl(const VarDecl *VD) const {
   return DeclToBindingListIndex.contains(VD);
+}
+
+LocalResourceAssigns::Assign::Assign(const Expr *AssignExpr,
+                                     const DeclBindingInfo *Info)
+    : AssignExpr(AssignExpr), Info(Info), Invalidated(false) {}
+
+void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
+                                       const Expr *AssignExpr,
+                                       const DeclBindingInfo *Info) {
+  Assign Cur{AssignExpr, Info};
+
+  auto AssignIt = Assignments.find(VD);
+  if (AssignIt == Assignments.end()) {
+    // Empty so just insert
+    Assignments.insert({VD, Cur});
+    return;
+  }
+
+  // Otherwise, if info isn't equivalent, mark as invalid
+  Assign &Prev = AssignIt->getSecond();
+  Cur.Invalidated = Cur.Info != Prev.Info;
+  Prev = Cur;
+}
+
+std::optional<LocalResourceAssigns::Assign>
+LocalResourceAssigns::getAssign(const ValueDecl *VD) {
+  auto AssignIt = Assignments.find(VD);
+  if (AssignIt == Assignments.end())
+    return std::nullopt;
+  return AssignIt->second;
 }
 
 SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
@@ -4450,30 +4481,35 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
           return false;
       }
 
-      auto RHSBinding = getGlobalBinding(RHSExpr);
-      if (!RHSBinding) {
-        SemaRef.Diag(Loc,
-                     diag::err_hlsl_assigning_local_resource_is_not_unique)
+      if (auto Binding = getGlobalBinding(RHSExpr)) {
+        Assigns.trackAssign(VD, RHSExpr, *Binding);
+      } else {
+        SemaRef.Diag(Loc, diag::err_hlsl_assigning_local_resource_is_not_unique)
             << RHSExpr << VD;
-        return false;
-      }
-
-      // Ensure assignment to a non-static local resource does not conflict
-      // with previous assignments to global resources
-      const DeclBindingInfo *LHSBinding = LocalResourceBindings[VD];
-      if (!LHSBinding) {
-        // LHSBinding is a nullptr when the local resource is instantiated
-        // without an expression.
-        LocalResourceBindings[VD] = *RHSBinding;
-      } else if (LHSBinding != *RHSBinding) {
-        SemaRef.Diag(Loc,
-                     diag::err_hlsl_assigning_local_resource_is_not_unique)
-            << RHSExpr << VD;
-        SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
         return false;
       }
     }
   }
+  return true;
+}
+
+bool SemaHLSL::CheckResourceSubscriptExpr(CXXOperatorCallExpr *Operator) {
+  assert(Operator->getOperator() == OO_Subscript && "Expected []operator");
+
+  if (0 < Operator->getNumArgs())
+    if (auto *ResourceAccess = dyn_cast<DeclRefExpr>(Operator->getArg(0)))
+      if (ResourceAccess->getType()->isHLSLResourceRecord())
+        if (auto *VD = dyn_cast<ValueDecl>(ResourceAccess->getDecl()))
+          if (auto Assign = Assigns.getAssign(VD))
+            if (Assign->Invalidated) {
+              SemaRef.Diag(
+                  Assign->AssignExpr->getBeginLoc(),
+                  diag::err_hlsl_assigning_local_resource_is_not_unique)
+                  << Assign->AssignExpr << VD;
+              SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here)
+                  << VD;
+              return false;
+            }
   return true;
 }
 
@@ -4849,17 +4885,16 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   // If initializing a local resource, register the binding it is using.
-  if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
-    if (auto *InitExpr = Init) {
-      if (auto Binding = getGlobalBinding(InitExpr)) {
-        LocalResourceBindings.insert({VDecl, *Binding});
-      } else {
-        SemaRef.Diag(Init->getBeginLoc(),
-                     diag::err_hlsl_assigning_local_resource_is_not_unique)
-            << Init << VDecl;
-        return false;
-      }
+  if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage()) {
+    if (auto Binding = getGlobalBinding(Init)) {
+      Assigns.trackAssign(VDecl, Init, *Binding);
+    } else {
+      SemaRef.Diag(Init->getBeginLoc(),
+                   diag::err_hlsl_assigning_local_resource_is_not_unique)
+          << Init << VDecl;
+      return false;
     }
+  }
 
   const HLSLVkConstantIdAttr *ConstIdAttr =
       VDecl->getAttr<HLSLVkConstantIdAttr>();

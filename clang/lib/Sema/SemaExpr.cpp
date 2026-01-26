@@ -34,6 +34,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -15836,6 +15837,17 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     LHSExpr = LHS.get();
   }
 
+  if (getLangOpts().HLSL) {
+    if (LHSExpr->getType()->isHLSLResourceRecord() ||
+        LHSExpr->getType()->isHLSLResourceRecordArray()) {
+      if (!HLSL().CheckResourceBinOp(Opc, LHSExpr, RHSExpr, OpLoc))
+        return ExprError();
+    } else if (auto *Operator = dyn_cast<CXXOperatorCallExpr>(LHSExpr))
+      if (Operator->getOperator() == OO_Subscript)
+        if (!HLSL().CheckResourceSubscriptExpr(Operator))
+          return ExprError();
+  }
+
   // Handle pseudo-objects in the RHS.
   if (const BuiltinType *pty = RHSExpr->getType()->getAsPlaceholderType()) {
     // An overload in the RHS can potentially be resolved by the type
@@ -15858,12 +15870,6 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     ExprResult resolvedRHS = CheckPlaceholderExpr(RHSExpr);
     if (!resolvedRHS.isUsable()) return ExprError();
     RHSExpr = resolvedRHS.get();
-  }
-
-  if (getLangOpts().HLSL && (LHSExpr->getType()->isHLSLResourceRecord() ||
-                             LHSExpr->getType()->isHLSLResourceRecordArray())) {
-    if (!HLSL().CheckResourceBinOp(Opc, LHSExpr, RHSExpr, OpLoc))
-      return ExprError();
   }
 
   if (getLangOpts().CPlusPlus) {

@@ -106,6 +106,28 @@ private:
   llvm::DenseMap<const VarDecl *, unsigned> DeclToBindingListIndex;
 };
 
+// ResourceAssigns tracks how local resources are assigned to ensure that at
+// any given resource access, it is statically determinable which **unique**
+// global resource they are accessing.
+class LocalResourceAssigns {
+public:
+  struct Assign {
+    const Expr *AssignExpr;
+    const DeclBindingInfo *Info;
+
+    bool Invalidated;
+
+    Assign(const Expr *AssignExpr, const DeclBindingInfo *Info);
+  };
+
+  void trackAssign(const ValueDecl *VD, const Expr *AssignExpr,
+                   const DeclBindingInfo *Info);
+  std::optional<Assign> getAssign(const ValueDecl *VD);
+
+private:
+  llvm::DenseMap<const ValueDecl *, Assign> Assignments;
+};
+
 class SemaHLSL : public SemaBase {
 public:
   SemaHLSL(Sema &S);
@@ -142,6 +164,7 @@ public:
   // Return true if everything is ok; returns false if there was an error.
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
+  bool CheckResourceSubscriptExpr(CXXOperatorCallExpr *Op);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
@@ -237,6 +260,8 @@ private:
 
   // List of all resource bindings
   ResourceBindings Bindings;
+  // Mapping of all local resource assignments
+  LocalResourceAssigns Assigns;
 
   // Map of local resource variables to their used global resource.
   //
