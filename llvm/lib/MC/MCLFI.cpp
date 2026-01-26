@@ -23,7 +23,7 @@ static const char NoteNamespace[] = "LFI";
 namespace llvm {
 
 cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
-                                  cl::desc("Don't enable rewriting for LFI."),
+                                  cl::desc("Enable rewriting for LFI."),
                                   cl::init(true));
 
 void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,

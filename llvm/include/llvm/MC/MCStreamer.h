@@ -311,7 +311,9 @@ public:
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
 
-  void setLFIRewriter(MCLFIRewriter *Exp) { LFIRewriter.reset(Exp); }
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter) {
+    LFIRewriter = std::move(Rewriter);
+  }
 
   MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
 
