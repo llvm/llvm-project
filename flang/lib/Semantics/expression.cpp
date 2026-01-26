@@ -3061,11 +3061,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
         Warn(common::LanguageFeature::AmbiguousStructureConstructor,
             "Reference to the intrinsic function '%s' is ambiguous with a structure constructor of the same name"_port_en_US,
             symbol.name());
-      } else {
-        Warn(common::LanguageFeature::AmbiguousStructureConstructor,
-            "Reference to generic function '%s' (resolving to specific '%s') is ambiguous with a structure constructor of the same name"_port_en_US,
-            symbol.name(),
-            nonElemental ? nonElemental->name() : elemental->name());
       }
     }
   }
