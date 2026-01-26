@@ -12180,7 +12180,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   auto EvaluateFpBinOpExpr =
       [&](llvm::function_ref<std::optional<APFloat>(
               const APFloat &, const APFloat &, std::optional<APSInt>)>
-              Fn) {
+              Fn,
+          bool IsScalar = false) {
         assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
         APValue A, B;
         if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
@@ -12203,6 +12204,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElements.reserve(NumElems);
 
         for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          if (IsScalar && EltNum > 0) {
+            ResultElements.push_back(A.getVectorElt(EltNum));
+            continue;
+          }
           const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
           const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
           std::optional<APFloat> Result = Fn(EltA, EltB, RoundingMode);
@@ -12210,6 +12215,44 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             return false;
           ResultElements.push_back(APValue(*Result));
         }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
+  auto EvaluateScalarFpRoundMaskBinOp =
+      [&](llvm::function_ref<APFloat(const APFloat &, const APFloat &)> Fn) {
+        assert(E->getNumArgs() == 5);
+        APValue VecA, VecB, VecSrc;
+        APSInt MaskVal, Rounding;
+
+        if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+            !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
+            !EvaluateAsRValue(Info, E->getArg(2), VecSrc) ||
+            !EvaluateInteger(E->getArg(3), MaskVal, Info) ||
+            !EvaluateInteger(E->getArg(4), Rounding, Info))
+          return false;
+
+        // Only _MM_FROUND_CUR_DIRECTION (4) is supported.
+        if (Rounding != 4)
+          return false;
+
+        unsigned NumElems = VecA.getVectorLength();
+        SmallVector<APValue, 8> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        if (MaskVal.getZExtValue() & 1) {
+          const APFloat &EltA = VecA.getVectorElt(0).getFloat();
+          const APFloat &EltB = VecB.getVectorElt(0).getFloat();
+          if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
+              EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+            return false;
+          ResultElements.push_back(APValue(Fn(EltA, EltB)));
+        } else {
+          ResultElements.push_back(VecSrc.getVectorElt(0));
+        }
+
+        for (unsigned I = 1; I < NumElems; ++I)
+          ResultElements.push_back(VecA.getVectorElt(I));
+
         return Success(APValue(ResultElements.data(), NumElems), E);
       };
 
@@ -14311,6 +14354,44 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
             return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+  case clang::X86::BI__builtin_ia32_minsh:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_maxss:
+  case clang::X86::BI__builtin_ia32_maxsd:
+  case clang::X86::BI__builtin_ia32_maxsh:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+    return EvaluateScalarFpRoundMaskBinOp(
+        [](const APFloat &A, const APFloat &B) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask:
+    return EvaluateScalarFpRoundMaskBinOp(
+        [](const APFloat &A, const APFloat &B) {
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);

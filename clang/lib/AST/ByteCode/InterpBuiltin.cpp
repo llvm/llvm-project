@@ -2509,7 +2509,8 @@ static bool interp__builtin_elementwise_fp_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::optional<APFloat>(
         const APFloat &, const APFloat &, std::optional<APSInt> RoundingMode)>
-        Fn) {
+        Fn,
+    bool IsScalar = false) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   assert(VT->getElementType()->isFloatingType());
@@ -2532,6 +2533,10 @@ static bool interp__builtin_elementwise_fp_binop(
   const Pointer &Dst = S.Stk.peek<Pointer>();
   for (unsigned ElemIdx = 0; ElemIdx != NumElems; ++ElemIdx) {
     using T = PrimConv<PT_Float>::T;
+    if (IsScalar && ElemIdx > 0) {
+      Dst.elem<T>(ElemIdx) = APtr.elem<T>(ElemIdx);
+      continue;
+    }
     APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
     std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
@@ -2539,6 +2544,45 @@ static bool interp__builtin_elementwise_fp_binop(
       return false;
     Dst.elem<T>(ElemIdx) = static_cast<T>(*Result);
   }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_scalar_fp_round_mask_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APFloat(const APFloat &, const APFloat &)> Fn) {
+  assert(Call->getNumArgs() == 5);
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned NumElems = VT->getNumElements();
+
+  APSInt Rounding = popToAPSInt(S, Call->getArg(4));
+  APSInt MaskVal = popToAPSInt(S, Call->getArg(3));
+  const Pointer &SrcPtr = S.Stk.pop<Pointer>();
+  const Pointer &BPtr = S.Stk.pop<Pointer>();
+  const Pointer &APtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  // Only _MM_FROUND_CUR_DIRECTION (4) is supported.
+  if (Rounding != 4)
+    return false;
+
+  using T = PrimConv<PT_Float>::T;
+
+  if (MaskVal.getZExtValue() & 1) {
+    APFloat ElemA = APtr.elem<T>(0).getAPFloat();
+    APFloat ElemB = BPtr.elem<T>(0).getAPFloat();
+    if (ElemA.isNaN() || ElemA.isInfinity() || ElemA.isDenormal() ||
+        ElemB.isNaN() || ElemB.isInfinity() || ElemB.isDenormal())
+      return false;
+    Dst.elem<T>(0) = static_cast<T>(Fn(ElemA, ElemB));
+  } else {
+    Dst.elem<T>(0) = SrcPtr.elem<T>(0);
+  }
+
+  for (unsigned I = 1; I < NumElems; ++I)
+    Dst.elem<T>(I) = APtr.elem<T>(I);
 
   Dst.initializeAllElements();
 
@@ -5874,6 +5918,46 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
             return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+  case clang::X86::BI__builtin_ia32_minsh:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_maxss:
+  case clang::X86::BI__builtin_ia32_maxsd:
+  case clang::X86::BI__builtin_ia32_maxsh:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+    return interp__builtin_scalar_fp_round_mask_binop(
+        S, OpPC, Call, [](const APFloat &A, const APFloat &B) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask:
+    return interp__builtin_scalar_fp_round_mask_binop(
+        S, OpPC, Call, [](const APFloat &A, const APFloat &B) {
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);
