@@ -2941,7 +2941,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
     SymbolNameAttr:$sym_name,
     CIR_VisibilityAttr:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
@@ -2960,6 +2960,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    OptionalAttr<CIR_SideEffect>:$side_effect,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -3085,35 +3086,6 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 //===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
-
-def CIR_SideEffect : CIR_I32EnumAttr<
-    "SideEffect", "allowed side effects of a function", [
-      I32EnumAttrCase<"All", 0, "all">,
-      I32EnumAttrCase<"Pure", 1, "pure">,
-      I32EnumAttrCase<"Const", 2, "const">
-]> {
-  let description = [{
-    The side effect attribute specifies the possible side effects of the callee
-    of a call operation. This is an enumeration attribute and all possible
-    enumerators are:
-
-    - all: The callee can have any side effects. This is the default if no side
-      effects are explicitly listed.
-    - pure: The callee may read data from memory, but it cannot write data to
-      memory. This has the same effect as the GNU C/C++ attribute
-      `__attribute__((pure))`.
-    - const: The callee may not read or write data from memory. This has the
-      same effect as the GNU C/C++ attribute `__attribute__((const))`.
-
-    Examples:
-
-    ```mlir
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
-    ```
-  }];
-}
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
