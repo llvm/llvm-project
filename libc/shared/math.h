@@ -39,6 +39,7 @@
 #include "math/coshf16.h"
 #include "math/cospif.h"
 #include "math/cospif16.h"
+#include "math/dfmaf128.h"
 #include "math/dfmal.h"
 #include "math/dsqrtl.h"
 #include "math/erff.h"
@@ -59,6 +60,8 @@
 #include "math/expm1f.h"
 #include "math/expm1f16.h"
 #include "math/f16fma.h"
+#include "math/f16fmal.h"
+#include "math/f16sqrtl.h"
 #include "math/frexpf.h"
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"
@@ -79,8 +82,11 @@
 #include "math/logbf.h"
 #include "math/logbf128.h"
 #include "math/logbf16.h"
+#include "math/logf.h"
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
+#include "math/tan.h"
+#include "math/tanf.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H

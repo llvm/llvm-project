@@ -8809,14 +8809,10 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   }
 
   // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
-  // instead if there are no NaNs and there can't be an incompatible zero
-  // compare: at least one operand isn't +/-0, or there are no signed-zeros.
-  if ((Node->getFlags().hasNoNaNs() ||
-       (DAG.isKnownNeverNaN(Node->getOperand(0)) &&
-        DAG.isKnownNeverNaN(Node->getOperand(1)))) &&
-      (Node->getFlags().hasNoSignedZeros() ||
-       DAG.isKnownNeverZeroFloat(Node->getOperand(0)) ||
-       DAG.isKnownNeverZeroFloat(Node->getOperand(1)))) {
+  // instead if there are no NaNs.
+  if (Node->getFlags().hasNoNaNs() ||
+      (DAG.isKnownNeverNaN(Node->getOperand(0)) &&
+       DAG.isKnownNeverNaN(Node->getOperand(1)))) {
     unsigned IEEE2018Op =
         Node->getOpcode() == ISD::FMINNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
     if (isOperationLegalOrCustom(IEEE2018Op, VT))
@@ -10919,23 +10915,7 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
 
   // If both sign bits are zero, flip UMIN/UMAX <-> SMIN/SMAX if legal.
-  unsigned AltOpcode;
-  switch (Opcode) {
-  case ISD::SMIN:
-    AltOpcode = ISD::UMIN;
-    break;
-  case ISD::SMAX:
-    AltOpcode = ISD::UMAX;
-    break;
-  case ISD::UMIN:
-    AltOpcode = ISD::SMIN;
-    break;
-  case ISD::UMAX:
-    AltOpcode = ISD::SMAX;
-    break;
-  default:
-    llvm_unreachable("Unknown MINMAX opcode");
-  }
+  unsigned AltOpcode = ISD::getOppositeSignednessMinMaxOpcode(Opcode);
   if (isOperationLegal(AltOpcode, VT) && DAG.SignBitIsZero(Op0) &&
       DAG.SignBitIsZero(Op1))
     return DAG.getNode(AltOpcode, DL, VT, Op0, Op1);
