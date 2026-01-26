@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -1711,7 +1712,8 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
   }
 
   // If missing, initialize the write indices to 0.
-  assert((writeIndices.empty() ||
+  bool useDefaultWriteIdxs = writeIndices.empty();
+  assert((useDefaultWriteIdxs ||
           writeIndices.size() == static_cast<size_t>(destRank)) &&
          "Invalid number of write indices!");
   if (writeIndices.empty()) {
@@ -1742,8 +1744,22 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
       isa<MemRefType>(dest.getType())
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
-  SmallVector<OpFoldResult> maskSizes(destSizes.end() - vecToStoreRank,
-                                      destSizes.end());
+
+  // Compute sizes for write-mask
+  SmallVector<OpFoldResult> maskSizes;
+  if (useDefaultWriteIdxs) {
+    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
+                                          destSizes.end());
+  } else {
+    size_t diff = destShape.size() - vecToStoreRank;
+    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
+      auto value =
+          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
+      auto neg =
+          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
+      maskSizes.push_back(OpFoldResult(neg));
+    }
+  }
 
   if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
                               vecToStoreShape))
@@ -2071,7 +2087,7 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
     return failure();
   }
 
-  if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
+  if (!isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
     LDBG() << "Not a 1D depth-wise WC conv, dynamic shapes are not supported";
     return failure();
   }
@@ -2436,10 +2452,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   if (isElementwise(linalgOp))
     return success();
 
-  // TODO: isaConvolutionOpInterface that can also infer from generic
-  // features. But we will still need stride/dilation attributes that will be
-  // annoying to reverse-engineer...
-  if (isa<ConvolutionOpInterface>(linalgOp.getOperation()))
+  // Check for both named as well as generic convolution ops.
+  if (isaConvolutionOpInterface(linalgOp))
     return vectorizeConvOpPrecondition(linalgOp);
 
   // TODO: the common vector shape is equal to the static loop sizes only when
@@ -2649,12 +2663,12 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
-  return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
-                 isa<linalg::BatchMatmulOp>(op) ||
-                 isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
-                 isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
-                 isa<linalg::BatchMmt4DOp>(op) ||
-                 hasReductionIterator(linalgOp));
+  return success(
+      isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
+      isa<linalg::BatchMatmulOp>(op) ||
+      isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(linalgOp) ||
+      isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
+      isa<linalg::BatchMmt4DOp>(op) || hasReductionIterator(linalgOp));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
@@ -2742,10 +2756,8 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   auto vectorizeResult =
       TypeSwitch<Operation *, LogicalResult>(op)
           .Case<linalg::LinalgOp>([&](auto linalgOp) {
-            // TODO: isaConvolutionOpInterface that can also infer from
-            // generic features. Will require stride/dilation attributes
-            // inference.
-            if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
+            // Check for both named as well as generic convolution ops.
+            if (isaConvolutionOpInterface(linalgOp)) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
                   rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
                   flatten1DDepthwiseConv);
@@ -3491,6 +3503,37 @@ static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
   bindShapeDims<0>(shapedType, vals...);
 }
 
+/// Match 1D convolution or pooling operations and return their dilations and
+/// strides. Returns std::nullopt for unrecognized ops.
+static std::optional<DilationsAndStrides> match1DConvPoolOp(LinalgOp op) {
+#define MATCH_1D_CONV_POOL_OP(ConvOpTy)                                        \
+  if (auto convParams = matchConvolutionOpOfType<ConvOpTy>(op))                \
+    return convParams;
+
+  // 1D Convolution ops.
+  MATCH_1D_CONV_POOL_OP(linalg::Conv1DOp);
+  MATCH_1D_CONV_POOL_OP(linalg::Conv1DNwcWcfOp);
+  MATCH_1D_CONV_POOL_OP(linalg::Conv1DNcwFcwOp);
+  // Depthwise 1D Convolution ops.
+  // Note: Only NWC layout without channel multiplier is supported.
+  // DepthwiseConv1DNcwCwOp (NCW) and DepthwiseConv1DNwcWcmOp (with multiplier)
+  // are not supported.
+  MATCH_1D_CONV_POOL_OP(linalg::DepthwiseConv1DNwcWcOp);
+  // 1D Pooling ops (NWC layout).
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcSumOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMaxOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMaxUnsignedOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMinOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMinUnsignedOp);
+  // 1D Pooling ops (NCW layout).
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNcwSumOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNcwMaxOp);
+
+#undef MATCH_1D_CONV_POOL_OP
+
+  return std::nullopt;
+}
+
 namespace {
 /// Generate a vector implementation for either:
 /// ```
@@ -3528,8 +3571,26 @@ namespace {
 /// kw is unrolled, w is unrolled iff dilationW > 1.
 struct Conv1DGenerator
     : public StructuredGenerator<LinalgOp, utils::IteratorType> {
-  Conv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp)
-      : StructuredGenerator<LinalgOp, utils::IteratorType>(rewriter, linalgOp) {
+  /// Factory method to create a Conv1DGenerator. Returns failure if the
+  /// operation doesn't have valid strides/dilations.
+  static FailureOr<Conv1DGenerator> create(RewriterBase &rewriter,
+                                           LinalgOp linalgOp) {
+    // Try to match a 1D conv/pool op using matchConvolutionOpOfType. This
+    // works for both named ops and generic ops that match their semantics.
+    std::optional<DilationsAndStrides> convParams = match1DConvPoolOp(linalgOp);
+    if (!convParams)
+      return failure();
+
+    int strideW = static_cast<int>(convParams->strides.front());
+    int dilationW = static_cast<int>(convParams->dilations.front());
+    return Conv1DGenerator(rewriter, linalgOp, strideW, dilationW);
+  }
+
+private:
+  Conv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp, int strideW,
+                  int dilationW)
+      : StructuredGenerator<LinalgOp, utils::IteratorType>(rewriter, linalgOp),
+        strideW(strideW), dilationW(dilationW) {
 
     lhsShaped = linalgOp.getDpsInputOperand(0)->get();
     rhsShaped = linalgOp.getDpsInputOperand(1)->get();
@@ -3545,17 +3606,9 @@ struct Conv1DGenerator
 
     auto maybeKind = getCombinerOpKind(reduceOp);
     reductionKind = maybeKind.value();
-
-    // The ConvolutionOpInterface gives us guarantees of existence for
-    // strides/dilations. However, we do not need to rely on those, we can
-    // simply use them if present, otherwise use the default and let the generic
-    // conv. matcher in the ConvGenerator succeed or fail.
-    auto strides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
-    auto dilations = linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations");
-    strideW = strides ? *strides.getValues<uint64_t>().begin() : 1;
-    dilationW = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
   }
 
+public:
   /// Generate a vector implementation for:
   /// ```
   ///   Op def: (     w,     kw  )
@@ -4251,20 +4304,22 @@ private:
 static FailureOr<Operation *> vectorizeConvolution(
     RewriterBase &rewriter, LinalgOp op, ArrayRef<int64_t> inputVecSizes,
     ArrayRef<bool> inputScalableVecDims, bool flatten1DDepthwiseConv) {
-  Conv1DGenerator conv1dGen(rewriter, op);
-  auto res = conv1dGen.generateNonChanneledConv();
+  FailureOr<Conv1DGenerator> conv1dGen = Conv1DGenerator::create(rewriter, op);
+  if (failed(conv1dGen))
+    return failure();
+  auto res = conv1dGen->generateNonChanneledConv();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNwcConv();
+  res = conv1dGen->generateNwcConv();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNcwConv();
+  res = conv1dGen->generateNcwConv();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNwcPooling();
+  res = conv1dGen->generateNwcPooling();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNcwPooling();
+  res = conv1dGen->generateNcwPooling();
   if (succeeded(res))
     return res;
 
@@ -4276,19 +4331,20 @@ static FailureOr<Operation *> vectorizeConvolution(
   if (!inputVecSizes.empty()) {
     // Only use the input vector size corresponding to the channel dim. Other
     // vector dims will be inferred from the Ops.
-    assert((isa<linalg::DepthwiseConv1DNwcWcOp>(*op) ||
-            isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) &&
+    assert((isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op) ||
+            isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op)) &&
            "Not a 1D depthwise conv!");
-    size_t chDimIdx =
-        TypeSwitch<Operation *, size_t>(op)
-            .Case<linalg::DepthwiseConv1DNwcWcOp>([](auto conv) { return 2; })
-            .Case<linalg::DepthwiseConv1DNcwCwOp>([](auto conv) { return 1; });
+    size_t chDimIdx = 0;
+    if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op))
+      chDimIdx = 2;
+    if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op))
+      chDimIdx = 1;
 
     vecChDimSize = inputVecSizes[chDimIdx];
     vecChDimScalableFlag = inputScalableVecDims[chDimIdx];
   }
-  return conv1dGen.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
-                                       flatten1DDepthwiseConv);
+  return conv1dGen->generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
+                                        flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {

@@ -3340,7 +3340,7 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     // CHECK: %{{.*}}map_clauses(ompx_hold){{.*}}
     // CHECK: %{{.*}}map_clauses(attach){{.*}}
     // CHECK: %{{.*}}map_clauses(attach_always){{.*}}
-    // CHECK: %{{.*}}map_clauses(attach_none){{.*}}
+    // CHECK: %{{.*}}map_clauses(attach_never){{.*}}
     // CHECK: %{{.*}}map_clauses(attach_auto){{.*}}
     // CHECK: %{{.*}}map_clauses(ref_ptr){{.*}}
     // CHECK: %{{.*}}map_clauses(ref_ptee){{.*}}
@@ -3360,7 +3360,7 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     %mapv12 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ompx_hold) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv13 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv14 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_always) capture(ByRef) -> memref<?xi32> {name = ""}
-    %mapv15 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_none) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv15 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_never) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv16 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_auto) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv17 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv18 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -3414,6 +3414,52 @@ func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> ()
   return
 }
 
+// CHECK-LABEL: func.func @omp_declare_simd_uniform
+func.func @omp_declare_simd_uniform(%a: f64, %b: f64,
+                                    %p0: memref<i32>, %p1: memref<i32>) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
+  omp.declare_simd uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_inbranch
+func.func @omp_declare_simd_inbranch() -> () {
+  // CHECK:      omp.declare_simd inbranch
+  omp.declare_simd inbranch
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_notinbranch
+func.func @omp_declare_simd_notinbranch() -> () {
+  // CHECK:      omp.declare_simd notinbranch
+  omp.declare_simd notinbranch
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_multiple_clauses
+func.func @omp_declare_simd_multiple_clauses(%a: f64, %b: f64,
+                                             %p0: memref<i32>, %p1: memref<i32>,
+                                             %iv: i32, %step: i32) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: notinbranch
+  // CHECK-SAME: simdlen(8)
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
+  omp.declare_simd simdlen(8)
+    aligned(%p0 : memref<i32> -> 32 : i64,
+            %p1 : memref<i32> -> 128 : i64)
+    uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+    notinbranch
+  return
+}
+
 // CHECK-LABEL: func.func @omp_declare_simd_all_clauses
 func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
                                         %p0: memref<i32>, %p1: memref<i32>,
@@ -3422,11 +3468,17 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   // CHECK-SAME: aligned(
   // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: inbranch
   // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
   // CHECK-SAME: simdlen(8)
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
   omp.declare_simd simdlen(8)
     aligned(%p0 : memref<i32> -> 32 : i64,
             %p1 : memref<i32> -> 128 : i64)
     linear(%iv = %step : i32)
+    uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+    inbranch
   return
 }
