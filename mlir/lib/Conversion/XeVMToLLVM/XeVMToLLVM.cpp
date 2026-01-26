@@ -929,8 +929,9 @@ class HandleVectorExtractPattern
             rewriter, loc, ty, srcShuffle.getV1(), srcShuffle.getV1(),
             DenseI32ArrayAttr::get(rewriter.getContext(), combinedMask));
         rewriter.replaceOp(op, newShuffle);
-      } else if (auto loadOp = src.getDefiningOp<LLVM::LoadOp>()) {
+      } else if (isa<LLVM::LoadOp>(srcOp)) {
         // 3. Merge with load as a smaller load
+        auto loadOp = cast<LLVM::LoadOp>(srcOp);
         auto loadPtr = loadOp.getAddr();
         auto loadTy = dyn_cast<VectorType>(loadOp.getType());
         auto elemTy = loadTy.getElementType();
