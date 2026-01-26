@@ -111,10 +111,10 @@ int main(int argc, char **argv) {
 #pragma omp task transparent(omp_import)
       for (int i = 0; i < 10; ++i) {
 #pragma omp task transparent(omp_export)
-	for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 10; ++i) {
 #pragma omp task transparent(omp_impex)
-	  foo();
-	}
+          foo();
+        }
       }
     }
   }

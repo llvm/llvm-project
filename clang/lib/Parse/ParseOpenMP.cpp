@@ -3213,6 +3213,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
           << getOpenMPClauseName(CKind) << 0;
       ErrorFound = true;
     }
+
     if (CKind == OMPC_transparent &&
         PP.LookAhead(0).is(tok::annot_pragma_openmp_end)) {
       SourceLocation Loc = ConsumeToken();
