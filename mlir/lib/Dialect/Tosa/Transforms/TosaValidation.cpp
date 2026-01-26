@@ -293,7 +293,6 @@ private:
     }
     return success();
   }
-
   // Level check shape lengths of all operands and results of an operation that
   // are tosa.shape type.
   template <typename T>
@@ -302,9 +301,11 @@ private:
       if (failed(levelCheckShapeLength(tosaOp, v.getType(), "operand")))
         return failure();
     }
-    if (failed(levelCheckShapeLength(tosaOp, tosaOp.getResult().getType(),
-                                     "result")))
-      return failure();
+    for (const auto &v : tosaOp->getResults()) {
+      if (failed(levelCheckShapeLength(tosaOp, v.getType(), "result")))
+        return failure();
+    }
+
     return success();
   }
 
@@ -772,6 +773,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Shape Operators
   CHECK_SHAPE_LEN(AddShape);
+  CHECK_SHAPE_LEN(AssertEqualShape);
   CHECK_SHAPE_LEN(ConcatShape);
   CHECK_SHAPE_LEN(DivCeilShape);
   CHECK_SHAPE_LEN(DivFloorShape);

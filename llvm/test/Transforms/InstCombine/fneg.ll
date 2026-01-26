@@ -1100,11 +1100,11 @@ define float @test_fneg_select_constant_var_multiuse(i1 %cond, float %x) {
 
 define float @test_fneg_select_maxnum(float %x) {
 ; CHECK-LABEL: @test_fneg_select_maxnum(
-; CHECK-NEXT:    [[SEL1:%.*]] = call nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SEL1]]
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
-  %cmp1 = fcmp ogt float %x, 1.0
+  %cmp1 = fcmp nnan ogt float %x, 1.0
   %sel1 = select nnan nsz i1 %cmp1, float %x, float 1.0
   %neg = fneg float %sel1
   ret float %neg

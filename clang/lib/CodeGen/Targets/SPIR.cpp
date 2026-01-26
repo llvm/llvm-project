@@ -49,7 +49,7 @@ class AMDGCNSPIRVABIInfo : public SPIRVABIInfo {
   static constexpr unsigned MaxNumRegsForArgsRet = 16; // 16 32-bit registers
   mutable unsigned NumRegsLeft = 0;
 
-  unsigned numRegsForType(QualType Ty) const;
+  uint64_t numRegsForType(QualType Ty) const;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override {
     return true;
@@ -234,21 +234,21 @@ RValue SPIRVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*AllowHigherAlign=*/true, Slot);
 }
 
-unsigned AMDGCNSPIRVABIInfo::numRegsForType(QualType Ty) const {
+uint64_t AMDGCNSPIRVABIInfo::numRegsForType(QualType Ty) const {
   // This duplicates the AMDGPUABI computation.
-  unsigned NumRegs = 0;
+  uint64_t NumRegs = 0;
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
     // Compute from the number of elements. The reported size is based on the
     // in-memory size, which includes the padding 4th element for 3-vectors.
     QualType EltTy = VT->getElementType();
-    unsigned EltSize = getContext().getTypeSize(EltTy);
+    uint64_t EltSize = getContext().getTypeSize(EltTy);
 
     // 16-bit element vectors should be passed as packed.
     if (EltSize == 16)
       return (VT->getNumElements() + 1) / 2;
 
-    unsigned EltNumRegs = (EltSize + 31) / 32;
+    uint64_t EltNumRegs = (EltSize + 31) / 32;
     return EltNumRegs * VT->getNumElements();
   }
 
@@ -355,8 +355,8 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   if (!isAggregateTypeForABI(Ty)) {
     ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
     if (!ArgInfo.isIndirect()) {
-      unsigned NumRegs = numRegsForType(Ty);
-      NumRegsLeft -= std::min(NumRegs, NumRegsLeft);
+      uint64_t NumRegs = numRegsForType(Ty);
+      NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});
     }
 
     return ArgInfo;
@@ -401,7 +401,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   }
 
   if (NumRegsLeft > 0) {
-    unsigned NumRegs = numRegsForType(Ty);
+    uint64_t NumRegs = numRegsForType(Ty);
     if (NumRegsLeft >= NumRegs) {
       NumRegsLeft -= NumRegs;
       return ABIArgInfo::getDirect();

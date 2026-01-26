@@ -42,7 +42,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__exp2_select_maybe_inf_or_not_nan
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__exp2_select_maybe_inf_or_not_nan(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[MAYBE_NAN:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[MAYBE_NAN]], float [[NOT_NAN]]
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[SELECT]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan float @llvm.exp2.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %maybe.nan, float %not.nan
@@ -54,7 +54,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__exp2_select_maybe_inf_or_not_nan
 define nofpclass(nan) float @ret_nofpclass_nan__exp2_select_maybe_inf_or_nan(i1 %cond, float %maybe.nan, float nofpclass(inf zero sub norm) %only.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__exp2_select_maybe_inf_or_nan(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[MAYBE_NAN:%.*]], float nofpclass(inf zero sub norm) [[ONLY_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[MAYBE_NAN]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan float @llvm.exp2.f32(float [[MAYBE_NAN]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %maybe.nan, float %only.nan
@@ -128,7 +128,7 @@ define nofpclass(pinf psub pnorm) float @ret_nofpclass_no_positives_except_0__ex
 define nofpclass(nan) float @handle_exp(i1 %cond, float %maybe.nan, float nofpclass(inf zero sub norm) %only.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @handle_exp(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[MAYBE_NAN:%.*]], float nofpclass(inf zero sub norm) [[ONLY_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp.f32(float [[MAYBE_NAN]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan float @llvm.exp.f32(float [[MAYBE_NAN]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %maybe.nan, float %only.nan
@@ -140,7 +140,7 @@ define nofpclass(nan) float @handle_exp(i1 %cond, float %maybe.nan, float nofpcl
 define nofpclass(nan) float @handle_exp10(i1 %cond, float %maybe.nan, float nofpclass(inf zero sub norm) %only.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @handle_exp10(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[MAYBE_NAN:%.*]], float nofpclass(inf zero sub norm) [[ONLY_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp10.f32(float [[MAYBE_NAN]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan float @llvm.exp10.f32(float [[MAYBE_NAN]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %maybe.nan, float %only.nan
@@ -154,7 +154,7 @@ define nofpclass(inf norm nan) float @ret_nofpclass_only_subzero__exp2_select_un
 ; CHECK-LABEL: define nofpclass(nan inf norm) float @ret_nofpclass_only_subzero__exp2_select_unknown_or_not_norm(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(norm) [[NOT_NORM:%.*]]) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float 0xFFF0000000000000
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[SELECT]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan float @llvm.exp2.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %unknown, float %not.norm
@@ -165,7 +165,7 @@ define nofpclass(inf norm nan) float @ret_nofpclass_only_subzero__exp2_select_un
 define nofpclass(inf norm nan zero) float @ret_nofpclass_only_sub__exp2_select_unknown_or_not_norm(i1 %cond, float %unknown, float nofpclass(norm) %not.norm) {
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) float @ret_nofpclass_only_sub__exp2_select_unknown_or_not_norm(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(norm) [[NOT_NORM:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %unknown, float %not.norm
@@ -256,7 +256,7 @@ define nofpclass(inf norm nan sub) float @zero_result_implies_nsub_source_valid_
 define nofpclass(inf norm nan zero) float @sub_result_implies_nnorm_source_valid(float nofpclass(pnorm sub nan) %maybe.nnorm) {
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) float @sub_result_implies_nnorm_source_valid(
 ; CHECK-SAME: float nofpclass(nan sub pnorm) [[MAYBE_NNORM:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[MAYBE_NNORM]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[MAYBE_NNORM]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call float @llvm.exp2.f32(float %maybe.nnorm)
@@ -294,7 +294,7 @@ define nofpclass(inf norm nan sub) float @zero_result_implies_pnorm_source_valid
 define nofpclass(inf norm nan zero) float @sub_result_implies_pnorm_source_valid(float nofpclass(pnorm sub nan) %maybe.pnorm) {
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) float @sub_result_implies_pnorm_source_valid(
 ; CHECK-SAME: float nofpclass(nan sub pnorm) [[MAYBE_PNORM:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[MAYBE_PNORM]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[MAYBE_PNORM]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call float @llvm.exp2.f32(float %maybe.pnorm)
@@ -304,7 +304,7 @@ define nofpclass(inf norm nan zero) float @sub_result_implies_pnorm_source_valid
 define nofpclass(inf nnorm nan zero) float @pnorm_result_implies_possible_0_source(float nofpclass(pnorm sub) %maybe.zero.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan inf zero nnorm) float @pnorm_result_implies_possible_0_source(
 ; CHECK-SAME: float nofpclass(sub pnorm) [[MAYBE_ZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[MAYBE_ZERO_OR_NAN]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[MAYBE_ZERO_OR_NAN]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call float @llvm.exp2.f32(float %maybe.zero.or.nan)
@@ -323,7 +323,7 @@ define nofpclass(inf nnorm nan zero sub) float @pnorm_result_implies_possible_0_
 define nofpclass(inf nnorm nan zero sub) float @pnorm_result_implies_possible_sub_source(float nofpclass(inf norm zero) %maybe.sub.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @pnorm_result_implies_possible_sub_source(
 ; CHECK-SAME: float nofpclass(inf zero norm) [[MAYBE_SUB_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[MAYBE_SUB_OR_NAN]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[MAYBE_SUB_OR_NAN]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call float @llvm.exp2.f32(float %maybe.sub.or.nan)
@@ -510,7 +510,7 @@ define nofpclass(nan inf nnorm sub zero) float @posnormal_result_demands_negnorm
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @posnormal_result_demands_negnormal_source(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero sub pnorm) [[NEG_NORMAL:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[NEG_NORMAL]]
-; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[SELECT]])
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %select = select i1 %cond, float %unknown, float %neg.normal

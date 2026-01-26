@@ -43,8 +43,7 @@ define nofpclass(inf zero sub norm) half @ret_only_nan(half %x, half %y) {
 define nofpclass(snan inf zero sub norm) half @ret_only_qnan(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y]]
-; CHECK-NEXT:    ret half [[ADD]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -63,7 +62,7 @@ define nofpclass(qnan inf zero sub norm) half @ret_only_snan(half %x, half %y) {
 define nofpclass(nan inf sub norm) half @ret_only_zero(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) half @ret_only_zero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %add = fadd half %x, %y
@@ -215,7 +214,7 @@ define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fadd_select_unknown_or_in
 ; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF0:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[INF1:%.*]] = call half @returns_inf()
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %inf0 = call half @returns_inf()

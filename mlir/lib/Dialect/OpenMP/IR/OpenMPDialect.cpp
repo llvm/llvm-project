@@ -1803,8 +1803,8 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "attach_always")
       mapTypeBits |= ClauseMapFlags::attach_always;
 
-    if (mapTypeMod == "attach_none")
-      mapTypeBits |= ClauseMapFlags::attach_none;
+    if (mapTypeMod == "attach_never")
+      mapTypeBits |= ClauseMapFlags::attach_never;
 
     if (mapTypeMod == "attach_auto")
       mapTypeBits |= ClauseMapFlags::attach_auto;
@@ -1880,8 +1880,8 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("attach");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_always))
     mapTypeStrs.push_back("attach_always");
-  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_none))
-    mapTypeStrs.push_back("attach_none");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_never))
+    mapTypeStrs.push_back("attach_never");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_auto))
     mapTypeStrs.push_back("attach_auto");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr))
@@ -4476,6 +4476,9 @@ LogicalResult DeclareSimdOp::verify() {
   if (!func)
     return emitOpError() << "must be nested inside a function";
 
+  if (getInbranch() && getNotinbranch())
+    return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
+
   return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
 }
 
@@ -4483,9 +4486,39 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           const DeclareSimdOperands &clauses) {
   MLIRContext *ctx = odsBuilder.getContext();
   DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
-                       makeArrayAttr(ctx, clauses.alignments),
+                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
                        clauses.linearVars, clauses.linearStepVars,
-                       clauses.linearVarTypes, clauses.simdlen);
+                       clauses.linearVarTypes, clauses.notinbranch,
+                       clauses.simdlen, clauses.uniformVars);
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for Uniform Clause
+//===----------------------------------------------------------------------===//
+
+/// uniform ::= `uniform` `(` uniform-list `)`
+/// uniform-list := uniform-val (`,` uniform-val)*
+/// uniform-val := ssa-id `:` type
+static ParseResult
+parseUniformClause(OpAsmParser &parser,
+                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &uniformVars,
+                   SmallVectorImpl<Type> &uniformTypes) {
+  return parser.parseCommaSeparatedList([&]() -> mlir::ParseResult {
+    if (parser.parseOperand(uniformVars.emplace_back()) ||
+        parser.parseColonType(uniformTypes.emplace_back()))
+      return mlir::failure();
+    return mlir::success();
+  });
+}
+
+/// Print Uniform Clauses
+static void printUniformClause(OpAsmPrinter &p, Operation *op,
+                               ValueRange uniformVars, TypeRange uniformTypes) {
+  for (unsigned i = 0; i < uniformVars.size(); ++i) {
+    if (i != 0)
+      p << ", ";
+    p << uniformVars[i] << " : " << uniformTypes[i];
+  }
 }
 
 #define GET_ATTRDEF_CLASSES
