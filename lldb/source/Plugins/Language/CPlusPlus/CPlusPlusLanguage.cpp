@@ -1286,6 +1286,22 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new StringSummaryFormat(
           eTypeOptionHideChildren | eTypeOptionHideValue,
           "${var.__y_} ${var.__m_} ${var.__wdl_}")));
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxPartialOrderingSummaryProvider,
+                "libc++ std::partial_ordering summary provider",
+                "^std::__[[:alnum:]]+::partial_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxWeakOrderingSummaryProvider,
+                "libc++ std::weak_ordering summary provider",
+                "^std::__[[:alnum:]]+::weak_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStrongOrderingSummaryProvider,
+                "libc++ std::strong_ordering summary provider",
+                "^std::__[[:alnum:]]+::strong_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
 }
 
 static void RegisterStdStringSummaryProvider(
