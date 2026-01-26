@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -Wlifetime-safety-noescape -Wlifetime-safety -verify %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety -flifetime-safety-inference -Wlifetime-safety-noescape -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
