@@ -1743,3 +1743,16 @@ func.func @test_tconv2d_bias_broadcast(%input: tensor<2x6x7x3xf32>, %weight: ten
        : (tensor<2x6x7x3xf32>, tensor<?x3x3x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
     return
   }
+
+// -----
+
+// CHECK-LABEL: test_pool2d_unknown_rank
+func.func @test_pool2d_unknown_rank() {
+  %0 = gpu.block_id  x
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.reduce_sum %1 {axis = 0 : i32} : (tensor<1xi32>) -> tensor<1xi32>
+  %3 = tosa.bitwise_or %2, %2 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %4 = tensor.cast %3 : tensor<1xi32> to tensor<*xi32>
+  %5 = tosa.avg_pool2d %4, %1, %1 {acc_type = i32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<*xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
