@@ -1,4 +1,4 @@
-//===-- Implementation header for powf ------------------------*- C++ -*-===//
+//===-- Implementation header for powf --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,10 +29,10 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
+namespace powf_internal {
+
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
-
-namespace powf_internal {
 
 using namespace common_constants_internal;
 
@@ -167,12 +167,13 @@ alignas(16) LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0x1.7a4887bd74039p-22, 0x1.fa406p-1},
     {0.0, 1.0},
 };
+
 #else
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-constexpr uint64_t ERR = 64;
+LIBC_INLINE_VAR constexpr uint64_t ERR = 64;
 #else
-constexpr uint64_t ERR = 128;
+LIBC_INLINE_VAR constexpr uint64_t ERR = 128;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // We choose the precision of the high part to be 53 - 24 - 8, so that when
@@ -186,7 +187,7 @@ constexpr uint64_t ERR = 128;
 //     d = round(a - b - c, D, RN);
 //     print("{", d, ",", c, ", ", b, "},");
 //    };
-static constexpr TripleDouble LOG2_R_TD[128] = {
+LIBC_INLINE_VAR constexpr TripleDouble LOG2_R_TD[128] = {
     {0.0, 0.0, 0.0},
     {0x1.84a2c615b70adp-79, -0x1.177c23362928cp-25, 0x1.72c8p-7},
     {-0x1.f27b820fd03eap-76, -0x1.179e0caa9c9abp-22, 0x1.744p-6},
@@ -326,7 +327,7 @@ static constexpr TripleDouble LOG2_R_TD[128] = {
 //     c = round(a - b, D, RN);
 //     print("{", c, ", ", b, "},");
 //    };
-static constexpr DoubleDouble LOG2_R2_DD[] = {
+LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R2_DD[] = {
     {0x1.ff25180953e64p-62, -0x1.720c2ab2312a9p-8},
     {-0x1.15ffd79560d8fp-62, -0x1.6c4c92b1478ffp-8},
     {0x1.b8d6d6f2e3579p-62, -0x1.668ce3c873549p-8},
@@ -650,7 +651,7 @@ LIBC_INLINE double powf_double_double(int idx_x, double dx, double y6,
 
 } // namespace powf_internal
 
-LIBC_INLINE static float powf(float x, float y) {
+LIBC_INLINE float powf(float x, float y) {
   using namespace powf_internal;
   using FloatBits = typename fputil::FPBits<float>;
   using DoubleBits = typename fputil::FPBits<double>;
