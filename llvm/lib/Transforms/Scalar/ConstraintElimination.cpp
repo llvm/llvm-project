@@ -746,8 +746,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   ConstraintTy Res(
       SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
       IsSigned, IsEq, IsNe);
-  // Collect variables that are known to be positive in all uses in the
-  // constraint.
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA)
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
