@@ -391,6 +391,7 @@ public:
 
   unsigned [[clang::annotate_type("webkit.nodelete")]] nodelete1();
   void [[clang::annotate_type("webkit.nodelete")]] nodelete2();
+  virtual void [[clang::annotate_type("webkit.nodelete")]] nodelete3();
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -586,6 +587,7 @@ public:
 
     getFieldTrivial().nodelete1(); // no-warning
     getFieldTrivial().nodelete2(); // no-warning
+    getFieldTrivial().nodelete3(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning

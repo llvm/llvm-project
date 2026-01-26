@@ -3680,6 +3680,20 @@ This applies to:
 
 For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
 
+alpha.webkit.NoDeleteChecker
+"""""""""""""""""""""""""""""""
+Check that [[clang::annotate_type("webkit.nodelete")]] annotation does not appear on a fucntion which could delete an object
+
+.. code-block:: cpp
+
+ void [[clang::annotate_type("webkit.nodelete")]] someFunction(RefCountable* obj) { // warn
+   delete obj;
+ };
+
+ Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
+   return obj->anotherTrivialFunction();
+ };
+
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""
 Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
