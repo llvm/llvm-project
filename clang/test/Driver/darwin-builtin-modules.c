@@ -2,7 +2,7 @@
 // when expected.
 
 // RUN: %clang -target x86_64-apple-darwin22.4 -### %s 2>&1 | FileCheck %s
-// RUN: %clang -isysroot %S/Inputs/MacOSX10.15.versioned.sdk -target x86_64-apple-macos10.15 -### %s 2>&1 | FileCheck %s
+// RUN: %clang -isysroot %S/Inputs/MacOSX10.15.sdk -target x86_64-apple-macos10.15 -### %s 2>&1 | FileCheck %s
 // RUN: %clang -isysroot %S/Inputs/iPhoneOS13.0.sdk -target arm64-apple-ios13.0 -### %s 2>&1 | FileCheck %s
 // CHECK: -fbuiltin-headers-in-system-modules
 

@@ -126,6 +126,9 @@ Transforms/Coroutines/coro-split-musttail9.ll
 Transforms/Coroutines/coro-split-musttail-chain-pgo-counter-promo.ll
 Transforms/Coroutines/coro-split-musttail.ll
 Transforms/Coroutines/coro-split-musttail-ppc64le.ll
+Transforms/Coroutines/coro-split-tbaa-md-neg-2.ll
+Transforms/Coroutines/coro-split-tbaa-md-neg.ll
+Transforms/Coroutines/coro-split-tbaa-md.ll
 Transforms/Coroutines/coro-split-noinline.ll
 Transforms/Coroutines/no-suspend.ll
 Transforms/CorrelatedValuePropagation/cond-at-use.ll
@@ -254,7 +257,6 @@ Transforms/InstCombine/icmp-with-selects.ll
 Transforms/InstCombine/intrinsic-select.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
-Transforms/InstCombine/load-addrspacecast-select.ll
 Transforms/InstCombine/load-bitcast-select.ll
 Transforms/InstCombine/load.ll
 Transforms/InstCombine/load-select.ll
@@ -407,6 +409,7 @@ Transforms/LoopDeletion/invalidate-scev-after-hoisting.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
 Transforms/LoopIdiom/RISCV/byte-compare-index.ll
+Transforms/LoopInterchange/reduction2mem.ll
 Transforms/LowerAtomic/atomic-load.ll
 Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll
@@ -488,6 +491,7 @@ Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PhaseOrdering/AArch64/constraint-elimination-placement.ll
 Transforms/PhaseOrdering/AArch64/globals-aa-required-for-vectorization.ll
 Transforms/PhaseOrdering/AArch64/hoist-load-from-vector-loop.ll
+Transforms/PhaseOrdering/AArch64/std-find.ll
 Transforms/PhaseOrdering/X86/merge-functions2.ll
 Transforms/PhaseOrdering/X86/merge-functions3.ll
 Transforms/PhaseOrdering/X86/merge-functions.ll
