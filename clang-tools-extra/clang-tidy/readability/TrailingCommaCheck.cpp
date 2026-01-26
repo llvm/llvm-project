@@ -39,9 +39,9 @@ struct OptionEnumMapping<readability::TrailingCommaCheck::CommaPolicyKind> {
 
 namespace clang::tidy::readability {
 
-static bool isSingleLine(SourceLocation Begin, SourceLocation End,
-                         const SourceManager &SM) {
-  return SM.getExpansionLineNumber(Begin) == SM.getExpansionLineNumber(End);
+static bool isSingleLine(SourceRange Range, const SourceManager &SM) {
+  return SM.getExpansionLineNumber(Range.getBegin()) ==
+         SM.getExpansionLineNumber(Range.getEnd());
 }
 
 namespace {
@@ -101,8 +101,8 @@ void TrailingCommaCheck::check(const MatchFinder::MatchResult &Result) {
 
 void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
                                        const MatchFinder::MatchResult &Result) {
-  const bool IsSingleLine = isSingleLine(Enum->getBeginLoc(), Enum->getEndLoc(),
-                                         *Result.SourceManager);
+  const bool IsSingleLine = isSingleLine(
+      {Enum->getBeginLoc(), Enum->getEndLoc()}, *Result.SourceManager);
   const CommaPolicyKind Policy =
       IsSingleLine ? SingleLineCommaPolicy : MultiLineCommaPolicy;
 
@@ -126,7 +126,7 @@ void TrailingCommaCheck::checkInitListExpr(
     InitList = SynInitInitList;
 
   const bool IsSingleLine = isSingleLine(
-      InitList->getBeginLoc(), InitList->getEndLoc(), *Result.SourceManager);
+      {InitList->getBeginLoc(), InitList->getEndLoc()}, *Result.SourceManager);
   const CommaPolicyKind Policy =
       IsSingleLine ? SingleLineCommaPolicy : MultiLineCommaPolicy;
 
