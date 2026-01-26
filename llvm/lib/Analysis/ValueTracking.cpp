@@ -6236,27 +6236,8 @@ bool llvm::isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
   if (isa<UndefValue>(V))
     return false;
 
-  if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
-    return CF->getValueAPF().isInteger();
-
-  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
-  const Constant *CV = dyn_cast<Constant>(V);
-  if (VFVTy && CV) {
-    unsigned NumElts = VFVTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = CV->getAggregateElement(i);
-      if (!Elt)
-        return false;
-      if (isa<PoisonValue>(Elt))
-        continue;
-
-      const ConstantFP *CFP = dyn_cast<ConstantFP>(Elt);
-      if (!CFP || !CFP->getValue().isInteger())
-        return false;
-    }
-
+  if (match(V, m_CheckedFp([](const APFloat &Val) { return Val.isInteger(); })))
     return true;
-  }
 
   const Instruction *I = dyn_cast<Instruction>(V);
   if (!I)
