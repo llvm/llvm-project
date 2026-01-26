@@ -2307,7 +2307,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (SrcAddRec && DstAddRec) {
+  bool SrcAnalyzable = SrcAddRec && SrcAddRec->hasNoSignedWrap();
+  bool DstAnalyzable = DstAddRec && DstAddRec->hasNoSignedWrap();
+  if (SrcAnalyzable && DstAnalyzable) {
     const SCEV *SrcConst = SrcAddRec->getStart();
     const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
@@ -2332,7 +2334,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
            symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
                             CurDstLoop);
   }
-  if (SrcAddRec) {
+  if (SrcAnalyzable) {
     const SCEV *SrcConst = SrcAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstConst = Dst;
@@ -2342,7 +2344,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                               CurSrcLoop, Level, Result) ||
            gcdMIVtest(Src, Dst, Result);
   }
-  if (DstAddRec) {
+  if (DstAnalyzable) {
     const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const SCEV *SrcConst = Src;
@@ -2352,7 +2354,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                               CurDstLoop, Level, Result) ||
            gcdMIVtest(Src, Dst, Result);
   }
-  llvm_unreachable("SIV test expected at least one AddRec");
+  assert((SrcAddRec != nullptr || DstAddRec != nullptr) &&
+         "SIV test expected at least one AddRec");
   return false;
 }
 

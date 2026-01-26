@@ -61,7 +61,7 @@ define void @coupled_miv_type_mismatch(i32 %n) {
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
 ; CHECK-NEXT:    da analyze - anti [< >]!
 ; CHECK-NEXT:  Src: store i32 %add6, ptr %arrayidx10, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0 *]!
 ;
 entry:
   br label %for.cond
