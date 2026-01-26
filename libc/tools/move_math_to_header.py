@@ -94,8 +94,8 @@ def transform_cpp_to_header(content: str, func_name: str) -> str:
         license_header
         + f"""
 
-#ifndef LIBC_SRC___SUPPORT_MATH_{func_upper}_H
-#define LIBC_SRC___SUPPORT_MATH_{func_upper}_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_{func_upper}_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_{func_upper}_H
 
 {headers}
 
@@ -111,7 +111,7 @@ namespace math {{
 
 """
     )
-    header += f"#endif // LIBC_SRC___SUPPORT_MATH_{func_upper}_H\n"
+    header += f"#endif // LLVM_LIBC_SRC___SUPPORT_MATH_{func_upper}_H\n"
 
     return header
 
