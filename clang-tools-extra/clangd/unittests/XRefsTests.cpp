@@ -1923,6 +1923,42 @@ TEST(FindImplementations, Inheritance) {
   }
 }
 
+TEST(FindImplementations, InheritanceRecursion) {
+  // Make sure inheritance is followed, but does not diverge.
+  llvm::StringRef Test = R"cpp(
+    template <int>
+    struct [[Ev^en]];
+
+    template <int>
+    struct [[Odd]];
+
+    template <>
+    struct Even<0> {
+      static const bool value = true;
+    };
+
+    template <>
+    struct Odd<0> {
+      static const bool value = false;
+    };
+
+    template <int I>
+    struct Even : Odd<I - 1> {};
+
+    template <int I>
+    struct Odd : Even<I - 1> {};
+
+    constexpr bool Answer = Even<42>::value;
+  )cpp";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+  EXPECT_THAT(findImplementations(AST, Code.point(), Index.get()),
+              UnorderedPointwise(declRange(), Code.ranges()));
+}
+
 TEST(FindImplementations, InheritanceObjC) {
   llvm::StringRef Test = R"objc(
     @interface $base^Base
