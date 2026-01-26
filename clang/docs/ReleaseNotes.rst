@@ -193,6 +193,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
+- Fixed a crash when diagnosing invalid deducing-this member function overloads which is annotated as static. (#GH177741)
 
 OpenACC Specific Changes
 ------------------------
