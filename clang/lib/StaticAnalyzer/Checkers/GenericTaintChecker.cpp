@@ -63,6 +63,8 @@ constexpr llvm::StringLiteral MsgSanitizeSystemArgs =
 constexpr llvm::StringLiteral MsgCustomSink =
     "Untrusted data is passed to a user-defined sink";
 
+const std::string MsgTaintOrigin = "Taint originated here";
+
 using ArgIdxTy = int;
 using ArgVecTy = llvm::SmallVector<ArgIdxTy, 2>;
 
@@ -159,7 +161,7 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
       return "";
     }
     if (TaintedSymbols.empty())
-      return "Taint originated here";
+      return MsgTaintOrigin;
 
     for (auto Sym : TaintedSymbols) {
       BR.markInteresting(Sym);
@@ -378,10 +380,12 @@ private:
   CheckerManager &Mgr;
 };
 
-class GenericTaintChecker : public Checker<check::PreCall, check::PostCall> {
+class GenericTaintChecker
+    : public Checker<check::PreCall, check::PostCall, check::BeginFunction> {
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkBeginFunction(CheckerContext &C) const;
 
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
@@ -827,8 +831,40 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
                             std::make_move_iterator(Rules.end()));
 }
 
+// The incoming parameters of the main function get tainted
+// if the program called in an untrusted environment.
+void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
+  if (!C.inTopFrame() || C.getAnalysisManager()
+                             .getAnalyzerOptions()
+                             .ShouldAssumeControlledEnvironment)
+    return;
+
+  const auto *FD = dyn_cast<FunctionDecl>(C.getLocationContext()->getDecl());
+  if (!FD || !FD->isMain() || FD->param_size() < 2)
+    return;
+
+  ProgramStateRef State = C.getState();
+  const MemRegion *ArgvReg =
+      State->getRegion(FD->parameters()[1], C.getLocationContext());
+  SVal ArgvSval = State->getSVal(ArgvReg);
+  // Add taintedness to argv**
+  State = addTaint(State, ArgvSval);
+
+  const NoteTag *OriginatingTag =
+      C.getNoteTag([ArgvSval](PathSensitiveBugReport &BR) -> std::string {
+        // We give diagnostics only for taint related reports
+        if (!BR.isInteresting(ArgvSval) ||
+            BR.getBugType().getCategory() != categories::TaintedData)
+          return "";
+
+        return MsgTaintOrigin;
+      });
+  C.addTransition(State, OriginatingTag);
+}
+
 void GenericTaintChecker::checkPreCall(const CallEvent &Call,
                                        CheckerContext &C) const {
+
   initTaintRules(C);
 
   // FIXME: this should be much simpler.
