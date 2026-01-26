@@ -2371,8 +2371,10 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   auto Triple = cgm.getContext().getTargetInfo().getTriple();
 
   msgSendMDKind = VMContext.getMDKindID("GNUObjCMessageSend");
+  auto Triple = cgm.getContext().getTargetInfo().getTriple();
   usesSEHExceptions = Triple.isWindowsMSVCEnvironment();
-  usesCxxExceptions = (Triple.isOSCygMing() && isRuntime(ObjCRuntime::GNUstep, 2)) || Triple.isWasm();
+  usesCxxExceptions = (Triple.isOSCygMing() &&
+      isRuntime(ObjCRuntime::GNUstep, 2)) || Triple.isWasm();
 
   CodeGenTypes &Types = CGM.getTypes();
   IntTy = cast<llvm::IntegerType>(
