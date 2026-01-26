@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-
-namespace tidy::misc {
+namespace clang::tidy::misc {
 
 /// Finds cyclical initialization of static variables.
 ///
@@ -28,7 +26,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace tidy::misc
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STATICINITIALIZATIONCYCLECHECK_H

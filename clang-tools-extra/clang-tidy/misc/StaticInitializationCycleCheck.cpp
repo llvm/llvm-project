@@ -17,13 +17,11 @@
 using namespace clang;
 using namespace clang::ast_matchers;
 
-namespace {
-
 // Compute (for the purpose of this check) if the value of a DeclRefExpr is used
 // (at runtime).
 // The value is not used if it appears at LHS of an assignment or it appears
 // inside a compile-time constant expression (like 'sizeof').
-bool isUnusedValue(const DeclRefExpr *DRE, ASTContext &ACtx) {
+static bool isUnusedValue(const DeclRefExpr *DRE, ASTContext &ACtx) {
   ParentMapContext &PMC = ACtx.getParentMapContext();
   DynTypedNodeList Parents = PMC.getParents(*DRE);
   const BinaryOperator *ParentBO = nullptr;
@@ -41,6 +39,8 @@ bool isUnusedValue(const DeclRefExpr *DRE, ASTContext &ACtx) {
   return ParentBO->isAssignmentOp() &&
          ParentBO->getLHS()->IgnoreParenCasts() == DRE;
 }
+
+namespace {
 
 class VarUseNode;
 
@@ -93,7 +93,7 @@ public:
   friend class VarUseGraph;
 };
 
-inline bool operator==(const VarUseRecord &LHS, const VarUseNode *RHS) {
+static inline bool operator==(const VarUseRecord &LHS, const VarUseNode *RHS) {
   return LHS.Node == RHS;
 }
 
@@ -242,19 +242,21 @@ struct GraphTraits<const VarUseGraph *>
     : public GraphTraits<const VarUseNode *> {
   static NodeType *getEntryNode(const VarUseGraph *G) { return G->getRoot(); }
 
-  static VarUseNode *GetValue(VarUseGraph::const_iterator::value_type &P) {
+  static VarUseNode *getValue(VarUseGraph::const_iterator::value_type &P) {
     return P.second.get();
   }
 
   using nodes_iterator =
-      mapped_iterator<VarUseGraph::const_iterator, decltype(&GetValue)>;
+      mapped_iterator<VarUseGraph::const_iterator, decltype(&getValue)>;
 
-  static nodes_iterator nodes_begin(const VarUseGraph *G) {
-    return nodes_iterator(G->begin(), &GetValue);
+  static nodes_iterator
+  nodes_begin(const VarUseGraph *G) { // NOLINT(readability-identifier-naming)
+    return {G->begin(), &getValue};
   }
 
-  static nodes_iterator nodes_end(const VarUseGraph *G) {
-    return nodes_iterator(G->end(), &GetValue);
+  static nodes_iterator
+  nodes_end(const VarUseGraph *G) { // NOLINT(readability-identifier-naming)
+    return {G->end(), &getValue};
   }
 
   static unsigned size(const VarUseGraph *G) { return G->size(); }
@@ -262,14 +264,13 @@ struct GraphTraits<const VarUseGraph *>
 
 } // namespace llvm
 
-namespace {
-
-void reportCycles(ArrayRef<const VarUseNode *> SCC,
-                  clang::tidy::misc::StaticInitializationCycleCheck &Chk) {
+static void
+reportCycles(ArrayRef<const VarUseNode *> SCC,
+             clang::tidy::misc::StaticInitializationCycleCheck &Chk) {
   // Check if the SCC contains any variable, otherwise it is a function
   // recursion.
   auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
-  auto VarNode = llvm::find_if(SCC, NodeIsVar);
+  const auto *VarNode = llvm::find_if(SCC, NodeIsVar);
   if (VarNode == SCC.end())
     return;
 
@@ -323,8 +324,6 @@ void reportCycles(ArrayRef<const VarUseNode *> SCC,
   }
 }
 
-} // namespace
-
 namespace clang::tidy::misc {
 
 void StaticInitializationCycleCheck::registerMatchers(MatchFinder *Finder) {
@@ -340,8 +339,8 @@ void StaticInitializationCycleCheck::check(
   Builder.TraverseDecl(const_cast<TranslationUnitDecl *>(TU));
 
   for (llvm::scc_iterator<const VarUseGraph *>
-           SCCI = llvm::scc_begin((const VarUseGraph *)&Uses),
-           SCCE = llvm::scc_end((const VarUseGraph *)&Uses);
+           SCCI = llvm::scc_begin(const_cast<const VarUseGraph *>(&Uses)),
+           SCCE = llvm::scc_end(const_cast<const VarUseGraph *>(&Uses));
        SCCI != SCCE; ++SCCI) {
     if (!SCCI.hasCycle())
       continue;
