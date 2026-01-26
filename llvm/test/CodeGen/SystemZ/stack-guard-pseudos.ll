@@ -1,12 +1,12 @@
 ; RUN: llc -stop-after=systemz-isel -mtriple=s390x-ibm-linux < %s -o - | FileCheck -check-prefix=CHECK-DAGCOMBINE %s
 ; RUN: llc -stop-after=finalize-isel -mtriple=s390x-ibm-linux < %s -o - | FileCheck -check-prefix=CHECK-CUSTOMINSERT %s
 ; CHECK-DAGCOMBINE:   bb.0.entry:
-; CHECK-DAGCOMBINE:     MOVE_STACK_GUARD_DAG %stack.0.StackGuardSlot, 0
-; CHECK-DAGCOMBINE:     COMPARE_STACK_GUARD_DAG %stack.0.StackGuardSlot, 0, implicit-def $cc
+; CHECK-DAGCOMBINE:     MOVE_SG_DAG %stack.0.StackGuardSlot, 0
+; CHECK-DAGCOMBINE:     COMPARE_SG_BRIDGE %stack.0.StackGuardSlot, 0, implicit-def $cc
 ; CHECK-CUSTOMINSERT: bb.0.entry
-; CHECK-CUSTOMINSERT:   early-clobber %6:addr64bit = MOVE_STACK_GUARD %stack.0.StackGuardSlot, 0
+; CHECK-CUSTOMINSERT:   early-clobber %6:addr64bit = MOVE_SG %stack.0.StackGuardSlot, 0
 ; CHECK_CUSTOMINSERT: bb.3.entry
-; CHECK-CUSTOMINSERT: early-clobber %10:addr64bit = COMPARE_STACK_GUARD %stack.0.StackGuardSlot, 0, implicit-def $cc
+; CHECK-CUSTOMINSERT: early-clobber %10:addr64bit = COMPARE_SG %stack.0.StackGuardSlot, 0, implicit-def $cc
 
 define dso_local signext i32 @stack_guard_pseudo_check(i32 %argc, ptr %argv) #0 {
 entry:

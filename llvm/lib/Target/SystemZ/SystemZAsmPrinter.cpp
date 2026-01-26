@@ -750,14 +750,14 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     llvm_unreachable(
         "LOAD_STACK_GUARD should have been eliminated by the DAG Combiner.");
 
-  case SystemZ::MOVE_STACK_GUARD:
-  case SystemZ::COMPARE_STACK_GUARD:
-    llvm_unreachable("MOVE_STACK_GUARD and COMPARE_STACK_GUARD should have "
+  case SystemZ::MOVE_SG:
+  case SystemZ::COMPARE_SG:
+    llvm_unreachable("MOVE_SG and COMPARE_SG should have "
                      "been expanded by ExpandPostRAPseudo.");
   
-  case SystemZ::LOAD_TLS_STACK_GUARD_ADDRESS:
-  case SystemZ::LOAD_GLOBAL_STACK_GUARD_ADDRESS:
-      lowerLOAD_STACK_GUARD_ADDRESS(*MI, Lower);
+  case SystemZ::LOAD_TSGA:
+  case SystemZ::LOAD_GSGA:
+      lowerLOAD_SGA(*MI, Lower);
       return;
 
   default:
@@ -1023,14 +1023,14 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
-void SystemZAsmPrinter::lowerLOAD_STACK_GUARD_ADDRESS(const MachineInstr& MI, SystemZMCInstLower& Lower) {
+void SystemZAsmPrinter::lowerLOAD_SGA(const MachineInstr& MI, SystemZMCInstLower& Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineBasicBlock &MBB = *(MI.getParent());
   const MachineFunction &MF = *(MBB.getParent());
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const Module* M = MF.getFunction().getParent();
 
-  if (MI.getOpcode() == SystemZ::LOAD_TLS_STACK_GUARD_ADDRESS) {
+  if (MI.getOpcode() == SystemZ::LOAD_TSGA) {
     // EAR can only load the low subregister so use a shift for %a0 to produce
     // the GR containing %a0 and %a1.
     const Register Reg32 =
@@ -1060,10 +1060,10 @@ void SystemZAsmPrinter::lowerLOAD_STACK_GUARD_ADDRESS(const MachineInstr& MI, Sy
     );
     return;
   }
-  if (MI.getOpcode() == SystemZ::LOAD_GLOBAL_STACK_GUARD_ADDRESS) {
+  if (MI.getOpcode() == SystemZ::LOAD_GSGA) {
     // Obtain the global value (assert if stack guard variable can't be found).
     const TargetLowering* TLI = MF.getSubtarget().getTargetLowering();
-    const GlobalVariable* GV = cast<GlobalVariable>(TLI->getSDagStackGuard(*M));
+    const GlobalVariable* GV = cast<GlobalVariable>(TLI->getSDagStackGuard(*M, TLI->getLibcallLoweringInfo()));
     // If configured, emit the `__stack_protector_loc` entry
     if (MF.getFunction().hasFnAttribute("mstackprotector-guard-record"))
       emitStackProtectorLocEntry();

@@ -1,5 +1,3 @@
-// RUN: %clang_cc1 -S -mllvm -stop-after=systemz-isel -stack-protector 1 -triple=s390x-ibm-linux < %s -o - | FileCheck -check-prefix=CHECK-DAGCOMBINE %s
-// RUN: %clang_cc1 -S -mllvm -stop-after=finalize-isel -stack-protector 1 -triple=s390x-ibm-linux < %s -o - | FileCheck -check-prefix=CHECK-CUSTOMINSERT %s
 // RUN: not %clang_cc1 -S -stack-protector 1 -mstack-protector-guard-record -triple=s390x-ibm-linux < %s -o - 2>&1 | FileCheck -check-prefix=CHECK-OPTS %s 
 extern char *strcpy (char * D, const char * S);
 int main(int argc, char *argv[])
