@@ -9,7 +9,7 @@
 # CHECK: PASS: shtest-json-diff :: different.txt {{.*}}
 # CHECK: PASS: shtest-json-diff :: identical.txt {{.*}}
 # CHECK: PASS: shtest-json-diff :: ignore-extra-keys.txt {{.*}}
-# CHECK: PASS: shtest-json-diff :: invalid-json.txt {{.*}}
+# CHECK: PASS: shtest-json-diff :: invalid-input.txt {{.*}}
 # CHECK: PASS: shtest-json-diff :: missing-file.txt {{.*}}
 
-# CHECK: Expected Passes{{ *}}: 6
+# CHECK:  Passed: 6{{.*}}
