@@ -8,22 +8,27 @@
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous -fms-compatibility
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis
-// Test that explicit -fno-ms-anonymous-structs does not enable the feature
+// Test that explicit -fno-ms-anonymous-structs does not enable the feature.
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
 // RUN:   -fno-ms-anonymous-structs
-// Test that explicit -fno-ms-anonymous-structs overrides -fms-anonymous-structs
+// Test that explicit -fno-ms-anonymous-structs does not enable the feature.
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
+// RUN:   -fno-ms-anonymous-structs
+// Test that explicit -fno-ms-anonymous-structs overrides -earlier fms-anonymous-structs.
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
 // RUN:   -fms-anonymous-structs -fno-ms-anonymous-structs
-// RUN: %clang_cc1 -triple powerpc-ibm-aix %s -fsyntax-only -Wno-unused-value \
-// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
-// RUN:   -fms-anonymous-structs -fno-ms-anonymous-structs
-// Test that explicit -fno-ms-anonymous-structs overrides -fms-extensions
+// Test that explicit -fms-anonymous-structs overrides earlier -fno-ms-anonymous-structs.
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
+// RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous \
+// RUN:   -fno-ms-anonymous-structs -fms-anonymous-structs
+// Test that explicit -fno-ms-anonymous-structs overrides earlier -fms-extensions.
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
 // RUN:   -fms-extensions -fno-ms-anonymous-structs
-// Test that explicit -fno-ms-anonymous-structs overrides -fms-compatibility
+// Test that explicit -fno-ms-anonymous-structs overrides earlier -fms-compatibility.
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value \
 // RUN:   -Wno-pointer-to-int-cast -Wmicrosoft -verify=ms-anonymous-dis \
 // RUN:   -fms-compatibility -fno-ms-anonymous-structs
