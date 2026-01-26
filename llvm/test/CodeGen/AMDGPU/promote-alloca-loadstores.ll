@@ -209,28 +209,38 @@ entry:
   ret void
 }
 
-define void @alloca_load_store_diff_size_ptrvecs(<2 x ptr> %arg1, <4 x ptr addrspace(3)> %arg2) {
-; CHECK-LABEL: define void @alloca_load_store_diff_size_ptrvecs
-; CHECK-SAME: (<2 x ptr> [[ARG1:%.*]], <4 x ptr addrspace(3)> [[ARG2:%.*]]) {
+define <2 x ptr> @alloca_load_store_diff_size_ptrvecs1(<2 x ptr> %arg) {
+; CHECK-LABEL: define <2 x ptr> @alloca_load_store_diff_size_ptrvecs1
+; CHECK-SAME: (<2 x ptr> [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA2:%.*]] = freeze <2 x ptr> poison
-; CHECK-NEXT:    [[ALLOCA1:%.*]] = freeze <4 x ptr addrspace(3)> poison
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr> [[ARG1]] to <2 x i64>
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <4 x ptr addrspace(3)> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr> [[ARG]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <4 x i32> [[TMP1]] to <4 x ptr addrspace(3)>
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[ARG2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i64> [[TMP4]] to <2 x ptr>
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret <2 x ptr> [[ARG]]
 ;
 entry:
-  %alloca1 = alloca <4 x ptr addrspace(3)>, align 8, addrspace(5)
-  %alloca2 = alloca <2 x ptr>, align 8, addrspace(5)
-  store <2 x ptr> %arg1, ptr addrspace(5) %alloca1, align 8
-  store <4 x ptr addrspace(3)> %arg2, ptr addrspace(5) %alloca2, align 8
-  %tmp1 = load <2 x ptr>, ptr addrspace(5) %alloca1, align 8
-  %tmp2 = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca2, align 8
-  ret void
+  %alloca = alloca <4 x ptr addrspace(3)>, align 8, addrspace(5)
+  store <2 x ptr> %arg, ptr addrspace(5) %alloca, align 8
+  %tmp = load <2 x ptr>, ptr addrspace(5) %alloca, align 8
+  ret <2 x ptr> %tmp
+}
+
+define <4 x ptr addrspace(3)> @alloca_load_store_diff_size_ptrvecs2(<4 x ptr addrspace(3)> %arg) {
+; CHECK-LABEL: define <4 x ptr addrspace(3)> @alloca_load_store_diff_size_ptrvecs2
+; CHECK-SAME: (<4 x ptr addrspace(3)> [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <2 x ptr> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[ARG]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i64> [[TMP1]] to <2 x ptr>
+; CHECK-NEXT:    ret <4 x ptr addrspace(3)> [[ARG]]
+;
+entry:
+  %alloca = alloca <2 x ptr>, align 8, addrspace(5)
+  store <4 x ptr addrspace(3)> %arg, ptr addrspace(5) %alloca, align 8
+  %tmp = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca, align 8
+  ret <4 x ptr addrspace(3)> %tmp
 }
 
 ; Will not vectorize because we're accessing a 64 bit vector with a 32 bits pointer.
