@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 
 ; RUN: opt -passes=loop-fusion -da-disable-delinearization-checks -disable-output -stats < %s 2>&1 | FileCheck -check-prefix=STAT %s
-; STAT: 2 loop-fusion - DA checks passed
+; STAT: 2 loop-fusion - Dependencies prevent fusion
 
 ; The two inner loops have no dependency and are allowed to be fused as in the
 ; outer loops, different levels are accessed to.

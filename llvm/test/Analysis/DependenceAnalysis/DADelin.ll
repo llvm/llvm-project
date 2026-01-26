@@ -646,15 +646,11 @@ exit:
 define void @coeff_may_negative(ptr %a, i32 %k) {
 ; CHECK-LABEL: 'coeff_may_negative'
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %k ne) 0
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %k ne) 0
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop
@@ -689,15 +685,11 @@ exit:
 define void @coeff_positive(ptr %a, i32 %k) {
 ; CHECK-LABEL: 'coeff_positive'
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %k ne) 0
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %k ne) 0
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop
