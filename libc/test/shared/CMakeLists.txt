@@ -57,6 +57,7 @@ add_fp_unittest(
     libc.src.__support.math.expf16
     libc.src.__support.math.f16fma
     libc.src.__support.math.f16fmal
+    libc.src.__support.math.f16sqrtl
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
     libc.src.__support.math.frexpf16
@@ -74,6 +75,8 @@ add_fp_unittest(
     libc.src.__support.math.logbf
     libc.src.__support.math.logbf128
     libc.src.__support.math.logbf16
+    libc.src.__support.math.logf
+    libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
     libc.src.__support.math.llogbf
