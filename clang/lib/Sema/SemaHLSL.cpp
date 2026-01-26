@@ -197,13 +197,15 @@ bool ResourceBindings::hasBindingInfoForDecl(const VarDecl *VD) const {
 }
 
 LocalResourceAssigns::Assign::Assign(const Expr *AssignExpr,
+                                     const Scope *AssignScope,
                                      const DeclBindingInfo *Info)
-    : AssignExpr(AssignExpr), Info(Info), Invalidated(false) {}
+    : AssignExpr(AssignExpr), AssignScope(AssignScope), Info(Info), Invalidated(false) {}
 
 void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
+                                       const Scope *AssignScope,
                                        const Expr *AssignExpr,
                                        const DeclBindingInfo *Info) {
-  Assign Cur{AssignExpr, Info};
+  Assign Cur{AssignExpr, AssignScope, Info};
 
   auto AssignIt = Assignments.find(VD);
   if (AssignIt == Assignments.end()) {
@@ -212,8 +214,14 @@ void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
     return;
   }
 
-  // Otherwise, if info isn't equivalent, mark as invalid
   Assign &Prev = AssignIt->getSecond();
+  if (Cur.AssignScope == Prev.AssignScope) {
+    // If we are in the same scope, just overwrite it
+    Prev = Cur;
+    return;
+  }
+
+  // Otherwise, if info isn't equivalent, mark as invalid
   Cur.Invalidated = Cur.Info != Prev.Info;
   Prev = Cur;
 }
@@ -4482,7 +4490,7 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
       }
 
       if (auto Binding = getGlobalBinding(RHSExpr)) {
-        Assigns.trackAssign(VD, RHSExpr, *Binding);
+        Assigns.trackAssign(VD, SemaRef.getCurScope(), RHSExpr, *Binding);
       } else {
         SemaRef.Diag(Loc, diag::err_hlsl_assigning_local_resource_is_not_unique)
             << RHSExpr << VD;
@@ -4887,7 +4895,7 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   // If initializing a local resource, register the binding it is using.
   if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage()) {
     if (auto Binding = getGlobalBinding(Init)) {
-      Assigns.trackAssign(VDecl, Init, *Binding);
+      Assigns.trackAssign(VDecl, SemaRef.getCurScope(), Init, *Binding);
     } else {
       SemaRef.Diag(Init->getBeginLoc(),
                    diag::err_hlsl_assigning_local_resource_is_not_unique)

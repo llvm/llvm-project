@@ -11,6 +11,12 @@ cbuffer c {
     bool cond;
 };
 
+void overwrite(int idx) {
+	RWStructuredBuffer<int> Out = Out0;
+	Out = Out1;
+	Out[idx] = In[idx];
+}
+
 void no_initial_assignment(int idx) {
     RWStructuredBuffer<int> Out;
     if (cond) {
