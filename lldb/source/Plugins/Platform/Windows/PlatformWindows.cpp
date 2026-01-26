@@ -523,10 +523,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
   if (error.Success()) {
-    if (launch_info.GetPTY().GetPseudoTerminalHandle() !=
-            INVALID_HANDLE_VALUE &&
-        launch_info.GetNumFileActions() == 0 &&
-        launch_info.GetFlags().Test(lldb::eLaunchFlagLaunchInTTY))
+    if (launch_info.ShouldUsePTY())
       process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
   } else {
     Log *log = GetLog(LLDBLog::Platform);
