@@ -162,8 +162,8 @@ class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let RVVConstraint = VMConstraint;
 }
 
-class RVInstV<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
-              dag ins, string opcodestr, string argstr>
+class RVInstVUnary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
+                   dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> vs2;
   bits<5> vd;
