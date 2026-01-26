@@ -1397,8 +1397,9 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
   Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
   if (CGF.getLangOpts().EmitStructuredGEP) {
-    if (auto *AT = dyn_cast<llvm::ArrayType>(Addr.getElementType()))
-      LayoutTy = llvm::ArrayType::get(LayoutTy, AT->getNumElements());
+    LayoutTy = llvm::ArrayType::get(
+        LayoutTy,
+        cast<llvm::ArrayType>(Addr.getElementType())->getNumElements());
     auto *GEP = cast<StructuredGEPInst>(CGF.Builder.CreateStructuredGEP(
         LayoutTy, Addr.emitRawPointer(CGF), Indices, "cbufferidx"));
     Addr =
