@@ -139,7 +139,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
     Operation *op, const RegionSuccessor &successor, ValueRange successorInputs,
-    ArrayRef<IntegerValueRangeLattice *> argLattices) {
+    ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) {
   if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
     LDBG() << "Inferring ranges for "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
