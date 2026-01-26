@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_SINF_H
-#define LIBC_SRC___SUPPORT_MATH_SINF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINF_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SINF_H
 
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -191,4 +191,4 @@ LIBC_INLINE static float sinf(float x) {
 
 #endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
 
-#endif // LIBC_SRC___SUPPORT_MATH_SINF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINF_H
