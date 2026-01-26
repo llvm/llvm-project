@@ -124,7 +124,7 @@ void vla_type_indirect(int x) {
 
 #if __STDC_VERSION__ >= 202400L // If C26 or above
 // SINCE-C26:      int labeled_break_and_continue(int x)
-// SINCE-C26-NEXT:  [B17 (ENTRY)]
+// SINCE-C26-NEXT:  [B18 (ENTRY)]
 // SINCE-C26-NEXT:    Succs (1): B2
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B1]
@@ -138,8 +138,8 @@ void vla_type_indirect(int x) {
 // SINCE-C26-NEXT:    1: x
 // SINCE-C26-NEXT:    2: [B2.1] (ImplicitCastExpr, LValueToRValue, int)
 // SINCE-C26-NEXT:    T: switch [B2.2]
-// SINCE-C26-NEXT:    Preds (1): B17
-// SINCE-C26-NEXT:    Succs (3): B9 B16 B8
+// SINCE-C26-NEXT:    Preds (1): B18
+// SINCE-C26-NEXT:    Succs (3): B9 B17 B8
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B3]
 // SINCE-C26-NEXT:    1: x
@@ -186,52 +186,57 @@ void vla_type_indirect(int x) {
 // SINCE-C26-NEXT:  [B9]
 // SINCE-C26-NEXT:   case 2:
 // SINCE-C26-NEXT:    T: break a;
-// SINCE-C26-NEXT:    Preds (2): B2 B11
+// SINCE-C26-NEXT:    Preds (2): B2 B10
 // SINCE-C26-NEXT:    Succs (1): B1
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B10]
-// SINCE-C26-NEXT:    1: 1
-// SINCE-C26-NEXT:    T: do ... while [B10.1]
+// SINCE-C26-NEXT:    1: DoStmt (LoopExit)
 // SINCE-C26-NEXT:    Preds (1): B12
-// SINCE-C26-NEXT:    Succs (2): B14 NULL
-// SINCE-C26-EMPTY:
-// SINCE-C26-NEXT:  [B11]
-// SINCE-C26-NEXT:    T: break b;
-// SINCE-C26-NEXT:    Preds (1): B13
 // SINCE-C26-NEXT:    Succs (1): B9
 // SINCE-C26-EMPTY:
-// SINCE-C26-NEXT:  [B12]
-// SINCE-C26-NEXT:    1: x
-// SINCE-C26-NEXT:    2: ++[B12.1]
-// SINCE-C26-NEXT:    T: continue b;
+// SINCE-C26-NEXT:  [B11]
+// SINCE-C26-NEXT:    1: 1
+// SINCE-C26-NEXT:    T: do ... while [B11.1]
 // SINCE-C26-NEXT:    Preds (1): B13
+// SINCE-C26-NEXT:    Succs (2): B15 NULL
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B12]
+// SINCE-C26-NEXT:    T: break b;
+// SINCE-C26-NEXT:    Preds (1): B14
 // SINCE-C26-NEXT:    Succs (1): B10
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B13]
 // SINCE-C26-NEXT:    1: x
-// SINCE-C26-NEXT:    2: [B13.1] (ImplicitCastExpr, LValueToRValue, int)
-// SINCE-C26-NEXT:    3: x
-// SINCE-C26-NEXT:    4: [B13.3] (ImplicitCastExpr, LValueToRValue, int)
-// SINCE-C26-NEXT:    5: [B13.2] * [B13.4]
-// SINCE-C26-NEXT:    6: 100
-// SINCE-C26-NEXT:    7: [B13.5] > [B13.6]
-// SINCE-C26-NEXT:    T: if [B13.7]
-// SINCE-C26-NEXT:    Preds (2): B14 B15
-// SINCE-C26-NEXT:    Succs (2): B12 B11
+// SINCE-C26-NEXT:    2: ++[B13.1]
+// SINCE-C26-NEXT:    T: continue b;
+// SINCE-C26-NEXT:    Preds (1): B14
+// SINCE-C26-NEXT:    Succs (1): B11
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B14]
-// SINCE-C26-NEXT:    Preds (1): B10
-// SINCE-C26-NEXT:    Succs (1): B13
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: [B14.1] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    3: x
+// SINCE-C26-NEXT:    4: [B14.3] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    5: [B14.2] * [B14.4]
+// SINCE-C26-NEXT:    6: 100
+// SINCE-C26-NEXT:    7: [B14.5] > [B14.6]
+// SINCE-C26-NEXT:    T: if [B14.7]
+// SINCE-C26-NEXT:    Preds (2): B15 B16
+// SINCE-C26-NEXT:    Succs (2): B13 B12
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B15]
-// SINCE-C26-NEXT:   b:
-// SINCE-C26-NEXT:    Preds (1): B16
-// SINCE-C26-NEXT:    Succs (1): B13
+// SINCE-C26-NEXT:    Preds (1): B11
+// SINCE-C26-NEXT:    Succs (1): B14
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B16]
+// SINCE-C26-NEXT:   b:
+// SINCE-C26-NEXT:    Preds (1): B17
+// SINCE-C26-NEXT:    Succs (1): B14
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B17]
 // SINCE-C26-NEXT:   case 1:
 // SINCE-C26-NEXT:    Preds (1): B2
-// SINCE-C26-NEXT:    Succs (1): B15
+// SINCE-C26-NEXT:    Succs (1): B16
 // SINCE-C26-EMPTY:
 // SINCE-C26-NEXT:  [B0 (EXIT)]
 // SINCE-C26-NEXT:    Preds (3): B1 B3 B5
