@@ -115,7 +115,7 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     }
 
     // Deallocate box
-    // The FIR type system doesn't nesecarrily know that this is a mutable box
+    // The FIR type system doesn't necessarily know that this is a mutable box
     // if we allocated the thread local array on the heap to avoid looped stack
     // allocations.
     mlir::Value addr =
