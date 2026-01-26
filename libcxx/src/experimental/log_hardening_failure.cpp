@@ -16,7 +16,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-void __log_hardening_failure(const char* message) noexcept [[_Clang::__nonblocking__]] {
+void __log_hardening_failure(const char* message) noexcept _LIBCPP_NONBLOCKING {
   // Always log the message to `stderr` in case the platform-specific system calls fail.
   std::fputs(message, stderr);
 
