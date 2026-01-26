@@ -1799,7 +1799,7 @@ shl_of_vscale,
 sub_of_vscale,
 ]>;
 
-// fold ((A+(B-C))-B) -> A-C
+// fold ((A + (B - C)) - B) -> A-C
 def APlusBMinusCMinusB : GICombineRule<
    (defs root:$root),
    (match (G_SUB $sub1, $B, $C),
@@ -1807,7 +1807,7 @@ def APlusBMinusCMinusB : GICombineRule<
           (G_SUB $root, $add1, $B)),
    (apply (G_SUB $root, $A, $C))>;
 
-// fold ((A-(B-C))-C) -> A-B
+// fold ((A - (B - C)) - C) -> A-B
 def AMinusBMinusCMinusC : GICombineRule<
     (defs root:$root),
     (match (G_SUB $sub1, $B, $C),
