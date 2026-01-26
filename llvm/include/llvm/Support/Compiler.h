@@ -762,30 +762,4 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 // clang-format on
 
-/// \macro LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
-/// Expands to true if runtime detection of SSE4.2 is supported.
-/// This can be used to guard runtime checks for SSE4.2 support.
-#if ((defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) && \
-     __has_attribute(target) && !defined(_WIN32))
-#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 1
-#else
-#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 0
-#endif
-
-/// \macro LLVM_TARGET_DEFAULT
-/// Function attribute to compile a function with default target features.
-#if defined(__has_attribute) && __has_attribute(target)
-#define LLVM_TARGET_DEFAULT __attribute__((target("default")))
-#else
-#define LLVM_TARGET_DEFAULT
-#endif
-
-/// \macro LLVM_TARGET_SSE42
-/// Function attribute to compile a function with SSE4.2 enabled.
-#if defined(__has_attribute) && __has_attribute(target)
-#define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
-#else
-#define LLVM_TARGET_SSE42
-#endif
-
 #endif
