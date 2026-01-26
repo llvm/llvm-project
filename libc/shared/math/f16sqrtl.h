@@ -24,5 +24,4 @@ using math::f16sqrtl;
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TYPES_HAS_FLOAT16
-       //
 #endif // LLVM_LIBC_SHARED_MATH_F16SQRTL_H
