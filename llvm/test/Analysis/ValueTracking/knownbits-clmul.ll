@@ -33,6 +33,29 @@ define i1 @clmul_low_bits_negative(i8 %a) nounwind {
   ret i1 %r
 }
 
+define <2 x i1> @clmul_low_bits_vector(<2 x i8> %a) nounwind {
+; CHECK-LABEL: @clmul_low_bits_vector(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %clmul = call <2 x i8> @llvm.clmul.v2i8(<2 x i8> %a, <2 x i8> splat (i8 4))
+  %and = and <2 x i8> %clmul, splat (i8 3)
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @clmul_low_bits_vector_negative(<2 x i8> %a) nounwind {
+; CHECK-LABEL: @clmul_low_bits_vector_negative(
+; CHECK-NEXT:    [[CLMUL:%.*]] = call <2 x i8> @llvm.clmul.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 4))
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[CLMUL]], splat (i8 4)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %clmul = call <2 x i8> @llvm.clmul.v2i8(<2 x i8> %a, <2 x i8> splat (i8 4))
+  %and = and <2 x i8> %clmul, splat (i8 4)
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
 define i1 @clmul_high_bits(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: @clmul_high_bits(
 ; CHECK-NEXT:    ret i1 true
@@ -76,4 +99,49 @@ define i1 @clmul_high_bits_negative(i8 %a, i8 %b) nounwind {
   %and = and i16 %clmul, u0x2000
   %r = icmp eq i16 %and, 0
   ret i1 %r
+}
+
+define <2 x i1> @clmul_high_bits_vector(<2 x i8> %a, <2 x i8> %b) nounwind {
+; CHECK-LABEL: @clmul_high_bits_vector(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %zext_a = zext <2 x i8> %a to <2 x i16>
+  %zext_b = zext <2 x i8> %b to <2 x i16>
+  %clmul = call <2 x i16> @llvm.clmul.v2i16(<2 x i16> %zext_a, <2 x i16> %zext_b)
+  %and = and <2 x i16> %clmul, splat (i16 u0x8000)
+  %r = icmp eq <2 x i16> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @clmul_high_bits_boundary_vector(<2 x i8> %a, <2 x i8> %b) nounwind {
+; CHECK-LABEL: @clmul_high_bits_boundary_vector(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext <2 x i8> [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[CLMUL:%.*]] = call <2 x i16> @llvm.clmul.v2i16(<2 x i16> [[ZEXT_A]], <2 x i16> [[ZEXT_B]])
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult <2 x i16> [[CLMUL]], splat (i16 16384)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %zext_a = zext <2 x i8> %a to <2 x i16>
+  %zext_b = zext <2 x i8> %b to <2 x i16>
+  %clmul = call <2 x i16> @llvm.clmul.v2i16(<2 x i16> %zext_a, <2 x i16> %zext_b)
+  %and = and <2 x i16> %clmul, splat (i16 u0x4000)
+  %r = icmp eq <2 x i16> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @clmul_high_bits_negative_vector(<2 x i8> %a, <2 x i8> %b) nounwind {
+; CHECK-LABEL: @clmul_high_bits_negative_vector(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext <2 x i8> [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[CLMUL:%.*]] = call <2 x i16> @llvm.clmul.v2i16(<2 x i16> [[ZEXT_A]], <2 x i16> [[ZEXT_B]])
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[CLMUL]], splat (i16 8192)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %zext_a = zext <2 x i8> %a to <2 x i16>
+  %zext_b = zext <2 x i8> %b to <2 x i16>
+  %clmul = call <2 x i16> @llvm.clmul.v2i16(<2 x i16> %zext_a, <2 x i16> %zext_b)
+  %and = and <2 x i16> %clmul, splat (i16 u0x2000)
+  %r = icmp eq <2 x i16> %and, zeroinitializer
+  ret <2 x i1> %r
 }
