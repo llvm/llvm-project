@@ -2556,7 +2556,9 @@ static void licm(VPlan &Plan) {
     }
   }
 
+#ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
+#endif
   // Sink recipes with no users inside the vector loop region into a dedicated
   // exit block.
   // TODO: Sinking to non-dedicated exits is not supported yet, as it would
@@ -2600,10 +2602,11 @@ static void licm(VPlan &Plan) {
       // Only sink to dedicated exit blocks.
       if (SinkBB->getSinglePredecessor() != LoopRegion)
         continue;
-      // Skip if the defining block does not dominate the sink block.
-      if (!VPDT.properlyDominates(VPBB, SinkBB))
-        continue;
 
+      // TODO: This will need to be a check instead of a assert after
+      // conditional branches in vectorized loops are supported.
+      assert(VPDT.properlyDominates(VPBB, SinkBB) &&
+             "Defining block must dominate sink block");
       Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
     }
   }
