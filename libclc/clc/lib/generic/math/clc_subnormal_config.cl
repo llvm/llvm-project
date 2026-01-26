@@ -26,7 +26,7 @@ _CLC_DEF bool __clc_fp32_subnormals_supported() {
   // the smallest normal. If subnormals are not supported it will flush to +0.
   float smallest_normal = 0x1p-126f;
   float sub =
-      smallest_normal * 0.5f; // Should be 0x1p-127f (subnormal) if supported
+      smallest_normal * 0.5f; // Expected 0x1p-127f (subnormal) if supported
   return !__builtin_isfpclass(sub, __FPCLASS_POSZERO);
 }
 
@@ -37,7 +37,7 @@ _CLC_DEF bool __clc_fp64_subnormals_supported() {
   // the smallest normal. If subnormals are not supported it will flush to +0.
   double smallest_normal = 0x1p-1022;
   double sub =
-      smallest_normal * 0.5; // Should be 0x1p-1023 (subnormal) if supported
+      smallest_normal * 0.5; // Expected 0x1p-1023 (subnormal) if supported
   return !__builtin_isfpclass(sub, __FPCLASS_POSZERO);
 }
 #endif // cl_khr_fp64
