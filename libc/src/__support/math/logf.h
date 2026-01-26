@@ -56,7 +56,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-static constexpr float logf(float x) {
+LIBC_INLINE static float logf(float x) {
   using namespace common_constants_internal;
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
