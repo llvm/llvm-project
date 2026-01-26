@@ -496,17 +496,8 @@ add_entrypoint_object(
   HDRS
     ../tanf.h
   DEPENDS
-    libc.src.__support.math.range_reduction
-    libc.src.__support.math.sincosf_utils
+    libc.src.__support.math.tanf
     libc.src.errno.errno
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.macros.optimization
 )
 
 add_entrypoint_object(
