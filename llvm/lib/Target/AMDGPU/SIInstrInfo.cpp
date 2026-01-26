@@ -1372,6 +1372,24 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   }
 }
 
+std::optional<int64_t>
+SIInstrInfo::getImmOrMaterializedImm(MachineOperand &Op) const {
+  if (Op.isImm())
+    return Op.getImm();
+
+  if (!Op.isReg() || !Op.getReg().isVirtual())
+    return std::nullopt;
+  MachineRegisterInfo &MRI = Op.getParent()->getMF()->getRegInfo();
+  const MachineInstr *Def = MRI.getVRegDef(Op.getReg());
+  if (Def && Def->isMoveImmediate()) {
+    const MachineOperand &ImmSrc = Def->getOperand(1);
+    if (ImmSrc.isImm())
+      return extractSubregFromImm(ImmSrc.getImm(), Op.getSubReg());
+  }
+
+  return std::nullopt;
+}
+
 unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
 
   if (RI.isAGPRClass(DstRC))
@@ -10960,6 +10978,34 @@ static bool foldableSelect(const MachineInstr &Def) {
   return true;
 }
 
+static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,
+                                  unsigned &NewDefOpc) {
+  // S_ADD_U32 X, 1 sets SCC on carryout which can only happen if result==0.
+  // S_ADD_I32 X, 1 can be converted to S_ADD_U32 X, 1 if SCC is dead.
+  if (Def.getOpcode() != AMDGPU::S_ADD_I32 &&
+      Def.getOpcode() != AMDGPU::S_ADD_U32)
+    return false;
+  const MachineOperand &AddSrc1 = Def.getOperand(1);
+  const MachineOperand &AddSrc2 = Def.getOperand(2);
+  int64_t addend;
+
+  if ((!AddSrc1.isImm() || AddSrc1.getImm() != 1) &&
+      (!AddSrc2.isImm() || AddSrc2.getImm() != 1) &&
+      (!getFoldableImm(&AddSrc1, addend) || addend != 1) &&
+      (!getFoldableImm(&AddSrc2, addend) || addend != 1))
+    return false;
+
+  if (Def.getOpcode() == AMDGPU::S_ADD_I32) {
+    const MachineOperand *SccDef =
+        Def.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
+    if (!SccDef->isDead())
+      return false;
+    NewDefOpc = AMDGPU::S_ADD_U32;
+  }
+  NeedInversion = !NeedInversion;
+  return true;
+}
+
 bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                        Register SrcReg2, int64_t CmpMask,
                                        int64_t CmpValue,
@@ -10981,19 +11027,31 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     // For S_OP that set SCC = DST!=0, do the transformation
     //
-    //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
-
+    //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
+    //
+    // For (S_OP ...) that set SCC = DST==0, invert NeedInversion and
+    // do the transformation:
+    //
+    //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
+    //
     // If foldableSelect, s_cmp_lg_* is redundant because the SCC input value
     // for S_CSELECT* already has the same value that will be calculated by
     // s_cmp_lg_*
     //
-    //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
-    //   imm), 0)
-    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(*Def))
+    //   s_cmp_[lg|eq]_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT*
+    //   (non-zero imm), 0)
+
+    unsigned NewDefOpc = Def->getOpcode();
+    if (!setsSCCIfResultIsNonZero(*Def) &&
+        !setsSCCIfResultIsZero(*Def, NeedInversion, NewDefOpc) &&
+        !foldableSelect(*Def))
       return false;
 
     if (!optimizeSCC(Def, &CmpInstr, NeedInversion))
       return false;
+
+    if (NewDefOpc != Def->getOpcode())
+      Def->setDesc(get(NewDefOpc));
 
     // If s_or_b32 result, sY, is unused (i.e. it is effectively a 64-bit
     // s_cmp_lg of a register pair) and the inputs are the hi and lo-halves of a
@@ -11017,7 +11075,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
             Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
           MachineInstr *Select = MRI->getVRegDef(Def1->getOperand(1).getReg());
           if (Select && foldableSelect(*Select))
-            optimizeSCC(Select, Def, false);
+            optimizeSCC(Select, Def, /*NeedInversion=*/false);
         }
       }
     }
@@ -11098,7 +11156,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr, false))
+    if (!optimizeSCC(Def, &CmpInstr, /*NeedInversion=*/false))
       return false;
 
     if (!MRI->use_nodbg_empty(DefReg)) {
