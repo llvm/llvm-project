@@ -2184,7 +2184,7 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
 
 void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   // TODO(Reflection): Implement this.
-  llvm_unreachable("not implemented yet");
+  assert(false & "not implemented yet");
 }
 
 void

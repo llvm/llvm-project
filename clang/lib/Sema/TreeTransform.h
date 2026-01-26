@@ -13020,7 +13020,7 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
-  llvm_unreachable("not implemeted yet");
+  assert(false & "not implemented yet");
 }
 
 template<typename Derived>
