@@ -2783,7 +2783,7 @@ DEF_TRAVERSE_STMT(CXXNewExpr, {
 DEF_TRAVERSE_STMT(OffsetOfExpr, {
   // The child-iterator will pick up the expression representing
   // the field.
-  // FIMXE: for code like offsetof(Foo, a.b.c), should we get
+  // FIXME: for code like offsetof(Foo, a.b.c), should we get
   // making a MemberExpr callbacks for Foo.a, Foo.a.b, and Foo.a.b.c?
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })

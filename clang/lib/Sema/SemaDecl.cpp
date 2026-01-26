@@ -15466,7 +15466,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
     }
   }
 
-  // FIMXE: We assume every Decl in the group is in the same file.
+  // FIXME: We assume every Decl in the group is in the same file.
   // This is false when preprocessor constructs the group from decls in
   // different files (e. g. macros or #include).
   Context.attachCommentsToJustParsedDecls(Group, &getPreprocessor());
