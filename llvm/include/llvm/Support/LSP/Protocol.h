@@ -104,12 +104,12 @@ public:
   URIForFile() = default;
 
   /// Try to build a URIForFile from the given URI string.
-  static llvm::Expected<URIForFile> fromURI(StringRef uri);
+  LLVM_ABI static llvm::Expected<URIForFile> fromURI(StringRef uri);
 
   /// Try to build a URIForFile from the given absolute file path and optional
   /// scheme.
-  static llvm::Expected<URIForFile> fromFile(StringRef absoluteFilepath,
-                                             StringRef scheme = "file");
+  LLVM_ABI static llvm::Expected<URIForFile>
+  fromFile(StringRef absoluteFilepath, StringRef scheme = "file");
 
   /// Returns the absolute path to the file.
   StringRef file() const { return filePath; }
@@ -118,7 +118,7 @@ public:
   StringRef uri() const { return uriStr; }
 
   /// Return the scheme of the uri.
-  StringRef scheme() const;
+  LLVM_ABI StringRef scheme() const;
 
   explicit operator bool() const { return !filePath.empty(); }
 
@@ -135,7 +135,7 @@ public:
   /// Register a supported URI scheme. The protocol supports `file` by default,
   /// so this is only necessary for any additional schemes that a server wants
   /// to support.
-  static void registerSupportedScheme(StringRef scheme);
+  LLVM_ABI static void registerSupportedScheme(StringRef scheme);
 
 private:
   explicit URIForFile(std::string &&filePath, std::string &&uriStr)
@@ -149,7 +149,7 @@ private:
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const URIForFile &value);
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 URIForFile &result, llvm::json::Path path);
-raw_ostream &operator<<(raw_ostream &os, const URIForFile &value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, const URIForFile &value);
 
 //===----------------------------------------------------------------------===//
 // ClientCapabilities
@@ -337,7 +337,7 @@ struct Position {
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 Position &result, llvm::json::Path path);
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Position &value);
-raw_ostream &operator<<(raw_ostream &os, const Position &value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, const Position &value);
 
 //===----------------------------------------------------------------------===//
 // Range
@@ -390,7 +390,7 @@ struct Range {
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value, Range &result,
                                 llvm::json::Path path);
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Range &value);
-raw_ostream &operator<<(raw_ostream &os, const Range &value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, const Range &value);
 
 //===----------------------------------------------------------------------===//
 // Location
@@ -425,7 +425,7 @@ struct Location {
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 Location &result, llvm::json::Path path);
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Location &value);
-raw_ostream &operator<<(raw_ostream &os, const Location &value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, const Location &value);
 
 //===----------------------------------------------------------------------===//
 // TextDocumentPositionParams
@@ -512,10 +512,11 @@ LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &,
 
 struct TextDocumentContentChangeEvent {
   /// Try to apply this change to the given contents string.
-  LogicalResult applyTo(std::string &contents) const;
+  LLVM_ABI LogicalResult applyTo(std::string &contents) const;
   /// Try to apply a set of changes to the given contents string.
-  static LogicalResult applyTo(ArrayRef<TextDocumentContentChangeEvent> changes,
-                               std::string &contents);
+  LLVM_ABI static LogicalResult
+  applyTo(ArrayRef<TextDocumentContentChangeEvent> changes,
+          std::string &contents);
 
   /// The range of the document that changed.
   std::optional<Range> range;
@@ -555,7 +556,7 @@ enum class MarkupKind {
   PlainText,
   Markdown,
 };
-raw_ostream &operator<<(raw_ostream &os, MarkupKind kind);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, MarkupKind kind);
 
 struct MarkupContent {
   MarkupKind kind = MarkupKind::PlainText;
@@ -797,7 +798,7 @@ inline bool operator==(const TextEdit &lhs, const TextEdit &rhs) {
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 TextEdit &result, llvm::json::Path path);
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const TextEdit &value);
-raw_ostream &operator<<(raw_ostream &os, const TextEdit &value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, const TextEdit &value);
 
 //===----------------------------------------------------------------------===//
 // CompletionItemKind
@@ -845,7 +846,7 @@ LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 CompletionItemKindBitset &result,
                                 llvm::json::Path path);
 
-CompletionItemKind
+LLVM_ABI CompletionItemKind
 adjustKindToCapability(CompletionItemKind kind,
                        CompletionItemKindBitset &supportedCompletionItemKinds);
 
@@ -927,8 +928,8 @@ struct CompletionItem {
 
 /// Add support for JSON serialization.
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const CompletionItem &value);
-raw_ostream &operator<<(raw_ostream &os, const CompletionItem &value);
-bool operator<(const CompletionItem &lhs, const CompletionItem &rhs);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os, const CompletionItem &value);
+LLVM_ABI bool operator<(const CompletionItem &lhs, const CompletionItem &rhs);
 
 //===----------------------------------------------------------------------===//
 // CompletionList
@@ -1029,7 +1030,8 @@ struct SignatureInformation {
 
 /// Add support for JSON serialization.
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const SignatureInformation &value);
-raw_ostream &operator<<(raw_ostream &os, const SignatureInformation &value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &os,
+                                 const SignatureInformation &value);
 
 //===----------------------------------------------------------------------===//
 // SignatureHelp
@@ -1178,9 +1180,10 @@ struct InlayHint {
 
 /// Add support for JSON serialization.
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const InlayHint &);
-bool operator==(const InlayHint &lhs, const InlayHint &rhs);
-bool operator<(const InlayHint &lhs, const InlayHint &rhs);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, InlayHintKind value);
+LLVM_ABI bool operator==(const InlayHint &lhs, const InlayHint &rhs);
+LLVM_ABI bool operator<(const InlayHint &lhs, const InlayHint &rhs);
+LLVM_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                       InlayHintKind value);
 
 //===----------------------------------------------------------------------===//
 // CodeActionContext
@@ -1260,9 +1263,9 @@ struct CodeAction {
   /// The kind of the code action.
   /// Used to filter code actions.
   std::optional<std::string> kind;
-  const static llvm::StringLiteral kQuickFix;
-  const static llvm::StringLiteral kRefactor;
-  const static llvm::StringLiteral kInfo;
+  LLVM_ABI const static llvm::StringLiteral kQuickFix;
+  LLVM_ABI const static llvm::StringLiteral kRefactor;
+  LLVM_ABI const static llvm::StringLiteral kInfo;
 
   /// The diagnostics that this code action resolves.
   std::optional<std::vector<Diagnostic>> diagnostics;
@@ -1303,10 +1306,10 @@ struct ShowMessageParams {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const MessageActionItem &Params);
+LLVM_ABI llvm::json::Value toJSON(const MessageActionItem &Params);
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const ShowMessageParams &Params);
+LLVM_ABI llvm::json::Value toJSON(const ShowMessageParams &Params);
 
 } // namespace lsp
 } // namespace llvm

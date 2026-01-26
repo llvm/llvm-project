@@ -10,13 +10,14 @@
 #define LLVM_CODEGEN_EXPANDREDUCTIONS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class ExpandReductionsPass
     : public PassInfoMixin<ExpandReductionsPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm
 

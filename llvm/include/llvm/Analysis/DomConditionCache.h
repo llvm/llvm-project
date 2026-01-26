@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -34,7 +35,7 @@ private:
 
 public:
   /// Add a branch condition to the cache.
-  void registerBranch(BranchInst *BI);
+  LLVM_ABI void registerBranch(BranchInst *BI);
 
   /// Remove a value from the cache, e.g. because it will be erased.
   void removeValue(Value *V) { AffectedValues.erase(V); }

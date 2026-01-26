@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -21,7 +22,7 @@ class DWARFDebugAbbrev;
 struct DWARFSection;
 class raw_ostream;
 
-class DWARFTypeUnit : public DWARFUnit {
+class LLVM_ABI DWARFTypeUnit : public DWARFUnit {
 public:
   DWARFTypeUnit(DWARFContext &Context, const DWARFSection &Section,
                 const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,

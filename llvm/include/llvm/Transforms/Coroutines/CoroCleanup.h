@@ -15,13 +15,14 @@
 #define LLVM_TRANSFORMS_COROUTINES_COROCLEANUP_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class Module;
 
 struct CoroCleanupPass : PassInfoMixin<CoroCleanupPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
 };
 } // end namespace llvm

@@ -13,13 +13,14 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {
 
 class NativeSession;
 
-class NativeInlineSiteSymbol : public NativeRawSymbol {
+class LLVM_ABI NativeInlineSiteSymbol : public NativeRawSymbol {
 public:
   NativeInlineSiteSymbol(NativeSession &Session, SymIndexId Id,
                          const codeview::InlineSiteSym &Sym,

@@ -10,10 +10,11 @@
 #define LLVM_MC_MCASMINFOCOFF_H
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class MCAsmInfoCOFF : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoCOFF : public MCAsmInfo {
   virtual void anchor();
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
@@ -23,14 +24,14 @@ protected:
   explicit MCAsmInfoCOFF();
 };
 
-class MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
+class LLVM_ABI MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
   void anchor() override;
 
 protected:
   explicit MCAsmInfoMicrosoft();
 };
 
-class MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
+class LLVM_ABI MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
   void anchor() override;
 
 protected:

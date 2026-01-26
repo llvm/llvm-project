@@ -9,6 +9,7 @@
 #define LLVM_TRANSFORMS_IPO_EXPANDVARIADICS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,12 +29,12 @@ class ExpandVariadicsPass : public PassInfoMixin<ExpandVariadicsPass> {
 
 public:
   // Operates under passed mode unless overridden on commandline
-  ExpandVariadicsPass(ExpandVariadicsMode Mode);
+  LLVM_ABI ExpandVariadicsPass(ExpandVariadicsMode Mode);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-ModulePass *createExpandVariadicsPass(ExpandVariadicsMode);
+LLVM_ABI ModulePass *createExpandVariadicsPass(ExpandVariadicsMode);
 
 } // end namespace llvm
 

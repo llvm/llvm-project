@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -425,9 +426,9 @@ struct FrameIndex {
   SMRange SourceRange;
 
   FrameIndex() = default;
-  FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
+  LLVM_ABI FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
 
-  Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
+  LLVM_ABI Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
 };
 
 template <> struct ScalarTraits<FrameIndex> {

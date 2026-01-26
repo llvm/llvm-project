@@ -14,9 +14,10 @@
 #ifndef LLVM_OBJECTYAML_ARCHIVEYAML_H
 #define LLVM_OBJECTYAML_ARCHIVEYAML_H
 
-#include "llvm/Support/YAMLTraits.h"
-#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <optional>
 
 namespace llvm {
@@ -63,13 +64,13 @@ namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<ArchYAML::Archive> {
-  static void mapping(IO &IO, ArchYAML::Archive &A);
-  static std::string validate(IO &, ArchYAML::Archive &A);
+  LLVM_ABI static void mapping(IO &IO, ArchYAML::Archive &A);
+  LLVM_ABI static std::string validate(IO &, ArchYAML::Archive &A);
 };
 
 template <> struct MappingTraits<ArchYAML::Archive::Child> {
-  static void mapping(IO &IO, ArchYAML::Archive::Child &C);
-  static std::string validate(IO &, ArchYAML::Archive::Child &C);
+  LLVM_ABI static void mapping(IO &IO, ArchYAML::Archive::Child &C);
+  LLVM_ABI static std::string validate(IO &, ArchYAML::Archive::Child &C);
 };
 
 } // end namespace yaml

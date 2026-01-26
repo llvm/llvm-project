@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 
@@ -21,10 +22,10 @@ namespace llvm::sandboxir {
 
 class SandboxVectorizerPassBuilder {
 public:
-  static std::unique_ptr<FunctionPass> createFunctionPass(StringRef Name,
-                                                          StringRef Args);
-  static std::unique_ptr<RegionPass> createRegionPass(StringRef Name,
-                                                      StringRef Args);
+  LLVM_ABI static std::unique_ptr<FunctionPass>
+  createFunctionPass(StringRef Name, StringRef Args);
+  LLVM_ABI static std::unique_ptr<RegionPass> createRegionPass(StringRef Name,
+                                                               StringRef Args);
 };
 
 } // namespace llvm::sandboxir

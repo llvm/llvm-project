@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_SAFESTACK_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -20,7 +21,7 @@ class SafeStackPass : public PassInfoMixin<SafeStackPass> {
 
 public:
   explicit SafeStackPass(const TargetMachine &TM_) : TM(&TM_) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

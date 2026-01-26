@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -145,8 +146,8 @@ public:
 };
 
 struct PhysicalRegisterInfo {
-  PhysicalRegisterInfo(const TargetRegisterInfo &tri,
-                       const MachineFunction &mf);
+  LLVM_ABI PhysicalRegisterInfo(const TargetRegisterInfo &tri,
+                                const MachineFunction &mf);
 
   RegisterId getRegMaskId(const uint32_t *RM) const {
     return RegisterRef::toMaskId(RegMasks.find(RM));
@@ -156,10 +157,10 @@ struct PhysicalRegisterInfo {
     return RegMasks.get(RR.asMaskIdx());
   }
 
-  bool alias(RegisterRef RA, RegisterRef RB) const;
+  LLVM_ABI bool alias(RegisterRef RA, RegisterRef RB) const;
 
   // Returns the set of aliased physical registers.
-  std::set<RegisterId> getAliasSet(RegisterRef RR) const;
+  LLVM_ABI std::set<RegisterId> getAliasSet(RegisterRef RR) const;
 
   RegisterRef getRefForUnit(MCRegUnit U) const {
     return RegisterRef(UnitInfos[U].Reg, UnitInfos[U].Mask);
@@ -169,20 +170,20 @@ struct PhysicalRegisterInfo {
     return MaskInfos[RR.asMaskIdx()].Units;
   }
 
-  std::set<RegisterId> getUnits(RegisterRef RR) const;
+  LLVM_ABI std::set<RegisterId> getUnits(RegisterRef RR) const;
 
   const BitVector &getUnitAliases(MCRegUnit U) const {
     return AliasInfos[U].Regs;
   }
 
-  RegisterRef mapTo(RegisterRef RR, RegisterId R) const;
+  LLVM_ABI RegisterRef mapTo(RegisterRef RR, RegisterId R) const;
   const TargetRegisterInfo &getTRI() const { return TRI; }
 
-  bool equal_to(RegisterRef A, RegisterRef B) const;
-  bool less(RegisterRef A, RegisterRef B) const;
+  LLVM_ABI bool equal_to(RegisterRef A, RegisterRef B) const;
+  LLVM_ABI bool less(RegisterRef A, RegisterRef B) const;
 
-  void print(raw_ostream &OS, RegisterRef A) const;
-  void print(raw_ostream &OS, const RegisterAggr &A) const;
+  LLVM_ABI void print(raw_ostream &OS, RegisterRef A) const;
+  LLVM_ABI void print(raw_ostream &OS, const RegisterAggr &A) const;
 
 private:
   struct RegInfo {
@@ -241,8 +242,8 @@ struct RegisterAggr {
 
   unsigned size() const { return Units.count(); }
   bool empty() const { return Units.none(); }
-  bool hasAliasOf(RegisterRef RR) const;
-  bool hasCoverOf(RegisterRef RR) const;
+  LLVM_ABI bool hasAliasOf(RegisterRef RR) const;
+  LLVM_ABI bool hasCoverOf(RegisterRef RR) const;
 
   const PhysicalRegisterInfo &getPRI() const { return PRI; }
 
@@ -255,16 +256,16 @@ struct RegisterAggr {
     return RegisterAggr(PRI).insert(RA).hasCoverOf(RB);
   }
 
-  RegisterAggr &insert(RegisterRef RR);
-  RegisterAggr &insert(const RegisterAggr &RG);
-  RegisterAggr &intersect(RegisterRef RR);
-  RegisterAggr &intersect(const RegisterAggr &RG);
-  RegisterAggr &clear(RegisterRef RR);
-  RegisterAggr &clear(const RegisterAggr &RG);
+  LLVM_ABI RegisterAggr &insert(RegisterRef RR);
+  LLVM_ABI RegisterAggr &insert(const RegisterAggr &RG);
+  LLVM_ABI RegisterAggr &intersect(RegisterRef RR);
+  LLVM_ABI RegisterAggr &intersect(const RegisterAggr &RG);
+  LLVM_ABI RegisterAggr &clear(RegisterRef RR);
+  LLVM_ABI RegisterAggr &clear(const RegisterAggr &RG);
 
-  RegisterRef intersectWith(RegisterRef RR) const;
-  RegisterRef clearIn(RegisterRef RR) const;
-  RegisterRef makeRegRef() const;
+  LLVM_ABI RegisterRef intersectWith(RegisterRef RR) const;
+  LLVM_ABI RegisterRef clearIn(RegisterRef RR) const;
+  LLVM_ABI RegisterRef makeRegRef() const;
 
   size_t hash() const { return DenseMapInfo<BitVector>::getHashValue(Units); }
 
@@ -278,7 +279,7 @@ struct RegisterAggr {
     const RegisterAggr *Owner;
 
   public:
-    ref_iterator(const RegisterAggr &RG, bool End);
+    LLVM_ABI ref_iterator(const RegisterAggr &RG, bool End);
 
     RegisterRef operator*() const {
       return RegisterRef(Pos->first, Pos->second);
@@ -343,14 +344,14 @@ public:
   using value_type = typename decltype(Map)::value_type;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RegisterAggr &A);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RegisterAggr &A);
 
 // Print the lane mask in a short form (or not at all if all bits are set).
 struct PrintLaneMaskShort {
   PrintLaneMaskShort(LaneBitmask M) : Mask(M) {}
   LaneBitmask Mask;
 };
-raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskShort &P);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskShort &P);
 
 } // end namespace rdf
 } // end namespace llvm

@@ -20,6 +20,7 @@
 #include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -73,8 +74,8 @@ struct SectionDataEntry {
   std::optional<object::coff_load_configuration32> LoadConfig32;
   std::optional<object::coff_load_configuration64> LoadConfig64;
 
-  size_t size() const;
-  void writeAsBinary(raw_ostream &OS) const;
+  LLVM_ABI size_t size() const;
+  LLVM_ABI void writeAsBinary(raw_ostream &OS) const;
 };
 
 struct Section {
@@ -89,7 +90,7 @@ struct Section {
   std::vector<Relocation> Relocations;
   StringRef Name;
 
-  Section();
+  LLVM_ABI Section();
 };
 
 struct Symbol {
@@ -104,7 +105,7 @@ struct Symbol {
   std::optional<COFF::AuxiliaryCLRToken> CLRToken;
   StringRef Name;
 
-  Symbol();
+  LLVM_ABI Symbol();
 };
 
 struct PEHeader {
@@ -119,7 +120,7 @@ struct Object {
   std::vector<Section> Sections;
   std::vector<Symbol> Symbols;
 
-  Object();
+  LLVM_ABI Object();
 };
 
 } // end namespace COFFYAML
@@ -136,152 +137,154 @@ namespace yaml {
 
 template <>
 struct ScalarEnumerationTraits<COFFYAML::WeakExternalCharacteristics> {
-  static void enumeration(IO &IO, COFFYAML::WeakExternalCharacteristics &Value);
+  LLVM_ABI static void
+  enumeration(IO &IO, COFFYAML::WeakExternalCharacteristics &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFFYAML::AuxSymbolType> {
-  static void enumeration(IO &IO, COFFYAML::AuxSymbolType &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFFYAML::AuxSymbolType &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFFYAML::COMDATType> {
-  static void enumeration(IO &IO, COFFYAML::COMDATType &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFFYAML::COMDATType &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::MachineTypes> {
-  static void enumeration(IO &IO, COFF::MachineTypes &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::MachineTypes &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::SymbolBaseType> {
-  static void enumeration(IO &IO, COFF::SymbolBaseType &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::SymbolBaseType &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::SymbolStorageClass> {
-  static void enumeration(IO &IO, COFF::SymbolStorageClass &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::SymbolStorageClass &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::SymbolComplexType> {
-  static void enumeration(IO &IO, COFF::SymbolComplexType &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::SymbolComplexType &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::RelocationTypeI386> {
-  static void enumeration(IO &IO, COFF::RelocationTypeI386 &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypeI386 &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::RelocationTypeAMD64> {
-  static void enumeration(IO &IO, COFF::RelocationTypeAMD64 &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypeAMD64 &Value);
 };
 
 template <> struct ScalarEnumerationTraits<COFF::RelocationTypesMips> {
-  static void enumeration(IO &IO, COFF::RelocationTypesMips &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypesMips &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::RelocationTypesARM> {
-  static void enumeration(IO &IO, COFF::RelocationTypesARM &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypesARM &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::RelocationTypesARM64> {
-  static void enumeration(IO &IO, COFF::RelocationTypesARM64 &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypesARM64 &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<COFF::WindowsSubsystem> {
-  static void enumeration(IO &IO, COFF::WindowsSubsystem &Value);
+  LLVM_ABI static void enumeration(IO &IO, COFF::WindowsSubsystem &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<COFF::Characteristics> {
-  static void bitset(IO &IO, COFF::Characteristics &Value);
+  LLVM_ABI static void bitset(IO &IO, COFF::Characteristics &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<COFF::SectionCharacteristics> {
-  static void bitset(IO &IO, COFF::SectionCharacteristics &Value);
+  LLVM_ABI static void bitset(IO &IO, COFF::SectionCharacteristics &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<COFF::DLLCharacteristics> {
-  static void bitset(IO &IO, COFF::DLLCharacteristics &Value);
+  LLVM_ABI static void bitset(IO &IO, COFF::DLLCharacteristics &Value);
 };
 
 template <>
 struct MappingTraits<COFFYAML::Relocation> {
-  static void mapping(IO &IO, COFFYAML::Relocation &Rel);
+  LLVM_ABI static void mapping(IO &IO, COFFYAML::Relocation &Rel);
 };
 
 template <>
 struct MappingTraits<COFFYAML::PEHeader> {
-  static void mapping(IO &IO, COFFYAML::PEHeader &PH);
+  LLVM_ABI static void mapping(IO &IO, COFFYAML::PEHeader &PH);
 };
 
 template <>
 struct MappingTraits<COFF::DataDirectory> {
-  static void mapping(IO &IO, COFF::DataDirectory &DD);
+  LLVM_ABI static void mapping(IO &IO, COFF::DataDirectory &DD);
 };
 
 template <>
 struct MappingTraits<COFF::header> {
-  static void mapping(IO &IO, COFF::header &H);
+  LLVM_ABI static void mapping(IO &IO, COFF::header &H);
 };
 
 template <> struct MappingTraits<COFF::AuxiliaryFunctionDefinition> {
-  static void mapping(IO &IO, COFF::AuxiliaryFunctionDefinition &AFD);
+  LLVM_ABI static void mapping(IO &IO, COFF::AuxiliaryFunctionDefinition &AFD);
 };
 
 template <> struct MappingTraits<COFF::AuxiliarybfAndefSymbol> {
-  static void mapping(IO &IO, COFF::AuxiliarybfAndefSymbol &AAS);
+  LLVM_ABI static void mapping(IO &IO, COFF::AuxiliarybfAndefSymbol &AAS);
 };
 
 template <> struct MappingTraits<COFF::AuxiliaryWeakExternal> {
-  static void mapping(IO &IO, COFF::AuxiliaryWeakExternal &AWE);
+  LLVM_ABI static void mapping(IO &IO, COFF::AuxiliaryWeakExternal &AWE);
 };
 
 template <> struct MappingTraits<COFF::AuxiliarySectionDefinition> {
-  static void mapping(IO &IO, COFF::AuxiliarySectionDefinition &ASD);
+  LLVM_ABI static void mapping(IO &IO, COFF::AuxiliarySectionDefinition &ASD);
 };
 
 template <> struct MappingTraits<COFF::AuxiliaryCLRToken> {
-  static void mapping(IO &IO, COFF::AuxiliaryCLRToken &ACT);
+  LLVM_ABI static void mapping(IO &IO, COFF::AuxiliaryCLRToken &ACT);
 };
 
 template <> struct MappingTraits<object::coff_load_configuration32> {
-  static void mapping(IO &IO, object::coff_load_configuration32 &ACT);
+  LLVM_ABI static void mapping(IO &IO, object::coff_load_configuration32 &ACT);
 };
 
 template <> struct MappingTraits<object::coff_load_configuration64> {
-  static void mapping(IO &IO, object::coff_load_configuration64 &ACT);
+  LLVM_ABI static void mapping(IO &IO, object::coff_load_configuration64 &ACT);
 };
 
 template <> struct MappingTraits<object::coff_load_config_code_integrity> {
-  static void mapping(IO &IO, object::coff_load_config_code_integrity &ACT);
+  LLVM_ABI static void mapping(IO &IO,
+                               object::coff_load_config_code_integrity &ACT);
 };
 
 template <>
 struct MappingTraits<COFFYAML::Symbol> {
-  static void mapping(IO &IO, COFFYAML::Symbol &S);
+  LLVM_ABI static void mapping(IO &IO, COFFYAML::Symbol &S);
 };
 
 template <> struct MappingTraits<COFFYAML::SectionDataEntry> {
-  static void mapping(IO &IO, COFFYAML::SectionDataEntry &Sec);
+  LLVM_ABI static void mapping(IO &IO, COFFYAML::SectionDataEntry &Sec);
 };
 
 template <>
 struct MappingTraits<COFFYAML::Section> {
-  static void mapping(IO &IO, COFFYAML::Section &Sec);
+  LLVM_ABI static void mapping(IO &IO, COFFYAML::Section &Sec);
 };
 
 template <>
 struct MappingTraits<COFFYAML::Object> {
-  static void mapping(IO &IO, COFFYAML::Object &Obj);
+  LLVM_ABI static void mapping(IO &IO, COFFYAML::Object &Obj);
 };
 
 } // end namespace yaml

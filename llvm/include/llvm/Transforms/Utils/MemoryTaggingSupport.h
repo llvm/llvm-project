@@ -20,6 +20,7 @@
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DominatorTree;
@@ -35,18 +36,20 @@ namespace memtag {
 // Returns whether Ends covered all possible exits. If they did not,
 // the caller should remove Ends to ensure that work done at the other
 // exits does not happen outside of the lifetime.
-bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const LoopInfo &LI, const Instruction *Start,
-                          const SmallVectorImpl<IntrinsicInst *> &Ends,
-                          const SmallVectorImpl<Instruction *> &RetVec,
-                          llvm::function_ref<void(Instruction *)> Callback);
+LLVM_ABI bool
+forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
+                     const LoopInfo &LI, const Instruction *Start,
+                     const SmallVectorImpl<IntrinsicInst *> &Ends,
+                     const SmallVectorImpl<Instruction *> &RetVec,
+                     llvm::function_ref<void(Instruction *)> Callback);
 
-bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
-                        const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, const LoopInfo *LI,
-                        size_t MaxLifetimes);
+LLVM_ABI bool
+isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
+                   const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
+                   const DominatorTree *DT, const LoopInfo *LI,
+                   size_t MaxLifetimes);
 
-Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
+LLVM_ABI Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
 struct AllocaInfo {
   AllocaInst *AI;
@@ -75,8 +78,8 @@ public:
   StackInfoBuilder(const StackSafetyGlobalInfo *SSI, const char *DebugType)
       : SSI(SSI), DebugType(DebugType) {}
 
-  void visit(OptimizationRemarkEmitter &ORE, Instruction &Inst);
-  AllocaInterestingness getAllocaInterestingness(const AllocaInst &AI);
+  LLVM_ABI void visit(OptimizationRemarkEmitter &ORE, Instruction &Inst);
+  LLVM_ABI AllocaInterestingness getAllocaInterestingness(const AllocaInst &AI);
   StackInfo &get() { return Info; };
 
 private:
@@ -85,17 +88,17 @@ private:
   const char *DebugType;
 };
 
-uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
-void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+LLVM_ABI uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
+LLVM_ABI void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 
-Value *readRegister(IRBuilder<> &IRB, StringRef Name);
-Value *getFP(IRBuilder<> &IRB);
-Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
-Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+LLVM_ABI Value *readRegister(IRBuilder<> &IRB, StringRef Name);
+LLVM_ABI Value *getFP(IRBuilder<> &IRB);
+LLVM_ABI Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
+LLVM_ABI Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
 
-void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
-Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc);
+LLVM_ABI void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
+LLVM_ABI Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
+                                    unsigned int Inc);
 
 } // namespace memtag
 } // namespace llvm

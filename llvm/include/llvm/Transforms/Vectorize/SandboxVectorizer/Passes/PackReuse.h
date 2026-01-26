@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/Region.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -23,7 +24,7 @@ namespace llvm::sandboxir {
 /// This is useful because even though the duplicates will most probably be
 /// optimized away by future passes, their added cost can make vectorization
 /// more conservative than it should be.
-class PackReuse final : public RegionPass {
+class LLVM_ABI PackReuse final : public RegionPass {
   bool Change = false;
 
 public:

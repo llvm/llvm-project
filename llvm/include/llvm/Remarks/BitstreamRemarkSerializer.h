@@ -17,6 +17,7 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Remarks/BitstreamRemarkContainer.h"
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -49,6 +50,7 @@ struct BitstreamRemarkSerializerHelper {
   uint64_t RecordRemarkArgWithDebugLocAbbrevID = 0;
   uint64_t RecordRemarkArgWithoutDebugLocAbbrevID = 0;
 
+  LLVM_ABI
   BitstreamRemarkSerializerHelper(BitstreamRemarkContainerType ContainerType,
                                   raw_ostream &OS);
 
@@ -64,36 +66,36 @@ struct BitstreamRemarkSerializerHelper {
   operator=(BitstreamRemarkSerializerHelper &&) = delete;
 
   /// Set up the necessary block info entries according to the container type.
-  void setupBlockInfo();
+  LLVM_ABI void setupBlockInfo();
 
   /// Set up the block info for the metadata block.
-  void setupMetaBlockInfo();
+  LLVM_ABI void setupMetaBlockInfo();
   /// The remark version in the metadata block.
-  void setupMetaRemarkVersion();
-  void emitMetaRemarkVersion(uint64_t RemarkVersion);
+  LLVM_ABI void setupMetaRemarkVersion();
+  LLVM_ABI void emitMetaRemarkVersion(uint64_t RemarkVersion);
   /// The strtab in the metadata block.
-  void setupMetaStrTab();
-  void emitMetaStrTab(const StringTable &StrTab);
+  LLVM_ABI void setupMetaStrTab();
+  LLVM_ABI void emitMetaStrTab(const StringTable &StrTab);
   /// The external file in the metadata block.
-  void setupMetaExternalFile();
-  void emitMetaExternalFile(StringRef Filename);
+  LLVM_ABI void setupMetaExternalFile();
+  LLVM_ABI void emitMetaExternalFile(StringRef Filename);
 
   /// The block info for the remarks block.
-  void setupRemarkBlockInfo();
+  LLVM_ABI void setupRemarkBlockInfo();
 
   /// Emit the main metadata at the beginning of the file
-  void emitMetaBlock(std::optional<StringRef> Filename = std::nullopt);
+  LLVM_ABI void emitMetaBlock(std::optional<StringRef> Filename = std::nullopt);
 
   /// Emit the remaining metadata at the end of the file. Here we emit metadata
   /// that is only known once all remarks were emitted.
-  void emitLateMetaBlock(const StringTable &StrTab);
+  LLVM_ABI void emitLateMetaBlock(const StringTable &StrTab);
 
   /// Emit a remark block. The string table is required.
-  void emitRemark(const Remark &Remark, StringTable &StrTab);
+  LLVM_ABI void emitRemark(const Remark &Remark, StringTable &StrTab);
 };
 
 /// Implementation of the remark serializer using LLVM bitstream.
-struct BitstreamRemarkSerializer : public RemarkSerializer {
+struct LLVM_ABI BitstreamRemarkSerializer : public RemarkSerializer {
   /// The file should contain:
   /// 1) The block info block that describes how to read the blocks.
   /// 2) The metadata block that contains various information about the remarks
@@ -137,7 +139,7 @@ private:
 };
 
 /// Serializer of metadata for bitstream remarks.
-struct BitstreamMetaSerializer : public MetaSerializer {
+struct LLVM_ABI BitstreamMetaSerializer : public MetaSerializer {
   std::optional<BitstreamRemarkSerializerHelper> Helper;
 
   StringRef ExternalFilename;

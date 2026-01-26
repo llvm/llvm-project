@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_GLOBALMERGE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -48,7 +49,7 @@ public:
   GlobalMergePass(const TargetMachine *TM, GlobalMergeOptions Options)
       : TM(TM), Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

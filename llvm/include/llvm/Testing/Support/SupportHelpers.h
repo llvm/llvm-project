@@ -10,6 +10,7 @@
 #define LLVM_TESTING_SUPPORT_SUPPORTHELPERS_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -106,7 +107,7 @@ detail::ValueIsMatcher<InnerMatcher> ValueIs(const InnerMatcher &ValueMatcher) {
 }
 namespace unittest {
 
-SmallString<128> getInputFileDirectory(const char *Argv0);
+LLVM_ABI SmallString<128> getInputFileDirectory(const char *Argv0);
 
 /// A RAII object that creates a temporary directory upon initialization and
 /// removes it upon destruction.

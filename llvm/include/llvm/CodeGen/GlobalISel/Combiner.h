@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MachineRegisterInfo;
@@ -31,7 +32,7 @@ class MachineIRBuilder;
 /// one of these each time they enter a new function.
 ///
 /// TODO: Is it worth making this module-wide?
-class Combiner : public GIMatchTableExecutor {
+class LLVM_ABI Combiner : public GIMatchTableExecutor {
 private:
   using WorkListTy = GISelWorkList<512>;
 

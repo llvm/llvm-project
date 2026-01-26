@@ -26,6 +26,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {
@@ -53,17 +54,18 @@ class LVSymbolTable final {
 public:
   LVSymbolTable() = default;
 
-  void add(StringRef Name, LVScope *Function, LVSectionIndex SectionIndex = 0);
-  void add(StringRef Name, LVAddress Address, LVSectionIndex SectionIndex,
-           bool IsComdat);
-  LVSectionIndex update(LVScope *Function);
+  LLVM_ABI void add(StringRef Name, LVScope *Function,
+                    LVSectionIndex SectionIndex = 0);
+  LLVM_ABI void add(StringRef Name, LVAddress Address,
+                    LVSectionIndex SectionIndex, bool IsComdat);
+  LLVM_ABI LVSectionIndex update(LVScope *Function);
 
-  const LVSymbolTableEntry &getEntry(StringRef Name);
-  LVAddress getAddress(StringRef Name);
-  LVSectionIndex getIndex(StringRef Name);
-  bool getIsComdat(StringRef Name);
+  LLVM_ABI const LVSymbolTableEntry &getEntry(StringRef Name);
+  LLVM_ABI LVAddress getAddress(StringRef Name);
+  LLVM_ABI LVSectionIndex getIndex(StringRef Name);
+  LLVM_ABI bool getIsComdat(StringRef Name);
 
-  void print(raw_ostream &OS);
+  LLVM_ABI void print(raw_ostream &OS);
 };
 
 class LVBinaryReader : public LVReader {
@@ -159,8 +161,8 @@ protected:
   LVAddress WasmCodeSectionOffset = 0;
 
   // Loads all info for the architecture of the provided object file.
-  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures,
-                              StringRef TheCPU);
+  LLVM_ABI Error loadGenericTargetInfo(StringRef TheTriple,
+                                       StringRef TheFeatures, StringRef TheCPU);
 
   virtual void mapRangeAddress(const object::ObjectFile &Obj) {}
   virtual void mapRangeAddress(const object::ObjectFile &Obj,
@@ -168,22 +170,25 @@ protected:
                                bool IsComdat) {}
 
   // Create a mapping from virtual address to section.
-  void mapVirtualAddress(const object::ObjectFile &Obj);
-  void mapVirtualAddress(const object::COFFObjectFile &COFFObj);
+  LLVM_ABI void mapVirtualAddress(const object::ObjectFile &Obj);
+  LLVM_ABI void mapVirtualAddress(const object::COFFObjectFile &COFFObj);
 
-  Expected<std::pair<LVSectionIndex, object::SectionRef>>
+  LLVM_ABI Expected<std::pair<LVSectionIndex, object::SectionRef>>
   getSection(LVScope *Scope, LVAddress Address, LVSectionIndex SectionIndex);
 
-  void includeInlineeLines(LVSectionIndex SectionIndex, LVScope *Function);
+  LLVM_ABI void includeInlineeLines(LVSectionIndex SectionIndex,
+                                    LVScope *Function);
 
-  Error createInstructions();
-  Error createInstructions(LVScope *Function, LVSectionIndex SectionIndex);
-  Error createInstructions(LVScope *Function, LVSectionIndex SectionIndex,
-                           const LVNameInfo &NameInfo);
+  LLVM_ABI Error createInstructions();
+  LLVM_ABI Error createInstructions(LVScope *Function,
+                                    LVSectionIndex SectionIndex);
+  LLVM_ABI Error createInstructions(LVScope *Function,
+                                    LVSectionIndex SectionIndex,
+                                    const LVNameInfo &NameInfo);
 
-  void processLines(LVLines *DebugLines, LVSectionIndex SectionIndex);
-  void processLines(LVLines *DebugLines, LVSectionIndex SectionIndex,
-                    LVScope *Function);
+  LLVM_ABI void processLines(LVLines *DebugLines, LVSectionIndex SectionIndex);
+  LLVM_ABI void processLines(LVLines *DebugLines, LVSectionIndex SectionIndex,
+                             LVScope *Function);
 
 public:
   LVBinaryReader() = delete;
@@ -204,23 +209,23 @@ public:
     return ImageBaseAddress + (Segment * VirtualAddress) + Offset + Addendum;
   }
 
-  void addToSymbolTable(StringRef Name, LVScope *Function,
-                        LVSectionIndex SectionIndex = 0);
-  void addToSymbolTable(StringRef Name, LVAddress Address,
-                        LVSectionIndex SectionIndex, bool IsComdat);
-  LVSectionIndex updateSymbolTable(LVScope *Function);
+  LLVM_ABI void addToSymbolTable(StringRef Name, LVScope *Function,
+                                 LVSectionIndex SectionIndex = 0);
+  LLVM_ABI void addToSymbolTable(StringRef Name, LVAddress Address,
+                                 LVSectionIndex SectionIndex, bool IsComdat);
+  LLVM_ABI LVSectionIndex updateSymbolTable(LVScope *Function);
 
-  const LVSymbolTableEntry &getSymbolTableEntry(StringRef Name);
-  LVAddress getSymbolTableAddress(StringRef Name);
-  LVSectionIndex getSymbolTableIndex(StringRef Name);
-  bool getSymbolTableIsComdat(StringRef Name);
+  LLVM_ABI const LVSymbolTableEntry &getSymbolTableEntry(StringRef Name);
+  LLVM_ABI LVAddress getSymbolTableAddress(StringRef Name);
+  LLVM_ABI LVSectionIndex getSymbolTableIndex(StringRef Name);
+  LLVM_ABI bool getSymbolTableIsComdat(StringRef Name);
 
   LVSectionIndex getSectionIndex(LVScope *Scope) override {
     return Scope ? getSymbolTableIndex(Scope->getLinkageName())
                  : DotTextSectionIndex;
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }

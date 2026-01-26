@@ -138,6 +138,7 @@ View the diff from {self.name} here.
             "excludes": [
                 "llvm/include/llvm/Debuginfod/",
                 "llvm/include/llvm/Demangle/",
+                "llvm/include/llvm/Support/AutoConvert.h",
             ],
             "export_macro": "LLVM_ABI",
             "include_header": "llvm/Support/Compiler.h",
@@ -154,7 +155,7 @@ View the diff from {self.name} here.
             "patterns": ["llvm/include/llvm/Demangle/**/*.h"],
             "excludes": [],
             "export_macro": "DEMANGLE_ABI",
-            "include_header": "llvm/Demangle/Visibility.h",
+            "include_header": "DemangleConfig.h",
         },
     ]
 

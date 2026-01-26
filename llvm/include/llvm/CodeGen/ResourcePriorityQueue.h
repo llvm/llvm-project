@@ -17,6 +17,7 @@
 #define LLVM_CODEGEN_RESOURCEPRIORITYQUEUE_H
 
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class DFAPacketizer;
@@ -31,10 +32,10 @@ namespace llvm {
     ResourcePriorityQueue *PQ;
     explicit resource_sort(ResourcePriorityQueue *pq) : PQ(pq) {}
 
-    bool operator()(const SUnit* LHS, const SUnit* RHS) const;
+    LLVM_ABI bool operator()(const SUnit *LHS, const SUnit *RHS) const;
   };
 
-  class ResourcePriorityQueue : public SchedulingPriorityQueue {
+  class LLVM_ABI ResourcePriorityQueue : public SchedulingPriorityQueue {
     /// SUnits - The SUnits for the current graph.
     std::vector<SUnit> *SUnits;
 

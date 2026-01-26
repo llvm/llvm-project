@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_CFGSCCPRINTER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -18,7 +19,7 @@ class CFGSCCPrinterPass : public PassInfoMixin<CFGSCCPrinterPass> {
 
 public:
   explicit CFGSCCPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 } // namespace llvm

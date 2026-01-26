@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_SCALAR_DIVREMPAIRS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -22,7 +23,7 @@ namespace llvm {
 /// improvements and better codegen.
 struct DivRemPairsPass : public PassInfoMixin<DivRemPairsPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 }

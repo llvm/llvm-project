@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <tuple>
 #include <vector>
 
@@ -65,7 +66,7 @@ public:
   };
 
   /// Parses the annotations from Text. Crashes if it's malformed.
-  Annotations(llvm::StringRef Text);
+  LLVM_ABI Annotations(llvm::StringRef Text);
 
   /// The input text with all annotations stripped.
   /// All points and ranges are relative to this stripped text.
@@ -73,41 +74,41 @@ public:
 
   /// Returns the position of the point marked by ^ (or $name^) in the text.
   /// Crashes if there isn't exactly one.
-  size_t point(llvm::StringRef Name = "") const;
+  LLVM_ABI size_t point(llvm::StringRef Name = "") const;
   /// Returns the position of the point with \p Name and its payload (if any).
-  std::pair<size_t, llvm::StringRef>
+  LLVM_ABI std::pair<size_t, llvm::StringRef>
   pointWithPayload(llvm::StringRef Name = "") const;
   /// Returns the position of all points marked by ^ (or $name^) in the text.
   /// Order matches the order within the text.
-  std::vector<size_t> points(llvm::StringRef Name = "") const;
+  LLVM_ABI std::vector<size_t> points(llvm::StringRef Name = "") const;
   /// Returns the positions and payloads (if any) of all points named \p Name
-  std::vector<std::pair<size_t, llvm::StringRef>>
+  LLVM_ABI std::vector<std::pair<size_t, llvm::StringRef>>
   pointsWithPayload(llvm::StringRef Name = "") const;
   /// Returns the mapping of all names of points marked in the text to their
   /// position. Unnamed points are mapped to the empty string. The positions are
   /// sorted.
   /// FIXME Remove this and expose `All` directly (currently used out-of-tree)
-  llvm::StringMap<llvm::SmallVector<size_t, 1>> all_points() const;
+  LLVM_ABI llvm::StringMap<llvm::SmallVector<size_t, 1>> all_points() const;
 
   /// Returns the location of the range marked by [[ ]] (or $name[[ ]]).
   /// Crashes if there isn't exactly one.
-  Range range(llvm::StringRef Name = "") const;
+  LLVM_ABI Range range(llvm::StringRef Name = "") const;
   /// Returns the location and payload of the range marked by [[ ]]
   /// (or $name(payload)[[ ]]). Crashes if there isn't exactly one.
-  std::pair<Range, llvm::StringRef>
+  LLVM_ABI std::pair<Range, llvm::StringRef>
   rangeWithPayload(llvm::StringRef Name = "") const;
   /// Returns the location of all ranges marked by [[ ]] (or $name[[ ]]).
   /// They are ordered by start position within the text.
-  std::vector<Range> ranges(llvm::StringRef Name = "") const;
+  LLVM_ABI std::vector<Range> ranges(llvm::StringRef Name = "") const;
   /// Returns the location of all ranges marked by [[ ]]
   /// (or $name(payload)[[ ]]).
   /// They are ordered by start position within the text.
-  std::vector<std::pair<Range, llvm::StringRef>>
+  LLVM_ABI std::vector<std::pair<Range, llvm::StringRef>>
   rangesWithPayload(llvm::StringRef Name = "") const;
   /// Returns the mapping of all names of ranges marked in the text to their
   /// location. Unnamed ranges are mapped to the empty string. The ranges are
   /// sorted by their start position.
-  llvm::StringMap<llvm::SmallVector<Range, 1>> all_ranges() const;
+  LLVM_ABI llvm::StringMap<llvm::SmallVector<Range, 1>> all_ranges() const;
 
 private:
   std::string Code;
@@ -125,8 +126,8 @@ private:
   llvm::StringMap<llvm::SmallVector<size_t, 1>> Ranges;
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
-                              const llvm::Annotations::Range &R);
+LLVM_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
+                                       const llvm::Annotations::Range &R);
 
 } // namespace llvm
 

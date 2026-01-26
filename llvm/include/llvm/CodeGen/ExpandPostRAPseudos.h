@@ -10,13 +10,14 @@
 #define LLVM_CODEGEN_EXPANDPOSTRAPSEUDOS_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class ExpandPostRAPseudosPass : public PassInfoMixin<ExpandPostRAPseudosPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

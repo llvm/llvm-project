@@ -10,12 +10,13 @@
 #define LLVM_CODEGEN_JMCINSTRUMENTER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class JMCInstrumenterPass : public PassInfoMixin<JMCInstrumenterPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_XTENSATARGETPARSER_H
 #define LLVM_TARGETPARSER_XTENSATARGETPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -67,10 +68,11 @@ enum XtensaFeatureKind : uint64_t {
   XF_MISCSR = 1ULL << 36
 };
 
-CPUKind parseCPUKind(StringRef CPU);
-StringRef getBaseName(StringRef CPU);
-void getCPUFeatures(StringRef CPU, SmallVectorImpl<StringRef> &Features);
-void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI CPUKind parseCPUKind(StringRef CPU);
+LLVM_ABI StringRef getBaseName(StringRef CPU);
+LLVM_ABI void getCPUFeatures(StringRef CPU,
+                             SmallVectorImpl<StringRef> &Features);
+LLVM_ABI void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
 
 } // namespace Xtensa
 } // namespace llvm

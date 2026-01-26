@@ -14,6 +14,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -41,7 +42,7 @@ public:
                    std::function<OptimizationRemarkEmitter &(Function &)> *GORE,
                    function_ref<AssumptionCache *(Function &)> LAC)
       : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE), LookupAC(LAC) {}
-  bool run(Module &M);
+  LLVM_ABI bool run(Module &M);
 
 private:
   bool isFunctionCold(const Function &F) const;
@@ -66,7 +67,7 @@ private:
 /// Pass to outline cold regions.
 class HotColdSplittingPass : public PassInfoMixin<HotColdSplittingPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

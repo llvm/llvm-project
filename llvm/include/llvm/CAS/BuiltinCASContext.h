@@ -11,6 +11,7 @@
 
 #include "llvm/CAS/CASID.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::cas::builtin {
@@ -55,7 +56,7 @@ using HasherT = BLAKE3;
 using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
 
 /// CASContext for LLVM builtin CAS using BLAKE3 hash type.
-class BuiltinCASContext : public CASContext {
+class LLVM_ABI BuiltinCASContext : public CASContext {
   void printIDImpl(raw_ostream &OS, const CASID &ID) const final;
   void anchor() override;
 

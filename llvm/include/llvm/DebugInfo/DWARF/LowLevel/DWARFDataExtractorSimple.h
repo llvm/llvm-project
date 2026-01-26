@@ -182,9 +182,9 @@ class DWARFDataExtractorSimple
 public:
   using DWARFDataExtractorBase::DWARFDataExtractorBase;
 
-  LLVM_ABI uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
-                                          uint64_t *SectionIndex = nullptr,
-                                          Error *Err = nullptr) const {
+  uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
+                                 uint64_t *SectionIndex = nullptr,
+                                 Error *Err = nullptr) const {
     assert(SectionIndex == nullptr &&
            "DWARFDATAExtractorSimple cannot take section indices.");
     return getUnsigned(Off, Size, Err);

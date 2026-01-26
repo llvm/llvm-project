@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOWERMATRIXINTRINSICS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LowerMatrixIntrinsicsPass
@@ -22,9 +23,10 @@ class LowerMatrixIntrinsicsPass
 
 public:
   LowerMatrixIntrinsicsPass(bool Minimal = false) : Minimal(Minimal) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
   static bool isRequired() { return true; }
 };
 } // namespace llvm

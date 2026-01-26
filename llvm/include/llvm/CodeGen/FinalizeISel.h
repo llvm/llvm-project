@@ -10,12 +10,14 @@
 #define LLVM_CODEGEN_FINALIZEISEL_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class FinalizeISelPass : public PassInfoMixin<FinalizeISelPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &);
   static bool isRequired() { return true; }
 };
 

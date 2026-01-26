@@ -16,12 +16,13 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERINVOKE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class LowerInvokePass : public PassInfoMixin<LowerInvokePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 }

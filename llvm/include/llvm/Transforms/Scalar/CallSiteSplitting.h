@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -17,7 +18,7 @@ class Function;
 
 struct CallSiteSplittingPass : PassInfoMixin<CallSiteSplittingPass> {
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm
 

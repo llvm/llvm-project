@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
@@ -45,9 +46,9 @@ struct DebugHSection {
   std::vector<GlobalHash> Hashes;
 };
 
-DebugHSection fromDebugH(ArrayRef<uint8_t> DebugH);
-ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
-                           BumpPtrAllocator &Alloc);
+LLVM_ABI DebugHSection fromDebugH(ArrayRef<uint8_t> DebugH);
+LLVM_ABI ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
+                                    BumpPtrAllocator &Alloc);
 
 } // end namespace CodeViewYAML
 

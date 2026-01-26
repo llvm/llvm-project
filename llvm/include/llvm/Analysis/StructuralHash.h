@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_STRUCTURALHASH_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -30,7 +31,7 @@ public:
                                      StructuralHashOptions Options)
       : OS(OS), Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
   static bool isRequired() { return true; }
 };

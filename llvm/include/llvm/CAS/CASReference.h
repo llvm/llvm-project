@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -53,8 +54,8 @@ public:
   }
 
 protected:
-  void print(raw_ostream &OS, const ObjectHandle &This) const;
-  void print(raw_ostream &OS, const ObjectRef &This) const;
+  LLVM_ABI void print(raw_ostream &OS, const ObjectHandle &This) const;
+  LLVM_ABI void print(raw_ostream &OS, const ObjectRef &This) const;
 
   bool hasSameInternalRef(const ReferenceBase &RHS) const {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -126,7 +127,7 @@ public:
   /// Print internal ref and/or CASID. Only suitable for debugging.
   void print(raw_ostream &OS) const { return ReferenceBase::print(OS, *this); }
 
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD LLVM_ABI void dump() const;
 
 private:
   friend class ObjectStore;
@@ -159,7 +160,7 @@ public:
   /// Print internal ref and/or CASID. Only suitable for debugging.
   void print(raw_ostream &OS) const { return ReferenceBase::print(OS, *this); }
 
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD LLVM_ABI void dump() const;
 
 private:
   friend class ObjectStore;

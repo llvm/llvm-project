@@ -17,6 +17,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolFilter.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 
 #include <atomic>
@@ -386,10 +387,11 @@ public:
 
     using OnEachSymbolFn = std::function<EnumerateResult(StringRef Sym)>;
 
-    static bool enumerateSymbols(object::ObjectFile *Obj, OnEachSymbolFn OnEach,
-                                 const SymbolEnumeratorOptions &Opts);
-    static bool enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
-                                 const SymbolEnumeratorOptions &Opts);
+    LLVM_ABI static bool enumerateSymbols(object::ObjectFile *Obj,
+                                          OnEachSymbolFn OnEach,
+                                          const SymbolEnumeratorOptions &Opts);
+    LLVM_ABI static bool enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
+                                          const SymbolEnumeratorOptions &Opts);
   };
 
   /// Tracks a set of symbols and the libraries where they are resolved.
@@ -515,7 +517,7 @@ public:
   };
 
   LibraryResolver() = delete;
-  explicit LibraryResolver(const Setup &S);
+  LLVM_ABI explicit LibraryResolver(const Setup &S);
   ~LibraryResolver() = default;
 
   using OnSearchComplete = unique_function<void(SymbolQuery &)>;
@@ -533,12 +535,13 @@ public:
     });
   }
 
-  void searchSymbolsInLibraries(ArrayRef<StringRef> SymList,
-                                OnSearchComplete OnComplete,
-                                const SearchConfig &Config = SearchConfig());
+  LLVM_ABI void
+  searchSymbolsInLibraries(ArrayRef<StringRef> SymList,
+                           OnSearchComplete OnComplete,
+                           const SearchConfig &Config = SearchConfig());
 
 private:
-  bool scanLibrariesIfNeeded(PathType K, size_t BatchSize = 0);
+  LLVM_ABI bool scanLibrariesIfNeeded(PathType K, size_t BatchSize = 0);
   bool scanForNewLibraries(PathType K, LibraryCursor &Cur);
   void resolveSymbolsInLibrary(LibraryInfo *Lib, SymbolQuery &Q,
                                const SymbolEnumeratorOptions &Opts);
@@ -558,12 +561,12 @@ using EnumerateResult = SymbolEnumerator::EnumerateResult;
 
 class LibraryResolutionDriver {
 public:
-  static std::unique_ptr<LibraryResolutionDriver>
+  LLVM_ABI static std::unique_ptr<LibraryResolutionDriver>
   create(const LibraryResolver::Setup &S);
 
-  void addScanPath(const std::string &Path, PathType Kind);
-  void markLibraryLoaded(StringRef Path);
-  void markLibraryUnLoaded(StringRef Path);
+  LLVM_ABI void addScanPath(const std::string &Path, PathType Kind);
+  LLVM_ABI void markLibraryLoaded(StringRef Path);
+  LLVM_ABI void markLibraryUnLoaded(StringRef Path);
   bool isLibraryLoaded(StringRef Path) const {
     return LR->LibMgr.isLoaded(Path);
   }
@@ -583,9 +586,9 @@ public:
     LR->scanLibrariesIfNeeded(PK, BatchSize);
   }
 
-  void resolveSymbols(ArrayRef<StringRef> Symbols,
-                      LibraryResolver::OnSearchComplete OnCompletion,
-                      const SearchConfig &Config = SearchConfig());
+  LLVM_ABI void resolveSymbols(ArrayRef<StringRef> Symbols,
+                               LibraryResolver::OnSearchComplete OnCompletion,
+                               const SearchConfig &Config = SearchConfig());
 
   ~LibraryResolutionDriver() = default;
 

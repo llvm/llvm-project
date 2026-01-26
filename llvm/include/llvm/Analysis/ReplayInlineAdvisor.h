@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class CallBase;
@@ -50,9 +51,10 @@ struct ReplayInlinerSettings {
 };
 
 /// Get call site location as a string with the given format
-std::string formatCallSiteLocation(DebugLoc DLoc, const CallSiteFormat &Format);
+LLVM_ABI std::string formatCallSiteLocation(DebugLoc DLoc,
+                                            const CallSiteFormat &Format);
 
-std::unique_ptr<InlineAdvisor>
+LLVM_ABI std::unique_ptr<InlineAdvisor>
 getReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
                        LLVMContext &Context,
                        std::unique_ptr<InlineAdvisor> OriginalAdvisor,
@@ -61,7 +63,7 @@ getReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
 
 /// Replay inline advisor that uses optimization remarks from inlining of
 /// previous build to guide current inlining. This is useful for inliner tuning.
-class ReplayInlineAdvisor : public InlineAdvisor {
+class LLVM_ABI ReplayInlineAdvisor : public InlineAdvisor {
 public:
   ReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
                       LLVMContext &Context,

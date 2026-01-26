@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -25,7 +26,8 @@ public:
   };
 
   RAGreedyPass(Options Opts = Options()) : Opts(std::move(Opts)) {}
-  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &F,
+                                 MachineFunctionAnalysisManager &AM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoPHIs();
@@ -35,7 +37,7 @@ public:
     return MachineFunctionProperties().setIsSSA();
   }
 
-  void
+  LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName) const;
   static bool isRequired() { return true; }

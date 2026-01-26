@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_SCALAR_SEPARATECONSTOFFSETFROMGEP_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -19,9 +20,10 @@ class SeparateConstOffsetFromGEPPass
 
 public:
   SeparateConstOffsetFromGEPPass(bool LowerGEP = false) : LowerGEP(LowerGEP) {}
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 } // end namespace llvm

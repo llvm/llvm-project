@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_INTERLEAVEDACCESS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -26,7 +27,7 @@ class InterleavedAccessPass : public PassInfoMixin<InterleavedAccessPass> {
 
 public:
   explicit InterleavedAccessPass(const TargetMachine &TM) : TM(&TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

@@ -19,6 +19,7 @@
 #include "llvm/ObjectYAML/OffloadYAML.h"
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/ObjectYAML/XCOFFYAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
 
@@ -42,7 +43,7 @@ struct YamlObjectFile {
 };
 
 template <> struct MappingTraits<YamlObjectFile> {
-  static void mapping(IO &IO, YamlObjectFile &ObjectFile);
+  LLVM_ABI static void mapping(IO &IO, YamlObjectFile &ObjectFile);
 };
 
 } // end namespace yaml

@@ -9,6 +9,7 @@
 #define LLVM_CODEGEN_BRANCHFOLDINGPASS_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -17,8 +18,8 @@ class BranchFolderPass : public PassInfoMixin<BranchFolderPass> {
 
 public:
   BranchFolderPass(bool EnableTailMerge) : EnableTailMerge(EnableTailMerge) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoPHIs();

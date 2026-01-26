@@ -173,7 +173,7 @@ public:
     // may emit references to. Such symbols must be considered external, as
     // removing them or modifying their interfaces would invalidate the code
     // generator's knowledge about them.
-    bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
+    LLVM_ABI bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
@@ -400,7 +400,7 @@ LLVM_ABI ThinBackend createWriteIndexesThinBackend(
 /// - Call the run() function. This function will use the supplied AddStream
 ///   and Cache functions to add up to getMaxTasks() native object files to
 ///   the link.
-class LTO {
+class LLVM_ABI LTO {
   friend InputFile;
 
 public:
@@ -421,21 +421,20 @@ public:
   /// this constructor.
   /// FIXME: We do currently require the DiagHandler field to be set in Conf.
   /// Until that is fixed, a Config argument is required.
-  LLVM_ABI LTO(Config Conf, ThinBackend Backend = {},
-               unsigned ParallelCodeGenParallelismLevel = 1,
-               LTOKind LTOMode = LTOK_Default);
-  LLVM_ABI virtual ~LTO();
+  LTO(Config Conf, ThinBackend Backend = {},
+      unsigned ParallelCodeGenParallelismLevel = 1,
+      LTOKind LTOMode = LTOK_Default);
+  virtual ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by
   /// InputFile::symbols().
-  LLVM_ABI Error add(std::unique_ptr<InputFile> Obj,
-                     ArrayRef<SymbolResolution> Res);
+  Error add(std::unique_ptr<InputFile> Obj, ArrayRef<SymbolResolution> Res);
 
   /// Returns an upper bound on the number of tasks that the client may expect.
   /// This may only be called after all IR object files have been added. For a
   /// full description of tasks see LTOBackend.h.
-  LLVM_ABI unsigned getMaxTasks() const;
+  unsigned getMaxTasks() const;
 
   /// Runs the LTO pipeline. This function calls the supplied AddStream
   /// function to add native object files to the link.
@@ -445,12 +444,11 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  LLVM_ABI Error run(AddStreamFn AddStream, FileCache Cache = {});
+  Error run(AddStreamFn AddStream, FileCache Cache = {});
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
-  LLVM_ABI static SmallVector<const char *>
-  getRuntimeLibcallSymbols(const Triple &TT);
+  static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);
 
 protected:
   // Called at the start of run().

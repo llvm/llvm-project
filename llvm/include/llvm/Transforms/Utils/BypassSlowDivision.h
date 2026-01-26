@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -66,8 +67,9 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 ///
 /// This optimization may add basic blocks immediately after BB; for obvious
 /// reasons, you shouldn't pass those blocks to bypassSlowDivision.
-bool bypassSlowDivision(
-    BasicBlock *BB, const DenseMap<unsigned int, unsigned int> &BypassWidth);
+LLVM_ABI bool
+bypassSlowDivision(BasicBlock *BB,
+                   const DenseMap<unsigned int, unsigned int> &BypassWidth);
 
 } // end namespace llvm
 

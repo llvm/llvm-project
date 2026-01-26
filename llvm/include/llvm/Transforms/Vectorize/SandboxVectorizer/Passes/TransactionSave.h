@@ -14,10 +14,11 @@
 
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/Region.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
-class TransactionSave : public RegionPass {
+class LLVM_ABI TransactionSave : public RegionPass {
 public:
   TransactionSave() : RegionPass("tr-save") {}
   bool runOnRegion(Region &Rgn, const Analyses &A) final;

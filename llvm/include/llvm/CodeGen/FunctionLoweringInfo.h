@@ -25,6 +25,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
 #include <utility>
@@ -89,7 +90,7 @@ public:
 
   /// This method is called from TargetLowerinInfo::isSDNodeSourceOfDivergence
   /// to get the Value corresponding to the live-in virtual register.
-  const Value *getValueFromVirtualReg(Register Vreg);
+  LLVM_ABI const Value *getValueFromVirtualReg(Register Vreg);
 
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, Register> CatchPadExceptionPointers;
@@ -197,12 +198,12 @@ public:
   /// set - Initialize this FunctionLoweringInfo with the given Function
   /// and its associated MachineFunction.
   ///
-  void set(const Function &Fn, MachineFunction &MF, SelectionDAG *DAG);
+  LLVM_ABI void set(const Function &Fn, MachineFunction &MF, SelectionDAG *DAG);
 
   /// clear - Clear out all the function-specific state. This returns this
   /// FunctionLoweringInfo to an empty state, ready to be used for a
   /// different function.
-  void clear();
+  LLVM_ABI void clear();
 
   /// isExportedInst - Return true if the specified value is an instruction
   /// exported from its block.
@@ -215,13 +216,13 @@ public:
     return MBBMap[BB->getNumber()];
   }
 
-  Register CreateReg(MVT VT, bool isDivergent = false);
+  LLVM_ABI Register CreateReg(MVT VT, bool isDivergent = false);
 
-  Register CreateRegs(const Value *V);
+  LLVM_ABI Register CreateRegs(const Value *V);
 
-  Register CreateRegs(Type *Ty, bool isDivergent = false);
+  LLVM_ABI Register CreateRegs(Type *Ty, bool isDivergent = false);
 
-  Register InitializeRegForValue(const Value *V);
+  LLVM_ABI Register InitializeRegForValue(const Value *V);
 
   /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
   /// register is a PHI destination and the PHI's LiveOutInfo is not valid.
@@ -241,7 +242,8 @@ public:
   /// the register's LiveOutInfo is for a smaller bit width, it is extended to
   /// the larger bit width by zero extension. The bit width must be no smaller
   /// than the LiveOutInfo's existing bit width.
-  const LiveOutInfo *GetLiveOutRegInfo(Register Reg, unsigned BitWidth);
+  LLVM_ABI const LiveOutInfo *GetLiveOutRegInfo(Register Reg,
+                                                unsigned BitWidth);
 
   /// AddLiveOutRegInfo - Adds LiveOutInfo for a register.
   void AddLiveOutRegInfo(Register Reg, unsigned NumSignBits,
@@ -259,7 +261,7 @@ public:
 
   /// ComputePHILiveOutRegInfo - Compute LiveOutInfo for a PHI's destination
   /// register based on the LiveOutInfo of its operands.
-  void ComputePHILiveOutRegInfo(const PHINode*);
+  LLVM_ABI void ComputePHILiveOutRegInfo(const PHINode *);
 
   /// InvalidatePHILiveOutRegInfo - Invalidates a PHI's LiveOutInfo, to be
   /// called when a block is visited before all of its predecessors.
@@ -279,13 +281,13 @@ public:
 
   /// setArgumentFrameIndex - Record frame index for the byval
   /// argument.
-  void setArgumentFrameIndex(const Argument *A, int FI);
+  LLVM_ABI void setArgumentFrameIndex(const Argument *A, int FI);
 
   /// getArgumentFrameIndex - Get frame index for the byval argument.
-  int getArgumentFrameIndex(const Argument *A);
+  LLVM_ABI int getArgumentFrameIndex(const Argument *A);
 
-  Register getCatchPadExceptionPointerVReg(const Value *CPI,
-                                           const TargetRegisterClass *RC);
+  LLVM_ABI Register getCatchPadExceptionPointerVReg(
+      const Value *CPI, const TargetRegisterClass *RC);
 
   /// Set the call site currently being processed.
   void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }

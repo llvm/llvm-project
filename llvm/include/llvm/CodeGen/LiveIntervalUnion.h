@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <limits>
 
@@ -88,16 +89,16 @@ public:
   bool changedSince(unsigned tag) const { return tag != Tag; }
 
   // Add a live virtual register to this union and merge its segments.
-  void unify(const LiveInterval &VirtReg, const LiveRange &Range);
+  LLVM_ABI void unify(const LiveInterval &VirtReg, const LiveRange &Range);
 
   // Remove a live virtual register's segments from this union.
-  void extract(const LiveInterval &VirtReg, const LiveRange &Range);
+  LLVM_ABI void extract(const LiveInterval &VirtReg, const LiveRange &Range);
 
   // Remove all inserted virtual registers.
   void clear() { Segments.clear(); ++Tag; }
 
   // Print union, using TRI to translate register names
-  void print(raw_ostream &OS, const TargetRegisterInfo *TRI) const;
+  LLVM_ABI void print(raw_ostream &OS, const TargetRegisterInfo *TRI) const;
 
 #ifndef NDEBUG
   // Verify the live intervals in this union and add them to the visited set.
@@ -105,7 +106,7 @@ public:
 #endif
 
   // Get any virtual register that is assign to this physical unit
-  const LiveInterval *getOneVReg() const;
+  LLVM_ABI const LiveInterval *getOneVReg() const;
 
   /// Query interferences between a single live virtual register and a live
   /// interval union.
@@ -122,7 +123,7 @@ public:
 
     // Count the virtual registers in this union that interfere with this
     // query's live virtual register, up to maxInterferingRegs.
-    unsigned collectInterferingVRegs(unsigned MaxInterferingRegs);
+    LLVM_ABI unsigned collectInterferingVRegs(unsigned MaxInterferingRegs);
 
     // Was this virtual register visited during collectInterferingVRegs?
     bool isSeenInterference(const LiveInterval *VirtReg) const;
@@ -185,11 +186,11 @@ public:
 
     // Initialize the array to have Size entries.
     // Reuse an existing allocation if the size matches.
-    void init(LiveIntervalUnion::Allocator&, unsigned Size);
+    LLVM_ABI void init(LiveIntervalUnion::Allocator &, unsigned Size);
 
     unsigned size() const { return Size; }
 
-    void clear();
+    LLVM_ABI void clear();
 
     LiveIntervalUnion &operator[](MCRegUnit Unit) {
       assert(static_cast<unsigned>(Unit) < Size && "Unit out of bounds");

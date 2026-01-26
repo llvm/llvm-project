@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -32,27 +33,27 @@ class BlockCoverageInference {
 public:
   using BlockSet = SmallSetVector<const BasicBlock *, 4>;
 
-  BlockCoverageInference(const Function &F, bool ForceInstrumentEntry);
+  LLVM_ABI BlockCoverageInference(const Function &F, bool ForceInstrumentEntry);
 
   /// \return true if \p BB should be instrumented for coverage.
-  bool shouldInstrumentBlock(const BasicBlock &BB) const;
+  LLVM_ABI bool shouldInstrumentBlock(const BasicBlock &BB) const;
 
   /// \return the set of blocks \p Deps such that \p BB is covered iff any
   /// blocks in \p Deps are covered.
-  BlockSet getDependencies(const BasicBlock &BB) const;
+  LLVM_ABI BlockSet getDependencies(const BasicBlock &BB) const;
 
   /// \return a hash that depends on the set of instrumented blocks.
-  uint64_t getInstrumentedBlocksHash() const;
+  LLVM_ABI uint64_t getInstrumentedBlocksHash() const;
 
   /// Dump the inference graph.
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
 
   /// View the inferred block coverage as a dot file.
   /// Filled gray blocks are instrumented, red outlined blocks are found to be
   /// covered, red edges show that a block's coverage can be inferred from its
   /// successors, and blue edges show that a block's coverage can be inferred
   /// from its predecessors.
-  void viewBlockCoverageGraph(
+  LLVM_ABI void viewBlockCoverageGraph(
       const DenseMap<const BasicBlock *, bool> *Coverage = nullptr) const;
 
 private:
@@ -75,7 +76,7 @@ private:
   void getReachableAvoiding(const BasicBlock &Start, const BasicBlock &Avoid,
                             bool IsForward, BlockSet &Reachable) const;
 
-  static std::string getBlockNames(ArrayRef<const BasicBlock *> BBs);
+  LLVM_ABI static std::string getBlockNames(ArrayRef<const BasicBlock *> BBs);
   static std::string getBlockNames(BlockSet BBs) {
     return getBlockNames(ArrayRef<const BasicBlock *>(BBs.begin(), BBs.end()));
   }

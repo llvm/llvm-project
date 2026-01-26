@@ -17,6 +17,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
 #include <memory>
 #include <string>
@@ -34,7 +35,7 @@ class FileSystem;
 using namespace sampleprof;
 
 class MIRProfileLoader;
-class MIRProfileLoaderPass : public MachineFunctionPass {
+class LLVM_ABI MIRProfileLoaderPass : public MachineFunctionPass {
   MachineFunction *MF;
   std::string ProfileFileName;
   FSDiscriminatorPass P;

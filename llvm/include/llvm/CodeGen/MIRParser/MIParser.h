@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <map>
 #include <utility>
@@ -94,62 +95,63 @@ private:
   void initNames2BitmaskTargetFlags();
   void initNames2MMOTargetFlags();
 
-  void initNames2RegClasses();
-  void initNames2RegBanks();
+  LLVM_ABI void initNames2RegClasses();
+  LLVM_ABI void initNames2RegBanks();
 
 public:
   /// Try to convert an instruction name to an opcode. Return true if the
   /// instruction name is invalid.
-  bool parseInstrName(StringRef InstrName, unsigned &OpCode);
+  LLVM_ABI bool parseInstrName(StringRef InstrName, unsigned &OpCode);
 
   /// Try to convert a register name to a register number. Return true if the
   /// register name is invalid.
-  bool getRegisterByName(StringRef RegName, Register &Reg);
+  LLVM_ABI bool getRegisterByName(StringRef RegName, Register &Reg);
 
   /// Check if the given identifier is a name of a register mask.
   ///
   /// Return null if the identifier isn't a register mask.
-  const uint32_t *getRegMask(StringRef Identifier);
+  LLVM_ABI const uint32_t *getRegMask(StringRef Identifier);
 
   /// Check if the given identifier is a name of a subregister index.
   ///
   /// Return 0 if the name isn't a subregister index class.
-  unsigned getSubRegIndex(StringRef Name);
+  LLVM_ABI unsigned getSubRegIndex(StringRef Name);
 
   /// Try to convert a name of target index to the corresponding target index.
   ///
   /// Return true if the name isn't a name of a target index.
-  bool getTargetIndex(StringRef Name, int &Index);
+  LLVM_ABI bool getTargetIndex(StringRef Name, int &Index);
 
   /// Try to convert a name of a direct target flag to the corresponding
   /// target flag.
   ///
   /// Return true if the name isn't a name of a direct flag.
-  bool getDirectTargetFlag(StringRef Name, unsigned &Flag);
+  LLVM_ABI bool getDirectTargetFlag(StringRef Name, unsigned &Flag);
 
   /// Try to convert a name of a bitmask target flag to the corresponding
   /// target flag.
   ///
   /// Return true if the name isn't a name of a bitmask target flag.
-  bool getBitmaskTargetFlag(StringRef Name, unsigned &Flag);
+  LLVM_ABI bool getBitmaskTargetFlag(StringRef Name, unsigned &Flag);
 
   /// Try to convert a name of a MachineMemOperand target flag to the
   /// corresponding target flag.
   ///
   /// Return true if the name isn't a name of a target MMO flag.
-  bool getMMOTargetFlag(StringRef Name, MachineMemOperand::Flags &Flag);
+  LLVM_ABI bool getMMOTargetFlag(StringRef Name,
+                                 MachineMemOperand::Flags &Flag);
 
   /// Check if the given identifier is a name of a register class.
   ///
   /// Return null if the name isn't a register class.
-  const TargetRegisterClass *getRegClass(StringRef Name);
+  LLVM_ABI const TargetRegisterClass *getRegClass(StringRef Name);
 
   /// Check if the given identifier is a name of a register bank.
   ///
   /// Return null if the name isn't a register bank.
-  const RegisterBank *getRegBank(StringRef Name);
+  LLVM_ABI const RegisterBank *getRegBank(StringRef Name);
 
-  bool getVRegFlagValue(StringRef FlagName, uint8_t &FlagValue) const;
+  LLVM_ABI bool getVRegFlagValue(StringRef FlagName, uint8_t &FlagValue) const;
 
   PerTargetMIParsingState(const TargetSubtargetInfo &STI)
     : Subtarget(STI) {
@@ -159,7 +161,7 @@ public:
 
   ~PerTargetMIParsingState() = default;
 
-  void setTarget(const TargetSubtargetInfo &NewSubtarget);
+  LLVM_ABI void setTarget(const TargetSubtargetInfo &NewSubtarget);
 };
 
 struct PerFunctionMIParsingState {
@@ -183,13 +185,13 @@ struct PerFunctionMIParsingState {
   /// Maps from slot numbers to function's unnamed values.
   DenseMap<unsigned, const Value *> Slots2Values;
 
-  PerFunctionMIParsingState(MachineFunction &MF, SourceMgr &SM,
-                            const SlotMapping &IRSlots,
-                            PerTargetMIParsingState &Target);
+  LLVM_ABI PerFunctionMIParsingState(MachineFunction &MF, SourceMgr &SM,
+                                     const SlotMapping &IRSlots,
+                                     PerTargetMIParsingState &Target);
 
-  VRegInfo &getVRegInfo(Register Num);
-  VRegInfo &getVRegInfoNamed(StringRef RegName);
-  const Value *getIRValue(unsigned Slot);
+  LLVM_ABI VRegInfo &getVRegInfo(Register Num);
+  LLVM_ABI VRegInfo &getVRegInfoNamed(StringRef RegName);
+  LLVM_ABI const Value *getIRValue(unsigned Slot);
 };
 
 /// Parse the machine basic block definitions, and skip the machine
@@ -204,8 +206,9 @@ struct PerFunctionMIParsingState {
 /// resolve the machine basic block references.
 ///
 /// Return true if an error occurred.
-bool parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
-                                       StringRef Src, SMDiagnostic &Error);
+LLVM_ABI bool parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
+                                                StringRef Src,
+                                                SMDiagnostic &Error);
 
 /// Parse the machine instructions.
 ///
@@ -217,32 +220,34 @@ bool parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
 /// on the given source string.
 ///
 /// Return true if an error occurred.
-bool parseMachineInstructions(PerFunctionMIParsingState &PFS, StringRef Src,
-                              SMDiagnostic &Error);
+LLVM_ABI bool parseMachineInstructions(PerFunctionMIParsingState &PFS,
+                                       StringRef Src, SMDiagnostic &Error);
 
-bool parseMBBReference(PerFunctionMIParsingState &PFS,
-                       MachineBasicBlock *&MBB, StringRef Src,
-                       SMDiagnostic &Error);
+LLVM_ABI bool parseMBBReference(PerFunctionMIParsingState &PFS,
+                                MachineBasicBlock *&MBB, StringRef Src,
+                                SMDiagnostic &Error);
 
-bool parseRegisterReference(PerFunctionMIParsingState &PFS,
-                            Register &Reg, StringRef Src,
-                            SMDiagnostic &Error);
+LLVM_ABI bool parseRegisterReference(PerFunctionMIParsingState &PFS,
+                                     Register &Reg, StringRef Src,
+                                     SMDiagnostic &Error);
 
-bool parseNamedRegisterReference(PerFunctionMIParsingState &PFS, Register &Reg,
-                                 StringRef Src, SMDiagnostic &Error);
+LLVM_ABI bool parseNamedRegisterReference(PerFunctionMIParsingState &PFS,
+                                          Register &Reg, StringRef Src,
+                                          SMDiagnostic &Error);
 
-bool parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
-                                   VRegInfo *&Info, StringRef Src,
+LLVM_ABI bool parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
+                                            VRegInfo *&Info, StringRef Src,
+                                            SMDiagnostic &Error);
+
+LLVM_ABI bool parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                                        StringRef Src, SMDiagnostic &Error);
+
+LLVM_ABI bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
+                          StringRef Src, SMDiagnostic &Error);
+
+LLVM_ABI bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
+                                   StringRef Src, SMRange SourceRange,
                                    SMDiagnostic &Error);
-
-bool parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
-                               StringRef Src, SMDiagnostic &Error);
-
-bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node, StringRef Src,
-                 SMDiagnostic &Error);
-
-bool parseMachineMetadata(PerFunctionMIParsingState &PFS, StringRef Src,
-                          SMRange SourceRange, SMDiagnostic &Error);
 
 } // end namespace llvm
 

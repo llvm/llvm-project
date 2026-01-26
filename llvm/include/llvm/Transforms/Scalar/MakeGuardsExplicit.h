@@ -34,11 +34,12 @@
 #define LLVM_TRANSFORMS_SCALAR_MAKEGUARDSEXPLICIT_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 struct MakeGuardsExplicitPass : public PassInfoMixin<MakeGuardsExplicitPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

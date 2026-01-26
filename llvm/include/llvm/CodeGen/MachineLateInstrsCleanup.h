@@ -9,14 +9,16 @@
 #define LLVM_CODEGEN_MACHINELATEINSTRSCLEANUP_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class MachineLateInstrsCleanupPass
     : public PassInfoMixin<MachineLateInstrsCleanupPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MachineFunction,
-                        MachineFunctionAnalysisManager &MachineFunctionAM);
+  LLVM_ABI PreservedAnalyses
+  run(MachineFunction &MachineFunction,
+      MachineFunctionAnalysisManager &MachineFunctionAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoVRegs();

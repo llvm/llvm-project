@@ -21,6 +21,7 @@
 #define LLVM_SUPPORT_VIRTUALOUTPUTBACKEND_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 #include "llvm/Support/VirtualOutputFile.h"
@@ -31,7 +32,7 @@ namespace llvm::vfs {
 ///
 /// If virtual functions are added here, also add them to \a
 /// ProxyOutputBackend.
-class OutputBackend : public RefCountedBase<OutputBackend> {
+class LLVM_ABI OutputBackend : public RefCountedBase<OutputBackend> {
   LLVM_ABI virtual void anchor();
 
 public:
@@ -47,7 +48,7 @@ public:
   /// have been customized).
   ///
   /// Thread-safe.
-  LLVM_ABI Expected<OutputFile>
+  Expected<OutputFile>
   createFile(const Twine &Path,
              std::optional<OutputConfig> Config = std::nullopt);
 

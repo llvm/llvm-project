@@ -16,6 +16,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -33,16 +34,17 @@ private:
   mutable std::unique_ptr<InfoTy> Info;
 
 public:
-  StackSafetyInfo();
-  StackSafetyInfo(Function *F, std::function<ScalarEvolution &()> GetSE);
-  StackSafetyInfo(StackSafetyInfo &&);
-  StackSafetyInfo &operator=(StackSafetyInfo &&);
-  ~StackSafetyInfo();
+  LLVM_ABI StackSafetyInfo();
+  LLVM_ABI StackSafetyInfo(Function *F,
+                           std::function<ScalarEvolution &()> GetSE);
+  LLVM_ABI StackSafetyInfo(StackSafetyInfo &&);
+  LLVM_ABI StackSafetyInfo &operator=(StackSafetyInfo &&);
+  LLVM_ABI ~StackSafetyInfo();
 
-  const InfoTy &getInfo() const;
+  LLVM_ABI const InfoTy &getInfo() const;
 
   // TODO: Add useful for client methods.
-  void print(raw_ostream &O) const;
+  LLVM_ABI void print(raw_ostream &O) const;
 
   /// Parameters use for a FunctionSummary.
   /// Function collects access information of all pointer parameters.
@@ -51,7 +53,7 @@ public:
   /// StackSafety assumes that missing parameter information means possibility
   /// of access to the parameter with any offset, so we can correctly link
   /// code without StackSafety information, e.g. non-ThinLTO.
-  std::vector<FunctionSummary::ParamAccess>
+  LLVM_ABI std::vector<FunctionSummary::ParamAccess>
   getParamAccesses(ModuleSummaryIndex &Index) const;
 };
 
@@ -67,25 +69,25 @@ private:
   const InfoTy &getInfo() const;
 
 public:
-  StackSafetyGlobalInfo();
-  StackSafetyGlobalInfo(
+  LLVM_ABI StackSafetyGlobalInfo();
+  LLVM_ABI StackSafetyGlobalInfo(
       Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI,
       const ModuleSummaryIndex *Index);
-  StackSafetyGlobalInfo(StackSafetyGlobalInfo &&);
-  StackSafetyGlobalInfo &operator=(StackSafetyGlobalInfo &&);
-  ~StackSafetyGlobalInfo();
+  LLVM_ABI StackSafetyGlobalInfo(StackSafetyGlobalInfo &&);
+  LLVM_ABI StackSafetyGlobalInfo &operator=(StackSafetyGlobalInfo &&);
+  LLVM_ABI ~StackSafetyGlobalInfo();
 
   // Whether we can prove that all accesses to this Alloca are in-range and
   // during its lifetime.
-  bool isSafe(const AllocaInst &AI) const;
+  LLVM_ABI bool isSafe(const AllocaInst &AI) const;
 
   // Returns true if the instruction can be proven to do only two types of
   // memory accesses:
   //  (1) live stack locations in-bounds or
   //  (2) non-stack locations.
-  bool stackAccessIsSafe(const Instruction &I) const;
-  void print(raw_ostream &O) const;
-  void dump() const;
+  LLVM_ABI bool stackAccessIsSafe(const Instruction &I) const;
+  LLVM_ABI void print(raw_ostream &O) const;
+  LLVM_ABI void dump() const;
 };
 
 /// StackSafetyInfo wrapper for the new pass manager.
@@ -95,7 +97,7 @@ class StackSafetyAnalysis : public AnalysisInfoMixin<StackSafetyAnalysis> {
 
 public:
   using Result = StackSafetyInfo;
-  StackSafetyInfo run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI StackSafetyInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c StackSafetyAnalysis results.
@@ -104,12 +106,12 @@ class StackSafetyPrinterPass : public PassInfoMixin<StackSafetyPrinterPass> {
 
 public:
   explicit StackSafetyPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 /// StackSafetyInfo wrapper for the legacy pass manager
-class StackSafetyInfoWrapperPass : public FunctionPass {
+class LLVM_ABI StackSafetyInfoWrapperPass : public FunctionPass {
   StackSafetyInfo SSI;
 
 public:
@@ -133,7 +135,7 @@ class StackSafetyGlobalAnalysis
 
 public:
   using Result = StackSafetyGlobalInfo;
-  Result run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Printer pass for the \c StackSafetyGlobalAnalysis results.
@@ -143,13 +145,13 @@ class StackSafetyGlobalPrinterPass
 
 public:
   explicit StackSafetyGlobalPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 /// This pass performs the global (interprocedural) stack safety analysis
 /// (legacy pass manager).
-class StackSafetyGlobalInfoWrapperPass : public ModulePass {
+class LLVM_ABI StackSafetyGlobalInfoWrapperPass : public ModulePass {
   StackSafetyGlobalInfo SSGI;
 
 public:
@@ -166,9 +168,9 @@ public:
   bool runOnModule(Module &M) override;
 };
 
-bool needsParamAccessSummary(const Module &M);
+LLVM_ABI bool needsParamAccessSummary(const Module &M);
 
-void generateParamAccessSummary(ModuleSummaryIndex &Index);
+LLVM_ABI void generateParamAccessSummary(ModuleSummaryIndex &Index);
 
 } // end namespace llvm
 

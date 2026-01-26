@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -24,13 +25,14 @@ namespace jitlink {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch32(
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromELFObject_aarch32(
     MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// jit-link the given object buffer, which must be an ELF arm/thumb object
 /// file.
-void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
-                      std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
+                               std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace jitlink
 } // end namespace llvm

@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOWERCONSTANTINTRINSICS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -23,8 +24,8 @@ class DominatorTree;
 class Function;
 class TargetLibraryInfo;
 
-bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
-                             DominatorTree *DT);
+LLVM_ABI bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
+                                      DominatorTree *DT);
 
 struct LowerConstantIntrinsicsPass :
     PassInfoMixin<LowerConstantIntrinsicsPass> {
@@ -39,7 +40,7 @@ public:
   /// propagated and conditional branches are resolved where possible.
   /// This complements the Instruction Simplification and
   /// Instruction Combination passes of the optimized pass chain.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 }

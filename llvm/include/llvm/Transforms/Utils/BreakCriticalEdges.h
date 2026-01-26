@@ -18,12 +18,13 @@
 #define LLVM_TRANSFORMS_UTILS_BREAKCRITICALEDGES_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class Function;
 struct BreakCriticalEdgesPass : public PassInfoMixin<BreakCriticalEdgesPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 #endif // LLVM_TRANSFORMS_UTILS_BREAKCRITICALEDGES_H

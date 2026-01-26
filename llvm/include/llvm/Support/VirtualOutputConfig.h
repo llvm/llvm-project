@@ -37,7 +37,7 @@ struct EmptyBaseClass {};
 struct OutputConfig : detail::EmptyBaseClass {
 public:
   LLVM_ABI_FOR_TEST void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void dump() const;
 
 #define HANDLE_OUTPUT_CONFIG_FLAG(NAME, DEFAULT)                               \
   constexpr bool get##NAME() const { return NAME; }                            \

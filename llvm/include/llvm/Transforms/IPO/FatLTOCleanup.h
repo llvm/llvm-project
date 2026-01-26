@@ -18,6 +18,7 @@
 #define LLVM_TRANSFORMS_IPO_FATLTOCLEANUP_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,7 +28,7 @@ class ModuleSummaryIndex;
 class FatLtoCleanup : public PassInfoMixin<FatLtoCleanup> {
 public:
   FatLtoCleanup() = default;
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

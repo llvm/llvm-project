@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_ZOSWRAPPERS_STRING_H
 #define LLVM_SUPPORT_ZOSWRAPPERS_STRING_H
 
+#include "llvm/Support/Compiler.h"
 #include_next <string.h>
 
 #ifdef __cplusplus
@@ -24,9 +25,9 @@ extern "C" {
 // - strnlen()
 // Implementations are provided for z/OS.
 
-char *strsignal(int sig) asm("llvm_zos_strsignal");
+LLVM_ABI char *strsignal(int sig) asm("llvm_zos_strsignal");
 
-size_t strnlen(const char *S, size_t MaxLen) asm("llvm_zos_strnlen");
+LLVM_ABI size_t strnlen(const char *S, size_t MaxLen) asm("llvm_zos_strnlen");
 
 #ifdef __cplusplus
 }

@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_PARTIALINLINING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -23,7 +24,7 @@ class Module;
 /// Pass to remove unused function declarations.
 class PartialInlinerPass : public PassInfoMixin<PartialInlinerPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

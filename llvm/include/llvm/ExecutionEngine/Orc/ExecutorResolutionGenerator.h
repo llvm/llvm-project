@@ -18,10 +18,11 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 
-class ExecutorResolutionGenerator : public DefinitionGenerator {
+class LLVM_ABI ExecutorResolutionGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AbsoluteSymbolsFn =

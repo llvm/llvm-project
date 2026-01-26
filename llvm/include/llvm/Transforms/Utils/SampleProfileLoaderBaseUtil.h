@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 using namespace sampleprof;
@@ -25,25 +26,25 @@ using namespace sampleprof;
 class ProfileSummaryInfo;
 class Module;
 
-extern cl::opt<unsigned> SampleProfileMaxPropagateIterations;
-extern cl::opt<unsigned> SampleProfileRecordCoverage;
-extern cl::opt<unsigned> SampleProfileSampleCoverage;
-extern cl::opt<bool> NoWarnSampleUnused;
+extern LLVM_ABI cl::opt<unsigned> SampleProfileMaxPropagateIterations;
+extern LLVM_ABI cl::opt<unsigned> SampleProfileRecordCoverage;
+extern LLVM_ABI cl::opt<unsigned> SampleProfileSampleCoverage;
+extern LLVM_ABI cl::opt<bool> NoWarnSampleUnused;
 
 namespace sampleprofutil {
 
 class SampleCoverageTracker {
 public:
-  bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
-                       uint32_t Discriminator, uint64_t Samples);
-  unsigned computeCoverage(unsigned Used, unsigned Total) const;
-  unsigned countUsedRecords(const FunctionSamples *FS,
-                            ProfileSummaryInfo *PSI) const;
-  unsigned countBodyRecords(const FunctionSamples *FS,
-                            ProfileSummaryInfo *PSI) const;
+  LLVM_ABI bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
+                                uint32_t Discriminator, uint64_t Samples);
+  LLVM_ABI unsigned computeCoverage(unsigned Used, unsigned Total) const;
+  LLVM_ABI unsigned countUsedRecords(const FunctionSamples *FS,
+                                     ProfileSummaryInfo *PSI) const;
+  LLVM_ABI unsigned countBodyRecords(const FunctionSamples *FS,
+                                     ProfileSummaryInfo *PSI) const;
   uint64_t getTotalUsedSamples() const { return TotalUsedSamples; }
-  uint64_t countBodySamples(const FunctionSamples *FS,
-                            ProfileSummaryInfo *PSI) const;
+  LLVM_ABI uint64_t countBodySamples(const FunctionSamples *FS,
+                                     ProfileSummaryInfo *PSI) const;
 
   void clear() {
     SampleCoverage.clear();
@@ -86,11 +87,11 @@ private:
 };
 
 /// Return true if the given callsite is hot wrt to hot cutoff threshold.
-bool callsiteIsHot(const FunctionSamples *CallsiteFS, ProfileSummaryInfo *PSI,
-                   bool ProfAccForSymsInList);
+LLVM_ABI bool callsiteIsHot(const FunctionSamples *CallsiteFS,
+                            ProfileSummaryInfo *PSI, bool ProfAccForSymsInList);
 
 /// Create a global variable to flag FSDiscriminators are used.
-void createFSDiscriminatorVariable(Module *M);
+LLVM_ABI void createFSDiscriminatorVariable(Module *M);
 
 } // end of namespace sampleprofutil
 } // end of namespace llvm

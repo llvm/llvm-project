@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 
@@ -70,8 +71,8 @@ class DWARFGdbIndex {
   bool parseImpl(DataExtractor Data);
 
 public:
-  void dump(raw_ostream &OS);
-  void parse(DataExtractor Data);
+  LLVM_ABI void dump(raw_ostream &OS);
+  LLVM_ABI void parse(DataExtractor Data);
 
   bool HasContent = false;
   bool HasError = false;

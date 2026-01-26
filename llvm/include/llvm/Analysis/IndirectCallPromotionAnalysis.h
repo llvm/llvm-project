@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_INDIRECTCALLPROMOTIONANALYSIS_H
 
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -57,9 +58,11 @@ public:
   ///
   /// The returned array space is owned by this class, and overwritten on
   /// subsequent calls.
-  MutableArrayRef<InstrProfValueData> getPromotionCandidatesForInstruction(
-      const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates,
-      unsigned MaxNumValueData = 0);
+  LLVM_ABI MutableArrayRef<InstrProfValueData>
+  getPromotionCandidatesForInstruction(const Instruction *I,
+                                       uint64_t &TotalCount,
+                                       uint32_t &NumCandidates,
+                                       unsigned MaxNumValueData = 0);
 };
 
 } // end namespace llvm

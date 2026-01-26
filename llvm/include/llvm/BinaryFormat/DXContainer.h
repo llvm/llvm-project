@@ -203,7 +203,7 @@ LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
 LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
 
-bool isValidRangeType(uint32_t V);
+LLVM_ABI bool isValidRangeType(uint32_t V);
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
 enum class ShaderVisibility : uint32_t {
@@ -212,14 +212,14 @@ enum class ShaderVisibility : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
-bool isValidShaderVisibility(uint32_t V);
+LLVM_ABI bool isValidShaderVisibility(uint32_t V);
 
 #define FILTER(Val, Enum) Enum = Val,
 enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-bool isValidSamplerFilter(uint32_t V);
+LLVM_ABI bool isValidSamplerFilter(uint32_t V);
 
 LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
 
@@ -230,7 +230,7 @@ enum class TextureAddressMode : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
 
-bool isValidAddress(uint32_t V);
+LLVM_ABI bool isValidAddress(uint32_t V);
 
 #define COMPARISON_FUNC(Val, Enum) Enum = Val,
 enum class ComparisonFunc : uint32_t {
@@ -239,20 +239,20 @@ enum class ComparisonFunc : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
 
-bool isValidComparisonFunc(uint32_t V);
+LLVM_ABI bool isValidComparisonFunc(uint32_t V);
 
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
 enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-bool isValidBorderColor(uint32_t V);
+LLVM_ABI bool isValidBorderColor(uint32_t V);
 
-bool isValidRootDesciptorFlags(uint32_t V);
+LLVM_ABI bool isValidRootDesciptorFlags(uint32_t V);
 
-bool isValidDescriptorRangeFlags(uint32_t V);
+LLVM_ABI bool isValidDescriptorRangeFlags(uint32_t V);
 
-bool isValidStaticSamplerFlags(uint32_t V);
+LLVM_ABI bool isValidStaticSamplerFlags(uint32_t V);
 
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 

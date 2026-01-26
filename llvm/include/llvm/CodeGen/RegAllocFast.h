@@ -11,6 +11,7 @@
 
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -43,10 +44,12 @@ public:
     return MachineFunctionProperties().setIsSSA();
   }
 
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 

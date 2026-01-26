@@ -435,7 +435,7 @@ public:
 
   /// Remove inserted instructions that are dead, e.g. due to InstSimplifyFolder
   /// simplifications. \p Root is assumed to be used and won't be removed.
-  void eraseDeadInstructions(Value *Root);
+  LLVM_ABI void eraseDeadInstructions(Value *Root);
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AssumptionCache;
@@ -44,14 +45,14 @@ private:
   bool OnlyLowerUnknownSize;
 
 public:
-  FortifiedLibCallSimplifier(const TargetLibraryInfo *TLI,
-                             bool OnlyLowerUnknownSize = false);
+  LLVM_ABI FortifiedLibCallSimplifier(const TargetLibraryInfo *TLI,
+                                      bool OnlyLowerUnknownSize = false);
 
   /// Take the given call instruction and return a more
   /// optimal value to replace the instruction with or 0 if a more
   /// optimal form can't be found.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
+  LLVM_ABI Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   Value *optimizeMemCpyChk(CallInst *CI, IRBuilderBase &B);
@@ -127,10 +128,10 @@ private:
   static void eraseFromParentDefault(Instruction *I) { I->eraseFromParent(); }
 
   /// Replace an instruction's uses with a value using our replacer.
-  void replaceAllUsesWith(Instruction *I, Value *With);
+  LLVM_ABI void replaceAllUsesWith(Instruction *I, Value *With);
 
   /// Erase an instruction from its parent with our eraser.
-  void eraseFromParent(Instruction *I);
+  LLVM_ABI void eraseFromParent(Instruction *I);
 
   /// Replace an instruction with a value and erase it from its parent.
   void substituteInParent(Instruction *I, Value *With) {
@@ -139,7 +140,7 @@ private:
   }
 
 public:
-  LibCallSimplifier(
+  LLVM_ABI LibCallSimplifier(
       const DataLayout &DL, const TargetLibraryInfo *TLI, DominatorTree *DT,
       DomConditionCache *DC, AssumptionCache *AC,
       OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
@@ -155,7 +156,7 @@ public:
   /// other instructions that use the given instruction were modified
   /// and the given instruction is dead.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
+  LLVM_ABI Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   // String and Memory Library Call Optimizations

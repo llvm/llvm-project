@@ -43,6 +43,7 @@
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
@@ -158,13 +159,13 @@ struct OutlinableRegion {
 
   /// For the contained region, split the parent BasicBlock at the starting and
   /// ending instructions of the contained IRSimilarityCandidate.
-  void splitCandidate();
+  LLVM_ABI void splitCandidate();
 
   /// For the contained region, reattach the BasicBlock at the starting and
   /// ending instructions of the contained IRSimilarityCandidate, or if the
   /// function has been extracted, the start and end of the BasicBlock
   /// containing the called function.
-  void reattachCandidate();
+  LLVM_ABI void reattachCandidate();
 
   /// Find a corresponding value for \p V in similar OutlinableRegion \p Other.
   ///
@@ -172,7 +173,8 @@ struct OutlinableRegion {
   /// in.
   /// \param V [in] - The Value to look for in the other region.
   /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
-  Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
+  LLVM_ABI Value *findCorrespondingValueIn(const OutlinableRegion &Other,
+                                           Value *V);
 
   /// Find a corresponding BasicBlock for \p BB in similar OutlinableRegion \p Other.
   ///
@@ -180,14 +182,14 @@ struct OutlinableRegion {
   /// BasicBlock in.
   /// \param BB [in] - The BasicBlock to look for in the other region.
   /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
-  BasicBlock *findCorrespondingBlockIn(const OutlinableRegion &Other,
-                                       BasicBlock *BB);
+  LLVM_ABI BasicBlock *findCorrespondingBlockIn(const OutlinableRegion &Other,
+                                                BasicBlock *BB);
 
   /// Get the size of the code removed from the region.
   ///
   /// \param [in] TTI - The TargetTransformInfo for the parent function.
   /// \returns the code size of the region
-  InstructionCost getBenefit(TargetTransformInfo &TTI);
+  LLVM_ABI InstructionCost getBenefit(TargetTransformInfo &TTI);
 };
 
 /// This class is a pass that identifies similarity in a Module, extracts
@@ -209,7 +211,7 @@ public:
     static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
                   static_cast<unsigned>(-2));
   }
-  bool run(Module &M);
+  LLVM_ABI bool run(Module &M);
 
 private:
   /// Find repeated similar code sequences in \p M and outline them into new
@@ -443,7 +445,7 @@ private:
 /// Pass to outline similar regions.
 class IROutlinerPass : public PassInfoMixin<IROutlinerPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/Support/Compiler.h"
 #include <limits>
 #include <memory>
 #include <utility>
@@ -28,7 +29,7 @@ class SUnit;
 class TargetInstrInfo;
 class TargetSubtargetInfo;
 
-class VLIWResourceModel {
+class LLVM_ABI VLIWResourceModel {
 protected:
   const TargetInstrInfo *TII;
 
@@ -67,7 +68,7 @@ protected:
 
 /// Extend the standard ScheduleDAGMILive to provide more context and override
 /// the top-level schedule() driver.
-class VLIWMachineScheduler : public ScheduleDAGMILive {
+class LLVM_ABI VLIWMachineScheduler : public ScheduleDAGMILive {
 public:
   VLIWMachineScheduler(MachineSchedContext *C,
                        std::unique_ptr<MachineSchedStrategy> S)
@@ -86,7 +87,7 @@ public:
 // MachineSchedStrategy.
 //===----------------------------------------------------------------------===//
 
-class ConvergingVLIWScheduler : public MachineSchedStrategy {
+class LLVM_ABI ConvergingVLIWScheduler : public MachineSchedStrategy {
 protected:
   /// Store the state used by ConvergingVLIWScheduler heuristics, required
   ///  for the lifetime of one invocation of pickNode().
@@ -151,7 +152,7 @@ protected:
         : Available(ID, Name + ".A"),
           Pending(ID << ConvergingVLIWScheduler::LogMaxQID, Name + ".P") {}
 
-    ~VLIWSchedBoundary();
+    LLVM_ABI ~VLIWSchedBoundary();
     VLIWSchedBoundary &operator=(const VLIWSchedBoundary &other) = delete;
     VLIWSchedBoundary(const VLIWSchedBoundary &other) = delete;
 
@@ -186,19 +187,19 @@ protected:
       return Available.getID() == ConvergingVLIWScheduler::TopQID;
     }
 
-    bool checkHazard(SUnit *SU);
+    LLVM_ABI bool checkHazard(SUnit *SU);
 
-    void releaseNode(SUnit *SU, unsigned ReadyCycle);
+    LLVM_ABI void releaseNode(SUnit *SU, unsigned ReadyCycle);
 
-    void bumpCycle();
+    LLVM_ABI void bumpCycle();
 
-    void bumpNode(SUnit *SU);
+    LLVM_ABI void bumpNode(SUnit *SU);
 
-    void releasePending();
+    LLVM_ABI void releasePending();
 
-    void removeReady(SUnit *SU);
+    LLVM_ABI void removeReady(SUnit *SU);
 
-    SUnit *pickOnlyChoice();
+    LLVM_ABI SUnit *pickOnlyChoice();
 
     bool isLatencyBound(SUnit *SU) {
       if (CurrCycle >= CriticalPathLength)

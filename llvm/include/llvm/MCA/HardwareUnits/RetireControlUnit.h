@@ -17,6 +17,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -77,7 +78,7 @@ private:
   unsigned computeNextSlotIdx() const;
 
 public:
-  RetireControlUnit(const MCSchedModel &SM);
+  LLVM_ABI RetireControlUnit(const MCSchedModel &SM);
 
   bool isEmpty() const { return AvailableEntries == NumROBEntries; }
 
@@ -88,18 +89,18 @@ public:
   unsigned getMaxRetirePerCycle() const { return MaxRetirePerCycle; }
 
   // Reserves a number of slots, and returns a new token reference.
-  unsigned dispatch(const InstRef &IS);
+  LLVM_ABI unsigned dispatch(const InstRef &IS);
 
   // Return the current token from the RCU's circular token queue.
-  const RUToken &getCurrentToken() const;
+  LLVM_ABI const RUToken &getCurrentToken() const;
 
-  const RUToken &peekNextToken() const;
+  LLVM_ABI const RUToken &peekNextToken() const;
 
   // Advance the pointer to the next token in the circular token queue.
-  void consumeCurrentToken();
+  LLVM_ABI void consumeCurrentToken();
 
   // Update the RCU token to represent the executed state.
-  void onInstructionExecuted(unsigned TokenID);
+  LLVM_ABI void onInstructionExecuted(unsigned TokenID);
 
 #ifndef NDEBUG
   void dump() const;

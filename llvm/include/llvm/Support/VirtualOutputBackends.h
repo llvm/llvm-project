@@ -23,6 +23,7 @@
 #define LLVM_SUPPORT_VIRTUALOUTPUTBACKENDS_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 
@@ -47,7 +48,7 @@ makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
 
 /// A helper class for proxying another backend, with the default
 /// implementation to forward to the underlying backend.
-class ProxyOutputBackend : public OutputBackend {
+class LLVM_ABI ProxyOutputBackend : public OutputBackend {
   LLVM_ABI void anchor() override;
 
 protected:
@@ -76,7 +77,7 @@ private:
 };
 
 /// An output backend that creates files on disk, wrapping APIs in sys::fs.
-class OnDiskOutputBackend : public OutputBackend {
+class LLVM_ABI OnDiskOutputBackend : public OutputBackend {
   LLVM_ABI void anchor() override;
 
 protected:
@@ -84,7 +85,7 @@ protected:
     return clone();
   }
 
-  LLVM_ABI Expected<std::unique_ptr<OutputFileImpl>>
+  Expected<std::unique_ptr<OutputFileImpl>>
   createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override;
 
 public:

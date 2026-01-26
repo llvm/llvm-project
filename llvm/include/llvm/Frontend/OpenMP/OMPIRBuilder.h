@@ -592,12 +592,13 @@ public:
     /// The basic block to which control should be transferred to
     /// implement the FiniCB. Memoized to avoid generating finalization
     /// multiple times.
-    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+    LLVM_ABI Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
 
     /// For cases where there is an unavoidable existing finalization block
     /// (e.g. loop finialization after omp sections). The existing finalization
     /// block must not contain any non-finalization code.
-    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+    LLVM_ABI Error mergeFiniBB(IRBuilderBase &Builder,
+                               BasicBlock *ExistingFiniBB);
 
   private:
     /// Access via getFiniBB.
@@ -2309,9 +2310,9 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
-  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
-                                      ArrayRef<Value *> Args,
-                                      StringRef Name = "");
+  LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                               ArrayRef<Value *> Args,
+                                               StringRef Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,

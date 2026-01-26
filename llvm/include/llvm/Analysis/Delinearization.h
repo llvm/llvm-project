@@ -18,6 +18,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class raw_ostream;
@@ -30,21 +31,21 @@ class SCEV;
 /// Compute the array dimensions Sizes from the set of Terms extracted from
 /// the memory access function of this SCEVAddRecExpr (second step of
 /// delinearization).
-void findArrayDimensions(ScalarEvolution &SE,
-                         SmallVectorImpl<const SCEV *> &Terms,
-                         SmallVectorImpl<const SCEV *> &Sizes,
-                         const SCEV *ElementSize);
+LLVM_ABI void findArrayDimensions(ScalarEvolution &SE,
+                                  SmallVectorImpl<const SCEV *> &Terms,
+                                  SmallVectorImpl<const SCEV *> &Sizes,
+                                  const SCEV *ElementSize);
 
 /// Collect parametric terms occurring in step expressions (first step of
 /// delinearization).
-void collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
-                            SmallVectorImpl<const SCEV *> &Terms);
+LLVM_ABI void collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
+                                     SmallVectorImpl<const SCEV *> &Terms);
 
 /// Return in Subscripts the access functions for each dimension in Sizes
 /// (third step of delinearization).
-void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
-                            SmallVectorImpl<const SCEV *> &Subscripts,
-                            SmallVectorImpl<const SCEV *> &Sizes);
+LLVM_ABI void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
+                                     SmallVectorImpl<const SCEV *> &Subscripts,
+                                     SmallVectorImpl<const SCEV *> &Sizes);
 /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
 /// subscripts and sizes of an array access.
 ///
@@ -109,15 +110,17 @@ void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
 /// The subscript of the outermost dimension is the Quotient: [j+k].
 ///
 /// Overall, we have: A[][n][m], and the access function: A[j+k][2i][5i].
-void delinearize(ScalarEvolution &SE, const SCEV *Expr,
-                 SmallVectorImpl<const SCEV *> &Subscripts,
-                 SmallVectorImpl<const SCEV *> &Sizes, const SCEV *ElementSize);
+LLVM_ABI void delinearize(ScalarEvolution &SE, const SCEV *Expr,
+                          SmallVectorImpl<const SCEV *> &Subscripts,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEV *ElementSize);
 
 /// Compute the dimensions of fixed size array from \Expr and save the results
 /// in \p Sizes.
-bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
-                                  SmallVectorImpl<uint64_t> &Sizes,
-                                  const SCEV *ElementSize);
+LLVM_ABI bool findFixedSizeArrayDimensions(ScalarEvolution &SE,
+                                           const SCEV *Expr,
+                                           SmallVectorImpl<uint64_t> &Sizes,
+                                           const SCEV *ElementSize);
 
 /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
 /// subscripts and sizes of an access to a fixed size array. This is a special
@@ -136,17 +139,18 @@ bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 ///
 /// This function is intended to replace getIndexExpressionsFromGEP. They rely
 /// on the GEP source element type so that will be removed in the future.
-bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
-                               SmallVectorImpl<const SCEV *> &Subscripts,
-                               SmallVectorImpl<const SCEV *> &Sizes,
-                               const SCEV *ElementSize);
+LLVM_ABI bool
+delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
+                          SmallVectorImpl<const SCEV *> &Subscripts,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEV *ElementSize);
 
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
 /// allowed.
-bool validateDelinearizationResult(ScalarEvolution &SE,
-                                   ArrayRef<const SCEV *> Sizes,
-                                   ArrayRef<const SCEV *> Subscripts);
+LLVM_ABI bool validateDelinearizationResult(ScalarEvolution &SE,
+                                            ArrayRef<const SCEV *> Sizes,
+                                            ArrayRef<const SCEV *> Subscripts);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
@@ -157,15 +161,15 @@ bool validateDelinearizationResult(ScalarEvolution &SE,
 /// lists have either equal length or the size list is one element shorter in
 /// case there is no known size available for the outermost array dimension.
 /// Returns true if successful and false otherwise.
-bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
-                                const GetElementPtrInst *GEP,
-                                SmallVectorImpl<const SCEV *> &Subscripts,
-                                SmallVectorImpl<const SCEV *> &Sizes);
+LLVM_ABI bool
+getIndexExpressionsFromGEP(ScalarEvolution &SE, const GetElementPtrInst *GEP,
+                           SmallVectorImpl<const SCEV *> &Subscripts,
+                           SmallVectorImpl<const SCEV *> &Sizes);
 
 struct DelinearizationPrinterPass
     : public PassInfoMixin<DelinearizationPrinterPass> {
-  explicit DelinearizationPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI explicit DelinearizationPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:

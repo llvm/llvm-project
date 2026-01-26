@@ -2521,9 +2521,9 @@ public:
   }
 
   /// Returns the scope of subprogram's retainedNodes.
-  static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  LLVM_ABI static const DILocalScope *getRetainedNodeScope(const MDNode *N);
   // For use in Verifier.
-  static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+  LLVM_ABI static const DIScope *getRawRetainedNodeScope(const MDNode *N);
 
   /// For each retained node, applies one of the given functions depending
   /// on the type of a node.

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
 
 #include <cassert>
@@ -29,7 +30,7 @@ namespace llvm {
 class MachineFunction;
 
 using namespace sampleprof;
-class MIRAddFSDiscriminators : public MachineFunctionPass {
+class LLVM_ABI MIRAddFSDiscriminators : public MachineFunctionPass {
   MachineFunction *MF = nullptr;
   FSDiscriminatorPass Pass;
   unsigned LowBit;

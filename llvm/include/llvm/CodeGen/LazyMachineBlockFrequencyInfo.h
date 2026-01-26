@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// This is an alternative analysis pass to MachineBlockFrequencyInfo.
@@ -34,7 +35,7 @@ namespace llvm {
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
 
-class LazyMachineBlockFrequencyInfoPass : public MachineFunctionPass {
+class LLVM_ABI LazyMachineBlockFrequencyInfoPass : public MachineFunctionPass {
 private:
   /// If generated on the fly this own the instance.
   mutable std::unique_ptr<MachineBlockFrequencyInfo> OwnedMBFI;

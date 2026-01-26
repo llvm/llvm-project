@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 
@@ -73,7 +74,7 @@ struct GOFFRelocationEntry {
         Action(Action), FetchStore(FetchStore) {}
 };
 
-class GOFFObjectWriter : public MCObjectWriter {
+class LLVM_ABI GOFFObjectWriter : public MCObjectWriter {
   // The target specific GOFF writer instance.
   std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
 
@@ -105,7 +106,7 @@ public:
 /// \param MOTW - The target-specific GOFF writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                        raw_pwrite_stream &OS);
 } // namespace llvm

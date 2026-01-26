@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERIFUNC_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -20,7 +21,7 @@ class LowerIFuncPass : public PassInfoMixin<LowerIFuncPass> {
 public:
   LowerIFuncPass() = default;
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

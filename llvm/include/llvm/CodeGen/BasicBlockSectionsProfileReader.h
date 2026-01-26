@@ -23,6 +23,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -114,19 +115,19 @@ public:
 
   // Returns true if function \p FuncName is hot based on the basic block
   // section profile.
-  bool isFunctionHot(StringRef FuncName) const;
+  LLVM_ABI bool isFunctionHot(StringRef FuncName) const;
 
   // Returns the cluster info for the function \p FuncName. Returns an empty
   // vector if function has no cluster info.
-  SmallVector<BBClusterInfo>
+  LLVM_ABI SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   // Returns the path clonings for the given function.
-  SmallVector<SmallVector<unsigned>>
+  LLVM_ABI SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
-                        const UniqueBBID &DestBBID) const;
+  LLVM_ABI uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                                 const UniqueBBID &DestBBID) const;
 
   // Returns a pointer to the CFGProfile for the function \p FuncName.
   // Returns nullptr if no profile data is available for the function.
@@ -139,7 +140,7 @@ public:
 
   // Returns the prefetch targets (identified by their containing callsite IDs)
   // for function `FuncName`.
-  SmallVector<CallsiteID>
+  LLVM_ABI SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
 
 private:
@@ -196,7 +197,7 @@ private:
 // Creates a BasicBlockSectionsProfileReader pass to parse the basic block
 // sections profile. \p Buf is a memory buffer that contains the list of
 // functions and basic block ids to selectively enable basic block sections.
-ImmutablePass *
+LLVM_ABI ImmutablePass *
 createBasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf);
 
 /// Analysis pass providing the \c BasicBlockSectionsProfileReader.
@@ -207,17 +208,18 @@ class BasicBlockSectionsProfileReaderAnalysis
     : public AnalysisInfoMixin<BasicBlockSectionsProfileReaderAnalysis> {
 
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
   typedef BasicBlockSectionsProfileReader Result;
   BasicBlockSectionsProfileReaderAnalysis(const TargetMachine &TM) : TM(&TM) {}
 
-  Result run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   const TargetMachine *TM;
 };
 
-class BasicBlockSectionsProfileReaderWrapperPass : public ImmutablePass {
+class LLVM_ABI BasicBlockSectionsProfileReaderWrapperPass
+    : public ImmutablePass {
 public:
   static char ID;
   BasicBlockSectionsProfileReader BBSPR;

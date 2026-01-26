@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 #include <vector>
 
@@ -24,7 +25,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeEnumTypes : public IPDBEnumChildren<PDBSymbol> {
+class LLVM_ABI NativeEnumTypes : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumTypes(NativeSession &Session,
                   codeview::LazyRandomTypeCollection &TypeCollection,

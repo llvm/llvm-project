@@ -24,6 +24,7 @@
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/MCA/Stages/Stage.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {
@@ -46,7 +47,7 @@ namespace mca {
 //
 // If the number of micro opcodes exceedes DispatchWidth, then the instruction
 // is dispatched in multiple cycles.
-class DispatchStage final : public Stage {
+class LLVM_ABI DispatchStage final : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;

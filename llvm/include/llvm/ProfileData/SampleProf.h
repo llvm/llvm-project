@@ -331,7 +331,7 @@ using TypeCountMap = std::map<FunctionId, uint64_t>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
 /// and written as ULEB128. Values are written as ULEB128 as well.
-std::error_code
+LLVM_ABI std::error_code
 serializeTypeMap(const TypeCountMap &Map,
                  const MapVector<FunctionId, uint32_t> &NameTable,
                  raw_ostream &OS);

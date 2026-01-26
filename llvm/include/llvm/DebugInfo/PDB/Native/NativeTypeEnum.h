@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class raw_ostream;
@@ -21,7 +22,7 @@ namespace pdb {
 
 class NativeTypeBuiltin;
 
-class NativeTypeEnum : public NativeRawSymbol {
+class LLVM_ABI NativeTypeEnum : public NativeRawSymbol {
 public:
   NativeTypeEnum(NativeSession &Session, SymIndexId Id, codeview::TypeIndex TI,
                  codeview::EnumRecord Record);

@@ -10,12 +10,13 @@
 #define LLVM_DTLTO_H
 
 #include "llvm/LTO/LTO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace lto {
 
-class DTLTO : public LTO {
+class LLVM_ABI DTLTO : public LTO {
   using Base = LTO;
 
 public:
@@ -29,13 +30,13 @@ public:
   }
 
   // Add an input file and prepare it for distribution.
-  LLVM_ABI Expected<std::shared_ptr<InputFile>>
+  Expected<std::shared_ptr<InputFile>>
   addInput(std::unique_ptr<InputFile> InputPtr) override;
 
 protected:
-  LLVM_ABI llvm::Error handleArchiveInputs() override;
+  llvm::Error handleArchiveInputs() override;
 
-  LLVM_ABI void cleanup() override;
+  void cleanup() override;
 
 private:
   // Bump allocator for a purpose of saving updated module IDs.

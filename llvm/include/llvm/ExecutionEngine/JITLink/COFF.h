@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_COFF_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -23,7 +24,7 @@ namespace jitlink {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>>
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
                               std::shared_ptr<orc::SymbolStringPool> SSP);
 
@@ -31,8 +32,8 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
 ///
 /// Uses conservative defaults for GOT and stub handling based on the target
 /// platform.
-void link_COFF(std::unique_ptr<LinkGraph> G,
-               std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_COFF(std::unique_ptr<LinkGraph> G,
+                        std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace jitlink
 } // end namespace llvm

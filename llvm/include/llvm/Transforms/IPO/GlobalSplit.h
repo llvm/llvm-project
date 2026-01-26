@@ -17,6 +17,7 @@
 #define LLVM_TRANSFORMS_IPO_GLOBALSPLIT_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -25,7 +26,7 @@ class Module;
 /// Pass to perform split of global variables.
 class GlobalSplitPass : public PassInfoMixin<GlobalSplitPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

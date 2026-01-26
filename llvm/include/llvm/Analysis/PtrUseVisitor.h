@@ -29,6 +29,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <type_traits>
 
@@ -168,13 +169,13 @@ protected:
   ///
   /// This will visit the users with the same offset of the current visit
   /// (including an unknown offset if that is the current state).
-  void enqueueUsers(Value &I);
+  LLVM_ABI void enqueueUsers(Value &I);
 
   /// Walk the operands of a GEP and adjust the offset as appropriate.
   ///
   /// This routine does the heavy lifting of the pointer walk by computing
   /// offsets and looking through GEPs.
-  bool adjustOffsetForGEP(GetElementPtrInst &GEPI);
+  LLVM_ABI bool adjustOffsetForGEP(GetElementPtrInst &GEPI);
 };
 
 } // end namespace detail

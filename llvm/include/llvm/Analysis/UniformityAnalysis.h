@@ -18,6 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -35,7 +36,7 @@ public:
   using Result = UniformityInfo;
 
   /// Run the analysis pass over a function and produce a dominator tree.
-  UniformityInfo run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI UniformityInfo run(Function &F, FunctionAnalysisManager &);
 
   // TODO: verify analysis
 };
@@ -46,15 +47,15 @@ class UniformityInfoPrinterPass
   raw_ostream &OS;
 
 public:
-  explicit UniformityInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit UniformityInfoPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes a \ref CycleInfo.
-class UniformityInfoWrapperPass : public FunctionPass {
+class LLVM_ABI UniformityInfoWrapperPass : public FunctionPass {
   Function *m_function = nullptr;
   UniformityInfo m_uniformityInfo;
 

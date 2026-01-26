@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEBLOCKHASHINFO_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -95,7 +96,7 @@ private:
   uint16_t NeighborHash{0};
 };
 
-class MachineBlockHashInfo : public MachineFunctionPass {
+class LLVM_ABI MachineBlockHashInfo : public MachineFunctionPass {
   DenseMap<const MachineBasicBlock *, uint64_t> MBBHashInfo;
 
 public:

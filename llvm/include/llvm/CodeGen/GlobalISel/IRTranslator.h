@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <utility>
 
@@ -63,7 +64,7 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslator : public MachineFunctionPass {
 public:
   static char ID;
 

@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {
@@ -20,7 +21,7 @@ class NativeSession;
 
 class DbiStream;
 
-class NativeExeSymbol : public NativeRawSymbol {
+class LLVM_ABI NativeExeSymbol : public NativeRawSymbol {
   // EXE symbol is the authority on the various symbol types.
   DbiStream *Dbi = nullptr;
 

@@ -10,14 +10,15 @@
 #define LLVM_CODEGEN_FIXUPSTATEPOINTCALLERSAVED_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class FixupStatepointCallerSavedPass
     : public PassInfoMixin<FixupStatepointCallerSavedPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

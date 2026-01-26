@@ -13,13 +13,14 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_CGPROFILE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
 class CGProfilePass : public PassInfoMixin<CGProfilePass> {
 public:
   CGProfilePass(bool InLTO) : InLTO(InLTO) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   bool InLTO = false;

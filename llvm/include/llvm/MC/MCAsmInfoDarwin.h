@@ -15,10 +15,11 @@
 #define LLVM_MC_MCASMINFODARWIN_H
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class MCAsmInfoDarwin : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoDarwin : public MCAsmInfo {
 public:
   explicit MCAsmInfoDarwin();
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,

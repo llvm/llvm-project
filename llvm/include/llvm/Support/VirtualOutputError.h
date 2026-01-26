@@ -14,12 +14,13 @@
 #ifndef LLVM_SUPPORT_VIRTUALOUTPUTERROR_H
 #define LLVM_SUPPORT_VIRTUALOUTPUTERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 
 namespace llvm::vfs {
 
-const std::error_category &output_category();
+LLVM_ABI const std::error_category &output_category();
 
 enum class OutputErrorCode {
   // Error code 0 is absent. Use std::error_code() instead.
@@ -35,7 +36,7 @@ inline std::error_code make_error_code(OutputErrorCode EV) {
 
 /// Error related to an \a OutputFile. Derives from \a ECError and adds \a
 /// getOutputPath().
-class OutputError : public ErrorInfo<OutputError, ECError> {
+class LLVM_ABI OutputError : public ErrorInfo<OutputError, ECError> {
   void anchor() override;
 
 public:
@@ -43,7 +44,7 @@ public:
   void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
-  LLVM_ABI static char ID;
+  static char ID;
 
   OutputError(const Twine &OutputPath, std::error_code EC)
       : ErrorInfo<OutputError, ECError>(EC), OutputPath(OutputPath.str()) {
@@ -70,7 +71,8 @@ inline Error convertToOutputError(const Twine &OutputPath, std::error_code EC) {
 
 /// Error related to an OutputConfig for an \a OutputFile. Derives from \a
 /// OutputError and adds \a getConfig().
-class OutputConfigError : public ErrorInfo<OutputConfigError, OutputError> {
+class LLVM_ABI OutputConfigError
+    : public ErrorInfo<OutputConfigError, OutputError> {
   void anchor() override;
 
 public:
@@ -91,7 +93,8 @@ private:
 
 /// Error related to a temporary file for an \a OutputFile. Derives from \a
 /// OutputError and adds \a getTempPath().
-class TempFileOutputError : public ErrorInfo<TempFileOutputError, OutputError> {
+class LLVM_ABI TempFileOutputError
+    : public ErrorInfo<TempFileOutputError, OutputError> {
   void anchor() override;
 
 public:
@@ -99,7 +102,7 @@ public:
   void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
-  LLVM_ABI static char ID;
+  static char ID;
 
   TempFileOutputError(const Twine &TempPath, const Twine &OutputPath,
                       std::error_code EC)

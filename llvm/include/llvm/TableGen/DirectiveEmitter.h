@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Directive/Spelling.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
@@ -84,7 +85,7 @@ public:
     return Records.getAllDerivedDefinitions("Clause");
   }
 
-  bool HasValidityErrors() const;
+  LLVM_ABI bool HasValidityErrors() const;
 
 private:
   const Record *Def;

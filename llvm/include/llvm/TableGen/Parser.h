@@ -13,6 +13,8 @@
 #ifndef LLVM_TABLEGEN_PARSER_H
 #define LLVM_TABLEGEN_PARSER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class RecordKeeper;
 class SourceMgr;
@@ -23,7 +25,7 @@ class SourceMgr;
 ///
 /// NOTE: TableGen currently relies on global state within a given parser
 ///       invocation, so this function is not thread-safe.
-bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records);
+LLVM_ABI bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records);
 
 } // end namespace llvm
 

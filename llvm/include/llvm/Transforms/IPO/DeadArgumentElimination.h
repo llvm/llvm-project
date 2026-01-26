@@ -23,6 +23,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <set>
 #include <string>
@@ -75,7 +76,7 @@ public:
   DeadArgumentEliminationPass(bool ShouldHackArguments = false)
       : ShouldHackArguments(ShouldHackArguments) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
   /// Convenience wrapper
   RetOrArg createRet(const Function *F, unsigned Idx) {

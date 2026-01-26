@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 #include <optional>
 
@@ -51,8 +52,8 @@ class IndexedReference {
 
 public:
   /// Construct an indexed reference given a \p StoreOrLoadInst instruction.
-  IndexedReference(Instruction &StoreOrLoadInst, const LoopInfo &LI,
-                   ScalarEvolution &SE);
+  LLVM_ABI IndexedReference(Instruction &StoreOrLoadInst, const LoopInfo &LI,
+                            ScalarEvolution &SE);
 
   bool isValid() const { return IsValid; }
   const SCEV *getBasePointer() const { return BasePointer; }
@@ -74,16 +75,17 @@ public:
   /// are/aren't in the same cache line of size \p CLS. Two references are in
   /// the same chace line iff the distance between them in the innermost
   /// dimension is less than the cache line size. Return std::nullopt if unsure.
-  std::optional<bool> hasSpacialReuse(const IndexedReference &Other,
-                                      unsigned CLS, AAResults &AA) const;
+  LLVM_ABI std::optional<bool> hasSpacialReuse(const IndexedReference &Other,
+                                               unsigned CLS,
+                                               AAResults &AA) const;
 
   /// Return true if the current object and the indexed reference \p Other
   /// have distance smaller than \p MaxDistance in the dimension associated with
   /// the given loop \p L. Return false if the distance is not smaller than \p
   /// MaxDistance and std::nullopt if unsure.
-  std::optional<bool> hasTemporalReuse(const IndexedReference &Other,
-                                       unsigned MaxDistance, const Loop &L,
-                                       DependenceInfo &DI, AAResults &AA) const;
+  LLVM_ABI std::optional<bool>
+  hasTemporalReuse(const IndexedReference &Other, unsigned MaxDistance,
+                   const Loop &L, DependenceInfo &DI, AAResults &AA) const;
 
   /// Compute the cost of the reference w.r.t. the given loop \p L when it is
   /// considered in the innermost position in the loop nest.
@@ -94,7 +96,7 @@ public:
   ///     + the coefficient of this loop's index variable used in all other
   ///       subscripts is zero
   ///   - or otherwise equal to 'TripCount'.
-  CacheCostTy computeRefCost(const Loop &L, unsigned CLS) const;
+  LLVM_ABI CacheCostTy computeRefCost(const Loop &L, unsigned CLS) const;
 
 private:
   /// Attempt to delinearize the indexed reference.
@@ -198,15 +200,16 @@ public:
   /// The optional parameter \p TRT can be used to specify the max. distance
   /// between array elements accessed in a loop so that the elements are
   /// classified to have temporal reuse.
-  CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI, ScalarEvolution &SE,
-            TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
-            std::optional<unsigned> TRT = std::nullopt);
+  LLVM_ABI CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
+                     ScalarEvolution &SE, TargetTransformInfo &TTI,
+                     AAResults &AA, DependenceInfo &DI,
+                     std::optional<unsigned> TRT = std::nullopt);
 
   /// Create a CacheCost for the loop nest rooted by \p Root.
   /// The optional parameter \p TRT can be used to specify the max. distance
   /// between array elements accessed in a loop so that the elements are
   /// classified to have temporal reuse.
-  static std::unique_ptr<CacheCost>
+  LLVM_ABI static std::unique_ptr<CacheCost>
   getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR, DependenceInfo &DI,
                std::optional<unsigned> TRT = std::nullopt);
 
@@ -279,8 +282,8 @@ private:
   DependenceInfo &DI;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const IndexedReference &R);
-raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const IndexedReference &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
 
 /// Printer pass for the \c CacheCost results.
 class LoopCachePrinterPass : public PassInfoMixin<LoopCachePrinterPass> {
@@ -289,8 +292,9 @@ class LoopCachePrinterPass : public PassInfoMixin<LoopCachePrinterPass> {
 public:
   explicit LoopCachePrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
   static bool isRequired() { return true; }
 };

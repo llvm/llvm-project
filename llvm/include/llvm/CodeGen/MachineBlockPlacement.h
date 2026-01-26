@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_MACHINEBLOCKPLACEMENT_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -21,11 +22,11 @@ class MachineBlockPlacementPass
 public:
   MachineBlockPlacementPass(bool AllowTailMerge)
       : AllowTailMerge(AllowTailMerge) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 
-  void
+  LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName) const;
 };
@@ -34,8 +35,8 @@ class MachineBlockPlacementStatsPass
     : public PassInfoMixin<MachineBlockPlacementStatsPass> {
 
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

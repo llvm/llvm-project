@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -20,12 +21,12 @@ namespace llvm {
 // precede any other options which prefix them). Additionally, if two options
 // are identical ignoring case, they are ordered according to case sensitive
 // ordering if `FallbackCaseSensitive` is true.
-int StrCmpOptionName(StringRef A, StringRef B,
-                     bool FallbackCaseSensitive = true);
+LLVM_ABI int StrCmpOptionName(StringRef A, StringRef B,
+                              bool FallbackCaseSensitive = true);
 
 // Comparison function for Option prefixes.
-int StrCmpOptionPrefixes(ArrayRef<StringRef> APrefixes,
-                         ArrayRef<StringRef> BPrefixes);
+LLVM_ABI int StrCmpOptionPrefixes(ArrayRef<StringRef> APrefixes,
+                                  ArrayRef<StringRef> BPrefixes);
 
 } // namespace llvm
 

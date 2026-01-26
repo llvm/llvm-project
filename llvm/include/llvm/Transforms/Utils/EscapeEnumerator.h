@@ -16,6 +16,7 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -43,7 +44,7 @@ public:
       : F(F), CleanupBBName(N), StateBB(F.begin()), StateE(F.end()),
         Builder(F.getContext()), HandleExceptions(HandleExceptions), DTU(DTU) {}
 
-  IRBuilder<> *Next();
+  LLVM_ABI IRBuilder<> *Next();
 };
 
 }

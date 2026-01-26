@@ -730,7 +730,7 @@ public:
   getMemProfCallerCalleePairs() const;
 
   // Returns non-owned pointer to data access profile data.
-  LLVM_ABI memprof::DataAccessProfData *getDataAccessProfileData() const {
+  memprof::DataAccessProfData *getDataAccessProfileData() const {
     return DataAccessProfileData.get();
   }
 

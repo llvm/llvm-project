@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_EXECUTORRESOLVER_H
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
@@ -32,7 +33,7 @@ public:
                             YieldResolveResultFn &&OnResolve) = 0;
 };
 
-class DylibSymbolResolver : public ExecutorResolver {
+class LLVM_ABI DylibSymbolResolver : public ExecutorResolver {
 public:
   DylibSymbolResolver(tpctypes::DylibHandle H) : Handle(H) {}
 

@@ -10,14 +10,15 @@
 #define LLVM_CODEGEN_SANITIZERBINARYMETADATA_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class MachineSanitizerBinaryMetadataPass
     : public PassInfoMixin<MachineSanitizerBinaryMetadataPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

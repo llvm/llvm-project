@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -97,8 +98,8 @@ public:
     /// the stack can be live-out on the stack without inserting a spill.
     bool ChangesValue;
 
-    void print(raw_ostream &OS) const;
-    void dump() const;
+    LLVM_ABI void print(raw_ostream &OS) const;
+    LLVM_ABI void dump() const;
   };
 
   /// prepare - Reset state and prepare for a new spill placement computation.
@@ -108,13 +109,13 @@ public:
   ///                   variable should be kept in a register through the
   ///                   bundle. A clear bit means the variable should be
   ///                   spilled. This vector is retained.
-  void prepare(BitVector &RegBundles);
+  LLVM_ABI void prepare(BitVector &RegBundles);
 
   /// addConstraints - Add constraints and biases. This method may be called
   /// more than once to accumulate constraints.
   /// @param LiveBlocks Constraints for blocks that have the variable live in or
   ///                   live out.
-  void addConstraints(ArrayRef<BlockConstraint> LiveBlocks);
+  LLVM_ABI void addConstraints(ArrayRef<BlockConstraint> LiveBlocks);
 
   /// addPrefSpill - Add PrefSpill constraints to all blocks listed.  This is
   /// equivalent to calling addConstraint with identical BlockConstraints with
@@ -122,21 +123,21 @@ public:
   ///
   /// @param Blocks Array of block numbers that prefer to spill in and out.
   /// @param Strong When true, double the negative bias for these blocks.
-  void addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong);
+  LLVM_ABI void addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong);
 
   /// addLinks - Add transparent blocks with the given numbers.
-  void addLinks(ArrayRef<unsigned> Links);
+  LLVM_ABI void addLinks(ArrayRef<unsigned> Links);
 
   /// scanActiveBundles - Perform an initial scan of all bundles activated by
   /// addConstraints and addLinks, updating their state. Add all the bundles
   /// that now prefer a register to RecentPositive.
   /// Prepare internal data structures for iterate.
   /// Return true is there are any positive nodes.
-  bool scanActiveBundles();
+  LLVM_ABI bool scanActiveBundles();
 
   /// iterate - Update the network iteratively until convergence, or new bundles
   /// are found.
-  void iterate();
+  LLVM_ABI void iterate();
 
   /// getRecentPositive - Return an array of bundles that became positive during
   /// the previous call to scanActiveBundles or iterate.
@@ -149,7 +150,7 @@ public:
   /// The selected bundles are returned in the bitvector passed to prepare().
   /// @return True if a perfect solution was found, allowing the variable to be
   ///         in a register through all relevant bundles.
-  bool finish();
+  LLVM_ABI bool finish();
 
   /// getBlockFrequency - Return the estimated block execution frequency per
   /// function invocation.
@@ -157,16 +158,16 @@ public:
     return BlockFrequencies[Number];
   }
 
-  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &Inv);
 
-  SpillPlacement(SpillPlacement &&);
-  ~SpillPlacement();
+  LLVM_ABI SpillPlacement(SpillPlacement &&);
+  LLVM_ABI ~SpillPlacement();
 
 private:
   SpillPlacement();
 
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
 
   void run(MachineFunction &MF, EdgeBundles *Bundles,
            MachineBlockFrequencyInfo *MBFI);
@@ -176,7 +177,7 @@ private:
   bool update(unsigned n);
 };
 
-class SpillPlacementWrapperLegacy : public MachineFunctionPass {
+class LLVM_ABI SpillPlacementWrapperLegacy : public MachineFunctionPass {
 public:
   static char ID;
   SpillPlacementWrapperLegacy() : MachineFunctionPass(ID) {}
@@ -198,7 +199,8 @@ class SpillPlacementAnalysis
 
 public:
   using Result = SpillPlacement;
-  SpillPlacement run(MachineFunction &, MachineFunctionAnalysisManager &);
+  LLVM_ABI SpillPlacement run(MachineFunction &,
+                              MachineFunctionAnalysisManager &);
 };
 
 } // end namespace llvm

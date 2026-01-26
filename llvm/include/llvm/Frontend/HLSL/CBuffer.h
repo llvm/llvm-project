@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -46,14 +47,14 @@ class CBufferMetadata {
   CBufferMetadata(NamedMDNode *MD) : MD(MD) {}
 
 public:
-  static std::optional<CBufferMetadata>
+  LLVM_ABI static std::optional<CBufferMetadata>
   get(Module &M, llvm::function_ref<bool(Type *)> IsPadding);
 
   using iterator = SmallVector<CBufferMapping>::iterator;
   iterator begin() { return Mappings.begin(); }
   iterator end() { return Mappings.end(); }
 
-  void eraseFromModule();
+  LLVM_ABI void eraseFromModule();
 };
 
 } // namespace hlsl

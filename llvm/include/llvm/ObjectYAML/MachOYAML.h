@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <optional>
@@ -70,7 +71,7 @@ struct FileHeader {
   llvm::yaml::Hex32 reserved;
 };
 
-struct LoadCommand {
+struct LLVM_ABI LoadCommand {
   virtual ~LoadCommand();
 
   llvm::MachO::macho_load_command Data;
@@ -133,7 +134,7 @@ struct LinkEditData {
   std::vector<DataInCodeEntry> DataInCode;
   std::vector<yaml::Hex8> ChainedFixups;
 
-  bool isEmpty() const;
+  LLVM_ABI bool isEmpty() const;
 };
 
 struct Object {
@@ -188,64 +189,66 @@ class raw_ostream;
 namespace yaml {
 
 template <> struct MappingTraits<MachOYAML::FileHeader> {
-  static void mapping(IO &IO, MachOYAML::FileHeader &FileHeader);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::FileHeader &FileHeader);
 };
 
 template <> struct MappingTraits<MachOYAML::Object> {
-  static void mapping(IO &IO, MachOYAML::Object &Object);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::Object &Object);
 };
 
 template <> struct MappingTraits<MachOYAML::FatHeader> {
-  static void mapping(IO &IO, MachOYAML::FatHeader &FatHeader);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::FatHeader &FatHeader);
 };
 
 template <> struct MappingTraits<MachOYAML::FatArch> {
-  static void mapping(IO &IO, MachOYAML::FatArch &FatArch);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::FatArch &FatArch);
 };
 
 template <> struct MappingTraits<MachOYAML::UniversalBinary> {
-  static void mapping(IO &IO, MachOYAML::UniversalBinary &UniversalBinary);
+  LLVM_ABI static void mapping(IO &IO,
+                               MachOYAML::UniversalBinary &UniversalBinary);
 };
 
 template <> struct MappingTraits<MachOYAML::LoadCommand> {
-  static void mapping(IO &IO, MachOYAML::LoadCommand &LoadCommand);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::LoadCommand &LoadCommand);
 };
 
 template <> struct MappingTraits<MachOYAML::LinkEditData> {
-  static void mapping(IO &IO, MachOYAML::LinkEditData &LinkEditData);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::LinkEditData &LinkEditData);
 };
 
 template <> struct MappingTraits<MachOYAML::RebaseOpcode> {
-  static void mapping(IO &IO, MachOYAML::RebaseOpcode &RebaseOpcode);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::RebaseOpcode &RebaseOpcode);
 };
 
 template <> struct MappingTraits<MachOYAML::BindOpcode> {
-  static void mapping(IO &IO, MachOYAML::BindOpcode &BindOpcode);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::BindOpcode &BindOpcode);
 };
 
 template <> struct MappingTraits<MachOYAML::ExportEntry> {
-  static void mapping(IO &IO, MachOYAML::ExportEntry &ExportEntry);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::ExportEntry &ExportEntry);
 };
 
 template <> struct MappingTraits<MachOYAML::Relocation> {
-  static void mapping(IO &IO, MachOYAML::Relocation &R);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::Relocation &R);
 };
 
 template <> struct MappingTraits<MachOYAML::Section> {
-  static void mapping(IO &IO, MachOYAML::Section &Section);
-  static std::string validate(IO &io, MachOYAML::Section &Section);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::Section &Section);
+  LLVM_ABI static std::string validate(IO &io, MachOYAML::Section &Section);
 };
 
 template <> struct MappingTraits<MachOYAML::NListEntry> {
-  static void mapping(IO &IO, MachOYAML::NListEntry &NListEntry);
+  LLVM_ABI static void mapping(IO &IO, MachOYAML::NListEntry &NListEntry);
 };
 
 template <> struct MappingTraits<MachO::build_tool_version> {
-  static void mapping(IO &IO, MachO::build_tool_version &tool);
+  LLVM_ABI static void mapping(IO &IO, MachO::build_tool_version &tool);
 };
 
 template <> struct MappingTraits<MachOYAML::DataInCodeEntry> {
-  static void mapping(IO &IO, MachOYAML::DataInCodeEntry &DataInCodeEntry);
+  LLVM_ABI static void mapping(IO &IO,
+                               MachOYAML::DataInCodeEntry &DataInCodeEntry);
 };
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
@@ -298,9 +301,9 @@ template <> struct ScalarEnumerationTraits<MachO::BindOpcode> {
 using char_16 = char[16];
 
 template <> struct ScalarTraits<char_16> {
-  static void output(const char_16 &Val, void *, raw_ostream &Out);
-  static StringRef input(StringRef Scalar, void *, char_16 &Val);
-  static QuotingType mustQuote(StringRef S);
+  LLVM_ABI static void output(const char_16 &Val, void *, raw_ostream &Out);
+  LLVM_ABI static StringRef input(StringRef Scalar, void *, char_16 &Val);
+  LLVM_ABI static QuotingType mustQuote(StringRef S);
 };
 
 // This trait is used for UUIDs. It reads and writes them matching otool's
@@ -308,9 +311,9 @@ template <> struct ScalarTraits<char_16> {
 using uuid_t = raw_ostream::uuid_t;
 
 template <> struct ScalarTraits<uuid_t> {
-  static void output(const uuid_t &Val, void *, raw_ostream &Out);
-  static StringRef input(StringRef Scalar, void *, uuid_t &Val);
-  static QuotingType mustQuote(StringRef S);
+  LLVM_ABI static void output(const uuid_t &Val, void *, raw_ostream &Out);
+  LLVM_ABI static StringRef input(StringRef Scalar, void *, uuid_t &Val);
+  LLVM_ABI static QuotingType mustQuote(StringRef S);
 };
 
 // Load Command struct mapping traits
@@ -324,19 +327,19 @@ template <> struct ScalarTraits<uuid_t> {
 
 // Extra structures used by load commands
 template <> struct MappingTraits<MachO::dylib> {
-  static void mapping(IO &IO, MachO::dylib &LoadCommand);
+  LLVM_ABI static void mapping(IO &IO, MachO::dylib &LoadCommand);
 };
 
 template <> struct MappingTraits<MachO::fvmlib> {
-  static void mapping(IO &IO, MachO::fvmlib &LoadCommand);
+  LLVM_ABI static void mapping(IO &IO, MachO::fvmlib &LoadCommand);
 };
 
 template <> struct MappingTraits<MachO::section> {
-  static void mapping(IO &IO, MachO::section &LoadCommand);
+  LLVM_ABI static void mapping(IO &IO, MachO::section &LoadCommand);
 };
 
 template <> struct MappingTraits<MachO::section_64> {
-  static void mapping(IO &IO, MachO::section_64 &LoadCommand);
+  LLVM_ABI static void mapping(IO &IO, MachO::section_64 &LoadCommand);
 };
 
 } // end namespace yaml

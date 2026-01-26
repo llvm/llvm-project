@@ -12,6 +12,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -24,17 +25,17 @@ using Kernel = Function *;
 using KernelSet = SetVector<Kernel>;
 
 /// Helper to determine if \p M contains OpenMP.
-bool containsOpenMP(Module &M);
+LLVM_ABI bool containsOpenMP(Module &M);
 
 /// Helper to determine if \p M is a OpenMP target offloading device module.
-bool isOpenMPDevice(Module &M);
+LLVM_ABI bool isOpenMPDevice(Module &M);
 
 /// Return true iff \p Fn is an OpenMP GPU kernel; \p Fn has the "kernel"
 /// attribute.
-bool isOpenMPKernel(Function &Fn);
+LLVM_ABI bool isOpenMPKernel(Function &Fn);
 
 /// Get OpenMP device kernels in \p M.
-KernelSet getDeviceKernels(Module &M);
+LLVM_ABI KernelSet getDeviceKernels(Module &M);
 
 } // namespace omp
 
@@ -44,7 +45,7 @@ public:
   OpenMPOptPass() = default;
   OpenMPOptPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   const ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None;
@@ -55,8 +56,9 @@ public:
   OpenMPOptCGSCCPass() = default;
   OpenMPOptCGSCCPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 
 private:
   const ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None;

@@ -120,13 +120,13 @@ public:
   /// @}
 };
 
-MCAsmParserExtension *createDarwinAsmParser();
-MCAsmParserExtension *createELFAsmParser();
-MCAsmParserExtension *createCOFFAsmParser();
-MCAsmParserExtension *createCOFFMasmParser();
-MCAsmParserExtension *createGOFFAsmParser();
-MCAsmParserExtension *createXCOFFAsmParser();
-MCAsmParserExtension *createWasmAsmParser();
+LLVM_ABI MCAsmParserExtension *createDarwinAsmParser();
+LLVM_ABI MCAsmParserExtension *createELFAsmParser();
+LLVM_ABI MCAsmParserExtension *createCOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createCOFFMasmParser();
+LLVM_ABI MCAsmParserExtension *createGOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createXCOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 

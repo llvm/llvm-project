@@ -22,9 +22,9 @@ namespace MCParserUtils {
 /// with the given name.
 ///
 /// On success, returns false and sets the Symbol and Value output parameters.
-bool parseAssignmentExpression(StringRef Name, bool allow_redef,
-                               MCAsmParser &Parser, MCSymbol *&Symbol,
-                               const MCExpr *&Value);
+LLVM_ABI bool parseAssignmentExpression(StringRef Name, bool allow_redef,
+                                        MCAsmParser &Parser, MCSymbol *&Symbol,
+                                        const MCExpr *&Value);
 
 } // namespace MCParserUtils
 

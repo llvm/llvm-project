@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTIONVISITOR_H
 
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -60,9 +61,9 @@ public:
                                     const StringsAndChecksumsRef &State) = 0;
 };
 
-Error visitDebugSubsection(const DebugSubsectionRecord &R,
-                           DebugSubsectionVisitor &V,
-                           const StringsAndChecksumsRef &State);
+LLVM_ABI Error visitDebugSubsection(const DebugSubsectionRecord &R,
+                                    DebugSubsectionVisitor &V,
+                                    const StringsAndChecksumsRef &State);
 
 namespace detail {
 template <typename T>

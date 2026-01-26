@@ -17,10 +17,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
-class RegionsFromMetadata final : public FunctionPass {
+class LLVM_ABI RegionsFromMetadata final : public FunctionPass {
   // The PM containing the pipeline of region passes.
   RegionPassManager RPM;
 

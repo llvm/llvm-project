@@ -10,6 +10,7 @@
 #define LLVM_MC_MCWINCOFFOBJECTWRITER_H
 
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -20,7 +21,7 @@ class MCFixup;
 class MCValue;
 class raw_pwrite_stream;
 
-class MCWinCOFFObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCWinCOFFObjectTargetWriter : public MCObjectTargetWriter {
   virtual void anchor();
 
   const unsigned Machine;
@@ -45,7 +46,7 @@ public:
 
 class WinCOFFWriter;
 
-class WinCOFFObjectWriter final : public MCObjectWriter {
+class LLVM_ABI WinCOFFObjectWriter final : public MCObjectWriter {
   friend class WinCOFFWriter;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
@@ -79,11 +80,11 @@ public:
 /// \param MOTW - The target specific WinCOFF writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createWinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                           raw_pwrite_stream &OS);
 
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createWinCOFFDwoObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
 } // end namespace llvm

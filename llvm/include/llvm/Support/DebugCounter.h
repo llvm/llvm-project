@@ -167,7 +167,7 @@ public:
 
 protected:
   void addCounter(CounterInfo *Info) { Counters[Info->Name] = Info; }
-  bool handleCounterIncrement(CounterInfo &Info);
+  LLVM_ABI bool handleCounterIncrement(CounterInfo &Info);
 
   MapVector<StringRef, CounterInfo *> Counters;
 

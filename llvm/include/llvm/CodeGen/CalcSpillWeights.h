@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -65,31 +66,32 @@ class VirtRegMap;
     virtual ~VirtRegAuxInfo() = default;
 
     /// (re)compute li's spill weight and allocation hint.
-    void calculateSpillWeightAndHint(LiveInterval &LI);
+    LLVM_ABI void calculateSpillWeightAndHint(LiveInterval &LI);
 
     /// Compute spill weights and allocation hints for all virtual register
     /// live intervals.
-    void calculateSpillWeightsAndHints();
+    LLVM_ABI void calculateSpillWeightsAndHints();
 
     /// Return the preferred allocation register for reg, given a COPY
     /// instruction.
-    static Register copyHint(const MachineInstr *MI, Register Reg,
-                             const TargetRegisterInfo &TRI,
-                             const MachineRegisterInfo &MRI);
+    LLVM_ABI static Register copyHint(const MachineInstr *MI, Register Reg,
+                                      const TargetRegisterInfo &TRI,
+                                      const MachineRegisterInfo &MRI);
 
     /// Determine if all values in LI are rematerializable.
-    static bool isRematerializable(const LiveInterval &LI,
-                                   const LiveIntervals &LIS,
-                                   const VirtRegMap &VRM,
-                                   const MachineRegisterInfo &MRI,
-                                   const TargetInstrInfo &TII);
+    LLVM_ABI static bool isRematerializable(const LiveInterval &LI,
+                                            const LiveIntervals &LIS,
+                                            const VirtRegMap &VRM,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetInstrInfo &TII);
 
     /// \returns true if all registers used by \p MI are also available with the
     /// same value at \p UseIdx.
-    static bool allUsesAvailableAt(const MachineInstr *MI, SlotIndex UseIdx,
-                                   const LiveIntervals &LIS,
-                                   const MachineRegisterInfo &MRI,
-                                   const TargetInstrInfo &TII);
+    LLVM_ABI static bool allUsesAvailableAt(const MachineInstr *MI,
+                                            SlotIndex UseIdx,
+                                            const LiveIntervals &LIS,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetInstrInfo &TII);
 
   protected:
     /// Helper function for weight calculations.
@@ -104,8 +106,9 @@ class VirtRegMap;
     ///               after end will not affect the weight. Relevant for
     ///               weight calculation of future split artifact.
     /// \return The spill weight. Returns negative weight for unspillable LI.
-    float weightCalcHelper(LiveInterval &LI, SlotIndex *Start = nullptr,
-                           SlotIndex *End = nullptr);
+    LLVM_ABI float weightCalcHelper(LiveInterval &LI,
+                                    SlotIndex *Start = nullptr,
+                                    SlotIndex *End = nullptr);
 
     /// Weight normalization function.
     virtual float normalize(float UseDefFreq, unsigned Size,

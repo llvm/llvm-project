@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_HARDWARELOOPS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -68,7 +69,7 @@ public:
   explicit HardwareLoopsPass(HardwareLoopOptions Opts = {})
     : Opts(Opts) { }
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

@@ -19,6 +19,7 @@
 #define LLVM_CODEGEN_LOOPTRAVERSAL_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -103,7 +104,7 @@ public:
   /// Identifies basic blocks that are part of loops and should to be
   ///  visited twice and returns efficient traversal order for all the blocks.
   typedef SmallVector<TraversedMBBInfo, 4> TraversalOrder;
-  TraversalOrder traverse(MachineFunction &MF);
+  LLVM_ABI TraversalOrder traverse(MachineFunction &MF);
 
 private:
   /// Returens true if the block is ready for its final round of processing.

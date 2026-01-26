@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_SCALAR_JUMP_TABLE_TO_SWITCH_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -22,7 +23,7 @@ class JumpTableToSwitchPass : public PassInfoMixin<JumpTableToSwitchPass> {
 public:
   explicit JumpTableToSwitchPass(bool InLTO = false) : InLTO(InLTO) {}
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm
 

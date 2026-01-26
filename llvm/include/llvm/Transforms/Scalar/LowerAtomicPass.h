@@ -15,13 +15,14 @@
 #define LLVM_TRANSFORMS_SCALAR_LOWERATOMICPASS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// A pass that lowers atomic intrinsic into non-atomic intrinsics.
 class LowerAtomicPass : public PassInfoMixin<LowerAtomicPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
   static bool isRequired() { return true; }
 };
 

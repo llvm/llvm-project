@@ -27,6 +27,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -36,7 +37,7 @@ class AAResults;
 namespace objcarc {
 
 /// A handy option to enable/disable all ARC Optimizations.
-extern bool EnableARCOpts;
+extern LLVM_ABI bool EnableARCOpts;
 
 /// Test if the given module looks interesting to run ARC optimization
 /// on.
@@ -174,7 +175,7 @@ inline bool IsPotentialRetainableObjPtr(const Value *Op) {
   return true;
 }
 
-bool IsPotentialRetainableObjPtr(const Value *Op, AAResults &AA);
+LLVM_ABI bool IsPotentialRetainableObjPtr(const Value *Op, AAResults &AA);
 
 /// Helper for GetARCInstKind. Determines what kind of construct CS
 /// is.

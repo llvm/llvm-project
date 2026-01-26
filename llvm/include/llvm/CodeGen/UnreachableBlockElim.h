@@ -24,19 +24,21 @@
 
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class UnreachableBlockElimPass
     : public PassInfoMixin<UnreachableBlockElimPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class UnreachableMachineBlockElimPass
     : public PassInfoMixin<UnreachableMachineBlockElimPass> {
 public:
-  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &F,
+                                 MachineFunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

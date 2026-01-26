@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -113,7 +114,7 @@ struct DomainValue {
   }
 };
 
-class ExecutionDomainFix : public MachineFunctionPass {
+class LLVM_ABI ExecutionDomainFix : public MachineFunctionPass {
   SpecificBumpPtrAllocator<DomainValue> Allocator;
   SmallVector<DomainValue *, 16> Avail;
 

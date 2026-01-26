@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_DWARFEHPREPARE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -25,7 +26,7 @@ class DwarfEHPreparePass : public PassInfoMixin<DwarfEHPreparePass> {
 
 public:
   explicit DwarfEHPreparePass(const TargetMachine &TM_) : TM(&TM_) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

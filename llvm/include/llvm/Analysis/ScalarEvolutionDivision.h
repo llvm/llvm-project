@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONDIVISION_H
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -40,9 +41,9 @@ public:
   /// * Division of constants is performed as signed.
   /// * The multiplication of Quotient and Denominator may wrap.
   /// * The addition of Quotient*Denominator and Remainder may wrap.
-  static void divide(ScalarEvolution &SE, const SCEV *Numerator,
-                     const SCEV *Denominator, const SCEV **Quotient,
-                     const SCEV **Remainder);
+  LLVM_ABI static void divide(ScalarEvolution &SE, const SCEV *Numerator,
+                              const SCEV *Denominator, const SCEV **Quotient,
+                              const SCEV **Remainder);
 
   // Except in the trivial case described above, we do not know how to divide
   // Expr by Denominator for the following functions with empty implementation.
@@ -60,15 +61,15 @@ public:
   void visitUnknown(const SCEVUnknown *Numerator) {}
   void visitCouldNotCompute(const SCEVCouldNotCompute *Numerator) {}
 
-  void visitConstant(const SCEVConstant *Numerator);
+  LLVM_ABI void visitConstant(const SCEVConstant *Numerator);
 
-  void visitVScale(const SCEVVScale *Numerator);
+  LLVM_ABI void visitVScale(const SCEVVScale *Numerator);
 
-  void visitAddRecExpr(const SCEVAddRecExpr *Numerator);
+  LLVM_ABI void visitAddRecExpr(const SCEVAddRecExpr *Numerator);
 
-  void visitAddExpr(const SCEVAddExpr *Numerator);
+  LLVM_ABI void visitAddExpr(const SCEVAddExpr *Numerator);
 
-  void visitMulExpr(const SCEVMulExpr *Numerator);
+  LLVM_ABI void visitMulExpr(const SCEVMulExpr *Numerator);
 
 private:
   SCEVDivision(ScalarEvolution &S, const SCEV *Numerator,
@@ -88,7 +89,7 @@ class SCEVDivisionPrinterPass : public PassInfoMixin<SCEVDivisionPrinterPass> {
 
 public:
   explicit SCEVDivisionPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

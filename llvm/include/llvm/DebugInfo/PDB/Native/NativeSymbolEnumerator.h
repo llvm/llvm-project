@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -21,7 +22,7 @@ namespace pdb {
 class NativeSession;
 class NativeTypeEnum;
 
-class NativeSymbolEnumerator : public NativeRawSymbol {
+class LLVM_ABI NativeSymbolEnumerator : public NativeRawSymbol {
 public:
   NativeSymbolEnumerator(NativeSession &Session, SymIndexId Id,
                          const NativeTypeEnum &Parent,

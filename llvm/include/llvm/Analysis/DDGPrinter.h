@@ -16,6 +16,7 @@
 #define LLVM_ANALYSIS_DDGPRINTER_H
 
 #include "llvm/Analysis/DDG.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 
 namespace llvm {
@@ -27,8 +28,9 @@ class Loop;
 //===--------------------------------------------------------------------===//
 class DDGDotPrinterPass : public PassInfoMixin<DDGDotPrinterPass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
   static bool isRequired() { return true; }
 };
 
@@ -49,20 +51,20 @@ struct DOTGraphTraits<const DataDependenceGraph *>
 
   /// Print a DDG node either in concise form (-ddg-dot-only) or
   /// verbose mode (-ddg-dot).
-  std::string getNodeLabel(const DDGNode *Node,
-                           const DataDependenceGraph *Graph);
+  LLVM_ABI std::string getNodeLabel(const DDGNode *Node,
+                                    const DataDependenceGraph *Graph);
 
   /// Print attributes of an edge in the DDG graph. If the edge
   /// is a MemoryDependence edge, then detailed dependence info
   /// available from DependenceAnalysis is displayed.
-  std::string
+  LLVM_ABI std::string
   getEdgeAttributes(const DDGNode *Node,
                     GraphTraits<const DDGNode *>::ChildIteratorType I,
                     const DataDependenceGraph *G);
 
   /// Do not print nodes that are part of a pi-block separately. They
   /// will be printed when their containing pi-block is being printed.
-  bool isNodeHidden(const DDGNode *Node, const DataDependenceGraph *G);
+  LLVM_ABI bool isNodeHidden(const DDGNode *Node, const DataDependenceGraph *G);
 
 private:
   /// Print a DDG node in concise form.

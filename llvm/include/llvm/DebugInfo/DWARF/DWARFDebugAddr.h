@@ -11,6 +11,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -49,28 +50,30 @@ class DWARFDebugAddrTable {
 public:
 
   /// Extract the entire table, including all addresses.
-  Error extract(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
-                uint16_t CUVersion, uint8_t CUAddrSize,
-                std::function<void(Error)> WarnCallback);
+  LLVM_ABI Error extract(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
+                         uint16_t CUVersion, uint8_t CUAddrSize,
+                         std::function<void(Error)> WarnCallback);
 
   /// Extract a DWARFv5 address table.
-  Error extractV5(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
-                  uint8_t CUAddrSize, std::function<void(Error)> WarnCallback);
+  LLVM_ABI Error extractV5(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
+                           uint8_t CUAddrSize,
+                           std::function<void(Error)> WarnCallback);
 
   /// Extract a pre-DWARFv5 address table. Such tables do not have a header
   /// and consist only of a series of addresses.
   /// See https://gcc.gnu.org/wiki/DebugFission for details.
-  Error extractPreStandard(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
-                           uint16_t CUVersion, uint8_t CUAddrSize);
+  LLVM_ABI Error extractPreStandard(const DWARFDataExtractor &Data,
+                                    uint64_t *OffsetPtr, uint16_t CUVersion,
+                                    uint8_t CUAddrSize);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = {}) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts = {}) const;
 
   /// Return the address based on a given index.
-  Expected<uint64_t> getAddrEntry(uint32_t Index) const;
+  LLVM_ABI Expected<uint64_t> getAddrEntry(uint32_t Index) const;
 
   /// Return the full length of this table, including the length field.
   /// Return std::nullopt if the length cannot be identified reliably.
-  std::optional<uint64_t> getFullLength() const;
+  LLVM_ABI std::optional<uint64_t> getFullLength() const;
 
   /// Return the DWARF format of this table.
   dwarf::DwarfFormat getFormat() const { return Format; }

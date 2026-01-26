@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/SDNodeInfo.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -30,7 +31,7 @@ class SelectionDAG;
 /// Targets can subclass this to parameterize the
 /// SelectionDAG lowering and instruction selection process.
 ///
-class SelectionDAGTargetInfo {
+class LLVM_ABI SelectionDAGTargetInfo {
 public:
   explicit SelectionDAGTargetInfo() = default;
   SelectionDAGTargetInfo(const SelectionDAGTargetInfo &) = delete;
@@ -198,7 +199,7 @@ public:
 
 /// Proxy class that targets should inherit from if they wish to use
 /// the generated node descriptions.
-class SelectionDAGGenTargetInfo : public SelectionDAGTargetInfo {
+class LLVM_ABI SelectionDAGGenTargetInfo : public SelectionDAGTargetInfo {
 protected:
   const SDNodeInfo &GenNodeInfo;
 

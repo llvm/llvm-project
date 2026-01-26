@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -152,13 +153,12 @@ public:
     return realpathCached(Path, ec);
   }
 #ifndef _WIN32
-  mode_t lstatCached(StringRef Path);
-  std::optional<std::string> readlinkCached(StringRef Path);
+  LLVM_ABI mode_t lstatCached(StringRef Path);
+  LLVM_ABI std::optional<std::string> readlinkCached(StringRef Path);
 #endif
-  std::optional<std::string> realpathCached(StringRef Path, std::error_code &ec,
-                                            StringRef base = "",
-                                            bool baseIsResolved = false,
-                                            long symloopLevel = 40);
+  LLVM_ABI std::optional<std::string>
+  realpathCached(StringRef Path, std::error_code &ec, StringRef base = "",
+                 bool baseIsResolved = false, long symloopLevel = 40);
 };
 
 /// Performs placeholder substitution in dynamic library paths.
@@ -167,7 +167,7 @@ public:
 /// in input paths with their resolved values.
 class DylibSubstitutor {
 public:
-  void configure(StringRef loaderPath);
+  LLVM_ABI void configure(StringRef loaderPath);
 
   std::string substitute(StringRef input) const {
     for (const auto &[ph, value] : Placeholders) {
@@ -219,14 +219,14 @@ public:
     return *Obj.getBinary();
   }
 
-  static bool isArchitectureCompatible(const object::ObjectFile &Obj);
+  LLVM_ABI static bool isArchitectureCompatible(const object::ObjectFile &Obj);
 
 private:
   object::OwningBinary<object::ObjectFile> Obj;
   Error Err = Error::success();
   bool ErrorTaken = false;
 
-  static Expected<object::OwningBinary<object::ObjectFile>>
+  LLVM_ABI static Expected<object::OwningBinary<object::ObjectFile>>
   loadObjectFileWithOwnership(StringRef FilePath);
 };
 
@@ -265,7 +265,7 @@ public:
                      ObjFileCache *ObjCache = nullptr)
       : LibPathResolver(PR), LibPathCache(LC), ObjCache(ObjCache) {}
 
-  bool isSharedLibrary(StringRef Path) const;
+  LLVM_ABI bool isSharedLibrary(StringRef Path) const;
   bool isSharedLibraryCached(StringRef Path) const {
     if (LibPathCache.hasSeen(Path))
       return true;
@@ -322,9 +322,9 @@ public:
       Paths.emplace_back(path.str());
   }
 
-  std::optional<std::string> resolve(StringRef libStem,
-                                     const DylibSubstitutor &Subst,
-                                     DylibPathValidator &Validator) const;
+  LLVM_ABI std::optional<std::string>
+  resolve(StringRef libStem, const DylibSubstitutor &Subst,
+          DylibPathValidator &Validator) const;
   SearchPathType searchPathType() const { return Kind; }
 
 private:
@@ -340,8 +340,8 @@ public:
       : Substitutor(std::move(Substitutor)), Validator(Validator),
         Resolvers(std::move(Resolvers)) {}
 
-  std::optional<std::string> resolve(StringRef Stem,
-                                     bool VariateLibStem = false) const;
+  LLVM_ABI std::optional<std::string>
+  resolve(StringRef Stem, bool VariateLibStem = false) const;
 
 private:
   std::optional<std::string> tryWithExtensions(StringRef libstem) const;
@@ -420,18 +420,18 @@ public:
       addBasePath(p);
   }
 
-  void
+  LLVM_ABI void
   addBasePath(const std::string &P,
               PathType Kind =
                   PathType::Unknown); // Add a canonical directory for scanning
 
-  void getNextBatch(PathType Kind, size_t batchSize,
-                    SmallVectorImpl<const LibrarySearchPath *> &Out);
+  LLVM_ABI void getNextBatch(PathType Kind, size_t batchSize,
+                             SmallVectorImpl<const LibrarySearchPath *> &Out);
 
-  bool leftToScan(PathType K) const;
-  void resetToScan();
+  LLVM_ABI bool leftToScan(PathType K) const;
+  LLVM_ABI void resetToScan();
 
-  bool isTrackedBasePath(StringRef P) const;
+  LLVM_ABI bool isTrackedBasePath(StringRef P) const;
   bool hasSearchPath() const { return !LibSearchPaths.empty(); }
 
   SmallVector<StringRef> getSearchPaths() const {
@@ -480,7 +480,7 @@ public:
                   &ObjCache),
         ShouldScanCall(std::move(ShouldScanCall)) {}
 
-  void scanNext(PathType Kind, size_t batchSize = 1);
+  LLVM_ABI void scanNext(PathType Kind, size_t batchSize = 1);
 
   /// Dependency info for a library.
   struct LibraryDepsInfo {

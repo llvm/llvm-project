@@ -54,6 +54,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -120,10 +121,10 @@ public:
 
   MachineTraceMetrics(MachineTraceMetrics &&) = default;
 
-  ~MachineTraceMetrics();
+  LLVM_ABI ~MachineTraceMetrics();
 
-  void init(MachineFunction &Func, const MachineLoopInfo &LI);
-  void clear();
+  LLVM_ABI void init(MachineFunction &Func, const MachineLoopInfo &LI);
+  LLVM_ABI void clear();
 
   /// Per-basic block information that doesn't depend on the trace through the
   /// block.
@@ -145,14 +146,14 @@ public:
   };
 
   /// Get the fixed resource information about MBB. Compute it on demand.
-  const FixedBlockInfo *getResources(const MachineBasicBlock*);
+  LLVM_ABI const FixedBlockInfo *getResources(const MachineBasicBlock *);
 
   /// Get the scaled number of cycles used per processor resource in MBB.
   /// This is an array with SchedModel.getNumProcResourceKinds() entries.
   /// The getResources() function above must have been called first.
   ///
   /// These numbers have already been scaled by SchedModel.getResourceFactor().
-  ArrayRef<unsigned> getProcReleaseAtCycles(unsigned MBBNum) const;
+  LLVM_ABI ArrayRef<unsigned> getProcReleaseAtCycles(unsigned MBBNum) const;
 
   /// A virtual register or regunit required by a basic block or its trace
   /// successors.
@@ -252,7 +253,7 @@ public:
     /// include PHI uses in deeper blocks.
     SmallVector<LiveInReg, 4> LiveIns;
 
-    void print(raw_ostream&) const;
+    LLVM_ABI void print(raw_ostream &) const;
     void dump() const { print(dbgs()); }
   };
 
@@ -281,7 +282,7 @@ public:
   public:
     explicit Trace(Ensemble &te, TraceBlockInfo &tbi) : TE(te), TBI(tbi) {}
 
-    void print(raw_ostream&) const;
+    LLVM_ABI void print(raw_ostream &) const;
     void dump() const { print(dbgs()); }
 
     /// Compute the total number of instructions in the trace.
@@ -294,7 +295,7 @@ public:
     /// the trace head to the trace center block. The resource depth only
     /// considers execution resources, it ignores data dependencies.
     /// When Bottom is set, instructions in the trace center block are included.
-    unsigned getResourceDepth(bool Bottom) const;
+    LLVM_ABI unsigned getResourceDepth(bool Bottom) const;
 
     /// Return the resource length of the trace. This is the number of cycles
     /// required to execute the instructions in the trace if they were all
@@ -304,7 +305,7 @@ public:
     /// trace. Likewise, extra resources required by the specified scheduling
     /// classes are included. For the caller to account for extra machine
     /// instructions, it must first resolve each instruction's scheduling class.
-    unsigned getResourceLength(
+    LLVM_ABI unsigned getResourceLength(
         ArrayRef<const MachineBasicBlock *> Extrablocks = {},
         ArrayRef<const MCSchedClassDesc *> ExtraInstrs = {},
         ArrayRef<const MCSchedClassDesc *> RemoveInstrs = {}) const;
@@ -323,23 +324,23 @@ public:
     /// Return the slack of MI. This is the number of cycles MI can be delayed
     /// before the critical path becomes longer.
     /// MI must be an instruction in the trace center block.
-    unsigned getInstrSlack(const MachineInstr &MI) const;
+    LLVM_ABI unsigned getInstrSlack(const MachineInstr &MI) const;
 
     /// Return the Depth of a PHI instruction in a trace center block successor.
     /// The PHI does not have to be part of the trace.
-    unsigned getPHIDepth(const MachineInstr &PHI) const;
+    LLVM_ABI unsigned getPHIDepth(const MachineInstr &PHI) const;
 
     /// A dependence is useful if the basic block of the defining instruction
     /// is part of the trace of the user instruction. It is assumed that DefMI
     /// dominates UseMI (see also isUsefulDominator).
-    bool isDepInTrace(const MachineInstr &DefMI,
-                      const MachineInstr &UseMI) const;
+    LLVM_ABI bool isDepInTrace(const MachineInstr &DefMI,
+                               const MachineInstr &UseMI) const;
   };
 
   /// A trace ensemble is a collection of traces selected using the same
   /// strategy, for example 'minimum resource height'. There is one trace for
   /// every block in the function.
-  class Ensemble {
+  class LLVM_ABI Ensemble {
     friend class Trace;
 
     SmallVector<TraceBlockInfo, 4> BlockInfo;
@@ -397,7 +398,7 @@ public:
   /// Get the trace ensemble representing the given trace selection strategy.
   /// The returned Ensemble object is owned by the MachineTraceMetrics analysis,
   /// and valid for the lifetime of the analysis pass.
-  Ensemble *getEnsemble(MachineTraceStrategy);
+  LLVM_ABI Ensemble *getEnsemble(MachineTraceStrategy);
 
   /// Invalidate cached information about MBB. This must be called *before* MBB
   /// is erased, or the CFG is otherwise changed.
@@ -407,13 +408,13 @@ public:
   /// through MBB.
   ///
   /// Call Ensemble::getTrace() again to update any trace handles.
-  void invalidate(const MachineBasicBlock *MBB);
+  LLVM_ABI void invalidate(const MachineBasicBlock *MBB);
 
   /// Handle invalidation explicitly.
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
 
-  void verifyAnalysis() const;
+  LLVM_ABI void verifyAnalysis() const;
 
 private:
   // One entry per basic block, indexed by block number.
@@ -457,18 +458,19 @@ class MachineTraceMetricsAnalysis
 
 public:
   using Result = MachineTraceMetrics;
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Verifier pass for \c MachineTraceMetrics.
 struct MachineTraceMetricsVerifierPass
     : PassInfoMixin<MachineTraceMetricsVerifierPass> {
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
-class MachineTraceMetricsWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineTraceMetricsWrapperPass : public MachineFunctionPass {
 public:
   static char ID;
   MachineTraceMetrics MTM;

@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
@@ -204,9 +205,9 @@ public:
   /// dereferenceable).
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
-  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
-                                      BuilderTy *Builder, bool &DoesConsume,
-                                      unsigned Depth);
+  LLVM_ABI Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                        BuilderTy *Builder, bool &DoesConsume,
+                                        unsigned Depth);
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
@@ -345,18 +346,19 @@ public:
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
 
   // Call target specific combiners
-  std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
-  std::optional<Value *>
+  LLVM_ABI std::optional<Instruction *>
+  targetInstCombineIntrinsic(IntrinsicInst &II);
+  LLVM_ABI std::optional<Value *>
   targetSimplifyDemandedUseBitsIntrinsic(IntrinsicInst &II, APInt DemandedMask,
                                          KnownBits &Known,
                                          bool &KnownBitsComputed);
-  std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
+  LLVM_ABI std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
       IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp);
 
-  void computeBackEdges();
+  LLVM_ABI void computeBackEdges();
   bool isBackEdge(const BasicBlock *From, const BasicBlock *To) {
     if (!ComputedBackEdges)
       computeBackEdges();
@@ -526,7 +528,7 @@ public:
                              unsigned Depth = 0,
                              bool AllowMultipleUsers = false) = 0;
 
-  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+  LLVM_ABI bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 };
 
 } // namespace llvm

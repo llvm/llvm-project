@@ -11,6 +11,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LPMUpdater;
@@ -18,8 +19,9 @@ class Loop;
 
 class LoopVersioningLICMPass : public PassInfoMixin<LoopVersioningLICMPass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &LAR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &LAR,
+                                 LPMUpdater &U);
 };
 
 } // namespace llvm

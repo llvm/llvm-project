@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <array>
@@ -73,10 +74,11 @@ struct PSVRuntimeInfo {
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
   // the highest supported version.
-  void write(raw_ostream &OS,
-             uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
+  LLVM_ABI void
+  write(raw_ostream &OS,
+        uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
 
-  void finalize(Triple::EnvironmentType Stage);
+  LLVM_ABI void finalize(Triple::EnvironmentType Stage);
 
 private:
   SmallVector<uint32_t, 64> IndexBuffer;
@@ -109,7 +111,7 @@ public:
                                Register, Mask, ExclusiveMask, MinPrecision});
   }
 
-  void write(raw_ostream &OS);
+  LLVM_ABI void write(raw_ostream &OS);
 };
 
 } // namespace mcdxbc

@@ -24,6 +24,7 @@
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -371,19 +372,19 @@ public:
         DefaultBlockScanLimit(DefaultBlockScanLimit) {}
 
   /// Handle invalidation in the new PM.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   /// Some methods limit the number of instructions they will examine.
   /// The return value of this method is the default limit that will be
   /// used if no limit is explicitly passed in.
-  unsigned getDefaultBlockScanLimit() const;
+  LLVM_ABI unsigned getDefaultBlockScanLimit() const;
 
   /// Returns the instruction on which a memory operation depends.
   ///
   /// See the class comment for more details. It is illegal to call this on
   /// non-memory instructions.
-  MemDepResult getDependency(Instruction *QueryInst);
+  LLVM_ABI MemDepResult getDependency(Instruction *QueryInst);
 
   /// Perform a full dependency query for the specified call, returning the set
   /// of blocks that the value is potentially live across.
@@ -398,7 +399,8 @@ public:
   /// invalidated on the next non-local query or when an instruction is
   /// removed.  Clients must copy this data if they want it around longer than
   /// that.
-  const NonLocalDepInfo &getNonLocalCallDependency(CallBase *QueryCall);
+  LLVM_ABI const NonLocalDepInfo &
+  getNonLocalCallDependency(CallBase *QueryCall);
 
   /// Perform a full dependency query for an access to the QueryInst's
   /// specified memory location, returning the set of instructions that either
@@ -410,12 +412,13 @@ public:
   ///
   /// This method assumes the pointer has a "NonLocal" dependency within
   /// QueryInst's parent basic block.
-  void getNonLocalPointerDependency(Instruction *QueryInst,
-                                    SmallVectorImpl<NonLocalDepResult> &Result);
+  LLVM_ABI void
+  getNonLocalPointerDependency(Instruction *QueryInst,
+                               SmallVectorImpl<NonLocalDepResult> &Result);
 
   /// Removes an instruction from the dependence analysis, updating the
   /// dependence of instructions that previously depended on it.
-  void removeInstruction(Instruction *InstToRemove);
+  LLVM_ABI void removeInstruction(Instruction *InstToRemove);
 
   /// Invalidates cached information about the specified pointer, because it
   /// may be too conservative in memdep.
@@ -424,13 +427,13 @@ public:
   /// equivalence between the pointer and some other value and replaces the
   /// other value with ptr. This can make Ptr available in more places that
   /// cached info does not necessarily keep.
-  void invalidateCachedPointerInfo(Value *Ptr);
+  LLVM_ABI void invalidateCachedPointerInfo(Value *Ptr);
 
   /// Clears the PredIteratorCache info.
   ///
   /// This needs to be done when the CFG changes, e.g., due to splitting
   /// critical edges.
-  void invalidateCachedPredecessors();
+  LLVM_ABI void invalidateCachedPredecessors();
 
   /// Returns the instruction on which a memory location depends.
   ///
@@ -445,24 +448,20 @@ public:
   /// in, the limit will default to the value of -memdep-block-scan-limit.
   ///
   /// Note that this is an uncached query, and thus may be inefficient.
-  MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
-                                        BasicBlock::iterator ScanIt,
-                                        BasicBlock *BB,
-                                        Instruction *QueryInst = nullptr,
-                                        unsigned *Limit = nullptr);
+  LLVM_ABI MemDepResult getPointerDependencyFrom(
+      const MemoryLocation &Loc, bool isLoad, BasicBlock::iterator ScanIt,
+      BasicBlock *BB, Instruction *QueryInst = nullptr,
+      unsigned *Limit = nullptr);
 
-  MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
-                                        BasicBlock::iterator ScanIt,
-                                        BasicBlock *BB,
-                                        Instruction *QueryInst,
-                                        unsigned *Limit,
-                                        BatchAAResults &BatchAA);
+  LLVM_ABI MemDepResult getPointerDependencyFrom(
+      const MemoryLocation &Loc, bool isLoad, BasicBlock::iterator ScanIt,
+      BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
+      BatchAAResults &BatchAA);
 
-  MemDepResult
-  getSimplePointerDependencyFrom(const MemoryLocation &MemLoc, bool isLoad,
-                                 BasicBlock::iterator ScanIt, BasicBlock *BB,
-                                 Instruction *QueryInst, unsigned *Limit,
-                                 BatchAAResults &BatchAA);
+  LLVM_ABI MemDepResult getSimplePointerDependencyFrom(
+      const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
+      BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
+      BatchAAResults &BatchAA);
 
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not
@@ -470,10 +469,11 @@ public:
   /// store the same value and NonLocal which indicate that non-local Def was
   /// found, which can be retrieved by calling getNonLocalPointerDependency
   /// with the same queried instruction.
-  MemDepResult getInvariantGroupPointerDependency(LoadInst *LI, BasicBlock *BB);
+  LLVM_ABI MemDepResult getInvariantGroupPointerDependency(LoadInst *LI,
+                                                           BasicBlock *BB);
 
   /// Release memory in caches.
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
 
   /// Return the clobber offset to dependent instruction.
   std::optional<int32_t> getClobberOffset(LoadInst *DepInst) const {
@@ -521,15 +521,16 @@ class MemoryDependenceAnalysis
 public:
   using Result = MemoryDependenceResults;
 
-  MemoryDependenceAnalysis();
+  LLVM_ABI MemoryDependenceAnalysis();
   MemoryDependenceAnalysis(unsigned DefaultBlockScanLimit) : DefaultBlockScanLimit(DefaultBlockScanLimit) { }
 
-  MemoryDependenceResults run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI MemoryDependenceResults run(Function &F,
+                                       FunctionAnalysisManager &AM);
 };
 
 /// A wrapper analysis pass for the legacy pass manager that exposes a \c
 /// MemoryDepnedenceResults instance.
-class MemoryDependenceWrapperPass : public FunctionPass {
+class LLVM_ABI MemoryDependenceWrapperPass : public FunctionPass {
   std::optional<MemoryDependenceResults> MemDep;
 
 public:

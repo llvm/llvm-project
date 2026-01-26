@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -94,7 +95,7 @@ class MCSectionXCOFF final : public MCSection {
   void printCsectDirective(raw_ostream &OS) const;
 
 public:
-  ~MCSectionXCOFF();
+  LLVM_ABI ~MCSectionXCOFF();
 
   XCOFF::StorageMappingClass getMappingClass() const {
     assert(isCsect() && "Only csect section has mapping class property!");

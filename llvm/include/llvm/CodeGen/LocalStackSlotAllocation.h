@@ -10,13 +10,15 @@
 #define LLVM_CODEGEN_LOCALSTACKSLOTALLOCATION_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class LocalStackSlotAllocationPass
     : public PassInfoMixin<LocalStackSlotAllocationPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &);
   static bool isRequired() { return true; }
 };
 

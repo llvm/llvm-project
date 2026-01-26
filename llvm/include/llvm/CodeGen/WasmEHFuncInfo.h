@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -85,7 +86,7 @@ struct WasmEHFuncInfo {
 };
 
 // Analyze the IR in the given function to build WasmEHFuncInfo.
-void calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo);
+LLVM_ABI void calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo);
 
 } // namespace llvm
 

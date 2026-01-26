@@ -14,12 +14,13 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {
 class NativeSession;
 
-class NativeTypeVTShape : public NativeRawSymbol {
+class LLVM_ABI NativeTypeVTShape : public NativeRawSymbol {
 public:
   // Create a pointer record for a non-simple type.
   NativeTypeVTShape(NativeSession &Session, SymIndexId Id,

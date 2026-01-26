@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Minidump.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {
@@ -24,7 +25,7 @@ namespace MinidumpYAML {
 /// one stream Kind can be used to represent multiple stream Types (e.g. any
 /// unrecognised stream Type will be handled via RawContentStream). The mapping
 /// from Types to Kinds is fixed and given by the static getKind function.
-struct Stream {
+struct LLVM_ABI Stream {
   enum class StreamKind {
     Exception,
     MemoryInfoList,
@@ -234,7 +235,7 @@ struct Object {
   /// The list of streams in this minidump object.
   std::vector<std::unique_ptr<Stream>> Streams;
 
-  static Expected<Object> create(const object::MinidumpFile &File);
+  LLVM_ABI static Expected<Object> create(const object::MinidumpFile &File);
 };
 
 } // namespace MinidumpYAML
@@ -254,19 +255,21 @@ template <> struct BlockScalarTraits<MinidumpYAML::BlockStringRef> {
 };
 
 template <> struct MappingTraits<std::unique_ptr<MinidumpYAML::Stream>> {
-  static void mapping(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
-  static std::string validate(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
+  LLVM_ABI static void mapping(IO &IO,
+                               std::unique_ptr<MinidumpYAML::Stream> &S);
+  LLVM_ABI static std::string
+  validate(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
 };
 
 template <> struct MappingContextTraits<minidump::MemoryDescriptor, BinaryRef> {
-  static void mapping(IO &IO, minidump::MemoryDescriptor &Memory,
-                      BinaryRef &Content);
+  LLVM_ABI static void mapping(IO &IO, minidump::MemoryDescriptor &Memory,
+                               BinaryRef &Content);
 };
 
 template <>
 struct MappingContextTraits<minidump::MemoryDescriptor_64, BinaryRef> {
-  static void mapping(IO &IO, minidump::MemoryDescriptor_64 &Memory,
-                      BinaryRef &Content);
+  LLVM_ABI static void mapping(IO &IO, minidump::MemoryDescriptor_64 &Memory,
+                               BinaryRef &Content);
 };
 
 } // namespace yaml

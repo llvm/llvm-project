@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -102,35 +103,37 @@ struct WinEHFuncInfo {
 
   int getLastStateNumber() const { return CxxUnwindMap.size() - 1; }
 
-  void addIPToStateRange(const InvokeInst *II, MCSymbol *InvokeBegin,
-                         MCSymbol *InvokeEnd);
+  LLVM_ABI void addIPToStateRange(const InvokeInst *II, MCSymbol *InvokeBegin,
+                                  MCSymbol *InvokeEnd);
 
-  void addIPToStateRange(int State, MCSymbol *InvokeBegin, MCSymbol *InvokeEnd);
+  LLVM_ABI void addIPToStateRange(int State, MCSymbol *InvokeBegin,
+                                  MCSymbol *InvokeEnd);
 
   int EHRegNodeFrameIndex = std::numeric_limits<int>::max();
   int EHRegNodeEndOffset = std::numeric_limits<int>::max();
   int EHGuardFrameIndex = std::numeric_limits<int>::max();
   int SEHSetFrameOffset = std::numeric_limits<int>::max();
 
-  WinEHFuncInfo();
+  LLVM_ABI WinEHFuncInfo();
 };
 
 /// Analyze the IR in ParentFn and it's handlers to build WinEHFuncInfo, which
 /// describes the state numbers and tables used by __CxxFrameHandler3. This
 /// analysis assumes that WinEHPrepare has already been run.
-void calculateWinCXXEHStateNumbers(const Function *ParentFn,
-                                   WinEHFuncInfo &FuncInfo);
+LLVM_ABI void calculateWinCXXEHStateNumbers(const Function *ParentFn,
+                                            WinEHFuncInfo &FuncInfo);
 
-void calculateSEHStateNumbers(const Function *ParentFn,
-                              WinEHFuncInfo &FuncInfo);
+LLVM_ABI void calculateSEHStateNumbers(const Function *ParentFn,
+                                       WinEHFuncInfo &FuncInfo);
 
-void calculateClrEHStateNumbers(const Function *Fn, WinEHFuncInfo &FuncInfo);
+LLVM_ABI void calculateClrEHStateNumbers(const Function *Fn,
+                                         WinEHFuncInfo &FuncInfo);
 
 // For AsynchEH (VC++ option -EHa)
-void calculateCXXStateForAsynchEH(const BasicBlock *BB, int State,
-                                  WinEHFuncInfo &FuncInfo);
-void calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
-                                  WinEHFuncInfo &FuncInfo);
+LLVM_ABI void calculateCXXStateForAsynchEH(const BasicBlock *BB, int State,
+                                           WinEHFuncInfo &FuncInfo);
+LLVM_ABI void calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
+                                           WinEHFuncInfo &FuncInfo);
 
 } // end namespace llvm
 

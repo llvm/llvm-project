@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -56,9 +57,9 @@ struct ILPValue {
     return RHS <= *this;
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 /// Compute the values of each DAG node for various metrics during DFS.
@@ -138,7 +139,7 @@ public:
   }
 
   /// Compute various metrics for the DAG with given roots.
-  void compute(ArrayRef<SUnit> SUnits);
+  LLVM_ABI void compute(ArrayRef<SUnit> SUnits);
 
   /// Get the number of instructions in the given subtree and its
   /// children.
@@ -183,10 +184,10 @@ public:
 
   /// Scheduler callback to update SubtreeConnectLevels when a tree is
   /// initially scheduled.
-  void scheduleTree(unsigned SubtreeID);
+  LLVM_ABI void scheduleTree(unsigned SubtreeID);
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val);
 
 } // end namespace llvm
 

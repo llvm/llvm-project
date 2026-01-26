@@ -70,6 +70,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -88,7 +89,7 @@ class TargetRegisterInfo;
 
 /// This pass implements the reg bank selector pass used in the GlobalISel
 /// pipeline. At the end of this pass, all register operands have been assigned
-class RegBankSelect : public MachineFunctionPass {
+class LLVM_ABI RegBankSelect : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -201,7 +202,7 @@ public:
   };
 
   /// Insertion point before or after an instruction.
-  class InstrInsertPoint : public InsertPoint {
+  class LLVM_ABI InstrInsertPoint : public InsertPoint {
   private:
     /// Insertion point.
     MachineInstr &Instr;
@@ -234,7 +235,7 @@ public:
   };
 
   /// Insertion point at the beginning or end of a basic block.
-  class MBBInsertPoint : public InsertPoint {
+  class LLVM_ABI MBBInsertPoint : public InsertPoint {
   private:
     /// Insertion point.
     MachineBasicBlock &MBB;
@@ -270,7 +271,7 @@ public:
   };
 
   /// Insertion point on an edge.
-  class EdgeInsertPoint : public InsertPoint {
+  class LLVM_ABI EdgeInsertPoint : public InsertPoint {
   private:
     /// Source of the edge.
     MachineBasicBlock &Src;
@@ -353,9 +354,9 @@ public:
     /// if the machine operand is a physical register. \p P is used to
     /// to update liveness information and such when materializing the
     /// points.
-    RepairingPlacement(MachineInstr &MI, unsigned OpIdx,
-                       const TargetRegisterInfo &TRI, Pass &P,
-                       RepairingKind Kind = RepairingKind::Insert);
+    LLVM_ABI RepairingPlacement(MachineInstr &MI, unsigned OpIdx,
+                                const TargetRegisterInfo &TRI, Pass &P,
+                                RepairingKind Kind = RepairingKind::Insert);
 
     /// \name Getters.
     /// @{
@@ -368,14 +369,15 @@ public:
     /// \name Overloaded methods to add an insertion point.
     /// @{
     /// Add a MBBInsertionPoint to the list of InsertPoints.
-    void addInsertPoint(MachineBasicBlock &MBB, bool Beginning);
+    LLVM_ABI void addInsertPoint(MachineBasicBlock &MBB, bool Beginning);
     /// Add a InstrInsertionPoint to the list of InsertPoints.
-    void addInsertPoint(MachineInstr &MI, bool Before);
+    LLVM_ABI void addInsertPoint(MachineInstr &MI, bool Before);
     /// Add an EdgeInsertionPoint (\p Src, \p Dst) to the list of InsertPoints.
-    void addInsertPoint(MachineBasicBlock &Src, MachineBasicBlock &Dst);
+    LLVM_ABI void addInsertPoint(MachineBasicBlock &Src,
+                                 MachineBasicBlock &Dst);
     /// Add an InsertPoint to the list of insert points.
     /// This method takes the ownership of &\p Point.
-    void addInsertPoint(InsertPoint &Point);
+    LLVM_ABI void addInsertPoint(InsertPoint &Point);
     /// @}
 
     /// \name Accessors related to the insertion points.
@@ -440,28 +442,28 @@ protected:
   public:
     /// Create a MappingCost assuming that most of the instructions
     /// will occur in a basic block with \p LocalFreq frequency.
-    MappingCost(BlockFrequency LocalFreq);
+    LLVM_ABI MappingCost(BlockFrequency LocalFreq);
 
     /// Add \p Cost to the local cost.
     /// \return true if this cost is saturated, false otherwise.
-    bool addLocalCost(uint64_t Cost);
+    LLVM_ABI bool addLocalCost(uint64_t Cost);
 
     /// Add \p Cost to the non-local cost.
     /// Non-local cost should reflect the frequency of their placement.
     /// \return true if this cost is saturated, false otherwise.
-    bool addNonLocalCost(uint64_t Cost);
+    LLVM_ABI bool addNonLocalCost(uint64_t Cost);
 
     /// Saturate the cost to the maximal representable value.
-    void saturate();
+    LLVM_ABI void saturate();
 
     /// Return an instance of MappingCost that represents an
     /// impossible mapping.
-    static MappingCost ImpossibleCost();
+    LLVM_ABI static MappingCost ImpossibleCost();
 
     /// Check if this is less than \p Cost.
-    bool operator<(const MappingCost &Cost) const;
+    LLVM_ABI bool operator<(const MappingCost &Cost) const;
     /// Check if this is equal to \p Cost.
-    bool operator==(const MappingCost &Cost) const;
+    LLVM_ABI bool operator==(const MappingCost &Cost) const;
     /// Check if this is not equal to \p Cost.
     bool operator!=(const MappingCost &Cost) const { return !(*this == Cost); }
     /// Check if this is greater than \p Cost.
@@ -470,10 +472,10 @@ protected:
     }
 
     /// Print this on dbgs() stream.
-    void dump() const;
+    LLVM_ABI void dump() const;
 
     /// Print this on \p OS;
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
 
     /// Overload the stream operator for easy debug printing.
     friend raw_ostream &operator<<(raw_ostream &OS, const MappingCost &Cost) {

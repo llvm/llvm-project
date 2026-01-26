@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <atomic>
@@ -94,7 +95,7 @@ public:
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
-  bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
+  LLVM_ABI bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
 
   void setHasCanonicalDIE() { HasCanonicalDIE = true; }
 
@@ -143,10 +144,9 @@ public:
   ///
   /// FIXME: The invalid bit along the return value is to emulate some
   /// dsymutil-classic functionality.
-  PointerIntPair<DeclContext *, 1> getChildDeclContext(DeclContext &Context,
-                                                       const DWARFDie &DIE,
-                                                       CompileUnit &Unit,
-                                                       bool InClangModule);
+  LLVM_ABI PointerIntPair<DeclContext *, 1>
+  getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
+                      CompileUnit &Unit, bool InClangModule);
 
   DeclContext &getRoot() { return Root; }
 
