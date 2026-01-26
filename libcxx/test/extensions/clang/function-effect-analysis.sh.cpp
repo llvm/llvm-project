@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test requires noexcept
-// UNSUPPORTED: c++03
+// This test requires noexcept and std::span
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // GCC doesn't support -Wfunction-effect-analysis and the associated attributes
 // UNSUPPORTED: gcc
