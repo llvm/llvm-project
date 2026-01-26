@@ -514,7 +514,10 @@ enum RelocationInfoType {
   // functions.
   RISCV_RELOC_LO12 = 4,
   // High 20 bits of GOT slot. r_pcrel=1 means this is paired with an
-  // AUIPC.  r_pcrel=0 means this is paired with a LUI.
+  // AUIPC.  r_pcrel=0 means this is paired with a LUI (the compiler
+  // may emit a @got reloc for a reference to anything outside the
+  // translation unit, then the linker elides the @got if the target
+  // is in range).
   RISCV_RELOC_GOT_HI20 = 5,
   // Low 12 bits of GOT slot. r_pcrel=1 means this is paired with an
   // AUIPC.  r_pcrel=0 means this is paired with a LUI.
