@@ -199,6 +199,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash when diagnosing invalid deducing-this member function overloads which is annotated as static. (#GH177741)
+- Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
 
 OpenACC Specific Changes
 ------------------------
