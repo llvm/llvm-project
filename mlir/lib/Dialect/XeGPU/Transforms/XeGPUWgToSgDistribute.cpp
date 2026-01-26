@@ -627,7 +627,22 @@ struct WgToSgConvertLayoutOp
         targetLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
 
-    // if sg_layout and sg_data are identical, no SLM needed
+    auto hasUnitLeadingDims = [](ArrayRef<int64_t> shape) {
+      if (shape.size() <= 2)
+        return true;
+      for (size_t i = 0; i + 2 < shape.size(); ++i)
+        if (shape[i] != 1)
+          return false;
+      return true;
+    };
+
+    if (wgShape.size() > 2) {
+      if (!hasUnitLeadingDims(inputSgData) || !hasUnitLeadingDims(targetSgData))
+        return rewriter.notifyMatchFailure(
+            op, "rank > 2 requires unit leading dims for sg_data");
+    }
+
+    // Fast path: if sg_layout and sg_data are identical, no SLM needed
     if (inputSgLayout == targetSgLayout && inputSgData == targetSgData) {
       inputLayout = inputLayout.dropSgLayoutAndData();
       targetLayout = targetLayout.dropSgLayoutAndData();
@@ -645,11 +660,11 @@ struct WgToSgConvertLayoutOp
     }
 
     // SLM path: layouts differ, need cross-subgroup data redistribution
-    auto srcVectorType = cast<VectorType>(op.getSource().getType());
-    Type elemTy = srcVectorType.getElementType();
+    Type elemTy = cast<VectorType>(op.getSource().getType()).getElementType();
+
+    SmallVector<int64_t> slmShape = llvm::to_vector(wgShape);
 
     // Calculate SLM size requirements
-    auto slmShape = wgShape;
     auto bitWidth = elemTy.getIntOrFloatBitWidth();
     auto bytesPerElement = bitWidth / 8;
     auto slmSize = computeProduct(slmShape) * bytesPerElement;
@@ -666,80 +681,47 @@ struct WgToSgConvertLayoutOp
     auto sgId = gpu::SubgroupIdOp::create(rewriter, loc,
                                           rewriter.getIndexType(), nullptr);
 
-    // STORE PHASE: Store input data to SLM using input layout
-    // Convert input sg_layout to Values for delinearizeIndex
-    SmallVector<Value> inputSgLayoutValues;
-    for (int64_t dim : inputSgLayout) {
-      inputSgLayoutValues.push_back(
-          arith::ConstantIndexOp::create(rewriter, loc, dim));
-    }
-
-    auto inputSgIdsResult = affine::delinearizeIndex(
-        rewriter, loc, sgId.getResult(), inputSgLayoutValues);
-    if (failed(inputSgIdsResult))
+    // STORE PHASE: Each subgroup stores in SLM using input layout
+    auto storeCoords = inputLayout.computeDistributedCoords(
+        rewriter, loc, sgId.getResult(), wgShape);
+    if (failed(storeCoords))
       return failure();
-    SmallVector<Value> inputSgIds = *inputSgIdsResult;
 
-    // Calculate store offsets based on input subgroup position and sg_data
-    SmallVector<Value> storeOffsets;
-    for (size_t i = 0; i < inputSgIds.size(); ++i) {
-      Value sgDataVal =
-          arith::ConstantIndexOp::create(rewriter, loc, inputSgData[i]);
-      Value offset =
-          arith::MulIOp::create(rewriter, loc, inputSgIds[i], sgDataVal);
-      storeOffsets.push_back(offset);
-    }
-
-    SmallVector<OpFoldResult> storeMatrixOffsets(storeOffsets.begin(),
-                                                 storeOffsets.end());
-
-    for (auto src : adaptor.getSource()) {
+    // Store to SLM
+    for (auto [src, coords] : llvm::zip(adaptor.getSource(), *storeCoords)) {
+      SmallVector<OpFoldResult> storeMatrixOffsets;
+      for (Value coord : coords) {
+        storeMatrixOffsets.push_back(coord);
+      }
       xegpu::StoreMatrixOp::create(rewriter, loc, src, memDesc.getResult(),
-                                   storeMatrixOffsets,
-                                   targetLayout.dropSgLayoutAndData());
+                                   storeMatrixOffsets, nullptr /*layout*/);
     }
 
     gpu::BarrierOp::create(rewriter, loc);
 
-    // LOAD PHASE: Load data from SLM using target layout
-    // Convert target sg_layout to Values for delinearizeIndex
-    SmallVector<Value> targetSgLayoutValues;
-    for (int64_t dim : targetSgLayout) {
-      targetSgLayoutValues.push_back(
-          arith::ConstantIndexOp::create(rewriter, loc, dim));
-    }
-
-    auto targetSgIdsResult = affine::delinearizeIndex(
-        rewriter, loc, sgId.getResult(), targetSgLayoutValues);
-    if (failed(targetSgIdsResult))
+    // LOAD PHASE: Each target subgroup loads from SLM using target layout
+    auto loadCoords = targetLayout.computeDistributedCoords(
+        rewriter, loc, sgId.getResult(), wgShape);
+    if (failed(loadCoords))
       return failure();
-    SmallVector<Value> targetSgIds = *targetSgIdsResult;
 
-    // Calculate load offsets based on target subgroup position and sg_data
-    SmallVector<Value> loadOffsets;
-    for (size_t i = 0; i < targetSgIds.size(); ++i) {
-      Value sgDataVal =
-          arith::ConstantIndexOp::create(rewriter, loc, targetSgData[i]);
-      Value offset =
-          arith::MulIOp::create(rewriter, loc, targetSgIds[i], sgDataVal);
-      loadOffsets.push_back(offset);
+    VectorType loadType = VectorType::get(targetSgData, elemTy);
+
+    // Load vectors from SLM
+    SmallVector<Value> finalResults;
+    for (auto coords : *loadCoords) {
+      SmallVector<OpFoldResult> loadMatrixOffsets;
+      for (Value coord : coords) {
+        loadMatrixOffsets.push_back(coord);
+      }
+      auto loadOp = xegpu::LoadMatrixOp::create(
+          rewriter, loc, loadType, memDesc.getResult(), loadMatrixOffsets,
+          targetLayout.dropSgLayoutAndData());
+
+      finalResults.push_back(loadOp.getResult());
     }
 
-    SmallVector<OpFoldResult> loadMatrixOffsets(loadOffsets.begin(),
-                                                loadOffsets.end());
-
-    VectorType targetVectorType = VectorType::get(targetSgData, elemTy);
-
-    SmallVector<Value> loadedVectors;
-    for (size_t i = 0; i < adaptor.getSource().size(); ++i) {
-      auto loadOp =
-          xegpu::LoadMatrixOp::create(rewriter, loc, targetVectorType,
-                                      memDesc.getResult(), loadMatrixOffsets,
-                                      /*layout=*/nullptr);
-      loadedVectors.push_back(loadOp.getResult());
-    }
-
-    rewriter.replaceOpWithMultiple(op, {loadedVectors});
+    rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
 };
