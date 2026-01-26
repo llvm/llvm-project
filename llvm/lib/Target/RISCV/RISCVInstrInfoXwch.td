@@ -26,34 +26,10 @@ class QKStackInst<bits<2> funct2, dag outs, dag ins,
 //===----------------------------------------------------------------------===//
 
 // A 5-bit unsigned immediate where the least significant bit is zero.
-def uimm5_lsb0 : RISCVOp,
-                 ImmLeaf<XLenVT, [{return isShiftedUInt<4, 1>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<5, "Lsb0">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_UIMM5_LSB0";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<4, 1>(Imm);
-  }];
-}
+def uimm5_lsb0 : RISCVUImmLsbZeroOp<5, 1>;
 
 // A 6-bit unsigned immediate where the least significant bit is zero.
-def uimm6_lsb0 : RISCVOp,
-                 ImmLeaf<XLenVT, [{return isShiftedUInt<5, 1>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<6, "Lsb0">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<6>";
-  let OperandType = "OPERAND_UIMM6_LSB0";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<5, 1>(Imm);
-  }];
-}
+def uimm6_lsb0 : RISCVUImmLsbZeroOp<6, 1>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
