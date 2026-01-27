@@ -2,12 +2,14 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='loop-unroll-and-jam' -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-
 ; CHECK-LABEL: fore_aft_less
+; CHECK: %i = phi
+; CHECK-NOT: phi
 ; CHECK: %j = phi
-; CHECK: %j.1 = phi
-; CHECK: %j.2 = phi
-; CHECK: %j.3 = phi
+; CHECK-NOT: phi
+; CHECK: %sum = phi
+; CHECK-NOT: phi
+; CHECK: add.lcssa = phi
 ;
 ; fore_aft_less SHOULD be unroll-and-jammed (count=4) as it's safe.
 ; Memory accesses:
@@ -17,6 +19,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ; access different array elements, so unrolling the outer loop and jamming the
 ; inner loop is safe. The backward dependency (i-1) doesn't create conflicts
 ; between different unrolled iterations.
+; After PR#178047 we cannot prove safety of this transformation.
 define void @fore_aft_less(ptr noalias nocapture %A, i32 %N, ptr noalias nocapture readonly %B) {
 entry:
   %cmp = icmp sgt i32 %N, 0
@@ -195,7 +198,6 @@ cleanup:
   ret void
 }
 
-
 ; CHECK-LABEL: fore_sub_eq
 ; CHECK: %j = phi
 ; CHECK: %j.1 = phi
@@ -293,10 +295,13 @@ cleanup:
 
 
 ; CHECK-LABEL: sub_aft_less
+; CHECK: %i = phi
+; CHECK-NOT: phi
 ; CHECK: %j = phi
-; CHECK: %j.1 = phi
-; CHECK: %j.2 = phi
-; CHECK: %j.3 = phi
+; CHECK-NOT: phi
+; CHECK: %sum = phi
+; CHECK-NOT: phi
+; CHECK: add.lcssa = phi
 ;
 ; sub_aft_less SHOULD be unroll-and-jammed (count=4) as it's safe.
 ; Memory accesses:
@@ -305,6 +310,7 @@ cleanup:
 ; No dependency conflict: The sub block writes A[i] and aft block writes A[i-1].
 ; These access different array elements, so unroll-and-jam is safe. The backward
 ; dependency pattern doesn't create conflicts between unrolled iterations.
+; After PR#178047 we cannot prove safety of this transformation.
 define void @sub_aft_less(ptr noalias nocapture %A, i32 %N, ptr noalias nocapture readonly %B) {
 entry:
   %cmp = icmp sgt i32 %N, 0
