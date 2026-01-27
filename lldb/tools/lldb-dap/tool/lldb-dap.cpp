@@ -330,7 +330,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   if (!stdio.empty()) {
     llvm::SmallVector<llvm::StringRef, 3> files;
-    stdio.split(files, ':');
+    stdio.split(files, ';');
     while (files.size() < 3)
       files.push_back(files.back());
 
