@@ -67,6 +67,7 @@
 #include "flang/Support/Flags.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1644,6 +1645,48 @@ private:
     genConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
 
+  void
+  genDoWhileAsSCFWhile(const Fortran::parser::ScalarLogicalExpr &whileCondition,
+                       Fortran::lower::pft::Evaluation &doConstructEval,
+                       Fortran::lower::pft::Evaluation &doStmtEval) {
+    mlir::Location loc = toLocation();
+
+    auto scfWhile =
+        mlir::scf::WhileOp::create(*builder, loc,
+                                   /*resultTypes=*/mlir::TypeRange{},
+                                   /*inits=*/mlir::ValueRange{});
+
+    // Fill the "before" region: compute condition.
+    mlir::Block *beforeBlock =
+        builder->createBlock(&scfWhile.getBefore(), scfWhile.getBefore().end());
+    builder->setInsertionPointToStart(beforeBlock);
+    Fortran::lower::StatementContext stmtCtx;
+    mlir::Value cond = createFIRExpr(
+        loc, Fortran::semantics::GetExpr(whileCondition), stmtCtx);
+    stmtCtx.finalizeAndReset();
+    cond = builder->createConvert(loc, builder->getI1Type(), cond);
+    mlir::scf::ConditionOp::create(*builder, loc, cond, mlir::ValueRange{});
+
+    // Fill the "after" region: loop body.
+    mlir::Block *afterBlock =
+        builder->createBlock(&scfWhile.getAfter(), scfWhile.getAfter().end());
+    builder->setInsertionPointToStart(afterBlock);
+
+    // Lower nested evaluations excluding the loop control statement (the
+    // NonLabelDoStmt) and the EndDoStmt.
+    auto iter = doConstructEval.getNestedEvaluations().begin();
+    auto end = doConstructEval.getNestedEvaluations().end();
+    assert(iter != end && "malformed DoConstruct evaluation list");
+    ++iter; // skip the NonLabelDoStmt
+    assert(iter != end && "malformed DoConstruct evaluation list");
+    auto endDoIter = std::prev(end);
+    for (; iter != endDoIter; ++iter)
+      genFIR(*iter, /*unstructuredContext=*/false);
+
+    mlir::scf::YieldOp::create(*builder, loc);
+    builder->setInsertionPointAfter(scfWhile);
+  }
+
   /// Return the nearest active ancestor construct of \p eval, or nullptr.
   Fortran::lower::pft::Evaluation *
   getActiveAncestor(const Fortran::lower::pft::Evaluation &eval) {
@@ -2408,6 +2451,14 @@ private:
             // necessary to forward the AccessGroups attribute.
             assignOp.getOperation()->setAttr(fir::getAccessGroupsAttrName(),
                                              attrs);
+          } else if (hlfir::RegionAssignOp regionAssignOp =
+                         mlir::dyn_cast<hlfir::RegionAssignOp>(op)) {
+            // User defined assignment, WHERE and FORALL assignments are
+            // abstracted via hlfir.region_assign at that stage. Set the
+            // access group on it so that it can later be propagated to
+            // hlfir.assign/fir.store/fir.loads created to implement it.
+            regionAssignOp.getOperation()->setAttr(
+                fir::getAccessGroupsAttrName(), attrs);
           } else if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
             callOp.setAccessGroupsAttr(attrs);
           }
@@ -2483,6 +2534,17 @@ private:
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
                         &loopControl->u))) {
+      // Optionally lower a restricted subset of DO WHILE loops directly to
+      // scf.while. This subset excludes early-exit constructs (EXIT/CYCLE/GOTO,
+      // etc.) by requiring that the loop body is structured (as decided by the
+      // PFT branch analysis), allowing the loop to exit only when the condition
+      // becomes false.
+      if (!unstructuredContext) {
+        maybeStartBlock(preheaderBlock); // no block or empty block
+        genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
+        return;
+      }
+
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
       startBlock(headerBlock);
