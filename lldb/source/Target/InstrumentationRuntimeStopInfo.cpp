@@ -53,7 +53,8 @@ InstrumentationRuntimeStopInfo::GetSuggestedStackFrameIndex(
   // case we somehow ended up looking at an infinite recursion.
   constexpr size_t max_stack_depth = 128;
 
-  size_t stack_idx = 0;
+  // Start at parent frame.
+  size_t stack_idx = 1;
   StackFrameSP most_relevant_frame_sp =
       thread_sp->GetStackFrameAtIndex(stack_idx);
 

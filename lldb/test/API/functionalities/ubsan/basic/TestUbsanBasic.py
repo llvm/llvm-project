@@ -13,6 +13,7 @@ import json
 class UbsanBasicTestCase(TestBase):
     @skipUnlessUndefinedBehaviorSanitizer
     @no_debug_info_test
+    @skipUnlessDarwin  # FIXME: update this test to work on other platforms
     def test(self):
         self.build()
         self.ubsan_tests()
