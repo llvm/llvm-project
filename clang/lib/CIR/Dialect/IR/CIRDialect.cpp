@@ -18,6 +18,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -1308,6 +1309,37 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 //===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
+
+/// Merges blocks connected by a unique unconditional branch.
+///
+///   ^bb0:              ^bb0:
+///     ...                ...
+///     cir.br ^bb1  =>    ...
+///   ^bb1:                cir.return
+///     ...
+///     cir.return
+LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
+  Block *src = op->getBlock();
+  Block *dst = op.getDest();
+
+  // Do not fold self-loops.
+  if (src == dst)
+    return failure();
+
+  // Only merge when this is the unique edge between the blocks.
+  if (src->getNumSuccessors() != 1 || dst->getSinglePredecessor() != src)
+    return failure();
+
+  // Don't merge blocks that start with LabelOp or IndirectBrOp.
+  // This is to avoid merging blocks that have an indirect predecessor.
+  if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
+    return failure();
+
+  auto operands = op.getDestOperands();
+  rewriter.eraseOp(op);
+  rewriter.mergeBlocks(dst, src, operands);
+  return success();
+}
 
 mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
@@ -2633,6 +2665,18 @@ LogicalResult cir::DerivedDataMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
@@ -2807,6 +2851,22 @@ LogicalResult cir::ExtractMemberOp::verify() {
     return emitError() << "member index out of bounds";
   if (recordTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::InsertMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError() << "cir.insert_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+    return emitError() << "member type mismatch";
+  // The op trait already checks that the types of $result and $record match.
   return mlir::success();
 }
 

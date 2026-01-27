@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBC-ZBKC
 
+; NOTE: This intrinsic has been removed so this tests autoupgrade to llvm.clmul.
 define i64 @clmul64(i64 %a, i64 %b) nounwind {
 ; RV64ZBC-ZBKC-LABEL: clmul64:
 ; RV64ZBC-ZBKC:       # %bb.0:
@@ -22,6 +23,7 @@ define i64 @clmul64h(i64 %a, i64 %b) nounwind {
   ret i64 %tmp
 }
 
+; NOTE: This intrinsic has been removed so this tests autoupgrade to llvm.clmul.
 define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-ZBKC-LABEL: clmul32:
 ; RV64ZBC-ZBKC:       # %bb.0:
