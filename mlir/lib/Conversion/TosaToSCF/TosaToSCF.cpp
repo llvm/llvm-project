@@ -101,9 +101,9 @@ public:
     auto input = scatter.getInput();
     auto loc = scatter.getLoc();
 
-    auto valuesType  = dyn_cast<RankedTensorType>(valuesIn.getType());
+    auto valuesType = dyn_cast<RankedTensorType>(valuesIn.getType());
     auto indicesType = dyn_cast<RankedTensorType>(indices.getType());
-    auto inputType   = dyn_cast<RankedTensorType>(input.getType());
+    auto inputType = dyn_cast<RankedTensorType>(input.getType());
     if (!valuesType || !indicesType || !inputType ||
         valuesType.getRank() != 3 || inputType.getRank() != 3 ||
         indicesType.getRank() != 2)
