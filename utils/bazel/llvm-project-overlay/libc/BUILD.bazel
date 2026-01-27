@@ -3514,6 +3514,7 @@ libc_support_library(
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_math_sincosf16_utils",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
