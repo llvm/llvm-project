@@ -1396,7 +1396,7 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
   defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
-  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+  let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = convertibleTo3Addr in {
       def _twoaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
     }
