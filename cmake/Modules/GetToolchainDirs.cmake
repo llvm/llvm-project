@@ -39,7 +39,7 @@ endfunction ()
 
 
 # Corresponds to Flang's ToolChain::getDefaultIntrinsicModuleDir().
-function (get_toolchain_module_subdir outvar)
+function (get_toolchain_fortran_module_subdir outvar)
   set(outval "finclude/flang")
 
   get_toolchain_arch_dirname(arch_dirname)
@@ -65,11 +65,9 @@ endfunction ()
 # Internal function extracted from compiler-rt. Use get_toolchain_arch_dirname
 # instead for new code.
 function(get_runtimes_target_libdir_common default_target_triple arch variable)
-message("  string(FIND "${default_target_triple}" "-" dash_index)")
   string(FIND "${default_target_triple}" "-" dash_index)
-message("string(SUBSTRING "${default_target_triple}" ${dash_index} -1 triple_suffix)")
-  string(SUBSTRING "${default_target_triple}" ${dash_index} -1 triple_suffix)
-  string(SUBSTRING "${default_target_triple}" 0 ${dash_index} triple_cpu)
+  string(SUBSTRING "${default_target_triple}" "${dash_index}" -1 triple_suffix)
+  string(SUBSTRING "${default_target_triple}" 0 "${dash_index}" triple_cpu)
   if(ANDROID AND "${arch}" STREQUAL "i386")
     set(target "i686${triple_suffix}")
   elseif("${arch}" STREQUAL "amd64")
@@ -120,10 +118,9 @@ endfunction()
 # Corresponds to Clang's ToolChain::getRuntimePath().
 function (get_toolchain_arch_dirname outvar)
   string(FIND "${LLVM_TARGET_TRIPLE}" "-" dash_index)
-  string(SUBSTRING "${LLVM_TARGET_TRIPLE}" 0 ${dash_index} triple_cpu)
+  string(SUBSTRING "${LLVM_TARGET_TRIPLE}" 0 "${dash_index}" triple_cpu)
   set(arch "${triple_cpu}")
   if("${arch}" MATCHES "^i.86$")
-    # Android uses i686, but that's remapped at a later stage.
     set(arch "i386")
   endif()
   get_runtimes_target_libdir_common("${LLVM_TARGET_TRIPLE}" "${arch}" target)
