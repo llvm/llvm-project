@@ -40,7 +40,7 @@ struct VPlanTransforms {
   /// Helper to run a VPlan pass \p Pass on \p VPlan, forwarding extra arguments
   /// to the pass. Performs verification/printing after each VPlan pass if
   /// requested via command line options.
-  template <typename PassTy, typename... ArgsTy>
+  template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
     auto PostTransformActions = [&]() {
@@ -50,7 +50,7 @@ struct VPlanTransforms {
         dbgs() << "VPlan after " << PassName << '\n';
         dbgs() << Plan << '\n';
       }
-      if (VerifyEachVPlan)
+      if (VerifyEachVPlan && EnableVerify)
         verifyVPlanIsValid(Plan);
     };
 
@@ -68,6 +68,8 @@ struct VPlanTransforms {
   }
 #define RUN_VPLAN_PASS(PASS, ...)                                              \
   llvm::VPlanTransforms::runPass(#PASS, PASS, __VA_ARGS__)
+#define RUN_VPLAN_PASS_NO_VERIFY(PASS, ...)                                    \
+  llvm::VPlanTransforms::runPass<false>(#PASS, PASS, __VA_ARGS__)
 
   /// Create a base VPlan0, serving as the common starting point for all later
   /// candidates. It consists of an initial plain CFG loop with loop blocks from

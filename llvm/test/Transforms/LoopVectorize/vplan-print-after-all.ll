@@ -2,7 +2,7 @@
 
 ; Verify that `-vplan-print-after-all` option works.
 
-; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 < %s 2>&1 | FileCheck %s --implicit-check-not "VPlan after"
+; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --implicit-check-not "VPlan after"
 
 ; CHECK: VPlan after printAfterInitialConstruction
 ; CHECK: VPlan after VPlanTransforms::clearReductionWrapFlags
