@@ -1,7 +1,7 @@
 // RUN: %clang -target x86_64-apple-darwin -emit-llvm -S -o - %s | FileCheck %s
 // RUN: %clang -target x86_64-apple-darwin -emit-llvm -S -o - %s -fstack-protector | FileCheck %s
 // RUN: %clang -target x86_64-apple-darwin -emit-llvm -S -o - %s -fstack-protector-all | FileCheck %s
-// RUN: %clang -target x86_64-apple-darwin -Xclang -verify -fstack-protector-all %s -o %t -c
+// RUN: %clang -target x86_64-apple-darwin -emit-llvm -Xclang -verify -fstack-protector-all %s -o %t -c
 
 typedef __SIZE_TYPE__ size_t;
 
