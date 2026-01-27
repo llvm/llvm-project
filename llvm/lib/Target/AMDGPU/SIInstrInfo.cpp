@@ -11013,16 +11013,26 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (!SrcReg || SrcReg.isPhysical())
     return false;
 
-  if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
-    return false;
+  if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue)) {
+    std::pair<MachineInstr *, unsigned> RegSequence2;
+    MachineInstr *Src2Def = MRI->getVRegDef(SrcReg2);
+    if (!Src2Def ||
+        !(Src2Def =
+              (RegSequence2 = pierceThroughRegSequence(*Src2Def)).first) ||
+        !getFoldableImm(Src2Def->getOperand(0).getReg(), *MRI, CmpValue))
+      return false;
+    else if(RegSequence2.second)
+      CmpValue <<= 32;
+  }
 
   const auto replaceSourceReg = [](MachineInstr &MI, Register Old, Register New) {
     for (int I = 0; I < MI.getNumOperands(); I++)
       if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
       {
         MI.getOperand(I).setReg(New);
-        break;
+        return true;
       }
+    return false;
   };
 
   const auto replaceSourceImm = [](MachineInstr &MI, uint64_t Old, uint64_t New) {
@@ -11030,12 +11040,24 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       if (MI.getOperand(I).isImm() && MI.getOperand(I).getImm() == Old)
       {
         MI.getOperand(I).setImm(New);
-        break;
+        return true;
       }
+    return false;
   };
 
-  const auto strengthReduceSCMP = [&CmpInstr, &SrcReg, &CmpValue, MRI,
-                                   this, &replaceSourceReg,&replaceSourceImm]() -> bool {
+  const auto replaceSourceRegWithImm = [](MachineInstr &MI, Register Old, uint64_t New) {
+    for (int I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
+      {
+        MI.getOperand(I).ChangeToImmediate(New);
+        return true;
+      }
+    return false;
+  };
+
+  const auto strengthReduceSCMP = [&CmpInstr, &SrcReg, &SrcReg2, &CmpValue, MRI,
+                                   this, &replaceSourceReg, &replaceSourceImm,
+                                   &replaceSourceRegWithImm]() -> bool {
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
     if (!Def)
       return false;
@@ -11050,11 +11072,11 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     if(!RegSequence.second) //Lower 32 bits nonzero
-      if (CmpValue > UINT32_MAX) {
+      if (CmpValue > UINT32_MAX + 1UL) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
-        CmpInstr.getOperand(0).setImm(0);
-        CmpInstr.getOperand(1).setImm(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
+        CmpInstr.getOperand(0).ChangeToImmediate(0);
+        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
       } else {
         CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr, SrcReg,
@@ -11062,15 +11084,16 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         SrcReg = RegSequence.first->getOperand(0).getReg();
       }
     else // Upper 32 bits nonzero
-      if (CmpValue % UINT32_MAX) {
+      if (CmpValue % (UINT32_MAX + 1UL)) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
-        CmpInstr.getOperand(0).setImm(0);
-        CmpInstr.getOperand(1).setImm(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
+        CmpInstr.getOperand(0).ChangeToImmediate(0);
+        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
       } else {
         CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr,SrcReg,RegSequence.first->getOperand(0).getReg());
-        replaceSourceImm(CmpInstr, CmpValue, (uint64_t)CmpValue >> 32);
+        if (!replaceSourceImm(CmpInstr, CmpValue, (uint64_t)CmpValue >> 32))
+          replaceSourceRegWithImm(CmpInstr, SrcReg2, (uint64_t)CmpValue >> 32);
         SrcReg = RegSequence.first->getOperand(0).getReg();
         CmpValue = (uint64_t)CmpValue >> 32;
       }
