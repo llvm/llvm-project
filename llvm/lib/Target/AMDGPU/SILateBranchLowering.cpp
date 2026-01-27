@@ -57,7 +57,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    auto *MLIWP = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWP ? &MLIWP->getLI() : nullptr;
     return SILateBranchLowering(ST, MDT, MLI).run(MF);
   }
 
@@ -68,7 +69,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -81,7 +81,6 @@ char SILateBranchLoweringLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(SILateBranchLoweringLegacy, DEBUG_TYPE,
                       "SI insert s_cbranch_execz instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(SILateBranchLoweringLegacy, DEBUG_TYPE,
                     "SI insert s_cbranch_execz instructions", false, false)
 
@@ -137,9 +136,11 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
   MDT->applyUpdates(DTUpdates);
 
-  // Update loop info
-  if (MachineLoop *Loop = MLI->getLoopFor(&MBB))
-    Loop->addBasicBlockToLoop(SplitBB, *MLI);
+  // Update loop info if available
+  if (MLI) {
+    if (MachineLoop *Loop = MLI->getLoopFor(&MBB))
+      Loop->addBasicBlockToLoop(SplitBB, *MLI);
+  }
 }
 
 static void copyOpWithoutRegFlags(MachineInstrBuilder &MIB,
@@ -221,7 +222,7 @@ llvm::SILateBranchLoweringPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   if (!SILateBranchLowering(ST, MDT, MLI).run(MF))
     return PreservedAnalyses::all();
 
