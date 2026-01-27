@@ -1,0 +1,70 @@
+REQUIRES: ld.lld
+
+# Test that DTLTO temporary files are "best-effort" cleaned up unless
+# --save-temps is specified. We use archives in this test as the handling for
+# archives requires a superset of the temporary files used for object inputs.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
+
+RUN: llvm-ar rcs t.a t1.o t2.o
+
+DEFINE: %{tdir} = dummy-to-make-lit-work
+DEFINE: %{action} = dummy-to-make-lit-work
+DEFINE: %{test-temps-dtlto} = \
+DEFINE:   mkdir %{tdir} && %python %S/test_temps.py %{tdir} %{action} \
+DEFINE:     %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
+DEFINE:       -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
+DEFINE:       -fthinlto-distributor=%python \
+DEFINE:       -Xthinlto-distributor=%S/local_codegen_and_wait.py
+
+# Check that all temporary files are removed in normal operation.
+REDEFINE: %{tdir} = empty
+REDEFINE: %{action} = none
+RUN: %{test-temps-dtlto}
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,ELF
+
+# Check that --save-temps preserves temporary files.
+REDEFINE: %{tdir} = savetemps
+REDEFINE: %{action} = none
+RUN: %{test-temps-dtlto} -Wl,--save-temps
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX,ELF
+
+# Check that --thinlto-emit-index-files preserves the index files.
+REDEFINE: %{tdir} = index
+REDEFINE: %{action} = none
+RUN: %{test-temps-dtlto} -Wl,--thinlto-emit-index-files
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,INDEX,ELF
+
+# No files are expected before.
+BOOKEND-NOT: {{.}}
+TEMPS: {{^}}t.[[#PID:]].dist-file.json{{$}}
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+TEMPS: {{^}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o{{$}}
+INDEX: {{^}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o{{$}}
+TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o{{$}}
+INDEX: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o{{$}}
+ELF:   {{^}}t.elf{{$}}
+TEMPS: {{^}}t.elf.resolution.txt{{$}}
+# No files are expected after.
+BOOKEND-NOT: {{.}}
+
+# Check that no warnings are produced if temporary files are missing. Note that
+# the use of the name "removed" for the output directory triggers special
+# behaviour in test_temps.py.
+REDEFINE: %{tdir} = removed
+REDEFINE: %{action} = remove
+RUN: %{test-temps-dtlto} 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
+RUN: ls %{tdir} | sort |  FileCheck %s --check-prefixes=BOOKEND,ELF
+# Sanity check for the expected test_temps.py behaviour.
+NOWARN: Remove non-essential files in the output directory.
+NOWARN-NOT: warning
+
+#--- t1.c
+__attribute__((retain)) int t1(int x) { return x; }
+
+#--- t2.c
+__attribute__((retain)) int t2(int x) { return x; }

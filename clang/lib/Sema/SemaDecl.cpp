@@ -7650,6 +7650,32 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
+void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
+  assert((isa<FunctionDecl>(NewD) || isa<VarDecl>(NewD)) &&
+         "NewD is not a function or variable");
+
+  if (PendingExportedNames.empty())
+    return;
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
+    if (getLangOpts().CPlusPlus && !FD->isExternC())
+      return;
+  }
+  IdentifierInfo *IdentName = NewD->getIdentifier();
+  if (IdentName == nullptr)
+    return;
+  auto PendingName = PendingExportedNames.find(IdentName);
+  if (PendingName != PendingExportedNames.end()) {
+    auto &Label = PendingName->second;
+    if (!Label.Used) {
+      Label.Used = true;
+      if (NewD->hasExternalFormalLinkage())
+        mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);
+      else
+        Diag(Label.NameLoc, diag::warn_pragma_not_applied) << "export" << NewD;
+    }
+  }
+}
+
 // Checks if VD is declared at global scope or with C language linkage.
 static bool isMainVar(DeclarationName Name, VarDecl *VD) {
   return Name.getAsIdentifierInfo() &&
@@ -8364,6 +8390,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
+  ProcessPragmaExport(NewVD);
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
@@ -8948,8 +8975,17 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
         NewVD->setInvalidDecl();
         return;
       }
-      if (T.getAddressSpace() == LangAS::opencl_constant ||
-          T.getAddressSpace() == LangAS::opencl_local) {
+      // When this extension is enabled, 'local' variables are permitted in
+      // non-kernel functions and within nested scopes of kernel functions,
+      // bypassing standard OpenCL address space restrictions.
+      bool AllowFunctionScopeLocalVariables =
+          T.getAddressSpace() == LangAS::opencl_local &&
+          getOpenCLOptions().isAvailableOption(
+              "__cl_clang_function_scope_local_variables", getLangOpts());
+      if (AllowFunctionScopeLocalVariables) {
+        // Direct pass: No further diagnostics needed for this specific case.
+      } else if (T.getAddressSpace() == LangAS::opencl_constant ||
+                 T.getAddressSpace() == LangAS::opencl_local) {
         FunctionDecl *FD = getCurFunctionDecl();
         // OpenCL v1.1 s6.5.2 and s6.5.3: no local or constant variables
         // in functions.
@@ -11010,6 +11046,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   ProcessPragmaWeak(S, NewFD);
+  ProcessPragmaExport(NewFD);
   checkAttributesAfterMerging(*this, *NewFD);
 
   AddKnownFunctionAttributes(NewFD);
@@ -14122,7 +14159,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // C99 6.7.8p4: All the expressions in an initializer for an object that has
     // static storage duration shall be constant expressions or string literals.
     } else if (VDecl->getStorageClass() == SC_Static) {
-      CheckForConstantInitializer(Init);
+      // Avoid evaluating the initializer twice for constexpr variables. It will
+      // be evaluated later.
+      if (!VDecl->isConstexpr())
+        CheckForConstantInitializer(Init);
 
       // C89 is stricter than C99 for aggregate initializers.
       // C89 6.5.7p3: All the expressions [...] in an initializer list
@@ -14730,6 +14770,22 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
   return ActOnDeclStmt(FinalizeDeclaratorGroup(S, DS, Var), IdentLoc,
                        Attrs.Range.getEnd().isValid() ? Attrs.Range.getEnd()
                                                       : IdentLoc);
+}
+
+void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
+  if (!MD || lifetimes::implicitObjectParamIsLifetimeBound(MD))
+    return;
+  auto *Attr = LifetimeBoundAttr::CreateImplicit(Context, MD->getLocation());
+  QualType MethodType = MD->getType();
+  QualType AttributedType =
+      Context.getAttributedType(Attr, MethodType, MethodType);
+  TypeLocBuilder TLB;
+  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+    TLB.pushFullCopy(TSI->getTypeLoc());
+  AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+  TyLoc.setAttr(Attr);
+  MD->setType(AttributedType);
+  MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
@@ -15426,7 +15482,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
     }
   }
 
-  // FIMXE: We assume every Decl in the group is in the same file.
+  // FIXME: We assume every Decl in the group is in the same file.
   // This is false when preprocessor constructs the group from decls in
   // different files (e. g. macros or #include).
   Context.attachCommentsToJustParsedDecls(Group, &getPreprocessor());

@@ -29,7 +29,7 @@ def TosaShapeOperator : NativeOpTrait<"TosaShapeOperator"> {
 }
 
 class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator, Pure])> {
+    : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator])> {
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_SHAPE]>,
@@ -67,6 +67,8 @@ def Tosa_AddShapeOp : Tosa_ElementwiseShapeOp<"add_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -335,6 +337,24 @@ def Tosa_SubShapeOp : Tosa_ElementwiseShapeOp<"sub_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: AssertEqualShape
+//===----------------------------------------------------------------------===//
+def Tosa_AssertEqualShapeOp
+    : Tosa_ShapeOp<"assert_equal_shape", [TosaShapeOperatorWithSameRanks]> {
+  let summary = "Verify two shapes are equal.";
+
+  let description = [{
+      Verify input1 and input2 are equal. If allow_broadcast is set, shapes which
+      are broadcast compatible are allowed.
+  }];
+
+  let arguments = (ins Tosa_Shape:$input1, Tosa_Shape:$input2,
+      BoolAttr:$allow_broadcast);
+
+  let results = (outs);
 }
 
 #endif // TOSA_SHAPE_OPS

@@ -538,6 +538,7 @@ def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,3>]>;
 def SDT_AArch64TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
 def SDT_AArch64PREFETCH : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>]>;
+def SDT_AArch64RANGE_PREFETCH: SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>, SDTCisVT<2, i64>]>;
 
 def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 
@@ -1037,7 +1038,12 @@ def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
-
+def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
+def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
+def AArch64sqshrn: SDNode<"AArch64ISD::SQSHRN", SDTFPTruncRoundOp>;
+def AArch64uqshrn: SDNode<"AArch64ISD::UQSHRN", SDTFPTruncRoundOp>;
+def AArch64sqrshrn: SDNode<"AArch64ISD::SQRSHRN", SDTFPTruncRoundOp>;
+def AArch64uqrshrn: SDNode<"AArch64ISD::UQRSHRN", SDTFPTruncRoundOp>;
 def AArch64sqrdmulh: SDNode<"AArch64ISD::SQRDMULH", SDTFPBinOp>;
 def AArch64sqrdmlah: SDNode<"AArch64ISD::SQRDMLAH", SDTFPTernaryOp>;
 def AArch64sqrdmlsh: SDNode<"AArch64ISD::SQRDMLSH", SDTFPTernaryOp>;
@@ -1053,6 +1059,10 @@ def AArch64tcret: SDNode<"AArch64ISD::TC_RETURN", SDT_AArch64TCRET,
 // Custom prefetch handling
 def AArch64Prefetch        : SDNode<"AArch64ISD::PREFETCH", SDT_AArch64PREFETCH,
                                [SDNPHasChain, SDNPSideEffect]>;
+
+def AArch64RangePrefetch: SDNode<"AArch64ISD::RANGE_PREFETCH",
+                                 SDT_AArch64RANGE_PREFETCH,
+                                 [SDNPHasChain, SDNPSideEffect]>;
 
 // {s|u}int to FP within a FP register.
 def AArch64sitof: SDNode<"AArch64ISD::SITOF", SDT_AArch64ITOF>;
@@ -1300,7 +1310,12 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
 def smullwithsignbits : PatFrag<(ops node:$l, node:$r), (mul node:$l, node:$r), [{
   return CurDAG->ComputeNumSignBits(N->getOperand(0)) > 32 &&
          CurDAG->ComputeNumSignBits(N->getOperand(1)) > 32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+     return VT->computeNumSignBits(MI.getOperand(1).getReg()) > 32 &&
+            VT->computeNumSignBits(MI.getOperand(2).getReg()) > 32;
+  }];
+}
 
 // Match "nnan" flagged calls to fminnum and fmmaxnum. Then semantically equivalent
 // to fmaximum/fminimum.
@@ -3298,13 +3313,6 @@ def : Pat<(cttz GPR32:$Rn),
           (CLZWr (RBITWr GPR32:$Rn))>;
 def : Pat<(cttz GPR64:$Rn),
           (CLZXr (RBITXr GPR64:$Rn))>;
-// FIXME: Remove these patterns when gisel supports ctls
-def : Pat<(ctlz (or (shl (xor (sra GPR32:$Rn, (i64 31)), GPR32:$Rn), (i64 1)),
-                (i32 1))),
-          (CLSWr GPR32:$Rn)>;
-def : Pat<(ctlz (or (shl (xor (sra GPR64:$Rn, (i64 63)), GPR64:$Rn), (i64 1)),
-                (i64 1))),
-          (CLSXr GPR64:$Rn)>;
 
 // Unlike the other one operand instructions, the instructions with the "rev"
 // mnemonic do *not* just different in the size bit, but actually use different
@@ -4611,9 +4619,6 @@ let Predicates = [HasLSUI, HasNEON] in {
 
 def : Pat<(AArch64stp GPR64z:$Rt, GPR64z:$Rt2, (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (STPXi GPR64z:$Rt, GPR64z:$Rt2, GPR64sp:$Rn, simm7s8:$offset)>;
-
-def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
-          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
 
 
 //---
@@ -6062,7 +6067,7 @@ defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
-defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
+defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
@@ -7803,6 +7808,12 @@ def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
 def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
           (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
 
+def: Pat<(f64 (bitconvert (i64 (zext (i32 (bitconvert (f32 FPR32:$Rn))))))),
+         (SUBREG_TO_REG (i32 0), (f32 (FMOVSr FPR32:$Rn)), ssub)>;
+
+def: Pat<(f32 (bitconvert (i32 (trunc (i64 (bitconvert (f64 FPR64:$Rn))))))),
+         (f32 (EXTRACT_SUBREG FPR64:$Rn, ssub))>;
+
 def : Pat<(v8i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
@@ -8953,15 +8964,15 @@ def : Pat<(i32 (int_aarch64_neon_facgt (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
 defm SHL      : SIMDScalarLShiftD<   0, 0b01010, "shl", AArch64vshl>;
 defm SLI      : SIMDScalarLShiftDTied<1, 0b01010, "sli", AArch64vsli>;
 defm SQRSHRN  : SIMDScalarRShiftBHS< 0, 0b10011, "sqrshrn",
-                                     int_aarch64_neon_sqrshrn>;
+                                     AArch64sqrshrn, int_aarch64_neon_sqrshrn>;
 defm SQRSHRUN : SIMDScalarRShiftBHS< 1, 0b10001, "sqrshrun",
-                                     int_aarch64_neon_sqrshrun>;
+                                     AArch64sqrshrun, int_aarch64_neon_sqrshrun>;
 defm SQSHLU   : SIMDScalarLShiftBHSD<1, 0b01100, "sqshlu", AArch64sqshlui>;
 defm SQSHL    : SIMDScalarLShiftBHSD<0, 0b01110, "sqshl", AArch64sqshli>;
 defm SQSHRN   : SIMDScalarRShiftBHS< 0, 0b10010, "sqshrn",
-                                     int_aarch64_neon_sqshrn>;
+                                     AArch64sqshrn, int_aarch64_neon_sqshrn>;
 defm SQSHRUN  : SIMDScalarRShiftBHS< 1, 0b10000, "sqshrun",
-                                     int_aarch64_neon_sqshrun>;
+                                     AArch64sqshrun, int_aarch64_neon_sqshrun>;
 defm SRI      : SIMDScalarRShiftDTied<   1, 0b01000, "sri", AArch64vsri>;
 defm SRSHR    : SIMDScalarRShiftD<   0, 0b00100, "srshr", AArch64srshri>;
 defm SRSRA    : SIMDScalarRShiftDTied<   0, 0b00110, "srsra",
@@ -8972,10 +8983,10 @@ defm SSRA     : SIMDScalarRShiftDTied<   0, 0b00010, "ssra",
     TriOpFrag<(add_and_or_is_add node:$LHS,
                    (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UQRSHRN  : SIMDScalarRShiftBHS< 1, 0b10011, "uqrshrn",
-                                     int_aarch64_neon_uqrshrn>;
+                                     AArch64uqrshrn, int_aarch64_neon_uqrshrn>;
 defm UQSHL    : SIMDScalarLShiftBHSD<1, 0b01110, "uqshl", AArch64uqshli>;
 defm UQSHRN   : SIMDScalarRShiftBHS< 1, 0b10010, "uqshrn",
-                                     int_aarch64_neon_uqshrn>;
+                                     AArch64uqshrn, int_aarch64_neon_uqshrn>;
 defm URSHR    : SIMDScalarRShiftD<   1, 0b00100, "urshr", AArch64urshri>;
 defm URSRA    : SIMDScalarRShiftDTied<   1, 0b00110, "ursra",
     TriOpFrag<(add node:$LHS,
@@ -10717,8 +10728,18 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 // Patterns for nontemporal/no-allocate stores.
 // We have to resort to tricks to turn a single-input store into a store pair,
 // because there is no single-input nontemporal store, only STNP.
-let Predicates = [IsLE] in {
-let AddedComplexity = 15 in {
+//
+// Currently, STNP lowering can only either keep or increase code size, thus
+// we predicate it to not apply when optimizing for code size.
+let Predicates = [IsLE, NotForCodeSize] in {
+
+// Make non-temporal store patterns have high complexity so they are prioritized
+// for non-temporal stores over temporal store patterns.
+let AddedComplexity = 18 in {
+
+def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
+
 class NTStore128Pat<ValueType VT> :
   Pat<(nontemporalstore (VT FPR128:$Rt),
         (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
@@ -10750,7 +10771,7 @@ def : Pat<(nontemporalstore GPR64:$Rt,
           (STNPWi (EXTRACT_SUBREG GPR64:$Rt, sub_32),
                   (EXTRACT_SUBREG (UBFMXri GPR64:$Rt, 32, 63), sub_32),
                   GPR64sp:$Rn, simm7s4:$offset)>;
-} // AddedComplexity=10
+} // AddedComplexity=18
 } // Predicates = [IsLE]
 
 // Tail call return handling. These are all compiler pseudo-instructions,
@@ -11088,6 +11109,9 @@ def RPRFM:
   // the decoder namespace to "Fallback".
   let DecoderNamespace = "Fallback";
 }
+
+def : Pat<(AArch64RangePrefetch rprfop:$Rt, GPR64sp:$Rn, GPR64:$Rm),
+          (RPRFM rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // 128-bit Atomics (FEAT_LSE128)

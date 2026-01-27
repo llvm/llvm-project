@@ -16,6 +16,7 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/CodeCompletion.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
@@ -288,6 +289,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
+  ExitOnErr(sanitizeOopArguments(argv[0]));
+
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
 
@@ -319,8 +322,6 @@ int main(int argc, const char **argv) {
 
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
-
-  ExitOnErr(sanitizeOopArguments(argv[0]));
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.

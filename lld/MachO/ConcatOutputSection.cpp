@@ -148,7 +148,7 @@ bool TextOutputSection::needsThunks() const {
     parent->needsThunks = true;
   }
   for (ConcatInputSection *isec : inputs) {
-    for (Reloc &r : isec->relocs) {
+    for (Relocation &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
       auto *sym = cast<Symbol *>(r.referent);
@@ -333,12 +333,13 @@ void TextOutputSection::finalize() {
       branchTargetThresholdVA = estimateBranchTargetThresholdVA(callIdx);
     }
     // Process relocs by ascending address, i.e., ascending offset within isec
-    std::vector<Reloc> &relocs = isec->relocs;
+    std::vector<Relocation> &relocs = isec->relocs;
     // FIXME: This property does not hold for object files produced by ld64's
     // `-r` mode.
-    assert(is_sorted(relocs,
-                     [](Reloc &a, Reloc &b) { return a.offset > b.offset; }));
-    for (Reloc &r : reverse(relocs)) {
+    assert(is_sorted(relocs, [](Relocation &a, Relocation &b) {
+      return a.offset > b.offset;
+    }));
+    for (Relocation &r : reverse(relocs)) {
       ++relocCount;
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;

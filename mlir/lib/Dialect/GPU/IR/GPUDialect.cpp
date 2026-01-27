@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1047,8 +1048,13 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(asyncDependencies, asyncTokenType,
                              result.operands))
     return failure();
-  if (parser.getNumResults() > 0)
+  if (parser.getNumResults() > 0) {
+    if (!asyncTokenType)
+      return parser.emitError(
+          parser.getNameLoc(),
+          "gpu.launch requires 'async' keyword to return a value");
     result.types.push_back(asyncTokenType);
+  }
 
   bool hasCluster = false;
   if (succeeded(
@@ -1468,24 +1474,47 @@ LogicalResult RotateOp::verify() {
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
-namespace {
-
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
-LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
-                                          PatternRewriter &rewriter) {
-  if (isa_and_nonnull<BarrierOp>(op->getNextNode())) {
-    rewriter.eraseOp(op);
-    return success();
-  }
-  return failure();
-}
+static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
+                                                 PatternRewriter &rewriter) {
+  auto nextOp = dyn_cast_or_null<BarrierOp>(op->getNextNode());
+  if (!nextOp)
+    return failure();
 
-} // end anonymous namespace
+  std::optional<ArrayAttr> thisMemfence = op.getAddressSpaces();
+  std::optional<ArrayAttr> nextMemfence = nextOp.getAddressSpaces();
+
+  if (thisMemfence) {
+    rewriter.modifyOpInPlace(op, [&]() {
+      if (!nextMemfence) {
+        op.removeAddressSpacesAttr();
+        return;
+      }
+      // Fast path - merge where the two barriers fence the same spaces.
+      if (*thisMemfence == *nextMemfence) {
+        return;
+      }
+
+      llvm::SmallSetVector<Attribute, 4> mergedSpaces;
+      for (Attribute attr : *thisMemfence)
+        mergedSpaces.insert(attr);
+      for (Attribute attr : *nextMemfence)
+        mergedSpaces.insert(attr);
+      op.setAddressSpacesAttr(rewriter.getArrayAttr(mergedSpaces.takeVector()));
+    });
+  }
+
+  rewriter.eraseOp(nextOp);
+  return success();
+}
 
 void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add(eraseRedundantGpuBarrierOps);
 }
+
+void BarrierOp::build(mlir::OpBuilder &odsBuilder,
+                      mlir::OperationState &odsState) {}
 
 //===----------------------------------------------------------------------===//
 // GPUFuncOp
@@ -2175,9 +2204,9 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AllocOp::verify() {
   auto memRefType = llvm::cast<MemRefType>(getMemref().getType());
 
-  if (getDynamicSizes().size() != memRefType.getNumDynamicDims())
-    return emitOpError("dimension operand count does not equal memref "
-                       "dynamic dimension count");
+  if (failed(verifyDynamicDimensionCount(getOperation(), memRefType,
+                                         getDynamicSizes())))
+    return failure();
 
   unsigned numSymbols = 0;
   if (!memRefType.getLayout().isIdentity())
@@ -2401,7 +2430,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
@@ -2409,6 +2438,9 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getWarpRegion()));
 }
 
+ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+}
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
                                  int64_t warpSize) {
@@ -2521,6 +2553,7 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
     // Speculation should be safe as long as we inside structured control flow.
     return Speculation::Speculatable;
   }
+  llvm_unreachable("Unknown BroadcastType");
 }
 
 LogicalResult gpu::SubgroupBroadcastOp::verify() {
@@ -2536,6 +2569,7 @@ LogicalResult gpu::SubgroupBroadcastOp::verify() {
              << "lane must be specified for `specific_lane` broadcast";
     return success();
   }
+  llvm_unreachable("Unknown BroadcastType");
 }
 
 OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {

@@ -1486,7 +1486,8 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+  if (!II->getType()->isVectorTy() ||
+      !isTriviallyVectorizable(II->getIntrinsicID()) ||
       !II->getCalledFunction()->isSpeculatable())
     return nullptr;
 
@@ -1689,9 +1690,11 @@ static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
 }
 
 /// Fold an unsigned minimum of trailing or leading zero bits counts:
-///   umin(cttz(CtOp, ZeroUndef), ConstOp) --> cttz(CtOp | (1 << ConstOp))
-///   umin(ctlz(CtOp, ZeroUndef), ConstOp) --> ctlz(CtOp | (SignedMin
+///   umin(cttz(CtOp1, ZeroUndef), ConstOp) --> cttz(CtOp1 | (1 << ConstOp))
+///   umin(ctlz(CtOp1, ZeroUndef), ConstOp) --> ctlz(CtOp1 | (SignedMin
 ///                                              >> ConstOp))
+///   umin(cttz(CtOp1), cttz(CtOp2))        --> cttz(CtOp1 | CtOp2)
+///   umin(ctlz(CtOp1), ctlz(CtOp2))        --> ctlz(CtOp1 | CtOp2)
 template <Intrinsic::ID IntrID>
 static Value *
 foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
@@ -1700,11 +1703,17 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
   static_assert(IntrID == Intrinsic::cttz || IntrID == Intrinsic::ctlz,
                 "This helper only supports cttz and ctlz intrinsics");
 
-  Value *CtOp;
-  Value *ZeroUndef;
-  if (!match(I0,
-             m_OneUse(m_Intrinsic<IntrID>(m_Value(CtOp), m_Value(ZeroUndef)))))
+  Value *CtOp1, *CtOp2;
+  Value *ZeroUndef1, *ZeroUndef2;
+  if (!match(I0, m_OneUse(
+                     m_Intrinsic<IntrID>(m_Value(CtOp1), m_Value(ZeroUndef1)))))
     return nullptr;
+
+  if (match(I1,
+            m_OneUse(m_Intrinsic<IntrID>(m_Value(CtOp2), m_Value(ZeroUndef2)))))
+    return Builder.CreateBinaryIntrinsic(
+        IntrID, Builder.CreateOr(CtOp1, CtOp2),
+        Builder.CreateOr(ZeroUndef1, ZeroUndef2));
 
   unsigned BitWidth = I1->getType()->getScalarSizeInBits();
   auto LessBitWidth = [BitWidth](auto &C) { return C.ult(BitWidth); };
@@ -1721,8 +1730,8 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
           : ConstantInt::get(Ty, APInt::getSignedMinValue(BitWidth)),
       cast<Constant>(I1), DL);
   return Builder.CreateBinaryIntrinsic(
-      IntrID, Builder.CreateOr(CtOp, NewConst),
-      ConstantInt::getTrue(ZeroUndef->getType()));
+      IntrID, Builder.CreateOr(CtOp1, NewConst),
+      ConstantInt::getTrue(ZeroUndef1->getType()));
 }
 
 /// Return whether "X LOp (Y ROp Z)" is always equal to
@@ -3037,6 +3046,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
+    Type *SignEltTy = Sign->getType()->getScalarType();
+
+    Value *CastSrc;
+    if (match(Sign, m_ElementWiseBitCast(m_OneUse(m_Value(CastSrc)))) &&
+        CastSrc->getType()->isIntOrIntVectorTy() &&
+        APFloat::hasSignBitInMSB(SignEltTy->getFltSemantics())) {
+      KnownBits Known(SignEltTy->getPrimitiveSizeInBits());
+      if (SimplifyDemandedBits(cast<Instruction>(Sign), 0,
+                               APInt::getSignMask(Known.getBitWidth()), Known,
+                               SQ))
+        return II;
+    }
+
     break;
   }
   case Intrinsic::fabs: {
@@ -3515,7 +3537,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // even for empty lifetime range.
     if (II->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
         II->getFunction()->hasFnAttribute(Attribute::SanitizeMemory) ||
-        II->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
+        II->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress) ||
+        II->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag))
       break;
 
     if (removeTriviallyEmptyRange(*II, *this, [](const IntrinsicInst &I) {
@@ -3661,8 +3684,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // into
     // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
     uint64_t AlignMask = 1;
-    if (EnableKnowledgeRetention &&
-        (match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
+    if ((match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
          match(IIOperand,
                m_SpecificICmp(ICmpInst::ICMP_EQ,
                               m_And(m_Value(A), m_ConstantInt(AlignMask)),
@@ -3957,8 +3979,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             Value *V = Builder.CreateBitCast(
                 Vect, Builder.getIntNTy(FTy->getNumElements()));
             Value *Res = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
-            if (Res->getType() != II->getType())
-              Res = Builder.CreateZExtOrTrunc(Res, II->getType());
+            Res = Builder.CreateZExtOrTrunc(Res, II->getType());
             if (Arg != Vect &&
                 cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
               Res = Builder.CreateNeg(Res);
@@ -4033,8 +4054,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
           if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAndReduce(Vect);
-            if (Res->getType() != II->getType())
-              Res = Builder.CreateZExt(Res, II->getType());
+            Res = Builder.CreateZExt(Res, II->getType());
             return replaceInstUsesWith(CI, Res);
           }
       }
@@ -4887,7 +4907,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       GCR.setOperand(2, ConstantInt::get(OpIntTy2, Val2Idx[DerivedPtr]));
     }
     // Create new statepoint instruction.
-    OperandBundleDef NewBundle("gc-live", NewLiveGc);
+    OperandBundleDef NewBundle("gc-live", std::move(NewLiveGc));
     return CallBase::Create(&Call, NewBundle);
   }
   default: { break; }
