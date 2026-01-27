@@ -110,12 +110,10 @@ else()
   # in-tree build we place the libraries in clang's resource driectory.
   include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
-  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
+  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" )
 
-  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
   cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
   cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
-  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR} )
 endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
@@ -232,6 +230,7 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   gfx1100 gfx1101 gfx1102 gfx1103
   gfx1150 gfx1151 gfx1152 gfx1153
   gfx1200 gfx1201 gfx1250 gfx1251
+  gfx1310
 )
 
 # pkg-config file
@@ -445,6 +444,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
+      DEVICE ${d}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}
@@ -459,6 +459,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     add_libclc_builtin_set(
       ARCH ${ARCH}
+      DEVICE ${d}
       ARCH_SUFFIX ${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}
