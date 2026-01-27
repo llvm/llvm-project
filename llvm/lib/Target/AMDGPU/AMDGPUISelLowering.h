@@ -405,6 +405,8 @@ public:
     // are using vector compares until that is fixed.
     return true;
   }
+
+  bool softPromoteHalfType() const override { return false; }
 };
 
 } // End namespace llvm

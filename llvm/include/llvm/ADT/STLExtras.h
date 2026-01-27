@@ -2157,6 +2157,20 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
   return all_equal<std::initializer_list<T>>(std::move(Values));
 }
 
+/// Functor variant of std::equal_to that can be used as a UnaryPredicate in
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
+template <typename T> constexpr auto equal_to(T &&Arg) {
+  return llvm::bind_front(std::equal_to<>{}, std::forward<T>(Arg));
+}
+
+/// Functor variant of std::not_equal_to that can be used as a UnaryPredicate in
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
+template <typename T> constexpr auto not_equal_to(T &&Arg) {
+  return llvm::bind_front(std::not_equal_to<>{}, std::forward<T>(Arg));
+}
+
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///

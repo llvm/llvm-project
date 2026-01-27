@@ -19,7 +19,7 @@ inputs:
       Token with premissions to read llvm teams that is used to ensure that
       the person who triggred the action has permission to upload artifacts.
       This is required if upload is true.
-    requred: false
+    required: false
   attestation-name:
     description: >-
       This will be used for the artifact name that is attached to the workflow and

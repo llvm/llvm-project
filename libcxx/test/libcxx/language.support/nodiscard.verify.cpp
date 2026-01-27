@@ -103,16 +103,18 @@ void test() {
       nex.nested_ptr(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     }
 
-#if TEST_STD_VER <= 14
-    std::get_unexpected(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
+    { // Removed in C++17
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+      std::get_unexpected();
+    }
 
     std::get_terminate(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-#if _LIBCPP_STD_VER <= 17
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::uncaught_exception();
-#endif
+    { // Removed in C++20
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+      std::uncaught_exception();
+    }
+
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::uncaught_exceptions();
 

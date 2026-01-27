@@ -493,6 +493,8 @@ LLVM_ABI FunctionPass *createInterleavedLoadCombinePass();
 ///
 LLVM_ABI ModulePass *createLowerEmuTLSPass();
 
+LLVM_ABI ModulePass *createLibcallLoweringInfoWrapper();
+
 /// This pass lowers the \@llvm.load.relative and \@llvm.objc.* intrinsics to
 /// instructions.  This is unsafe to do earlier because a pass may combine the
 /// constant initializer into the load, which may result in an overflowing
@@ -548,8 +550,8 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 // the corresponding function in a vector library (e.g., SVML, libmvec).
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandIRInstsPass();
+// Expands large div/rem and floating-point instructions.
+LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 // This pass expands memcmp() to load/stores.
 LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
@@ -565,9 +567,6 @@ LLVM_ABI FunctionPass *createCFIFixup();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();
-
-// Expands floating point instructions.
-FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
