@@ -2343,6 +2343,9 @@ module std [system] {
       module merge {
         header "__pstl/cpu_algos/merge.h"
       }
+      module min_element {
+        header "__pstl/cpu_algos/min_element.h"
+      }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"
         export std_core.utility_core.empty

@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <execution>
+#include <functional>
 #include <iterator>
 
 void test() {
@@ -48,4 +49,8 @@ void test() {
   std::find(std::execution::par, std::begin(a), std::end(a), 1);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_partitioned(std::execution::par, std::begin(a), std::end(a), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::min_element(std::execution::par, std::begin(a), std::end(a));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::min_element(std::execution::par, std::begin(a), std::end(a), std::less<int>());
 }

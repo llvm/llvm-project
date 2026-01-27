@@ -13,6 +13,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/min_element.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
@@ -172,6 +173,15 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation1>(__reduce),
         std::forward<_BinaryOperation2>(__transform));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __min_element<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    return std::min_element(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
   }
 };
 

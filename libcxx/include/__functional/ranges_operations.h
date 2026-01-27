@@ -109,6 +109,9 @@ inline const bool __desugars_to_v<__less_tag, ranges::less, _Tp, _Up> = true;
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__greater_tag, ranges::greater, _Tp, _Up> = true;
 
+template <class _Tp, class _Up>
+inline const bool __desugars_to_v<__totally_ordered_greater_tag, ranges::greater, _Tp, _Up> = true;
+
 template <>
 inline const bool __is_generic_transparent_comparator_v<ranges::less> = true;
 

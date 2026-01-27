@@ -40,6 +40,14 @@ struct __greater_tag {};
 // additional semantic requirements on that operation.
 struct __totally_ordered_less_tag {};
 
+// syntactically, the operation is equivalent to calling `a > b`, and these expressions
+// have to be true for any `a` and `b`:
+// - `(a > b) == (b < a)`
+// - `(!(a > b) && !(b > a)) == (a == b)`
+// For example, this is satisfied for std::greater on integral types, but also for ranges::greater on all types due to
+// additional semantic requirements on that operation.
+struct __totally_ordered_greater_tag {};
+
 // This class template is used to determine whether an operation "desugars"
 // (or boils down) to a given canonical operation.
 //

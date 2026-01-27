@@ -190,4 +190,9 @@ void f(non_forward_iterator non_fwd, non_output_iterator non_output, std::execut
     (void)std::transform_reduce(
         pol, non_fwd, non_fwd, val, func, func); // expected-error@*:* {{static assertion failed: transform_reduce}}
   }
+
+  {
+    (void)std::min_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: min_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: min_element}}
+  }
 }

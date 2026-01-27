@@ -33,6 +33,7 @@
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/min_element.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -391,6 +392,10 @@ struct __any_of<__libdispatch_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __min_element<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_min_element<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
