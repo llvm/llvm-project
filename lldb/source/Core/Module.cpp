@@ -514,15 +514,6 @@ uint32_t Module::ResolveSymbolContextForAddress(
         }
 
         sc.symbol = matching_symbol;
-        if (!sc.symbol && resolve_scope & eSymbolContextFunction &&
-            !(resolved_flags & eSymbolContextFunction)) {
-          bool verify_unique = false; // No need to check again since
-                                      // ResolveSymbolContext failed to find a
-                                      // symbol at this address.
-          if (ObjectFile *obj_file = sc.module_sp->GetObjectFile())
-            sc.symbol =
-                obj_file->ResolveSymbolForAddress(so_addr, verify_unique);
-        }
 
         if (sc.symbol) {
           if (sc.symbol->IsSynthetic()) {

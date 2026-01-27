@@ -331,7 +331,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     } else if (RMWI && (isReleaseOrStronger(RMWI->getOrdering()) ||
                         isAcquireOrStronger(RMWI->getOrdering()))) {
       FenceOrdering = RMWI->getOrdering();
-      RMWI->setOrdering(AtomicOrdering::Monotonic);
+      RMWI->setOrdering(TLI->atomicOperationOrderAfterFenceSplit(RMWI));
     } else if (CASI &&
                TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
                    TargetLoweringBase::AtomicExpansionKind::None &&
@@ -1681,6 +1681,9 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
+  // TODO: The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.

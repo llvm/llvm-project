@@ -501,7 +501,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   // inlined functions which the user wants to skip).
 
   std::map<FileSpec, std::set<uint32_t>> source_lines_seen;
-  Symbol *previous_symbol = nullptr;
+  const Symbol *previous_symbol = nullptr;
 
   size_t address_text_size = 0;
   for (size_t i = 0; i < num_instructions_found; ++i) {

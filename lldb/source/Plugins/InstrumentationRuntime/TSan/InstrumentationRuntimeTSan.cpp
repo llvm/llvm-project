@@ -549,7 +549,7 @@ static std::string GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr) {
   if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
     return "";
 
-  lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
+  const lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
   if (!symbol)
     return "";
 

@@ -56,7 +56,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
                                           lldb::eSymbolTypeAny, symbol_indices);
     EXPECT_EQ(symbol_indices.size(), 1u);
 
-    Symbol *sym = symtab->SymbolAtIndex(symbol_indices[0]);
+    const Symbol *sym = symtab->SymbolAtIndex(symbol_indices[0]);
     ASSERT_NE(sym, nullptr);
     Address base = sym->GetAddress();
     size_t size = sym->GetByteSize();

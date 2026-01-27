@@ -1128,7 +1128,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
   if (!symtab)
     return AddressClass::eUnknown;
 
-  Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
+  const Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
   if (symbol) {
     if (symbol->ValueIsAddress()) {
       SectionSP section_sp(symbol->GetAddressRef().GetSection());
@@ -5123,9 +5123,10 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     if (start_address == LLDB_INVALID_ADDRESS && IsDynamicLoader()) {
       if (GetSymtab()) {
-        Symbol *dyld_start_sym = GetSymtab()->FindFirstSymbolWithNameAndType(
-            ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
-            Symtab::eDebugAny, Symtab::eVisibilityAny);
+        const Symbol *dyld_start_sym =
+            GetSymtab()->FindFirstSymbolWithNameAndType(
+                ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
+                Symtab::eDebugAny, Symtab::eVisibilityAny);
         if (dyld_start_sym && dyld_start_sym->GetAddress().IsValid()) {
           start_address = dyld_start_sym->GetAddress().GetFileAddress();
         }
