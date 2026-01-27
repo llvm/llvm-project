@@ -375,12 +375,14 @@ struct VPCostContext {
 
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
-  /// type-based getScalarizationOverhead API. If \p AlwaysIncludeReplicatingR
-  /// is true, always compute the cost of scalarizing replicating operands.
-  InstructionCost
-  getScalarizationOverhead(Type *ResultTy, ArrayRef<const VPValue *> Operands,
-                           ElementCount VF,
-                           bool AlwaysIncludeReplicatingR = false);
+  /// type-based getScalarizationOverhead API. \p VIC provides context about
+  /// whether the scalarization is for a load/store operation. If \p
+  /// AlwaysIncludeReplicatingR is true, always compute the cost of scalarizing
+  /// replicating operands.
+  InstructionCost getScalarizationOverhead(
+      Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
+      bool AlwaysIncludeReplicatingR = false);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

@@ -3448,8 +3448,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         ResultTy = Ctx.Types.inferScalarType(this);
     }
 
+    TTI::VectorInstrContext VIC =
+        IsLoad ? TTI::VectorInstrContext::Load : TTI::VectorInstrContext::Store;
     return (ScalarCost * VF.getFixedValue()) +
-           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, true);
+           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, VIC,
+                                        true);
   }
   case Instruction::SExt:
   case Instruction::ZExt:

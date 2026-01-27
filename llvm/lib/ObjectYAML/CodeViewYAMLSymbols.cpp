@@ -627,7 +627,7 @@ fromCodeViewSymbolImpl(CVSymbol Symbol) {
   auto Impl = std::make_shared<SymbolType>(Symbol.kind());
   if (auto EC = Impl->fromCodeViewSymbol(Symbol))
     return std::move(EC);
-  Result.Symbol = Impl;
+  Result.Symbol = std::move(Impl);
   return Result;
 }
 

@@ -27,7 +27,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 namespace tosa {
@@ -190,40 +189,33 @@ private:
     constCheckers.emplace_back(checkConstantOperandSilceShape);
   }
 
-  LogicalResult levelCheck(Operation *op, const int32_t calculatedValue,
-                           const int32_t maxLevel, const StringRef inputName,
-                           const StringRef levelName) {
-    if (calculatedValue > maxLevel)
-      return op->emitOpError()
-             << "failed level check: " << inputName << " <= " << levelName
-             << " (" << maxLevel << "), got " << calculatedValue;
+  LogicalResult levelCheckKernel(Operation *op, int32_t v,
+                                 const StringRef checkDesc) {
+    if (v > targetEnv.getLevel().MAX_KERNEL)
+      return op->emitOpError() << "failed level check: " << checkDesc;
     return success();
   }
 
-  LogicalResult levelCheckKernel(Operation *op, int32_t v,
-                                 const StringRef inputName) {
-    return levelCheck(op, v, targetEnv.getLevel().MAX_KERNEL, inputName,
-                      "MAX_KERNEL");
-  }
-
   LogicalResult levelCheckStride(Operation *op, int32_t v,
-                                 const StringRef inputName) {
-    return levelCheck(op, v, targetEnv.getLevel().MAX_STRIDE, inputName,
-                      "MAX_STRIDE");
+                                 const StringRef checkDesc) {
+    if (v > targetEnv.getLevel().MAX_STRIDE)
+      return op->emitOpError() << "failed level check: " << checkDesc;
+    return success();
   }
 
   LogicalResult levelCheckScale(Operation *op, int32_t v,
-                                const StringRef inputName) {
-    return levelCheck(op, v, targetEnv.getLevel().MAX_SCALE, inputName,
-                      "MAX_SCALE");
+                                const StringRef checkDesc) {
+    if (v > targetEnv.getLevel().MAX_SCALE)
+      return op->emitOpError() << "failed level check: " << checkDesc;
+    return success();
   }
 
   LogicalResult levelCheckListSize(Operation *op, int32_t v,
-                                   const StringRef inputName) {
-    const std::string inputDesc =
-        llvm::formatv("length(tensor_list_shape({0}))", inputName);
-    return levelCheck(op, v, targetEnv.getLevel().MAX_TENSOR_LIST_SIZE,
-                      inputDesc, "MAX_TENSOR_LIST_SIZE");
+                                   const StringRef checkDesc) {
+    if (v > targetEnv.getLevel().MAX_TENSOR_LIST_SIZE)
+      return op->emitOpError()
+             << "failed level check for MAX_TENSOR_LIST_SIZE: " << checkDesc;
+    return success();
   }
 
   // Perform the Level Rank check on the tensor type.
@@ -325,17 +317,17 @@ private:
   LogicalResult levelCheckPool(Operation *op) {
     if (auto poolOp = dyn_cast<T>(op)) {
       for (auto k : poolOp.getKernel()) {
-        if (failed(levelCheckKernel(op, k, "kernel"))) {
+        if (failed(levelCheckKernel(op, k, "kernel <= MAX_KERNEL"))) {
           return failure();
         }
       }
       for (auto s : poolOp.getStride()) {
-        if (failed(levelCheckStride(op, s, "stride"))) {
+        if (failed(levelCheckStride(op, s, "stride <= MAX_STRIDE"))) {
           return failure();
         }
       }
       for (auto p : poolOp.getPad()) {
-        if (failed(levelCheckKernel(op, p, "pad"))) {
+        if (failed(levelCheckKernel(op, p, "pad <= MAX_KERNEL"))) {
           return failure();
         }
       }
@@ -349,17 +341,17 @@ private:
     if (auto convOp = dyn_cast<T>(op)) {
 
       for (auto k : convOp.getDilation()) {
-        if (failed(levelCheckKernel(op, k, "dilation"))) {
+        if (failed(levelCheckKernel(op, k, "dilation <= MAX_KERNEL"))) {
           return failure();
         }
       }
       for (auto p : convOp.getPad()) {
-        if (failed(levelCheckKernel(op, p, "pad"))) {
+        if (failed(levelCheckKernel(op, p, "pad <= MAX_KERNEL"))) {
           return failure();
         }
       }
       for (auto s : convOp.getStride()) {
-        if (failed(levelCheckStride(op, s, "stride"))) {
+        if (failed(levelCheckStride(op, s, "stride <= MAX_STRIDE"))) {
           return failure();
         }
       }
@@ -371,27 +363,27 @@ private:
           assert(shape.size() == 4);
           assert(dilation.size() == 2);
           if (failed(levelCheckKernel(op, dilation[0] * shape[1],
-                                      "dilation_y * KH")) ||
+                                      "dilation_y * KH <= MAX_KERNEL)")) ||
               failed(levelCheckKernel(op, dilation[1] * shape[2],
-                                      "dilation_x * KW")))
+                                      "dilation_x * KW <= MAX_KERNEL)")))
             return failure();
         } else if (isa<tosa::Conv3DOp>(op)) {
           assert(shape.size() == 5);
           assert(dilation.size() == 3);
           if (failed(levelCheckKernel(op, dilation[0] * shape[1],
-                                      "dilation_d * KD")) ||
+                                      "dilation_d * KD <= MAX_KERNEL)")) ||
               failed(levelCheckKernel(op, dilation[1] * shape[2],
-                                      "dilation_y * KH")) ||
+                                      "dilation_y * KH <= MAX_KERNEL)")) ||
               failed(levelCheckKernel(op, dilation[2] * shape[3],
-                                      "dilation_x * KW")))
+                                      "dilation_x * KW <= MAX_KERNEL)")))
             return failure();
         } else if (isa<tosa::DepthwiseConv2DOp>(op)) {
           assert(shape.size() == 4);
           assert(dilation.size() == 2);
           if (failed(levelCheckKernel(op, dilation[0] * shape[0],
-                                      "dilation_y * KH")) ||
+                                      "dilation_y * KH <= MAX_KERNEL)")) ||
               failed(levelCheckKernel(op, dilation[1] * shape[1],
-                                      "dilation_x * KW")))
+                                      "dilation_x * KW <= MAX_KERNEL)")))
             return failure();
         }
       }
@@ -453,8 +445,8 @@ private:
         if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
           auto shape = type.getShape();
           assert(shape.size() == 3);
-          if (failed(levelCheckKernel(op, shape[1], "H")) ||
-              failed(levelCheckKernel(op, shape[2], "W"))) {
+          if (failed(levelCheckKernel(op, shape[1], "H <= MAX_KERNEL")) ||
+              failed(levelCheckKernel(op, shape[2], "W <= MAX_KERNEL"))) {
             return failure();
           }
         }
@@ -471,18 +463,18 @@ private:
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
-        if (failed(levelCheckKernel(op, shape[1], "KH")) ||
-            failed(levelCheckKernel(op, shape[2], "KW"))) {
+        if (failed(levelCheckKernel(op, shape[1], "KH <= MAX_KERNEL")) ||
+            failed(levelCheckKernel(op, shape[2], "KW <= MAX_KERNEL"))) {
           return failure();
         }
       }
       for (auto p : transpose.getOutPad()) {
-        if (failed(levelCheckKernel(op, p, "pad"))) {
+        if (failed(levelCheckKernel(op, p, "pad <= MAX_KERNEL"))) {
           return failure();
         }
       }
       for (auto s : transpose.getStride()) {
-        if (failed(levelCheckStride(op, s, "stride"))) {
+        if (failed(levelCheckStride(op, s, "stride <= MAX_STRIDE"))) {
           return failure();
         }
       }
@@ -502,10 +494,10 @@ private:
       const int64_t scaleYD = scale[1];
       const int64_t scaleXN = scale[2];
       const int64_t scaleXD = scale[3];
-      if (failed(
-              levelCheckScale(op, scaleYN / scaleYD, "scale_y_n/scale_y_d")) ||
-          failed(
-              levelCheckScale(op, scaleXN / scaleXD, "scale_x_n/scale_x_d"))) {
+      if (failed(levelCheckScale(op, scaleYN / scaleYD,
+                                 "scale_y_n/scale_y_d <= MAX_SCALE")) ||
+          failed(levelCheckScale(op, scaleXN / scaleXD,
+                                 "scale_x_n/scale_x_d <= MAX_SCALE"))) {
         return failure();
       }
     }
@@ -532,11 +524,11 @@ private:
     int32_t maxNestedDepth = 0;
     getMaxNestedDepth(op, maxNestedDepth);
 
-    const int32_t maxNestingLevel = targetEnv.getLevel().MAX_NESTING;
-    if (maxNestedDepth >= maxNestingLevel)
-      return op->emitOpError()
-             << "failed level check: tosa_nesting_depth < MAX_NESTING" << " ("
-             << maxNestingLevel << "), got " << maxNestedDepth;
+    if (maxNestedDepth >= targetEnv.getLevel().MAX_NESTING) {
+      op->emitOpError() << "failed level check: " << maxNestedDepth
+                        << " >= MAX_NESTING";
+      return failure();
+    }
     return success();
   }
 

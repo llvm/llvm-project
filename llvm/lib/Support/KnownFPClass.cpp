@@ -521,6 +521,21 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::sin(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // Return NaN on infinite inputs.
+  Known.knownNot(fcInf);
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::cos(const KnownFPClass &KnownSrc) {
+  return sin(KnownSrc);
+}
+
 KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
                                  const fltSemantics &DstTy,
                                  const fltSemantics &SrcTy) {

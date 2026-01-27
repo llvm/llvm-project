@@ -4797,7 +4797,7 @@ def ffile_prefix_map_EQ
              "macros and __builtin_FILE(). Implies -ffile-reproducible.">;
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"remap file source paths in predefined preprocessor macros and "
              "__builtin_FILE(). Implies -ffile-reproducible.">;
 defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",

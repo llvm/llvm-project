@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: asan
+// REQUIRES: libcpp-instrumented-with-asan
 // UNSUPPORTED: c++03
 
 // Basic test if ASan annotations work for basic_string.

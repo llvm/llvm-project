@@ -383,9 +383,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    const Value *Op0, const Value *Op1) const {
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
-      Opcode, Val, CostKind, Index, Op0, Op1);
+      Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 
   // SIMD128's insert/extract currently only take constant indices.
   if (Index == -1u)

@@ -1340,12 +1340,17 @@ struct IntentSpec {
   WRAPPER_CLASS_BOILERPLATE(IntentSpec, Intent);
 };
 
+// F2023_R829 rank-clause ->
+//        scalar-int-constant-expr
+WRAPPER_CLASS(RankClause, ScalarIntConstantExpr);
+
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE |
+//        PROTECTED | RANK ( scalar-int-constant-expr ) | SAVE | TARGET |
+//        VALUE | VOLATILE |
 // (CUDA) CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE
 EMPTY_CLASS(Asynchronous);
 EMPTY_CLASS(External);
@@ -1361,7 +1366,7 @@ struct AttrSpec {
   UNION_CLASS_BOILERPLATE(AttrSpec);
   std::variant<AccessSpec, Allocatable, Asynchronous, CoarraySpec, Contiguous,
       ArraySpec, External, IntentSpec, Intrinsic, LanguageBindingSpec, Optional,
-      Parameter, Pointer, Protected, Save, Target, Value, Volatile,
+      Parameter, Pointer, Protected, RankClause, Save, Target, Value, Volatile,
       common::CUDADataAttr>
       u;
 };

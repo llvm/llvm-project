@@ -45,6 +45,7 @@ for macro, feature in macros.items():
 true_false_macros = {
     "_LIBCPP_HAS_THREAD_API_EXTERNAL": "libcpp-has-thread-api-external",
     "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
+    "_LIBCPP_INSTRUMENTED_WITH_ASAN": "libcpp-instrumented-with-asan",
 }
 for macro, feature in true_false_macros.items():
     features.append(

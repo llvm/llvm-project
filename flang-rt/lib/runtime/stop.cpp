@@ -96,7 +96,10 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
-  std::exit(code);
+  if (isErrorStop)
+    Fortran::runtime::ErrorExit(code);
+  else
+    Fortran::runtime::NormalExit(code);
 #endif
 }
 
@@ -124,9 +127,9 @@ static void CloseAllExternalUnits(const char *why) {
     DescribeIEEESignaledExceptions();
   }
   if (isErrorStop) {
-    std::exit(EXIT_FAILURE);
+    Fortran::runtime::ErrorExit(EXIT_FAILURE);
   } else {
-    std::exit(EXIT_SUCCESS);
+    Fortran::runtime::NormalExit(EXIT_SUCCESS);
   }
 #endif
 }
@@ -144,7 +147,7 @@ static void EndPause() {
   std::fflush(nullptr);
   if (std::fgetc(stdin) == EOF) {
     CloseAllExternalUnits("PAUSE statement");
-    std::exit(EXIT_SUCCESS);
+    Fortran::runtime::ErrorExit(EXIT_SUCCESS);
   }
 }
 
@@ -172,19 +175,31 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
 }
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
-  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
   CloseAllExternalUnits("FAIL IMAGE statement");
-  std::exit(EXIT_FAILURE);
+  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
+  Fortran::runtime::NormalExit(EXIT_FAILURE);
 }
 
 [[noreturn]] void RTNAME(ProgramEndStatement)() {
   CloseAllExternalUnits("END statement");
-  std::exit(EXIT_SUCCESS);
+  Fortran::runtime::NormalExit(EXIT_SUCCESS);
+}
+
+void RTNAME(RegisterImagesNormalEndCallback)(void (*callback)(int)) {
+  Fortran::runtime::SetNormalEndCallback(callback);
+}
+
+void RTNAME(RegisterImagesErrorCallback)(void (*callback)(int)) {
+  Fortran::runtime::SetErrorCallback(callback);
+}
+
+void RTNAME(RegisterFailImageCallback)(void (*callback)(void)) {
+  Fortran::runtime::SetFailImageCallback(callback);
 }
 
 [[noreturn]] void RTNAME(Exit)(int status) {
   CloseAllExternalUnits("CALL EXIT()");
-  std::exit(status);
+  Fortran::runtime::NormalExit(status);
 }
 
 static RT_NOINLINE_ATTR void PrintBacktrace() {

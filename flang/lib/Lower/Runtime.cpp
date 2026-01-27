@@ -118,6 +118,7 @@ void Fortran::lower::genStopStatement(
   }
 
   fir::CallOp::create(builder, loc, callee, operands);
+
   auto blockIsUnterminated = [&builder]() {
     mlir::Block *currentBlock = builder.getBlock();
     return currentBlock->empty() ||
