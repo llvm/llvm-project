@@ -1884,7 +1884,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       return {};
     }
 
-    if (auto cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+    if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
       auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
       if (cxxDecl->isVirtual())
         return cgm.getCXXABI().buildVirtualMethodAttr(ty, cxxDecl);
