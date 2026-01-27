@@ -17,6 +17,11 @@ entry:
   ret i32 %mul
 }
 
+; There are two functions being checked here, one which is optnone and the other which isn't.
+; As we are running at O2, we default to using SDAG for selection. The optnone function however,
+; will make use of GlobalISel. The top check, checks that the GlobalISel pipeline is run on the 
+; optnone function, and the second line is checking that SDAG was run on the normal function.
+
 ; GISEL: Skipping pass 'AArch64PostLegalizerCombiner' on function optnone_fn
 ; GISEL: Creating new node:
 

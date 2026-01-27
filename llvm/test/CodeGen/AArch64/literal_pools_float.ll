@@ -94,8 +94,6 @@ define dso_local float @float_ret_optnone() optnone noinline {
 ; CHECK-NOFP-TINY-NEXT:    movk w0, #15820, lsl #16
 ; CHECK-NOFP-TINY-NEXT:    ret
   ret float 0x3FB99999A0000000
-
-; In the large code model, FastISel cannot load from the constant pool.
 }
 
 define dso_local double @double_ret_optnone() optnone noinline {
