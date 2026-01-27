@@ -134,6 +134,26 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
+static bool allEffectsAreParallelSafe(Operation *op) {
+  std::optional<llvm::SmallVector<MemoryEffects::EffectInstance>> effects =
+      getEffectsRecursively(op);
+  if (!effects)
+    return false;
+  for (const MemoryEffects::EffectInstance &effect : *effects) {
+    // Allocate is a parallel-safe effect.
+    if (isa<MemoryEffects::Allocate>(effect.getEffect()))
+      continue;
+    SideEffects::Resource *resource = effect.getResource();
+    // Reads/write to parallel-safe unit resources are parallelizable.
+    if (resource && resource->isUnitResource() &&
+        resource->hasUnitProperties(static_cast<uint64_t>(
+            SideEffects::Resource::UnitProperties::ParallelSafe)))
+      continue;
+    return false;
+  }
+  return true;
+}
+
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
@@ -151,8 +171,7 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
       if (!isLocallyDefined(writeOp.getMemRef(), forOp))
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
-               !hasSingleEffect<MemoryEffects::Allocate>(op) &&
-               !isMemoryEffectFree(op)) {
+               !allEffectsAreParallelSafe(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).
       return WalkResult::interrupt();
