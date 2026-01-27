@@ -162,7 +162,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
     int32_t offset_td_name = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_name"), 4, -1, error);
 
-    // fail if we were not able to read any of the offsets
+    // Fail if we were not able to read any of the offsets.
     if (offset_p_list == -1 || offset_p_pid == -1 || offset_p_threads == -1 ||
         offset_p_comm == -1 || offset_td_tid == -1 || offset_td_plist == -1 ||
         offset_td_pcb == -1 || offset_td_oncpu == -1 || offset_td_name == -1)
@@ -174,8 +174,8 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadSignedIntegerFromMemory(FindSymbol("dumptid"), 4, -1, error);
     lldb::addr_t dumppcb = FindSymbol("dumppcb");
 
-    // stoppcbs is an array of PCBs on all CPUs
-    // each element is of size pcb_size
+    // stoppcbs is an array of PCBs on all CPUs.
+    // Each element is of size pcb_size.
     int32_t pcbsize =
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
@@ -183,20 +183,30 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
     // from FreeBSD sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
-    // iterate through a linked list of all processes
-    // allproc is a pointer to the first list element, p_list field
-    // (found at offset_p_list) specifies the next element
+    // Iterate through a linked list of all processes. New processes are added
+    // to the head of this list. Which means that earlier PIDs are actually at
+    // the end of the list, so we have to walk it backwards. First collect all
+    // the processes in the list order.
+    std::vector<lldb::addr_t> process_addrs;
     for (lldb::addr_t proc =
              ReadPointerFromMemory(FindSymbol("allproc"), error);
          proc != 0 && proc != LLDB_INVALID_ADDRESS;
          proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+      process_addrs.push_back(proc);
+    }
+
+    // Processes are in the linked list in descending PID order, so we must walk
+    // them in reverse to get ascending PID order.
+    for (auto proc_it = process_addrs.rbegin(); proc_it != process_addrs.rend();
+         ++proc_it) {
+      lldb::addr_t proc = *proc_it;
       int32_t pid =
           ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
 
-      // iterate through a linked list of all process' threads
+      // Iterate through a linked list of all process' threads
       // the initial thread is found in process' p_threads, subsequent
       // elements are linked via td_plist field
       for (lldb::addr_t td =
@@ -214,7 +224,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadCStringFromMemory(td + offset_td_name, thread_name,
                               sizeof(thread_name), error);
 
-        // if we failed to read TID, ignore this thread
+        // If we failed to read TID, ignore this thread.
         if (tid == -1)
           continue;
 
@@ -224,7 +234,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
           thread_desc += thread_name;
         }
 
-        // roughly:
+        // Roughly:
         // 1. if the thread crashed, its PCB is going to be at "dumppcb"
         // 2. if the thread was on CPU, its PCB is going to be on the CPU
         // 3. otherwise, its PCB is in the thread struct
@@ -233,8 +243,8 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
           pcb_addr = dumppcb;
           thread_desc += " (crashed)";
         } else if (oncpu != -1) {
-          // if we managed to read stoppcbs and pcb_size, use them to find
-          // the correct PCB
+          // If we managed to read stoppcbs and pcb_size, use them to find
+          // the correct PCB.
           if (stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0)
             pcb_addr = stoppcbs + oncpu * pcbsize;
           else
