@@ -800,48 +800,44 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   return false;
 }
 
-// Given an expression like `&x` or `std::addressof(x)`, returns the
-// `DeclRefExpr` corresponding to `x`. Returns null if the expression `E` is not
-// an address-of expression.
-static const DeclRefExpr *getDeclRefInAddressOfExpr(const Expr *E) {
+// Given an expression like `&X` or `std::addressof(X)`, returns the `Expr`
+// corresponding to `X` (after removing parens and implicit casts).
+// Returns null if the input expression `E` is not an address-of expression.
+static const Expr *getSubExprInAddressOfExpr(const Expr *E) {
   if (!E->getType()->isPointerType())
     return nullptr;
   const Expr *Ptr = E->IgnoreParenImpCasts();
 
-  // `&x` where `x` is a DeclRefExpr.
+  // `&X` where `X` is an `Expr`.
   if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
-    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf) {
+    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
       return nullptr;
-    }
-    return dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenImpCasts());
+    return UO->getSubExpr()->IgnoreParenImpCasts();
   }
 
-  // `std::addressof(x)` where `x` is a DeclRefExpr.
+  // `std::addressof(X)` where `X` is an `Expr`.
   if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
     const FunctionDecl *FnDecl = CE->getDirectCallee();
-
     if (!FnDecl || !FnDecl->isInStdNamespace() ||
         FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
       return nullptr;
-
-    return dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts());
+    return CE->getArg(0)->IgnoreParenImpCasts();
   }
 
   return nullptr;
 }
 
-// Given an expression like `sizeof(x)`, returns the `DeclRefExpr` corresponding
-// to `x`. Returns null if the expression `E` is not a `sizeof` expression or is
-// `sizeof(T)` for a type `T`.
-static const DeclRefExpr *getDeclRefInSizeOfExr(const Expr *E) {
+// Given an expression like `sizeof(X)`, returns the `Expr` corresponding to `X`
+// (after removing parens and implicit casts). Returns null if the expression
+// `E` is not a `sizeof` expression or is `sizeof(T)` for a type `T`.
+static const Expr *getSubExprInSizeOfExpr(const Expr *E) {
   const auto *SizeOfExpr =
       dyn_cast<UnaryExprOrTypeTraitExpr>(E->IgnoreParenImpCasts());
   if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
     return nullptr;
   if (SizeOfExpr->isArgumentType())
     return nullptr;
-  return dyn_cast<DeclRefExpr>(
-      SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts());
+  return SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts();
 }
 
 namespace libc_func_matchers {
@@ -1165,11 +1161,13 @@ static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
 
   // Now we have a real call to memset, it's considered unsafe unless it's in
   // the form `memset(&x, 0, sizeof(x))`.
-  const DeclRefExpr *AddressOfVar = getDeclRefInAddressOfExpr(Node.getArg(0));
+  const auto *AddressOfVar = dyn_cast_if_present<DeclRefExpr>(
+      getSubExprInAddressOfExpr(Node.getArg(0)));
   if (!AddressOfVar)
     return true;
 
-  const DeclRefExpr *SizeOfVar = getDeclRefInSizeOfExr(Node.getArg(2));
+  const auto *SizeOfVar =
+      dyn_cast_if_present<DeclRefExpr>(getSubExprInSizeOfExpr(Node.getArg(2)));
   if (!SizeOfVar)
     return true;
 
