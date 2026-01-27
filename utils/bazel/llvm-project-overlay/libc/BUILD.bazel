@@ -4051,6 +4051,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_hypot",
+    hdrs = ["src/__support/math/hypot.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_hypot",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_hypotf",
     hdrs = ["src/__support/math/hypotf.h"],
     deps = [
@@ -4221,21 +4230,6 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_sincosf_utils",
-    ],
-)
-
-libc_support_library(
-    name = "src___support_math_hypot",
-    hdrs = ["src/__support/math/hypot.h"],
-    deps = [
-        ":__support_common",
-        ":__support_cpp_bit",
-        ":__support_cpp_type_traits",
-        ":__support_fp_util_basic_operations",
-        ":__support_fp_util_fenv_impl",
-        ":__support_fp_util_fp_bits",
-        ":__support_fp_util_rounding_mode",
-        ":__support_uint128",
     ],
 )
 
@@ -5263,7 +5257,12 @@ libc_math_function(name = "getpayloadf128")
 
 libc_math_function(name = "getpayloadf16")
 
-libc_math_function(name = "hypot")
+libc_math_function(
+    name = "hypot",
+    additional_deps = [
+        ":__support_math_hypot",
+    ],
+)
 
 libc_math_function(
     name = "hypotf",

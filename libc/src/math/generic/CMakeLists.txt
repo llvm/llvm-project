@@ -3228,7 +3228,6 @@ add_entrypoint_object(
     ../hypot.h
   DEPENDS
     libc.src.__support.math.hypot
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_entrypoint_object(
