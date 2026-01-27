@@ -388,6 +388,12 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     return;
   }
 
+  if (O->getAnyRelocationType(RE) == MachO::RISCV_RELOC_ADDEND &&
+      O->getArch() == Triple::riscv32) {
+    Fmt << format("0x%0" PRIx64, Val);
+    return;
+  }
+
   if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
     std::advance(SI, Val);
@@ -928,6 +934,9 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           else if ((cputype == MachO::CPU_TYPE_ARM64 ||
                     cputype == MachO::CPU_TYPE_ARM64_32) &&
                    r_type == MachO::ARM64_RELOC_ADDEND)
+            outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
+          else if (cputype == MachO::CPU_TYPE_RISCV &&
+                   r_type == MachO::RISCV_RELOC_ADDEND)
             outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
           else {
             outs() << format("%d ", r_symbolnum);

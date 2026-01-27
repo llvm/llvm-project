@@ -477,6 +477,62 @@ enum RelocationInfoType {
   // An authenticated pointer.
   ARM64_RELOC_AUTHENTICATED_POINTER = 11,
 
+  // For pointers. For example, for a .word directive in assembly
+  // representing a memory location where data is stored:
+  //      .word: _bar
+  RISCV_RELOC_UNSIGNED = 0,
+  // Subtractor operand. Must be followed by a RISCV_RELOC_UNSIGNED,
+  // which is the pointer from which to subtract the subtractor. For
+  // example:
+  //
+  //          .global _a
+  //          .global _b
+  //    _a: ...
+  //    _b: ...
+  //
+  //    .data_region
+  //    .word _a - _b
+  //    .end_data_region
+  RISCV_RELOC_SUBTRACTOR = 1,
+  // A jal/j instruction with 21-bit displacement. For example, a
+  // function call:
+  //
+  //    _foo:
+  //          jal _bar
+  RISCV_RELOC_BRANCH21 = 2,
+  // High 20 bits of pointer. r_pcrel=1 means this is paired with an
+  // AUIPC.  r_pcrel=0 means this is paired with a LUI.
+  RISCV_RELOC_HI20 = 3,
+  // An ADDI or LW/SW instruction that requires low 12 bits to be
+  // adjusted. r_pcrel=1 means this is paired with an AUIPC.
+  // r_pcrel=0 means this is paired with a LUI (llvm currently does
+  // not support no-PIC). Note: the compiler places the distance to
+  // the paired AUIPC in the imm12 (e.g. if previous instruction is
+  // the AUIPC, the imm12 is -4 or 0xFFC).  NOTE: this mean that the
+  // separation between hi/lo has to fit in (signed) 12 bits. FIXME:
+  // this needs addressing for code models that go beyond 4k
+  // functions.
+  RISCV_RELOC_LO12 = 4,
+  // High 20 bits of GOT slot. r_pcrel=1 means this is paired with an
+  // AUIPC.  r_pcrel=0 means this is paired with a LUI (the compiler
+  // may emit a @got reloc for a reference to anything outside the
+  // translation unit, then the linker elides the @got if the target
+  // is in range).
+  RISCV_RELOC_GOT_HI20 = 5,
+  // Low 12 bits of GOT slot. r_pcrel=1 means this is paired with an
+  // AUIPC.  r_pcrel=0 means this is paired with a LUI.
+  RISCV_RELOC_GOT_LO12 = 6,
+  // For pointers to GOT slots. To be used by C++ exception handling,
+  // in the Language Specific Data Area (LSDA, __gcc_except_tab
+  // section). Not currently used, but added for completeness.
+  RISCV_RELOC_POINTER_TO_GOT = 7,
+  // Adds a static offset to a relocation.  Must be followed by
+  // RISCV_RELOC_PCREL_HI or RISCV_RELOC_BRANCH21. For example, the 16
+  // bytes offset in:
+  //
+  //         auipc a0, %pcrel_hi(var+16)
+  RISCV_RELOC_ADDEND = 8,
+
   // Constant values for the r_type field in an x86_64 architecture
   // llvm::MachO::relocation_info or llvm::MachO::scattered_relocation_info
   // structure
