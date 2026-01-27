@@ -331,6 +331,7 @@ set(files
   __condition_variable/condition_variable.h
   __config
   __configuration/abi.h
+  __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
   __configuration/experimental.h
