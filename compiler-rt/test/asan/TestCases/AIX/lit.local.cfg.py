@@ -3,6 +3,7 @@ def getRoot(config):
         return config
     return getRoot(config.parent)
 
+
 root = getRoot(config)
 
 if root.target_os not in ["AIX"]:
