@@ -451,8 +451,7 @@ bool isPtrConversion(const FunctionDecl *F) {
   return false;
 }
 
-bool isNoDeleteFunction(const FunctionDecl *F)
-{
+bool isNoDeleteFunction(const FunctionDecl *F) {
   return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
 }
 

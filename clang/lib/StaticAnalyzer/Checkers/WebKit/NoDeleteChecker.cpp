@@ -34,7 +34,9 @@ class NoDeleteChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 
 public:
   NoDeleteChecker()
-      : Bug(this, "Incorrect [[clang::annotate_type(\"webkit.nodelete\")]] annotation",
+      : Bug(this,
+            "Incorrect [[clang::annotate_type(\"webkit.nodelete\")]] "
+            "annotation",
             "WebKit coding guidelines") {}
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -48,8 +50,7 @@ public:
       const NoDeleteChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
-      explicit LocalVisitor(const NoDeleteChecker *Checker)
-          : Checker(Checker) {
+      explicit LocalVisitor(const NoDeleteChecker *Checker) : Checker(Checker) {
         assert(Checker);
       }
 
@@ -72,26 +73,28 @@ public:
 
     bool HasNoDeleteAnnotation = isNoDeleteFunction(FD);
     if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (auto* Cls = MD->getParent(); Cls && MD->isVirtual()) {
+      if (auto *Cls = MD->getParent(); Cls && MD->isVirtual()) {
         CXXBasePaths Paths;
         Paths.setOrigin(Cls);
 
-        Cls->lookupInBases([&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-          const Type *T = Base->getType().getTypePtrOrNull();
-          if (!T)
-            return false;
-
-          const CXXRecordDecl *R = T->getAsCXXRecordDecl();
-          for (const CXXMethodDecl *BaseMD : R->methods()) {
-            if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
-              if (isNoDeleteFunction(FD)) {
-                HasNoDeleteAnnotation = true;
+        Cls->lookupInBases(
+            [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
+              const Type *T = Base->getType().getTypePtrOrNull();
+              if (!T)
                 return false;
+
+              const CXXRecordDecl *R = T->getAsCXXRecordDecl();
+              for (const CXXMethodDecl *BaseMD : R->methods()) {
+                if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
+                  if (isNoDeleteFunction(FD)) {
+                    HasNoDeleteAnnotation = true;
+                    return false;
+                  }
+                }
               }
-            }
-          }
-          return true;
-        }, Paths, /*LookupInDependent =*/true);
+              return true;
+            },
+            Paths, /*LookupInDependent =*/true);
       }
     }
 
