@@ -1,4 +1,4 @@
-//===-- Implementation of llogb function ----------------------------------===//
+//===-- Shared llogb function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/llogb.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LLOGB_H
+#define LLVM_LIBC_SHARED_MATH_LLOGB_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/llogb.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(long, llogb, (double x)) { return math::llogb(x); }
+using math::llogb;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LLOGB_H
