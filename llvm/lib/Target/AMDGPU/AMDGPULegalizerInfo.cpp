@@ -3410,6 +3410,7 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_sqrt:
       return true;
     default:
       break;
@@ -3417,6 +3418,8 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
 
     break;
   }
+  case TargetOpcode::G_FSQRT:
+    return true;
   case TargetOpcode::G_FFREXP: {
     if (DefMI->getOperand(0).getReg() == Src)
       return true;

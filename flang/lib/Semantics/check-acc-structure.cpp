@@ -669,8 +669,53 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
   if (loopNestLevel == 0) {
-    context_.Say(verbatim.source,
-          "The CACHE directive must be inside a loop"_err_en_US);
+    context_.Say(
+        verbatim.source, "The CACHE directive must be inside a loop"_err_en_US);
+  }
+
+  // Check cache directive array section constraints
+  const auto &objectListWithModifier =
+      std::get<parser::AccObjectListWithModifier>(x.t);
+  const auto &objectList =
+      std::get<parser::AccObjectList>(objectListWithModifier.t);
+
+  for (const auto &accObject : objectList.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *dataRef =
+                      std::get_if<parser::DataRef>(&designator.u)) {
+                if (const auto *arrayElem =
+                        std::get_if<common::Indirection<parser::ArrayElement>>(
+                            &dataRef->u)) {
+                  for (const auto &subscript : arrayElem->value().subscripts) {
+                    if (const auto *triplet =
+                            std::get_if<parser::SubscriptTriplet>(
+                                &subscript.u)) {
+                      const auto &lower{std::get<0>(triplet->t)};
+                      const auto &upper{std::get<1>(triplet->t)};
+                      const auto &stride{std::get<2>(triplet->t)};
+                      if (!lower && !upper) {
+                        context_.Say(designator.source,
+                            "The CACHE directive requires at least one of the bounds in the array section subscript triplet to be specified"_err_en_US);
+                      }
+                      if (stride) {
+                        if (auto strideVal{GetIntValue(*stride)}) {
+                          if (*strideVal != 1) {
+                            context_.Say(designator.source,
+                                "The CACHE directive does not support strided array sections"_err_en_US);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &) {
+              // Common block names are not expected in cache directive
+            }},
+        accObject.u);
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {

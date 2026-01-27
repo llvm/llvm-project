@@ -630,6 +630,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
   }
+  // HwModeId is used if we have any RegClassByHwMode patterns
+  if (!Target.getAllRegClassByHwMode().empty())
+    FuncH.indent(2) << "[[maybe_unused]] unsigned HwModeId = "
+                    << "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n";
 
   if (CompressPatterns.empty()) {
     OS << FH;
@@ -735,7 +739,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         switch (SourceOperandMap[OpNo].Kind) {
         case OpData::Operand:
           if (SourceOperandMap[OpNo].OpInfo.TiedOpIdx != -1) {
-            if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClass"))
+            if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClassLike"))
               CondStream << CondSep << "MI.getOperand(" << OpNo
                          << ").isReg() && MI.getOperand("
                          << SourceOperandMap[OpNo].OpInfo.TiedOpIdx
@@ -788,11 +792,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           const Record *DagRec = DestOperandMap[OpNo].OpInfo.DagRec;
           // Check that the operand in the Source instruction fits
           // the type for the Dest instruction.
-          if (DagRec->isSubClassOf("RegisterClass") ||
-              DagRec->isSubClassOf("RegisterOperand")) {
-            auto *ClassRec = DagRec->isSubClassOf("RegisterClass")
-                                 ? DagRec
-                                 : DagRec->getValueAsDef("RegClass");
+          if (auto *ClassRec = Target.getAsRegClassLike(DagRec)) {
             // This is a register operand. Check the register class.
             // Don't check register class if this is a tied operand, it was done
             // for the operand it's tied to.
@@ -801,9 +801,15 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
               if (EType == EmitterType::CheckCompress)
                 CondStream << " && MI.getOperand(" << OpIdx
                            << ").getReg().isPhysical()";
-              CondStream << CondSep << TargetName << "MCRegisterClasses["
-                         << TargetName << "::" << ClassRec->getName()
-                         << "RegClassID].contains(MI.getOperand(" << OpIdx
+              CondStream << CondSep << TargetName << "MCRegisterClasses[";
+              if (ClassRec->isSubClassOf("RegClassByHwMode")) {
+                CondStream << TargetName << "RegClassByHwModeTables[HwModeId]["
+                           << TargetName << "::" << ClassRec->getName() << "]";
+              } else {
+                CondStream << TargetName << "::" << ClassRec->getName()
+                           << "RegClassID";
+              }
+              CondStream << "].contains(MI.getOperand(" << OpIdx
                          << ").getReg())";
             }
 

@@ -8,6 +8,7 @@
 
 #include "RedundantBranchConditionCheck.h"
 #include "../utils/Aliasing.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
@@ -135,8 +136,8 @@ void RedundantBranchConditionCheck::check(
       const SourceLocation BeforeOtherSide =
           OtherSide->getBeginLoc().getLocWithOffset(-1);
       const SourceLocation AfterOtherSide =
-          Lexer::findNextToken(OtherSide->getEndLoc(), *Result.SourceManager,
-                               getLangOpts())
+          utils::lexer::findNextTokenSkippingComments(
+              OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts())
               ->getLocation();
       Diag << FixItHint::CreateRemoval(
                   CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
@@ -167,8 +168,9 @@ void RedundantBranchConditionCheck::check(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
     } else {
       const SourceLocation AfterLHS =
-          Lexer::findNextToken(CondOp->getLHS()->getEndLoc(),
-                               *Result.SourceManager, getLangOpts())
+          utils::lexer::findNextTokenSkippingComments(
+              CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
+              getLangOpts())
               ->getLocation();
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           AfterLHS, CondOp->getRHS()->getEndLoc()));

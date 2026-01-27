@@ -280,6 +280,13 @@ static std::string computeAMDDataLayout(const Triple &TT) {
 }
 
 static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
+  if (TT.isOSBinFormatMachO()) {
+    assert(TT.isLittleEndian() && "Invalid endianness");
+    assert(TT.isArch32Bit() && "Invalid triple");
+    assert((ABIName != "ilp32e") && "Invalid ABI.");
+    return "e-m:o-p:32:32-i64:64-n32-S128";
+  }
+
   std::string Ret;
 
   if (TT.isLittleEndian())

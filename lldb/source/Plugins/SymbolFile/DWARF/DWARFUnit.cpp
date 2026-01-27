@@ -134,12 +134,14 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   else if (dwo_symbol_file->GetDWARFContext()
                .getOrLoadRngListsData()
                .GetByteSize() > 0)
-    dwo_cu->SetRangesBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+    dwo_cu->SetRangesBase(
+        llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format));
 
   if (GetVersion() >= 5 &&
       dwo_symbol_file->GetDWARFContext().getOrLoadLocListsData().GetByteSize() >
           0)
-    dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+    dwo_cu->SetLoclistsBase(
+        llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format));
 
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
@@ -521,7 +523,8 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
   }
   m_loclists_base = loclists_base;
 
-  uint64_t header_size = llvm::DWARFListTableHeader::getHeaderSize(DWARF32);
+  uint64_t header_size =
+      llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format);
   if (loclists_base < header_size)
     return;
 
@@ -591,7 +594,8 @@ DWARFUnit::GetRnglistTable() {
     m_rnglist_table_done = true;
     if (auto table_or_error =
             ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
-                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base, DWARF32))
+                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base,
+                GetFormParams().Format))
       m_rnglist_table = std::move(table_or_error.get());
     else
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(

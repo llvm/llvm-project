@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
 #include "config/linux/app.h"
+#include "hdr/elf_proxy.h"
+#include "hdr/link_macros.h"
 #include "hdr/stdint_proxy.h"
-#include "include/llvm-libc-macros/link-macros.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
@@ -17,8 +18,6 @@
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
 
-#include <linux/auxvec.h>
-#include <linux/elf.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
@@ -37,7 +36,7 @@ extern uintptr_t __fini_array_end[];
 // This symbol is provided by the dynamic linker. It can be undefined depending
 // on how the program is loaded exactly.
 [[gnu::weak,
-  gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
+  gnu::visibility("hidden")]] extern const ElfW(Dyn) _DYNAMIC[]; // NOLINT
 }
 
 namespace LIBC_NAMESPACE_DECL {
@@ -63,9 +62,6 @@ static void call_fini_array_callbacks() {
 
 static ThreadAttributes main_thread_attrib;
 static TLSDescriptor tls;
-// We separate teardown_main_tls from callbacks as callback function themselves
-// may require TLS.
-void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
 
 [[noreturn]] void do_start() {
   auto tid = syscall_impl<long>(SYS_gettid);

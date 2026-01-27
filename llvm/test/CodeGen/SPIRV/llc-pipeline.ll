@@ -38,6 +38,7 @@
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
 ; SPIRV-O0-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
 ; SPIRV-O0-NEXT:    SPIRV push constant Access
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
@@ -143,6 +144,7 @@
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
 ; SPIRV-Opt-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access
 ; SPIRV-Opt-NEXT:    SPIRV push constant Access
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
