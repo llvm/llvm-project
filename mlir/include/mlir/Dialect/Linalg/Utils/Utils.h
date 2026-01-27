@@ -44,6 +44,23 @@ SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp,
 SmallVector<int64_t> getUnPackInverseSrcPerm(linalg::UnPackOp,
                                              PackingMetadata &metadata);
 
+/// Returns a vector that interchanges `elements` starting at offset `offset`
+/// based on the indexes in `interchangeVector`.
+template <typename T>
+SmallVector<T> interchange(ArrayRef<T> elements,
+                           ArrayRef<int64_t> interchangeVector,
+                           int offset = 0) {
+  SmallVector<T> vec = llvm::to_vector(elements);
+  for (auto [idx, val] : llvm::enumerate(interchangeVector)) {
+    vec[idx + offset] = elements[val + offset];
+  }
+  return vec;
+}
+
+/// Returns the `interchangeVector` based on `dimsPos`.
+SmallVector<int64_t> computeInterchangeFromDimPos(ArrayRef<int64_t> dimsPos,
+                                                  int64_t rank);
+
 //===----------------------------------------------------------------------===//
 // General utilities
 //===----------------------------------------------------------------------===//
