@@ -49,6 +49,14 @@ clang:headers:
     - any-glob-to-any-file:
       - clang/lib/Headers/**/*
 
+clang:ssaf:
+  - changed-files:
+    - any-glob-to-any-file:
+      - clang/docs/ScalableStaticAnalysisFramework/**/*
+      - clang/include/clang/Analysis/Scalable/**/*
+      - clang/lib/Analysis/Scalable/**/*
+      - clang/unittests/Analysis/Scalable/**/*
+
 compiler-rt:
   - changed-files:
     - any-glob-to-any-file:
