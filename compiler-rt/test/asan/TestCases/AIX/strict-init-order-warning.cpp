@@ -3,6 +3,4 @@
 
 // CHECK: WARNING: strict_init_order is not supported on AIX.
 
-int main() {
-  return 0;
-}
+int main() { return 0; }
