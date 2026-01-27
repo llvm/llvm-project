@@ -101,13 +101,12 @@ public:
     auto input = scatter.getInput();
     auto loc = scatter.getLoc();
 
-    auto valuesType = dyn_cast<RankedTensorType>(valuesIn.getType());
-    auto indicesType = dyn_cast<RankedTensorType>(indices.getType());
-    auto inputType = dyn_cast<RankedTensorType>(input.getType());
-    if (!valuesType || !indicesType || !inputType ||
-        valuesType.getRank() != 3 || inputType.getRank() != 3 ||
-        indicesType.getRank() != 2)
-      return failure();
+    if (!isa<RankedTensorType>(valuesIn.getType()) ||
+    !isa<RankedTensorType>(indices.getType()) ||
+    !isa<RankedTensorType>(input.getType())) {
+      return rewriter.notifyMatchFailure(scatter,
+          "expected ranked tensor operands for scatter lowering");
+    }
 
     // N, W, C are chosen to match the TOSA spec
     auto dimN = createTensorDim(rewriter, loc, input, 0);
