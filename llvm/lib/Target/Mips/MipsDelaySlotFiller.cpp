@@ -663,17 +663,19 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // R5900 short loop erratum fix: skip delay slot filling for short backward
     // loops to avoid triggering a hardware bug where short loops may exit
     // early. The fix can be controlled with -mfix-r5900 / -mno-fix-r5900.
+    bool SkipForFixR5900 = false;
     if (STI.fixR5900() && isR5900ShortLoopBranch(&*I, MBB)) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": skipping delay slot fill for R5900 "
                                       "short loop branch.\n");
       ++R5900ShortLoopNops;
-      // Fall through to insert NOP in delay slot
+      SkipForFixR5900 = true;
     }
+
     // Delay slot filling is disabled at -O0, in microMIPS32R6, or for R5900
     // short loop branches.
-    else if (!DisableDelaySlotFiller &&
-             (TM->getOptLevel() != CodeGenOptLevel::None) &&
-             !(InMicroMipsMode && STI.hasMips32r6())) {
+    if (!DisableDelaySlotFiller &&
+        (TM->getOptLevel() != CodeGenOptLevel::None) &&
+        !(InMicroMipsMode && STI.hasMips32r6()) && !SkipForFixR5900) {
 
       bool Filled = false;
 
