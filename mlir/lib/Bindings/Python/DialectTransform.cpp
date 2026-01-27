@@ -408,6 +408,14 @@ void producesHandle(nb::iterable &results,
   mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
                               effects.effects);
 };
+
+void modifiesPayload(PyMemoryEffectsInstanceList effects) {
+  mlirTransformModifiesPayload(effects.effects);
+}
+
+void onlyReadsPayload(PyMemoryEffectsInstanceList effects) {
+  mlirTransformOnlyReadsPayload(effects.effects);
+}
 } // namespace
 
 static void populateDialectTransformSubmodule(nb::module_ &m) {
@@ -438,6 +446,12 @@ static void populateDialectTransformSubmodule(nb::module_ &m) {
 
   m.def("produces_handle", producesHandle, "Mark results as producing handles.",
         nb::arg("results"), nb::arg("effects"));
+
+  m.def("modifies_payload", modifiesPayload,
+        "Mark the transform as modifying the payload.", nb::arg("effects"));
+
+  m.def("only_reads_payload", onlyReadsPayload,
+        "Mark the transform as only reading the payload.", nb::arg("effects"));
 }
 } // namespace transform
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

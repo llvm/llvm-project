@@ -226,6 +226,14 @@ MLIR_CAPI_EXPORTED void
 mlirTransformProducesHandle(MlirOpResult *results, intptr_t numResults,
                             MlirMemoryEffectInstancesList effects);
 
+/// Helper to mark potential modifications to the payload IR.
+MLIR_CAPI_EXPORTED void
+mlirTransformModifiesPayload(MlirMemoryEffectInstancesList effects);
+
+/// Helper to mark potential reads from the payload IR.
+MLIR_CAPI_EXPORTED void
+mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesList effects);
+
 #ifdef __cplusplus
 }
 #endif

@@ -81,6 +81,7 @@ class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
     def get_effects(op: ir.Operation, effects):
         transform.only_reads_handle(op.op_operands, effects)
         transform.produces_handle(op.results, effects)
+        transform.only_reads_payload(effects)
 
 
 # Demonstration of a TransformOpInterface-implementing op that gets named attributes
@@ -236,6 +237,13 @@ def OneOpInOneOpOutTransformOpInterfaceRewriterImpl():
     TransformOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
+    class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
+        @staticmethod
+        def get_effects(op: ir.Operation, effects):
+            transform.consumes_handle(op.op_operands, effects)
+            transform.produces_handle(op.results, effects)
+            transform.modifies_payload(effects)
+
     MemoryEffectsOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     with schedule_boilerplate() as (schedule, named_seq):

@@ -329,3 +329,13 @@ void mlirTransformProducesHandle(MlirOpResult *results, intptr_t numResults,
     transform::producesHandle(ResultRange(*unwrap(results[i])),
                               *unwrap(effects));
 }
+
+/// Set the effect of potentially modifying payload IR.
+void mlirTransformModifiesPayload(MlirMemoryEffectInstancesList effects) {
+  transform::modifiesPayload(*unwrap(effects));
+}
+
+/// Set the effect of potentially reading payload IR.
+void mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesList effects) {
+  transform::onlyReadsPayload(*unwrap(effects));
+}
