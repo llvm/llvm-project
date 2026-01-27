@@ -499,19 +499,19 @@ _mm512_maskz_div_ph(__mmask32 __U, __m512h __A, __m512h __B) {
       (__mmask32)(U), (__v32hf)_mm512_div_round_ph((A), (B), (R)),             \
       (__v32hf)_mm512_setzero_ph()))
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_min_ph(__m512h __A,
-                                                              __m512h __B) {
+static __inline__ __m512h
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_min_ph(__m512h __A, __m512h __B) {
   return (__m512h)__builtin_ia32_minph512((__v32hf)__A, (__v32hf)__B,
                                           _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_min_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
   return (__m512h)__builtin_ia32_selectph_512(
       (__mmask32)__U, (__v32hf)_mm512_min_ph(__A, __B), (__v32hf)__W);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_min_ph(__mmask32 __U, __m512h __A, __m512h __B) {
   return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
                                               (__v32hf)_mm512_min_ph(__A, __B),
@@ -532,19 +532,19 @@ _mm512_maskz_min_ph(__mmask32 __U, __m512h __A, __m512h __B) {
       (__mmask32)(U), (__v32hf)_mm512_min_round_ph((A), (B), (R)),             \
       (__v32hf)_mm512_setzero_ph()))
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_max_ph(__m512h __A,
-                                                              __m512h __B) {
+static __inline__ __m512h
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_max_ph(__m512h __A, __m512h __B) {
   return (__m512h)__builtin_ia32_maxph512((__v32hf)__A, (__v32hf)__B,
                                           _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_max_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
   return (__m512h)__builtin_ia32_selectph_512(
       (__mmask32)__U, (__v32hf)_mm512_max_ph(__A, __B), (__v32hf)__W);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
   return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
                                               (__v32hf)_mm512_max_ph(__A, __B),

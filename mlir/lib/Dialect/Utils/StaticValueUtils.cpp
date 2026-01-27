@@ -316,8 +316,12 @@ std::optional<APInt> constantTripCount(
            << lb;
     return std::nullopt;
   }
-  if (lb == ub)
+  if (lb == ub) {
+    // Fast path: LB == UB. The loop has zero iterations.
+    // Note: LB and UB could match at runtime, even though they are different
+    // SSA values. That case cannot be detected here.
     return APInt(bitwidth, 0);
+  }
 
   std::optional<std::pair<APInt, bool>> maybeStepCst =
       getConstantAPIntValue(step);
@@ -326,8 +330,12 @@ std::optional<APInt> constantTripCount(
     auto &stepCst = maybeStepCst->first;
     assert(static_cast<int>(stepCst.getBitWidth()) == bitwidth &&
            "step must have the same bitwidth as lb and ub");
-    if (stepCst.isZero())
-      return stepCst;
+    if (stepCst.isZero()) {
+      // Step is zero. If LB and UB match, we have zero iterations. Otherwise,
+      // we have an infinite number of iterations. We cannot tell for sure which
+      // case applies, so the static trip count is unknown.
+      return std::nullopt;
+    }
     if (stepCst.isNegative())
       return APInt(bitwidth, 0);
   }
@@ -351,8 +359,6 @@ std::optional<APInt> constantTripCount(
       return std::nullopt;
     APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
     APSInt ubCst(maybeUbCst->first, /*isUnsigned=*/!isSigned);
-    if (!maybeUbCst)
-      return std::nullopt;
     if (ubCst <= lbCst) {
       LDBG() << "constantTripCount is 0 because ub <= lb (" << lbCst << "("
              << lbCst.getBitWidth() << ") <= " << ubCst << "("
@@ -385,9 +391,9 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
   auto &stepCst = maybeStepCst->first;
-  llvm::APInt tripCount = diff.sdiv(stepCst);
-  llvm::APInt r = diff.srem(stepCst);
-  if (!r.isZero())
+  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
+  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
+  if (!remainder.isZero())
     tripCount = tripCount + 1;
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;

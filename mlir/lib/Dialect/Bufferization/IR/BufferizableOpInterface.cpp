@@ -125,6 +125,10 @@ SymbolTableCollection &BufferizationState::getSymbolTables() {
   return symbolTables;
 }
 
+SymbolTableCollection &BufferizationState::getSymbolTables() const {
+  return symbolTables;
+}
+
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
   assert(isRepetitiveRegion(region, options) && "expected repetitive region");
@@ -720,8 +724,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
   assert(llvm::isa<TensorLikeType>(value.getType()) &&
          "unexpected non-tensor type");
   invocationStack.push_back(value);
-  auto popFromStack =
-      llvm::make_scope_exit([&]() { invocationStack.pop_back(); });
+  llvm::scope_exit popFromStack([&]() { invocationStack.pop_back(); });
 
   // Try querying BufferizableOpInterface.
   Operation *op = getOwnerOfValue(value);

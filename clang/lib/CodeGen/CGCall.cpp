@@ -31,6 +31,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
@@ -150,7 +151,7 @@ static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
 /// and it makes ABI code a little easier to be able to assume that
 /// all parameter and return types are top-level unqualified.
 static CanQualType GetReturnType(QualType RetTy) {
-  return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+  return RetTy->getCanonicalTypeUnqualified();
 }
 
 /// Arrange the argument and result information for a value of the given
@@ -2884,7 +2885,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
           if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
               ParamType->castAsRecordDecl()->isParamDestroyedInCallee())
-            Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+            Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo());
         }
       }
 
@@ -6010,11 +6011,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AddObjCARCExceptionMetadata(CI);
 
   // Set tail call kind if necessary.
+  bool IsPPC = getTarget().getTriple().isPPC();
+  bool IsMIPS = getTarget().getTriple().isMIPS();
+  bool HasMips16 = false;
+  if (IsMIPS) {
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+    HasMips16 = TargetOpts.FeatureMap.lookup("mips16");
+    if (!HasMips16)
+      HasMips16 = llvm::is_contained(TargetOpts.Features, "+mips16");
+  }
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
     else if (IsMustTail) {
-      if (getTarget().getTriple().isPPC()) {
+      if (IsPPC) {
         if (getTarget().getTriple().isOSAIX())
           CGM.getDiags().Report(Loc, diag::err_aix_musttail_unsupported);
         else if (!getTarget().hasFeature("pcrelative-memops")) {
@@ -6039,6 +6049,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             }
           }
         }
+      }
+      if (IsMIPS) {
+        if (HasMips16)
+          CGM.getDiags().Report(Loc, diag::err_mips_impossible_musttail) << 0;
+        else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+          CGM.addUndefinedGlobalForTailCall({FD, Loc});
       }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
     }

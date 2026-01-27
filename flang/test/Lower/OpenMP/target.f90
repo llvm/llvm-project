@@ -694,3 +694,87 @@ subroutine target_unstructured
    !$omp end target
    !CHECK: }
 end subroutine target_unstructured
+
+!===============================================================================
+! Target `device` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_device() {
+subroutine omp_target_device
+  integer            :: dev32
+  integer(kind=8)    :: dev64
+  integer(kind=2)    :: dev16
+
+  dev32 = 1
+  dev64 = 2_8
+  dev16 = 3_2
+
+  !$omp target device(dev32)
+  !$omp end target
+  ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: omp.target device(%[[DEV32]] : i32)
+
+  !$omp target device(dev64)
+  !$omp end target
+  ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+  ! CHECK: omp.target device(%[[DEV64]] : i64)
+
+  !$omp target device(dev16)
+  !$omp end target
+  ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
+  ! CHECK: omp.target device(%[[DEV16]] : i16)
+
+  !$omp target device(2)
+  !$omp end target
+  ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
+  ! CHECK: omp.target device(%[[C2]] : i32)
+
+  !$omp target device(5_8)
+  !$omp end target
+  ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
+  ! CHECK: omp.target device(%[[C5]] : i64)
+
+end subroutine omp_target_device
+
+!===============================================================================
+! Target data `device` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_data_device() {
+subroutine omp_target_data_device
+  integer            :: dev32
+  integer(kind=8)    :: dev64
+  integer(kind=2)    :: dev16
+  integer            :: x
+
+  dev32 = 1
+  dev64 = 2_8
+  dev16 = 3_2
+  x = 0
+
+  !$omp target data device(dev32) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: omp.target_data device(%[[DEV32]] : i32)
+
+  !$omp target data device(dev64) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+  ! CHECK: omp.target_data device(%[[DEV64]] : i64)
+
+  !$omp target data device(dev16) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
+  ! CHECK: omp.target_data device(%[[DEV16]] : i16)
+
+  !$omp target data device(2) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
+  ! CHECK: omp.target_data device(%[[C2]] : i32)
+
+  !$omp target data device(5_8) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
+  ! CHECK: omp.target_data device(%[[C5]] : i64)
+
+end subroutine omp_target_data_device

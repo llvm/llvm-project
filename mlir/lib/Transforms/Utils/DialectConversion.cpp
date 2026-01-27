@@ -548,7 +548,13 @@ public:
     // Move the block back to its original position.
     Region::iterator before =
         insertBeforeBlock ? Region::iterator(insertBeforeBlock) : region->end();
-    region->getBlocks().splice(before, block->getParent()->getBlocks(), block);
+    if (Region *currentParent = block->getParent()) {
+      // Block is still in a region, use cheap splice to move it back.
+      region->getBlocks().splice(before, currentParent->getBlocks(), block);
+      return;
+    }
+    // Block was orphaned by a prior rollback, can't splice.
+    region->getBlocks().insert(before, block);
   }
 
 private:
@@ -2644,7 +2650,7 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
 
   // Clear pattern state, so that the next pattern application starts with a
   // clean slate. (The op/block sets are populated by listener notifications.)
-  auto cleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit cleanup([&]() {
     rewriterImpl.patternNewOps.clear();
     rewriterImpl.patternModifiedOps.clear();
   });

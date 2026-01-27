@@ -113,12 +113,17 @@ void transform::AlternativesOp::getSuccessorRegions(
                                             ->getParentRegion()
                                             ->getRegionNumber() +
                                         1)) {
-    regions.emplace_back(&alternative, !getOperands().empty()
-                                           ? alternative.getArguments()
-                                           : Block::BlockArgListType());
+    regions.emplace_back(&alternative);
   }
   if (!point.isParent())
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+transform::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getOperation()->getResults();
+  return successor.getSuccessor()->getArguments();
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -170,7 +175,7 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
     auto scope = state.make_region_scope(reg);
     auto clones = llvm::to_vector(
         llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
-    auto deleteClones = llvm::make_scope_exit([&] {
+    llvm::scope_exit deleteClones([&] {
       for (Operation *clone : clones)
         clone->erase();
     });
@@ -1738,7 +1743,7 @@ void transform::ForeachOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   Region *bodyRegion = &getBody();
   if (point.isParent()) {
-    regions.emplace_back(bodyRegion, bodyRegion->getArguments());
+    regions.emplace_back(bodyRegion);
     return;
   }
 
@@ -1746,8 +1751,13 @@ void transform::ForeachOp::getSuccessorRegions(
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.emplace_back(bodyRegion);
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange transform::ForeachOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults())
+                              : ValueRange(getBody().getArguments());
 }
 
 OperandRange
@@ -2873,7 +2883,7 @@ static bool isValueUsePotentialConsumer(OpOperand &use) {
   return isHandleConsumed(use.get(), iface);
 }
 
-LogicalResult
+static LogicalResult
 checkDoubleConsume(Value value,
                    function_ref<InFlightDiagnostic()> reportError) {
   OpOperand *potentialConsumer = nullptr;
@@ -2969,16 +2979,23 @@ void transform::SequenceOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent()) {
     Region *bodyRegion = &getBody();
-    regions.emplace_back(bodyRegion, getNumOperands() != 0
-                                         ? bodyRegion->getArguments()
-                                         : Block::BlockArgListType());
+    regions.emplace_back(bodyRegion);
     return;
   }
 
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+transform::SequenceOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (getNumOperands() == 0)
+    return ValueRange();
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(

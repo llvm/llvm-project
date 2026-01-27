@@ -2,6 +2,7 @@
 
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
@@ -545,8 +546,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (mpt->isMemberDataPointer()) {
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      assert(!cir::MissingFeatures::methodType());
-      cgm.errorNYI(SourceLocation(), "MethodType");
+      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
   }
@@ -661,15 +662,14 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
-                                    llvm::ArrayRef<CanQualType> argTypes,
-                                    RequiredArgs required) {
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info, RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -686,7 +686,7 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
@@ -710,7 +710,7 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If this is an enum being completed, then we flush all non-struct types
   // from the cache. This allows function types and other things that may be
   // derived from the enum to be recomputed.
-  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+  if ([[maybe_unused]] const auto *ed = dyn_cast<EnumDecl>(td)) {
     // Classic codegen clears the type cache if it contains an entry for this
     // enum type that doesn't use i32 as the underlying type, but I can't find
     // a test case that meets that condition. C++ doesn't allow forward

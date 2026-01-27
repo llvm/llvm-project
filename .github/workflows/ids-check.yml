@@ -1,0 +1,105 @@
+name: "Check LLVM ABI annotations"
+
+# TODO(https://github.com/llvm/llvm-project/issues/109483): Re-enable on pull
+# requests once the workflow is less diruptive.
+on:
+  # pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository_owner == 'llvm'
+    name: Check LLVM_ABI annotations with ids
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: compnerd/ids
+          path: ${{ github.workspace }}/ids
+          ref: b3bf35dd13d7ff244a6a6d106fe58d0eedb5743e # main
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          path: ${{ github.workspace }}/llvm-project
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
+        with:
+          path: "./llvm-project"
+          separator: ","
+          skip_initial_fetch: true
+          base_sha: 'HEAD~1'
+          sha: 'HEAD'
+
+      - name: Install dependencies
+        run: |
+          sudo apt install -y clang-19 ninja-build libclang-19-dev
+          pip install --require-hashes -r ${{ github.workspace }}/llvm-project/llvm/utils/git/requirements.txt
+
+      - name: Configure and build minimal LLVM for use by ids
+        run: |
+          cmake -B ${{ github.workspace }}/llvm-project/build/ \
+                -S ${{ github.workspace }}/llvm-project/llvm/ \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D CMAKE_C_COMPILER=clang \
+                -D CMAKE_CXX_COMPILER=clang++ \
+                -D LLVM_ENABLE_PROJECTS=clang \
+                -D LLVM_TARGETS_TO_BUILD="host" \
+                -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -G Ninja
+          cd ${{ github.workspace }}/llvm-project/build/
+          ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//'
+
+      - name: Configure ids
+        run: |
+          cmake -B ${{ github.workspace }}/ids/build/ \
+                -S ${{ github.workspace }}/ids/ \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D CMAKE_C_COMPILER=clang \
+                -D CMAKE_CXX_COMPILER=clang++ \
+                -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
+                -D LLVM_DIR=/usr/lib/llvm-19/lib/cmake/llvm/ \
+                -D Clang_DIR=/usr/lib/llvm-19/lib/cmake/clang/ \
+                -D FILECHECK_EXECUTABLE=$(which FileCheck-19) \
+                -D LIT_EXECUTABLE=$(which lit) \
+                -G Ninja
+
+      # TODO: Use an image with a prebuilt idt.
+      - name: Build ids
+        run: |
+          ninja -C ${{ github.workspace }}/ids/build/ all
+
+      - name: Run ids check
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        working-directory: ${{ github.workspace }}/llvm-project
+        run: |
+          echo "[]" > comments &&
+          python llvm/utils/git/ids-check-helper.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --idt-path ${{ github.workspace }}/ids/build/bin/idt \
+            --compile-commands ${{ github.workspace }}/llvm-project/build/compile_commands.json \
+            --start-rev HEAD~1 \
+            --end-rev HEAD \
+            --changed-files "$CHANGED_FILES"
+
+      - name: Upload results
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            llvm-project/comments

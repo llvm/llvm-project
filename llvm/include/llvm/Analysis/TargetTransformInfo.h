@@ -555,6 +555,18 @@ public:
 
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
+  // Given an address space cast of the given pointer value, calculate the known
+  // bits of the source pointer in the source addrspace and the destination
+  // pointer in the destination addrspace.
+  LLVM_ABI std::pair<KnownBits, KnownBits>
+  computeKnownBitsAddrSpaceCast(unsigned ToAS, const Value &PtrOp) const;
+
+  // Given an address space cast, calculate the known bits of the resulting ptr
+  // in the destination addrspace using the known bits of the source pointer in
+  // the source addrspace.
+  LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
+      unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
+
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
   LLVM_ABI bool
@@ -688,7 +700,7 @@ public:
     /// Don't allow loop unrolling to simulate more than this number of
     /// iterations when checking full unroll profitability
     unsigned MaxIterationsCountToAnalyze;
-    /// Don't disable runtime unroll for the loops which were vectorized.
+    /// Disable runtime unrolling by default for vectorized loops.
     bool UnrollVectorizedLoop = false;
     /// Don't allow runtime unrolling if expanding the trip count takes more
     /// than SCEVExpansionBudget.
@@ -1029,6 +1041,24 @@ public:
   isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
                                                    int RetIdx) const;
 
+  /// Represents a hint about the context in which an insert/extract is used.
+  ///
+  /// On some targets, inserts/extracts can cheaply be folded into loads/stores.
+  ///
+  /// This enum allows the vectorizer to give getVectorInstrCost an idea of how
+  /// inserts/extracts are used
+  ///
+  /// See \c getVectorInstrContextHint to compute a VectorInstrContext from an
+  /// insert/extract Instruction*.
+  enum class VectorInstrContext : uint8_t {
+    None,  ///< The insert/extract is not used with a load/store.
+    Load,  ///< The value being inserted comes from a load (InsertElement only).
+    Store, ///< The extracted value is stored (ExtractElement only).
+  };
+
+  /// Calculates a VectorInstrContext from \p I.
+  static VectorInstrContext getVectorInstrContextHint(const Instruction *I);
+
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.  The involved values may be passed in VL if
@@ -1036,12 +1066,14 @@ public:
   LLVM_ABI InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
       TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const;
+      ArrayRef<Value *> VL = {},
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// Estimate the overhead of scalarizing operands with the given types. The
   /// (potentially vector) types to use for each of argument are passes via Tys.
   LLVM_ABI InstructionCost getOperandsScalarizationOverhead(
-      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const;
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
@@ -1254,6 +1286,17 @@ public:
     OperandValueInfo getNoProps() const {
       return {Kind, OP_None};
     }
+
+    OperandValueInfo mergeWith(const OperandValueInfo OpInfoY) {
+      OperandValueKind MergeKind = OK_AnyValue;
+      if (isConstant() && OpInfoY.isConstant())
+        MergeKind = OK_NonUniformConstantValue;
+
+      OperandValueProperties MergeProp = OP_None;
+      if (Properties == OpInfoY.Properties)
+        MergeProp = Properties;
+      return {MergeKind, MergeProp};
+    }
   };
 
   /// \return the number of registers in the target-provided register class.
@@ -1430,6 +1473,10 @@ public:
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
 
+  /// Collect common data between two OperandValueInfo inputs
+  LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
+                                                     const Value *Y);
+
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
   /// From Agner Fog's guides, reciprocal throughput is "the average number of
@@ -1557,11 +1604,11 @@ public:
   /// This is used when the instruction is not available; a typical use
   /// case is to provision the cost of vectorization/scalarization in
   /// vectorizer passes.
-  LLVM_ABI InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                              TTI::TargetCostKind CostKind,
-                                              unsigned Index = -1,
-                                              const Value *Op0 = nullptr,
-                                              const Value *Op1 = nullptr) const;
+  LLVM_ABI InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index = -1, const Value *Op0 = nullptr,
+      const Value *Op1 = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
@@ -1575,7 +1622,8 @@ public:
   LLVM_ABI InstructionCost getVectorInstrCost(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
-      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const;
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// This is used when instruction is available, and implementation
@@ -1583,9 +1631,10 @@ public:
   ///
   /// A typical suitable use case is cost estimation when vector instruction
   /// exists (e.g., from basic blocks during transformation).
-  LLVM_ABI InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
-                                              TTI::TargetCostKind CostKind,
-                                              unsigned Index = -1) const;
+  LLVM_ABI InstructionCost getVectorInstrCost(
+      const Instruction &I, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index = -1,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// \return The expected cost of inserting or extracting a lane that is \p
   /// Index elements from the end of a vector, i.e. the mathematical expression

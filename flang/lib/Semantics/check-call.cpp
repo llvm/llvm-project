@@ -341,11 +341,9 @@ static bool DefersSameTypeParameters(
 // List of intrinsics that are skipped when checking for device actual
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
-    "__builtin_c_f_pointer", "__builtin_c_loc", "loc", "present"};
-// List of intrinsics that can have a device actual argument if it is an
-// allocatable or pointer.
-static const llvm::StringSet<> cudaAllowedIntrinsics = {
-    "allocated", "associated", "kind", "lbound", "shape", "size", "ubound"};
+    "__builtin_c_f_pointer", "__builtin_c_loc", "__builtin_show_descriptor",
+    "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
+    "size", "sizeof", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -576,6 +574,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
+  } else if (dummyIsAssumedSize && dummy.type.type().IsAssumedType() &&
+      actualRank == 0 && !actualIsAssumedRank) {
+    // F'2023 15.5.2.5 p14 third bullet allows a scalar actual
+    // argument to associate with a TYPE(*) assumed-size dummy
+    foldingContext.Warn(common::UsageWarning::AssumedTypeSizeDummy,
+        "A scalar actual argument for an assumed-size TYPE(*) dummy is not portable"_port_en_US);
   } else if (dummyRank > 0) {
     bool basicError{false};
     if (actualRank == 0 && !actualIsAssumedRank &&
@@ -592,9 +596,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           actualType.type().category() == TypeCategory::Character &&
           actualType.type().kind() == 1};
       if (!actualIsCKindCharacter) {
-        if (!actualIsArrayElement &&
-            !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-            !dummyIsAssumedRank &&
+        if (!actualIsArrayElement && !dummyIsAssumedRank &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
           basicError = true;
           messages.Say(
@@ -786,7 +788,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         }
       }
     } else if (dummy.intent != common::Intent::In ||
-        (dummyIsPointer && !actualIsPointer)) {
+        (dummyIsPointer && !actualIsPointer) ||
+        (intrinsic && intrinsic->name == "loc")) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
         context.NoteDefinedSymbol(named->GetFirstSymbol());
       }
@@ -1156,17 +1159,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = actualObject->cudaDataAttr();
       }
       if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::Device) {
-        // Allocatable or pointer with device attribute have their descriptor in
-        // managed memory. It is allowed to pass them to some inquiry
-        // intrinsics.
-        if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
-            (IsAllocatableOrPointer(*actualLastSymbol) &&
-                !cudaAllowedIntrinsics.contains(intrinsic->name))) {
-          messages.Say(
-              "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
-              actualLastSymbol ? actualLastSymbol->name() : "",
-              intrinsic->name);
-        }
+        messages.Say(
+            "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
+            actualLastSymbol ? actualLastSymbol->name() : "", intrinsic->name);
       }
     }
   }

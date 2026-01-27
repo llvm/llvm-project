@@ -97,6 +97,8 @@ static StringRef getLoongArchSpecifierName(uint16_t S) {
     return "gd_pc_hi20";
   case ELF::R_LARCH_TLS_GD_HI20:
     return "gd_hi20";
+  case ELF::R_LARCH_CALL30:
+    return "call30";
   case ELF::R_LARCH_CALL36:
     return "call36";
   case ELF::R_LARCH_TLS_DESC_PC_HI20:
@@ -133,6 +135,30 @@ static StringRef getLoongArchSpecifierName(uint16_t S) {
     return "gd_pcrel_20";
   case ELF::R_LARCH_TLS_DESC_PCREL20_S2:
     return "desc_pcrel_20";
+  case ELF::R_LARCH_PCADD_HI20:
+    return "pcadd_hi20";
+  case ELF::R_LARCH_PCADD_LO12:
+    return "pcadd_lo12";
+  case ELF::R_LARCH_GOT_PCADD_HI20:
+    return "got_pcadd_hi20";
+  case ELF::R_LARCH_GOT_PCADD_LO12:
+    return "got_pcadd_lo12";
+  case ELF::R_LARCH_TLS_IE_PCADD_HI20:
+    return "ie_pcadd_hi20";
+  case ELF::R_LARCH_TLS_IE_PCADD_LO12:
+    return "ie_pcadd_lo12";
+  case ELF::R_LARCH_TLS_LD_PCADD_HI20:
+    return "ld_pcadd_hi20";
+  case ELF::R_LARCH_TLS_LD_PCADD_LO12:
+    return "ld_pcadd_lo12";
+  case ELF::R_LARCH_TLS_GD_PCADD_HI20:
+    return "gd_pcadd_hi20";
+  case ELF::R_LARCH_TLS_GD_PCADD_LO12:
+    return "gd_pcadd_lo12";
+  case ELF::R_LARCH_TLS_DESC_PCADD_HI20:
+    return "desc_pcadd_hi20";
+  case ELF::R_LARCH_TLS_DESC_PCADD_LO12:
+    return "desc_pcadd_lo12";
   }
 }
 
@@ -174,6 +200,7 @@ LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
       .Case("ld_hi20", ELF::R_LARCH_TLS_LD_HI20)
       .Case("gd_pc_hi20", ELF::R_LARCH_TLS_GD_PC_HI20)
       .Case("gd_hi20", ELF::R_LARCH_TLS_GD_HI20)
+      .Case("call30", ELF::R_LARCH_CALL30)
       .Case("call36", ELF::R_LARCH_CALL36)
       .Case("desc_pc_hi20", ELF::R_LARCH_TLS_DESC_PC_HI20)
       .Case("desc_pc_lo12", ELF::R_LARCH_TLS_DESC_PC_LO12)
@@ -192,6 +219,18 @@ LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
       .Case("ld_pcrel_20", ELF::R_LARCH_TLS_LD_PCREL20_S2)
       .Case("gd_pcrel_20", ELF::R_LARCH_TLS_GD_PCREL20_S2)
       .Case("desc_pcrel_20", ELF::R_LARCH_TLS_DESC_PCREL20_S2)
+      .Case("pcadd_hi20", ELF::R_LARCH_PCADD_HI20)
+      .Case("pcadd_lo12", ELF::R_LARCH_PCADD_LO12)
+      .Case("got_pcadd_hi20", ELF::R_LARCH_GOT_PCADD_HI20)
+      .Case("got_pcadd_lo12", ELF::R_LARCH_GOT_PCADD_LO12)
+      .Case("ie_pcadd_hi20", ELF::R_LARCH_TLS_IE_PCADD_HI20)
+      .Case("ie_pcadd_lo12", ELF::R_LARCH_TLS_IE_PCADD_LO12)
+      .Case("ld_pcadd_hi20", ELF::R_LARCH_TLS_LD_PCADD_HI20)
+      .Case("ld_pcadd_lo12", ELF::R_LARCH_TLS_LD_PCADD_LO12)
+      .Case("gd_pcadd_hi20", ELF::R_LARCH_TLS_GD_PCADD_HI20)
+      .Case("gd_pcadd_lo12", ELF::R_LARCH_TLS_GD_PCADD_LO12)
+      .Case("desc_pcadd_hi20", ELF::R_LARCH_TLS_DESC_PCADD_HI20)
+      .Case("desc_pcadd_lo12", ELF::R_LARCH_TLS_DESC_PCADD_LO12)
       .Default(0);
 }
 

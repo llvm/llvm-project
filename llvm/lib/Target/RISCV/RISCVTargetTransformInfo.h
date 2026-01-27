@@ -58,6 +58,10 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind) const;
 
+  // Return the cost of generating a PC relative address
+  InstructionCost
+  getStaticDataAddrGenerationCost(const TTI::TargetCostKind CostKind) const;
+
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
@@ -175,10 +179,13 @@ public:
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getScalarizationOverhead(
-      VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override;
+  InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -242,10 +249,11 @@ public:
                                  const Instruction *I = nullptr) const override;
 
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
@@ -492,6 +500,12 @@ public:
 
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
+  bool enableSelectOptimize() const override {
+    return ST->enableSelectOptimize();
+  }
+
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
 };
 
 } // end namespace llvm

@@ -1113,9 +1113,7 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
-  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-  Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                             HandleRef->getPointerAlignment(DL));
+  Builder.CreateAlignedStore(CreateHandle, GV, GV->getPointerAlignment(DL));
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
@@ -1420,7 +1418,7 @@ class HLSLBufferCopyEmitter {
                          llvm::ConstantInt *LoadIndex) {
     CurStoreIndices.push_back(StoreIndex);
     CurLoadIndices.push_back(LoadIndex);
-    auto RestoreIndices = llvm::make_scope_exit([&]() {
+    llvm::scope_exit RestoreIndices([&]() {
       CurStoreIndices.pop_back();
       CurLoadIndices.pop_back();
     });

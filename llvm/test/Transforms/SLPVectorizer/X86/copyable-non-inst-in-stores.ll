@@ -5,21 +5,10 @@ define void @test(i32 %a, ptr %out) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[A:%.*]], ptr [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store i32 [[A]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[ARRAYIDX9_1:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 4
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[ARRAYIDX9_1]], align 4
-; CHECK-NEXT:    [[SHR_5:%.*]] = lshr i32 [[A]], 5
-; CHECK-NEXT:    [[ARRAYIDX9_5:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 20
-; CHECK-NEXT:    store i32 [[SHR_5]], ptr [[ARRAYIDX9_5]], align 4
-; CHECK-NEXT:    [[SHR_6:%.*]] = lshr i32 [[A]], 6
-; CHECK-NEXT:    [[ARRAYIDX9_6:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 24
-; CHECK-NEXT:    store i32 [[SHR_6]], ptr [[ARRAYIDX9_6]], align 4
-; CHECK-NEXT:    [[SHR_7:%.*]] = lshr i32 [[A]], 7
-; CHECK-NEXT:    [[ARRAYIDX9_7:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 28
-; CHECK-NEXT:    store i32 [[SHR_7]], ptr [[ARRAYIDX9_7]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[A]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i32> [[TMP1]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

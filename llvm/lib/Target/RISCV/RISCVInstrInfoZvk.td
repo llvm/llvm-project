@@ -96,8 +96,8 @@ class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
 // regardless of tail policy
 class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
                         string opcodestr>
-    : RVInstV<funct6, vs1, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs2),
-              opcodestr, "$vd, $vs2"> {
+    : RVInstVUnary<funct6, vs1, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs2),
+                   opcodestr, "$vd, $vs2"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
@@ -1057,15 +1057,8 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
 
 multiclass VPatBinaryV_VV_VX_VROL<string intrinsic, string instruction,
                                   string instruction2, list<VTypeInfo> vtilist>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
+    : VPatBinaryV_VV_VX<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI_VROL<intrinsic, instruction2, vtilist>;
-
-multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
-                                     list<VTypeInfo> vtilist>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic, instruction, vtilist, uimm6>;
 
 multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
                                       list<VTypeInfoToWide> vtilist>
@@ -1106,7 +1099,7 @@ let Predicates = [HasStdExtZvkb] in {
   defm : VPatUnaryV_V<"int_riscv_vbrev8", "PseudoVBREV8", AllIntegerVectors>;
   defm : VPatUnaryV_V<"int_riscv_vrev8", "PseudoVREV8", AllIntegerVectors>;
   defm : VPatBinaryV_VV_VX_VROL<"int_riscv_vrol", "PseudoVROL", "PseudoVROR", AllIntegerVectors>;
-  defm : VPatBinaryV_VV_VX_VI_VROR<"int_riscv_vror", "PseudoVROR", AllIntegerVectors>;
+  defm : VPatBinaryV_VV_VX_VI<"int_riscv_vror", "PseudoVROR", AllIntegerVectors, uimm6>;
 } // Predicates = [HasStdExtZvkb]
 
 let Predicates = [HasStdExtZvkg] in {

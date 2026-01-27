@@ -762,6 +762,7 @@ class Attr {
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
+  string comparisonFn = "";
   list<Documentation> Documentation;
 }
 
@@ -886,6 +887,7 @@ def Aligned : InheritableAttr {
                    Accessor<"isAlignas", [CustomKeyword<"alignas">,
                                           CustomKeyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
+  let comparisonFn = "areAlignedAttrsEqual";
   let Documentation = [Undocumented];
 }
 
@@ -1944,14 +1946,6 @@ def Final : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def TriviallyRelocatable : InheritableAttr {
-  let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
-  let SemaHandler = 0;
-  // Omitted from docs, since this is language syntax, not an attribute, as far
-  // as users are concerned.
-  let Documentation = [InternalOnly];
-}
-
 def MinSize : InheritableAttr {
   let Spellings = [Clang<"minsize">];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
@@ -2728,6 +2722,13 @@ def NoStackProtector : InheritableAttr {
                    C23<"gnu", "no_stack_protector">, Declspec<"safebuffers">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [NoStackProtectorDocs];
+  let SimpleHandler = 1;
+}
+
+def StackProtectorIgnore : InheritableAttr {
+  let Spellings = [Clang<"stack_protector_ignore">];
+  let Subjects = SubjectList<[LocalVar]>;
+  let Documentation = [StackProtectorIgnoreDocs];
   let SimpleHandler = 1;
 }
 
