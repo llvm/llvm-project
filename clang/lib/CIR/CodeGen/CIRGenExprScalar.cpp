@@ -2281,9 +2281,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::IntegerAttr offsetAttr = builder.getIndexAttr(offset.getQuantity());
 
     if (subExpr->getType()->isMemberFunctionPointerType()) {
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "VisitCastExpr: member function pointer");
-      return {};
+      if (kind == CK_BaseToDerivedMemberPointer)
+        return cir::DerivedMethodOp::create(builder, loc, resultTy, src,
+                                            offsetAttr);
+      return cir::BaseMethodOp::create(builder, loc, resultTy, src, offsetAttr);
     }
 
     if (kind == CK_BaseToDerivedMemberPointer)
