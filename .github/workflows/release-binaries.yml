@@ -77,7 +77,6 @@ jobs:
         # Some of the python modules we install require this package to be installed on the system.
         vcpkg install openssl:arm64-windows-static-md
         vcpkg install libsodium:arm64-windows-static-md
-        vcpkg install libxml2[core]:x64-windows-static
         echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
         echo "SODIUM_INSTALL=system" >> $env:GITHUB_ENV
         echo "SODIUM_INSTALL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
@@ -245,6 +244,12 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\x64\libs" >> $env:GITHUB_ENV
+
+    # Install Windows dependncies
+    - name: Windows Depenencies
+      if: runner.os == 'Windows'
+      run: |
+        vcpkg install libxml2[core]:x64-windows-static
 
     - name: Setup crlf
       if: runner.os == 'Windows'
