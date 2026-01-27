@@ -3986,7 +3986,8 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     const Instruction *I, Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Index != -1U) {
@@ -4015,7 +4016,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
     // are expensive instructions on some uArchs.
-    if (I && isa<LoadInst>(I->getOperand(1))) {
+    if (VIC == TTI::VectorInstrContext::Load) {
       if (ST->hasFastLD1Single())
         return 0;
       return CostKind == TTI::TCK_CodeSize
@@ -4156,33 +4157,33 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
                                        : ST->getVectorInsertExtractBaseCost();
 }
 
-InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
-                                                   const Value *Op1) const {
+InstructionCost AArch64TTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   // Treat insert at lane 0 into a poison vector as having zero cost. This
   // ensures vector broadcasts via an insert + shuffle (and will be lowered to a
   // single dup) are treated as cheap.
   if (Opcode == Instruction::InsertElement && Index == 0 && Op0 &&
       isa<PoisonValue>(Op0))
     return 0;
-  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, nullptr,
+                                  nullptr, {}, VIC);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) const {
   return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, nullptr, Scalar,
-                                  ScalarUserAndIdx);
+                                  ScalarUserAndIdx, VIC);
 }
 
-InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
-                                                   Type *Val,
-                                                   TTI::TargetCostKind CostKind,
-                                                   unsigned Index) const {
-  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I);
+InstructionCost
+AArch64TTIImpl::getVectorInstrCost(const Instruction &I, Type *Val,
+                                   TTI::TargetCostKind CostKind, unsigned Index,
+                                   TTI::VectorInstrContext VIC) const {
+  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I,
+                                  nullptr, {}, VIC);
 }
 
 InstructionCost
@@ -4205,8 +4206,8 @@ AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
   if (Ty->getElementType()->isFloatingPointTy())

@@ -123,6 +123,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::v8i16, &SystemZ::VR128BitRegClass);
       addRegisterClass(MVT::v4i32, &SystemZ::VR128BitRegClass);
       addRegisterClass(MVT::v2i64, &SystemZ::VR128BitRegClass);
+      addRegisterClass(MVT::v8f16, &SystemZ::VR128BitRegClass);
       addRegisterClass(MVT::v4f32, &SystemZ::VR128BitRegClass);
       addRegisterClass(MVT::v2f64, &SystemZ::VR128BitRegClass);
     }
@@ -620,13 +621,16 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // Handle floating-point vector types.
   if (Subtarget.hasVector()) {
     // Scalar-to-vector conversion is just a subreg.
+    setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8f16, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v4f32, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2f64, Legal);
 
     // Some insertions and extractions can be done directly but others
     // need to go via integers.
+    setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8f16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f64, Custom);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v8f16, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f64, Custom);
 
@@ -840,6 +844,41 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
 bool SystemZTargetLowering::useSoftFloat() const {
   return Subtarget.hasSoftFloat();
+}
+
+unsigned SystemZTargetLowering::getVectorTypeBreakdownForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT) const {
+  // Pass fp16 vectors in VR(s).
+  if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16) {
+    IntermediateVT = RegisterVT = MVT::v8f16;
+    return NumIntermediates =
+               divideCeil(VT.getVectorNumElements(), SystemZ::VectorBytes / 2);
+  }
+  return TargetLowering::getVectorTypeBreakdownForCallingConv(
+      Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
+}
+
+MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                         CallingConv::ID CC,
+                                                         EVT VT) const {
+  // 128-bit single-element vector types are passed like other vectors,
+  // not like their element type.
+  if (VT.isVector() && VT.getSizeInBits() == 128 &&
+      VT.getVectorNumElements() == 1)
+    return MVT::v16i8;
+  // Pass fp16 vectors in VR(s).
+  if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16)
+    return MVT::v8f16;
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
+
+unsigned SystemZTargetLowering::getNumRegistersForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
+  // Pass fp16 vectors in VR(s).
+  if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16)
+    return divideCeil(VT.getVectorNumElements(), SystemZ::VectorBytes / 2);
+  return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
 
 EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -2052,6 +2091,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       case MVT::v8i16:
       case MVT::v4i32:
       case MVT::v2i64:
+      case MVT::v8f16:
       case MVT::v4f32:
       case MVT::v2f64:
         RC = &SystemZ::VR128BitRegClass;
@@ -2354,9 +2394,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
         SlotVT = Outs[I].VT;
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+
+      MachinePointerInfo StackPtrInfo =
+          MachinePointerInfo::getFixedStack(MF, FI);
       MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, SpillSlot,
-                       MachinePointerInfo::getFixedStack(MF, FI)));
+          DAG.getStore(Chain, DL, ArgValue, SpillSlot, StackPtrInfo));
       // If the original argument was split (e.g. i128), we need
       // to store all parts of it here (and pass just one address).
       assert(Outs[I].PartOffset == 0);
@@ -2368,7 +2410,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                       DAG.getIntPtrConstant(PartOffset, DL));
         MemOpChains.push_back(
             DAG.getStore(Chain, DL, PartValue, Address,
-                         MachinePointerInfo::getFixedStack(MF, FI)));
+                         StackPtrInfo.getWithOffset(PartOffset)));
         assert(PartOffset && "Offset should be non-zero.");
         assert((PartOffset + PartValue.getValueType().getStoreSize() <=
                 SlotVT.getStoreSize()) && "Not enough space for argument part!");
@@ -6345,6 +6387,38 @@ bool SystemZTargetLowering::isVectorElementLoad(SDValue Op) const {
   return false;
 }
 
+static SDValue mergeHighParts(SelectionDAG &DAG, const SDLoc &DL,
+                              unsigned MergedBits, EVT VT, SDValue Op0,
+                              SDValue Op1) {
+  MVT IntVecVT = MVT::getVectorVT(MVT::getIntegerVT(MergedBits),
+                                  SystemZ::VectorBits / MergedBits);
+  assert(VT.getSizeInBits() == 128 && IntVecVT.getSizeInBits() == 128 &&
+         "Handling full vectors only.");
+  Op0 = DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op0);
+  Op1 = DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op1);
+  SDValue Op = DAG.getNode(SystemZISD::MERGE_HIGH, DL, IntVecVT, Op0, Op1);
+  return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+}
+
+static SDValue buildFPVecFromScalars4(SelectionDAG &DAG, const SDLoc &DL,
+                                      EVT VT, SmallVectorImpl<SDValue> &Elems,
+                                      unsigned Pos) {
+  SDValue Op01 = buildMergeScalars(DAG, DL, VT, Elems[Pos + 0], Elems[Pos + 1]);
+  SDValue Op23 = buildMergeScalars(DAG, DL, VT, Elems[Pos + 2], Elems[Pos + 3]);
+  // Avoid unnecessary undefs by reusing the other operand.
+  if (Op01.isUndef()) {
+    if (Op23.isUndef())
+      return Op01;
+    Op01 = Op23;
+  } else if (Op23.isUndef())
+    Op23 = Op01;
+  // Merging identical replications is a no-op.
+  if (Op01.getOpcode() == SystemZISD::REPLICATE && Op01 == Op23)
+    return Op01;
+  unsigned MergedBits = VT.getSimpleVT().getScalarSizeInBits() * 2;
+  return mergeHighParts(DAG, DL, MergedBits, VT, Op01, Op23);
+}
+
 // Combine GPR scalar values Elems into a vector of type VT.
 SDValue
 SystemZTargetLowering::buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
@@ -6403,22 +6477,22 @@ SystemZTargetLowering::buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
   //      <ABxx>         <CDxx>
   //                V                 VMRHG
   //              <ABCD>
-  if (VT == MVT::v4f32 && !AllLoads) {
-    SDValue Op01 = buildMergeScalars(DAG, DL, VT, Elems[0], Elems[1]);
-    SDValue Op23 = buildMergeScalars(DAG, DL, VT, Elems[2], Elems[3]);
+  if (VT == MVT::v4f32 && !AllLoads)
+    return buildFPVecFromScalars4(DAG, DL, VT, Elems, 0);
+
+  // Same for v8f16.
+  if (VT == MVT::v8f16 && !AllLoads) {
+    SDValue Op0123 = buildFPVecFromScalars4(DAG, DL, VT, Elems, 0);
+    SDValue Op4567 = buildFPVecFromScalars4(DAG, DL, VT, Elems, 4);
     // Avoid unnecessary undefs by reusing the other operand.
-    if (Op01.isUndef())
-      Op01 = Op23;
-    else if (Op23.isUndef())
-      Op23 = Op01;
+    if (Op0123.isUndef())
+      Op0123 = Op4567;
+    else if (Op4567.isUndef())
+      Op4567 = Op0123;
     // Merging identical replications is a no-op.
-    if (Op01.getOpcode() == SystemZISD::REPLICATE && Op01 == Op23)
-      return Op01;
-    Op01 = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Op01);
-    Op23 = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Op23);
-    SDValue Op = DAG.getNode(SystemZISD::MERGE_HIGH,
-                             DL, MVT::v2i64, Op01, Op23);
-    return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+    if (Op0123.getOpcode() == SystemZISD::REPLICATE && Op0123 == Op4567)
+      return Op0123;
+    return mergeHighParts(DAG, DL, 64, VT, Op0123, Op4567);
   }
 
   // Collect the constant terms.
@@ -6562,6 +6636,33 @@ SDValue SystemZTargetLowering::lowerSCALAR_TO_VECTOR(SDValue Op,
                      Op.getOperand(0), DAG.getConstant(0, DL, MVT::i32));
 }
 
+// Shift the lower 2 bytes of Op to the left in order to insert into the
+// upper 2 bytes of the FP register.
+static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::i64 &&
+         "Expexted to convert i64 to f16.");
+  SDLoc DL(Op);
+  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i64, Op,
+                             DAG.getConstant(48, DL, MVT::i64));
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f64, Shft);
+  SDValue F16Val =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+  return F16Val;
+}
+
+// Extract Op into GPR and shift the 2 f16 bytes to the right.
+static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::f16 &&
+         "Expected to convert f16 to i64.");
+  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f64);
+  SDValue In64 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f64,
+                                           SDValue(U32, 0), Op);
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i64, In64);
+  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i64, BCast,
+                             DAG.getConstant(48, DL, MVT::i32));
+  return Shft;
+}
+
 SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                                       SelectionDAG &DAG) const {
   // Handle insertions of floating-point values.
@@ -6587,9 +6688,13 @@ SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // Otherwise bitcast to the equivalent integer form and insert via a GPR.
   MVT IntVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
   MVT IntVecVT = MVT::getVectorVT(IntVT, VT.getVectorNumElements());
-  SDValue Res = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntVecVT,
-                            DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op0),
-                            DAG.getNode(ISD::BITCAST, DL, IntVT, Op1), Op2);
+  SDValue IntOp1 =
+      VT == MVT::v8f16
+          ? DAG.getZExtOrTrunc(convertFromF16(Op1, DL, DAG), DL, MVT::i32)
+          : DAG.getNode(ISD::BITCAST, DL, IntVT, Op1);
+  SDValue Res =
+      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntVecVT,
+                  DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op0), IntOp1, Op2);
   return DAG.getNode(ISD::BITCAST, DL, VT, Res);
 }
 
@@ -6614,9 +6719,12 @@ SystemZTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // Otherwise bitcast to the equivalent integer form and extract via a GPR.
   MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
   MVT IntVecVT = MVT::getVectorVT(IntVT, VecVT.getVectorNumElements());
-  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, IntVT,
-                            DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op0), Op1);
-  return DAG.getNode(ISD::BITCAST, DL, VT, Res);
+  MVT ExtrVT = IntVT == MVT::i16 ? MVT::i32 : IntVT;
+  SDValue Extr = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtrVT,
+                             DAG.getNode(ISD::BITCAST, DL, IntVecVT, Op0), Op1);
+  if (VT == MVT::f16)
+    return convertToF16(DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Extr), DAG);
+  return DAG.getNode(ISD::BITCAST, DL, VT, Extr);
 }
 
 SDValue SystemZTargetLowering::
@@ -6950,33 +7058,6 @@ SDValue SystemZTargetLowering::lower_INT_TO_FP(SDValue Op,
   }
 
   return Op; // Legal
-}
-
-// Shift the lower 2 bytes of Op to the left in order to insert into the
-// upper 2 bytes of the FP register.
-static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
-  assert(Op.getSimpleValueType() == MVT::i64 &&
-         "Expexted to convert i64 to f16.");
-  SDLoc DL(Op);
-  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i64, Op,
-                             DAG.getConstant(48, DL, MVT::i64));
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f64, Shft);
-  SDValue F16Val =
-      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
-  return F16Val;
-}
-
-// Extract Op into GPR and shift the 2 f16 bytes to the right.
-static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
-  assert(Op.getSimpleValueType() == MVT::f16 &&
-         "Expected to convert f16 to i64.");
-  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f64);
-  SDValue In64 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f64,
-                                           SDValue(U32, 0), Op);
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i64, In64);
-  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i64, BCast,
-                             DAG.getConstant(48, DL, MVT::i32));
-  return Shft;
 }
 
 // Lower an f16 LOAD in case of no vector support.

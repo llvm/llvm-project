@@ -1917,7 +1917,7 @@ struct DarwinPlatform {
     StringRef PlatformPrefix =
         (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
     return DarwinSDKInfo(
-        getOSVersion(), /*MaximumDeploymentTarget=*/
+        "", getOSVersion(), /*MaximumDeploymentTarget=*/
         VersionTuple(getOSVersion().getMajor(), 0, 99),
         {DarwinSDKInfo::SDKPlatformInfo(llvm::Triple::Apple, OS,
                                         llvm::Triple::UnknownEnvironment,
@@ -3288,6 +3288,16 @@ void Darwin::addClangTargetOptions(
     CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
+
+  if (SDKInfo) {
+    // Make the SDKSettings.json an explicit dependency for the compiler
+    // invocation, in case the compiler needs to read it to remap versions.
+    if (!SDKInfo->getFilePath().empty()) {
+      SmallString<64> ExtraDepOpt("-fdepfile-entry=");
+      ExtraDepOpt += SDKInfo->getFilePath();
+      CC1Args.push_back(DriverArgs.MakeArgString(ExtraDepOpt));
+    }
+  }
 
   // Enable compatibility mode for NSItemProviderCompletionHandler in
   // Foundation/NSItemProvider.h.

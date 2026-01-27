@@ -4082,10 +4082,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Instrument compare-packed intrinsic.
-  // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
-  // all-ones shadow.
-  void handleVectorComparePackedIntrinsic(IntrinsicInst &I) {
+  //
+  // x86 has the predicate as the third operand, which is ImmArg e.g.,
+  // - <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double>, <4 x double>, i8)
+  // - <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double>, <2 x double>, i8)
+  //
+  // while Arm has separate intrinsics for >= and > e.g.,
+  // - <2 x i32> @llvm.aarch64.neon.facge.v2i32.v2f32
+  //                 (<2 x float> %A, <2 x float>)
+  // - <2 x i32> @llvm.aarch64.neon.facgt.v2i32.v2f32
+  //                 (<2 x float> %A, <2 x float>)
+  void handleVectorComparePackedIntrinsic(IntrinsicInst &I,
+                                          bool PredicateAsOperand) {
+    if (PredicateAsOperand) {
+      assert(I.arg_size() == 3);
+      assert(I.paramHasAttr(2, Attribute::ImmArg));
+    } else
+      assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
+
+    // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
+    // all-ones shadow.
     Type *ResTy = getShadowTy(&I);
     auto *Shadow0 = getShadow(&I, 0);
     auto *Shadow1 = getShadow(&I, 1);
@@ -6212,7 +6230,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx_cmp_ps_256:
     case Intrinsic::x86_sse2_cmp_pd:
     case Intrinsic::x86_sse_cmp_ps:
-      handleVectorComparePackedIntrinsic(I);
+      handleVectorComparePackedIntrinsic(I, /*PredicateAsOperand=*/true);
       break;
 
     case Intrinsic::x86_bmi_bextr_32:
@@ -6674,6 +6692,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool maybeHandleArmSIMDIntrinsic(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    // Two operands e.g.,
+    // - <8 x i8>  @llvm.aarch64.neon.rshrn.v8i8  (<8 x i16>, i32)
+    // - <4 x i16> @llvm.aarch64.neon.uqrshl.v4i16(<4 x i16>, <4 x i16>)
     case Intrinsic::aarch64_neon_rshrn:
     case Intrinsic::aarch64_neon_sqrshl:
     case Intrinsic::aarch64_neon_sqrshrn:
@@ -6690,8 +6711,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_uqshrn:
     case Intrinsic::aarch64_neon_urshl:
     case Intrinsic::aarch64_neon_ushl:
-      // Not handled here: aarch64_neon_vsli (vector shift left and insert)
       handleVectorShiftIntrinsic(I, /* Variable */ false);
+      break;
+
+    // Vector Shift Left/Right and Insert
+    //
+    // Three operands e.g.,
+    // - <4 x i16> @llvm.aarch64.neon.vsli.v4i16
+    //                 (<4 x i16> %a, <4 x i16> %b, i32 %n)
+    // - <16 x i8> @llvm.aarch64.neon.vsri.v16i8
+    //                 (<16 x i8> %a, <16 x i8> %b, i32 %n)
+    //
+    // %b is shifted by %n bits, and the "missing" bits are filled in with %a
+    // (instead of zero-extending/sign-extending).
+    case Intrinsic::aarch64_neon_vsli:
+    case Intrinsic::aarch64_neon_vsri:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1);
       break;
 
     // TODO: handling max/min similarly to AND/OR may be more precise

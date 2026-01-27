@@ -1118,9 +1118,9 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
         // For recipes that do not directly map to LLVM IR instructions,
         // assign opcodes after the last VPInstruction opcode (which is also
-        // after the last IR Instruction opcode), based on the VPDefID.
+        // after the last IR Instruction opcode), based on the VPRecipeID.
         return std::make_pair(false,
-                              VPInstruction::OpsEnd + 1 + I->getVPDefID());
+                              VPInstruction::OpsEnd + 1 + I->getVPRecipeID());
       })
       .Default([](auto *) { return std::nullopt; });
 }
@@ -1128,17 +1128,17 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
 /// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
 /// Operands are foldable live-ins.
-static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
-                                 ArrayRef<VPValue *> Operands,
-                                 const DataLayout &DL,
-                                 VPTypeAnalysis &TypeInfo) {
+static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
+                                   ArrayRef<VPValue *> Operands,
+                                   const DataLayout &DL,
+                                   VPTypeAnalysis &TypeInfo) {
   auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
   if (!OpcodeOrIID)
     return nullptr;
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!isa<VPIRValue, VPSymbolicValue>(Op))
+    if (!match(Op, m_LiveIn()))
       return nullptr;
     Value *V = Op->getUnderlyingValue();
     if (!V)
@@ -2452,7 +2452,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     const VPlan *Plan = Def->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
     hash_code Result = hash_combine(
-        Def->getVPDefID(), getOpcodeOrIntrinsicID(Def),
+        Def->getVPRecipeID(), getOpcodeOrIntrinsicID(Def),
         getGEPSourceElementType(Def), TypeInfo.inferScalarType(Def),
         vputils::isSingleScalar(Def), hash_combine_range(Def->operands()));
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
@@ -2465,7 +2465,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
     if (isSentinel(L) || isSentinel(R))
       return L == R;
-    if (L->getVPDefID() != R->getVPDefID() ||
+    if (L->getVPRecipeID() != R->getVPRecipeID() ||
         getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
         vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||

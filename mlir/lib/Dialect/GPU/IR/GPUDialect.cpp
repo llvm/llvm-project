@@ -1048,8 +1048,13 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(asyncDependencies, asyncTokenType,
                              result.operands))
     return failure();
-  if (parser.getNumResults() > 0)
+  if (parser.getNumResults() > 0) {
+    if (!asyncTokenType)
+      return parser.emitError(
+          parser.getNameLoc(),
+          "gpu.launch requires 'async' keyword to return a value");
     result.types.push_back(asyncTokenType);
+  }
 
   bool hasCluster = false;
   if (succeeded(
@@ -1472,17 +1477,44 @@ LogicalResult RotateOp::verify() {
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
 static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
                                                  PatternRewriter &rewriter) {
-  if (isa_and_nonnull<BarrierOp>(op->getNextNode())) {
-    rewriter.eraseOp(op);
-    return success();
+  auto nextOp = dyn_cast_or_null<BarrierOp>(op->getNextNode());
+  if (!nextOp)
+    return failure();
+
+  std::optional<ArrayAttr> thisMemfence = op.getAddressSpaces();
+  std::optional<ArrayAttr> nextMemfence = nextOp.getAddressSpaces();
+
+  if (thisMemfence) {
+    rewriter.modifyOpInPlace(op, [&]() {
+      if (!nextMemfence) {
+        op.removeAddressSpacesAttr();
+        return;
+      }
+      // Fast path - merge where the two barriers fence the same spaces.
+      if (*thisMemfence == *nextMemfence) {
+        return;
+      }
+
+      llvm::SmallSetVector<Attribute, 4> mergedSpaces;
+      for (Attribute attr : *thisMemfence)
+        mergedSpaces.insert(attr);
+      for (Attribute attr : *nextMemfence)
+        mergedSpaces.insert(attr);
+      op.setAddressSpacesAttr(rewriter.getArrayAttr(mergedSpaces.takeVector()));
+    });
   }
-  return failure();
+
+  rewriter.eraseOp(nextOp);
+  return success();
 }
 
 void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add(eraseRedundantGpuBarrierOps);
 }
+
+void BarrierOp::build(mlir::OpBuilder &odsBuilder,
+                      mlir::OperationState &odsState) {}
 
 //===----------------------------------------------------------------------===//
 // GPUFuncOp
@@ -2521,6 +2553,7 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
     // Speculation should be safe as long as we inside structured control flow.
     return Speculation::Speculatable;
   }
+  llvm_unreachable("Unknown BroadcastType");
 }
 
 LogicalResult gpu::SubgroupBroadcastOp::verify() {
@@ -2536,6 +2569,7 @@ LogicalResult gpu::SubgroupBroadcastOp::verify() {
              << "lane must be specified for `specific_lane` broadcast";
     return success();
   }
+  llvm_unreachable("Unknown BroadcastType");
 }
 
 OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {

@@ -658,14 +658,8 @@ define <6 x i16> @v_load_constant_v6i16_align8(ptr addrspace(4) %ptr) {
 ; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
-; GFX7-NEXT:    buffer_load_dwordx3 v[6:8], v[0:1], s[4:7], 0 addr64
+; GFX7-NEXT:    buffer_load_dwordx3 v[0:2], v[0:1], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v6
-; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
-; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 16, v8
-; GFX7-NEXT:    v_mov_b32_e32 v0, v6
-; GFX7-NEXT:    v_mov_b32_e32 v2, v7
-; GFX7-NEXT:    v_mov_b32_e32 v4, v8
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: v_load_constant_v6i16_align8:
@@ -674,15 +668,12 @@ define <6 x i16> @v_load_constant_v6i16_align8(ptr addrspace(4) %ptr) {
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
-; GFX6-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64
-; GFX6-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:8
+; GFX6-NEXT:    buffer_load_dwordx2 v[3:4], v[0:1], s[4:7], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 offset:8
 ; GFX6-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v6
-; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
+; GFX6-NEXT:    v_mov_b32_e32 v0, v3
+; GFX6-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
-; GFX6-NEXT:    v_mov_b32_e32 v0, v6
-; GFX6-NEXT:    v_mov_b32_e32 v2, v7
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %load = load <6 x i16>, ptr addrspace(4) %ptr, align 8
   ret <6 x i16> %load
