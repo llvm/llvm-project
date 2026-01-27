@@ -163,6 +163,8 @@ class SinkStoreInfo {
 
     auto VFs = B->getParent()->getPlan()->vectorFactors();
     ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
+    if (MaxVF.isScalable())
+      return false;
     return Distance->abs().uge(
         MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
   }
@@ -1116,9 +1118,9 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
         // For recipes that do not directly map to LLVM IR instructions,
         // assign opcodes after the last VPInstruction opcode (which is also
-        // after the last IR Instruction opcode), based on the VPDefID.
+        // after the last IR Instruction opcode), based on the VPRecipeID.
         return std::make_pair(false,
-                              VPInstruction::OpsEnd + 1 + I->getVPDefID());
+                              VPInstruction::OpsEnd + 1 + I->getVPRecipeID());
       })
       .Default([](auto *) { return std::nullopt; });
 }
@@ -1303,8 +1305,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
-  // select !c, x, y -> select c, y, x
+  // select c, false, true -> not c
   VPValue *C;
+  if (match(Def, m_Select(m_VPValue(C), m_False(), m_True())))
+    return Def->replaceAllUsesWith(Builder.createNot(C));
+
+  // select !c, x, y -> select c, y, x
   if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
     Def->setOperand(0, C);
     Def->setOperand(1, Y);
@@ -1509,12 +1515,18 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (!Plan->isUnrolled())
     return;
 
-  // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
   // After unrolling, extract-lane may be used to extract values from multiple
   // scalar sources. Only simplify when extracting from a single scalar source.
-  if (match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
-      vputils::isSingleScalar(A)) {
-    return Def->replaceAllUsesWith(A);
+  VPValue *LaneToExtract;
+  if (match(Def, m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(A)))) {
+    // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
+    if (vputils::isSingleScalar(A))
+      return Def->replaceAllUsesWith(A);
+
+    // Simplify extract-lane with single source to extract-element.
+    Def->replaceAllUsesWith(Builder.createNaryOp(
+        Instruction::ExtractElement, {A, LaneToExtract}, Def->getDebugLoc()));
+    return;
   }
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
@@ -1535,10 +1547,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
       return VPR->replaceAllUsesWith(VPR->getOperand(0));
 
-  // VPScalarIVSteps for part 0 can be replaced by their start value, if only
-  // the first lane is demanded.
+  // VPScalarIVSteps after unrolling can be replaced by their start value, if
+  // the start index is zero and only the first lane 0 is demanded.
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(Def)) {
-    if (Steps->isPart0() && vputils::onlyFirstLaneUsed(Steps)) {
+    if (!Steps->getStartIndex() && vputils::onlyFirstLaneUsed(Steps)) {
       Steps->replaceAllUsesWith(Steps->getOperand(0));
       return;
     }
@@ -2440,7 +2452,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     const VPlan *Plan = Def->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
     hash_code Result = hash_combine(
-        Def->getVPDefID(), getOpcodeOrIntrinsicID(Def),
+        Def->getVPRecipeID(), getOpcodeOrIntrinsicID(Def),
         getGEPSourceElementType(Def), TypeInfo.inferScalarType(Def),
         vputils::isSingleScalar(Def), hash_combine_range(Def->operands()));
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
@@ -2453,7 +2465,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
     if (isSentinel(L) || isSentinel(R))
       return L == R;
-    if (L->getVPDefID() != R->getVPDefID() ||
+    if (L->getVPRecipeID() != R->getVPRecipeID() ||
         getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
         vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||

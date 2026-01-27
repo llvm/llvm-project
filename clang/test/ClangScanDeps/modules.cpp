@@ -14,7 +14,7 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
+// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO%if system-darwin %{,CHECK-DARWIN1,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
 //
@@ -24,31 +24,33 @@
 // `modules_cdb_input2.cpp`.
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck --check-prefix=CHECK1 %s
+// RUN:   FileCheck --check-prefixes=CHECK1%if system-darwin %{,CHECK-DARWIN1 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
-// RUN:   FileCheck --check-prefix=CHECK1 %s
+// RUN:   FileCheck --check-prefixes=CHECK1%if system-darwin %{,CHECK-DARWIN1 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck --check-prefix=CHECK2 %s
+// RUN:   FileCheck --check-prefixes=CHECK2%if system-darwin %{,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
-// RUN:   FileCheck --check-prefix=CHECK2 %s
+// RUN:   FileCheck --check-prefixes=CHECK2%if system-darwin %{,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 
 #include "header.h"
 
 // CHECK1: modules_cdb_input2.o:
+// CHECK-DARWIN1-NEXT: SDKSettings.json
 // CHECK1-NEXT: modules_cdb_input2.cpp
 // CHECK1-NEXT: Inputs{{/|\\}}module.modulemap
 // CHECK1-NEXT: Inputs{{/|\\}}header2.h
 // CHECK1: Inputs{{/|\\}}header.h
 
 // CHECK2: {{(modules_cdb_input)|(a)|(b)}}.o:
+// CHECK-DARWIN2-NEXT: SDKSettings.json
 // CHECK2-NEXT: modules_cdb_input.cpp
 // CHECK2-NEXT: Inputs{{/|\\}}module.modulemap
 // CHECK2-NEXT: Inputs{{/|\\}}header.h

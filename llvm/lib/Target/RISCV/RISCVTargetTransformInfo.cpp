@@ -44,6 +44,9 @@ static cl::opt<unsigned>
                              "vectorization while tail-folding."),
                     cl::init(5), cl::Hidden);
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-riscv-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) const {
@@ -1184,7 +1187,6 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *DataTy = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
-  const Instruction *I = MICA.getInst();
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
@@ -1198,11 +1200,8 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
-  InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
-                      {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * MemOpCost;
+  return NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
@@ -1269,6 +1268,7 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
+  // FIXME: This will overcost for i64 on rv32 with +zve64x.
   auto &VTy = *cast<VectorType>(DataTy);
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
@@ -3489,4 +3489,23 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
+}
+
+bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
+    const Instruction *I) const {
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<BranchInst>(I->getNextNode()) &&
+        cast<BranchInst>(I->getNextNode())->isUnconditional())
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }

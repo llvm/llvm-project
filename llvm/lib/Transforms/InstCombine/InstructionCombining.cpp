@@ -2878,7 +2878,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       APInt NewFalseVal = *ConstOffset + *FalseVal;
       Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
       Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
-      Value *NewSelect = Builder.CreateSelect(Cond, NewTrue, NewFalse);
+      Value *NewSelect = Builder.CreateSelect(
+          Cond, NewTrue, NewFalse, /*Name=*/"",
+          /*MDFrom=*/(ProfcheckDisableMetadataFixes ? nullptr : Select));
       GEPNoWrapFlags Flags =
           getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
       return replaceInstUsesWith(GEP,
@@ -3031,7 +3033,9 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
         if (auto *II = dyn_cast<IntrinsicInst>(V))
           return Builder->CreateBinaryIntrinsic(
               getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
-        return Builder->CreateSelect(Cond, NotA, NotB);
+        return Builder->CreateSelect(
+            Cond, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(V));
       }
       return NonNull;
     }

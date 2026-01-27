@@ -220,6 +220,18 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         return false;
       }]
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to device data.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeviceData",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 }
 
@@ -440,6 +452,18 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return true;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the variable represents device data.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeviceData",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
       }]
     >,
   ];

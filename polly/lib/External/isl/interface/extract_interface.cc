@@ -37,6 +37,7 @@
 #include <assert.h>
 #include <iostream>
 #include <stdlib.h>
+#include <type_traits>
 #ifdef HAVE_ADT_OWNINGPTR_H
 #include <llvm/ADT/OwningPtr.h>
 #else
@@ -47,8 +48,12 @@
 #endif
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/CommandLine.h>
-#include <llvm/Support/ManagedStatic.h>
+#ifdef HAVE_TARGETPARSER_HOST_H
 #include <llvm/TargetParser/Host.h>
+#else
+#include <llvm/Support/Host.h>
+#endif
+#include <llvm/Support/ManagedStatic.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
 #include <clang/Basic/Builtins.h>
@@ -404,7 +409,8 @@ void add_path(HeaderSearchOptions &HSO, string Path)
 
 #ifdef HAVE_SETMAINFILEID
 
-static void create_main_file_id(SourceManager &SM, const FileEntry *file)
+template <typename T>
+static void create_main_file_id(SourceManager &SM, const T &file)
 {
 	SM.setMainFileID(SM.createFileID(file, SourceLocation(),
 					SrcMgr::C_User));
@@ -491,12 +497,42 @@ static const FileEntry *ignore_error(const T obj)
 	return ignore_error_helper(obj, 0, NULL);
 }
 
-/* Return the FileEntry corresponding to the given file name
- * in the given compiler instances, ignoring any error.
+/* This is identical to std::void_t in C++17.
  */
-static const FileEntry *getFile(CompilerInstance *Clang, std::string Filename)
+template< class... >
+using void_t = void;
+
+/* A template class with value true if "T" has a getFileRef method.
+ */
+template <class T, class = void>
+struct HasGetFileRef : public std::false_type {};
+template <class T>
+struct HasGetFileRef<T, ::void_t<decltype(&T::getFileRef)>> :
+    public std::true_type {};
+
+/* Return the FileEntryRef/FileEntry corresponding to the given file name
+ * in the given compiler instances, ignoring any error.
+ *
+ * If T (= FileManager) has a getFileRef method, then call that and
+ * return a FileEntryRef.
+ * Otherwise, call getFile and return a FileEntry (pointer).
+ */
+template <typename T,
+	typename std::enable_if<HasGetFileRef<T>::value, bool>::type = true>
+static auto getFile(T& obj, const std::string &filename)
+	-> decltype(*obj.getFileRef(filename))
 {
-	return ignore_error(Clang->getFileManager().getFile(Filename));
+	auto file = obj.getFileRef(filename);
+	assert(file);
+	return *file;
+}
+template <typename T,
+	typename std::enable_if<!HasGetFileRef<T>::value, bool>::type = true>
+static const FileEntry *getFile(T& obj, const std::string &filename)
+{
+	const FileEntry *file = ignore_error(obj.getFile(filename));
+	assert(file);
+	return file;
 }
 
 /* Create an interface generator for the selected language and
@@ -571,8 +607,7 @@ int main(int argc, char *argv[])
 
 	PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(), LO);
 
-	const FileEntry *file = getFile(Clang, InputFilename);
-	assert(file);
+	auto file = getFile(Clang->getFileManager(), InputFilename);
 	create_main_file_id(Clang->getSourceManager(), file);
 
 	Clang->createASTContext();
