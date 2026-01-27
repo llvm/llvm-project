@@ -1148,6 +1148,19 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
+  // CHECK: omp.teams thread_limit(%{{.*}}, %{{.*}} : i32, i32)
+  omp.teams thread_limit(%lb, %ub : i32, i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test thread_limit with mixed types.
+  // CHECK: omp.teams thread_limit(%{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+  omp.teams thread_limit(%lb, %ub64, %ub16 : i32, i64, i16) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Test reduction.
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr

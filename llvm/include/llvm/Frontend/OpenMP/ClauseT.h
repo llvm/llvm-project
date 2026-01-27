@@ -1226,11 +1226,13 @@ struct TaskReductionT {
 };
 
 // V5.2: [13.3] `thread_limit` clause
+// V6.1: Extended with dims modifier support
 template <typename T, typename I, typename E> //
 struct ThreadLimitT {
   using Threadlim = E;
+  using List = ListT<Threadlim>;
   using WrapperTrait = std::true_type;
-  Threadlim v;
+  List v;
 };
 
 // V5.2: [15.10.3] `parallelization-level` clauses
