@@ -3417,7 +3417,9 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":__support_macros_config"
+        ":__support_macros_config",
+        ":__support_sincos_eval",
+        ":range_reduction_double_common",
     ],
 )
 
