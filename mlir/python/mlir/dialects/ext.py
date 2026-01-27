@@ -432,7 +432,6 @@ class Dialect(ir.Dialect):
         def __init__(*args, **kwargs):
             raise RuntimeError("Cannot instantiate Dialect.ExtOperation directly.")
 
-
     @classmethod
     def __init_subclass__(cls, name: str, **kwargs):
         cls.name = name
@@ -460,14 +459,9 @@ class Dialect(ir.Dialect):
         return m
 
     @classmethod
-    def load(cls, register=True, context: Optional[ir.Context] = None) -> None:
-        context = context or ir.Context.current
-
-        try:
-            context.dialects[cls.name]
-            raise RuntimeError(f"Dialect {cls.name} is already loaded.")
-        except IndexError:
-            pass  # Dialect not loaded yet.
+    def load(cls, register=True) -> None:
+        if hasattr(cls, "_mlir_module"):
+            return
 
         cls._mlir_module = cls._emit_module()
         pm = PassManager()

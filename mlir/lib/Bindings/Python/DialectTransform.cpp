@@ -382,7 +382,8 @@ struct ParamType : PyConcreteType<ParamType> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-void onlyReadsHandle(nb::iterable &operands, PyMemoryEffectsInstanceList effects) {
+void onlyReadsHandle(nb::iterable &operands,
+                     PyMemoryEffectsInstanceList effects) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
@@ -390,7 +391,8 @@ void onlyReadsHandle(nb::iterable &operands, PyMemoryEffectsInstanceList effects
                                effects.effects);
 };
 
-void consumesHandle(nb::iterable &operands, PyMemoryEffectsInstanceList effects) {
+void consumesHandle(nb::iterable &operands,
+                    PyMemoryEffectsInstanceList effects) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
@@ -398,7 +400,8 @@ void consumesHandle(nb::iterable &operands, PyMemoryEffectsInstanceList effects)
                               effects.effects);
 };
 
-void producesHandle(nb::iterable &results, PyMemoryEffectsInstanceList effects) {
+void producesHandle(nb::iterable &results,
+                    PyMemoryEffectsInstanceList effects) {
   std::vector<MlirOpResult> resultsVec;
   for (auto result : results)
     resultsVec.push_back(nb::cast<PyOpResult>(result));
