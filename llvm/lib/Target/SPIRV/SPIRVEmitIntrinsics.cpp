@@ -62,6 +62,75 @@ namespace llvm::SPIRV {
 } // namespace llvm::SPIRV
 
 namespace {
+// This class keeps track of which functions reference which global variables.
+class GlobalVariableReferences {
+  template <typename T1, typename T2>
+  using OneToManyMapTy = DenseMap<T1, SmallPtrSet<T2, 4>>;
+
+  OneToManyMapTy<GlobalVariable *, Function *> GlobalIsReferencedByFun;
+
+  void collectGlobalReferences(
+      GlobalVariable *GV,
+      OneToManyMapTy<GlobalVariable *, GlobalVariable *> &Global2Global,
+      OneToManyMapTy<GlobalVariable *, Function *> &Global2Function) {
+    SmallVector<Value *> Stack = {GV->user_begin(), GV->user_end()};
+    while (!Stack.empty()) {
+      Value *V = Stack.pop_back_val();
+
+      if (Instruction *I = dyn_cast<Instruction>(V)) {
+        Global2Function[GV].insert(I->getFunction());
+        continue;
+      }
+
+      if (GlobalVariable *UserGV = dyn_cast<GlobalVariable>(V)) {
+        Global2Global[GV].insert(UserGV);
+        continue;
+      }
+
+      if (Constant *C = dyn_cast<Constant>(V))
+        Stack.append(C->user_begin(), C->user_end());
+    }
+  }
+
+public:
+  void init(Module &M) {
+    // Collect which global variables are referenced by which global variables
+    // and which functions reference each global variables.
+    OneToManyMapTy<GlobalVariable *, GlobalVariable *>
+        GlobalIsReferencedByGlobal;
+    GlobalIsReferencedByGlobal.clear();
+    for (GlobalVariable &GV : M.globals()) {
+      GlobalIsReferencedByGlobal.try_emplace(&GV);
+      collectGlobalReferences(&GV, GlobalIsReferencedByGlobal,
+                              GlobalIsReferencedByFun);
+    }
+
+    // Compute indirect references by iterating until a fixed point is found.
+    bool Changed;
+    do {
+      Changed = false;
+      for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
+        SmallPtrSet<GlobalVariable *, 4> NewRefs = ReferencedBy;
+        for (GlobalVariable *ReferencedGV : ReferencedBy)
+          Changed |=
+              set_union(NewRefs, GlobalIsReferencedByGlobal[ReferencedGV]);
+
+        if (NewRefs.size() > ReferencedBy.size())
+          ReferencedBy = std::move(NewRefs);
+      }
+    } while (Changed);
+
+    for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
+      auto &ReferencedByF = GlobalIsReferencedByFun[GV];
+      for (GlobalVariable *ReferencedGV : ReferencedBy)
+        set_union(ReferencedByF, GlobalIsReferencedByFun[ReferencedGV]);
+    }
+  }
+
+  const auto &getReferencedBy(GlobalVariable &GV) const {
+    return GlobalIsReferencedByFun.at(&GV);
+  }
+};
 
 class SPIRVEmitIntrinsics
     : public ModulePass,
@@ -74,6 +143,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  GlobalVariableReferences GlobalRefs;
   std::unordered_set<Value *> Named;
 
   // map of function declarations to <pointer arg index => element type>
@@ -204,7 +274,6 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
-
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
 
   // Tries to walk the type accessed by the given GEP instruction.
@@ -2117,49 +2186,35 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
-static bool shouldEmitIntrinsicsForGlobalValue(const GlobalVariable &GV,
-                                               const Function *CurrF) {
+static bool
+shouldEmitIntrinsicsForGlobalValue(const GlobalVariableReferences &GlobalRefs,
+                                   GlobalVariable &GV, Function *F) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
                                              "llvm.compiler.used"};
-
   if (ArtificialGlobals.contains(GV.getName()))
     return false;
 
-  SmallPtrSet<const Value *, 8> Visited;
-  SmallVector<const Value *> Worklist = {&GV};
-  bool ReferencedByAnotherFunction = false;
-  while (!Worklist.empty()) {
-    const Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
-
-    if (const Instruction *I = dyn_cast<Instruction>(V)) {
-      if (I->getFunction() == CurrF)
-        return true;
-      ReferencedByAnotherFunction = true;
-      continue;
-    }
-
-    if (const Constant *C = dyn_cast<Constant>(V))
-      Worklist.append(C->user_begin(), C->user_end());
-  }
+  auto &ReferencedBy = GlobalRefs.getReferencedBy(GV);
+  if (ReferencedBy.contains(F))
+    return true;
 
   // Do not emit the intrinsics in this function, it's going to be emitted on
   // the functions that reference it.
-  if (ReferencedByAnotherFunction)
+  if (!ReferencedBy.empty())
     return false;
 
   // Emit definitions for globals that are not referenced by any function on the
   // first function definition.
-  const Module &M = *CurrF->getParent();
+  const Module &M = *F->getParent();
   const Function &FirstDefinition = *M.getFunctionDefs().begin();
-  return CurrF == &FirstDefinition;
+  return F == &FirstDefinition;
 }
 
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
-  if (!shouldEmitIntrinsicsForGlobalValue(GV, CurrF))
+
+  if (!shouldEmitIntrinsicsForGlobalValue(GlobalRefs, GV, CurrF))
     return;
 
   Constant *Init = nullptr;
@@ -3141,6 +3196,7 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
 
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
+  GlobalRefs.init(M);
 
   TodoType.clear();
   for (auto &F : M)
