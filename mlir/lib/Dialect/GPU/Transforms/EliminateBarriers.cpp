@@ -78,14 +78,121 @@ static void addAllValuelessEffects(
   effects.emplace_back(MemoryEffects::Effect::get<MemoryEffects::Free>());
 }
 
+/// Looks through known "view-like" ops to find the base memref.
+static Value getBase(Value v) {
+  while (true) {
+    Operation *definingOp = v.getDefiningOp();
+    if (!definingOp)
+      break;
+
+    bool shouldContinue = TypeSwitch<Operation *, bool>(v.getDefiningOp())
+                              .Case<ViewLikeOpInterface>([&](auto op) {
+                                v = op.getViewSource();
+                                return true;
+                              })
+                              .Case<memref::TransposeOp>([&](auto op) {
+                                v = op.getIn();
+                                return true;
+                              })
+                              .Default(false);
+    if (!shouldContinue)
+      break;
+  }
+  return v;
+}
+
+/// Returns `true` if accesses to the given memory space could potentially be
+/// fenced by a barrier synchoronizing on the given `fencedAddressSpaces`. If
+/// the set of address spaces is not given, it is equal to all possible address
+/// spaces. Memory spaces that are not `#gpu.address_space` are deemed to
+/// overlap with all GPU address spaces.
+static bool isAddressSpacePotentiallyFenced(
+    Attribute memorySpace,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces) {
+  if (!fencedAddressSpaces)
+    return true;
+
+  auto gpuMemSpace = dyn_cast_if_present<gpu::AddressSpaceAttr>(memorySpace);
+  if (!gpuMemSpace)
+    return true;
+
+  // Check if this GPU address space is in the fenced set.
+  return llvm::is_contained(*fencedAddressSpaces, gpuMemSpace);
+}
+
+/// Returns `true` if the effect operates on a memref whose memory  space
+/// cannot be one of the given fenced address spaces. This will both look at the
+/// address space of the effect's operand and of the base memref for that
+/// operand so as to handle casts that add and remove address space information.
+static bool effectCannotAffectAddressSpaces(
+    const MemoryEffects::EffectInstance &effect,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces) {
+  if (!fencedAddressSpaces)
+    return false;
+
+  Value value = effect.getValue();
+  if (!value)
+    return false;
+
+  auto mightMatch = [&](Value v) {
+    auto memrefType = dyn_cast<BaseMemRefType>(v.getType());
+    if (!memrefType)
+      return true;
+    return isAddressSpacePotentiallyFenced(memrefType.getMemorySpace(),
+                                           fencedAddressSpaces);
+  };
+
+  if (!mightMatch(value))
+    return true;
+
+  Value base = getBase(value);
+  return !mightMatch(base);
+}
+
+/// Returns `true` if `op` is a `BarrierOp` that fences any address spaces that
+/// could overlap with the given fenced address spaces.
+static bool isBarrierWithCommonFencedMemory(
+    Operation *op,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces) {
+  auto barrier = dyn_cast<BarrierOp>(op);
+  if (!barrier)
+    return false;
+
+  std::optional<ArrayAttr> otherFencedSpaces = barrier.getAddressSpaces();
+  // Barriers with unspecified fencing fence everything.
+  if (!otherFencedSpaces)
+    return true;
+  // while barriers that fence nothing can't close off our search.
+  if (otherFencedSpaces->empty())
+    return false;
+
+  // If we fence all memory, we've got fencing in common with anything but the
+  // non-merory barrier.
+  if (!fencedAddressSpaces)
+    return true;
+
+  // Check if there's any intersection between the two sets.
+  for (Attribute ourSpace : *fencedAddressSpaces) {
+    if (llvm::is_contained(*otherFencedSpaces, ourSpace))
+      return true;
+  }
+
+  return false;
+}
+
 /// Collect the memory effects of the given op in 'effects'. Returns 'true' if
 /// it could extract the effect information from the op, otherwise returns
 /// 'false' and conservatively populates the list with all possible effects
-/// associated with no particular value or symbol.
-static bool
-collectEffects(Operation *op,
-               SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-               bool ignoreBarriers = true) {
+/// associated with no particular value or symbol. `fencedAddressSpaces` is,
+/// if given, the set of GPU memory spaces that are being synchronized by the
+/// barrier being syrchronized - memory operations where the value being
+/// impacted is known and either it or its base value have an address space that
+/// is known to be distinct from the ones being synchronized on will not be
+/// included in the effect set.
+static bool collectEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces,
+    bool ignoreBarriers = true) {
   // Skip over barriers to avoid infinite recursion (those barriers would ask
   // this barrier again).
   if (ignoreBarriers && isa<BarrierOp>(op))
@@ -98,14 +205,19 @@ collectEffects(Operation *op,
   if (auto iface = dyn_cast<MemoryEffectOpInterface>(op)) {
     SmallVector<MemoryEffects::EffectInstance> localEffects;
     iface.getEffects(localEffects);
-    llvm::append_range(effects, localEffects);
+    // Filter out effects that cannot affect the fenced address spaces.
+    for (const MemoryEffects::EffectInstance &effect : localEffects) {
+      if (!effectCannotAffectAddressSpaces(effect, fencedAddressSpaces))
+        effects.push_back(effect);
+    }
     return true;
   }
   if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     for (auto &region : op->getRegions()) {
       for (auto &block : region) {
         for (auto &innerOp : block)
-          if (!collectEffects(&innerOp, effects, ignoreBarriers))
+          if (!collectEffects(&innerOp, effects, fencedAddressSpaces,
+                              ignoreBarriers))
             return false;
       }
     }
@@ -120,22 +232,22 @@ collectEffects(Operation *op,
 
 /// Get all effects before the given operation caused by other operations in the
 /// same block. That is, this will not consider operations beyond the block.
-static bool
-getEffectsBeforeInBlock(Operation *op,
-                        SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-                        bool stopAtBarrier) {
+static bool getEffectsBeforeInBlock(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces,
+    bool stopAtBarrier) {
   if (op == &op->getBlock()->front())
     return true;
 
   for (Operation *it = op->getPrevNode(); it != nullptr;
        it = it->getPrevNode()) {
-    if (isa<BarrierOp>(it)) {
+    if (isBarrierWithCommonFencedMemory(it, fencedAddressSpaces)) {
       if (stopAtBarrier)
         return true;
       continue;
     }
 
-    if (!collectEffects(it, effects))
+    if (!collectEffects(it, effects, fencedAddressSpaces))
       return false;
   }
   return true;
@@ -147,10 +259,10 @@ getEffectsBeforeInBlock(Operation *op,
 /// set. Returns `true` if the memory effects added to `effects` are exact,
 /// `false` if they are a conservative over-approximation. The latter means that
 /// `effects` contain instances not associated with a specific value.
-static bool
-getEffectsBefore(Operation *op,
-                 SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-                 bool stopAtBarrier) {
+static bool getEffectsBefore(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces,
+    bool stopAtBarrier) {
   if (!op->getBlock())
     return true;
 
@@ -162,7 +274,7 @@ getEffectsBefore(Operation *op,
   }
 
   // Collect all effects before the op.
-  getEffectsBeforeInBlock(op, effects, stopAtBarrier);
+  getEffectsBeforeInBlock(op, effects, fencedAddressSpaces, stopAtBarrier);
 
   // Stop if reached the parallel region boundary.
   if (isParallelRegionBoundary(op->getParentOp()))
@@ -171,7 +283,7 @@ getEffectsBefore(Operation *op,
   Operation *parent = op->getParentOp();
   // Otherwise, keep collecting above the parent operation.
   if (!parent->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-      !getEffectsBefore(parent, effects, stopAtBarrier))
+      !getEffectsBefore(parent, effects, fencedAddressSpaces, stopAtBarrier))
     return false;
 
   // If the op is loop-like, collect effects from the trailing operations until
@@ -191,7 +303,7 @@ getEffectsBefore(Operation *op,
   if (isSequentialLoopLike(parent)) {
     // Assuming loop terminators have no side effects.
     return getEffectsBeforeInBlock(op->getBlock()->getTerminator(), effects,
-                                   /*stopAtBarrier=*/true);
+                                   fencedAddressSpaces, /*stopAtBarrier=*/true);
   }
 
   // If the parent operation is not guaranteed to execute its (single-block)
@@ -201,7 +313,7 @@ getEffectsBefore(Operation *op,
     op->getParentOp()->walk([&](Operation *in) {
       if (conservative)
         return WalkResult::interrupt();
-      if (!collectEffects(in, effects)) {
+      if (!collectEffects(in, effects, fencedAddressSpaces)) {
         conservative = true;
         return WalkResult::interrupt();
       }
@@ -213,21 +325,21 @@ getEffectsBefore(Operation *op,
 
 /// Get all effects after the given operation caused by other operations in the
 /// same block. That is, this will not consider operations beyond the block.
-static bool
-getEffectsAfterInBlock(Operation *op,
-                       SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-                       bool stopAtBarrier) {
+static bool getEffectsAfterInBlock(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces,
+    bool stopAtBarrier) {
   if (op == &op->getBlock()->back())
     return true;
 
   for (Operation *it = op->getNextNode(); it != nullptr;
        it = it->getNextNode()) {
-    if (isa<BarrierOp>(it)) {
+    if (isBarrierWithCommonFencedMemory(it, fencedAddressSpaces)) {
       if (stopAtBarrier)
         return true;
       continue;
     }
-    if (!collectEffects(it, effects))
+    if (!collectEffects(it, effects, fencedAddressSpaces))
       return false;
   }
   return true;
@@ -239,10 +351,10 @@ getEffectsAfterInBlock(Operation *op,
 /// set. Returns `true` if the memory effects added to `effects` are exact,
 /// `false` if they are a conservative over-approximation. The latter means that
 /// `effects` contain instances not associated with a specific value.
-static bool
-getEffectsAfter(Operation *op,
-                SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-                bool stopAtBarrier) {
+static bool getEffectsAfter(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces,
+    bool stopAtBarrier) {
   if (!op->getBlock())
     return true;
 
@@ -254,7 +366,7 @@ getEffectsAfter(Operation *op,
   }
 
   // Collect all effects after the op.
-  getEffectsAfterInBlock(op, effects, stopAtBarrier);
+  getEffectsAfterInBlock(op, effects, fencedAddressSpaces, stopAtBarrier);
 
   Operation *parent = op->getParentOp();
   // Stop if reached the parallel region boundary.
@@ -264,7 +376,7 @@ getEffectsAfter(Operation *op,
   // Otherwise, keep collecting below the parent operation.
   // Don't look into, for example, neighboring functions
   if (!parent->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-      !getEffectsAfter(parent, effects, stopAtBarrier))
+      !getEffectsAfter(parent, effects, fencedAddressSpaces, stopAtBarrier))
     return false;
 
   // If the op is loop-like, collect effects from the leading operations until
@@ -282,11 +394,14 @@ getEffectsAfter(Operation *op,
   // operation `op2` at iteration `i-1` and the side effects must be ordered
   // appropriately.
   if (isSequentialLoopLike(parent)) {
-    if (isa<BarrierOp>(op->getBlock()->front()))
+    if (isBarrierWithCommonFencedMemory(&op->getBlock()->front(),
+                                        fencedAddressSpaces))
       return true;
 
-    bool exact = collectEffects(&op->getBlock()->front(), effects);
+    bool exact =
+        collectEffects(&op->getBlock()->front(), effects, fencedAddressSpaces);
     return getEffectsAfterInBlock(&op->getBlock()->front(), effects,
+                                  fencedAddressSpaces,
                                   /*stopAtBarrier=*/true) &&
            exact;
   }
@@ -298,7 +413,7 @@ getEffectsAfter(Operation *op,
     op->getParentOp()->walk([&](Operation *in) {
       if (conservative)
         return WalkResult::interrupt();
-      if (!collectEffects(in, effects)) {
+      if (!collectEffects(in, effects, fencedAddressSpaces)) {
         conservative = true;
         return WalkResult::interrupt();
       }
@@ -306,35 +421,6 @@ getEffectsAfter(Operation *op,
     });
 
   return !conservative;
-}
-
-/// Looks through known "view-like" ops to find the base memref.
-static Value getBase(Value v) {
-  while (true) {
-    Operation *definingOp = v.getDefiningOp();
-    if (!definingOp)
-      break;
-
-    bool shouldContinue =
-        TypeSwitch<Operation *, bool>(v.getDefiningOp())
-            .Case<memref::CastOp, memref::SubViewOp, memref::ViewOp>(
-                [&](auto op) {
-                  v = op.getSource();
-                  return true;
-                })
-            .Case<memref::TransposeOp>([&](auto op) {
-              v = op.getIn();
-              return true;
-            })
-            .Case<memref::CollapseShapeOp, memref::ExpandShapeOp>([&](auto op) {
-              v = op.getSrc();
-              return true;
-            })
-            .Default(false);
-    if (!shouldContinue)
-      break;
-  }
-  return v;
 }
 
 /// Returns `true` if the value is defined as a function argument.
@@ -352,8 +438,6 @@ static Value propagatesCapture(Operation *op) {
           [](ViewLikeOpInterface viewLike) { return viewLike.getViewSource(); })
       .Case([](CastOpInterface castLike) { return castLike->getOperand(0); })
       .Case([](memref::TransposeOp transpose) { return transpose.getIn(); })
-      .Case<memref::ExpandShapeOp, memref::CollapseShapeOp>(
-          [](auto op) { return op.getSrc(); })
       .Default(nullptr);
 }
 
@@ -583,11 +667,29 @@ public:
     LDBG() << "checking the necessity of: " << barrier << " "
            << barrier.getLoc();
 
+    std::optional<ArrayAttr> fencedMemSpaces = barrier.getAddressSpaces();
+    if (fencedMemSpaces && fencedMemSpaces->empty()) {
+      LDBG()
+          << "barrier is not used to synchronize memory accesses, retain it\n";
+      return failure();
+    }
+
+    // Convert the fenced address spaces to the proper type for passing through.
+    SmallVector<gpu::AddressSpaceAttr> fencedSpacesStorage;
+    std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedSpaces;
+    if (fencedMemSpaces) {
+      for (Attribute attr : *fencedMemSpaces)
+        fencedSpacesStorage.push_back(cast<gpu::AddressSpaceAttr>(attr));
+      fencedSpaces = fencedSpacesStorage;
+    }
+
     SmallVector<MemoryEffects::EffectInstance> beforeEffects;
-    getEffectsBefore(barrier, beforeEffects, /*stopAtBarrier=*/true);
+    getEffectsBefore(barrier, beforeEffects, fencedSpaces,
+                     /*stopAtBarrier=*/true);
 
     SmallVector<MemoryEffects::EffectInstance> afterEffects;
-    getEffectsAfter(barrier, afterEffects, /*stopAtBarrier=*/true);
+    getEffectsAfter(barrier, afterEffects, fencedSpaces,
+                    /*stopAtBarrier=*/true);
 
     if (!haveConflictingEffects(beforeEffects, afterEffects)) {
       LDBG() << "the surrounding barriers are sufficient, removing " << barrier;
