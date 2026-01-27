@@ -2807,9 +2807,9 @@ def CIR_InsertMemberOp : CIR_Op<"insert_member", [
   let summary = "Overwrite the value of a member of a record value";
   let description = [{
     The `cir.insert_member` operation overwrites the value of a particular
-    member in the input record value, and returns the modified record value. The
-    result of this operation is equal to the input record value, except for the
-    member specified by `index_attr` whose value is equal to the given value.
+    member in the input record, and returns the modified record. The result of
+    this operation is equal to the input record, except for the member specified
+    by `index_attr` whose value is equal to the given value.
 
     This operation is named after the LLVM instruction `insertvalue`.
 
