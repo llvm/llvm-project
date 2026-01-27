@@ -1300,6 +1300,23 @@ add_header_library(
 )
 
 add_header_library(
+  sinhf16
+  HDRS
+    sinhf16.h
+  DEPENDS
+    .expxf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   dfmal
   HDRS
     dfmal.h
