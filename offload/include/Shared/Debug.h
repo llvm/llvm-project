@@ -308,8 +308,14 @@ struct DebugSettings {
       return;
 
     Settings.Enabled = true;
-    if (EnvRef.equals_insensitive("all"))
-      return;
+
+    if (EnvRef.starts_with_insensitive("all")) {
+      auto Spec = parseDebugFilter(EnvRef);
+      if (Spec.Type.equals_insensitive("all")) {
+        Settings.DefaultLevel = Spec.Level;
+        return;
+      }
+    }
 
     if (!EnvRef.getAsInteger(10, Settings.DefaultLevel))
       return;

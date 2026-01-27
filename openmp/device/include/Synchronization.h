@@ -192,43 +192,6 @@ atomicExchange(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
 
 } // namespace atomic
 
-namespace synchronize {
-
-/// Initialize the synchronization machinery. Must be called by all threads.
-void init(bool IsSPMD);
-
-/// Synchronize all threads in a warp identified by \p Mask.
-static inline void warp(LaneMaskTy Mask) { __gpu_sync_lane(Mask); }
-
-/// Synchronize all threads in a block and perform a fence before and after the
-/// barrier according to \p Ordering. Note that the fence might be part of the
-/// barrier.
-static inline void threads(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_barrier_sync(8);
-#else
-  __gpu_sync_threads();
-#endif
-}
-
-/// Synchronizing threads is allowed even if they all hit different instances of
-/// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
-/// restrictive in that it requires all threads to hit the same instance. The
-/// noinline is removed by the openmp-opt pass and helps to preserve the
-/// information till then.
-///{
-
-/// Synchronize all threads in a block, they are reaching the same instruction
-/// (hence all threads in the block are "aligned"). Also perform a fence before
-/// and after the barrier according to \p Ordering. Note that the
-/// fence might be part of the barrier if the target offers this.
-[[gnu::noinline, omp::assume("ompx_aligned_barrier")]] void
-threadsAligned(atomic::OrderingTy Ordering);
-
-///}
-
-} // namespace synchronize
-
 // FIXME: NVPTX does not respect the memory scope argument.
 namespace fence {
 
@@ -260,6 +223,53 @@ static inline void system(atomic::OrderingTy Ordering) {
 }
 
 } // namespace fence
+
+namespace synchronize {
+
+/// Initialize the synchronization machinery. Must be called by all threads.
+void init(bool IsSPMD);
+
+/// Synchronize all threads in a warp identified by \p Mask.
+static inline void warp(LaneMaskTy Mask) { __gpu_sync_lane(Mask); }
+
+/// Synchronize all threads in a block and perform a fence before and after the
+/// barrier according to \p Ordering. Note that the fence might be part of the
+/// barrier.
+static inline void threads(atomic::OrderingTy Ordering) {
+#if defined(__NVPTX__)
+  __nvvm_barrier_sync(8);
+#elif defined(__AMDGPU__)
+  if (Ordering != atomic::relaxed)
+    fence::team(Ordering == atomic::acq_rel ? atomic::release
+                                            : atomic::seq_cst);
+
+  __builtin_amdgcn_s_barrier();
+
+  if (Ordering != atomic::relaxed)
+    fence::team(Ordering == atomic::acq_rel ? atomic::acquire
+                                            : atomic::seq_cst);
+#else
+  __gpu_sync_threads();
+#endif
+}
+
+/// Synchronizing threads is allowed even if they all hit different instances of
+/// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
+/// restrictive in that it requires all threads to hit the same instance. The
+/// noinline is removed by the openmp-opt pass and helps to preserve the
+/// information till then.
+///{
+
+/// Synchronize all threads in a block, they are reaching the same instruction
+/// (hence all threads in the block are "aligned"). Also perform a fence before
+/// and after the barrier according to \p Ordering. Note that the
+/// fence might be part of the barrier if the target offers this.
+[[gnu::noinline, omp::assume("ompx_aligned_barrier")]] void
+threadsAligned(atomic::OrderingTy Ordering);
+
+///}
+
+} // namespace synchronize
 
 } // namespace ompx
 
