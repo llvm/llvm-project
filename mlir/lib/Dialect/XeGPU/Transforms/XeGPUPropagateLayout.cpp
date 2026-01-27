@@ -649,6 +649,10 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   if (!resLayoutInfo.isAssigned())
     return;
 
+  // debug print resLayoutInfo
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: resLayoutInfo = ";
+             resLayoutInfo.print(llvm::dbgs()); llvm::dbgs() << "\n");
+
   VectorType sourceTy =
       llvm::dyn_cast<VectorType>(reduction.getSourceVectorType());
   SmallVector<int64_t> reductionDims(reduction.getReductionDims().begin(),
@@ -672,18 +676,28 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
 
   LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: consumerLayoutAttr = "
                     << consumerLayoutAttr << "\n");
-  // An dominant layout is for the result and represents the layout requirements
-  // for the operation it is recorded to anchor layout or temporary layout it
-  // must be honored for current op and may conflict with the layout propagated
-  // from consumer op the conflict is resolved in later phase by converting the
-  // dominant layout to the source layout
-
+  // The required result layout represents the layout requirements
+  // for the operation it is recorded to anchor layout or temporary layout.
+  // it must be honored for current op and may conflict with the layout
+  // propagated from consumer op, the conflict is resolved in later phase by
+  // converting the required result layout to the consumer layout
+  auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   auto requiredResLayoutAttr = xegpu::reductionSetupResultLayout(
-      layoutKind, srcShape, consumerLayoutAttr, reductionDims);
+      layoutKind, srcShape, consumerLayoutAttr, reductionDims, uArch);
   LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: requiredResLayoutAttr = "
                     << requiredResLayoutAttr << "\n");
 
-  resLayoutInfo.set(requiredResLayoutAttr);
+  // resLayoutInfo.set(requiredResLayoutAttr);
+  xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
+
+  // debug print resLayoutInfo
+  LLVM_DEBUG(
+      DBGS() << "visitVectorMultiReductionOp: after change resLayoutInfo = ";
+      resLayoutInfo.print(llvm::dbgs()); llvm::dbgs() << "\n");
+
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: after change "
+                       "results[0]->getValue() = ";
+             results[0]->getValue().print(llvm::dbgs()); llvm::dbgs() << "\n");
 
   // derive the source layout from the dominant layout and reduction dims
   auto srcLayoutAttr =
@@ -694,7 +708,8 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
-  propagateIfChanged(operands[1], operands[1]->meet(resLayoutInfo));
+  propagateIfChanged(operands[1],
+                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitVectorBroadCastOp(
@@ -1102,12 +1117,12 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   ArrayRef<int64_t> srcShape = bitcast.getSourceVectorType().getShape();
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
-
+  auto uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
   auto requiredResLayoutAttr =
       bitCastSetupResultLayout(layoutKind, srcShape, consumerLayoutAttr,
-                               outElemTyBitWidth, inElemTyBitWidth);
+                               outElemTyBitWidth, inElemTyBitWidth, uArch);
 
-  resLayoutInfo.set(requiredResLayoutAttr);
+  xegpu::setTemporaryLayout(bitcast->getResult(0), requiredResLayoutAttr);
 
   // derive the source layout from the dominant layout and reduction dims
   auto srcLayoutAttr = xegpu::inferBitCastSourceLayout(
@@ -1327,12 +1342,10 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     VectorType payloadTy = llvm::cast<VectorType>(operand.getType());
     assert(payloadTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
-    SmallVector<int> instData = {1, uArch->getSubgroupSize()};
-    if (layoutKind == xegpu::LayoutKind::InstData)
-      layout = LayoutInfo(
-          xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
-    else
-      layout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
+    auto requiredAnchorLayoutAttr =
+        storeMatrixSetupAnchorLayout(layoutKind, payloadTy, uArch);
+    storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
+    layout = LayoutInfo(requiredAnchorLayoutAttr);
   }
 
   propagateIfChanged(operands[index], operands[index]->meet(layout));
@@ -1612,6 +1625,12 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (!layout.isAssigned())
       return {};
+    if (auto opResult = dyn_cast<OpResult>(val)) {
+      xegpu::DistributeLayoutAttr requiredResLayoutAttr =
+          xegpu::getTemporaryLayout(opResult);
+      if (requiredResLayoutAttr != nullptr)
+        return requiredResLayoutAttr;
+    }
     xegpu::DistributeLayoutAttr layoutAttr =
         cast<xegpu::DistributeLayoutAttr>(layout.get());
     if (layout.isSliceLayout())

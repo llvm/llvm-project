@@ -553,16 +553,12 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 
 xegpu::SliceAttr xegpu::reductionSetupResultLayout(
     xegpu::LayoutKind layoutKind, ArrayRef<int64_t> srcShape,
-    DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims) {
+    DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
+    const xegpu::uArch::uArch *uArch) {
 
   xegpu::SliceAttr consumerSliceLayout =
       dyn_cast<xegpu::SliceAttr>(consumerLayout);
 
-  // Hardware constraints (TODO: these should ideally be queried from device
-  // capabilities)
-  const int workgroupSize = 16; // Total number of subgroups in a workgroup
-  const int subgroupSize = 16;  // Number of SIMD lanes per subgroup
-  const int vectorSize = 8;     // Elements processed per vector instruction
   int srcShapeSize = srcShape.size();
   xegpu::DistributeLayoutAttr proposedSrcLayout;
   auto context = consumerLayout.getContext();
@@ -575,6 +571,23 @@ xegpu::SliceAttr xegpu::reductionSetupResultLayout(
   SmallVector<int64_t> instData(srcShapeSize);
   SmallVector<int64_t> laneLayout(srcShapeSize);
   SmallVector<int64_t> laneData(srcShapeSize);
+
+  // recover workgroup and subgroup size from consumer layout
+  DistributeLayoutAttr origPlainLayout;
+  if (consumerSliceLayout) {
+    origPlainLayout = consumerSliceLayout.flatten().getParent();
+  } else {
+    origPlainLayout = consumerLayout;
+  }
+
+  const int workgroupSize =
+      std::accumulate(origPlainLayout.getEffectiveSgLayoutAsInt().begin(),
+                      origPlainLayout.getEffectiveSgLayoutAsInt().end(), 1,
+                      std::multiplies<int64_t>());
+
+  const int subgroupSize = uArch->getSubgroupSize();
+
+  const int vectorSize = 16; // vector size from SPRIV vector restriction
 
   SmallVector<int64_t> defaultInstData(srcShapeSize, 1);
   defaultInstData[srcShapeSize - 1] = subgroupSize;
@@ -702,8 +715,11 @@ xegpu::SliceAttr xegpu::reductionSetupResultLayout(
              "not all subgroups have been distributed");
       break;
     case xegpu::LayoutKind::InstData:
-      for (int i = 0; i < srcShapeSize; i++)
+      for (int i = 0; i < srcShapeSize; i++) {
         instData[i] = std::min(defaultInstData[i], srcShape[i]);
+        llvm::dbgs() << "MultiReductionOp: Strategy 2: instData [" << i
+                     << "] = " << instData[i] << "\n";
+      }
       break;
     case xegpu::LayoutKind::Lane:
       consumerLaneId = consumerLaneLayout.size() - 1;
@@ -740,12 +756,24 @@ xegpu::SliceAttr xegpu::reductionSetupResultLayout(
   SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
   SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
 
-  proposedSrcLayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout32),
-      DenseI32ArrayAttr::get(context, sgData32),
-      DenseI32ArrayAttr::get(context, instData32),
-      DenseI32ArrayAttr::get(context, laneLayout32),
-      DenseI32ArrayAttr::get(context, laneData32), consumerLayout.getOrder());
+  switch (layoutKind) {
+  case xegpu::LayoutKind::Subgroup:
+    proposedSrcLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, sgLayout32),
+        DenseI32ArrayAttr::get(context, sgData32), consumerLayout.getOrder());
+    break;
+  case xegpu::LayoutKind::InstData:
+    proposedSrcLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, instData32));
+    break;
+  case xegpu::LayoutKind::Lane:
+    proposedSrcLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, laneLayout32),
+        DenseI32ArrayAttr::get(context, laneData32), consumerLayout.getOrder());
+    break;
+  default:
+    llvm_unreachable("unsupported layout kind");
+  }
 
   xegpu::SliceAttr resLayout =
       xegpu::SliceAttr::get(context, proposedSrcLayout,
@@ -753,17 +781,17 @@ xegpu::SliceAttr xegpu::reductionSetupResultLayout(
   return resLayout;
 }
 
-xegpu::DistributeLayoutAttr
-xegpu::bitCastSetupResultLayout(xegpu::LayoutKind layoutKind,
-                                ArrayRef<int64_t> srcShape,
-                                DistributeLayoutAttr consumerLayout,
-                                int resElemTyBitWidth, int srcElemTyBitWidth) {
+xegpu::DistributeLayoutAttr xegpu::bitCastSetupResultLayout(
+    xegpu::LayoutKind layoutKind, ArrayRef<int64_t> srcShape,
+    DistributeLayoutAttr consumerLayout, int resElemTyBitWidth,
+    int srcElemTyBitWidth, const xegpu::uArch::uArch *uArch) {
   SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
   size_t dim = srcShape.size() - 1;
   int64_t sgDataValue, instDataValue, laneDataValue;
-  const int subgroupSize = 16; // assuming 16 lanes per subgroup
+
+  const int subgroupSize = uArch->getSubgroupSize();
 
   if (srcElemTyBitWidth > resElemTyBitWidth) {
     // When casting to a smaller bitwidth, multiply the result layout
@@ -811,4 +839,30 @@ xegpu::bitCastSetupResultLayout(xegpu::LayoutKind layoutKind,
   resLayout =
       consumerLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
   return resLayout;
+}
+
+xegpu::DistributeLayoutAttr
+xegpu::storeMatrixSetupAnchorLayout(xegpu::LayoutKind layoutKind,
+                                    VectorType vectorTy,
+                                    const xegpu::uArch::uArch *uArch) {
+
+  xegpu::DistributeLayoutAttr requiredLayout;
+  SmallVector<int> instData = {1, uArch->getSubgroupSize()};
+  switch (layoutKind) {
+  case xegpu::LayoutKind::Subgroup:
+    assert(false &&
+           "subgroup layout assignment not supported yet for storeMatrix.");
+    break;
+  case xegpu::LayoutKind::InstData:
+    requiredLayout = xegpu::LayoutAttr::get(vectorTy.getContext(), instData);
+    break;
+  case xegpu::LayoutKind::Lane:
+    requiredLayout = xegpu::LayoutAttr::get(
+        vectorTy.getContext(), {1, uArch->getSubgroupSize()}, {1, 1});
+
+    break;
+  default:
+    llvm_unreachable("unsupported layout kind");
+  }
+  return requiredLayout;
 }

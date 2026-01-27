@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
@@ -100,7 +101,8 @@ DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
 SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
                                      ArrayRef<int64_t> srcShape,
                                      DistributeLayoutAttr consumerLayout,
-                                     SmallVector<int64_t> reductionDims);
+                                     SmallVector<int64_t> reductionDims,
+                                     const uArch::uArch *uArch);
 
 /// Setup the result layout attribute for a bitcast operation based on element
 /// type bitwidths. This ensures the source layout can always be derived from
@@ -112,10 +114,15 @@ SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
 /// maintains the invariant that the source layout can be recovered by inverse
 /// scaling during layout inference.
 DistributeLayoutAttr
-bitCastSetupResultLayout(xegpu::LayoutKind layoutKind,
-                         ArrayRef<int64_t> srcShape,
+bitCastSetupResultLayout(LayoutKind layoutKind, ArrayRef<int64_t> srcShape,
                          DistributeLayoutAttr consumerLayout,
-                         int resElemTyBitWidth, int srcElemTyBitWidth);
+                         int resElemTyBitWidth, int srcElemTyBitWidth,
+                         const uArch::uArch *uArch);
+
+// Setup the anchor layout attribute for a storeMatrix operation
+DistributeLayoutAttr storeMatrixSetupAnchorLayout(LayoutKind layoutKind,
+                                                  VectorType vectorTy,
+                                                  const uArch::uArch *uArch);
 
 } // namespace xegpu
 
