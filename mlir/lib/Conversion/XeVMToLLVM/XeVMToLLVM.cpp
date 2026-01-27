@@ -930,6 +930,9 @@ class HandleVectorExtractPattern
         }
         auto maskScale = srcResSize / srcInputSize;
         if (maskScale != 1) {
+          if (mask[0] % maskScale != 0) {
+            return failure();
+          }
           // Create a new mask that maps to the source vector
           SmallVector<int32_t> newMask;
           int32_t newMaskSize = maskSize / maskScale;
