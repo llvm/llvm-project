@@ -69,7 +69,46 @@ private:
   /// The id of the derived effect class.
   TypeID id;
 };
+} // namespace SideEffects
 
+//===----------------------------------------------------------------------===//
+// Operation Memory-Effect Modeling
+//===----------------------------------------------------------------------===//
+
+namespace MemoryEffects {
+/// This class represents the base class used for memory effects.
+struct Effect : public SideEffects::Effect {
+  using SideEffects::Effect::Effect;
+
+  /// A base class for memory effects that provides helper utilities.
+  template <typename DerivedEffect>
+  using Base = SideEffects::Effect::Base<DerivedEffect, Effect>;
+
+  static bool classof(const SideEffects::Effect *effect);
+};
+
+/// The following effect indicates that the operation allocates from some
+/// resource. An 'allocate' effect implies only allocation of the resource, and
+/// not any visible mutation or dereference.
+struct Allocate : public Effect::Base<Allocate> {};
+
+/// The following effect indicates that the operation frees some resource that
+/// has been allocated. An 'allocate' effect implies only de-allocation of the
+/// resource, and not any visible allocation, mutation or dereference.
+struct Free : public Effect::Base<Free> {};
+
+/// The following effect indicates that the operation reads from some resource.
+/// A 'read' effect implies only dereferencing of the resource, and not any
+/// visible mutation.
+struct Read : public Effect::Base<Read> {};
+
+/// The following effect indicates that the operation writes to some resource. A
+/// 'write' effect implies only mutating a resource, and not any visible
+/// dereference or read.
+struct Write : public Effect::Base<Write> {};
+} // namespace MemoryEffects
+
+namespace SideEffects {
 //===----------------------------------------------------------------------===//
 // Resources
 //===----------------------------------------------------------------------===//
@@ -110,10 +149,68 @@ public:
   /// Return a string name of the resource.
   virtual StringRef getName() = 0;
 
+  /// Return true if the resource is a "unit resource",
+  /// which means it cannot be partitioned and can only
+  /// be read/written as a whole. As such, none of the values
+  /// can legally point to this resource, i.e. all the side
+  /// effects affecting such a resource are operation-wide.
+  ///
+  /// Unit resources may be used for establishing ordering
+  /// constraints on specific operations, which otherwise
+  /// may be hard to preserve during MLIR transformations.
+  ///
+  /// Two operations may be reordered relative to each other
+  /// if they both only read a unit resource.
+  /// An operation may be erased if it writes a unit resource
+  /// and it is postdominated by another operation that writes
+  /// a unit resource (without first reading it).
+  ///
+  /// A unit resource should be always allocated, so Allocate/Free
+  /// effects should be illegal for it. For the time being,
+  /// Allocate effect is allowed to represent a case like this:
+  /// a set of operations that may be reordered relative to each
+  /// other may use Read effect, but with solely Read effect
+  /// the might be considered trivially dead - the presence
+  /// of Allocate effect currently prevents their deletion.
+  /// TODO: it is questionable whether relying on Allocate
+  /// effect is enough (e.g. a pass may decide to still
+  /// delete such operations if it does not find an operation
+  /// with the corresponding Free effect). How do we represent
+  /// a set of reorderable operations that cannot be deleted
+  /// but do not block any optimizations due to their side effects.
+  virtual bool isUnitResource() const { return false; }
+
+  /// A set of properties of a unit resource.
+  enum class UnitProperties {
+    /// No special properties.
+    None = 0,
+    /// A parallel-safe unit resource can be read/written in parallel by the
+    /// same static instance of an operation without invalidating the program.
+    /// It may be useful to make a "unit resource" also parallel,
+    /// e.g. if it is an artificial resource to prevent static
+    /// operations reordering without blocking dynamic reordering.
+    /// For example, Flang uses DebuggingResource to preserve
+    /// ordering between certain operations providing debug information,
+    /// but these operations do not affect execution and can be assumed
+    /// parallel safe.
+
+    ParallelSafe = 1,
+  };
+
+  bool hasUnitProperties(uint64_t props) {
+    assert(isUnitResource() && "the resource must be unit");
+    return props == (static_cast<uint64_t>(getUnitProperties()) & props);
+  }
+
 protected:
   Resource(TypeID id) : id(id) {}
 
 private:
+  /// Overrideable method that returns properties of the unit resource.
+  virtual UnitProperties getUnitProperties() const {
+    return UnitProperties::None;
+  }
+
   /// The id of the derived resource class.
   TypeID id;
 };
@@ -140,11 +237,15 @@ class EffectInstance {
 public:
   EffectInstance(EffectT *effect, Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), stage(0),
-        effectOnFullRegion(false) {}
+        effectOnFullRegion(false) {
+    verify();
+  }
   EffectInstance(EffectT *effect, int stage, bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    verify();
+  }
   template <typename T,
             std::enable_if_t<
                 llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
@@ -152,7 +253,9 @@ public:
   EffectInstance(EffectT *effect, T value,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(0),
-        effectOnFullRegion(false) {}
+        effectOnFullRegion(false) {
+    verify();
+  }
   template <typename T,
             std::enable_if_t<
                 llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
@@ -160,25 +263,35 @@ public:
   EffectInstance(EffectT *effect, T value, int stage, bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    verify();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol), stage(0),
-        effectOnFullRegion(false) {}
+        effectOnFullRegion(false) {
+    verify();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, int stage,
                  bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    verify();
+  }
   EffectInstance(EffectT *effect, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), parameters(parameters), stage(0),
-        effectOnFullRegion(false) {}
+        effectOnFullRegion(false) {
+    verify();
+  }
   EffectInstance(EffectT *effect, Attribute parameters, int stage,
                  bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), parameters(parameters),
-        stage(stage), effectOnFullRegion(effectOnFullRegion) {}
+        stage(stage), effectOnFullRegion(effectOnFullRegion) {
+    verify();
+  }
   template <typename T,
             std::enable_if_t<
                 llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
@@ -186,7 +299,9 @@ public:
   EffectInstance(EffectT *effect, T value, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
-        parameters(parameters), stage(0), effectOnFullRegion(false) {}
+        parameters(parameters), stage(0), effectOnFullRegion(false) {
+    verify();
+  }
   template <typename T,
             std::enable_if_t<
                 llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
@@ -196,17 +311,23 @@ public:
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
         parameters(parameters), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    verify();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol),
-        parameters(parameters), stage(0), effectOnFullRegion(false) {}
+        parameters(parameters), stage(0), effectOnFullRegion(false) {
+    verify();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, Attribute parameters,
                  int stage, bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol),
         parameters(parameters), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    verify();
+  }
 
   /// Return the effect being applied.
   EffectT *getEffect() const { return effect; }
@@ -256,6 +377,22 @@ public:
   bool getEffectOnFullRegion() const { return effectOnFullRegion; }
 
 private:
+  /// Verify the limitations of the side effect (e.g. a unit resource
+  /// effect cannot be applied to any value).
+  void verify() const {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    if (resource && resource->isUnitResource()) {
+      if (effect && isa<MemoryEffects::Free>(effect))
+        os << "Free effect is not allowed for unit resources";
+      else if (value)
+        os << "Unit resources cannot be addressed via any location";
+    }
+
+    if (!message.empty())
+      llvm::report_fatal_error(Twine(message));
+  }
+
   /// The specific effect being applied.
   EffectT *effect;
 
@@ -279,6 +416,10 @@ private:
   bool effectOnFullRegion;
 };
 } // namespace SideEffects
+
+namespace MemoryEffects {
+using EffectInstance = SideEffects::EffectInstance<Effect>;
+} // namespace MemoryEffects
 
 namespace Speculation {
 /// This enum is returned from the `getSpeculatability` method in the
@@ -340,44 +481,6 @@ struct AlwaysSpeculatableImplTrait
   }
 };
 } // namespace OpTrait
-
-//===----------------------------------------------------------------------===//
-// Operation Memory-Effect Modeling
-//===----------------------------------------------------------------------===//
-
-namespace MemoryEffects {
-/// This class represents the base class used for memory effects.
-struct Effect : public SideEffects::Effect {
-  using SideEffects::Effect::Effect;
-
-  /// A base class for memory effects that provides helper utilities.
-  template <typename DerivedEffect>
-  using Base = SideEffects::Effect::Base<DerivedEffect, Effect>;
-
-  static bool classof(const SideEffects::Effect *effect);
-};
-using EffectInstance = SideEffects::EffectInstance<Effect>;
-
-/// The following effect indicates that the operation allocates from some
-/// resource. An 'allocate' effect implies only allocation of the resource, and
-/// not any visible mutation or dereference.
-struct Allocate : public Effect::Base<Allocate> {};
-
-/// The following effect indicates that the operation frees some resource that
-/// has been allocated. An 'allocate' effect implies only de-allocation of the
-/// resource, and not any visible allocation, mutation or dereference.
-struct Free : public Effect::Base<Free> {};
-
-/// The following effect indicates that the operation reads from some resource.
-/// A 'read' effect implies only dereferencing of the resource, and not any
-/// visible mutation.
-struct Read : public Effect::Base<Read> {};
-
-/// The following effect indicates that the operation writes to some resource. A
-/// 'write' effect implies only mutating a resource, and not any visible
-/// dereference or read.
-struct Write : public Effect::Base<Write> {};
-} // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
 // SideEffect Utilities
