@@ -24,13 +24,6 @@ namespace nb = nanobind;
 using namespace llvm;
 using namespace llvm::ir2vec;
 
-namespace llvm {
-namespace ir2vec {
-void setIR2VecVocabPath(StringRef Path);
-StringRef getIR2VecVocabPath();
-} // namespace ir2vec
-} // namespace llvm
-
 namespace {
 
 bool fileNotValid(const std::string &Filename) {
@@ -63,17 +56,16 @@ public:
       throw std::runtime_error("Invalid mode. Use 'sym' or 'fa'");
 
     if (VocabPath.empty())
-      throw std::runtime_error("Error - Empty Vocab Path not allowed");
-
-    setIR2VecVocabPath(VocabPath);
+      throw std::runtime_error("Empty Vocab Path not allowed");
 
     Ctx = std::make_unique<LLVMContext>();
     M = getLLVMIR(Filename, *Ctx);
     Tool = std::make_unique<IR2VecTool>(*M);
 
-    bool Ok = Tool->initializeVocabulary();
-    if (!Ok)
-      throw std::runtime_error("Failed to initialize IR2Vec vocabulary");
+    if (auto Err = Tool->initializeVocabulary(VocabPath)) {
+      throw std::runtime_error("Failed to initialize IR2Vec vocabulary: " +
+                               toString(std::move(Err)));
+    }
   }
 };
 
