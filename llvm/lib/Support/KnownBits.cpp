@@ -1251,7 +1251,7 @@ KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
     // NB: Low bits set in `remGetLowBits`.
     APInt HighBits = ~(RHS.getConstant() - 1);
-    Known.Zero |= HighBits;
+    Known.Zero |= std::move(HighBits);
     return Known;
   }
 
