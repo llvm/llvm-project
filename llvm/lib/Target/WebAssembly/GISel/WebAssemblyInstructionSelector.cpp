@@ -186,12 +186,17 @@ bool WebAssemblyInstructionSelector::computeAddress(const MachineInstr &MI,
   default:
     break;
   case TargetOpcode::G_GLOBAL_VALUE: {
-    if (TM.isPositionIndependent())
-      return false;
     if (Addr.getGlobalValue())
       return false;
-    if (MI.getOperand(1).getGlobal()->isThreadLocal())
-      return false;
+
+    if (TM.isPositionIndependent() ||
+        MI.getOperand(1).getGlobal()->isThreadLocal()) {
+      if (Addr.isSet())
+        return false;
+
+      Addr.setReg(Def);
+      return true;
+    }
 
     uint64_t TmpOffset = Addr.getOffset() + MI.getOperand(1).getOffset();
     if (int64_t(TmpOffset) < 0)
@@ -259,8 +264,12 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
 
   Address Addr = Address();
 
-  if (!computeAddress(RootDef, Addr))
-    return std::nullopt;
+  if (!computeAddress(RootDef, Addr)) {
+    // something inhibited the complex matching logic
+    // just fall back to using the register as base, and 0 offset
+    Addr = Address();
+    Addr.setReg(Root.getReg());
+  }
 
   if (Addr.isRegBase()) {
     unsigned Reg = Addr.getReg();
