@@ -17,8 +17,10 @@
 #define LLVM_CAS_ONDISKGRAPHDB_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include <atomic>
 
 namespace llvm::cas::ondisk {
 
@@ -279,7 +281,7 @@ public:
   ///
   /// Returns \p nullopt if the object is not stored in this CAS.
   LLVM_ABI_FOR_TEST std::optional<ObjectID>
-  getExistingReference(ArrayRef<uint8_t> Digest);
+  getExistingReference(ArrayRef<uint8_t> Digest, bool CheckUpstream = true);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function will fault-in according to the policy.
@@ -287,8 +289,21 @@ public:
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function does not fault-in.
-  bool containsObject(ObjectID Ref) const {
-    return containsObject(Ref, /*CheckUpstream=*/true);
+  bool containsObject(ObjectID Ref, bool CheckUpstream = true) const {
+    auto Presence = getObjectPresence(Ref, CheckUpstream);
+    if (!Presence) {
+      consumeError(Presence.takeError());
+      return false;
+    }
+    switch (*Presence) {
+    case ObjectPresence::Missing:
+      return false;
+    case ObjectPresence::InPrimaryDB:
+      return true;
+    case ObjectPresence::OnlyInUpstreamDB:
+      return true;
+    }
+    llvm_unreachable("Unknown ObjectPresence enum");
   }
 
   /// \returns the data part of the provided object handle.
@@ -325,6 +340,10 @@ public:
   /// \param Hasher is the hashing function used for objects inside CAS.
   Error validate(bool Deep, HashingFuncT Hasher) const;
 
+  /// Checks that \p ID exists in the index. It is allowed to not have data
+  /// associated with it.
+  LLVM_ABI_FOR_TEST Error validateObjectID(ObjectID ID) const;
+
   /// How to fault-in nodes if an upstream database is used.
   enum class FaultInPolicy {
     /// Copy only the requested node.
@@ -352,6 +371,7 @@ public:
   LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        OnDiskGraphDB *UpstreamDB = nullptr,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   LLVM_ABI_FOR_TEST ~OnDiskGraphDB();
@@ -369,24 +389,6 @@ private:
   /// Check if object exists and if it is on upstream only.
   LLVM_ABI_FOR_TEST Expected<ObjectPresence>
   getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
-
-  /// \returns true if object can be found in database.
-  bool containsObject(ObjectID Ref, bool CheckUpstream) const {
-    auto Presence = getObjectPresence(Ref, CheckUpstream);
-    if (!Presence) {
-      consumeError(Presence.takeError());
-      return false;
-    }
-    switch (*Presence) {
-    case ObjectPresence::Missing:
-      return false;
-    case ObjectPresence::InPrimaryDB:
-      return true;
-    case ObjectPresence::OnlyInUpstreamDB:
-      return true;
-    }
-    llvm_unreachable("Unknown ObjectPresence enum");
-  }
 
   /// When \p load is called for a node that doesn't exist, this function tries
   /// to load it from the upstream store and copy it to the primary one.
@@ -446,7 +448,7 @@ private:
   // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                 OnDiskDataAllocator DataPool, OnDiskGraphDB *UpstreamDB,
-                FaultInPolicy Policy);
+                FaultInPolicy Policy, std::shared_ptr<OnDiskCASLogger> Logger);
 
   /// Mapping from hash to object reference.
   ///
@@ -469,6 +471,9 @@ private:
 
   /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;
+
+  /// Debug Logger.
+  std::shared_ptr<OnDiskCASLogger> Logger;
 };
 
 } // namespace llvm::cas::ondisk

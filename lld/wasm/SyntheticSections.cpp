@@ -196,7 +196,9 @@ void ImportSection::addImport(Symbol *sym) {
   StringRef module = sym->importModule.value_or(defaultModule);
   StringRef name = sym->importName.value_or(sym->getName());
   if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
-    ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
+    const WasmSignature *sig = f->getSignature();
+    assert(sig && "imported functions must have a signature");
+    ImportKey<WasmSignature> key(*sig, module, name);
     auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
     if (entry.second) {
       importedSymbols.emplace_back(sym);

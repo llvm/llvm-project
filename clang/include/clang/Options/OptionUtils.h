@@ -28,6 +28,7 @@ class ArgList;
 } // namespace llvm
 
 namespace clang {
+
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.
 int getLastArgIntValue(const llvm::opt::ArgList &Args,
@@ -52,6 +53,29 @@ inline uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
                                       unsigned Base = 0) {
   return getLastArgUInt64Value(Args, Id, Default, &Diags, Base);
 }
+
+// Parse -mprefer-vector-width=. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                        const llvm::opt::ArgList &Args);
+
+// Parse -mrecip. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
+                            const llvm::opt::ArgList &Args);
+
+/// Get the directory where the compiler headers reside, relative to the
+/// compiler binary path \p BinaryPath.
+std::string GetResourcesPath(StringRef BinaryPath);
+
+/// Get the directory where the compiler headers reside, relative to the
+/// compiler binary path (found by the passed in arguments).
+///
+/// \param Argv0 The program path (from argv[0]), for finding the builtin
+/// compiler path.
+/// \param MainAddr The address of main (or some other function in the main
+/// executable), for finding the builtin compiler path.
+std::string GetResourcesPath(const char *Argv0, void *MainAddr);
 
 } // namespace clang
 

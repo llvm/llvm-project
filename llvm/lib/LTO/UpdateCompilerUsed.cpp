@@ -57,7 +57,7 @@ private:
   // same names are added to llvm.compiler.used to prevent them from being
   // deleted by optimizations.
   void initializeLibCalls(const Module &TheModule) {
-    TargetLibraryInfoImpl TLII(TM.getTargetTriple());
+    TargetLibraryInfoImpl TLII(TM.getTargetTriple(), TM.Options.VecLib);
     TargetLibraryInfo TLI(TLII);
 
     // TargetLibraryInfo has info on C runtime library calls on the current

@@ -5,6 +5,7 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: DXIL Resource Type Analysis
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Assumption Cache Tracker
@@ -15,6 +16,7 @@
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   Dead Global Elimination
+; CHECK-NEXT:   DXIL Memory Intrinsic Elimination
 ; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access

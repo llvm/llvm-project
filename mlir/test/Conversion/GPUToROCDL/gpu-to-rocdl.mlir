@@ -130,17 +130,6 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK-LABEL: func @gpu_sync()
-  func.func @gpu_sync() {
-    // CHECK: rocdl.barrier
-    gpu.barrier
-    func.return
-  }
-}
-
-// -----
-
-gpu.module @test_module {
   // CHECK-LABEL: func @gpu_sqrt
   func.func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
     %result16 = math.sqrt %arg_f16 : f16
@@ -612,7 +601,9 @@ gpu.module @test_module {
     // CHECK: llvm.select
     // CHECK: llvm.shl
     // CHECK: rocdl.ds_bpermute {{.*}}
-    // CHECK: rocdl.barrier
+    // CHECK: llvm.fence
+    // CHECK: rocdl.s.barrier
+    // CHECK: llvm.fence
     // CHECK: llvm.bitcast
     // CHECK: llvm.fadd
     %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
@@ -636,7 +627,9 @@ gpu.module @test_module {
     // CHECK: llvm.select
     // CHECK: llvm.shl
     // CHECK: rocdl.ds_bpermute {{.*}}
-    // CHECK: rocdl.barrier
+    // CHECK: llvm.fence
+    // CHECK: rocdl.s.barrier
+    // CHECK: llvm.fence
     %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
@@ -820,5 +813,42 @@ func.func @broadcast(%arg0 : index, %arg1 : i32) -> (index, index) {
   %0 = gpu.subgroup_broadcast %arg0, first_active_lane : index
   %1 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : index
   func.return %0, %1 : index, index
+}
+
+// CHECK-LABEL: func @broadcast_i8
+//  CHECK-SAME:   (%[[ARG:.*]]: i8, %[[IDX:.*]]: i32)
+func.func @broadcast_i8(%arg0 : i8, %arg1 : i32) -> (i8, i8) {
+//       CHECK:   %[[I32_1:.*]] = llvm.zext %[[ARG]] : i8 to i32
+//       CHECK:   %[[R1:.*]] = rocdl.readfirstlane %[[I32_1]] : i32
+//       CHECK:   %[[RES1:.*]] = llvm.trunc %[[R1]] : i32 to i8
+//       CHECK:   %[[I32_2:.*]] = llvm.zext %[[ARG]] : i8 to i32
+//       CHECK:   %[[R2:.*]] = rocdl.readlane %[[I32_2]], %[[IDX]] : (i32, i32) -> i32
+//       CHECK:   %[[RES2:.*]] = llvm.trunc %[[R2]] : i32 to i8
+//       CHECK:   %{{.*}} = llvm.insertvalue %[[RES1]], %{{.*}}[0] : !llvm.struct<(i8, i8)>
+//       CHECK:   %{{.*}} = llvm.insertvalue %[[RES2]], %{{.*}}[1] : !llvm.struct<(i8, i8)>
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : i8
+  %1 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : i8
+  func.return %0, %1 : i8, i8
+}
+
+// CHECK-LABEL: func @broadcast_4xi16
+//  CHECK-SAME:   (%[[ARG:.*]]: vector<4xi16>)
+func.func @broadcast_4xi16(%arg0 : vector<4xi16>) -> vector<4xi16> {
+//       CHECK:   %[[BITCAST:.*]] = llvm.bitcast %[[ARG:.*]] : vector<4xi16> to vector<2xi32>
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK:   %[[ELEM0:.*]] = llvm.extractelement %[[BITCAST]][%[[C0]] : i32] : vector<2xi32>
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+//       CHECK:   %[[ELEM1:.*]] = llvm.extractelement %[[BITCAST]][%[[C1]] : i32] : vector<2xi32>
+//       CHECK:   %[[RFL0:.*]] = rocdl.readfirstlane %[[ELEM0]] : i32
+//       CHECK:   %[[RFL1:.*]] = rocdl.readfirstlane %[[ELEM1]] : i32
+//       CHECK:   %[[POISON:.*]] = llvm.mlir.poison : vector<2xi32>
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK:   %[[INS0:.*]] = llvm.insertelement %[[RFL0]], %[[POISON]][%[[C0]] : i32] : vector<2xi32>
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+//       CHECK:   %[[INS1:.*]] = llvm.insertelement %[[RFL1]], %[[INS0]][%[[C1]] : i32] : vector<2xi32>
+//       CHECK:   %[[BITCAST2:.*]] = llvm.bitcast %[[INS1]] : vector<2xi32> to vector<4xi16>
+//       CHECK:   return %[[BITCAST2]] : vector<4xi16>
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : vector<4xi16>
+  func.return %0 : vector<4xi16>
 }
 }

@@ -2149,9 +2149,12 @@ bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
   case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
   case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
-  case Intrinsic::nvvm_barrier0_and:
-  case Intrinsic::nvvm_barrier0_or:
-  case Intrinsic::nvvm_barrier0_popc:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_count:
     return true;
   case Intrinsic::amdgcn_s_barrier:
     if (ExecutedAligned)
@@ -5220,6 +5223,13 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
         return AlignAA->getKnownAlign().value();
       break;
     }
+    case Intrinsic::amdgcn_make_buffer_rsrc: {
+      const auto *AlignAA = A.getAAFor<AAAlign>(
+          QueryingAA, IRPosition::value(*II), DepClassTy::NONE);
+      if (AlignAA)
+        return AlignAA->getKnownAlign().value();
+      break;
+    }
     default:
       break;
     }
@@ -5543,7 +5553,7 @@ struct AAAlignCallSiteReturned final
         const auto *AlignAA =
             A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
                                 DepClassTy::REQUIRED);
-        if (AlignAA && AlignAA->isValidState()) {
+        if (AlignAA) {
           Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
           Valid = true;
         }
@@ -5552,6 +5562,18 @@ struct AAAlignCallSiteReturned final
           return clampStateAndIndicateChange<StateType>(
               this->getState(),
               std::min(this->getAssumedAlign(), Alignment).value());
+        break;
+      }
+      // FIXME: Should introduce target specific sub-attributes and letting
+      // getAAfor<AAAlign> lead to create sub-attribute to handle target
+      // specific intrinsics.
+      case Intrinsic::amdgcn_make_buffer_rsrc: {
+        const auto *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        if (AlignAA)
+          return clampStateAndIndicateChange<StateType>(
+              this->getState(), AlignAA->getAssumedAlign().value());
         break;
       }
       default:
@@ -10464,13 +10486,32 @@ struct AANoFPClassImpl : AANoFPClass {
       addKnownBits(Attr.getNoFPClass());
     }
 
-    const DataLayout &DL = A.getDataLayout();
+    Instruction *CtxI = getCtxI();
+
     if (getPositionKind() != IRPosition::IRP_RETURNED) {
-      KnownFPClass KnownFPClass = computeKnownFPClass(&V, DL);
+      const DataLayout &DL = A.getDataLayout();
+      InformationCache &InfoCache = A.getInfoCache();
+
+      const DominatorTree *DT = nullptr;
+      AssumptionCache *AC = nullptr;
+      const TargetLibraryInfo *TLI = nullptr;
+      Function *F = getAssociatedFunction();
+      if (F) {
+        TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
+        if (!F->isDeclaration()) {
+          DT =
+              InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
+          AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
+        }
+      }
+
+      SimplifyQuery Q(DL, TLI, DT, AC, CtxI);
+
+      KnownFPClass KnownFPClass = computeKnownFPClass(&V, fcAllFlags, Q);
       addKnownBits(~KnownFPClass.KnownFPClasses);
     }
 
-    if (Instruction *CtxI = getCtxI())
+    if (CtxI)
       followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
@@ -13210,7 +13251,7 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 
 // TODO: this is similar to AAAddressSpace, most of the code should be merged.
 // But merging it created failing cased on gateway test that cannot be
-// reproduced locally. So should open a seperated PR to hande the merge of
+// reproduced locally. So should open a separated PR to handle the merge of
 // AANoAliasAddrSpace and AAAddressSpace attribute
 
 namespace {

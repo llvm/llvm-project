@@ -27,10 +27,12 @@
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
 // RISCV64: error: unknown target CPU 'not-a-cpu'
 // RISCV64-NEXT: note: valid target CPU values are:
-// RISCV64-SAME: {{^}} andes-ax25
+// RISCV64-SAME: {{^}} an-erbium
+// RISCV64-SAME: {{^}}, andes-ax25
 // RISCV64-SAME: {{^}}, andes-ax45
 // RISCV64-SAME: {{^}}, andes-ax45mpv
 // RISCV64-SAME: {{^}}, andes-nx45
+// RISCV64-SAME: {{^}}, et-soc1
 // RISCV64-SAME: {{^}}, generic-rv64
 // RISCV64-SAME: {{^}}, mips-p8700
 // RISCV64-SAME: {{^}}, rocket-rv64
@@ -48,6 +50,7 @@
 // RISCV64-SAME: {{^}}, sifive-x280
 // RISCV64-SAME: {{^}}, sifive-x390
 // RISCV64-SAME: {{^}}, spacemit-x60
+// RISCV64-SAME: {{^}}, spacemit-x100
 // RISCV64-SAME: {{^}}, syntacore-scr3-rv64
 // RISCV64-SAME: {{^}}, syntacore-scr4-rv64
 // RISCV64-SAME: {{^}}, syntacore-scr5-rv64
@@ -88,10 +91,12 @@
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
 // TUNE-RISCV64-NEXT: note: valid target CPU values are:
-// TUNE-RISCV64-SAME: {{^}} andes-ax25
+// TUNE-RISCV64-SAME: {{^}} an-erbium
+// TUNE-RISCV64-SAME: {{^}}, andes-ax25
 // TUNE-RISCV64-SAME: {{^}}, andes-ax45
 // TUNE-RISCV64-SAME: {{^}}, andes-ax45mpv
 // TUNE-RISCV64-SAME: {{^}}, andes-nx45
+// TUNE-RISCV64-SAME: {{^}}, et-soc1
 // TUNE-RISCV64-SAME: {{^}}, generic-rv64
 // TUNE-RISCV64-SAME: {{^}}, mips-p8700
 // TUNE-RISCV64-SAME: {{^}}, rocket-rv64
@@ -109,6 +114,7 @@
 // TUNE-RISCV64-SAME: {{^}}, sifive-x280
 // TUNE-RISCV64-SAME: {{^}}, sifive-x390
 // TUNE-RISCV64-SAME: {{^}}, spacemit-x60
+// TUNE-RISCV64-SAME: {{^}}, spacemit-x100
 // TUNE-RISCV64-SAME: {{^}}, syntacore-scr3-rv64
 // TUNE-RISCV64-SAME: {{^}}, syntacore-scr4-rv64
 // TUNE-RISCV64-SAME: {{^}}, syntacore-scr5-rv64

@@ -63,6 +63,7 @@ namespace {
 
 class AtomicExpandImpl {
   const TargetLowering *TLI = nullptr;
+  const LibcallLoweringInfo *LibcallLowering = nullptr;
   const DataLayout *DL = nullptr;
 
 private:
@@ -132,15 +133,20 @@ private:
   bool processAtomicInstr(Instruction *I);
 
 public:
-  bool run(Function &F, const TargetMachine *TM);
+  bool run(Function &F,
+           const LibcallLoweringModuleAnalysisResult &LibcallResult,
+           const TargetMachine *TM);
 };
 
 class AtomicExpandLegacy : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  AtomicExpandLegacy() : FunctionPass(ID) {
-    initializeAtomicExpandLegacyPass(*PassRegistry::getPassRegistry());
+  AtomicExpandLegacy() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LibcallLoweringInfoWrapper>();
+    FunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnFunction(Function &F) override;
@@ -179,6 +185,7 @@ char &llvm::AtomicExpandID = AtomicExpandLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AtomicExpandLegacy, DEBUG_TYPE,
                       "Expand Atomic instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AtomicExpandLegacy, DEBUG_TYPE,
                     "Expand Atomic instructions", false, false)
@@ -345,21 +352,13 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (FenceOrdering != AtomicOrdering::Monotonic) {
       MadeChange |= bracketInstWithFences(I, FenceOrdering);
     }
-  } else if (I->hasAtomicStore() &&
-             TLI->shouldInsertTrailingFenceForAtomicStore(I)) {
-    auto FenceOrdering = AtomicOrdering::Monotonic;
-    if (SI)
-      FenceOrdering = SI->getOrdering();
-    else if (RMWI)
-      FenceOrdering = RMWI->getOrdering();
-    else if (CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) !=
-                         TargetLoweringBase::AtomicExpansionKind::LLSC)
-      // LLSC is handled in expandAtomicCmpXchg().
-      FenceOrdering = CASI->getSuccessOrdering();
-
+  } else if (TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(I) &&
+             !(CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
+                           TargetLoweringBase::AtomicExpansionKind::LLSC)) {
+    // CmpXchg LLSC is handled in expandAtomicCmpXchg().
     IRBuilder Builder(I);
-    if (auto TrailingFence =
-            TLI->emitTrailingFence(Builder, I, FenceOrdering)) {
+    if (auto TrailingFence = TLI->emitTrailingFence(
+            Builder, I, AtomicOrdering::SequentiallyConsistent)) {
       TrailingFence->moveAfter(I);
       MadeChange = true;
     }
@@ -387,11 +386,14 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   return MadeChange;
 }
 
-bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
+bool AtomicExpandImpl::run(
+    Function &F, const LibcallLoweringModuleAnalysisResult &LibcallResult,
+    const TargetMachine *TM) {
   const auto *Subtarget = TM->getSubtargetImpl(F);
   if (!Subtarget->enableAtomicExpand())
     return false;
   TLI = Subtarget->getTargetLowering();
+  LibcallLowering = &LibcallResult.getLibcallLowering(*Subtarget);
   DL = &F.getDataLayout();
 
   bool MadeChange = false;
@@ -424,8 +426,11 @@ bool AtomicExpandLegacy::runOnFunction(Function &F) {
   if (!TPC)
     return false;
   auto *TM = &TPC->getTM<TargetMachine>();
+
+  const LibcallLoweringModuleAnalysisResult &LibcallResult =
+      getAnalysis<LibcallLoweringInfoWrapper>().getResult(*F.getParent());
   AtomicExpandImpl AE;
-  return AE.run(F, TM);
+  return AE.run(F, LibcallResult, TM);
 }
 
 FunctionPass *llvm::createAtomicExpandLegacyPass() {
@@ -433,10 +438,21 @@ FunctionPass *llvm::createAtomicExpandLegacyPass() {
 }
 
 PreservedAnalyses AtomicExpandPass::run(Function &F,
-                                        FunctionAnalysisManager &AM) {
+                                        FunctionAnalysisManager &FAM) {
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+
+  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
+
+  if (!LibcallResult) {
+    F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
+                             "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
   AtomicExpandImpl AE;
 
-  bool Changed = AE.run(F, TM);
+  bool Changed = AE.run(F, *LibcallResult, TM);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -853,8 +869,8 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   if (AddrAlign < MinWordSize) {
     PMV.AlignedAddr = Builder.CreateIntrinsic(
         Intrinsic::ptrmask, {PtrTy, IntTy},
-        {Addr, ConstantInt::get(IntTy, ~(uint64_t)(MinWordSize - 1))}, nullptr,
-        "AlignedAddr");
+        {Addr, ConstantInt::getSigned(IntTy, ~(uint64_t)(MinWordSize - 1))},
+        nullptr, "AlignedAddr");
 
     Value *AddrInt = Builder.CreatePtrToInt(Addr, IntTy);
     PtrLSB = Builder.CreateAnd(AddrInt, MinWordSize - 1, "PtrLSB");
@@ -1512,7 +1528,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // necessary.
   Builder.SetInsertPoint(SuccessBB);
   if (ShouldInsertFencesForAtomic ||
-      TLI->shouldInsertTrailingFenceForAtomicStore(CI))
+      TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(CI))
     TLI->emitTrailingFence(Builder, CI, SuccessOrder);
   Builder.CreateBr(ExitBB);
 
@@ -1974,7 +1990,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     return false;
   }
 
-  if (!TLI->getLibcallName(RTLibType)) {
+  RTLIB::LibcallImpl LibcallImpl = LibcallLowering->getLibcallImpl(RTLibType);
+  if (LibcallImpl == RTLIB::Unsupported) {
     // This target does not implement the requested atomic libcall so give up.
     return false;
   }
@@ -2081,8 +2098,9 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   for (Value *Arg : Args)
     ArgTys.push_back(Arg->getType());
   FunctionType *FnType = FunctionType::get(ResultTy, ArgTys, false);
-  FunctionCallee LibcallFn =
-      M->getOrInsertFunction(TLI->getLibcallName(RTLibType), FnType, Attr);
+  FunctionCallee LibcallFn = M->getOrInsertFunction(
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl), FnType,
+      Attr);
   CallInst *Call = Builder.CreateCall(LibcallFn, Args);
   Call->setAttributes(Attr);
   Value *Result = Call;

@@ -6,7 +6,7 @@
 subroutine test_parallel_master_taskloop_simd
   integer :: i, j = 1
   !CHECK: not yet implemented: Composite TASKLOOP SIMD
-  !$omp parallel master taskloop simd 
+  !$omp parallel master taskloop simd
   do i=1,10
    j = j + 1
   end do

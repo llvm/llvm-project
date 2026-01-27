@@ -44,9 +44,9 @@ public:
   }
 
   // [coroutine.handle.export.import], export/import
-  _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr coroutine_handle from_address(void* __addr) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr coroutine_handle from_address(void* __addr) noexcept {
     coroutine_handle __tmp;
     __tmp.__handle_ = __addr;
     return __tmp;
@@ -55,7 +55,7 @@ public:
   // [coroutine.handle.observers], observers
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return __handle_ != nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI bool done() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool done() const {
     _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "done() can be called only on suspended coroutines");
     return __builtin_coro_done(__handle_);
   }
@@ -100,7 +100,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr coroutine_handle(nullptr_t) noexcept {}
 
-  _LIBCPP_HIDE_FROM_ABI static coroutine_handle from_promise(_Promise& __promise) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static coroutine_handle from_promise(_Promise& __promise) {
     using _RawPromise = __remove_cv_t<_Promise>;
     coroutine_handle __tmp;
     __tmp.__handle_ =
@@ -114,9 +114,9 @@ public:
   }
 
   // [coroutine.handle.export.import], export/import
-  _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr coroutine_handle from_address(void* __addr) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr coroutine_handle from_address(void* __addr) noexcept {
     coroutine_handle __tmp;
     __tmp.__handle_ = __addr;
     return __tmp;
@@ -130,7 +130,7 @@ public:
   // [coroutine.handle.observers], observers
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return __handle_ != nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI bool done() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool done() const {
     _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "done() can be called only on suspended coroutines");
     return __builtin_coro_done(__handle_);
   }
@@ -150,7 +150,7 @@ public:
   }
 
   // [coroutine.handle.promise], promise access
-  _LIBCPP_HIDE_FROM_ABI _Promise& promise() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Promise& promise() const {
     return *static_cast<_Promise*>(__builtin_coro_promise(this->__handle_, alignof(_Promise), false));
   }
 
@@ -165,7 +165,7 @@ private:
 // [coroutine.handle.hash]
 template <class _Tp>
 struct hash<coroutine_handle<_Tp>> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const coroutine_handle<_Tp>& __v) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const coroutine_handle<_Tp>& __v) const noexcept {
     return hash<void*>()(__v.address());
   }
 };

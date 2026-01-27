@@ -1,0 +1,57 @@
+REQUIRES: ld.lld
+
+# Test that if a link is terminated by a signal (or the equivalent on
+# Windows), e.g. CTRL-C, DTLTO temporary files are cleaned up. We use
+# archives in this test as the handling for archives requires a superset
+# of the temporary files used for object inputs.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
+
+RUN: llvm-ar rcs t.a t1.o t2.o
+
+DEFINE: %{tdir} = dummy-to-make-lit-work
+DEFINE: %{kill-dtlto} = mkdir %{tdir} && %python %S/test_temps.py %{tdir} kill \
+DEFINE:   %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
+DEFINE:     -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
+DEFINE:     -fthinlto-distributor=%python \
+DEFINE:     -Xthinlto-distributor=%S/local_codegen_and_wait.py
+
+# Check that all temporary files are removed if the process is aborted.
+REDEFINE: %{tdir} = empty
+RUN: %{kill-dtlto}
+RUN: ls %{tdir} | FileCheck %s --allow-empty --check-prefix=EMPTY
+
+EMPTY-NOT: {{.}}
+
+# Check that --save-temps preserves temporary files if the process is aborted.
+REDEFINE: %{tdir} = savetemps
+RUN: %{kill-dtlto} -Wl,--save-temps
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX,OTHER
+
+# Check that --thinlto-emit-index-files preserves the index files if the process
+# is aborted.
+REDEFINE: %{tdir} = index
+RUN: %{kill-dtlto} -Wl,--thinlto-emit-index-files
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,INDEX
+
+# No files are expected before.
+BOOKEND-NOT: {{.}}
+TEMPS: {{^}}t.[[#PID:]].dist-file.json{{$}}
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+TEMPS: {{^}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o{{$}}
+INDEX: {{^}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o{{$}}
+TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o{{$}}
+INDEX: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o{{$}}
+OTHER: {{^}}t.elf.resolution.txt{{$}}
+# No files are expected after.
+BOOKEND-NOT: {{.}}
+
+#--- t1.c
+__attribute__((retain)) int t1(int x) { return x; }
+
+#--- t2.c
+__attribute__((retain)) int t2(int x) { return x; }

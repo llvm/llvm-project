@@ -2,7 +2,7 @@
 ; Test that we are able to generate the Xqcibi instructions
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32I
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcibi -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcibi -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCIBI
 
 define i32 @beqimm(i32 %a) {

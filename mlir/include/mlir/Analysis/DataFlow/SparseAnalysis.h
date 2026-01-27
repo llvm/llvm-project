@@ -215,7 +215,8 @@ protected:
   /// of loops).
   virtual void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ArrayRef<AbstractSparseLattice *> argLattices, unsigned firstIndex) = 0;
+      ValueRange nonSuccessorInputs,
+      ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices) = 0;
 
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
@@ -321,18 +322,17 @@ public:
   }
 
   /// Given an operation with possible region control-flow, the lattices of the
-  /// operands, and a region successor, compute the lattice values for block
-  /// arguments that are not accounted for by the branching control flow (ex.
-  /// the bounds of loops). By default, this method marks all such lattice
-  /// elements as having reached a pessimistic fixpoint. `firstIndex` is the
-  /// index of the first element of `argLattices` that is set by control-flow.
-  virtual void visitNonControlFlowArguments(Operation *op,
-                                            const RegionSuccessor &successor,
-                                            ArrayRef<StateT *> argLattices,
-                                            unsigned firstIndex) {
-    setAllToEntryStates(argLattices.take_front(firstIndex));
-    setAllToEntryStates(argLattices.drop_front(
-        firstIndex + successor.getSuccessorInputs().size()));
+  /// operands, and a region successor, compute the lattice values for
+  /// non-successor-inputs (ex. loop induction variables) of a given region
+  /// successor. By default, this method marks all lattice elements as having
+  /// reached a pessimistic fixpoint.
+  virtual void
+  visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
+                               ValueRange nonSuccessorInputs,
+                               ArrayRef<StateT *> nonSuccessorInputLattices) {
+    assert(nonSuccessorInputs.size() == nonSuccessorInputLattices.size() &&
+           "size mismatch");
+    setAllToEntryStates(nonSuccessorInputLattices);
   }
 
 protected:
@@ -383,14 +383,14 @@ private:
   }
   void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ArrayRef<AbstractSparseLattice *> argLattices,
-      unsigned firstIndex) override {
+      ValueRange nonSuccessorInputs,
+      ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices) override {
     visitNonControlFlowArguments(
-        op, successor,
-        {reinterpret_cast<StateT *const *>(argLattices.begin()),
-         argLattices.size()},
-        firstIndex);
+        op, successor, nonSuccessorInputs,
+        {reinterpret_cast<StateT *const *>(nonSuccessorInputLattices.begin()),
+         nonSuccessorInputLattices.size()});
   }
+
   void setToEntryState(AbstractSparseLattice *lattice) override {
     return setToEntryState(reinterpret_cast<StateT *>(lattice));
   }
@@ -430,6 +430,12 @@ protected:
 
   // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
+
+  // Visit the non-forwarded arguments of a region, such as the
+  // induction variables of a loop.
+  virtual void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) = 0;
 
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;

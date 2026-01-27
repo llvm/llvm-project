@@ -275,8 +275,15 @@ static const OmpDirectiveSet loopConstructSet{
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
     Directive::OMPD_teams_loop,
+    Directive::OMPD_fuse,
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
+};
+
+static const OmpDirectiveSet loopTransformationSet{
+    Directive::OMPD_tile,
+    Directive::OMPD_unroll,
+    Directive::OMPD_fuse,
 };
 
 static const OmpDirectiveSet nonPartialVarSet{

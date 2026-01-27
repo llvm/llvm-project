@@ -17,8 +17,8 @@
 
 define amdgpu_kernel void @testKernel(ptr addrspace(1) nocapture %arg) local_unnamed_addr #0 {
 bb:
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr bitcast (ptr getelementptr ([100 x float], ptr addrspacecast ([100 x float] addrspace(1)* @data_generic to ptr), i64 0, i64 4) to ptr), align 4
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr bitcast (ptr getelementptr ([100 x float], ptr addrspacecast ([100 x float] addrspace(1)* @data_reference to ptr), i64 0, i64 4) to ptr), align 4
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr bitcast (ptr getelementptr ([100 x float], ptr addrspacecast (ptr addrspace(1) @data_generic to ptr), i64 0, i64 4) to ptr), align 4
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr bitcast (ptr getelementptr ([100 x float], ptr addrspacecast (ptr addrspace(1) @data_reference to ptr), i64 0, i64 4) to ptr), align 4
   br label %bb18
 
 bb1:                                              ; preds = %bb18

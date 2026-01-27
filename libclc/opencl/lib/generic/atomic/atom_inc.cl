@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_inc.h>
-#include <clc/opencl/atomic/atom_inc.h>
 
 // Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 
 #define __CLC_IMPL(AS, TYPE)                                                   \
-  _CLC_OVERLOAD _CLC_DEF TYPE atom_inc(volatile AS TYPE *p) {                  \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_inc(AS TYPE *p) {                           \
     return __clc_atomic_inc(p, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);       \
   }                                                                            \
-  _CLC_OVERLOAD _CLC_DEF TYPE atom_inc(AS TYPE *p) {                           \
-    return atom_inc((volatile AS TYPE *)p);                                    \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_inc(volatile AS TYPE *p) {                  \
+    return atom_inc((AS TYPE *)p);                                             \
   }
 
 #ifdef cl_khr_global_int32_base_atomics

@@ -49,7 +49,7 @@ SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
   ExecutorAddrRange RR(FR.Segments.front().Addr, FR.Segments.front().Addr);
 
   std::vector<sys::MemoryBlock> MBsToReset;
-  auto ResetMBs = make_scope_exit([&]() {
+  llvm::scope_exit ResetMBs([&]() {
     for (auto &MB : MBsToReset)
       sys::Memory::protectMappedMemory(MB, sys::Memory::MF_READ |
                                                sys::Memory::MF_WRITE);
@@ -306,7 +306,7 @@ SimpleExecutorMemoryManager::getRegionInfo(ExecutorAddr A, StringRef Context) {
   return getRegionInfo(*Slab, A, Context);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReserveSignature>::
@@ -316,7 +316,7 @@ SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
                                                size_t ArgSize) {
   return shared::
@@ -327,7 +327,7 @@ SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
                                                  size_t ArgSize) {
   return shared::WrapperFunction<
@@ -338,7 +338,7 @@ SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::releaseWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReleaseSignature>::

@@ -314,7 +314,7 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f32_off4_slc(ptr addrsp
 ; G_GFX10-NEXT:    v_mov_b32_e32 v0, s6
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, s7
 ; G_GFX10-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 4 offen glc slc
-; G_GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; G_GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; G_GFX10-NEXT:    s_load_dword s0, s[4:5], 0x3c
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, s0

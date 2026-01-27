@@ -11,7 +11,7 @@ subroutine standalone
       ! CHECK:      OpenMPConstruct -> OpenMPStandaloneConstruct
       ! CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | OmpClauseList ->
-      ! CHECK-NEXT: | Flags = None
+      ! CHECK-NEXT: | Flags = {}
       !$omp ordered depend(source)
       x(i, j) = i + j
     end do
@@ -29,7 +29,7 @@ subroutine strict_block
       ! CHECK-NEXT: | OmpBeginDirective
       ! CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | | OmpClauseList ->
-      ! CHECK-NEXT: | | Flags = None
+      ! CHECK-NEXT: | | Flags = {}
       !$omp ordered
       block
         tmp = i + j
@@ -50,7 +50,7 @@ subroutine loose_block
       ! CHECK-NEXT: | OmpBeginDirective
       ! CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | | OmpClauseList ->
-      ! CHECK-NEXT: | | Flags = None
+      ! CHECK-NEXT: | | Flags = {}
       !$omp ordered
         tmp = i + j
         x(i, j) = tmp

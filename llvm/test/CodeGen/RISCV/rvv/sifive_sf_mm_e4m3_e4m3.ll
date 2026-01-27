@@ -4,8 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+xsfmm32a8f \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare void @llvm.riscv.sf.mm.e4m3.e4m3.iXLen.nxv64i8(iXLen, <vscale x 64 x i8>, <vscale x 64 x i8>, iXLen, iXLen, iXLen, iXLen)
-
 define void @test_sf_mm_e4m3_e4m3_w4_u8m8_u8m8(iXLen %mtd, <vscale x 64 x i8> %v1, <vscale x 64 x i8> %v2, iXLen %tm, iXLen %tn, iXLen %tk) {
 ; CHECK-LABEL: test_sf_mm_e4m3_e4m3_w4_u8m8_u8m8:
 ; CHECK:       # %bb.0: # %entry

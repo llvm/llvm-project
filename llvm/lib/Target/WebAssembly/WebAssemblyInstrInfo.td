@@ -245,6 +245,11 @@ def bool_node : PatLeaf<(i32 I32:$cond), [{
   return CurDAG->computeKnownBits(Op).countMinLeadingZeros() == 31;
 }]>;
 
+/// Floating point constants
+def fpimm0    : PatLeaf<(fpimm), [{
+  return N->isExactlyValue(+0.0);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Register to Stack instruction mapping
 //===----------------------------------------------------------------------===//
@@ -460,8 +465,8 @@ def : Pat<(i64 (WebAssemblyWrapperREL texternalsym:$addr)),
 include "WebAssemblyInstrMemory.td"
 include "WebAssemblyInstrCall.td"
 include "WebAssemblyInstrControl.td"
-include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrConv.td"
+include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrFloat.td"
 include "WebAssemblyInstrAtomics.td"
 include "WebAssemblyInstrSIMD.td"

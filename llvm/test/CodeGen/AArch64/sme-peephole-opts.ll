@@ -230,10 +230,6 @@ define void @test7() nounwind "aarch64_inout_zt0" {
 ; CHECK-NEXT:    str zt0, [x19]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    ldr zt0, [x19]
-; CHECK-NEXT:    str zt0, [x19]
-; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    ldr zt0, [x19]

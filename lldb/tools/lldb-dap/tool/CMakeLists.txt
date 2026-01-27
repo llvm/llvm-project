@@ -9,6 +9,11 @@ add_lldb_tool(lldb-dap
     lldbDAP
   )
 
+add_dependencies(lldb-dap
+  LLDBDAPOptionsTableGen
+  ${tablegen_deps}
+)
+
 if(APPLE)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in

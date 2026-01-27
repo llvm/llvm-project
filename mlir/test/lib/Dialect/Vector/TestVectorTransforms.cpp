@@ -121,7 +121,7 @@ struct TestVectorContractionPrepareForMMTLowering
     return "test-vector-contraction-prepare-for-mmt-lowering";
   }
   StringRef getDescription() const final {
-    return "Test vector.contraction matmul canonicalization for MMT lowering.";
+    return "Test vector.contract matmul canonicalization for MMT lowering.";
   }
   TestVectorContractionPrepareForMMTLowering() = default;
 
@@ -178,6 +178,14 @@ struct TestVectorUnrollingPatterns
                                      .setFilterConstraint([](Operation *op) {
                                        return success(isa<vector::StepOp>(op));
                                      }));
+    populateVectorUnrollPatterns(
+        patterns,
+        UnrollVectorOptions()
+            .setNativeShape(ArrayRef<int64_t>{8, 8})
+            .setFilterConstraint([](Operation *op) {
+              return success(
+                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
+            }));
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()

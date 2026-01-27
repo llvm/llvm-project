@@ -203,6 +203,16 @@ private:
   ValueObject *m_tail = nullptr;
 };
 
+/// Gets the (forward-)list element type from the head node instead of the
+/// template arguments. This is needed with PDB as it doesn't have info about
+/// the template arguments.
+CompilerType GetMsvcStlElementTypeFromHead(ValueObject &head) {
+  auto val_sp = head.GetChildMemberWithName("_Myval");
+  if (val_sp)
+    return val_sp->GetCompilerType();
+  return CompilerType();
+}
+
 } // end anonymous namespace
 
 template <StlType Stl>
@@ -344,9 +354,8 @@ lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   // Anonymous strucutre index is in base class at index 0.
-  auto [impl_sp, is_compressed_pair] =
-      GetValueOrOldCompressedPair(*list_base_sp, /*anon_struct_idx=*/0,
-                                  "__before_begin_", "__before_begin_");
+  auto [impl_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      *list_base_sp, "__before_begin_", "__before_begin_");
   if (!impl_sp)
     return ChildCacheState::eRefetch;
 
@@ -373,8 +382,8 @@ llvm::Expected<uint32_t> LibCxxListFrontEnd::CalculateNumChildren() {
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
 
-  auto [size_node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      m_backend, /*anon_struct_idx=*/1, "__size_", "__size_alloc_");
+  auto [size_node_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(m_backend, "__size_", "__size_alloc_");
   if (is_compressed_pair)
     size_node_sp = GetFirstValueOfLibCXXCompressedPair(*size_node_sp);
 
@@ -530,6 +539,10 @@ lldb::ChildCacheState MsvcStlForwardListFrontEnd::Update() {
           m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Myhead"}))
     m_head = head_sp.get();
 
+  // With PDB, we can't get the element type from the template arguments
+  if (!m_element_type && m_head)
+    m_element_type = GetMsvcStlElementTypeFromHead(*m_head);
+
   return ChildCacheState::eRefetch;
 }
 
@@ -605,6 +618,10 @@ lldb::ChildCacheState MsvcStlListFrontEnd::Update() {
 
   m_head = first.get();
   m_tail = last.get();
+
+  // With PDB, we can't get the element type from the template arguments
+  if (!m_element_type && m_head)
+    m_element_type = GetMsvcStlElementTypeFromHead(*m_head);
 
   return lldb::ChildCacheState::eRefetch;
 }

@@ -1,48 +1,27 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-p -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-p -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-p < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-p -M no-aliases -d -r --no-print-imm-hex - \
+# RUN:     | llvm-objdump --mattr=+experimental-p -d -r --no-print-imm-hex - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: clz a0, a1
-# CHECK-ASM: encoding: [0x13,0x95,0x05,0x60]
-clz a0, a1
 # CHECK-ASM-AND-OBJ: cls a1, a2
 # CHECK-ASM: encoding: [0x93,0x15,0x36,0x60]
 cls a1, a2
-# CHECK-ASM-AND-OBJ: sext.b a2, a3
-# CHECK-ASM: encoding: [0x13,0x96,0x46,0x60]
-sext.b a2, a3
-# CHECK-ASM-AND-OBJ: sext.h t0, t1
-# CHECK-ASM: encoding: [0x93,0x12,0x53,0x60]
-sext.h t0, t1
 # CHECK-ASM-AND-OBJ: abs a4, a5
 # CHECK-ASM: encoding: [0x13,0x97,0x77,0x60]
 abs a4, a5
-# CHECK-ASM-AND-OBJ: rev8 s0, s1
-# CHECK-ASM: encoding: [0x13,0xd4,0x84,0x69]
-rev8 s0, s1
 # CHECK-ASM-AND-OBJ: rev s2, s3
 # CHECK-ASM: encoding: [0x13,0xd9,0xf9,0x69]
 rev s2, s3
-# CHECK-ASM-AND-OBJ: sh1add a0, a1, a2
-# CHECK-ASM: encoding: [0x33,0xa5,0xc5,0x20]
-sh1add a0, a1, a2
 # CHECK-ASM-AND-OBJ: pack s0, s1, s2
 # CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
 pack s0, s1, s2
-# CHECK-ASM-AND-OBJ: min t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x42,0x73,0x0a]
-min t0, t1, t2
-# CHECK-ASM-AND-OBJ: minu ra, sp, gp
-# CHECK-ASM: encoding: [0xb3,0x50,0x31,0x0a]
-minu ra, sp, gp
-# CHECK-ASM-AND-OBJ: max t3, t4, t5
-# CHECK-ASM: encoding: [0x33,0xee,0xee,0x0b]
-max t3, t4, t5
-# CHECK-ASM-AND-OBJ: maxu a4, a5, a6
-# CHECK-ASM: encoding: [0x33,0xf7,0x07,0x0b]
-maxu a4, a5, a6
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
+pack t0, t1, x0
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
+zext.h t0, t1
 # CHECK-ASM-AND-OBJ: pslli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xa8,0x88,0x80]
 pslli.b a6, a7, 0
@@ -205,12 +184,12 @@ psub.h t3, t4, t5
 # CHECK-ASM-AND-OBJ: psub.b t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x02,0x73,0xc4]
 psub.b t0, t1, t2
-# CHECK-ASM-AND-OBJ: pdif.h t3, t4, t5
+# CHECK-ASM-AND-OBJ: pabd.h t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x8e,0xee,0xc9]
-pdif.h t3, t4, t5
-# CHECK-ASM-AND-OBJ: pdif.b t0, t1, t2
+pabd.h t3, t4, t5
+# CHECK-ASM-AND-OBJ: pabd.b t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x02,0x73,0xcc]
-pdif.b t0, t1, t2
+pabd.b t0, t1, t2
 # CHECK-ASM-AND-OBJ: pssub.h t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x8e,0xee,0xd1]
 pssub.h t3, t4, t5
@@ -229,12 +208,12 @@ asub t1, a7, a0
 # CHECK-ASM-AND-OBJ: pasub.b t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x02,0x73,0xdc]
 pasub.b t0, t1, t2
-# CHECK-ASM-AND-OBJ: pdifu.h t3, t4, t5
+# CHECK-ASM-AND-OBJ: pabdu.h t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x8e,0xee,0xe9]
-pdifu.h t3, t4, t5
-# CHECK-ASM-AND-OBJ: pdifu.b t0, t1, t2
+pabdu.h t3, t4, t5
+# CHECK-ASM-AND-OBJ: pabdu.b t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x02,0x73,0xec]
-pdifu.b t0, t1, t2
+pabdu.b t0, t1, t2
 # CHECK-ASM-AND-OBJ: pssubu.h t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x8e,0xee,0xf1]
 pssubu.h t3, t4, t5
@@ -283,15 +262,15 @@ pmulu.h.b01 t3, t4, t5
 # CHECK-ASM-AND-OBJ: mulu.h01 t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x12,0x73,0xb2]
 mulu.h01 t0, t1, t2
-# CHECK-ASM-AND-OBJ: pdifsumu.b t3, t4, t5
+# CHECK-ASM-AND-OBJ: pabdsumu.b t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x9e,0xee,0xb5]
-pdifsumu.b t3, t4, t5
+pabdsumu.b t3, t4, t5
 # CHECK-ASM-AND-OBJ: maccu.h01 t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x9e,0xee,0xbb]
 maccu.h01 t3, t4, t5
-# CHECK-ASM-AND-OBJ: pdifsumau.b t3, t4, t5
+# CHECK-ASM-AND-OBJ: pabdsumau.b t3, t4, t5
 # CHECK-ASM: encoding: [0x3b,0x9e,0xee,0xbd]
-pdifsumau.b t3, t4, t5
+pabdsumau.b t3, t4, t5
 # CHECK-ASM-AND-OBJ: psh1add.h a0, a1, a2
 # CHECK-ASM: encoding: [0x3b,0xa5,0xc5,0xa0]
 psh1add.h a0, a1, a2
@@ -355,27 +334,27 @@ mulsu.h11 s8, s4, s0
 # CHECK-ASM-AND-OBJ: maccsu.h11 s0, a2, s6
 # CHECK-ASM: encoding: [0x3b,0x34,0x66,0xfb]
 maccsu.h11 s0, a2, s6
-# CHECK-ASM-AND-OBJ: ppack.h t1, a2, t5
+# CHECK-ASM-AND-OBJ: ppaire.b t1, a2, t5
 # CHECK-ASM: encoding: [0x3b,0x43,0xe6,0x81]
-ppack.h t1, a2, t5
-# CHECK-ASM-AND-OBJ: ppackbt.h t5, t3, s2
+ppaire.b t1, a2, t5
+# CHECK-ASM-AND-OBJ: ppaireo.b t5, t3, s2
 # CHECK-ASM: encoding: [0x3b,0x4f,0x2e,0x91]
-ppackbt.h t5, t3, s2
-# CHECK-ASM-AND-OBJ: packbt t1, t1, s2
+ppaireo.b t5, t3, s2
+# CHECK-ASM-AND-OBJ: ppaireo.h t1, t1, s2
 # CHECK-ASM: encoding: [0x3b,0x43,0x23,0x93]
-packbt t1, t1, s2
-# CHECK-ASM-AND-OBJ: ppacktb.h t1, t1, s0
+ppaireo.h t1, t1, s2
+# CHECK-ASM-AND-OBJ: ppairoe.b t1, t1, s0
 # CHECK-ASM: encoding: [0x3b,0x43,0x83,0xa0]
-ppacktb.h t1, t1, s0
-# CHECK-ASM-AND-OBJ: packtb t5, s0, a2
+ppairoe.b t1, t1, s0
+# CHECK-ASM-AND-OBJ: ppairoe.h t5, s0, a2
 # CHECK-ASM: encoding: [0x3b,0x4f,0xc4,0xa2]
-packtb t5, s0, a2
-# CHECK-ASM-AND-OBJ: ppackt.h t3, s0, s0
+ppairoe.h t5, s0, a2
+# CHECK-ASM-AND-OBJ: ppairo.b t3, s0, s0
 # CHECK-ASM: encoding: [0x3b,0x4e,0x84,0xb0]
-ppackt.h t3, s0, s0
-# CHECK-ASM-AND-OBJ: packt a2, t3, t1
+ppairo.b t3, s0, s0
+# CHECK-ASM-AND-OBJ: ppairo.h a2, t3, t1
 # CHECK-ASM: encoding: [0x3b,0x46,0x6e,0xb2]
-packt a2, t3, t1
+ppairo.h a2, t3, t1
 # CHECK-ASM: encoding: [0x3b,0x5e,0x83,0x80]
 pm2add.h t3, t1, s0
 # CHECK-ASM-AND-OBJ: pm4add.b t1, s2, t5
@@ -1191,12 +1170,12 @@ psub.db a4, a0, t5
 # CHECK-ASM-AND-OBJ: subd a2, a4, t1
 # CHECK-ASM: encoding: [0x1b,0x66,0x67,0xc6]
 subd a2, a4, t1
-# CHECK-ASM-AND-OBJ: pdif.dh t5, t1, t3
+# CHECK-ASM-AND-OBJ: pabd.dh t5, t1, t3
 # CHECK-ASM: encoding: [0x1b,0x6f,0xc3,0xc9]
-pdif.dh t5, t1, t3
-# CHECK-ASM-AND-OBJ: pdif.db t1, t5, a0
+pabd.dh t5, t1, t3
+# CHECK-ASM-AND-OBJ: pabd.db t1, t5, a0
 # CHECK-ASM: encoding: [0x1b,0x63,0xaf,0xcc]
-pdif.db t1, t5, a0
+pabd.db t1, t5, a0
 # CHECK-ASM-AND-OBJ: pssub.dh s0, s2, s2
 # CHECK-ASM: encoding: [0x1b,0x64,0x29,0xd1]
 pssub.dh s0, s2, s2
@@ -1215,12 +1194,12 @@ pasub.dw t1, s2, s2
 # CHECK-ASM-AND-OBJ: pasub.db a0, a0, a0
 # CHECK-ASM: encoding: [0x1b,0x65,0xa5,0xdc]
 pasub.db a0, a0, a0
-# CHECK-ASM-AND-OBJ: pdifu.dh t5, a4, a4
+# CHECK-ASM-AND-OBJ: pabdu.dh t5, a4, a4
 # CHECK-ASM: encoding: [0x1b,0x6f,0xe7,0xe8]
-pdifu.dh t5, a4, a4
-# CHECK-ASM-AND-OBJ: pdifu.db t1, t1, a4
+pabdu.dh t5, a4, a4
+# CHECK-ASM-AND-OBJ: pabdu.db t1, t1, a4
 # CHECK-ASM: encoding: [0x1b,0x63,0xe3,0xec]
-pdifu.db t1, t1, a4
+pabdu.db t1, t1, a4
 # CHECK-ASM-AND-OBJ: pssubu.dh t5, t1, t5
 # CHECK-ASM: encoding: [0x1b,0x6f,0xe3,0xf1]
 pssubu.dh t5, t1, t5
@@ -1251,30 +1230,30 @@ pssh1sadd.dh t3, a4, a0
 # CHECK-ASM-AND-OBJ: pssh1sadd.dw t1, t1, a2
 # CHECK-ASM: encoding: [0x1b,0x63,0xd3,0xb2]
 pssh1sadd.dw t1, t1, a2
-# CHECK-ASM-AND-OBJ: ppack.dh a2, t1, s2
+# CHECK-ASM-AND-OBJ: ppaire.db a2, t1, s2
 # CHECK-ASM: encoding: [0x1b,0xe6,0x23,0x81]
-ppack.dh a2, t1, s2
-# CHECK-ASM-AND-OBJ: ppack.dw t5, t3, a4
+ppaire.db a2, t1, s2
+# CHECK-ASM-AND-OBJ: ppaire.dh t5, t3, a4
 # CHECK-ASM: encoding: [0x1b,0xef,0xee,0x82]
-ppack.dw t5, t3, a4
-# CHECK-ASM-AND-OBJ: ppackbt.dh t1, t3, t1
+ppaire.dh t5, t3, a4
+# CHECK-ASM-AND-OBJ: ppaireo.db t1, t3, t1
 # CHECK-ASM: encoding: [0x1b,0xe3,0x6e,0x90]
-ppackbt.dh t1, t3, t1
-# CHECK-ASM-AND-OBJ: ppackbt.dw a4, t5, a2
+ppaireo.db t1, t3, t1
+# CHECK-ASM-AND-OBJ: ppaireo.dh a4, t5, a2
 # CHECK-ASM: encoding: [0x1b,0xe7,0xcf,0x92]
-ppackbt.dw a4, t5, a2
-# CHECK-ASM-AND-OBJ: ppacktb.dh a4, t1, a2
+ppaireo.dh a4, t5, a2
+# CHECK-ASM-AND-OBJ: ppairoe.db a4, t1, a2
 # CHECK-ASM: encoding: [0x1b,0xe7,0xc3,0xa0]
-ppacktb.dh a4, t1, a2
-# CHECK-ASM-AND-OBJ: ppacktb.dw a2, t5, s0
+ppairoe.db a4, t1, a2
+# CHECK-ASM-AND-OBJ: ppairoe.dh a2, t5, s0
 # CHECK-ASM: encoding: [0x1b,0xe6,0x8f,0xa2]
-ppacktb.dw a2, t5, s0
-# CHECK-ASM-AND-OBJ: ppackt.dh a0, a0, s0
+ppairoe.dh a2, t5, s0
+# CHECK-ASM-AND-OBJ: ppairo.db a0, a0, s0
 # CHECK-ASM: encoding: [0x1b,0xe5,0x85,0xb0]
-ppackt.dh a0, a0, s0
-# CHECK-ASM-AND-OBJ: ppackt.dw a4, a4, a2
+ppairo.db a0, a0, s0
+# CHECK-ASM-AND-OBJ: ppairo.dh a4, a4, a2
 # CHECK-ASM: encoding: [0x1b,0xe7,0xc7,0xb2]
-ppackt.dw a4, a4, a2
+ppairo.dh a4, a4, a2
 # CHECK-ASM-AND-OBJ: pas.dhx t3, t3, s2
 # CHECK-ASM: encoding: [0x1b,0xee,0x3e,0x81]
 pas.dhx t3, t3, s2

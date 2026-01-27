@@ -90,11 +90,11 @@ SymbolVendorWasm::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!sym_fspec)
     return nullptr;
 
-  DataBufferSP sym_file_data_sp;
+  DataExtractorSP sym_file_extractor_sp;
   lldb::offset_t sym_file_data_offset = 0;
   ObjectFileSP sym_objfile_sp = ObjectFile::FindPlugin(
       module_sp, &sym_fspec, 0, FileSystem::Instance().GetByteSize(sym_fspec),
-      sym_file_data_sp, sym_file_data_offset);
+      sym_file_extractor_sp, sym_file_data_offset);
   if (!sym_objfile_sp)
     return nullptr;
 

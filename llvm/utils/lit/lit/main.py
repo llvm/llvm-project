@@ -90,6 +90,9 @@ def main(builtin_params={}):
         and not opts.filter_out.search(t.getFullName())
     ]
 
+    if opts.filterFailed:
+        selected_tests = [t for t in selected_tests if t.previous_failure]
+
     if not selected_tests:
         sys.stderr.write(
             "error: filter did not match any tests "

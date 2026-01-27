@@ -54,7 +54,7 @@ define void @slsr_gep(ptr %input, i64 %s) {
 ; CHECK-LABEL: define void @slsr_gep(
 ; CHECK-SAME: ptr [[INPUT:%.*]], i64 [[S:%.*]]) {
 ; CHECK-NEXT:    call void @foo(ptr [[INPUT]])
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i64 [[S]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[INPUT]], i64 [[S]]
 ; CHECK-NEXT:    call void @foo(ptr [[P1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[S]], 2
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[TMP1]]
@@ -91,7 +91,7 @@ define void @slsr_gep_sext(ptr %input, i32 %s) {
 ; CHECK-SAME: ptr [[INPUT:%.*]], i32 [[S:%.*]]) {
 ; CHECK-NEXT:    call void @foo(ptr [[INPUT]])
 ; CHECK-NEXT:    [[T:%.*]] = sext i32 [[S]] to i64
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i64 [[T]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[INPUT]], i64 [[T]]
 ; CHECK-NEXT:    call void @foo(ptr [[P1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[T]], 2
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[TMP1]]
@@ -129,10 +129,10 @@ define void @slsr_gep_sext(ptr %input, i32 %s) {
 define void @slsr_gep_2d(ptr %input, i64 %s, i64 %t) {
 ; CHECK-LABEL: define void @slsr_gep_2d(
 ; CHECK-SAME: ptr [[INPUT:%.*]], i64 [[S:%.*]], i64 [[T:%.*]]) {
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds [10 x [5 x i32]], ptr [[INPUT]], i64 0, i64 [[S]], i64 [[T]]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr [10 x [5 x i32]], ptr [[INPUT]], i64 0, i64 [[S]], i64 [[T]]
 ; CHECK-NEXT:    call void @foo(ptr [[P0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[S]], 20
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P0]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @foo(ptr [[P1]])
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @foo(ptr [[P2]])
@@ -166,10 +166,10 @@ define void @slsr_gep_2d(ptr %input, i64 %s, i64 %t) {
 define void @slsr_gep_uglygep(ptr %input, i64 %s, i64 %t) {
 ; CHECK-LABEL: define void @slsr_gep_uglygep(
 ; CHECK-SAME: ptr [[INPUT:%.*]], i64 [[S:%.*]], i64 [[T:%.*]]) {
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds [10 x [5 x %struct.S]], ptr [[INPUT]], i64 0, i64 [[S]], i64 [[T]], i32 0
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr [10 x [5 x [[STRUCT_S:%.*]]]], ptr [[INPUT]], i64 0, i64 [[S]], i64 [[T]], i32 0
 ; CHECK-NEXT:    call void @bar(ptr [[P0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[S]], 60
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P0]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @bar(ptr [[P1]])
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @bar(ptr [[P2]])
@@ -276,7 +276,7 @@ define void @slsr_gep_fat_pointer(ptr addrspace(2) %input, i32 %s) {
   ; p1 = &input[s]
 ; CHECK-LABEL: define void @slsr_gep_fat_pointer(
 ; CHECK-SAME: ptr addrspace(2) [[INPUT:%.*]], i32 [[S:%.*]]) {
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[INPUT]], i32 [[S]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr addrspace(2) [[INPUT]], i32 [[S]]
 ; CHECK-NEXT:    call void @baz2(ptr addrspace(2) [[P1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[S]], 2
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(2) [[P1]], i32 [[TMP1]]
@@ -357,9 +357,9 @@ define void @stride_var(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
   store float %r, ptr %getElem, align 4
 
   %mul = mul nsw i32 %b, %n
-  %add = add i32 %mul, %c
-  %add.11 = add i32 %add, %n
-  %add.2 = add i32 %add.11, %n
+  %add = add nsw i32 %mul, %c
+  %add.11 = add nsw i32 %add, %n
+  %add.2 = add nsw i32 %add.11, %n
   %offset1 = sext i32 %add.2 to i64
   %getElem.1 = getelementptr inbounds float, ptr %input, i64 %offset1
   store float %r, ptr %getElem.1, align 4
