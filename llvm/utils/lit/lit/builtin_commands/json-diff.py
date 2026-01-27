@@ -19,9 +19,26 @@ def fail(msg, exit_code):
 
 
 def readJson(filepath):
+    def checkDuplicateKeys(pairs):
+        keys = [key for (key, value) in pairs]
+        seen = set()
+        duplicates = set()
+
+        for key in keys:
+            if key in seen:
+                duplicates.add(key)
+            else:
+                seen.add(key)
+
+        if duplicates:
+            dupkeys = ", ".join(sorted(duplicates))
+            fail(f"Error: failed to read JSON. Found duplicate keys: {dupkeys}.", 2)
+
+        return dict(pairs)
+
     try:
         with open(filepath, "r") as f:
-            data = json.load(f)
+            data = json.load(f, object_pairs_hook=checkDuplicateKeys)
             return data
     except Exception as e:
         fail(f"Error: failed to read JSON from {filepath}: {e}.", 2)
