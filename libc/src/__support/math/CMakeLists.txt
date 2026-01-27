@@ -1090,19 +1090,14 @@ add_header_library(
     sincosf.h
   DEPENDS
     .sincosf_utils
-    libc.src.__support.math.sincosf_utils
-    libc.src.__support.FPUtil.FEnvImpl
-    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
-
-  libc.src.__support.macros.properties.types
-
-  libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
