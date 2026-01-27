@@ -1386,7 +1386,7 @@ nb::object PyOperation::createOpView() {
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
   auto operationCls = PyGlobals::get().lookupOperationClass(
-      StringRef(identStr.data, identStr.length));
+      std::string_view(identStr.data, identStr.length));
   if (operationCls)
     return PyOpView::constructDerived(*operationCls, getRef().getObject());
   return nb::cast(PyOpView(getRef().getObject()));
@@ -1471,7 +1471,7 @@ PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
 // PyOpView
 //------------------------------------------------------------------------------
 
-static void populateResultTypes(StringRef name, nb::list resultTypeList,
+static void populateResultTypes(std::string_view name, nb::list resultTypeList,
                                 const nb::object &resultSegmentSpecObj,
                                 std::vector<int32_t> &resultSegmentLengths,
                                 std::vector<PyType *> &resultTypes) {
@@ -1553,9 +1553,8 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
           // above "casts". Just keep the scope above small and catch them all.
           throw nb::value_error(
               (std::string("Result ") + std::to_string(it.index()) +
-               " of operation \"" + name + "\" must be a Sequence of Types (" +
+               " of operation \"" + std::string(name) + "\" must be a Sequence of Types (" +
                err.what() + ")")
-                  .str()
                   .c_str());
         }
       } else {
@@ -1570,11 +1569,10 @@ MlirValue getUniqueResult(MlirOperation operation) {
   if (numResults != 1) {
     auto name = mlirIdentifierStr(mlirOperationGetName(operation));
     throw nb::value_error((std::string("Cannot call .result on operation ") +
-                           StringRef(name.data, name.length) + " which has " +
+                           std::string(name.data, name.length) + " which has " +
                            std::to_string(numResults) +
                            " results (it is only valid for operations with a "
                            "single result)")
-                              .str()
                               .c_str());
   }
   return mlirOperationGetResult(operation, 0);
@@ -2614,7 +2612,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     PyCodeObject *code = PyFrame_GetCode(pyFrame);
     auto fileNameStr =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_filename));
-    llvm::StringRef fileName(fileNameStr);
+    std::string_view fileName(fileNameStr);
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
@@ -2622,14 +2620,14 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 #if PY_VERSION_HEX < 0x030B00F0
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
-    llvm::StringRef funcName(name);
+    std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
     MlirLocation loc =
         mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
 #else
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
-    llvm::StringRef funcName(name);
+    std::string_view funcName(name);
     int startLine, startCol, endLine, endCol;
     int lasti = PyFrame_GetLasti(pyFrame);
     if (!PyCode_Addr2Location(code, lasti, &startLine, &startCol, &endLine,
