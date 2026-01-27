@@ -255,5 +255,115 @@ define nofpclass(inf norm sub) float @ret_only_zero_nan__log__select_maybe_pnorm
   ret float %result
 }
 
+define nofpclass(snan) float @ret_no_snan__log__no_pinf_inputs(float nofpclass(pinf) %x) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_no_snan__log__no_pinf_inputs(
+; CHECK-SAME: float nofpclass(pinf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Cannot infer flags. A nan output could still be produced by a -inf
+; input.
+define nofpclass(pinf) float @ret_no_pinf__log(float %x) {
+; CHECK-LABEL: define nofpclass(pinf) float @ret_no_pinf__log(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+define nofpclass(ninf) float @ret_no_ninf__log(float %x) {
+; CHECK-LABEL: define nofpclass(ninf) float @ret_no_ninf__log(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan (not ninf)
+define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log(float %x) {
+; CHECK-LABEL: define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan and ninf
+define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log_no_zero(float nofpclass(zero) %x) {
+; CHECK-LABEL: define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log_no_zero(
+; CHECK-SAME: float nofpclass(zero) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan (not ninf)
+define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log_no_zero__daz(float nofpclass(zero) %x) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log_no_zero__daz(
+; CHECK-SAME: float nofpclass(zero) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan and ninf
+define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log_no_zero_or_sub__daz(float nofpclass(zero sub) %x) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf) float @ret_no_pinf_no_nan__log_no_zero_or_sub__daz(
+; CHECK-SAME: float nofpclass(zero sub) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan (not ninf)
+define nofpclass(nan) float @ret_no_nan__log__no_pinf_inputs(float nofpclass(pinf) %x) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__log__no_pinf_inputs(
+; CHECK-SAME: float nofpclass(pinf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan (not ninf)
+define nofpclass(nan) float @ret_no_nan__log__no_inf_inputs(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__log__no_inf_inputs(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.log.f32(float %x)
+  ret float %result
+}
+
+define nofpclass(inf nan) float @add_flags_log__drop_noundef(float nofpclass(inf nan) %x) {
+; CHECK-LABEL: define nofpclass(nan inf) float @add_flags_log__drop_noundef(
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.log.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call noundef float @llvm.log.f32(float noundef %x), !unknown.md !0
+  ret float %result
+}
+
 attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+
+!0 = !{}

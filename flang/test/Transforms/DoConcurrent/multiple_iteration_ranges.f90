@@ -75,7 +75,7 @@ end
 ! COMMON-SAME:   (%[[ARG0:[^[:space:]]+]], %[[ARG1:[^[:space:]]+]], %[[ARG2:[^[:space:]]+]])
 ! COMMON-SAME:   : index = (%[[LB_I]], %[[LB_J]], %[[LB_K]])
 ! COMMON-SAME:     to (%[[UB_I]], %[[UB_J]], %[[UB_K]]) inclusive
-! COMMON-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) {
+! COMMON-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) collapse(3) {
 
 ! COMMON-NEXT: %[[IV_IDX_I:.*]] = fir.convert %[[ARG0]]
 ! COMMON-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#0

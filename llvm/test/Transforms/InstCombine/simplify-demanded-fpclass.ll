@@ -40,6 +40,23 @@ define nofpclass(inf) float @ret_nofpclass_inf_undef() {
   ret float undef
 }
 
+define nofpclass(all) float @ret_nofpclass_all_undef() {
+; CHECK-LABEL: define nofpclass(all) float @ret_nofpclass_all_undef() {
+; CHECK-NEXT:    ret float poison
+;
+  ret float undef
+}
+
+; Use + callsite implies no values, should fold undef to poison.
+define nofpclass(nan) float @undef_folds_to_poison_arg() {
+; CHECK-LABEL: define nofpclass(nan) float @undef_folds_to_poison_arg() {
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) poison)
+; CHECK-NEXT:    ret float [[FENCE]]
+;
+  %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf sub norm zero) undef)
+  ret float %fence
+}
+
 ; Make sure there's no infinite loop
 define nofpclass(all) float @ret_nofpclass_all_var(float %arg) {
 ; CHECK-LABEL: define nofpclass(all) float @ret_nofpclass_all_var
