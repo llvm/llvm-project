@@ -373,8 +373,12 @@ public:
 
       PyMemoryEffectsInstanceList effectsWrapper{effects};
 
+      PyMlirContextRef context =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      auto opview = PyOperation::forOperation(context, op)->createOpView();
+
       // Invoke `pyClass.get_effects(op, effects)`.
-      pyGetEffects(op, effectsWrapper);
+      pyGetEffects(opview, effectsWrapper);
     };
 
     mlirMemoryEffectsOpInterfaceAttachFallbackModel(
