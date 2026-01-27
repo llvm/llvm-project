@@ -1,4 +1,4 @@
-/*===-- CoreTypes.h - Essential types for the ORC Runtime C APIs --*- C -*-===*\
+/*===--- Visibility.h - Visibility macros for the ORC runtime ---*- C++ -*-===*\
 |*                                                                            *|
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
 |* Exceptions.                                                                *|
@@ -7,27 +7,24 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* Defines core types for the ORC runtime.                                    *|
+|* This header defines visibility macros used for the ORC runtime C interface.*|
+|* These macros are used to annotate C functions that should be exported as   *|
+|* part of a shared library or DLL.                                           *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#ifndef ORC_RT_C_CORETYPES_H
-#define ORC_RT_C_CORETYPES_H
+#ifndef ORC_RT_C_VISIBILITY_H
+#define ORC_RT_C_VISIBILITY_H
 
-#include "orc-rt-c/ExternC.h"
+/* ORC_RT_C_ABI is the export/visibility macro used to mark symbols declared
+   in orc-rt-c as exported when built as a shared library. */
 
-ORC_RT_C_EXTERN_C_BEGIN
+#if defined(__has_attribute) && __has_attribute(visibility)
+#define ORC_RT_C_ABI __attribute__((visibility("default")))
+#endif
 
-/**
- * Opaque reference to an error instance. Null serves as the 'success' value.
- */
-typedef struct orc_rt_OpaqueError *orc_rt_ErrorRef;
+#if !defined(ORC_RT_C_ABI)
+#define ORC_RT_C_ABI
+#endif
 
-/**
- * A reference to an orc_rt::Session instance.
- */
-typedef struct orc_rt_OpaqueSession *orc_rt_SessionRef;
-
-ORC_RT_C_EXTERN_C_END
-
-#endif /* ORC_RT_C_CORETYPES_H */
+#endif /* ORC_RT_C_VISIBILITY_H */
