@@ -3483,7 +3483,7 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_sincosf",
-    hdrs = ["/src/__support/math/sincosf.h"],
+    hdrs = ["src/__support/math/sincosf.h"],
     deps = [
         ":__support_fputil_fma",
         ":__support_fputil_polyeval",
