@@ -1126,11 +1126,20 @@ macro(add_llvm_executable name)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
   endif()
 
+  # CMake position-independent code sets -fPIE for source files in executables.
+  # With LLVM_ENABLE_PIC, we add -fPIC to all source files, but -fPIE is added
+  # later and therefore wins. To avoid option mismatch between the PCH (-fPIC)
+  # and the executable (-fPIE), disable PCH reuse for PIE.
+  get_target_property(cmake_pie ${name} POSITION_INDEPENDENT_CODE)
+  if(${cmake_pie})
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
     llvm_update_pch(${name})
-  else()
+  elseif(NOT ARG_DISABLE_PCH_REUSE)
     target_precompile_headers(${name} REUSE_FROM ${obj_name})
     get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
     set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
