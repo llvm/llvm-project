@@ -3320,28 +3320,34 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                             SemaRef.getASTContext().UnsignedIntTy))
       return true;
 
-    // Figure out the return type of the intrinsic. For most resources it is the
-    // contained type. For ByteAddressBuffer it is determined by the type used
-    // on the FunctionDecl.
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
-    QualType ElementTy = ResourceTy->getContainedType();
-    if (ResourceTy->isRaw() && !ResourceTy->isStructured()) {
-      // Load method uses return type
-      FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
-      ElementTy = FD->getReturnType();
-      // Store method uses 2nd parameter type
-      if (ElementTy->isVoidType()) {
-        assert(FD->getNumParams() == 2 &&
-               "expected 2 parameters for Store method");
-        ElementTy = FD->getParamDecl(1)->getType();
-      }
+    QualType ContainedTy = ResourceTy->getContainedType();
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
+    TheCall->setValueKind(VK_LValue);
 
-      // Reject array types
-      if (ElementTy->isArrayType())
-        return SemaRef.Diag(FD->getPointOfInstantiation(),
-                            diag::err_invalid_use_of_array_type);
-    }
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    QualType ElementTy = TheCall->getArg(2)->getType();
+    assert(ElementTy->isPointerType() &&
+           "expected pointer type for second argument");
+    ElementTy = ElementTy->getPointeeType();
+
+    // Reject array types
+    if (ElementTy->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
 
     auto ReturnType =
         SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
@@ -3368,7 +3374,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
     if (ResourceTy->isRaw() && !ResourceTy->isStructured()) {
-      FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
+      FunctionDecl *FD = cast<FunctionDecl>(SemaRef.CurContext);
       ReturnType = FD->getReturnType();
 
       // Reject array types

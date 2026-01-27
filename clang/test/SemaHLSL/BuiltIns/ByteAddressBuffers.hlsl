@@ -3,7 +3,7 @@
 ByteAddressBuffer Buf : register(t0);
 RWByteAddressBuffer RWBuf : register(u0);
 
-int test_load_uint_array()[4] {
+uint test_load_uint_array()[4] {
   return Buf.Load<uint[4]>(0);
   // expected-error@-1 {{an array type is not allowed here}}
   // expected-note@-2 {{in instantiation of function template specialization 'hlsl::ByteAddressBuffer::Load<unsigned int[4]>' requested here}}
@@ -15,7 +15,7 @@ float test_load_float_array()[2] {
   // expected-note@-2 {{in instantiation of function template specialization 'hlsl::RWByteAddressBuffer::Load<float[2]>' requested here}}
 }
 
-int test_load_uint_array_with_status()[4] {
+uint test_load_uint_array_with_status()[4] {
   uint s1;
   return RWBuf.Load<uint[4]>(0, s1);
   // expected-error@-1 {{an array type is not allowed here}}

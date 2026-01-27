@@ -484,7 +484,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                          "hlsl.AddUint64");
     return Result;
   }
-  case Builtin::BI__builtin_hlsl_resource_getpointer: {
+  case Builtin::BI__builtin_hlsl_resource_getpointer:
+  case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 

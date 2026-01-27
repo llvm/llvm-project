@@ -178,6 +178,7 @@ private:
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(LocalVar &Var);
   Expr *convertPlaceholder(Expr *E) { return E; }
+  Expr *convertPlaceholder(QualType Ty);
 
 public:
   friend BuiltinTypeDeclBuilder;
@@ -423,6 +424,16 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(LocalVar &Var) {
       VD->getASTContext(), NestedNameSpecifierLoc(), SourceLocation(), VD,
       false, DeclarationNameInfo(VD->getDeclName(), SourceLocation()),
       VD->getType(), VK_LValue);
+}
+
+// Converts a QualType to an Expr that carries type information through template
+// instantiation. Creates `Ty*()`, a value-initialized null pointer of type Ty*.
+Expr *BuiltinTypeMethodBuilder::convertPlaceholder(QualType Ty) {
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  QualType PtrTy = AST.getPointerType(Ty);
+  return CXXUnresolvedConstructExpr::Create(
+      AST, PtrTy, AST.getTrivialTypeSourceInfo(PtrTy), SourceLocation(), {},
+      SourceLocation(), false);
 }
 
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
@@ -1359,13 +1370,13 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  bool IsTemplated = (ElemTy == AST.DependentTy);
 
   // The empty QualType is a placeholder. The actual return type is set below.
   BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
 
-  if (ElemTy == AST.DependentTy) {
+  if (IsTemplated)
     ElemTy = MMB.addTemplateTypeParam("element_type");
-  }
   QualType AddrSpaceElemTy =
       AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
@@ -1383,11 +1394,16 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
   }
   MMB.ReturnTy = ReturnTy;
 
-  return MMB.addParam("Index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
-                   PH::_0)
-      .dereference(PH::LastStmt)
-      .finalize();
+  MMB.addParam("Index", AST.UnsignedIntTy);
+
+  if (IsTemplated)
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                    PH::Handle, PH::_0, ElemTy);
+  else
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                    PH::_0);
+
+  return MMB.dereference(PH::LastStmt).finalize();
 }
 
 BuiltinTypeDeclBuilder &
@@ -1396,22 +1412,26 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name,
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  bool IsTemplated = (ValueTy == AST.DependentTy);
 
   BuiltinTypeMethodBuilder MMB(*this, Name, AST.VoidTy, IsConst);
 
-  if (ValueTy == AST.DependentTy)
+  if (IsTemplated)
     ValueTy = MMB.addTemplateTypeParam("element_type");
   QualType AddrSpaceElemTy =
       AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
 
-  return MMB.addParam("Index", AST.UnsignedIntTy)
-      .addParam("Value", ValueTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
-                   PH::_0)
-      .dereference(PH::LastStmt)
-      .assign(PH::LastStmt, PH::_1)
-      .finalize();
+  MMB.addParam("Index", AST.UnsignedIntTy).addParam("Value", ValueTy);
+
+  if (IsTemplated)
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                    PH::Handle, PH::_0, ValueTy);
+  else
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                    PH::_0);
+
+  return MMB.dereference(PH::LastStmt).assign(PH::LastStmt, PH::_1).finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
