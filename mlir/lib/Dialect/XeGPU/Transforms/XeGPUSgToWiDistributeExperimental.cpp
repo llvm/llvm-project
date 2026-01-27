@@ -288,13 +288,7 @@ struct WgToWiElementWise : public ConversionPattern {
 
     VectorType newResultType = wiShapeOrFailure.value();
     OperationState state(op->getLoc(), op->getName());
-    // Cast the types of operands to the expected workitem types.
-    SmallVector<Value> newOperands =
-        llvm::map_to_vector(operands, [&](Value v) {
-          return castValueTo(rewriter, cast<TypedValue<VectorType>>(v),
-                             newResultType);
-        });
-    state.addOperands(newOperands);
+    state.addOperands(operands);
     state.addTypes(newResultType);
     // Copy all attributes except for DistributeLayoutAttr.
     for (auto attr : op->getAttrs()) {
@@ -413,16 +407,6 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
     xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
-    target.addLegalOp<UnrealizedConversionCastOp>();
-    (void)applyPartialConversion(root, target, std::move(patterns));
-  }
-  // Apply the XeGPU subgroup to workitem distribution patterns.
-  {
-    ConversionTarget target(getContext());
-    TypeConverter typeConverter;
-    typeConverter.addTargetMaterialization(materializeCast);
-    typeConverter.addSourceMaterialization(materializeCast);
-    RewritePatternSet patterns(&getContext());
     xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         typeConverter, patterns, target);
     target.addLegalOp<UnrealizedConversionCastOp>();
@@ -453,7 +437,8 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
       return;
 
     // Check if the defining op of the input is also an
-    // UnrealizedConversionCastOp and it has a single user (which is this op).
+    // UnrealizedConversionCastOp and it has a single user (which is this
+    // op).
     auto definingOp = singleInput.getDefiningOp<UnrealizedConversionCastOp>();
     if (!definingOp || !definingOp->hasOneUse())
       return;
