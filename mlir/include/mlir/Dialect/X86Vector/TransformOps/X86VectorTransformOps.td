@@ -71,6 +71,17 @@ def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyFlattenVectorTransferOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86vector.flatten_vector_transfer_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to rewrite contiguous row-major vector.transfer_read or 
+    vector.transfer_write operations to a 1D operation.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // X86VECTOR_TRANSFORM_OPS
 

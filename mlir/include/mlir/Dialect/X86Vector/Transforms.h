@@ -104,6 +104,11 @@ void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 // grouped with respect to odd/even packed index.
 void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 
+// Rewrites contiguous row-major vector.transfer_read or vector.transfer_write
+// operations by inserting  a memref.collapse_shape on the source,
+// transforming the operation to use a 1D source.
+void populateFlattenVectorTransferOpsPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h
