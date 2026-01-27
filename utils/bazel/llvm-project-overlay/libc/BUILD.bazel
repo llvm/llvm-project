@@ -4913,7 +4913,6 @@ libc_math_function(
     name = "log10f",
     additional_deps = [
         ":__support_math_log10f",
-        ":errno",
     ],
 )
 

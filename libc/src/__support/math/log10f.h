@@ -110,7 +110,7 @@ LIBC_INLINE_VAR constexpr double LOG10_R[128] = {
 
 } // namespace log10f_internal
 
-LIBC_INLINE static constexpr float log10f(float x) {
+LIBC_INLINE float log10f(float x) {
   using namespace common_constants_internal;
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
 
