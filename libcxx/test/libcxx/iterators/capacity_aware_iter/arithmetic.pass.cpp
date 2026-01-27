@@ -29,6 +29,7 @@
 #include <iterator>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 template <typename Iter>
 constexpr bool test() {
@@ -44,6 +45,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
     CapIter& res = ++iter;
 
+    ASSERT_NOEXCEPT(*iter);
     assert(&res == &iter);
     assert(*iter == 2);
   }
@@ -53,6 +55,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
     CapIter res  = iter++;
 
+    ASSERT_NOEXCEPT(iter++);
     assert(*res == 1);
     assert(*iter == 2);
   }
@@ -62,6 +65,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 1));
     CapIter& res = --iter;
 
+    ASSERT_NOEXCEPT(--iter);
     assert(&iter == &res);
     assert(*iter == 1);
   }
@@ -71,6 +75,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 1));
     CapIter res  = iter--;
 
+    ASSERT_NOEXCEPT(iter--);
     assert(*res == 2);
     assert(*iter == 1);
   }
@@ -80,6 +85,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
     CapIter& res = iter += 2;
 
+    ASSERT_NOEXCEPT(iter += 2);
     assert(&iter == &res);
     assert(*iter == 3);
   }
@@ -89,6 +95,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
     CapIter res  = iter + 2;
 
+    ASSERT_NOEXCEPT(iter + 2);
     assert(*iter == 1);
     assert(*res == 3);
   }
@@ -98,6 +105,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
     CapIter res  = 2 + iter;
 
+    ASSERT_NOEXCEPT(2 + iter);
     assert(*iter == 1);
     assert(*res == 3);
   }
@@ -107,6 +115,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 2));
     CapIter& res = iter -= 2;
 
+    ASSERT_NOEXCEPT(iter -= 2);
     assert(&iter == &res);
     assert(*iter == 1);
   }
@@ -116,6 +125,7 @@ constexpr bool test() {
     CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 2));
     CapIter res  = iter - 2;
 
+    ASSERT_NOEXCEPT(iter - 2);
     assert(*iter == 3);
     assert(*res == 1);
   }
@@ -128,6 +138,7 @@ constexpr bool test() {
     std::ptrdiff_t res  = iter2 - iter;
     std::ptrdiff_t res2 = iter3 - iter;
 
+    ASSERT_NOEXCEPT(iter2 - iter);
     assert(res == 2);
     assert(res2 == 6);
   }

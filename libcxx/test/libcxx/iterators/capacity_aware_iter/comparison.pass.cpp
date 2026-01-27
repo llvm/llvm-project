@@ -26,6 +26,7 @@
 #include <iterator>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 template <typename Iter>
 constexpr bool test() {
@@ -39,18 +40,21 @@ constexpr bool test() {
 
   // operator==
   {
+    ASSERT_NOEXCEPT(iter1 == iter2);
     assert(iter1 == iter1);
     assert(!(iter1 == iter2));
   }
 
   // operator!=
   {
+    ASSERT_NOEXCEPT(iter1 != iter2);
     assert(iter1 != iter2);
     assert(!(iter1 != iter1));
   }
 
   // operator<
   {
+    ASSERT_NOEXCEPT(iter1 < iter2);
     assert(iter1 < iter2);
     assert(!(iter1 < iter1));
     assert(!(iter2 < iter1));
@@ -58,6 +62,7 @@ constexpr bool test() {
 
   // operator<=
   {
+    ASSERT_NOEXCEPT(iter1 <= iter2);
     assert(iter1 <= iter2);
     assert(iter1 <= iter1);
     assert(!(iter2 <= iter1));
@@ -65,6 +70,7 @@ constexpr bool test() {
 
   // operator>
   {
+    ASSERT_NOEXCEPT(iter1 > iter2);
     assert(iter2 > iter1);
     assert(!(iter1 > iter2));
     assert(!(iter1 > iter1));
@@ -72,6 +78,7 @@ constexpr bool test() {
 
   // operator>=
   {
+    ASSERT_NOEXCEPT(iter1 >= iter2);
     assert(iter2 >= iter1);
     assert(iter1 >= iter1);
     assert(!(iter1 >= iter2));
@@ -79,6 +86,7 @@ constexpr bool test() {
 
   // operator <=>
   {
+    ASSERT_NOEXCEPT(iter1 <=> iter2);
     std::same_as<std::strong_ordering> decltype(auto) r1 = iter1 <=> iter2;
     assert(r1 == std::strong_ordering::less);
 

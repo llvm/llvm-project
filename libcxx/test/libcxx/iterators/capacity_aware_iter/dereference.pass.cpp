@@ -20,6 +20,7 @@
 #include <__iterator/capacity_aware_iterator.h>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct Foo {
   int x;
@@ -37,6 +38,7 @@ constexpr bool test() {
 
   // operator[]
   {
+    ASSERT_NOEXCEPT(it[0]);
     assert(it[0] == Foo{1});
     assert(it[1] == Foo{2});
     assert(it[2] == Foo{3});
@@ -49,11 +51,13 @@ constexpr bool test() {
 
   // operator*
   {
+    ASSERT_NOEXCEPT(*it);
     assert(*it == Foo{1});
   }
 
   // operator->
   {
+    ASSERT_NOEXCEPT(it->x);
     assert(it->x == 1);
   }
 
