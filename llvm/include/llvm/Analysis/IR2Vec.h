@@ -77,6 +77,7 @@ LLVM_ABI extern cl::opt<float> OpcWeight;
 LLVM_ABI extern cl::opt<float> TypeWeight;
 LLVM_ABI extern cl::opt<float> ArgWeight;
 LLVM_ABI extern cl::opt<IR2VecKind> IR2VecEmbeddingKind;
+LLVM_ABI extern cl::opt<std::string> VocabFile;
 
 /// Embedding is a datatype that wraps std::vector<double>. It provides
 /// additional functionality for arithmetic and comparison operations.

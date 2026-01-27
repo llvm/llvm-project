@@ -153,9 +153,16 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    auto VocabStatus = Tool.initializeVocabulary();
-    assert(VocabStatus && "Failed to initialize IR2Vec vocabulary");
-    (void)VocabStatus;
+    // and this value will be populated in the var VocabFile
+    if (VocabFile.empty()) {
+      return createStringError(
+          errc::invalid_argument,
+          "IR2Vec vocabulary file path not specified; "
+          "You may need to set it using --ir2vec-vocab-path");
+    }
+
+    if (Error Err = Tool.initializeVocabulary(VocabFile))
+      return Err;
 
     if (!FunctionName.empty()) {
       // Process single function
