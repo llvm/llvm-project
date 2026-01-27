@@ -26,7 +26,7 @@ def run(emit_schedule):
     with ir.Context() as ctx, ir.Location.unknown():
         payload = emit_payload()
 
-        MyTransform.load(register=False)
+        MyTransform.load(register=False, reload=True)
 
         GetNamedAttributeOp.attach_interface_impls(ctx)
         PrintParamOp.attach_interface_impls(ctx)

@@ -459,8 +459,8 @@ class Dialect(ir.Dialect):
         return m
 
     @classmethod
-    def load(cls, register=True) -> None:
-        if hasattr(cls, "_mlir_module"):
+    def load(cls, register=True, reload=False) -> None:
+        if hasattr(cls, "_mlir_module") and not reload:
             return
 
         cls._mlir_module = cls._emit_module()
