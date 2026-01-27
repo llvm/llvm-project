@@ -245,51 +245,67 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
-  const SCEV *Expr = TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
-      .Case<VPExpandSCEVRecipe>(
-          [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Case<VPCanonicalIVPHIRecipe>([&SE, &PSE,
-                                     L](const VPCanonicalIVPHIRecipe *R) {
-        if (!L)
-          return SE.getCouldNotCompute();
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
-                                SCEV::FlagAnyWrap);
-      })
-      .Case<VPWidenIntOrFpInductionRecipe>(
-          [&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
-            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
-            if (!L || isa<SCEVCouldNotCompute>(Step))
+  const SCEV *Expr =
+      TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
+          .Case<VPExpandSCEVRecipe>(
+              [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+          .Case<VPCanonicalIVPHIRecipe>([&SE, &PSE,
+                                         L](const VPCanonicalIVPHIRecipe *R) {
+            if (!L)
               return SE.getCouldNotCompute();
-            const SCEV *Start =
-                getSCEVExprForVPValue(R->getStartValue(), PSE, L);
-            const SCEV *AddRec =
-                SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
-            if (R->getTruncInst())
-              return SE.getTruncateExpr(AddRec, R->getScalarType());
-            return AddRec;
+            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                                    SCEV::FlagAnyWrap);
           })
-      .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
-        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
-          return SE.getCouldNotCompute();
+          .Case<VPWidenIntOrFpInductionRecipe>(
+              [&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
+                const SCEV *Step =
+                    getSCEVExprForVPValue(R->getStepValue(), PSE, L);
+                if (!L || isa<SCEVCouldNotCompute>(Step))
+                  return SE.getCouldNotCompute();
+                const SCEV *Start =
+                    getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+                const SCEV *AddRec =
+                    SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+                if (R->getTruncInst())
+                  return SE.getTruncateExpr(AddRec, R->getScalarType());
+                return AddRec;
+              })
+          .Case<VPWidenPointerInductionRecipe>(
+              [&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+                const SCEV *Start =
+                    getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+                if (!L || isa<SCEVCouldNotCompute>(Start))
+                  return SE.getCouldNotCompute();
+                const SCEV *Step =
+                    getSCEVExprForVPValue(R->getStepValue(), PSE, L);
+                if (isa<SCEVCouldNotCompute>(Step))
+                  return SE.getCouldNotCompute();
+                return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+              })
+          .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
+            const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
+            if (any_of(ArrayRef({Start, IV, Scale}),
+                       IsaPred<SCEVCouldNotCompute>))
+              return SE.getCouldNotCompute();
 
-        return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
-                             SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
-                                                   Scale, IV->getType())));
-      })
-      .Case<VPScalarIVStepsRecipe>([&SE, &PSE,
-                                    L](const VPScalarIVStepsRecipe *R) {
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-        if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
-          return SE.getCouldNotCompute();
-        return SE.getTruncateOrSignExtend(IV, Step->getType());
-      })
-      .Default(
-          [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+            return SE.getAddExpr(
+                SE.getTruncateOrSignExtend(Start, IV->getType()),
+                SE.getMulExpr(
+                    IV, SE.getTruncateOrSignExtend(Scale, IV->getType())));
+          })
+          .Case<VPScalarIVStepsRecipe>([&SE, &PSE,
+                                        L](const VPScalarIVStepsRecipe *R) {
+            const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
+            if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
+              return SE.getCouldNotCompute();
+            return SE.getTruncateOrSignExtend(IV, Step->getType());
+          })
+          .Default(
+              [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 
   return PSE.getPredicatedSCEV(Expr);
 }
@@ -317,6 +333,7 @@ static bool preservesUniformity(unsigned Opcode) {
   if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
     return true;
   switch (Opcode) {
+  case Instruction::Freeze:
   case Instruction::GetElementPtr:
   case Instruction::ICmp:
   case Instruction::FCmp:

@@ -38,7 +38,9 @@ enum class InstructionKind {
                              // matrix multiply-add operation
   Subgroup2DBlockStore,      // Subgroup-level 2D block write instruction
   Subgroup2DBlockLoad,       // Subgroup-level 2D block load instruction
-  Subgroup2DBlockPrefetch    // Subgroup-level 2D block prefetch instruction
+  Subgroup2DBlockPrefetch,   // Subgroup-level 2D block prefetch instruction
+  StoreScatter,              // Lane-level store (scalar, vector)
+  LoadGather                 // Lane-level load (scalar, vector)
   // @TODO: Add more instructions as needed
 };
 
@@ -65,6 +67,10 @@ struct Instruction {
       return "load_nd";
     case InstructionKind::Subgroup2DBlockPrefetch:
       return "prefetch_nd";
+    case InstructionKind::StoreScatter:
+      return "store";
+    case InstructionKind::LoadGather:
+      return "load";
     }
     llvm_unreachable("Unknown InstructionKind");
   }

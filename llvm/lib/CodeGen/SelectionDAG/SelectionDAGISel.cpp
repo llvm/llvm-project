@@ -364,7 +364,6 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 SelectionDAGISelLegacy::SelectionDAGISelLegacy(
     char &ID, std::unique_ptr<SelectionDAGISel> S)
     : MachineFunctionPass(ID), Selector(std::move(S)) {
-  initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
   initializeBranchProbabilityInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
@@ -408,7 +407,6 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOptLevel OL)
       SDB(std::make_unique<SelectionDAGBuilder>(*CurDAG, *FuncInfo, *SwiftError,
                                                 OL)),
       OptLevel(OL) {
-  initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
   initializeBranchProbabilityInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
@@ -437,6 +435,9 @@ void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<AssignmentTrackingAnalysis>();
   if (RegisterPGOPasses)
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+
+  AU.addRequired<LibcallLoweringInfoWrapper>();
+
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -489,9 +490,10 @@ void SelectionDAGISel::initializeAnalysisResults(
   (void)MatchFilterFuncName;
 #endif
 
+  const TargetSubtargetInfo &Subtarget = MF->getSubtarget();
   bool RegisterPGOPasses = maintainPGOProfile(TM, OptLevel);
-  TII = MF->getSubtarget().getInstrInfo();
-  TLI = MF->getSubtarget().getTargetLowering();
+  TII = Subtarget.getInstrInfo();
+  TLI = Subtarget.getTargetLowering();
   RegInfo = &MF->getRegInfo();
   LibInfo = &FAM.getResult<TargetLibraryAnalysis>(Fn);
 
@@ -512,9 +514,16 @@ void SelectionDAGISel::initializeAnalysisResults(
   MachineModuleInfo &MMI =
       MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo,
-               &TLI->getLibcallLoweringInfo(), // FIXME: Take from analysis
-               UA, PSI, BFI, MMI, FnVarLocs);
+  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+      MAMP.getCachedResult<LibcallLoweringModuleAnalysis>(*Fn.getParent());
+  if (!LibcallResult) {
+    reportFatalUsageError("'" + LibcallLoweringModuleAnalysis::name() +
+                          "' analysis required");
+  }
+
+  LibcallLowering = &LibcallResult->getLibcallLowering(Subtarget);
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
+               FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -535,7 +544,7 @@ void SelectionDAGISel::initializeAnalysisResults(
 
   TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
 
-  HwMode = MF->getSubtarget().getHwMode();
+  HwMode = Subtarget.getHwMode();
 }
 
 void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
@@ -547,9 +556,11 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   (void)MatchFilterFuncName;
 #endif
 
+  const TargetSubtargetInfo &Subtarget = MF->getSubtarget();
+
   bool RegisterPGOPasses = maintainPGOProfile(TM, OptLevel);
-  TII = MF->getSubtarget().getInstrInfo();
-  TLI = MF->getSubtarget().getTargetLowering();
+  TII = Subtarget.getInstrInfo();
+  TLI = Subtarget.getTargetLowering();
   RegInfo = &MF->getRegInfo();
   LibInfo = &MFP.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(Fn);
 
@@ -573,9 +584,12 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   MachineModuleInfo &MMI =
       MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo,
-               &TLI->getLibcallLoweringInfo(), // FIXME: Take from analysis
-               UA, PSI, BFI, MMI, FnVarLocs);
+  LibcallLowering =
+      &MFP.getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *Fn.getParent(), Subtarget);
+
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
+               FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -597,7 +611,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
 
   TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
 
-  HwMode = MF->getSubtarget().getHwMode();
+  HwMode = Subtarget.getHwMode();
 }
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
@@ -1658,7 +1672,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   FastISel *FastIS = nullptr;
   if (TM.Options.EnableFastISel) {
     LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
-    FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
+    FastIS = TLI->createFastISel(*FuncInfo, LibInfo, LibcallLowering);
   }
 
   ReversePostOrderTraversal<const Function*> RPOT(&Fn);
@@ -1924,7 +1938,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
-          TLI->getSSPStackGuardCheck(*Fn.getParent()) && Fn.hasMinSize();
+          TLI->getSSPStackGuardCheck(*Fn.getParent(), *LibcallLowering) &&
+          Fn.hasMinSize();
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }
