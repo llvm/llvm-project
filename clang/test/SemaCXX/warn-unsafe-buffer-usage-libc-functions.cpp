@@ -79,6 +79,10 @@ namespace std {
 
   typedef basic_string_view<char> string_view;
   typedef basic_string_view<wchar_t> wstring_view;
+
+
+  template <typename T>
+  T *addressof(T& arg);
 }
 
 void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
@@ -374,4 +378,53 @@ void test_format_attr_invalid_arg_idx(char * Str, std::string StdStr) {
   myprintf("hello");
   myprintf(Str); // expected-warning{{formatting function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   myprintf(StdStr.c_str());
+}
+
+
+void *memset(void *s, int c, size_t n);
+void *memset(void *s, size_t n); // invalid memset missing value parameter
+
+void testSafeMemsetWithUnaryAddressOf() {
+  int i = 0;
+
+  // considered memory-safe since it's not the known memset with 3 parameters
+  memset(&i, 10);
+
+  // memory-safe and in the form currently considered safe
+  memset(&i, 0, sizeof(i));
+  memset(&i, 0, sizeof i);
+  memset(&(i), 0, sizeof(i));
+  memset(&(i), 0, sizeof i);
+
+  // memory-safe but not one of the forms currently considered safe
+  memset(&i, 0, 0); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, 1); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, sizeof(int)); // expected-warning{{function 'memset' is unsafe}}
+  memset(&(++i), 0, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+
+  // unsafe
+  memset(nullptr, 0, 10); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, 10); // expected-warning{{function 'memset' is unsafe}}
+}
+
+void testSafeMemsetWithStdAddressof() {
+  int i = 0;
+
+  // considered memory-safe since it's not the known memset with 3 parameters
+  memset(std::addressof(i), 10);
+
+  // memory-safe and in the form currently considered safe
+  memset(std::addressof(i), 0, sizeof(i));
+  memset(std::addressof(i), 0, sizeof i);
+  memset(std::addressof((i)), 0, sizeof(i));
+  memset(std::addressof((i)), 0, sizeof i);
+
+  // memory-safe but not one of the forms currently considered safe
+  memset(std::addressof(i), 0, 0); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, 1); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, sizeof(int)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(++i), 0, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+
+  // unsafe
+  memset(std::addressof(i), 0, 10); // expected-warning{{function 'memset' is unsafe}}
 }

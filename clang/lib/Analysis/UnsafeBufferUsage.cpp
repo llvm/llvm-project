@@ -800,6 +800,50 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   return false;
 }
 
+// Given an expression like `&x` or `std::addressof(x)`, returns the
+// `DeclRefExpr` corresponding to `x`. Returns null if the expression `E` is not
+// an address-of expression.
+static const DeclRefExpr *getDeclRefInAddressOfExpr(const Expr *E) {
+  if (!E->getType()->isPointerType())
+    return nullptr;
+  const Expr *Ptr = E->IgnoreParenImpCasts();
+
+  // `&x` where `x` is a DeclRefExpr.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
+    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf) {
+      return nullptr;
+    }
+    return dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenImpCasts());
+  }
+
+  // `std::addressof(x)` where `x` is a DeclRefExpr.
+  if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
+    const FunctionDecl *FnDecl = CE->getDirectCallee();
+
+    if (!FnDecl || !FnDecl->isInStdNamespace() ||
+        FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
+      return nullptr;
+
+    return dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts());
+  }
+
+  return nullptr;
+}
+
+// Given an expression like `sizeof(x)`, returns the `DeclRefExpr` corresponding
+// to `x`. Returns null if the expression `E` is not a `sizeof` expression or is
+// `sizeof(T)` for a type `T`.
+static const DeclRefExpr *getDeclRefInSizeOfExr(const Expr *E) {
+  const auto *SizeOfExpr =
+      dyn_cast<UnaryExprOrTypeTraitExpr>(E->IgnoreParenImpCasts());
+  if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
+    return nullptr;
+  if (SizeOfExpr->isArgumentType())
+    return nullptr;
+  return dyn_cast<DeclRefExpr>(
+      SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts());
+}
+
 namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
@@ -1057,7 +1101,6 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
             "wmemcpy",
             "memmove",
             "wmemmove",
-            "memset",
             "wmemset",
             // IO:
             "fread",
@@ -1103,6 +1146,34 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
   // all should end with "scanf"):
   return Name.ends_with("scanf");
+}
+
+// Returns true if this is an unsafe call to `memset`.
+// The only call we currently consider safe is of the form
+// `memset(&x, 0, sizeof(x))`, with possible variations in parentheses.
+static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
+  const FunctionDecl *FD = Node.getDirectCallee();
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II || II->getName() != "memset")
+    return false;
+
+  // If the number of parameters is unexpected, don't flag it as unsafe.
+  if (FD->getNumParams() < 3)
+    return false;
+
+  // Now we have a real call to memset, it's considered unsafe unless it's in
+  // the form `memset(&x, 0, sizeof(x))`.
+  const DeclRefExpr *AddressOfVar = getDeclRefInAddressOfExpr(Node.getArg(0));
+  if (!AddressOfVar)
+    return true;
+
+  const DeclRefExpr *SizeOfVar = getDeclRefInSizeOfExr(Node.getArg(2));
+  if (!SizeOfVar)
+    return true;
+
+  return AddressOfVar->getDecl() != SizeOfVar->getDecl();
 }
 
 // Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
@@ -2168,6 +2239,10 @@ public:
     if (!isSingleStringLiteralArg) {
       // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (libc_func_matchers::isUnsafeMemset(*CE, Ctx)) {
         Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
       }
