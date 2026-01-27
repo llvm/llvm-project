@@ -727,6 +727,8 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   return SDValue();
 }
 
+// Ensure SETCC result and operand have the same bit width; isel does not
+// support mismatched widths.
 SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -735,26 +737,21 @@ SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
 
   EVT SetCCResultVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT);
-  // Check if the result type and operand type are already consistent
-  if (ResultVT == SetCCResultVT) {
-    return Op;
-  }
 
-  // Ensure operands have the same type
+  if (ResultVT == SetCCResultVT)
+    return Op;
+
   assert(Op.getOperand(0).getValueType() == Op.getOperand(1).getValueType() &&
          "SETCC operands must have the same type!");
 
-  // Create the SETCC node with the result type derived from the operand type
   SDValue SetCCNode =
       DAG.getNode(ISD::SETCC, DL, SetCCResultVT, Op.getOperand(0),
                   Op.getOperand(1), Op.getOperand(2));
 
-  // Otherwise, extend or truncate the result to match the desired result type
-  if (ResultVT.bitsGT(SetCCResultVT)) {
+  if (ResultVT.bitsGT(SetCCResultVT))
     SetCCNode = DAG.getNode(ISD::SIGN_EXTEND, DL, ResultVT, SetCCNode);
-  } else if (ResultVT.bitsLT(SetCCResultVT)) {
+  else if (ResultVT.bitsLT(SetCCResultVT))
     SetCCNode = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, SetCCNode);
-  }
 
   return SetCCNode;
 }
