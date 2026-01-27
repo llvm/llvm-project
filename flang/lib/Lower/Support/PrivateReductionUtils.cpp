@@ -89,37 +89,23 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
-    // Special handling for boxed character types - they need to use
-    // fir.box_addr instead of hlfir::genVariableRawAddress to avoid creating
-    // an hlfir::Entity from a value that doesn't satisfy isFortranEntity.
+    // Extract address from the box. For character types, use fir.box_addr
+    // directly to avoid creating an hlfir::Entity from a value that doesn't
+    // satisfy isFortranEntity (boxed characters may not be valid entities yet).
     mlir::Type innerTy = fir::unwrapRefType(
         mlir::cast<fir::BaseBoxType>(arg.getType()).getEleTy());
+    mlir::Value addr;
     if (fir::isa_char(innerTy)) {
-      mlir::Value addr = fir::BoxAddrOp::create(builder, loc, arg);
-      mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
-      fir::IfOp ifOp = fir::IfOp::create(builder, loc, isAllocated,
-                                         /*withElseRegion=*/false);
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-
-      mlir::Value cast = builder.createConvert(
-          loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())),
-          addr);
-      fir::FreeMemOp::create(builder, loc, cast);
-
-      builder.setInsertionPointAfter(ifOp);
-      if (isDoConcurrent)
-        fir::YieldOp::create(builder, loc);
-      else
-        mlir::omp::YieldOp::create(builder, loc);
-      return;
+      addr = fir::BoxAddrOp::create(builder, loc, arg);
+    } else {
+      // For non-character types, use genVariableRawAddress
+      // The FIR type system doesn't necessarily know that this is a mutable
+      // box if we allocated the thread local array on the heap to avoid looped
+      // stack allocations.
+      addr = hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
     }
 
-    // Deallocate box
-    // The FIR type system doesn't necessarily know that this is a mutable box
-    // if we allocated the thread local array on the heap to avoid looped stack
-    // allocations.
-    mlir::Value addr =
-        hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
+    // Deallocate if allocated
     mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
     fir::IfOp ifOp =
         fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
@@ -137,6 +123,10 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     return;
   }
 
+  // Handle !fir.boxchar (passed by VALUE for runtime-length characters).
+  // Note: This is distinct from !fir.box<!fir.char<>> which is handled above.
+  // BoxChar is a special tuple type (addr, len) used when character length
+  // is only known at runtime.
   if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
     auto [addr, len] =
         fir::factory::CharacterExprHelper{builder, loc}.createUnboxChar(
