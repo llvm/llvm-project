@@ -3247,9 +3247,9 @@ void VPlanTransforms::addExplicitVectorLength(
   Plan.setUF(1);
 }
 
-void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
-  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
-  // There should be only one EVL PHI in the entire plan.
+/// Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
+/// There should be only one EVL PHI in the entire plan.
+static VPEVLBasedIVPHIRecipe *findEVLPhi(VPlan &Plan) {
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -3260,28 +3260,17 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
         EVLPhi = PhiR;
       }
 
+  return EVLPhi;
+}
+
+void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
+  VPEVLBasedIVPHIRecipe *EVLPhi = findEVLPhi(Plan);
   // Early return if no EVL PHI is found.
   if (!EVLPhi)
     return;
 
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
-  VPValue *AVL;
-  [[maybe_unused]] bool FoundAVL =
-      match(EVLIncrement,
-            m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi)));
-  assert(FoundAVL && "Didn't find AVL?");
-
-  // The AVL may be capped to a safe distance.
-  VPValue *SafeAVL;
-  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
-    AVL = SafeAVL;
-
-  VPValue *AVLNext;
-  [[maybe_unused]] bool FoundAVLNext =
-      match(AVL, m_VPInstruction<Instruction::PHI>(
-                     m_Specific(Plan.getTripCount()), m_VPValue(AVLNext)));
-  assert(FoundAVLNext && "Didn't find AVL backedge?");
 
   // Convert EVLPhi to concrete recipe.
   auto *ScalarR =
@@ -3302,21 +3291,45 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
   CanonicalIVIncrement->eraseFromParent();
   CanonicalIV->eraseFromParent();
+}
 
-  // Replace the use of VectorTripCount in the latch-exiting block.
-  // Before: (branch-on-cond (icmp eq EVLIVInc, VectorTripCount))
-  // After: (branch-on-cond icmp eq AVLNext, 0)
+void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
+  VPEVLBasedIVPHIRecipe *EVLPhi = findEVLPhi(Plan);
+  if (!EVLPhi)
+    return;
+
+  // Bail if not an EVL tail folded loop.
+  VPValue *AVL;
+  if (!match(EVLPhi->getBackedgeValue(),
+             m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi))))
+    return;
+
+  // The AVL may be capped to a safe distance.
+  VPValue *SafeAVL;
+  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
+    AVL = SafeAVL;
+
+  VPValue *AVLNext;
+  [[maybe_unused]] bool FoundAVLNext =
+      match(AVL, m_VPInstruction<Instruction::PHI>(
+                     m_Specific(Plan.getTripCount()), m_VPValue(AVLNext)));
+  assert(FoundAVLNext && "Didn't find AVL backedge?");
+
+  VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPBasicBlock *LatchExiting =
       HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
   auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
   if (match(LatchExitingBr, m_BranchOnCond(m_True())))
     return;
 
-  assert(match(LatchExitingBr, m_BranchOnCond(m_SpecificCmp(
-                                   CmpInst::ICMP_EQ, m_VPValue(EVLIncrement),
-                                   m_Specific(&Plan.getVectorTripCount())))) &&
-         "Expected BranchOnCond with ICmp comparing EVL increment with vector "
-         "trip count");
+  [[maybe_unused]] auto *CanIV = cast<VPPhi>(&*EVLPhi->getParent()->begin());
+  assert(
+      match(LatchExitingBr,
+            m_BranchOnCond(m_SpecificCmp(
+                CmpInst::ICMP_EQ, m_Specific(CanIV->getIncomingValue(1)),
+                m_Specific(&Plan.getVectorTripCount())))) &&
+      "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
+      "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchExitingBr);

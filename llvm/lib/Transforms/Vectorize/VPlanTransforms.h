@@ -315,11 +315,13 @@ struct VPlanTransforms {
   /// variable vector lengths instead of fixed lengths. This transformation:
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  ///  * Replaces the exit condition from
-  ///      (branch-on-count CanonicalIVInc, VectorTripCount)
-  ///    to
-  ///      (branch-on-cond eq AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
+
+  /// Replaces the exit condition from
+  ///   (branch-on-count CanonicalIVInc, VectorTripCount)
+  /// to
+  ///   (branch-on-cond eq AVLNext, 0)
+  static void convertEVLExitCond(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
