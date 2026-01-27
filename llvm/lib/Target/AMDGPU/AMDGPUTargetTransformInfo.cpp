@@ -284,7 +284,7 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
     AMDGPU::FeatureUnalignedAccessMode,
 

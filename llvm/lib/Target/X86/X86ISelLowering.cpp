@@ -1713,6 +1713,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v16f16, Expand);
 
+    // Only PCLMUL required as we always unroll clmul vectors.
+    if (Subtarget.hasPCLMUL()) {
+      for (auto VT : {MVT::v8i32, MVT::v4i64}) {
+        setOperationAction(ISD::CLMUL, VT, Custom);
+        setOperationAction(ISD::CLMULH, VT, Custom);
+      }
+    }
+
     if (HasInt256) {
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
@@ -2110,6 +2118,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
       setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
+    }
+
+    // Only PCLMUL required as we always unroll clmul vectors.
+    if (Subtarget.hasPCLMUL()) {
+      for (auto VT : {MVT::v16i32, MVT::v8i64}) {
+        setOperationAction(ISD::CLMUL, VT, Custom);
+        setOperationAction(ISD::CLMULH, VT, Custom);
+      }
     }
 
     setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
@@ -55753,17 +55769,29 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                               ForCodeSize, Cost, Depth);
 }
 
-static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget) {
+static SDValue combineX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
   MVT VT = N->getSimpleValueType(0);
-  // If we have integer vector types available, use the integer opcodes.
-  if (!VT.isVector() || !Subtarget.hasSSE2())
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // Check if this will constant fold as a generic op.
+  bool WillFold = false;
+  if (DAG.getTargetLoweringInfo().isCommutativeBinOp(N->getOpcode())) {
+    WillFold |= Op0.isUndef() || Op1.isUndef();
+    WillFold |= Op0.getOpcode() == ISD::ConstantFP &&
+                Op1.getOpcode() == ISD::ConstantFP;
+  }
+
+  // If this will fold away or we have integer vector types available, use the
+  // integer opcodes.
+  if (!WillFold && (!VT.isVector() || !Subtarget.hasSSE2()))
     return SDValue();
 
   SDLoc dl(N);
-  MVT IntVT = VT.changeVectorElementTypeToInteger();
-  SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
-  SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
+  MVT IntVT = VT.changeTypeToInteger();
+  Op0 = DAG.getBitcast(IntVT, Op0);
+  Op1 = DAG.getBitcast(IntVT, Op1);
   unsigned IntOpcode;
   switch (N->getOpcode()) {
   // clang-format off
@@ -56057,7 +56085,7 @@ static SDValue combineFAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineFAndFNotToFAndn(N, DAG, Subtarget))
     return V;
 
-  return lowerX86FPLogicOp(N, DAG, Subtarget);
+  return combineX86FPLogicOp(N, DAG, Subtarget);
 }
 
 /// Do target-specific dag combines on X86ISD::FANDN nodes.
@@ -56071,7 +56099,7 @@ static SDValue combineFAndn(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = getNullFPConstForNullVal(N->getOperand(1), DAG, Subtarget))
     return V;
 
-  return lowerX86FPLogicOp(N, DAG, Subtarget);
+  return combineX86FPLogicOp(N, DAG, Subtarget);
 }
 
 /// Do target-specific dag combines on X86ISD::FOR and X86ISD::FXOR nodes.
@@ -56091,7 +56119,7 @@ static SDValue combineFOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue NewVal = combineFneg(N, DAG, DCI, Subtarget))
     return NewVal;
 
-  return lowerX86FPLogicOp(N, DAG, Subtarget);
+  return combineX86FPLogicOp(N, DAG, Subtarget);
 }
 
 /// Do target-specific dag combines on X86ISD::FMIN and X86ISD::FMAX nodes.
@@ -59595,6 +59623,25 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     }
+    case ISD::SCALAR_TO_VECTOR: {
+      if (!IsSplat &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                   Op.getOperand(0).getOperand(0).getValueType() ==
+                       Op0.getValueType() &&
+                   isNullConstant(Op.getOperand(0).getOperand(1));
+          })) {
+        SmallVector<SDValue, 4> Subs;
+        for (SDValue SubOp : Ops)
+          Subs.push_back(SubOp.getOperand(0).getOperand(0));
+        if (SDValue R =
+                combineConcatVectorOps(DL, VT, Subs, DAG, Subtarget, Depth + 1))
+          return R;
+      }
+      break;
+    }
     case ISD::VECTOR_SHUFFLE: {
       // TODO: Generalize NumOps support.
       if (!IsSplat && NumOps == 2 &&
@@ -61772,7 +61819,7 @@ static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
     if (!getTargetShuffleInputs(peekThroughBitcasts(Op), Src, Mask, DAG) ||
         Src.size() != 1 || Src[0].getValueSizeInBits() != VT.getSizeInBits() ||
         !scaleShuffleMaskElts(NumElts, Mask, ScaledMask) ||
-        !is128BitLaneRepeatedShuffleMask(VT, ScaledMask, RepeatedMask) ||
+        !isRepeatedTargetShuffleMask(128, VT, ScaledMask, RepeatedMask) ||
         !isInRange(RepeatedMask[M & 1], 0, 2))
       return false;
     Op = DAG.getBitcast(VT, Src[0]);
