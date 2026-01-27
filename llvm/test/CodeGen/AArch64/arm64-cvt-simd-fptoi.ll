@@ -546,15 +546,13 @@ define double @fcvtau_dd_round_simd(double %a) {
 define double @fcvtns_ds_roundeven_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_ds_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtns x8, s0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_ds_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    fcvtns d0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = fptosi float %r to i64
@@ -565,15 +563,13 @@ define double @fcvtns_ds_roundeven_simd(float %a) {
 define float @fcvtns_sd_roundeven_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_sd_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs w8, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtns w8, d0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_sd_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzs s0, d0
+; CHECK-NEXT:    fcvtns s0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = fptosi double %r to i32
@@ -584,14 +580,12 @@ define float @fcvtns_sd_roundeven_simd(double %a) {
 define float @fcvtns_ss_roundeven_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_ss_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtns s0, s0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_ss_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    fcvtns s0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = fptosi float %r to i32
@@ -602,14 +596,12 @@ define float @fcvtns_ss_roundeven_simd(float %a) {
 define double @fcvtns_dd_roundeven_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_dd_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs d0, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtns d0, d0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_dd_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    fcvtns d0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = fptosi double %r to i64
@@ -621,15 +613,13 @@ define double @fcvtns_dd_roundeven_simd(double %a) {
 define double @fcvtnu_ds_roundeven_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_ds_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu x8, s0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_ds_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    fcvtnu d0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = fptoui float %r to i64
@@ -640,15 +630,13 @@ define double @fcvtnu_ds_roundeven_simd(float %a) {
 define float @fcvtnu_sd_roundeven_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_sd_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu w8, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu w8, d0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_sd_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu s0, d0
+; CHECK-NEXT:    fcvtnu s0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = fptoui double %r to i32
@@ -659,14 +647,12 @@ define float @fcvtnu_sd_roundeven_simd(double %a) {
 define float @fcvtnu_ss_roundeven_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_ss_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu s0, s0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_ss_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu s0, s0
+; CHECK-NEXT:    fcvtnu s0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = fptoui float %r to i32
@@ -677,14 +663,12 @@ define float @fcvtnu_ss_roundeven_simd(float %a) {
 define double @fcvtnu_dd_roundeven_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_dd_roundeven_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu d0, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu d0, d0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_dd_roundeven_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    fcvtnu d0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = fptoui double %r to i64
@@ -1493,15 +1477,13 @@ define double @fcvtau_dd_simd(double %a) {
 define float @fcvtns_sh_simd(half %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_sh_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn h0, h0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs w8, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtns w8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_sh_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn h0, h0
-; CHECK-NEXT:    fcvtzs s0, h0
+; CHECK-NEXT:    fcvtns s0, h0
 ; CHECK-NEXT:    ret
   %r = call half @llvm.roundeven.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
@@ -1512,15 +1494,13 @@ define float @fcvtns_sh_simd(half %a) {
 define double @fcvtns_dh_simd(half %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_dh_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn h0, h0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtns x8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_dh_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn h0, h0
-; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    fcvtns d0, h0
 ; CHECK-NEXT:    ret
   %r = call half @llvm.roundeven.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
@@ -1531,15 +1511,13 @@ define double @fcvtns_dh_simd(half %a) {
 define double @fcvtns_ds_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_ds_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtns x8, s0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_ds_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    fcvtns d0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
@@ -1550,15 +1528,13 @@ define double @fcvtns_ds_simd(float %a) {
 define float @fcvtns_sd_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_sd_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs w8, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtns w8, d0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_sd_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzs s0, d0
+; CHECK-NEXT:    fcvtns s0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
@@ -1569,14 +1545,12 @@ define float @fcvtns_sd_simd(double %a) {
 define float @fcvtns_ss_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_ss_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtns s0, s0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_ss_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    fcvtns s0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
@@ -1587,14 +1561,12 @@ define float @fcvtns_ss_simd(float %a) {
 define double @fcvtns_dd_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtns_dd_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzs d0, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtns d0, d0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtns_dd_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    fcvtns d0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
@@ -1605,15 +1577,13 @@ define double @fcvtns_dd_simd(double %a) {
 define float @fcvtnu_sh_simd(half %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_sh_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn h0, h0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu w8, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu w8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_sh_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn h0, h0
-; CHECK-NEXT:    fcvtzu s0, h0
+; CHECK-NEXT:    fcvtnu s0, h0
 ; CHECK-NEXT:    ret
   %r = call half @llvm.roundeven.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
@@ -1624,15 +1594,13 @@ define float @fcvtnu_sh_simd(half %a) {
 define double @fcvtnu_dh_simd(half %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_dh_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn h0, h0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu x8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_dh_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn h0, h0
-; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    fcvtnu d0, h0
 ; CHECK-NEXT:    ret
   %r = call half @llvm.roundeven.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
@@ -1643,15 +1611,13 @@ define double @fcvtnu_dh_simd(half %a) {
 define double @fcvtnu_ds_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_ds_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu x8, s0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_ds_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    fcvtnu d0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
@@ -1662,15 +1628,13 @@ define double @fcvtnu_ds_simd(float %a) {
 define float @fcvtnu_sd_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_sd_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu w8, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu w8, d0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_sd_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu s0, d0
+; CHECK-NEXT:    fcvtnu s0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
@@ -1681,14 +1645,12 @@ define float @fcvtnu_sd_simd(double %a) {
 define float @fcvtnu_ss_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_ss_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn s0, s0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu s0, s0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_ss_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu s0, s0
+; CHECK-NEXT:    fcvtnu s0, s0
 ; CHECK-NEXT:    ret
   %r = call float @llvm.roundeven.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
@@ -1699,14 +1661,12 @@ define float @fcvtnu_ss_simd(float %a) {
 define double @fcvtnu_dd_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtnu_dd_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    frintn d0, d0
-; CHECK-NOFPRCVT-NEXT:    fcvtzu d0, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtnu d0, d0
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtnu_dd_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    fcvtnu d0, d0
 ; CHECK-NEXT:    ret
   %r = call double @llvm.roundeven.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
