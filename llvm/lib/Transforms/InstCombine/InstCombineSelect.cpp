@@ -501,7 +501,7 @@ static Instruction *foldSelectIntrinsicUnary(SelectInst &SI,
 
   if (match(TrueV, m_Intrinsic<ID>(m_Value(TV))) &&
       match(FalseV, m_Intrinsic<ID>(m_Value(FV)))) {
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV);
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
     Instruction *NewCall =
         Builder.CreateIntrinsic(ID, {NewSel->getType()}, {NewSel});
     return NewCall;
@@ -520,7 +520,7 @@ foldSelectIntrinsicBinary(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
   if (match(TrueV, m_Intrinsic<ID>(m_Value(TV), m_ConstantInt(TZ))) &&
       match(FalseV, m_Intrinsic<ID>(m_Value(FV), m_ConstantInt(FZ))) &&
       TZ == FZ) {
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV);
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
     Instruction *NewCall =
         Builder.CreateIntrinsic(ID, {NewSel->getType()}, {NewSel, TZ});
     return NewCall;
