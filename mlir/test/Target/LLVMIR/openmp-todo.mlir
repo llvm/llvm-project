@@ -432,6 +432,17 @@ llvm.func @teams_private(%x : !llvm.ptr) {
 
 // -----
 
+llvm.func @teams_num_teams_multi_dim(%lb : i32, %ub : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause num_teams with multi-dimensional values in omp.teams operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
+  omp.teams num_teams(to %ub, %ub, %ub : i32, i32, i32) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @wsloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
