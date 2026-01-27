@@ -276,8 +276,6 @@ struct ConstraintTy {
   SmallVector<int64_t, 8> Coefficients;
   SmallVector<ConditionTy, 2> Preconditions;
 
-  SmallVector<SmallVector<int64_t, 8>> ExtraInfo;
-
   bool IsSigned = false;
 
   ConstraintTy() = default;
@@ -399,13 +397,9 @@ private:
 struct DecompEntry {
   int64_t Coefficient;
   Value *Variable;
-  /// True if the variable is known positive in the current constraint.
-  bool IsKnownNonNegative;
 
-  DecompEntry(int64_t Coefficient, Value *Variable,
-              bool IsKnownNonNegative = false)
-      : Coefficient(Coefficient), Variable(Variable),
-        IsKnownNonNegative(IsKnownNonNegative) {}
+  DecompEntry(int64_t Coefficient, Value *Variable)
+      : Coefficient(Coefficient), Variable(Variable) {}
 };
 
 /// Represents an Offset + Coefficient1 * Variable1 + ... decomposition.
@@ -414,9 +408,7 @@ struct Decomposition {
   SmallVector<DecompEntry, 3> Vars;
 
   Decomposition(int64_t Offset) : Offset(Offset) {}
-  Decomposition(Value *V, bool IsKnownNonNegative = false) {
-    Vars.emplace_back(1, V, IsKnownNonNegative);
-  }
+  Decomposition(Value *V) { Vars.emplace_back(1, V); }
   Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
       : Offset(Offset), Vars(Vars) {}
 
@@ -596,7 +588,7 @@ static Decomposition decompose(Value *V,
     if (auto *PHI = dyn_cast<PHINode>(V)) {
       auto It = State.PtrInductionPHIInfoMap.find(PHI);
       if (It == State.PtrInductionPHIInfoMap.end())
-        return {V, false};
+        return V;
 
       assert(PHI->getNumIncomingValues() == 2 &&
              "Only PHI with two operands is supported");
@@ -625,8 +617,6 @@ static Decomposition decompose(Value *V,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
-  bool IsKnownNonNegative = false;
-
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -640,7 +630,6 @@ static Decomposition decompose(Value *V,
       V = Op0;
     else if (match(V, m_NNegZExt(m_Value(Op0)))) {
       V = Op0;
-      IsKnownNonNegative = true;
     } else if (match(V, m_NSWTrunc(m_Value(Op0)))) {
       if (Op0->getType()->getScalarSizeInBits() <= 64)
         V = Op0;
@@ -649,7 +638,7 @@ static Decomposition decompose(Value *V,
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
-      return {V, IsKnownNonNegative};
+      return V;
     }
 
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
@@ -657,7 +646,7 @@ static Decomposition decompose(Value *V,
       auto ResB = decompose(Op1, Preconditions, IsSigned, State);
       if (!ResA.sub(ResB))
         return ResA;
-      return {V, IsKnownNonNegative};
+      return V;
     }
 
     ConstantInt *CI;
@@ -665,7 +654,7 @@ static Decomposition decompose(Value *V,
       auto Result = decompose(Op0, Preconditions, IsSigned, State);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
-      return {V, IsKnownNonNegative};
+      return V;
     }
 
     // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
@@ -677,11 +666,11 @@ static Decomposition decompose(Value *V,
         auto Result = decompose(Op0, Preconditions, IsSigned, State);
         if (!Result.mul(int64_t(1) << Shift))
           return Result;
-        return {V, IsKnownNonNegative};
+        return V;
       }
     }
 
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -692,7 +681,6 @@ static Decomposition decompose(Value *V,
 
   Value *Op0;
   while (match(V, m_ZExt(m_Value(Op0)))) {
-    IsKnownNonNegative = true;
     V = Op0;
   }
   if (match(V, m_SExt(m_Value(Op0)))) {
@@ -715,7 +703,7 @@ static Decomposition decompose(Value *V,
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
@@ -725,7 +713,7 @@ static Decomposition decompose(Value *V,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
     if (auto Decomp = MergeResults(Op0, CI, true))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
@@ -738,23 +726,23 @@ static Decomposition decompose(Value *V,
 
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   // Decompose or as an add if there are no common bits between the operands.
   if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI)))) {
     if (auto Decomp = MergeResults(Op0, CI, IsSigned))
       return *Decomp;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
-      return {V, IsKnownNonNegative};
+      return V;
     auto Result = decompose(Op1, Preconditions, IsSigned, State);
     if (!Result.mul(int64_t{1} << CI->getSExtValue()))
       return Result;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
@@ -762,7 +750,7 @@ static Decomposition decompose(Value *V,
     auto Result = decompose(Op1, Preconditions, IsSigned, State);
     if (!Result.mul(CI->getSExtValue()))
       return Result;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1)))) {
@@ -770,10 +758,10 @@ static Decomposition decompose(Value *V,
     auto ResB = decompose(Op1, Preconditions, IsSigned, State);
     if (!ResA.sub(ResB))
       return ResA;
-    return {V, IsKnownNonNegative};
+    return V;
   }
 
-  return {V, IsKnownNonNegative};
+  return V;
 }
 
 ConstraintTy
@@ -866,24 +854,14 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   ConstraintTy Res(
       SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
       IsSigned, IsEq, IsNe);
-  // Collect variables that are known to be positive in all uses in the
-  // constraint.
-  SmallDenseMap<Value *, bool> KnownNonNegativeVariables;
   auto &R = Res.Coefficients;
-  for (const auto &KV : VariablesA) {
+  for (const auto &KV : VariablesA)
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
-    auto I =
-        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
-    I.first->second &= KV.IsKnownNonNegative;
-  }
 
   for (const auto &KV : VariablesB) {
     auto &Coeff = R[GetOrAddIndex(KV.Variable)];
     if (SubOverflow(Coeff, KV.Coefficient, Coeff))
       return {};
-    auto I =
-        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
-    I.first->second &= KV.IsKnownNonNegative;
   }
 
   int64_t OffsetSum;
@@ -906,15 +884,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     NewIndexMap.erase(RemovedV);
   }
 
-  // Add extra constraints for variables that are known positive.
-  for (auto &KV : KnownNonNegativeVariables) {
-    if (!KV.second ||
-        (!Value2Index.contains(KV.first) && !NewIndexMap.contains(KV.first)))
-      continue;
-    auto &C = Res.ExtraInfo.emplace_back(
-        Value2Index.size() + NewVariables.size() + 1, 0);
-    C[GetOrAddIndex(KV.first)] = -1;
-  }
   return Res;
 }
 
@@ -1993,17 +1962,6 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   }
 
   auto &CSToUse = Info.getCS(R.IsSigned);
-
-  // If there was extra information collected during decomposition, apply
-  // it now and remove it immediately once we are done with reasoning
-  // about the constraint.
-  for (auto &Row : R.ExtraInfo)
-    CSToUse.addVariableRow(Row);
-  llvm::scope_exit InfoRestorer([&]() {
-    for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
-      CSToUse.popLastConstraint();
-  });
-
   if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
     if (!DebugCounter::shouldExecute(EliminatedCounter))
       return std::nullopt;
