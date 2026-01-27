@@ -192,3 +192,33 @@ int __attribute__((target("default"))) BadOutOfLine::foo(int) { return 1; }
 // expected-note@-4 {{member declaration nearly matches}}
 // expected-note@-4 {{member declaration nearly matches}}
 int __attribute__((target("arch=atom"))) BadOutOfLine::foo(int) { return 1; }
+
+namespace gh115317 {
+  struct S1 {
+    virtual void mv();
+  };
+  // expected-error@+2 {{multiversioned functions do not yet support virtual functions}}
+  __attribute__((target_clones("arch=ivybridge", "default")))
+  void S1::mv() {}
+
+  struct S2 {
+    virtual void mv();
+  };
+  // expected-error@+2 {{multiversioned functions do not yet support virtual functions}}
+  __attribute__((cpu_dispatch(ivybridge, generic)))
+  void S2::mv() {}
+
+  struct S3 {
+    virtual void mv();
+  };
+  // expected-error@+2 {{multiversioned functions do not yet support virtual functions}}
+  __attribute__((target("default")))
+  void S3::mv() {}
+
+  struct S4 {
+    virtual void mv();
+  };
+  // expected-error@+2 {{multiversioned functions do not yet support virtual functions}}
+  __attribute__((cpu_specific(ivybridge)))
+  void S4::mv() {}
+}

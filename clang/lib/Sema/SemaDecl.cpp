@@ -11492,6 +11492,11 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     return Diag(NoSupportDiagIDAt.first, NoSupportDiagIDAt.second)
            << FuncTemplates;
 
+  if (const auto *OldCXXFD = dyn_cast_or_null<CXXMethodDecl>(OldFD))
+    if (OldCXXFD->isVirtual())
+      return Diag(NoSupportDiagIDAt.first, NoSupportDiagIDAt.second)
+             << VirtFuncs;
+
   if (const auto *NewCXXFD = dyn_cast<CXXMethodDecl>(NewFD)) {
     if (NewCXXFD->isVirtual())
       return Diag(NoSupportDiagIDAt.first, NoSupportDiagIDAt.second)
