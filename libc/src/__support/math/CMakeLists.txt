@@ -1286,7 +1286,7 @@ add_header_library(
     libc.src.__support.macros.optimization
 )
 
-add_header_library (
+add_header_library(
   sinhf
   HDRS
     sinhf.h
