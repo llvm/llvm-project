@@ -244,6 +244,8 @@ int main(int argc, char **argv) {
 #pragma omp task threadset(omp_team)
   foo();
 
+#pragma omp task transparent shared(x)
+#pragma omp task transparent(omp_export) shared(x)
 #pragma omp task transparent
 #pragma omp task transparent(omp_not_impex)
 #pragma omp task transparent(omp_import)
@@ -272,6 +274,8 @@ int main(int argc, char **argv) {
   // CHECK60: #pragma omp task threadset(omp_pool)
   // CHECK60: #pragma omp task threadset(omp_team)
   // CHECK60-NEXT: foo();
+  // CHECK60: #pragma omp task transparent(omp_impex) shared(x)
+  // CHECK60: #pragma omp task transparent(omp_export) shared(x)
   // CHECK60: #pragma omp task transparent(omp_impex)
   // CHECK60: #pragma omp task transparent(omp_not_impex)
   // CHECK60-NEXT: #pragma omp task transparent(omp_import)
