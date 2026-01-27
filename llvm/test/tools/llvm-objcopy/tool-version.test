@@ -12,7 +12,7 @@
 
 # RUN: llvm-extract-bundle-entry --version | FileCheck %s
 # RUN: llvm-extract-bundle-entry -V | FileCheck %s
-#
+
 # OBJCOPY-DAG: {{ version }}
 # OBJCOPY-DAG: GNU objcopy
 

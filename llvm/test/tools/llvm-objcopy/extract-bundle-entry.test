@@ -24,7 +24,9 @@
 # EXTRACT_BUNDLE_ENTRY-NEXT:        global_store_dword v[0:1], v2, off                         // 000000001960: DC708000 007F0200
 # EXTRACT_BUNDLE_ENTRY-NEXT:        s_endpgm                                                   // 000000001968: BF810000
 
-# RUN: llvm-extract-bundle-entry 2>&1 | \
+# RUN: llvm-extract-bundle-entry -help 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_HELP
+# RUN: not llvm-extract-bundle-entry 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=EXTRACT_BUNDLE_ENTRY_HELP
 # EXTRACT_BUNDLE_ENTRY_HELP: OVERVIEW: llvm-extract-bundle-entry tool
 # EXTRACT_BUNDLE_ENTRY_HELP: USAGE: llvm-extract-bundle-entry URI
