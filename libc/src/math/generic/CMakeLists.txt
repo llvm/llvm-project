@@ -1777,8 +1777,7 @@ add_entrypoint_object(
   HDRS
     ../ilogbf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ilogbf128
 )
 
 add_entrypoint_object(

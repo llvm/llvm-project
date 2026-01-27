@@ -135,6 +135,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                                 float128(24), &exponent));
   EXPECT_EQ(exponent, 5);
 
+  EXPECT_EQ(3, LIBC_NAMESPACE::shared::ilogbf128(float128(8.0)));
   ASSERT_FP_EQ(float128(8 << 5),
                LIBC_NAMESPACE::shared::ldexpf128(float128(8), 5));
   ASSERT_FP_EQ(float128(-1 * (8 << 5)),
