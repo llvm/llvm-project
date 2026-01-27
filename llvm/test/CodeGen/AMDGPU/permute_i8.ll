@@ -3864,9 +3864,9 @@ define hidden void @trunc_vector(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 }
 
 ; Should produce a v_perm instead of shift/and/or
-define amdgpu_kernel void @any_extend_to_perm(i8 %0, <4 x i8> %1) {
+define amdgpu_kernel void @any_extend_to_perm(i8 %arg, <4 x i8> %arg1) {
 ; GFX10-LABEL: any_extend_to_perm:
-; GFX10:       ; %bb.0: ; %.lr.ph
+; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0xc0c0006
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
@@ -3879,7 +3879,7 @@ define amdgpu_kernel void @any_extend_to_perm(i8 %0, <4 x i8> %1) {
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: any_extend_to_perm:
-; GFX9:       ; %bb.0: ; %.lr.ph
+; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0xc0c0006
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3891,375 +3891,63 @@ define amdgpu_kernel void @any_extend_to_perm(i8 %0, <4 x i8> %1) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    ds_write_b32 v1, v0
 ; GFX9-NEXT:    s_endpgm
-.lr.ph:
-  %2 = insertelement <4 x i8> %1, i8 %0, i64 3
-  store <4 x i8> %2, ptr addrspace(3) null, align 4
+bb:
+  %insertelement = insertelement <4 x i8> %arg1, i8 %arg, i64 3
+  store <4 x i8> %insertelement, ptr addrspace(3) null, align 4
   ret void
 }
 
 ; Similar to above to but should produce a series of v_perms with mask reuse. This was reduced from CK-provided IR
-define amdgpu_kernel void @more_any_extend_to_perm(i8 %0, i8 %1, i8 %2, i8 %3, i8 %4, i8 %5, i8 %6, i8 %7, i8 %8, i8 %9, i8 %10, i8 %11, i8 %12, i8 %13, ptr addrspace(3) %14, ptr addrspace(3) %15) {
+define amdgpu_kernel void @more_any_extend_to_perm(i8 %arg, <4 x i8> %arg1, i8 %arg2, ptr addrspace(3) %arg3, ptr addrspace(3) %arg4) {
 ; GFX10-LABEL: more_any_extend_to_perm:
-; GFX10:       ; %bb.0: ; %.lr.ph
+; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX10-NEXT:    s_load_dwordx2 s[14:15], s[4:5], 0x34
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xc0c0004
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0xc0c0005
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0xc0c0204
-; GFX10-NEXT:    v_mov_b32_e32 v2, 0xc0c0104
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xc0c0304
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0xc0c0104
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v5, s1, s0, v3
-; GFX10-NEXT:    v_perm_b32 v6, s0, s0, 0xc0c0306
-; GFX10-NEXT:    v_perm_b32 v7, s0, s1, v4
-; GFX10-NEXT:    v_perm_b32 v8, s0, s1, v2
-; GFX10-NEXT:    v_perm_b32 v9, s0, s0, 0xc0c0304
-; GFX10-NEXT:    v_perm_b32 v10, s0, s0, 0xc0c0005
-; GFX10-NEXT:    v_perm_b32 v11, s1, s0, v0
-; GFX10-NEXT:    v_perm_b32 v12, s0, s0, 0xc0c0204
-; GFX10-NEXT:    v_perm_b32 v13, s0, s0, 0xc0c0107
-; GFX10-NEXT:    v_perm_b32 v14, s0, s0, 0xc0c0007
-; GFX10-NEXT:    v_perm_b32 v15, s0, s0, 0xc0c0106
-; GFX10-NEXT:    v_perm_b32 v16, s0, s1, v0
-; GFX10-NEXT:    v_perm_b32 v17, s0, s0, 0xc0c0104
-; GFX10-NEXT:    v_perm_b32 v18, s0, s0, 0xc0c0006
-; GFX10-NEXT:    v_perm_b32 v19, s0, s0, 0xc0c0305
-; GFX10-NEXT:    v_perm_b32 v20, s0, s0, 0xc0c0205
-; GFX10-NEXT:    v_mov_b32_e32 v3, s14
-; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
-; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
-; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v7
-; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 16, v8
-; GFX10-NEXT:    v_mov_b32_e32 v8, s15
-; GFX10-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX10-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; GFX10-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX10-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX10-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX10-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX10-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX10-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX10-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX10-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX10-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX10-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX10-NEXT:    s_lshr_b32 s5, s0, 8
-; GFX10-NEXT:    s_lshr_b32 s12, s0, 16
-; GFX10-NEXT:    s_lshr_b32 s6, s0, 24
-; GFX10-NEXT:    s_lshr_b32 s4, s1, 8
-; GFX10-NEXT:    s_lshr_b32 s9, s1, 16
-; GFX10-NEXT:    s_lshr_b32 s11, s1, 24
-; GFX10-NEXT:    s_lshr_b32 s10, s2, 8
-; GFX10-NEXT:    s_lshr_b32 s8, s2, 16
-; GFX10-NEXT:    s_lshr_b32 s7, s2, 24
-; GFX10-NEXT:    s_lshr_b32 s15, s3, 8
-; GFX10-NEXT:    s_mov_b32 s14, 1
-; GFX10-NEXT:    s_mov_b32 s13, s0
-; GFX10-NEXT:  .LBB76_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_perm_b32 v21, s12, s0, v0
-; GFX10-NEXT:    v_perm_b32 v22, s11, s0, v0
-; GFX10-NEXT:    v_perm_b32 v23, s15, s0, v0
-; GFX10-NEXT:    v_perm_b32 v24, s10, s0, v0
-; GFX10-NEXT:    v_perm_b32 v25, s13, s0, v0
-; GFX10-NEXT:    v_perm_b32 v26, s9, s0, v0
-; GFX10-NEXT:    v_perm_b32 v27, s8, s0, v0
-; GFX10-NEXT:    v_perm_b32 v28, s6, s0, v0
-; GFX10-NEXT:    v_perm_b32 v29, s14, s0, v0
-; GFX10-NEXT:    v_perm_b32 v30, s3, s0, v0
-; GFX10-NEXT:    v_perm_b32 v31, s2, s0, v0
-; GFX10-NEXT:    v_perm_b32 v32, s13, s0, v2
-; GFX10-NEXT:    v_perm_b32 v33, s7, s0, v0
-; GFX10-NEXT:    v_perm_b32 v34, s5, s0, v0
-; GFX10-NEXT:    v_perm_b32 v35, s4, s0, v0
-; GFX10-NEXT:    v_perm_b32 v36, s1, s0, v0
-; GFX10-NEXT:    v_or_b32_e32 v21, v21, v4
-; GFX10-NEXT:    v_or_b32_e32 v22, v22, v5
-; GFX10-NEXT:    v_or_b32_e32 v23, v23, v6
-; GFX10-NEXT:    s_mov_b32 s13, 0
-; GFX10-NEXT:    s_mov_b32 s1, 0
-; GFX10-NEXT:    s_mov_b32 s6, 0
-; GFX10-NEXT:    s_mov_b32 s10, 0
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s2, 0
-; GFX10-NEXT:    s_mov_b32 s8, 0
-; GFX10-NEXT:    s_mov_b32 s15, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0
-; GFX10-NEXT:    s_mov_b32 s3, 0
-; GFX10-NEXT:    s_mov_b32 s9, 0
-; GFX10-NEXT:    s_mov_b32 s11, 0
-; GFX10-NEXT:    s_mov_b32 s7, 0
-; GFX10-NEXT:    s_mov_b32 s14, 0
-; GFX10-NEXT:    s_mov_b32 s12, 0
-; GFX10-NEXT:    v_or_b32_e32 v24, v24, v7
-; GFX10-NEXT:    v_or_b32_e32 v25, v25, v9
-; GFX10-NEXT:    v_or_b32_e32 v26, v26, v10
-; GFX10-NEXT:    v_or_b32_e32 v27, v27, v11
-; GFX10-NEXT:    v_or_b32_e32 v28, v28, v12
-; GFX10-NEXT:    v_or_b32_e32 v29, v29, v13
-; GFX10-NEXT:    v_or_b32_e32 v30, v30, v14
-; GFX10-NEXT:    v_or_b32_e32 v31, v31, v15
-; GFX10-NEXT:    v_or_b32_e32 v32, v32, v16
-; GFX10-NEXT:    v_or_b32_e32 v33, v33, v17
-; GFX10-NEXT:    v_or_b32_e32 v34, v34, v18
-; GFX10-NEXT:    v_or_b32_e32 v35, v35, v19
-; GFX10-NEXT:    v_or_b32_e32 v36, v36, v20
-; GFX10-NEXT:    ds_write_b32 v1, v21
-; GFX10-NEXT:    ds_write_b32 v3, v22
-; GFX10-NEXT:    ds_write_b32 v1, v23
-; GFX10-NEXT:    ds_write_b32 v8, v24
-; GFX10-NEXT:    ds_write_b32 v3, v25
-; GFX10-NEXT:    ds_write_b32 v1, v26
-; GFX10-NEXT:    ds_write_b32 v3, v27
-; GFX10-NEXT:    ds_write_b32 v1, v28
-; GFX10-NEXT:    ds_write_b32 v8, v29
-; GFX10-NEXT:    ds_write_b32 v3, v30
-; GFX10-NEXT:    ds_write_b32 v1, v31
-; GFX10-NEXT:    ds_write_b32 v3, v32
-; GFX10-NEXT:    ds_write_b32 v1, v33
-; GFX10-NEXT:    ds_write_b32 v3, v34
-; GFX10-NEXT:    ds_write_b32 v8, v35
-; GFX10-NEXT:    ds_write_b32 v1, v36
-; GFX10-NEXT:    s_cbranch_vccnz .LBB76_1
-; GFX10-NEXT:  ; %bb.2: ; %DummyReturnBlock
+; GFX10-NEXT:    v_perm_b32 v2, s6, s7, v0
+; GFX10-NEXT:    v_perm_b32 v0, s0, s7, v0
+; GFX10-NEXT:    v_perm_b32 v3, s0, s7, v1
+; GFX10-NEXT:    v_perm_b32 v1, s6, s7, v1
+; GFX10-NEXT:    v_mov_b32_e32 v4, s1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX10-NEXT:    v_mov_b32_e32 v5, s2
+; GFX10-NEXT:    v_or_b32_e32 v2, v3, v2
+; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX10-NEXT:    ds_write_b32 v4, v2
+; GFX10-NEXT:    ds_write_b32 v5, v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: more_any_extend_to_perm:
-; GFX9:       ; %bb.0: ; %.lr.ph
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x34
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0xc0c0004
-; GFX9-NEXT:    v_mov_b32_e32 v9, 0xc0c0005
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0xc0c0306
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xc0c0304
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0xc0c0104
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v5, s1
-; GFX9-NEXT:    v_mov_b32_e32 v11, 0xc0c0204
-; GFX9-NEXT:    v_mov_b32_e32 v7, s1
-; GFX9-NEXT:    v_mov_b32_e32 v6, 0xc0c0104
-; GFX9-NEXT:    v_mov_b32_e32 v8, 0xc0c0304
-; GFX9-NEXT:    v_mov_b32_e32 v12, 0xc0c0107
-; GFX9-NEXT:    v_mov_b32_e32 v13, 0xc0c0007
-; GFX9-NEXT:    v_mov_b32_e32 v14, 0xc0c0106
-; GFX9-NEXT:    v_mov_b32_e32 v15, s1
-; GFX9-NEXT:    v_mov_b32_e32 v17, 0xc0c0006
-; GFX9-NEXT:    v_mov_b32_e32 v18, 0xc0c0305
-; GFX9-NEXT:    v_mov_b32_e32 v19, 0xc0c0205
-; GFX9-NEXT:    v_perm_b32 v2, s1, v0, v9
-; GFX9-NEXT:    v_perm_b32 v4, s0, s0, v4
-; GFX9-NEXT:    v_perm_b32 v5, s0, v5, v11
-; GFX9-NEXT:    v_perm_b32 v7, s0, v7, v6
-; GFX9-NEXT:    v_perm_b32 v8, s0, s0, v8
-; GFX9-NEXT:    v_perm_b32 v9, s0, s0, v9
-; GFX9-NEXT:    v_perm_b32 v10, s1, v0, v1
-; GFX9-NEXT:    v_perm_b32 v11, s0, s0, v11
-; GFX9-NEXT:    v_perm_b32 v12, s0, s0, v12
-; GFX9-NEXT:    v_perm_b32 v13, s0, s0, v13
-; GFX9-NEXT:    v_perm_b32 v14, s0, s0, v14
-; GFX9-NEXT:    v_perm_b32 v15, s0, v15, v1
-; GFX9-NEXT:    v_perm_b32 v16, s0, s0, v6
-; GFX9-NEXT:    v_perm_b32 v17, s0, s0, v17
-; GFX9-NEXT:    v_perm_b32 v18, s0, s0, v18
-; GFX9-NEXT:    v_perm_b32 v19, s0, s0, v19
-; GFX9-NEXT:    s_lshr_b32 s5, s0, 8
-; GFX9-NEXT:    s_lshr_b32 s12, s0, 16
-; GFX9-NEXT:    s_lshr_b32 s6, s0, 24
-; GFX9-NEXT:    s_lshr_b32 s4, s1, 8
-; GFX9-NEXT:    s_lshr_b32 s9, s1, 16
-; GFX9-NEXT:    s_lshr_b32 s13, s1, 24
-; GFX9-NEXT:    s_lshr_b32 s10, s2, 8
-; GFX9-NEXT:    s_lshr_b32 s8, s2, 16
-; GFX9-NEXT:    s_lshr_b32 s7, s2, 24
-; GFX9-NEXT:    s_lshr_b32 s14, s3, 8
-; GFX9-NEXT:    s_mov_b32 s11, 1
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s7
+; GFX9-NEXT:    v_perm_b32 v4, s6, v2, v1
+; GFX9-NEXT:    v_perm_b32 v1, s0, v2, v1
+; GFX9-NEXT:    v_perm_b32 v3, s0, v2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX9-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX9-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; GFX9-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX9-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX9-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX9-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX9-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX9-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX9-NEXT:    s_and_b64 vcc, exec, -1
-; GFX9-NEXT:    v_mov_b32_e32 v20, s16
-; GFX9-NEXT:    v_mov_b32_e32 v21, s17
-; GFX9-NEXT:    v_mov_b32_e32 v22, s0
-; GFX9-NEXT:  .LBB76_1: ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    v_perm_b32 v23, s12, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v2
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    v_perm_b32 v23, s13, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v4
-; GFX9-NEXT:    ds_write_b32 v20, v23
-; GFX9-NEXT:    v_perm_b32 v23, s14, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v5
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    v_perm_b32 v23, s10, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v7
-; GFX9-NEXT:    ds_write_b32 v21, v23
-; GFX9-NEXT:    v_perm_b32 v23, s0, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v8
-; GFX9-NEXT:    ds_write_b32 v20, v23
-; GFX9-NEXT:    v_perm_b32 v23, s9, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v9
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    v_perm_b32 v23, s8, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v10
-; GFX9-NEXT:    ds_write_b32 v20, v23
-; GFX9-NEXT:    v_perm_b32 v23, s6, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v11
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    v_perm_b32 v23, s11, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v12
-; GFX9-NEXT:    ds_write_b32 v21, v23
-; GFX9-NEXT:    v_perm_b32 v23, s3, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v13
-; GFX9-NEXT:    ds_write_b32 v20, v23
-; GFX9-NEXT:    v_perm_b32 v23, s2, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v14
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    v_perm_b32 v23, s0, v22, v6
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v15
-; GFX9-NEXT:    ds_write_b32 v20, v23
-; GFX9-NEXT:    v_perm_b32 v23, s7, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v16
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    v_perm_b32 v23, s5, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v17
-; GFX9-NEXT:    ds_write_b32 v20, v23
-; GFX9-NEXT:    v_perm_b32 v23, s4, v0, v1
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v18
-; GFX9-NEXT:    ds_write_b32 v21, v23
-; GFX9-NEXT:    v_perm_b32 v23, s1, v0, v1
-; GFX9-NEXT:    s_mov_b32 s0, 0
-; GFX9-NEXT:    s_mov_b32 s1, 0
-; GFX9-NEXT:    s_mov_b32 s6, 0
-; GFX9-NEXT:    s_mov_b32 s10, 0
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s2, 0
-; GFX9-NEXT:    s_mov_b32 s8, 0
-; GFX9-NEXT:    s_mov_b32 s14, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0
-; GFX9-NEXT:    s_mov_b32 s3, 0
-; GFX9-NEXT:    s_mov_b32 s9, 0
-; GFX9-NEXT:    s_mov_b32 s13, 0
-; GFX9-NEXT:    s_mov_b32 s7, 0
-; GFX9-NEXT:    s_mov_b32 s11, 0
-; GFX9-NEXT:    s_mov_b32 s12, 0
-; GFX9-NEXT:    v_or_b32_e32 v23, v23, v19
-; GFX9-NEXT:    ds_write_b32 v3, v23
-; GFX9-NEXT:    s_mov_b64 vcc, vcc
-; GFX9-NEXT:    s_cbranch_vccnz .LBB76_1
-; GFX9-NEXT:  ; %bb.2: ; %DummyReturnBlock
+; GFX9-NEXT:    v_perm_b32 v0, s6, v2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v4
+; GFX9-NEXT:    v_mov_b32_e32 v4, s1
+; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    ds_write_b32 v4, v3
+; GFX9-NEXT:    ds_write_b32 v1, v0
 ; GFX9-NEXT:    s_endpgm
-.lr.ph:
-  br label %16
-
-16:                                               ; preds = %16, %.lr.ph
-  %.pn1297131 = phi i8 [ %0, %.lr.ph ], [ 0, %16 ]
-  %.pn225665 = phi i8 [ %4, %.lr.ph ], [ 0, %16 ]
-  %.pn229663 = phi i8 [ %3, %.lr.ph ], [ 0, %16 ]
-  %.pn231662 = phi i8 [ %9, %.lr.ph ], [ 0, %16 ]
-  %.pn233661 = phi i8 [ %5, %.lr.ph ], [ 0, %16 ]
-  %.pn235660 = phi i8 [ %8, %.lr.ph ], [ 0, %16 ]
-  %.pn237659 = phi i8 [ %10, %.lr.ph ], [ 0, %16 ]
-  %.pn239658 = phi i8 [ %13, %.lr.ph ], [ 0, %16 ]
-  %.pn241657 = phi i8 [ %1, %.lr.ph ], [ 0, %16 ]
-  %.pn243656 = phi i8 [ %12, %.lr.ph ], [ 0, %16 ]
-  %.pn245655 = phi i8 [ %6, %.lr.ph ], [ 0, %16 ]
-  %.pn247654 = phi i8 [ %7, %.lr.ph ], [ 0, %16 ]
-  %.pn249653 = phi i8 [ %11, %.lr.ph ], [ 0, %16 ]
-  %.pn251652 = phi i8 [ 1, %.lr.ph ], [ 0, %16 ]
-  %.pn255650 = phi i8 [ %2, %.lr.ph ], [ 0, %16 ]
-  %17 = insertelement <4 x i8> zeroinitializer, i8 %.pn255650, i64 0
-  %18 = insertelement <4 x i8> %17, i8 %0, i64 1
-  %19 = insertelement <4 x i8> %18, i8 %5, i64 2
-  %20 = insertelement <4 x i8> %19, i8 %0, i64 3
-  store <4 x i8> %20, ptr addrspace(3) null, align 4
-  %21 = insertelement <4 x i8> zeroinitializer, i8 %.pn247654, i64 0
-  %22 = insertelement <4 x i8> %21, i8 %0, i64 1
-  %23 = insertelement <4 x i8> %22, i8 %2, i64 2
-  %24 = insertelement <4 x i8> %23, i8 %3, i64 3
-  store <4 x i8> %24, ptr addrspace(3) %14, align 4
-  %25 = insertelement <4 x i8> zeroinitializer, i8 %.pn239658, i64 0
-  %26 = insertelement <4 x i8> %25, i8 %0, i64 1
-  %27 = insertelement <4 x i8> %26, i8 %0, i64 2
-  %28 = insertelement <4 x i8> %27, i8 %6, i64 3
-  store <4 x i8> %28, ptr addrspace(3) null, align 4
-  %29 = insertelement <4 x i8> zeroinitializer, i8 %.pn231662, i64 0
-  %30 = insertelement <4 x i8> %29, i8 %0, i64 1
-  %31 = insertelement <4 x i8> %30, i8 %0, i64 2
-  %32 = insertelement <4 x i8> %31, i8 %5, i64 3
-  store <4 x i8> %32, ptr addrspace(3) %15, align 4
-  %33 = insertelement <4 x i8> zeroinitializer, i8 %.pn1297131, i64 0
-  %34 = insertelement <4 x i8> %33, i8 %0, i64 1
-  %35 = insertelement <4 x i8> %34, i8 %0, i64 2
-  %36 = insertelement <4 x i8> %35, i8 %3, i64 3
-  store <4 x i8> %36, ptr addrspace(3) %14, align 4
-  %37 = insertelement <4 x i8> zeroinitializer, i8 %.pn245655, i64 0
-  %38 = insertelement <4 x i8> %37, i8 %0, i64 1
-  %39 = insertelement <4 x i8> %38, i8 %1, i64 2
-  %40 = insertelement <4 x i8> %39, i8 %0, i64 3
-  store <4 x i8> %40, ptr addrspace(3) null, align 4
-  %41 = insertelement <4 x i8> zeroinitializer, i8 %.pn237659, i64 0
-  %42 = insertelement <4 x i8> %41, i8 %0, i64 1
-  %43 = insertelement <4 x i8> %42, i8 %4, i64 2
-  %44 = insertelement <4 x i8> %43, i8 %0, i64 3
-  store <4 x i8> %44, ptr addrspace(3) %14, align 4
-  %45 = insertelement <4 x i8> zeroinitializer, i8 %.pn229663, i64 0
-  %46 = insertelement <4 x i8> %45, i8 %0, i64 1
-  %47 = insertelement <4 x i8> %46, i8 %0, i64 2
-  %48 = insertelement <4 x i8> %47, i8 %2, i64 3
-  store <4 x i8> %48, ptr addrspace(3) null, align 4
-  %49 = insertelement <4 x i8> zeroinitializer, i8 %.pn251652, i64 0
-  %50 = insertelement <4 x i8> %49, i8 %0, i64 1
-  %51 = insertelement <4 x i8> %50, i8 %3, i64 2
-  %52 = insertelement <4 x i8> %51, i8 %1, i64 3
-  store <4 x i8> %52, ptr addrspace(3) %15, align 4
-  %53 = insertelement <4 x i8> zeroinitializer, i8 %.pn243656, i64 0
-  %54 = insertelement <4 x i8> %53, i8 %0, i64 1
-  %55 = insertelement <4 x i8> %54, i8 %3, i64 2
-  %56 = insertelement <4 x i8> %55, i8 %0, i64 3
-  store <4 x i8> %56, ptr addrspace(3) %14, align 4
-  %57 = insertelement <4 x i8> zeroinitializer, i8 %.pn235660, i64 0
-  %58 = insertelement <4 x i8> %57, i8 %0, i64 1
-  %59 = insertelement <4 x i8> %58, i8 %2, i64 2
-  %60 = insertelement <4 x i8> %59, i8 %1, i64 3
-  store <4 x i8> %60, ptr addrspace(3) null, align 4
-  %61 = insertelement <4 x i8> splat (i8 1), i8 %.pn1297131, i64 0
-  %62 = insertelement <4 x i8> %61, i8 %1, i64 1
-  %63 = insertelement <4 x i8> %62, i8 %0, i64 2
-  %64 = insertelement <4 x i8> %63, i8 %4, i64 3
-  store <4 x i8> %64, ptr addrspace(3) %14, align 4
-  %65 = insertelement <4 x i8> zeroinitializer, i8 %.pn249653, i64 0
-  %66 = insertelement <4 x i8> %65, i8 %0, i64 1
-  %67 = insertelement <4 x i8> %66, i8 %0, i64 2
-  %68 = insertelement <4 x i8> %67, i8 %1, i64 3
-  store <4 x i8> %68, ptr addrspace(3) null, align 4
-  %69 = insertelement <4 x i8> zeroinitializer, i8 %.pn241657, i64 0
-  %70 = insertelement <4 x i8> %69, i8 %0, i64 1
-  %71 = insertelement <4 x i8> %70, i8 %2, i64 2
-  %72 = insertelement <4 x i8> %71, i8 %0, i64 3
-  store <4 x i8> %72, ptr addrspace(3) %14, align 4
-  %73 = insertelement <4 x i8> zeroinitializer, i8 %.pn233661, i64 0
-  %74 = insertelement <4 x i8> %73, i8 %0, i64 1
-  %75 = insertelement <4 x i8> %74, i8 %1, i64 2
-  %76 = insertelement <4 x i8> %75, i8 %3, i64 3
-  store <4 x i8> %76, ptr addrspace(3) %15, align 4
-  %77 = insertelement <4 x i8> zeroinitializer, i8 %.pn225665, i64 0
-  %78 = insertelement <4 x i8> %77, i8 %0, i64 1
-  %79 = insertelement <4 x i8> %78, i8 %1, i64 2
-  %80 = insertelement <4 x i8> %79, i8 %2, i64 3
-  store <4 x i8> %80, ptr addrspace(3) null, align 4
-  br label %16
+bb:
+  %insertelement = insertelement <4 x i8> %arg1, i8 %arg2, i64 0
+  %insertelement5 = insertelement <4 x i8> %insertelement, i8 %arg, i64 2
+  store <4 x i8> %insertelement5, ptr addrspace(3) %arg3, align 4
+  %insertelement6 = insertelement <4 x i8> %arg1, i8 %arg, i64 0
+  %insertelement7 = insertelement <4 x i8> %insertelement6, i8 %arg2, i64 2
+  store <4 x i8> %insertelement7, ptr addrspace(3) %arg4, align 4
+  ret void
 }

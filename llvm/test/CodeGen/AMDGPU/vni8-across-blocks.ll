@@ -544,14 +544,14 @@ define amdgpu_kernel void @v8i8_phi_const(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v4
 ; GFX942-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
 ; GFX942-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX942-NEXT:    v_mov_b32_e32 v0, 1
-; GFX942-NEXT:    v_mov_b32_e32 v10, 2
-; GFX942-NEXT:    v_mov_b32_e32 v9, 3
-; GFX942-NEXT:    v_mov_b32_e32 v8, 4
-; GFX942-NEXT:    v_mov_b32_e32 v1, 5
-; GFX942-NEXT:    v_mov_b32_e32 v7, 6
-; GFX942-NEXT:    v_mov_b32_e32 v6, 7
 ; GFX942-NEXT:    v_mov_b32_e32 v5, 8
+; GFX942-NEXT:    v_mov_b32_e32 v6, 7
+; GFX942-NEXT:    v_mov_b32_e32 v7, 6
+; GFX942-NEXT:    v_mov_b32_e32 v1, 5
+; GFX942-NEXT:    v_mov_b32_e32 v8, 4
+; GFX942-NEXT:    v_mov_b32_e32 v9, 3
+; GFX942-NEXT:    v_mov_b32_e32 v10, 2
+; GFX942-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX942-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v16, 24, v3

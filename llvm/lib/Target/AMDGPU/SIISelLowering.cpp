@@ -14500,6 +14500,7 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
       calculateByteProvider(SDValue(N, 0), 1, 0, 1);
   if (!BP1 || BP1->SrcOffset >= 4 || !BP1->Src)
     return SDValue();
+
   SDValue V1 = *BP1->Src;
 
   if (V0 == V1)
