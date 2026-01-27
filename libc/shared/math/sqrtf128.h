@@ -26,4 +26,4 @@ using math::sqrtf128;
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
-#endif // LLVM_LIBC_SHARED_MATH_LDEXPF128_H
+#endif // LLVM_LIBC_SHARED_MATH_SQRTF128_H
