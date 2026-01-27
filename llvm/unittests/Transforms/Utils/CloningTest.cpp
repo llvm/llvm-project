@@ -394,7 +394,7 @@ TEST(CloneLoop, CloneLoopNest) {
 
   std::unique_ptr<Module> M = parseIR(
     Context,
-    R"(define void @foo(i32* %A, i32 %ub) {
+    R"(define void @foo(ptr %A, i32 %ub) {
 entry:
   %guardcmp = icmp slt i32 0, %ub
   br i1 %guardcmp, label %for.outer.preheader, label %for.end
@@ -408,8 +408,8 @@ for.inner.preheader:
 for.inner:
   %i = phi i32 [ 0, %for.inner.preheader ], [ %inc, %for.inner ]
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i, ptr %arrayidx, align 4
   %inc = add nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %ub
   br i1 %cmp, label %for.inner, label %for.inner.exit
@@ -480,7 +480,7 @@ protected:
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(
@@ -728,10 +728,10 @@ TEST(CloneFunction, CloneEmptyFunction) {
 
 TEST(CloneFunction, CloneFunctionWithInalloca) {
   StringRef ImplAssembly = R"(
-    declare void @a(i32* inalloca(i32))
+    declare void @a(ptr inalloca(i32))
     define void @foo() {
       %a = alloca inalloca i32
-      call void @a(i32* inalloca(i32) %a)
+      call void @a(ptr inalloca(i32) %a)
       ret void
     }
     declare void @bar()
@@ -769,7 +769,7 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !5 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !4, metadata !DIExpression()), !dbg !6
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !4, metadata !DIExpression()), !dbg !6
       ret void
     }
 
@@ -813,7 +813,7 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !3 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !5, metadata !DIExpression()), !dbg !7
       ret void
     }
 
@@ -973,7 +973,7 @@ protected:
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(
         DISourceLanguageName(dwarf::DW_LANG_C99),

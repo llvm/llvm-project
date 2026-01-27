@@ -1,9 +1,5 @@
-import os
-
 import clang.cindex
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    clang.cindex.Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
 import ast

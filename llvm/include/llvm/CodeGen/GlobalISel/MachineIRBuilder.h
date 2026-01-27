@@ -56,6 +56,7 @@ struct MachineIRBuilderState {
   MDNode *PCSections = nullptr;
   /// MMRA Metadata to be set on any instruction we create.
   MDNode *MMRA = nullptr;
+  Value *DS = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -369,6 +370,7 @@ public:
     State.II = MI.getIterator();
     setPCSections(MI.getPCSections());
     setMMRAMetadata(MI.getMMRAMetadata());
+    setDeactivationSymbol(MI.getDeactivationSymbol());
   }
   /// @}
 
@@ -404,6 +406,9 @@ public:
 
   /// Set the PC sections metadata to \p MD for all the next build instructions.
   void setMMRAMetadata(MDNode *MMRA) { State.MMRA = MMRA; }
+
+  Value *getDeactivationSymbol() { return State.DS; }
+  void setDeactivationSymbol(Value *DS) { State.DS = DS; }
 
   /// Get the current instruction's MMRA metadata.
   MDNode *getMMRAMetadata() { return State.MMRA; }
@@ -2056,6 +2061,11 @@ public:
   /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
   MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTLS \p Op0, \p Src0
+  MachineInstrBuilder buildCTLS(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLS, {Dst}, {Src0});
   }
 
   /// Build and insert \p Dst = G_BSWAP \p Src0

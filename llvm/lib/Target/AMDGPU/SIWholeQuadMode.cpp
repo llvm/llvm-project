@@ -188,8 +188,9 @@ private:
 
   void markInstruction(MachineInstr &MI, char Flag,
                        std::vector<WorkItem> &Worklist);
-  void markDefs(const MachineInstr &UseMI, LiveRange &LR, Register Reg,
-                unsigned SubReg, char Flag, std::vector<WorkItem> &Worklist);
+  void markDefs(const MachineInstr &UseMI, LiveRange &LR,
+                VirtRegOrUnit VRegOrUnit, unsigned SubReg, char Flag,
+                std::vector<WorkItem> &Worklist);
   void markOperand(const MachineInstr &MI, const MachineOperand &Op, char Flag,
                    std::vector<WorkItem> &Worklist);
   void markInstructionUses(const MachineInstr &MI, char Flag,
@@ -318,8 +319,8 @@ void SIWholeQuadMode::markInstruction(MachineInstr &MI, char Flag,
 
 /// Mark all relevant definitions of register \p Reg in usage \p UseMI.
 void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
-                               Register Reg, unsigned SubReg, char Flag,
-                               std::vector<WorkItem> &Worklist) {
+                               VirtRegOrUnit VRegOrUnit, unsigned SubReg,
+                               char Flag, std::vector<WorkItem> &Worklist) {
   LLVM_DEBUG(dbgs() << "markDefs " << PrintState(Flag) << ": " << UseMI);
 
   LiveQueryResult UseLRQ = LR.Query(LIS->getInstructionIndex(UseMI));
@@ -331,8 +332,9 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
   // cover registers.
   const LaneBitmask UseLanes =
       SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
-             : (Reg.isVirtual() ? MRI->getMaxLaneMaskForVReg(Reg)
-                                : LaneBitmask::getNone());
+             : (VRegOrUnit.isVirtualReg()
+                    ? MRI->getMaxLaneMaskForVReg(VRegOrUnit.asVirtualReg())
+                    : LaneBitmask::getNone());
 
   // Perform a depth-first iteration of the LiveRange graph marking defs.
   // Stop processing of a given branch when all use lanes have been defined.
@@ -382,11 +384,11 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
       MachineInstr *MI = LIS->getInstructionFromIndex(Value->def);
       assert(MI && "Def has no defining instruction");
 
-      if (Reg.isVirtual()) {
+      if (VRegOrUnit.isVirtualReg()) {
         // Iterate over all operands to find relevant definitions
         bool HasDef = false;
         for (const MachineOperand &Op : MI->all_defs()) {
-          if (Op.getReg() != Reg)
+          if (Op.getReg() != VRegOrUnit.asVirtualReg())
             continue;
 
           // Compute lanes defined and overlap with use
@@ -453,7 +455,7 @@ void SIWholeQuadMode::markOperand(const MachineInstr &MI,
                     << " for " << MI);
   if (Reg.isVirtual()) {
     LiveRange &LR = LIS->getInterval(Reg);
-    markDefs(MI, LR, Reg, Op.getSubReg(), Flag, Worklist);
+    markDefs(MI, LR, VirtRegOrUnit(Reg), Op.getSubReg(), Flag, Worklist);
   } else {
     // Handle physical registers that we need to track; this is mostly relevant
     // for VCC, which can appear as the (implicit) input of a uniform branch,
@@ -462,7 +464,8 @@ void SIWholeQuadMode::markOperand(const MachineInstr &MI,
       LiveRange &LR = LIS->getRegUnit(Unit);
       const VNInfo *Value = LR.Query(LIS->getInstructionIndex(MI)).valueIn();
       if (Value)
-        markDefs(MI, LR, Unit, AMDGPU::NoSubRegister, Flag, Worklist);
+        markDefs(MI, LR, VirtRegOrUnit(Unit), AMDGPU::NoSubRegister, Flag,
+                 Worklist);
     }
   }
 }
@@ -1176,16 +1179,17 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
     }
   }
 
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
   MachineInstr *MI;
 
   if (SaveWQM) {
     unsigned Opcode =
         IsTerminator ? LMC.AndSaveExecTermOpc : LMC.AndSaveExecOpc;
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(Opcode), SaveWQM)
-             .addReg(LiveMaskReg);
+    MI =
+        BuildMI(MBB, Before, DL, TII->get(Opcode), SaveWQM).addReg(LiveMaskReg);
   } else {
     unsigned Opcode = IsTerminator ? LMC.AndTermOpc : LMC.AndOpc;
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(Opcode), LMC.ExecReg)
+    MI = BuildMI(MBB, Before, DL, TII->get(Opcode), LMC.ExecReg)
              .addReg(LMC.ExecReg)
              .addReg(LiveMaskReg);
   }
@@ -1197,13 +1201,14 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
 void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator Before,
                             Register SavedWQM) {
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
   MachineInstr *MI;
 
   if (SavedWQM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), LMC.ExecReg)
+    MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::COPY), LMC.ExecReg)
              .addReg(SavedWQM);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(LMC.WQMOpc), LMC.ExecReg)
+    MI = BuildMI(MBB, Before, DL, TII->get(LMC.WQMOpc), LMC.ExecReg)
              .addReg(LMC.ExecReg);
   }
 
@@ -1219,13 +1224,13 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
   assert(StrictStateNeeded == StateStrictWWM ||
          StrictStateNeeded == StateStrictWQM);
 
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
+
   if (StrictStateNeeded == StateStrictWWM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WWM),
-                 SaveOrig)
+    MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WWM), SaveOrig)
              .addImm(-1);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WQM),
-                 SaveOrig)
+    MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WQM), SaveOrig)
              .addImm(-1);
   }
   LIS->InsertMachineInstrInMaps(*MI);
@@ -1242,14 +1247,16 @@ void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
   assert(CurrentStrictState == StateStrictWWM ||
          CurrentStrictState == StateStrictWQM);
 
+  const DebugLoc &DL = MBB.findDebugLoc(Before);
+
   if (CurrentStrictState == StateStrictWWM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WWM),
-                 LMC.ExecReg)
-             .addReg(SavedOrig);
+    MI =
+        BuildMI(MBB, Before, DL, TII->get(AMDGPU::EXIT_STRICT_WWM), LMC.ExecReg)
+            .addReg(SavedOrig);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WQM),
-                 LMC.ExecReg)
-             .addReg(SavedOrig);
+    MI =
+        BuildMI(MBB, Before, DL, TII->get(AMDGPU::EXIT_STRICT_WQM), LMC.ExecReg)
+            .addReg(SavedOrig);
   }
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = NonStrictState;
@@ -1629,7 +1636,7 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   }
 
   // Insert instruction sequence at block beginning (before vector operations).
-  const DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
   const unsigned WavefrontSize = ST->getWavefrontSize();
   const unsigned Mask = (WavefrontSize << 1) - 1;
   Register CountReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);

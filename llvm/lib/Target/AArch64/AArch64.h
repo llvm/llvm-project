@@ -26,11 +26,14 @@ namespace llvm {
 class AArch64RegisterBankInfo;
 class AArch64Subtarget;
 class AArch64TargetMachine;
+enum class CodeGenOptLevel;
 class FunctionPass;
 class InstructionSelector;
+class ModulePass;
 
 FunctionPass *createAArch64DeadRegisterDefinitions();
 FunctionPass *createAArch64RedundantCopyEliminationPass();
+FunctionPass *createAArch64RedundantCondBranchPass();
 FunctionPass *createAArch64CondBrTuning();
 FunctionPass *createAArch64CompressJumpTablesPass();
 FunctionPass *createAArch64ConditionalCompares();
@@ -61,6 +64,7 @@ FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEABIPass();
 FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
+FunctionPass *createAArch64SRLTDefineSuperRegsPass();
 ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -101,6 +105,7 @@ void initializeAArch64PostSelectOptimizePass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);
+void initializeAArch64RedundantCondBranchPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptPass(PassRegistry &);
 void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
@@ -113,6 +118,7 @@ void initializeLDTLSCleanupPass(PassRegistry&);
 void initializeSMEABIPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
+void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 } // end namespace llvm

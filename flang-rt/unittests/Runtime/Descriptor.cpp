@@ -9,6 +9,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "tools.h"
 #include "gtest/gtest.h"
+#include <regex>
 
 using namespace Fortran::runtime;
 
@@ -32,8 +33,8 @@ TEST(Descriptor, FixedStride) {
   extent[0] = 8;
   descriptor.Establish(integer, four, data, 1, extent);
   ASSERT_EQ(descriptor.rank(), 1);
-  ASSERT_EQ(descriptor.Elements(), 8);
-  ASSERT_EQ(descriptor.ElementBytes(), four);
+  ASSERT_EQ(descriptor.Elements(), 8u);
+  ASSERT_EQ(descriptor.ElementBytes(), static_cast<unsigned>(four));
   ASSERT_EQ(descriptor.GetDimension(0).LowerBound(), 0);
   ASSERT_EQ(descriptor.GetDimension(0).ByteStride(), four);
   ASSERT_EQ(descriptor.GetDimension(0).Extent(), 8);
@@ -158,3 +159,124 @@ TEST(Descriptor, FixedStride) {
   EXPECT_TRUE(descriptor.IsContiguous());
   EXPECT_EQ(descriptor.FixedStride().value_or(-666), 0);
 }
+
+// The test below uses file operations that have nuances across multiple
+// platforms. Hence limit coverage by linux only unless wider coverage
+// should be required.
+#if defined(__linux__) && !defined(__ANDROID__)
+TEST(Descriptor, Dump) {
+  StaticDescriptor<4> staticDesc[2];
+  Descriptor &descriptor{staticDesc[0].descriptor()};
+  using Type = std::int32_t;
+  Type data[8][8][8];
+  constexpr int four{static_cast<int>(sizeof data[0][0][0])};
+  TypeCode integer{TypeCategory::Integer, four};
+  // Scalar
+  descriptor.Establish(integer, four, data, 0);
+  FILE *tmpf{tmpfile()};
+  ASSERT_TRUE(tmpf) << "tmpfile returned NULL";
+  auto resetTmpFile = [tmpf]() {
+    fflush(tmpf);
+    rewind(tmpf);
+    ftruncate(fileno(tmpf), 0);
+  };
+
+  auto getAddrFilteredContent = [tmpf]() -> std::string {
+    rewind(tmpf);
+    std::ostringstream content;
+    char buffer[1024];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), tmpf)) > 0) {
+      content.write(buffer, bytes_read);
+    }
+
+    return std::regex_replace(
+        std::regex_replace(content.str(), std::regex("Descriptor @.*:"),
+            "Descriptor @ [addr]:"),
+        std::regex("base_addr .*"), "base_addr [addr]");
+  };
+
+  descriptor.Dump(tmpf, /*dumpRawType=*/false);
+  // also dump as CFI type
+  descriptor.Dump(tmpf, /*dumpRawType=*/true);
+  std::string output{getAddrFilteredContent()};
+  ASSERT_STREQ(output.c_str(),
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  rank      0 (scalar)\n"
+      "  type      9 \"INTEGER(kind=4)\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n"
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  rank      0 (scalar)\n"
+      "  type      9 \"CFI_type_int32_t\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n");
+
+  // Contiguous matrix (0:7, 0:7)
+  SubscriptValue extent[3]{8, 8, 8};
+  descriptor.Establish(integer, four, data, 2, extent);
+  resetTmpFile();
+  descriptor.Dump(tmpf, /*dumpRawType=*/false);
+  output = getAddrFilteredContent();
+  ASSERT_STREQ(output.c_str(),
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  rank      2\n"
+      "  type      9 \"INTEGER(kind=4)\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n"
+      "  dim[0] lower_bound 0\n"
+      "         extent      8\n"
+      "         sm          4\n"
+      "  dim[1] lower_bound 0\n"
+      "         extent      8\n"
+      "         sm          32\n");
+
+  TypeCode real{TypeCategory::Real, four};
+  // Discontiguous real 3-D array (0:7, 0:6:2, 0:6:2)
+  descriptor.Establish(real, four, data, 3, extent);
+  descriptor.GetDimension(1).SetExtent(4);
+  descriptor.GetDimension(1).SetByteStride(8 * 2 * four);
+  descriptor.GetDimension(2).SetExtent(4);
+  descriptor.GetDimension(2).SetByteStride(8 * 8 * 2 * four);
+
+  resetTmpFile();
+  descriptor.Dump(tmpf, /*dumpRawType=*/false);
+  output = getAddrFilteredContent();
+  ASSERT_STREQ(output.c_str(),
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  rank      3\n"
+      "  type      27 \"REAL(kind=4)\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n"
+      "  dim[0] lower_bound 0\n"
+      "         extent      8\n"
+      "         sm          4\n"
+      "  dim[1] lower_bound 0\n"
+      "         extent      4\n"
+      "         sm          64\n"
+      "  dim[2] lower_bound 0\n"
+      "         extent      4\n"
+      "         sm          512\n");
+  fclose(tmpf);
+}
+#endif // defined(__linux__) && !defined(__ANDROID__)

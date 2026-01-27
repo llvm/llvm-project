@@ -14,8 +14,8 @@ struct Foo {
 // Make sure noalias is added to indirect arguments with trivially copyable types
 // if -fpass-by-value-is-noalias is provided.
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take3Foo(ptr dead_on_return noalias noundef %arg)
-// NO_NOALIAS: define{{.*}} void @_Z4take3Foo(ptr dead_on_return noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take3Foo(ptr noalias noundef dead_on_return %arg)
+// NO_NOALIAS: define{{.*}} void @_Z4take3Foo(ptr noundef dead_on_return %arg)
 void take(Foo arg) {}
 
 int G;
@@ -38,8 +38,8 @@ struct NonTrivial {
 // Make sure noalias is not added to indirect arguments that are not trivially
 // copyable even if -fpass-by-value-is-noalias is provided.
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take10NonTrivial(ptr dead_on_return noundef %arg)
-// NO_NOALIAS:   define{{.*}} void @_Z4take10NonTrivial(ptr dead_on_return noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take10NonTrivial(ptr noundef dead_on_return %arg)
+// NO_NOALIAS:   define{{.*}} void @_Z4take10NonTrivial(ptr noundef dead_on_return %arg)
 void take(NonTrivial arg) {}
 
 // Escape examples. Pointers to the objects passed to take() may escape, depending on whether a temporary copy is created or not (e.g. due to NRVO).
@@ -54,8 +54,8 @@ struct A {
 };
 A *p;
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take1A(ptr dead_on_return noalias noundef %arg)
-// NO_NOALIAS: define{{.*}} void @_Z4take1A(ptr dead_on_return noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take1A(ptr noalias noundef dead_on_return %arg)
+// NO_NOALIAS: define{{.*}} void @_Z4take1A(ptr noundef dead_on_return %arg)
 void take(A arg) {}
 
 // WITH_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(ptr dead_on_unwind noalias writable sret(%struct.A) align 1 %agg.result, ptr noundef %where)

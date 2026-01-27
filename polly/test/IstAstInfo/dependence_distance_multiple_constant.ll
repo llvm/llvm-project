@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ;        void f(int *restrict A, int *restrict B, int N) {
 ; CHECK:   #pragma minimal dependence distance: 5

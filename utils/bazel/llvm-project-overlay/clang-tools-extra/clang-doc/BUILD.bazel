@@ -28,7 +28,6 @@ cc_library(
         exclude = [
             "Generators.cpp",
             "HTMLGenerator.cpp",
-            "HTMLMustacheGenerator.cpp",
             "MDGenerator.cpp",
             "YAMLGenerator.cpp",
         ],
@@ -53,7 +52,6 @@ cc_library(
     srcs = [
         "Generators.cpp",
         "HTMLGenerator.cpp",
-        "HTMLMustacheGenerator.cpp",
         "MDGenerator.cpp",
         "YAMLGenerator.cpp",
     ],
@@ -82,6 +80,7 @@ cc_binary(
         ":lib",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
         "//clang:driver",
         "//clang:frontend",
         "//clang:tooling",

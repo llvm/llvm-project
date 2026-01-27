@@ -521,6 +521,25 @@ namespace llvm {
     static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
   };
 
+  template <> struct DenseMapInfo<clang::SourceRange> {
+    static clang::SourceRange getEmptyKey() {
+      return DenseMapInfo<clang::SourceLocation>::getEmptyKey();
+    }
+
+    static clang::SourceRange getTombstoneKey() {
+      return DenseMapInfo<clang::SourceLocation>::getTombstoneKey();
+    }
+
+    static unsigned getHashValue(clang::SourceRange Range) {
+      return detail::combineHashValue(Range.getBegin().getHashValue(),
+                                      Range.getEnd().getHashValue());
+    }
+
+    static bool isEqual(clang::SourceRange LHS, clang::SourceRange RHS) {
+      return LHS == RHS;
+    }
+  };
+
 } // namespace llvm
 
 #endif // LLVM_CLANG_BASIC_SOURCELOCATION_H

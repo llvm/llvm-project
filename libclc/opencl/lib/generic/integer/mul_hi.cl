@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_mul_hi.h>
-#include <clc/opencl/integer/mul_hi.h>
 
 #define __CLC_FUNCTION mul_hi
 #define __CLC_BODY <clc/shared/binary_def.inc>

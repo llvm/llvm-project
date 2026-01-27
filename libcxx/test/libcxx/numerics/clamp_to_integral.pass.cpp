@@ -16,6 +16,7 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 template <class IntT>
 void test() {

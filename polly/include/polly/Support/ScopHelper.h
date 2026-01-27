@@ -361,14 +361,6 @@ void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
 /// Split the entry block of a function to store the newly inserted
 ///        allocations outside of all Scops.
 ///
-/// @param EntryBlock The entry block of the current function.
-/// @param P          The pass that currently running.
-///
-void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
-
-/// Split the entry block of a function to store the newly inserted
-///        allocations outside of all Scops.
-///
 /// @param DT DominatorTree to be updated.
 /// @param LI LoopInfo to be updated.
 /// @param RI RegionInfo to be updated.

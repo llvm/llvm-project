@@ -3,7 +3,7 @@
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
 # GCN:        $sgpr0 = S_MOV_B32 $exec_lo
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65310
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo
@@ -21,7 +21,7 @@ body:            |
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec
 # GCN:        $sgpr0_sgpr1 = S_MOV_B64 $exec
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65310
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec
@@ -129,7 +129,7 @@ body:            |
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo_depctr_ffff
 # GCN:        $sgpr0 = S_MOV_B32 $exec_lo
 # GCN-NEXT:   S_WAITCNT_DEPCTR 65535
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65310
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_ffff

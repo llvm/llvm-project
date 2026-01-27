@@ -9,6 +9,7 @@ def TestTarget : Target {
 }
 
 def FeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "enable foo">;
+def FeatureBar : SubtargetFeature<"bar", "HasBar", "true", "enable bar">;
 
 def ResX0 : ProcResource<1>;
 
@@ -26,13 +27,38 @@ def SchedWriteResA : SchedWriteRes<[ResX0]> {
 def SchedWriteResB : SchedWriteRes<[ResX0]> {
   let Latency = 4;
 }
+def SchedWriteResC : SchedWriteRes<[ResX0]> {
+  let Latency = 8;
+}
+def SchedWriteResD : SchedWriteRes<[ResX0]> {
+  let Latency = 16;
+}
+def SchedWriteResE : SchedWriteRes<[ResX0]> {
+  let Latency = 32;
+}
 
 // Check SchedPredicate with subtarget feature.
 def FeatureFooPred : FeatureSchedPredicate<FeatureFoo>;
+def FeatureBarPred : FeatureSchedPredicate<FeatureBar>;
+
+// Check SchedPredicate combiners.
+
+// First, check MC-only combiners.
+def CombinedAllOfPred: AllOfSchedPreds<[FeatureFooPred, MCSchedPredicate<CheckZeroOperand<1>>]>;
+// Then, check nested combiner that can be used with MCInst and MachineInstr.
+def CombinedAnyOfPred: AnyOfSchedPreds<[CombinedAllOfPred,
+                                        NoneOfSchedPreds<[FeatureBarPred,
+                                                          SchedPredicate<[{/*hello=*/false}]>]>]>;
+// Check if the inverse predicate correctly wraps (or not wrap) its sub-predicates.
+def CombinedNotPred : NotSchedPred<AllOfSchedPreds<[MCSchedPredicate<CheckZeroOperand<3>>,
+                                                    NotSchedPred<FeatureFooPred>]>>;
 
 def Variant : SchedWriteVariant<[
-  SchedVar<FeatureFooPred, [SchedWriteResA]>,
-  SchedVar<NoSchedPred,    [SchedWriteResB]>
+  SchedVar<FeatureFooPred,       [SchedWriteResA]>,
+  SchedVar<NoSchedPred,          [SchedWriteResB]>,
+  SchedVar<CombinedAllOfPred,    [SchedWriteResC]>,
+  SchedVar<CombinedAnyOfPred,    [SchedWriteResD]>,
+  SchedVar<CombinedNotPred,      [SchedWriteResE]>,
 ]>;
 
 def : InstRW<[Variant], (instrs Inst_A)>;
@@ -46,11 +72,15 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:   if (CPUID == {{.*}}) { // SchedModel_A
 // CHECK-NEXT:     if (STI.hasFeature(TestTarget::FeatureFoo))
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResA
+// CHECK-NEXT:     if (STI.hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0)
+// CHECK-NEXT:       return {{.*}}; // SchedWriteResC
+// CHECK-NEXT:     if (!(MI->getOperand(3).getImm() == 0 && !STI.hasFeature(TestTarget::FeatureFoo)))
+// CHECK-NEXT: 	     return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:     return {{.*}}; // SchedWriteResB
 
 // CHECK: unsigned resolveVariantSchedClass(unsigned SchedClass,
 // CHECK-NEXT:    const MCInst *MI, const MCInstrInfo *MCII,
-// CHECK-NEXT:    unsigned CPUID) const override {
+// CHECK-NEXT:    unsigned CPUID) const final {
 // CHECK-NEXT:   return TestTarget_MC::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);
 // CHECK-NEXT: }
 
@@ -61,4 +91,10 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:     if (SchedModel->getProcessorID() == {{.*}}) { // SchedModel_A
 // CHECK-NEXT:       if (this->hasFeature(TestTarget::FeatureFoo))
 // CHECK-NEXT:         return {{.*}}; // SchedWriteResA
+// CHECK-NEXT:       if (this->hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0)
+// CHECK-NEXT:         return {{.*}}; // SchedWriteResC
+// CHECK-NEXT:       if ((this->hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0) || !(this->hasFeature(TestTarget::FeatureBar) || (/*hello=*/false)))
+// CHECK-NEXT:         return {{.*}}; // SchedWriteResD
+// CHECK-NEXT:       if (!(MI->getOperand(3).getImm() == 0 && !this->hasFeature(TestTarget::FeatureFoo)))
+// CHECK-NEXT: 	       return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResB

@@ -32,7 +32,6 @@ unittest("CodeGenTests") {
     "LexicalScopesTest.cpp",
     "LowLevelTypeTest.cpp",
     "MIR2VecTest.cpp",
-    "MLRegAllocDevelopmentFeatures.cpp",
     "MachineBasicBlockTest.cpp",
     "MachineDomTreeUpdaterTest.cpp",
     "MachineInstrBundleIteratorTest.cpp",

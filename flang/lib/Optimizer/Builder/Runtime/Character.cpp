@@ -94,27 +94,34 @@ fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::arith::CmpIPredicate cmp,
                              mlir::Value lhsBuff, mlir::Value lhsLen,
                              mlir::Value rhsBuff, mlir::Value rhsLen) {
-  mlir::func::FuncOp beginFunc;
-  switch (discoverKind(lhsBuff.getType())) {
+  int lhsKind = discoverKind(lhsBuff.getType());
+  int rhsKind = discoverKind(rhsBuff.getType());
+  if (lhsKind != rhsKind) {
+    fir::emitFatalError(loc, "runtime does not support comparison of different "
+                             "CHARACTER kind values");
+  }
+  mlir::func::FuncOp func;
+  switch (lhsKind) {
   case 1:
-    beginFunc = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar1)>(
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar1)>(
         loc, builder);
     break;
   case 2:
-    beginFunc = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar2)>(
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar2)>(
         loc, builder);
     break;
   case 4:
-    beginFunc = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar4)>(
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar4)>(
         loc, builder);
     break;
   default:
-    llvm_unreachable("runtime does not support CHARACTER KIND");
+    fir::emitFatalError(
+        loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
-  auto fTy = beginFunc.getFunctionType();
+  auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, lhsBuff, rhsBuff,
                                             lhsLen, rhsLen);
-  auto tri = fir::CallOp::create(builder, loc, beginFunc, args).getResult(0);
+  auto tri = fir::CallOp::create(builder, loc, func, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
   return mlir::arith::CmpIOp::create(builder, loc, cmp, tri, zero);
 }

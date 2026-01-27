@@ -47,23 +47,23 @@ entry:
   %d = alloca i32, align 4
   %e = alloca i64, align 8
   %f = alloca i64, align 8
-  store i32 0, i32* %retval, align 4
-  store i16 258, i16* %a, align 2
-  %0 = load i16, i16* %a, align 2
+  store i32 0, ptr %retval, align 4
+  store i16 258, ptr %a, align 2
+  %0 = load i16, ptr %a, align 2
   %1 = call i16 @llvm.bswap.i16(i16 %0)
-  store i16 %1, i16* %b, align 2
-  store i16 234, i16* %h, align 2
-  %2 = load i16, i16* %h, align 2
+  store i16 %1, ptr %b, align 2
+  store i16 234, ptr %h, align 2
+  %2 = load i16, ptr %h, align 2
   %3 = call i16 @llvm.bswap.i16(i16 %2)
-  store i16 %3, i16* %i, align 2
-  store i32 566, i32* %c, align 4
-  %4 = load i32, i32* %c, align 4
+  store i16 %3, ptr %i, align 2
+  store i32 566, ptr %c, align 4
+  %4 = load i32, ptr %c, align 4
   %5 = call i32 @llvm.bswap.i32(i32 %4)
-  store i32 %5, i32* %d, align 4
-  store i64 12587, i64* %e, align 8
-  %6 = load i64, i64* %e, align 8
+  store i32 %5, ptr %d, align 4
+  store i64 12587, ptr %e, align 8
+  %6 = load i64, ptr %e, align 8
   %7 = call i64 @llvm.bswap.i64(i64 %6)
-  store i64 %7, i64* %f, align 8
+  store i64 %7, ptr %f, align 8
   ret i32 0
 }
 

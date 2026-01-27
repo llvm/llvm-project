@@ -931,6 +931,37 @@ private:
   mlir::Value genScalarAdd(mlir::Value value1, mlir::Value value2);
 };
 
+/// Reduction converter for Product.
+class ProductAsElementalConverter
+    : public NumericReductionAsElementalConverterBase<hlfir::ProductOp> {
+  using Base = NumericReductionAsElementalConverterBase;
+
+public:
+  ProductAsElementalConverter(hlfir::ProductOp op,
+                              mlir::PatternRewriter &rewriter)
+      : Base{op, rewriter} {}
+
+private:
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      [[maybe_unused]] mlir::ValueRange oneBasedIndices,
+      [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
+      final {
+    return {fir::factory::createOneValue(builder, loc, getResultElementType())};
+  }
+  virtual llvm::SmallVector<mlir::Value>
+  reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
+                   hlfir::Entity array,
+                   mlir::ValueRange oneBasedIndices) final {
+    checkReductions(currentValue);
+    hlfir::Entity elementValue =
+        hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
+    return {genScalarMult(currentValue[0], elementValue)};
+  }
+
+  // Generate scalar multiplication of the two values (of the same data type).
+  mlir::Value genScalarMult(mlir::Value value1, mlir::Value value2);
+};
+
 /// Base class for logical reductions like ALL, ANY, COUNT.
 /// They do not have MASK and FastMathFlags.
 template <typename OpT>
@@ -1194,6 +1225,20 @@ mlir::Value SumAsElementalConverter::genScalarAdd(mlir::Value value1,
   llvm_unreachable("unsupported SUM reduction type");
 }
 
+mlir::Value ProductAsElementalConverter::genScalarMult(mlir::Value value1,
+                                                       mlir::Value value2) {
+  mlir::Type ty = value1.getType();
+  assert(ty == value2.getType() && "reduction values' types do not match");
+  if (mlir::isa<mlir::FloatType>(ty))
+    return mlir::arith::MulFOp::create(builder, loc, value1, value2);
+  else if (mlir::isa<mlir::ComplexType>(ty))
+    return fir::MulcOp::create(builder, loc, value1, value2);
+  else if (mlir::isa<mlir::IntegerType>(ty))
+    return mlir::arith::MulIOp::create(builder, loc, value1, value2);
+
+  llvm_unreachable("unsupported MUL reduction type");
+}
+
 mlir::Value ReductionAsElementalConverter::genMaskValue(
     mlir::Value mask, mlir::Value isPresentPred, mlir::ValueRange indices) {
   mlir::OpBuilder::InsertionGuard guard(builder);
@@ -1264,6 +1309,9 @@ public:
       return converter.convert();
     } else if constexpr (std::is_same_v<Op, hlfir::SumOp>) {
       SumAsElementalConverter converter{op, rewriter};
+      return converter.convert();
+    } else if constexpr (std::is_same_v<Op, hlfir::ProductOp>) {
+      ProductAsElementalConverter converter{op, rewriter};
       return converter.convert();
     }
     return rewriter.notifyMatchFailure(op, "unexpected reduction operation");
@@ -3158,6 +3206,7 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
     patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::ProductOp>>(context);
     patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);
     patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
     patterns.insert<CmpCharOpConversion>(context);

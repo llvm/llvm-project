@@ -10,6 +10,8 @@
 
 // traps
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <limits>
 
 #include "test_macros.h"
@@ -33,17 +35,17 @@ test()
 int main(int, char**)
 {
     test<bool, false>();
-    test<char, integral_types_trap>();
-    test<signed char, integral_types_trap>();
-    test<unsigned char, integral_types_trap>();
-    test<wchar_t, integral_types_trap>();
+    test<char, false>();
+    test<signed char, false>();
+    test<unsigned char, false>();
+    test<wchar_t, false>();
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
-    test<char8_t, integral_types_trap>();
+    test<char8_t, false>();
 #endif
-    test<char16_t, integral_types_trap>();
-    test<char32_t, integral_types_trap>();
-    test<short, integral_types_trap>();
-    test<unsigned short, integral_types_trap>();
+    test<char16_t, false>();
+    test<char32_t, false>();
+    test<short, false>();
+    test<unsigned short, false>();
     test<int, integral_types_trap>();
     test<unsigned int, integral_types_trap>();
     test<long, integral_types_trap>();

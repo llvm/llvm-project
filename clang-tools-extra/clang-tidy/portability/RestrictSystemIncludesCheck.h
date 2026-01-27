@@ -23,7 +23,7 @@ namespace clang::tidy::portability {
 class RestrictSystemIncludesCheck : public ClangTidyCheck {
 public:
   RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context,
-                              std::string DefaultAllowedIncludes = "*")
+                              StringRef DefaultAllowedIncludes = "*")
       : ClangTidyCheck(Name, Context),
         AllowedIncludes(Options.get("Includes", DefaultAllowedIncludes)),
         AllowedIncludesGlobList(AllowedIncludes) {}
@@ -36,7 +36,7 @@ public:
   }
 
 private:
-  std::string AllowedIncludes;
+  StringRef AllowedIncludes;
   GlobList AllowedIncludesGlobList;
 };
 

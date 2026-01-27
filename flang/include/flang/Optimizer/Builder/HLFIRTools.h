@@ -66,6 +66,7 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
+  bool isBoxAddress() const { return fir::isBoxAddress(getType()); }
 
   /// Is this entity a procedure designator?
   bool isProcedure() const { return isFortranProcedureValue(getType()); }
@@ -233,7 +234,7 @@ genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            fir::FortranVariableFlagsAttr flags,
            mlir::Value dummyScope = nullptr, mlir::Value storage = nullptr,
            std::uint64_t storageOffset = 0,
-           cuf::DataAttributeAttr dataAttr = {});
+           cuf::DataAttributeAttr dataAttr = {}, unsigned dummyArgNo = 0);
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are

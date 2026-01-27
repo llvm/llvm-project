@@ -17,11 +17,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-constexpr llvm::StringLiteral ContainerExprName = "container-expr";
-constexpr llvm::StringLiteral DerefContainerExprName = "deref-container-expr";
-constexpr llvm::StringLiteral AddrOfContainerExprName =
-    "addr-of-container-expr";
-constexpr llvm::StringLiteral AddressOfName = "address-of";
+constexpr StringRef ContainerExprName = "container-expr";
+constexpr StringRef DerefContainerExprName = "deref-container-expr";
+constexpr StringRef AddrOfContainerExprName = "addr-of-container-expr";
+constexpr StringRef AddressOfName = "address-of";
 
 void ContainerDataPointerCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -38,7 +37,7 @@ ContainerDataPointerCheck::ContainerDataPointerCheck(StringRef Name,
 void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto Record =
       cxxRecordDecl(
-          unless(matchers::matchesAnyListedName(IgnoredContainers)),
+          unless(matchers::matchesAnyListedRegexName(IgnoredContainers)),
           isSameOrDerivedFrom(
               namedDecl(
                   has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))
@@ -107,8 +106,11 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
                            *Result.SourceManager, getLangOpts())};
 
-  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr,
-           MemberExpr>(CE))
+  const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(CE);
+  const bool NeedsParens =
+      OpCall ? (OpCall->getOperator() != OO_Subscript)
+             : !isa<DeclRefExpr, MemberExpr, ArraySubscriptExpr, CallExpr>(CE);
+  if (NeedsParens)
     ReplacementText = "(" + ReplacementText + ")";
 
   if (CE->getType()->isPointerType())

@@ -72,9 +72,8 @@ define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(ptr %x) {
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    vl8re32.v v8, (a1)
 ; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    slli a4, a2, 5
 ; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    sub a4, a4, a3
+; CHECK-NEXT:    add a4, a2, a3
 ; CHECK-NEXT:    add a5, a1, a2
 ; CHECK-NEXT:    vl8re32.v v16, (a5)
 ; CHECK-NEXT:    add a5, a1, a3
@@ -112,16 +111,16 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-NEXT:    addi a3, a3, 16
 ; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    slli a4, a2, 5
-; CHECK-NEXT:    slli a5, a2, 4
+; CHECK-NEXT:    slli a4, a2, 4
+; CHECK-NEXT:    slli a5, a2, 5
 ; CHECK-NEXT:    slli a2, a2, 6
-; CHECK-NEXT:    sub a6, a4, a3
-; CHECK-NEXT:    add a7, a4, a3
-; CHECK-NEXT:    sub t0, a2, a5
+; CHECK-NEXT:    add a6, a4, a3
+; CHECK-NEXT:    add a7, a5, a3
+; CHECK-NEXT:    add t0, a5, a4
 ; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add t1, a1, a3
-; CHECK-NEXT:    add t2, a1, a5
-; CHECK-NEXT:    add t3, a1, a4
+; CHECK-NEXT:    add t2, a1, a4
+; CHECK-NEXT:    add t3, a1, a5
 ; CHECK-NEXT:    vl8re32.v v8, (t1)
 ; CHECK-NEXT:    csrr t1, vlenb
 ; CHECK-NEXT:    slli t1, t1, 4
@@ -157,12 +156,12 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vs8r.v v0, (a0)
-; CHECK-NEXT:    add a4, a0, a4
-; CHECK-NEXT:    vs8r.v v16, (a4)
 ; CHECK-NEXT:    add a5, a0, a5
+; CHECK-NEXT:    vs8r.v v16, (a5)
+; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vs8r.v v16, (a5)
+; CHECK-NEXT:    vs8r.v v16, (a4)
 ; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4

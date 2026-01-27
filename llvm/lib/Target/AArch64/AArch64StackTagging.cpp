@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <memory>
-#include <utility>
 
 using namespace llvm;
 
@@ -584,15 +583,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    ClMaxLifetimes);
     if (StandardLifetime) {
-      IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
-      tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
+      for (IntrinsicInst *Start : Info.LifetimeStart)
+        tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
-                                        SInfo.RetVec, TagEnd)) {
+          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
+                                        TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }

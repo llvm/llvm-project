@@ -51,8 +51,11 @@ LIBC_INLINE void funlockfile(::FILE *f) { ::funlockfile(f); }
 LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
                                          size_t nmemb, ::FILE *f) {
   // Need to use system errno in this case, as system write will set this errno
-  // which we need to propagate back into our code.
-  return {::fwrite_unlocked(ptr, size, nmemb, f), errno};
+  // which we need to propagate back into our code. fwrite only modifies errno
+  // if there was an error, and errno may have previously been nonzero. Only
+  // return errno if there was an error.
+  size_t members_written = ::fwrite_unlocked(ptr, size, nmemb, f);
+  return {members_written, members_written == nmemb ? 0 : errno};
 }
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace internal
@@ -83,8 +86,8 @@ LIBC_INLINE ErrorOr<size_t> vfprintf_internal(::FILE *__restrict stream,
                                               internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
-  printf_core::WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value> wb(
-      buffer, BUFF_SIZE, &file_write_hook, reinterpret_cast<void *>(stream));
+  printf_core::FlushingBuffer wb(buffer, BUFF_SIZE, &file_write_hook,
+                                 reinterpret_cast<void *>(stream));
   Writer writer(wb);
   internal::flockfile(stream);
   auto retval = printf_main(&writer, format, args);
@@ -92,7 +95,7 @@ LIBC_INLINE ErrorOr<size_t> vfprintf_internal(::FILE *__restrict stream,
     internal::funlockfile(stream);
     return retval;
   }
-  int flushval = wb.overflow_write("");
+  int flushval = wb.flush_to_stream();
   if (flushval != WRITE_OK)
     retval = Error(-flushval);
   internal::funlockfile(stream);

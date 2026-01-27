@@ -119,61 +119,6 @@ class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
 
-class DITypeRefArray {
-  const MDTuple *N = nullptr;
-
-public:
-  DITypeRefArray() = default;
-  DITypeRefArray(const MDTuple *N) : N(N) {}
-
-  explicit operator bool() const { return get(); }
-  explicit operator MDTuple *() const { return get(); }
-
-  MDTuple *get() const { return const_cast<MDTuple *>(N); }
-  MDTuple *operator->() const { return get(); }
-  MDTuple &operator*() const { return *get(); }
-
-  // FIXME: Fix callers and remove condition on N.
-  unsigned size() const { return N ? N->getNumOperands() : 0u; }
-  DIType *operator[](unsigned I) const {
-    return cast_or_null<DIType>(N->getOperand(I));
-  }
-
-  class iterator {
-    MDNode::op_iterator I = nullptr;
-
-  public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = DIType *;
-    using difference_type = std::ptrdiff_t;
-    using pointer = void;
-    using reference = DIType *;
-
-    iterator() = default;
-    explicit iterator(MDNode::op_iterator I) : I(I) {}
-
-    DIType *operator*() const { return cast_or_null<DIType>(*I); }
-
-    iterator &operator++() {
-      ++I;
-      return *this;
-    }
-
-    iterator operator++(int) {
-      iterator Temp(*this);
-      ++I;
-      return Temp;
-    }
-
-    bool operator==(const iterator &X) const { return I == X.I; }
-    bool operator!=(const iterator &X) const { return I != X.I; }
-  };
-
-  // FIXME: Fix callers and remove condition on N.
-  iterator begin() const { return N ? iterator(N->op_begin()) : iterator(); }
-  iterator end() const { return N ? iterator(N->op_end()) : iterator(); }
-};
-
 /// Tagged DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
@@ -1520,7 +1465,9 @@ inline bool operator!=(DIDerivedType::PtrAuthData Lhs,
 /// is also a DIType.
 class DISubrangeType : public DIType {
 public:
-  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *> BoundType;
+  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *,
+                       DIDerivedType *>
+      BoundType;
 
 private:
   friend class LLVMContextImpl;
@@ -1941,6 +1888,8 @@ public:
     return cast_or_null<DIType>(getRawSpecification());
   }
 
+  bool isNameSimplified() const { return getFlags() & FlagNameIsSimplified; }
+
   Metadata *getRawBitStride() const {
     return getOperand(MY_FIRST_OPERAND + 12);
   }
@@ -1997,7 +1946,7 @@ class DISubroutineType : public DIType {
   ~DISubroutineType() = default;
 
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
-                                   uint8_t CC, DITypeRefArray TypeArray,
+                                   uint8_t CC, DITypeArray TypeArray,
                                    StorageType Storage,
                                    bool ShouldCreate = true) {
     return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
@@ -2013,7 +1962,7 @@ class DISubroutineType : public DIType {
 
 public:
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray),
+                    (DIFlags Flags, uint8_t CC, DITypeArray TypeArray),
                     (Flags, CC, TypeArray))
   DEFINE_MDNODE_GET(DISubroutineType,
                     (DIFlags Flags, uint8_t CC, Metadata *TypeArray),
@@ -2029,7 +1978,7 @@ public:
 
   uint8_t getCC() const { return CC; }
 
-  DITypeRefArray getTypeArray() const {
+  DITypeArray getTypeArray() const {
     return cast_or_null<MDTuple>(getRawTypeArray());
   }
 
@@ -2446,6 +2395,7 @@ public:
   }
   bool isExplicit() const { return getFlags() & FlagExplicit; }
   bool isPrototyped() const { return getFlags() & FlagPrototyped; }
+  bool isNameSimplified() const { return getFlags() & FlagNameIsSimplified; }
   bool areAllCallsDescribed() const {
     return getFlags() & FlagAllCallsDescribed;
   }
@@ -2552,6 +2502,39 @@ public:
   }
   void replaceRetainedNodes(DINodeArray N) {
     replaceOperandWith(7, N.get());
+  }
+
+  /// For the given retained node of DISubprogram, applies one of the
+  /// given functions depending on the type of the node.
+  template <typename T, typename FuncLVT, typename FuncLabelT,
+            typename FuncImportedEntityT, typename FuncUnknownT>
+  static T
+  visitRetainedNode(const Metadata *N, FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                    FuncImportedEntityT &&FuncIE, FuncUnknownT &&FuncUnknown) {
+    if (const auto *LV = dyn_cast<DILocalVariable>(N))
+      return FuncLV(LV);
+    if (const auto *L = dyn_cast<DILabel>(N))
+      return FuncLabel(L);
+    if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+      return FuncIE(IE);
+    return FuncUnknown(N);
+  }
+
+  /// Returns the scope of subprogram's retainedNodes.
+  static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  // For use in Verifier.
+  static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+
+  /// For each retained node, applies one of the given functions depending
+  /// on the type of a node.
+  template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT>
+  void forEachRetainedNode(FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                           FuncImportedEntityT &&FuncIE) const {
+    for (MDNode *N : getRetainedNodes())
+      visitRetainedNode<void>(N, FuncLV, FuncLabel, FuncIE,
+                              [](const Metadata *N) {
+                                llvm_unreachable("Unexpected retained node!");
+                              });
   }
 
   /// Check if this subprogram describes the given function.

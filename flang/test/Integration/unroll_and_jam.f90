@@ -27,7 +27,7 @@ end subroutine unroll_and_jam_dir_0
 ! CHECK-LABEL: unroll_and_jam_dir_1
 subroutine unroll_and_jam_dir_1
   integer :: a(10)
-  !dir$ unroll_and_jam 1 
+  !dir$ unroll_and_jam 1
   ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
   ! CHECK-NOT: !llvm.loop
   ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE]]

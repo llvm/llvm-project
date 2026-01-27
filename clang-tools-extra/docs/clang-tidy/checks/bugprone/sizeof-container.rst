@@ -3,12 +3,12 @@
 bugprone-sizeof-container
 =========================
 
-The check finds usages of ``sizeof`` on expressions of STL container types. Most
-likely the user wanted to use ``.size()`` instead.
+The check finds usages of ``sizeof`` on expressions of STL container types.
+Most likely the user wanted to use ``.size()`` instead.
 
-All class/struct types declared in namespace ``std::`` having a const ``size()``
-method are considered containers, with the exception of ``std::bitset`` and
-``std::array``.
+All class/struct types declared in namespace ``std::`` having a const
+``size()`` method are considered containers, with the exception of
+``std::bitset`` and ``std::array``.
 
 Examples:
 

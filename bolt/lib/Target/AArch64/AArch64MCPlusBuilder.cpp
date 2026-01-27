@@ -164,11 +164,55 @@ public:
 
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
-  };
+  }
 
   bool isPop(const MCInst &Inst) const override {
     return isLoadFromStack(Inst);
-  };
+  }
+
+  // We look for instruction that saves LR to or restores LR from stack.
+  //
+  // If we ever see an LR save to stack, we assume this block is not an
+  // epilogue.
+  //
+  // If there is no LR save in the block and we see an LR restore from
+  // stack, we assume it is an epilogue.
+  //
+  // If neither is seen, we assume it is not an epilogue.
+  //
+  // This is not meant to accurately recognize epilogue in all possible
+  // cases, but to have BOLT be conservative on treating basic block as
+  // epilogue and then turning indirect branch with unknown control flow
+  // to tail call.
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    if (BB.succ_size())
+      return false;
+
+    bool SeenLRRestoreFromStack = false;
+    for (auto It = BB.rbegin(); It != BB.rend(); ++It) {
+      const MCInst &Instr = *It;
+      // Skip CFI pseudo instruction.
+      if (isCFI(Instr))
+        continue;
+      if (isReturn(Instr))
+        return true;
+
+      if (isStoreToStack(Instr)) {
+        for (const MCOperand &Operand : useOperands(Instr)) {
+          if (Operand.isReg() && Operand.getReg() == AArch64::LR) {
+            return false;
+          }
+        }
+      } else if (isLoadFromStack(Instr)) {
+        for (const MCOperand &Operand : defOperands(Instr)) {
+          if (Operand.isReg() && Operand.getReg() == AArch64::LR) {
+            SeenLRRestoreFromStack = true;
+          }
+        }
+      }
+    }
+    return SeenLRRestoreFromStack;
+  }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
@@ -269,6 +313,33 @@ public:
            Inst.getOpcode() == AArch64::RETABSPPCi ||
            Inst.getOpcode() == AArch64::RETAASPPCr ||
            Inst.getOpcode() == AArch64::RETABSPPCr;
+  }
+
+  void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) override {
+    Auth.clear();
+    Auth.setOperands(AuthAndRet.getOperands());
+    switch (AuthAndRet.getOpcode()) {
+    case AArch64::RETAA:
+      Auth.setOpcode(AArch64::AUTIASP);
+      break;
+    case AArch64::RETAB:
+      Auth.setOpcode(AArch64::AUTIBSP);
+      break;
+    case AArch64::RETAASPPCi:
+      Auth.setOpcode(AArch64::AUTIASPPCi);
+      break;
+    case AArch64::RETABSPPCi:
+      Auth.setOpcode(AArch64::AUTIBSPPCi);
+      break;
+    case AArch64::RETAASPPCr:
+      Auth.setOpcode(AArch64::AUTIASPPCr);
+      break;
+    case AArch64::RETABSPPCr:
+      Auth.setOpcode(AArch64::AUTIBSPPCr);
+      break;
+    default:
+      llvm_unreachable("Unhandled fused pauth-and-return instruction");
+    }
   }
 
   std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
@@ -1598,6 +1669,70 @@ public:
     return Base + Offset;
   }
 
+  /// This function is used to patch PLT entries to include a BTI instruction.
+  /// This currently only works for binaries linked using LLD.
+  ///
+  /// PLT entry before patching:
+  ///
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///    nop
+  ///
+  /// PLT entry after patching:
+  ///
+  ///    bti c
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///
+  /// Safety considerations:
+  ///
+  /// The PLT entry will become incorrect if shifting the ADRP by one
+  /// instruction (4 bytes) moves it across a page boundary.
+  ///
+  /// The PLT entry is 24 bytes, and page size is 4096 (or 16384) bytes.
+  /// Their GCD is 8 bytes, meaning that shifting the ADRP is safe, as long as
+  /// it is shifted by less than 8 bytes.
+  ///
+  /// If the PLT entry does not contain extra nops, this function will create an
+  /// error. This can happen in binaries linked using BFD.
+  void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) override {
+    BinaryContext &BC = PLTFunction.getBinaryContext();
+    assert(PLTFunction.isPLTFunction() &&
+           "patchPLTEntryForBTI called on a non-PLT function");
+    // Checking if the PLT entry already starts with the BTI needed for Call.
+    auto FirstBBI = PLTFunction.begin();
+    auto FirstII = FirstBBI->begin();
+    assert(FirstII != FirstBBI->end() && "Cannot patch empty PLT entry");
+    if (isCallCoveredByBTI(Call, *FirstII))
+      return;
+    // Checking if there are extra nops at the end. If not, BOLT cannot patch
+    // the PLT entry.
+    auto LastBBI = std::prev(PLTFunction.end());
+    auto LastII = std::prev(LastBBI->end());
+    if (!isNoop(*LastII)) {
+      errs() << "BOLT-ERROR: Cannot patch PLT entry "
+             << PLTFunction.getPrintName()
+             << " to have a BTI landing pad. Relink the binary using LLD.\n";
+      exit(1);
+    }
+    // If the PLT does not have a BTI, and it has nops, create a new instruction
+    // sequence to patch the entry with.
+    InstructionListType NewPLTSeq;
+    MCInst BTIInst;
+    createBTI(BTIInst, BTIKind::C);
+    NewPLTSeq.push_back(BTIInst);
+    // Only adding the instructions from the first BB (adrp, ldr, add, br) to
+    // NewPLTSeq.
+    NewPLTSeq.insert(NewPLTSeq.end(), FirstBBI->begin(), FirstBBI->end());
+    BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     switch (Opcode) {
     default:
@@ -1793,14 +1928,12 @@ public:
   }
 
   bool isNoop(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::HINT &&
-           Inst.getOperand(0).getImm() == 0;
+    return Inst.getOpcode() == AArch64::NOP;
   }
 
   void createNoop(MCInst &Inst) const override {
-    Inst.setOpcode(AArch64::HINT);
+    Inst.setOpcode(AArch64::NOP);
     Inst.clear();
-    Inst.addOperand(MCOperand::createImm(0));
   }
 
   bool isTrap(const MCInst &Inst) const override {
@@ -2205,7 +2338,7 @@ public:
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;
     TargetHiBits = &*I;
-    Addr |= (Address + ((int64_t)I->getOperand(1).getImm() << 12)) &
+    Addr |= (Address + ((uint64_t)I->getOperand(1).getImm() << 12)) &
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
     return 3;
@@ -2706,6 +2839,112 @@ public:
     return Insts;
   }
 
+  void createBTI(MCInst &Inst, BTIKind BTI) const override {
+    Inst.setOpcode(AArch64::HINT);
+    Inst.clear();
+    bool CallTarget = BTI == BTIKind::C || BTI == BTIKind::JC;
+    bool JumpTarget = BTI == BTIKind::J || BTI == BTIKind::JC;
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    Inst.addOperand(MCOperand::createImm(HintNum));
+  }
+
+  bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const override {
+    bool CallTarget = BTI == BTIKind::C || BTI == BTIKind::JC;
+    bool JumpTarget = BTI == BTIKind::J || BTI == BTIKind::JC;
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    bool IsExplicitBTI = Inst.getOpcode() == AArch64::HINT &&
+                         MCPlus::getNumPrimeOperands(Inst) == 1 &&
+                         Inst.getOperand(0).isImm() &&
+                         Inst.getOperand(0).getImm() == HintNum;
+
+    // Only "BTI C" can be implicit.
+    bool IsImplicitBTI =
+        HintNum == getBTIHintNum(true, false) && isImplicitBTIC(Inst);
+    return IsExplicitBTI || IsImplicitBTI;
+  }
+
+  bool isImplicitBTIC(MCInst &Inst) const override {
+    // PACI[AB]SP are always implicitly BTI C, independently of
+    // SCTLR_EL1.BT[01].
+    return Inst.getOpcode() == AArch64::PACIASP ||
+           Inst.getOpcode() == AArch64::PACIBSP;
+  }
+
+  bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const override {
+    assert((isIndirectCall(Call) || isIndirectBranch(Call)) &&
+           "Not an indirect call or branch.");
+
+    // A BLR can be accepted by a BTI c.
+    if (isIndirectCall(Call))
+      return isBTILandingPad(Pad, BTIKind::C) ||
+             isBTILandingPad(Pad, BTIKind::JC);
+
+    // A BR can be accepted by a BTI j or BTI c (and BTI jc) IF the operand is
+    // x16 or x17. If the operand is not x16 or x17, it can be accepted by a BTI
+    // j or BTI jc (and not BTI c).
+    if (isIndirectBranch(Call)) {
+      assert(MCPlus::getNumPrimeOperands(Call) == 1 &&
+             "Indirect branch needs to have 1 operand.");
+      assert(Call.getOperand(0).isReg() &&
+             "Indirect branch does not have a register operand.");
+      MCPhysReg Reg = Call.getOperand(0).getReg();
+      if (Reg == AArch64::X16 || Reg == AArch64::X17)
+        return isBTILandingPad(Pad, BTIKind::C) ||
+               isBTILandingPad(Pad, BTIKind::J) ||
+               isBTILandingPad(Pad, BTIKind::JC);
+      return isBTILandingPad(Pad, BTIKind::J) ||
+             isBTILandingPad(Pad, BTIKind::JC);
+    }
+    return false;
+  }
+
+  void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const override {
+    auto II = BB.getFirstNonPseudo();
+    // Only check the first instruction for non-empty BasicBlocks
+    bool Empty = (II == BB.end());
+    if (!Empty && isCallCoveredByBTI(Call, *II))
+      return;
+    // A BLR can be accepted by a BTI c.
+    if (isIndirectCall(Call)) {
+      // if we have a BTI j at the start, extend it to a BTI jc,
+      // otherwise insert a new BTI c.
+      if (!Empty && isBTILandingPad(*II, BTIKind::J)) {
+        createBTI(*II, BTIKind::JC);
+      } else {
+        MCInst BTIInst;
+        createBTI(BTIInst, BTIKind::C);
+        BB.insertInstruction(II, BTIInst);
+      }
+    }
+
+    // A BR can be accepted by a BTI j or BTI c (and BTI jc) IF the operand is
+    // x16 or x17. If the operand is not x16 or x17, it can be accepted by a
+    // BTI j or BTI jc (and not BTI c).
+    if (isIndirectBranch(Call)) {
+      assert(MCPlus::getNumPrimeOperands(Call) == 1 &&
+             "Indirect branch needs to have 1 operand.");
+      assert(Call.getOperand(0).isReg() &&
+             "Indirect branch does not have a register operand.");
+      MCPhysReg Reg = Call.getOperand(0).getReg();
+      if (Reg == AArch64::X16 || Reg == AArch64::X17) {
+        // Add a new BTI c
+        MCInst BTIInst;
+        createBTI(BTIInst, BTIKind::C);
+        BB.insertInstruction(II, BTIInst);
+      } else {
+        // If BB starts with a BTI c, extend it to BTI jc,
+        // otherwise insert a new BTI j.
+        if (!Empty && isBTILandingPad(*II, BTIKind::C)) {
+          createBTI(*II, BTIKind::JC);
+        } else {
+          MCInst BTIInst;
+          createBTI(BTIInst, BTIKind::J);
+          BB.insertInstruction(II, BTIInst);
+        }
+      }
+    }
+  }
+
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
                                          MCPhysReg RegName,
                                          int64_t Addend = 0) const override {
@@ -2797,7 +3036,7 @@ public:
 
   std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const override {
+                        InstructionListType::iterator CallInst) const override {
     MCPhysReg SizeReg = getIntArgRegister(2);
     if (SizeReg == getNoRegister())
       return std::nullopt;

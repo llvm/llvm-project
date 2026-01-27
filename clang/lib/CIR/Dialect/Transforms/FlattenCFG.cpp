@@ -26,6 +26,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRFLATTENCFG
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
 /// Lowers operations with the terminator trait that have a single successor.
@@ -50,7 +55,7 @@ void walkRegionSkipping(
   });
 }
 
-struct CIRFlattenCFGPass : public CIRFlattenCFGBase<CIRFlattenCFGPass> {
+struct CIRFlattenCFGPass : public impl::CIRFlattenCFGBase<CIRFlattenCFGPass> {
 
   CIRFlattenCFGPass() = default;
   void runOnOperation() override;
@@ -212,8 +217,7 @@ public:
         rewriter, op.getLoc(), uIntType, CastKind::integral, rangeLength);
 
     cir::CmpOp cmpResult = cir::CmpOp::create(
-        rewriter, op.getLoc(), cir::BoolType::get(op.getContext()),
-        cir::CmpOpKind::le, uDiffValue, uRangeLength);
+        rewriter, op.getLoc(), cir::CmpOpKind::le, uDiffValue, uRangeLength);
     cir::BrCondOp::create(rewriter, op.getLoc(), cmpResult, rangeDestination,
                           defaultDestination);
     return resBlock;

@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MACHO_H
 #define LLVM_EXECUTIONENGINE_ORC_MACHO_H
 
+#include "llvm/ExecutionEngine/Orc/CoreContainers.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/Compiler.h"
@@ -31,6 +32,7 @@ class MachOUniversalBinary;
 
 namespace orc {
 
+class ExecutionSession;
 class JITDylib;
 class ObjectLayer;
 
@@ -92,6 +94,37 @@ private:
   JITDylib &JD;
   bool ObjCOnly;
 };
+
+using GetFallbackArchsFn =
+    unique_function<SmallVector<std::pair<uint32_t, uint32_t>>(
+        uint32_t CPUType, uint32_t CPUSubType)>;
+
+/// Match the exact CPU type/subtype only.
+LLVM_ABI SmallVector<std::pair<uint32_t, uint32_t>>
+noFallbackArchs(uint32_t CPUType, uint32_t CPUSubType);
+
+/// Match standard dynamic loader fallback rules.
+LLVM_ABI SmallVector<std::pair<uint32_t, uint32_t>>
+standardMachOFallbackArchs(uint32_t CPUType, uint32_t CPUSubType);
+
+/// Returns a SymbolNameSet containing the exported symbols defined in the
+/// given dylib.
+LLVM_ABI Expected<SymbolNameSet> getDylibInterfaceFromDylib(
+    ExecutionSession &ES, Twine Path,
+    GetFallbackArchsFn GetFallbackArchs = standardMachOFallbackArchs);
+
+/// Returns a SymbolNameSet containing the exported symbols defined in the
+/// relevant slice of the TapiUniversal file.
+LLVM_ABI Expected<SymbolNameSet> getDylibInterfaceFromTapiFile(
+    ExecutionSession &ES, Twine Path,
+    GetFallbackArchsFn GetFallbackArchs = standardMachOFallbackArchs);
+
+/// Returns a SymbolNameSet containing the exported symbols defined in the
+/// relevant slice of the given file, which may be either a dylib or a tapi
+/// file.
+LLVM_ABI Expected<SymbolNameSet> getDylibInterface(
+    ExecutionSession &ES, Twine Path,
+    GetFallbackArchsFn GetFallbackArchs = standardMachOFallbackArchs);
 
 } // namespace orc
 } // namespace llvm

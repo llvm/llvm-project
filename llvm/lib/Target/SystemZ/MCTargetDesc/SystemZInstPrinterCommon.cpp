@@ -218,7 +218,7 @@ void SystemZInstPrinterCommon::printBDXAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
-  unsigned Base = MI->getOperand(OpNum).getReg();
+  MCRegister Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   uint64_t Length = MI->getOperand(OpNum + 2).getImm();
   printOperand(DispMO, &MAI, O);
@@ -232,9 +232,9 @@ void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
-  unsigned Base = MI->getOperand(OpNum).getReg();
+  MCRegister Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
-  unsigned Length = MI->getOperand(OpNum + 2).getReg();
+  MCRegister Length = MI->getOperand(OpNum + 2).getReg();
   printOperand(DispMO, &MAI, O);
   O << "(";
   printRegName(O, Length);

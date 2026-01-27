@@ -60,6 +60,9 @@ static llvm::cl::opt<unsigned> localAllocsThreshold(
     llvm::cl::desc("If present, stops generating TBAA tags for accesses of "
                    "local allocations after N accesses in a module"));
 
+// Defined in AliasAnalysis.cpp
+extern llvm::cl::opt<bool> supportCrayPointers;
+
 namespace {
 
 // Return the size and alignment (in bytes) for the given type.
@@ -668,6 +671,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   LLVM_DEBUG(llvm::dbgs() << "Analysing " << op << "\n");
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
+  LLVM_DEBUG(llvm::dbgs() << "Got source " << source << "\n");
 
   // Process the scopes, if not processed yet.
   state.processFunctionScopes(func);
@@ -686,14 +690,22 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   }
 
   mlir::LLVM::TBAATagAttr tag;
-  // TBAA for dummy arguments
-  if (enableDummyArgs &&
-      source.kind == fir::AliasAnalysis::SourceKind::Argument) {
+  // Cray pointer/pointee is a special case. These might alias with any data.
+  if (supportCrayPointers && source.isCrayPointerOrPointee()) {
+    LLVM_DEBUG(llvm::dbgs().indent(2)
+               << "Found reference to Cray pointer/pointee at " << *op << "\n");
+    mlir::LLVM::TBAATypeDescriptorAttr anyDataDesc =
+        state.getFuncTreeWithScope(func, scopeOp).anyDataTypeDesc;
+    tag = mlir::LLVM::TBAATagAttr::get(anyDataDesc, anyDataDesc, /*offset=*/0);
+    // TBAA for dummy arguments
+  } else if (enableDummyArgs &&
+             source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
     std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
-    // If it is a TARGET or POINTER, then we do not care about the name,
-    // because the tag points to the root of the subtree currently.
+    // POINTERS can alias with any POINTER or TARGET. Assume that TARGET dummy
+    // arguments might alias with each other (because of the "TARGET" hole for
+    // dummy arguments). See flang/docs/Aliasing.md.
     if (source.isTargetOrPointer()) {
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
     } else if (!name.empty()) {
@@ -715,13 +727,10 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to global " << globalName.str() << " at "
                << *op << "\n");
-    if (source.isPointer()) {
-      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else {
-      // In general, place the tags under the "global data" root.
-      fir::TBAATree::SubtreeState *subTree =
-          &state.getMutableFuncTreeWithScope(func, scopeOp).globalDataTree;
 
+    // Add a named tag inside the given subtree, disambiguating members of a
+    // common block
+    auto addTagUsingStorageDesc = [&](fir::TBAATree::SubtreeState *subTree) {
       mlir::Operation *instantiationPoint = source.origin.instantiationPoint;
       auto storageIface =
           mlir::dyn_cast_or_null<fir::FortranVariableStorageOpInterface>(
@@ -766,6 +775,19 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
         LLVM_DEBUG(llvm::dbgs()
                    << "Tagged under '" << globalName << "' root\n");
       }
+    };
+
+    if (source.isPointer()) {
+      // Pointers can alias with any pointer or target.
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (source.isTarget()) {
+      // Targets could alias with any pointer but not with each other.
+      addTagUsingStorageDesc(
+          &state.getMutableFuncTreeWithScope(func, scopeOp).targetDataTree);
+    } else {
+      // In general, place the tags under the "global data" root.
+      addTagUsingStorageDesc(
+          &state.getMutableFuncTreeWithScope(func, scopeOp).globalDataTree);
     }
 
     // TBAA for global variables with descriptors
@@ -776,9 +798,17 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
+      // Pointer can alias with any pointer or target so that gets the root.
       if (source.isPointer())
         tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+      // Targets could alias with any pointer but not with each other so they
+      // get their own node inside of the target data tree.
+      else if (source.isTarget())
+        tag = state.getFuncTreeWithScope(func, scopeOp)
+                  .targetDataTree.getTag(name);
       else
+        // Boxes that are not pointers or targets cannot alias with those that
+        // are. Put them under global data.
         tag = state.getFuncTreeWithScope(func, scopeOp)
                   .directDataTree.getTag(name);
     } else {
@@ -815,7 +845,17 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                  << "\n");
     } else if (source.isPointer() && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
-                 << "Found reference to allocation at " << *op << "\n");
+                 << "Found reference to POINTER allocation at " << *op << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (name && source.isTarget() && state.attachLocalAllocTag()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "Found reference to TARGET allocation at " << *op << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp)
+                .targetDataTree.getTag(*name);
+    } else if (source.isTarget() && state.attachLocalAllocTag()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "WARN: couldn't find a name for TARGET allocation " << *op
+                 << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
     } else if (name && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "

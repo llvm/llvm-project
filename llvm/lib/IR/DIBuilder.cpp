@@ -647,7 +647,7 @@ DIBuilder::createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
   return R;
 }
 
-DISubroutineType *DIBuilder::createSubroutineType(DITypeRefArray ParameterTypes,
+DISubroutineType *DIBuilder::createSubroutineType(DITypeArray ParameterTypes,
                                                   DINode::DIFlags Flags,
                                                   unsigned CC) {
   return DISubroutineType::get(VMContext, Flags, CC, ParameterTypes);
@@ -814,7 +814,7 @@ DIBuilder::getOrCreateMacroArray(ArrayRef<Metadata *> Elements) {
   return MDTuple::get(VMContext, Elements);
 }
 
-DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
+DITypeArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
   SmallVector<llvm::Metadata *, 16> Elts;
   for (Metadata *E : Elements) {
     if (isa_and_nonnull<MDNode>(E))
@@ -822,7 +822,7 @@ DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
     else
       Elts.push_back(E);
   }
-  return DITypeRefArray(MDNode::get(VMContext, Elts));
+  return DITypeArray(MDNode::get(VMContext, Elts));
 }
 
 DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, int64_t Count) {
@@ -1143,6 +1143,24 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
 
   DbgVariableRecord *DVR =
       DbgVariableRecord::createDVRDeclare(Storage, VarInfo, Expr, DL);
+  insertDbgVariableRecord(DVR, InsertPt);
+  return DVR;
+}
+
+DbgInstPtr DIBuilder::insertDeclareValue(Value *Storage,
+                                         DILocalVariable *VarInfo,
+                                         DIExpression *Expr,
+                                         const DILocation *DL,
+                                         InsertPosition InsertPt) {
+  assert(VarInfo &&
+         "empty or invalid DILocalVariable* passed to dbg.declare_value");
+  assert(DL && "Expected debug loc");
+  assert(DL->getScope()->getSubprogram() ==
+             VarInfo->getScope()->getSubprogram() &&
+         "Expected matching subprograms");
+
+  DbgVariableRecord *DVR =
+      DbgVariableRecord::createDVRDeclareValue(Storage, VarInfo, Expr, DL);
   insertDbgVariableRecord(DVR, InsertPt);
   return DVR;
 }

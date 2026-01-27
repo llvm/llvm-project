@@ -41,7 +41,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    add x27, x27, LJTI0_0@PAGEOFF
 ; CHECK-NEXT:    mov w28, #1 ; =0x1
 ; CHECK-NEXT:    ; implicit-def: $w8
-; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Spill
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_1: ; %bb10
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -74,7 +74,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:  LBB0_6: ; %bb13
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
-; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Spill
 ; CHECK-NEXT:    tbz w19, #0, LBB0_2
 ; CHECK-NEXT:  ; %bb.7: ; %bb14
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -89,7 +89,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    b LBB0_8
 ; CHECK-NEXT:  LBB0_9: ; %bb16
-; CHECK-NEXT:    ldr x8, [sp, #40] ; 8-byte Folded Reload
+; CHECK-NEXT:    ldr x8, [sp, #40] ; 8-byte Reload
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    ; kill: def $w8 killed $w8 killed $x8 def $x8

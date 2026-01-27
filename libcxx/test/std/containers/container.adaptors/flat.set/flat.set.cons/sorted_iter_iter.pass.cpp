@@ -128,8 +128,8 @@ constexpr void test_alloc() {
   {
     // flat_set(sorted_unique_t, InputIterator, InputIterator, const key_compare&, const Allocator&);
     // explicit(false)
-    using A1 = test_allocator<short>;
-    using M  = std::flat_set<short, std::less<int>, KeyContainer<short, A1>>;
+    using A1 = test_allocator<long>;
+    using M  = std::flat_set<long, std::less<int>, KeyContainer<long, A1>>;
     int ar[] = {1, 2, 4, 5};
     M m      = {std::sorted_unique, ar, ar + 4, {}, A1(5)}; // implicit ctor
     assert((m == M{1, 2, 4, 5}));

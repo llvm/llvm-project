@@ -90,7 +90,7 @@ Operator selection then proceeds according to the usual rules for choosing
 the best/most constrained match.
 
 Any declaration of a type aware operator new or operator delete must include a
-matching complimentary operator defined in the same scope.
+matching complementary operator defined in the same scope.
 
 Notes
 =====

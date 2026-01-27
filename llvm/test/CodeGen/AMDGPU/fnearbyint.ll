@@ -121,14 +121,13 @@ define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %
 ; SICI-LABEL: fnearbyint_v2f32:
 ; SICI:       ; %bb.0: ; %entry
 ; SICI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SICI-NEXT:    s_mov_b32 s7, 0xf000
-; SICI-NEXT:    s_mov_b32 s6, -1
 ; SICI-NEXT:    s_waitcnt lgkmcnt(0)
-; SICI-NEXT:    s_mov_b32 s4, s0
-; SICI-NEXT:    s_mov_b32 s5, s1
-; SICI-NEXT:    v_rndne_f32_e32 v1, s3
-; SICI-NEXT:    v_rndne_f32_e32 v0, s2
-; SICI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SICI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SICI-NEXT:    s_mov_b32 s3, 0xf000
+; SICI-NEXT:    s_mov_b32 s2, -1
+; SICI-NEXT:    v_rndne_f32_e32 v1, s5
+; SICI-NEXT:    v_rndne_f32_e32 v0, s4
+; SICI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SICI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: fnearbyint_v2f32:

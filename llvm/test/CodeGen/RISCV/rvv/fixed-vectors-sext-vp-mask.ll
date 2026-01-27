@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v < %s | FileCheck %s
 
-declare <4 x i16> @llvm.vp.sext.v4i16.v4i1(<4 x i1>, <4 x i1>, i32)
-
 define <4 x i16> @vsext_v4i16_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i16_v4i1:
 ; CHECK:       # %bb.0:
@@ -26,8 +24,6 @@ define <4 x i16> @vsext_v4i16_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
   ret <4 x i16> %v
 }
 
-declare <4 x i32> @llvm.vp.sext.v4i32.v4i1(<4 x i1>, <4 x i1>, i32)
-
 define <4 x i32> @vsext_v4i32_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i32_v4i1:
 ; CHECK:       # %bb.0:
@@ -49,8 +45,6 @@ define <4 x i32> @vsext_v4i32_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
   %v = call <4 x i32> @llvm.vp.sext.v4i32.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
-
-declare <4 x i64> @llvm.vp.sext.v4i64.v4i1(<4 x i1>, <4 x i1>, i32)
 
 define <4 x i64> @vsext_v4i64_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i64_v4i1:
