@@ -13,7 +13,6 @@ import json
 class UbsanBasicTestCase(TestBase):
     @skipUnlessUndefinedBehaviorSanitizer
     @no_debug_info_test
-    @skipUnlessDarwin  # FIXME: update this test to work on other platforms
     def test(self):
         self.build()
         self.ubsan_tests()
@@ -53,11 +52,11 @@ class UbsanBasicTestCase(TestBase):
             substrs=["1 match found"],
         )
 
+        # FIXME: Check on non macOS platform we land don't
+        # stop on __ubsan_on_report instead we stop on main.
         if self.platformIsDarwin():
             # We should not be stopped in the sanitizer library.
             self.assertIn("main", frame.GetFunctionName())
-        else:
-            self.assertIn("__ubsan_on_report", frame.GetFunctionName())
 
         # The stopped thread backtrace should contain either 'align line'
         found = False
