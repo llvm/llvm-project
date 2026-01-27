@@ -51,7 +51,11 @@ class BoltAddressTranslation;
 class DataAggregator : public DataReader {
 public:
   explicit DataAggregator(StringRef Filename) : DataReader(Filename) {
-    start();
+    PerfDataFiles.push_back(std::string(Filename));
+  }
+
+  void addInputFile(StringRef Filename) {
+    PerfDataFiles.push_back(std::string(Filename));
   }
 
   ~DataAggregator();
@@ -76,6 +80,11 @@ public:
 
   /// Check whether \p FileName is a perf.data file
   static bool checkPerfDataMagic(StringRef FileName);
+
+  /// Start an aggregation job asynchronously.
+  void start();
+
+  bool isDataAggregator() const override { return true; }
 
 private:
   struct LBREntry {
@@ -202,6 +211,9 @@ private:
   BinaryContext *BC{nullptr};
 
   BoltAddressTranslation *BAT{nullptr};
+
+  /// Used to support multiple perf.data inputs
+  std::vector<std::string> PerfDataFiles;
 
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
@@ -469,9 +481,6 @@ private:
 
   /// Populate functions in \p BC with profile.
   void processProfile(BinaryContext &BC);
-
-  /// Start an aggregation job asynchronously.
-  void start();
 
   /// Returns true if this aggregation job is using a translation table to
   /// remap samples collected on binaries already processed by BOLT.
