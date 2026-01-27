@@ -15,19 +15,7 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def uimm2_lsb0 : RISCVOp,
-                 ImmLeaf<XLenVT, [{return isShiftedUInt<1, 1>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<2, "Lsb0">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2_LSB0";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<1, 1>(Imm);
-  }];
-}
+def uimm2_lsb0 : RISCVUImmLsbZeroOp<2, 1>;
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;

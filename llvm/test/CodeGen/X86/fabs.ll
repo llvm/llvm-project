@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=-sse,-sse2,-sse3 -enable-no-nans-fp-math | FileCheck %s --check-prefix=X87UNSAFE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown                                                                      | FileCheck %s --check-prefix=X64
 
-declare float @fabsf(float)
-declare x86_fp80 @fabsl(x86_fp80)
+declare float @llvm.fabs.f32(float)
+declare x86_fp80 @llvm.fabs.f80(x86_fp80)
 
 define float @test1(float %X) {
 ; X87-LABEL: test1:
@@ -23,7 +23,7 @@ define float @test1(float %X) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
-  %Y = call float @fabsf(float %X) readnone
+  %Y = call float @llvm.fabs.f32(float %X) readnone
   ret float %Y
 }
 
@@ -45,7 +45,7 @@ define x86_fp80 @test2(x86_fp80 %X) {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fabs
 ; X64-NEXT:    retq
-  %Y = call x86_fp80 @fabsl(x86_fp80 %X) readnone
+  %Y = call x86_fp80 @llvm.fabs.f80(x86_fp80 %X) readnone
   ret x86_fp80 %Y
 }
 
