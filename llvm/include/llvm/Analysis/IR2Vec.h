@@ -139,6 +139,11 @@ public:
   LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
                                     double Tolerance = 1e-4) const;
 
+  /// Returns true if all elements of the embedding are zero.
+  bool isZero() const {
+    return llvm::all_of(Data, [](double D) { return D == 0.0; });
+  }
+
   LLVM_ABI void print(raw_ostream &OS) const;
 };
 

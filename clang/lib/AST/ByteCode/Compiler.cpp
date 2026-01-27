@@ -5684,6 +5684,9 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       if (!this->visit(RE))
         return false;
     } else {
+      if (RE->containsErrors())
+        return false;
+
       InitLinkScope<Emitter> ILS(this, InitLink::RVO());
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
