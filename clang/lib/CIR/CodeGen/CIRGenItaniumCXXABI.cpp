@@ -26,6 +26,8 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <limits>
+
 using namespace clang;
 using namespace clang::CIRGen;
 
@@ -1939,7 +1941,7 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
       // If the path contains a virtual base class we can't give any hint.
       // -1: no hint.
       if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
+        return CharUnits::fromQuantity( std::numeric_limits<uint64_t>::max());
 
       if (numPublicPaths > 1) // Won't use offsets, skip computation.
         continue;
