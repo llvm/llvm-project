@@ -1588,7 +1588,7 @@ __device__ void nvvm_add_fma_f32_sat() {
 #define F16X2 {(__fp16)0.1f, (__fp16)0.1f}
 #define F16X2_2 {(__fp16)0.2f, (__fp16)0.2f}
 
-// CHECK-LABEL: nvvm_add_mul_f16_sat
+// CHECK-LABEL: nvvm_add_mul_f16_sat_ftz
 __device__ void nvvm_add_mul_f16_sat_ftz() {
   // CHECK: call half @llvm.nvvm.add.rn.sat.f16
   __nvvm_add_rn_sat_f16(F16, F16_2);
