@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 #define _decl_hvx_gather(ct, t)                                                \
-  __attribute__((used, always_inline, weak)) extern void hvx_gather_##t(       \
+  __attribute__((always_inline)) extern void hvx_gather_##t(                   \
       ct *dst, const ct *src, int index, size_t region_size)
 
 _decl_hvx_gather(int8_t, i8);
@@ -46,7 +46,7 @@ _decl_hvx_gather(_Float16, f16);
 #undef _decl_hvx_gather
 
 #define _decl_hvx_gather_16(ct, t)                                             \
-  __attribute__((used, always_inline, weak)) extern void hvx_gather_##t##_16(  \
+  __attribute__((always_inline)) extern void hvx_gather_##t##_16(              \
       ct *dst, const ct *src, int16_t index, size_t region_size)
 
 _decl_hvx_gather_16(int8_t, i8);
@@ -107,8 +107,12 @@ _decl_hvx_gather_16(_Float16, f16);
 
 #else // __cplusplus
 
+// The `gnu::unused` attribute on static hvx_gather() and hvx_scatter() C++
+// functions is added to avoid compiler warnings for unused static functions if
+// this file is installed in a path included with -I (not -isystem or its
+// variant).
 #define _decl_hvx_gather_spec(ct, t)                                           \
-  [[gnu::always_inline, gnu::used]] static void hvx_gather(                    \
+  [[gnu::always_inline, gnu::unused]] static void hvx_gather(                  \
       ct *dst, const ct *src, int index, size_t region_size) {                 \
     hvx_gather_##t(dst, src, index, region_size);                              \
   }
@@ -134,7 +138,7 @@ _decl_hvx_gather_spec(_Float16, f16);
 #undef _decl_hvx_gather_spec
 
 #define _decl_hvx_gather_16_spec(ct, t)                                        \
-  [[gnu::always_inline, gnu::used]] static void hvx_gather(                    \
+  [[gnu::always_inline, gnu::unused]] static void hvx_gather(                  \
       ct *dst, const ct *src, int16_t index, size_t region_size) {             \
     hvx_gather_##t##_16(dst, src, index, region_size);                         \
   }
@@ -162,44 +166,32 @@ _decl_hvx_gather_16_spec(_Float16, f16);
 extern "C" {
 #endif
 #define _decl_hvx_scatter(w)                                                   \
-  __attribute__((used, always_inline, weak)) extern void hvx_scatter_i##w(     \
+  __attribute__((always_inline)) extern void hvx_scatter_i##w(                 \
       int##w##_t *dst, int index, int##w##_t src, size_t region_size);         \
-  __attribute__((used, always_inline, weak)) extern void hvx_scatter_u##w(     \
+  __attribute__((always_inline)) extern void hvx_scatter_u##w(                 \
       uint##w##_t *dst, int index, uint##w##_t src, size_t region_size)
 
 #define _decl_hvx_scatter_16(w)                                                \
-  __attribute__((used, always_inline,                                          \
-                 weak)) extern void hvx_scatter_i##w##_16(int##w##_t *dst,     \
-                                                          int16_t index,       \
-                                                          int##w##_t src,      \
-                                                          size_t region_size); \
-  __attribute__((used, always_inline,                                          \
-                 weak)) extern void hvx_scatter_u##w##_16(uint##w##_t *dst,    \
-                                                          int16_t index,       \
-                                                          uint##w##_t src,     \
-                                                          size_t region_size)
+  __attribute__((always_inline)) extern void hvx_scatter_i##w##_16(            \
+      int##w##_t *dst, int16_t index, int##w##_t src, size_t region_size);     \
+  __attribute__((always_inline)) extern void hvx_scatter_u##w##_16(            \
+      uint##w##_t *dst, int16_t index, uint##w##_t src, size_t region_size)
 
 #define _decl_f_hvx_scatter(w, ct)                                             \
-  __attribute__((used, always_inline, weak)) extern void hvx_scatter_f##w(     \
+  __attribute__((always_inline)) extern void hvx_scatter_f##w(                 \
       ct *dst, int index, ct src, size_t region_size)
 
 #define _decl_f_hvx_scatter_16(w, ct)                                          \
-  __attribute__((used, always_inline,                                          \
-                 weak)) extern void hvx_scatter_f##w##_16(ct *dst,             \
-                                                          int16_t index,       \
-                                                          ct src,              \
-                                                          size_t region_size);
+  __attribute__((always_inline)) extern void hvx_scatter_f##w##_16(            \
+      ct *dst, int16_t index, ct src, size_t region_size);
 
+#define _decl_f_hvx_scatter_bf16                                               \
+  __attribute__((always_inline)) extern void hvx_scatter_bf16(                 \
+      __bf16 *dst, int index, __bf16 src, size_t region_size)
 
-#define _decl_f_hvx_scatter_bf16 \
-__attribute__((used, always_inline, weak)) extern void hvx_scatter_bf16( \
-__bf16 *dst, int index, __bf16 src, size_t region_size)
-
-#define _decl_f_hvx_scatter_bf16_16 \
-__attribute__((used, always_inline, weak)) extern void hvx_scatter_bf16_16( \
-__bf16 *dst, int16_t index, __bf16 src, size_t region_size)
-
-
+#define _decl_f_hvx_scatter_bf16_16                                            \
+  __attribute__((always_inline)) extern void hvx_scatter_bf16_16(              \
+      __bf16 *dst, int16_t index, __bf16 src, size_t region_size)
 
 _decl_hvx_scatter(8);
 _decl_hvx_scatter(16);
@@ -263,7 +255,7 @@ _decl_f_hvx_scatter(64, double);
 
 #else // __cplusplus
 #define _decl_hvx_scatter_spec(ct, t)                                          \
-  [[gnu::always_inline, gnu::used]] static void hvx_scatter(                   \
+  [[gnu::always_inline, gnu::unused]] static void hvx_scatter(                 \
       ct *dst, int index, ct src, size_t region_size) {                        \
     hvx_scatter_##t(dst, index, src, region_size);                             \
   }
@@ -289,7 +281,7 @@ _decl_hvx_scatter_spec(_Float16, f16);
 #undef _decl_hvx_scatter_spec
 
 #define _decl_hvx_scatter_16_spec(ct, t)                                       \
-  [[gnu::always_inline, gnu::used]] static void hvx_scatter(                   \
+  [[gnu::always_inline, gnu::unused]] static void hvx_scatter(                 \
       ct *dst, int16_t index, ct src, size_t region_size) {                    \
     hvx_scatter_##t##_16(dst, index, src, region_size);                        \
   }
