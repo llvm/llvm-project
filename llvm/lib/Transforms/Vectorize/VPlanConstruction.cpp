@@ -1405,15 +1405,19 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   return true;
 }
 
-/// For an argmin/argmax reduction with strict predicate \p MinOrMaxPhiR,
-/// update the FindLastIV reduction \p FindLastIVPhiR of induction \p WideIV to
-/// to select the first index of the wide canonical IV outside the loop using
-/// UMin or \p FindLastIVPhiR's start value, if \p MinMaxResult equals \p
-/// MinOrMaxPhiR's start value. If \p WideIV was not canonical, a new canonical
-/// wide IV is added, and the final result is scaled back to the original IV. \p
-/// MinOrMaxResult computes the final value of \p MinOrMaxPhiR and \p
-/// FindIVSelect, \p FindIVCmp, \p FindIVRdxResult compute the final value of \p
-/// FindLastIVPhiR.
+/// Given a first argmin/argmax pattern with strict predicate consisting of
+/// 1) a MinOrMax reduction \p MinOrMaxPhiR producing \p MinOrMaxResult,
+/// 2) a wide induction \p WideIV,
+/// 3) a FindLastIV reduction \p FindLastIVPhiR,
+/// return the smallest index of the FindLastIV reduction result using UMin,
+/// unless \p MinOrMaxResult equals the start value of its MinOrMax reduction.
+/// In that case, return the start value of the FindLastIV reduction instead.
+/// If \p WideIV is not canonical, a new canonical wide IV is added, and the
+/// final result is scaled back to the non-canonical \p WideIV.
+/// The final value of the FindLastIV reduction was originally computed using
+/// \p FindIVSelect, \p FindIVCmp, and \p FindIVRdxResult, which are replaced
+/// and removed.
+/// Returns true if the pattern was handled successfully, false otherwise.
 static bool handleFirstArgMinOrMax(
     VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
     VPReductionPHIRecipe *FindLastIVPhiR, VPWidenIntOrFpInductionRecipe *WideIV,
@@ -1447,18 +1451,15 @@ static bool handleFirstArgMinOrMax(
     WidenCanIV->insertBefore(WideIV);
 
     // Update the select to use the wide canonical IV.
-    assert(FindIVSelectR->getOperand(1) == WideIV ^
-               FindIVSelectR->getOperand(2) == WideIV &&
-           "WideIV must be either the second or third operand");
     FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
                               WidenCanIV);
   }
 
-  // Create the new UMin reduction recipe to track the minimum index.
   assert(!FindLastIVPhiR->isInLoop() && !FindLastIVPhiR->isOrdered() &&
          "inloop and ordered reductions not supported");
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
          "FindIV reduction must not be scaled");
+  // Set the starting value of FindLastIV reduction to be the upper bound.
   VPValue *MaxIV =
       Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
   FindLastIVPhiR->setOperand(0, MaxIV);
@@ -1473,7 +1474,7 @@ static bool handleFirstArgMinOrMax(
   //     min/max value.
   //  4. Find the first canonical index of overall min/max and scale it back to
   //     the original IV using VPDerivedIVRecipe.
-  //  5. If the overall min/max is equal to the start value, the condition in
+  //  5. If the overall min/max equals the starting min/max, the condition in
   //     the loop was always false, due to being strict; return the start value
   //     of FindLastIVPhiR in that case.
   //
