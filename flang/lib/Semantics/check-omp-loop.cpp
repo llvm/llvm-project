@@ -814,7 +814,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
     }
   }
 
-  // Linear clause Restrictions
+  // Linear clause restrictions.
   for (auto &[symbol, source] : symbols) {
     // Check that the list item is a scalar variable (rank 0)
     // For declare simd with REF modifier, arrays are allowed
