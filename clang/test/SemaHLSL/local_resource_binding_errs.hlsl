@@ -65,6 +65,7 @@ void scoped_switch(int idx) {
     case 0: Out = Out0;
     case 1: Out = Out0;
     default: {
+        Out = Out0;
         // expected-error@+1 {{assignment of 'Out1' to local resource 'Out' is not to the same unique global resource}}
         Out = Out1;
     }

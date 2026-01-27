@@ -253,8 +253,11 @@ void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
     return;
   }
 
-  Cur.Invalidated = Cur.Info != Prev.Info;
-  Prev = Cur;
+  // If it isn't equivalent, mark the assignment as invalid and updated the
+  // AssignExpr to the current. We should keep the previous scope to prevent
+  // overwriting an invalid access.
+  Prev.Invalidated = Cur.Info != Prev.Info;
+  Prev.AssignExpr = Cur.AssignExpr;
 }
 
 std::optional<LocalResourceAssigns::Assign>
