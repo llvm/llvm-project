@@ -1899,6 +1899,9 @@ public:
   }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
+  std::optional<llvm::Attribute::AttrKind>
+  StackProtectorAttribute(const Decl *D) const;
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 

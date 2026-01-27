@@ -312,6 +312,10 @@ def warn_stack_clash_protection_inline_asm : Warning<
   "unable to protect inline asm that clobbers stack pointer against stack "
   "clash">, InGroup<DiagGroup<"stack-protector">>;
 
+def warn_stack_protection_ignore_attribute : Warning<
+  "'stack_protector_ignore' attribute ignored due to "
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
+
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
   InGroup<DiagGroup<"slh-asm-goto">>;
