@@ -124,7 +124,7 @@ bool GnuPropertySection::parse(const ElfW(Phdr) * gnu_property_phdr,
       break;
     }
 
-    offset += property_size;
+    offset += static_cast<ElfW(Word)>(property_size);
   }
 
   return true;

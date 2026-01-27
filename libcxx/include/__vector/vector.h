@@ -92,7 +92,6 @@ public:
   //
   // Types
   //
-  using __self _LIBCPP_NODEBUG         = vector;
   using value_type                     = _Tp;
   using allocator_type                 = _Allocator;
   using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<allocator_type>;
@@ -294,8 +293,8 @@ public:
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #endif
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20
+  _LIBCPP_HIDE_FROM_ABI vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __x)
       _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     __move_assign(__x, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
@@ -466,11 +465,9 @@ public:
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER >= 17
-  reference
-  emplace_back(_Args&&... __args);
+  reference emplace_back(_Args&&... __args);
 #else
-  void
-  emplace_back(_Args&&... __args);
+  void emplace_back(_Args&&... __args);
 #endif
 
   template <class... _Args>
@@ -550,8 +547,8 @@ public:
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
-  insert(const_iterator __position, initializer_list<value_type> __il) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, initializer_list<value_type> __il) {
     return insert(__position, __il.begin(), __il.end());
   }
 #endif
@@ -876,7 +873,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   std::__uninitialized_allocator_relocate(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__end_), std::__to_address(__new_begin));
   __v.__set_valid_range(__new_begin, __v.end());
-  __end_       = __begin_; // All the objects have been destroyed by relocating them.
+  __end_ = __begin_; // All the objects have been destroyed by relocating them.
 
   __swap_layouts(__v);
   __v.__set_data(__v.begin());
@@ -1324,7 +1321,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
         __alloc_, std::__to_address(__v.begin()), std::__to_address(__v.end()), std::__to_address(__merged.end()));
     __merged.__set_sentinel(__merged.size() + __v.size());
     __v.__set_sentinel(__v.begin());
-    __p        = __swap_out_circular_buffer(__merged, __p);
+    __p = __swap_out_circular_buffer(__merged, __p);
   }
   return __make_iter(__p);
 }

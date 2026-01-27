@@ -176,6 +176,12 @@ struct KnownFPClass {
       SignBit = !*SignBit;
   }
 
+  static KnownFPClass fneg(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fneg();
+    return Known;
+  }
+
   void fabs() {
     if (KnownFPClasses & fcNegZero)
       KnownFPClasses |= fcPosZero;
@@ -190,12 +196,6 @@ struct KnownFPClass {
       KnownFPClasses |= fcPosNormal;
 
     signBitMustBeZero();
-  }
-
-  static KnownFPClass fneg(const KnownFPClass &Src) {
-    KnownFPClass Known = Src;
-    Known.fneg();
-    return Known;
   }
 
   static KnownFPClass fabs(const KnownFPClass &Src) {
@@ -234,6 +234,11 @@ struct KnownFPClass {
   fadd_self(const KnownFPClass &Src,
             DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for fsub
+  LLVM_ABI static KnownFPClass
+  fsub(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -250,8 +255,40 @@ struct KnownFPClass {
     return Known;
   }
 
+  /// Report known values for fdiv
+  LLVM_ABI static KnownFPClass
+  fdiv(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fdiv x, x
+  LLVM_ABI static KnownFPClass
+  fdiv_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for frem
+  LLVM_ABI static KnownFPClass
+  frem_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fma
+  LLVM_ABI static KnownFPClass
+  fma(const KnownFPClass &LHS, const KnownFPClass &RHS,
+      const KnownFPClass &Addend,
+      DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fma squared, squared, addend
+  LLVM_ABI static KnownFPClass
+  fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+             DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for exp, exp2 and exp10.
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
+
+  /// Report known values for sin
+  LLVM_ABI static KnownFPClass sin(const KnownFPClass &Src);
+
+  /// Report known values for cos
+  LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
@@ -332,12 +369,19 @@ struct KnownFPClass {
                                      const fltSemantics &DstTy,
                                      const fltSemantics &SrcTy);
 
+  /// Propagate known class for fptrunc.
+  static LLVM_ABI KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
+
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
   /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
   static LLVM_ABI KnownFPClass roundToIntegral(const KnownFPClass &Src,
                                                bool IsTrunc,
                                                bool IsMultiUnitFPType);
+
+  /// Propagate known class for mantissa component of frexp
+  static LLVM_ABI KnownFPClass frexp_mant(
+      const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   void resetAll() { *this = KnownFPClass(); }
 };
