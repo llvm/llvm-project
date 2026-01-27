@@ -261,8 +261,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
       if (Not64Bit && !IsNegative)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << StringRef("-mapx-features=|-mapxf")
-            << Triple.getTriple();
+            << StringRef("-mapx-features=|-mapxf") << Triple.getTriple();
 
       if (Name == "apxf") {
         if (IsNegative) {
