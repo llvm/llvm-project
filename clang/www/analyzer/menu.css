@@ -49,3 +49,7 @@
 .menubar li:hover ul, li.over ul { /* lists nested under hovered list items */
   display: block;
 }
+
+a{
+  text-decoration: none;
+}
