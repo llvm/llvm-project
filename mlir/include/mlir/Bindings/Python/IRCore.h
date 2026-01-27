@@ -1328,7 +1328,7 @@ private:
 struct MLIR_PYTHON_API_EXPORTED MLIRError {
   MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
-      : message(message), errorDiagnostics(std::move(errorDiagnostics)) {}
+      : message(std::move(message)), errorDiagnostics(std::move(errorDiagnostics)) {}
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
