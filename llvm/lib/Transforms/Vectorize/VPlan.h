@@ -1250,10 +1250,12 @@ public:
 
     /// Returns the value for vscale.
     VScale,
-    /// Compute the final induction value after vectorization. Takes the wide
-    /// induction recipe and the backedge value as operands.
-    FinalIVValue,
-    OpsEnd = FinalIVValue,
+    /// Compute the exiting value of a wide induction after vectorization, that
+    /// is the value of the last lane of the induction increment (i.e. its
+    /// backedge value). Takes the wide induction recipe and the original
+    /// backedge value as operands.
+    ExitingIVValue,
+    OpsEnd = ExitingIVValue,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.

@@ -316,7 +316,7 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       VPValue *Op;
       if (!match(&R, m_CombineOr(
-                         m_FinalIVValue(m_VPValue(), m_VPValue(Op)),
+                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
                          m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
         continue;
 

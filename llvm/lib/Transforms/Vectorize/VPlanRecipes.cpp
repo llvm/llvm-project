@@ -464,7 +464,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
-  case VPInstruction::FinalIVValue:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -1316,7 +1316,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::FinalIVValue:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLastActive:
@@ -1380,7 +1380,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ComputeAnyOfResult:
     return Op == getOperand(0) || Op == getOperand(1);
   case VPInstruction::ExtractLane:
-  case VPInstruction::FinalIVValue:
+  case VPInstruction::ExitingIVValue:
     return Op == getOperand(0);
   };
   llvm_unreachable("switch should return");
@@ -1477,8 +1477,8 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
     break;
-  case VPInstruction::FinalIVValue:
-    O << "final-iv-value";
+  case VPInstruction::ExitingIVValue:
+    O << "exiting-iv-value";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";

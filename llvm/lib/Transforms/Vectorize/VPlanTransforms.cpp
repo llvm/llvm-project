@@ -881,7 +881,6 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 /// return null.
 static VPWidenInductionRecipe *
 getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
-  match(VPV, m_FinalIVValue(m_VPValue(VPV), m_VPValue()));
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
@@ -997,12 +996,15 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
-  VPValue *Incoming = Op;
-  if (!match(Op, m_CombineOr(m_FinalIVValue(m_VPValue(), m_VPValue()),
-                             m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))))
-    return nullptr;
+  VPValue *IVCand;
+  VPValue *Incoming;
+  if (!match(Op, m_ExitingIVValue(m_VPValue(IVCand), m_VPValue(Incoming)))) {
+    if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(IVCand))))
+      return nullptr;
+    Incoming = IVCand;
+  }
 
-  auto *WideIV = getOptimizableIVOf(Incoming, PSE);
+  auto *WideIV = getOptimizableIVOf(IVCand, PSE);
   if (!WideIV)
     return nullptr;
 

@@ -636,8 +636,30 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
 
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, DL);
+  auto *WideIV = new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+
+  // Replace live-out extracts of WideIV by ExitingIVValue recipes.
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  for (VPUser *U : to_vector(BackedgeVal->users())) {
+    if (!match(U, m_ExtractLastPart(m_VPValue())))
+      continue;
+    auto *ExtractLastPart = cast<VPInstruction>(U);
+    if (!match(ExtractLastPart->getSingleUser(),
+               m_ExtractLastLane(m_VPValue())))
+      continue;
+    auto *ExtractLastLane =
+        cast<VPInstruction>(ExtractLastPart->getSingleUser());
+    assert(is_contained(ExtractLastLane->getParent()->successors(),
+                        Plan.getScalarPreheader()) &&
+           "last lane must be extracted in the middle block");
+    VPBuilder Builder(ExtractLastLane);
+    ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+        VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+    ExtractLastLane->eraseFromParent();
+    ExtractLastPart->eraseFromParent();
+  }
+  return WideIV;
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
@@ -700,23 +722,6 @@ void VPlanTransforms::createHeaderPhiRecipes(
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
-    if (isa<VPWidenIntOrFpInductionRecipe>(HeaderPhiR)) {
-      for (VPUser *U : PhiR->getOperand(1)->users()) {
-        if (!match(U, m_ExtractLastPart(m_VPValue())))
-          continue;
-        auto *ExtractLastPart = cast<VPInstruction>(U);
-        if (!match(ExtractLastPart->getSingleUser(),
-                   m_ExtractLastLane(m_VPValue())))
-          continue;
-        auto *ExtractLastLane =
-            cast<VPInstruction>(ExtractLastPart->getSingleUser());
-        VPBuilder Builder(ExtractLastLane);
-        ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
-            VPInstruction::FinalIVValue, {HeaderPhiR, PhiR->getOperand(1)}));
-        ExtractLastLane->eraseFromParent();
-        ExtractLastPart->eraseFromParent();
-      }
-    }
     PhiR->eraseFromParent();
   }
 }

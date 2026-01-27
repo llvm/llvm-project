@@ -501,9 +501,9 @@ inline VPInstruction_match<VPInstruction::StepVector> m_StepVector() {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline VPInstruction_match<VPInstruction::FinalIVValue, Op0_t, Op1_t>
-m_FinalIVValue(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::FinalIVValue>(Op0, Op1);
+inline VPInstruction_match<VPInstruction::ExitingIVValue, Op0_t, Op1_t>
+m_ExitingIVValue(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExitingIVValue>(Op0, Op1);
 }
 
 template <unsigned Opcode, typename Op0_t>
