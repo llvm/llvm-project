@@ -20,17 +20,10 @@
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
-#include "clang/AST/APValue.h"
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/OptionalDiagnostic.h"
 
 namespace clang {
 namespace interp {
 class Context;
-class Function;
-class InterpStack;
-class InterpFrame;
 class SourceMapper;
 
 struct StdAllocatorCaller {
