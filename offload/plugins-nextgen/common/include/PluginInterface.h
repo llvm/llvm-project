@@ -738,12 +738,17 @@ public:
   /// with an already existing one. A partial overlapping with extension is not
   /// allowed. The function returns the device accessible pointer of the pinned
   /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
-  Expected<void *> lockHostBuffer(void *HstPtr, size_t Size);
+  Expected<void *> lockHostBuffer(void *HstPtr, size_t Size,
+                                  bool RegisterMappedBuffer = false,
+                                  bool LockMappedMemory = true,
+                                  bool IgnoreLockErrors = false);
 
   /// Unlock the host buffer at \p HstPtr or unregister a user if other users
   /// are still using the pinned allocation. If this was the last user, the
   /// pinned allocation is removed from the map and the memory is unlocked.
-  Error unlockHostBuffer(void *HstPtr);
+  Error unlockHostBuffer(void *HstPtr,
+                         bool LockMappedMemory = true,
+                         bool IgnoreLockErrors = false);
 
   /// Lock or register a host buffer that was recently mapped by libomptarget.
   /// This behavior is applied if LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS is
@@ -883,13 +888,21 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Pin host memory to optimize transfers and return the device accessible
   /// pointer that devices should use for memory transfers involving the host
   /// pinned allocation.
-  Expected<void *> dataLock(void *HstPtr, int64_t Size) {
-    return PinnedAllocs.lockHostBuffer(HstPtr, Size);
+  Expected<void *> dataLock(void *HstPtr, int64_t Size,
+                            bool RegisterMappedBuffer = false,
+                            bool LockMappedMemory = true,
+                            bool IgnoreLockErrors = false) {
+    return PinnedAllocs.lockHostBuffer(HstPtr, Size, RegisterMappedBuffer, 
+                                       LockMappedMemory, IgnoreLockErrors);
   }
 
   /// Unpin a host memory buffer that was previously pinned.
-  Error dataUnlock(void *HstPtr) {
-    return PinnedAllocs.unlockHostBuffer(HstPtr);
+  Error dataUnlock(void *HstPtr,
+                   bool LockMappedMemory = true,
+                   bool IgnoreLockErrors = false) {
+    return PinnedAllocs.unlockHostBuffer(HstPtr,
+                                         LockMappedMemory, 
+                                         IgnoreLockErrors);
   }
 
   /// Lock the host buffer \p HstPtr with \p Size bytes with the vendor-specific

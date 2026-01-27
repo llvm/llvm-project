@@ -24,6 +24,16 @@ def ol_memory_register_flags_t : Typedef {
   let value = "uint32_t";
 }
 
+def ol_memory_register_flag_t : Enum {
+  let desc = "Memory registering/locking flags";
+  let is_bit_field = 1;
+  let etors =[
+    Etor<"REGISTER_MAPPED_MEMORY", "Memory may already been locked outside of the API">,
+    Etor<"LOCK_MEMORY", "Lock the memory">,
+    Etor<"IGNORE_LOCK_FAILURE", "Ignore memory locking errors">,
+  ];
+}
+
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
@@ -153,7 +163,7 @@ def olMemRegister : Function {
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
     Param<"void *", "Ptr", "host pointer", PARAM_IN>,
     Param<"size_t", "Size", "size of the memory in bytes", PARAM_IN>,
-    Param<"ol_memory_register_flags_t", "Flags", "flags. Reserved for future use", PARAM_IN>,
+    Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of registration", PARAM_IN>,
     Param<"void**", "PinnedPtr", "pointer to the pinned memory", PARAM_OUT>
   ];
   let returns = [
@@ -172,40 +182,8 @@ def olMemUnregister : Function {
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"void *", "Ptr", "host pointer", PARAM_IN>
-  ];
-  let returns = [];
-}
-
-def olMemDataMappedNotify : Function {
-  let desc = "Notifies device about mapping of memory block.";
-  let details = [
-        "Notifies device about mapping of host memory block after user created",
-        "a mapping of that memory block. The device would mark the buffer",
-        "as mapped so the buffer may be locked and used as source/destination",
-        "for memory transfers."
-  ];
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>,
-    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`Size == 0`"
-    ]>
-  ];
-}
-
-def olMemDataUnMappedNotify : Function {
-  let desc = "Notifies device about unmapping of memory block.";
-  let details = [
-        "Notifies device about unmapping of a memory block.",
-        "The device would mark that buffer as unmapped and unlock it if it was locked."
-  ];
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>
+    Param<"void *", "Ptr", "host pointer", PARAM_IN>,
+    Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of registration", PARAM_IN>,
   ];
   let returns = [];
 }
