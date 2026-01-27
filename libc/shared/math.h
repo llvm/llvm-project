@@ -69,6 +69,7 @@
 #include "math/fsqrtf128.h"
 #include "math/hypotf.h"
 #include "math/ilogbf.h"
+#include "math/ilogbf128.h"
 #include "math/ilogbf16.h"
 #include "math/ilogbl.h"
 #include "math/ldexpf.h"
@@ -86,6 +87,8 @@
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
+#include "math/sinf.h"
+#include "math/sinhf.h"
 #include "math/tan.h"
 #include "math/tanf.h"
 

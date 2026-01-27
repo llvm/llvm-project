@@ -679,6 +679,16 @@ add_header_library(
 )
 
 add_header_library(
+  ilogbf128
+  HDRS
+    ilogbf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
   ilogbf
   HDRS
     ilogbf.h
@@ -1257,6 +1267,35 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.range_reduction_double
     libc.src.__support.math.sincos_eval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sinf
+  HDRS
+    sinf.h
+  DEPENDS
+    .range_reduction
+    .sincosf_utils
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sinhf
+  HDRS
+    sinhf.h
+  DEPENDS
+    .sinhfcoshf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
