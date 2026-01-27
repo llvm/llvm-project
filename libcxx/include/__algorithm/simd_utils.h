@@ -114,6 +114,13 @@ template <class _VecT, class _Iter>
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
+#  if __has_builtin(__builtin_masked_load)
+template <class _VecT, class _Tp>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _VecT __load_vector(_Tp* __ptr) noexcept {
+  return __builtin_masked_load(__simd_vector<bool, __simd_vector_size_v<_VecT>>(true), __ptr);
+}
+#  endif
+
 // Load the first _Np elements, zero the rest
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
@@ -153,16 +160,22 @@ template <class _Tp, size_t _Np>
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
-
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2201
+#    if defined(_LIBCPP_BIG_ENDIAN)
+  return std::__countl_zero(__builtin_convertvector(__vec, __mask_vec));
+#    else
+  return std::__countr_zero(__builtin_convertvector(__vec, __mask_vec));
+#    endif
+#  else
   // This has MSan disabled du to https://llvm.org/PR85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
-#  if defined(_LIBCPP_BIG_ENDIAN)
+#    if defined(_LIBCPP_BIG_ENDIAN)
     return std::min<size_t>(
         _Np, std::__countl_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
-#  else
+#    else
     return std::min<size_t>(
         _Np, std::__countr_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
-#  endif
+#    endif
   };
 
   if constexpr (sizeof(__mask_vec) == sizeof(uint8_t)) {
@@ -177,6 +190,7 @@ template <class _Tp, size_t _Np>
     static_assert(sizeof(__mask_vec) == 0, "unexpected required size for mask integer type");
     return 0;
   }
+#  endif
 }
 
 template <class _Tp, size_t _Np>
