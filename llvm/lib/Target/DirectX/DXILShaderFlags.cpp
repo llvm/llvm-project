@@ -65,7 +65,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
   // case Intrinsic::dx_wave_allequal:
-  // case Intrinsic::dx_wave_ballot:
   // case Intrinsic::dx_wave_readfirst:
   // case Intrinsic::dx_wave_reduce.and:
   // case Intrinsic::dx_wave_reduce.or:
@@ -89,6 +88,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_active_countbits:
+  case Intrinsic::dx_wave_ballot:
   // Wave Active Op Variants
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:

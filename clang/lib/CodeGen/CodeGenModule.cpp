@@ -950,6 +950,22 @@ static bool isStackProtectorOn(const LangOptions &LangOpts,
   return LangOpts.getStackProtector() == Mode;
 }
 
+std::optional<llvm::Attribute::AttrKind>
+CodeGenModule::StackProtectorAttribute(const Decl *D) const {
+  if (D && D->hasAttr<NoStackProtectorAttr>())
+    ; // Do nothing.
+  else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
+    return llvm::Attribute::StackProtectStrong;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
+    return llvm::Attribute::StackProtect;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong))
+    return llvm::Attribute::StackProtectStrong;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
+    return llvm::Attribute::StackProtectReq;
+  return std::nullopt;
+}
+
 void CodeGenModule::Release() {
   Module *Primary = getContext().getCurrentNamedModule();
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
@@ -1122,11 +1138,15 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "CodeViewGHash", 1);
   }
   if (CodeGenOpts.ControlFlowGuard) {
-    // Function ID tables and checks for Control Flow Guard (cfguard=2).
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 2);
+    // Function ID tables and checks for Control Flow Guard.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard",
+        static_cast<unsigned>(llvm::ControlFlowGuardMode::Enabled));
   } else if (CodeGenOpts.ControlFlowGuardNoChecks) {
-    // Function ID tables for Control Flow Guard (cfguard=1).
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 1);
+    // Function ID tables for Control Flow Guard.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard",
+        static_cast<unsigned>(llvm::ControlFlowGuardMode::TableOnly));
   }
   if (CodeGenOpts.EHContGuard) {
     // Function ID tables for EH Continuation Guard.
@@ -1759,6 +1779,12 @@ void CodeGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
   getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
                     diag::err_codegen_unsupported)
       << Msg << S->getSourceRange();
+}
+
+void CodeGenModule::ErrorUnsupported(const Stmt *S, llvm::StringRef Type) {
+  getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
+                    diag::err_codegen_unsupported)
+      << Type << S->getSourceRange();
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
@@ -2726,17 +2752,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (!hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
 
-  if (D && D->hasAttr<NoStackProtectorAttr>())
-    ; // Do nothing.
-  else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&
-           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
-    B.addAttribute(llvm::Attribute::StackProtectStrong);
-  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
-    B.addAttribute(llvm::Attribute::StackProtect);
-  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong))
-    B.addAttribute(llvm::Attribute::StackProtectStrong);
-  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
-    B.addAttribute(llvm::Attribute::StackProtectReq);
+  if (std::optional<llvm::Attribute::AttrKind> Attr =
+          StackProtectorAttribute(D)) {
+    B.addAttribute(*Attr);
+  }
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.
@@ -2923,6 +2942,24 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
     addUsedOrCompilerUsedGlobal(GV);
 }
 
+/// Get the feature delta from the default feature map for the given target CPU.
+static std::vector<std::string>
+getFeatureDeltaFromDefault(const CodeGenModule &CGM, StringRef TargetCPU,
+                           llvm::StringMap<bool> &FeatureMap) {
+  llvm::StringMap<bool> DefaultFeatureMap;
+  CGM.getTarget().initFeatureMap(
+      DefaultFeatureMap, CGM.getContext().getDiagnostics(), TargetCPU, {});
+
+  std::vector<std::string> Delta;
+  for (const auto &[K, V] : FeatureMap) {
+    auto DefaultIt = DefaultFeatureMap.find(K);
+    if (DefaultIt == DefaultFeatureMap.end() || DefaultIt->getValue() != V)
+      Delta.push_back((V ? "+" : "-") + K.str());
+  }
+
+  return Delta;
+}
+
 bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                                 llvm::AttrBuilder &Attrs,
                                                 bool SetTargetFeatures) {
@@ -2943,10 +2980,6 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
-
-    // Produce the canonical string for this set of features.
-    for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
-      Features.push_back((Entry.getValue() ? "+" : "-") + Entry.getKey().str());
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -2970,10 +3003,34 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       // favor this processor.
       TuneCPU = SD->getCPUName(GD.getMultiVersionIndex())->getName();
     }
+
+    // For AMDGPU, only emit delta features (features that differ from the
+    // target CPU's defaults). Other targets might want to follow a similar
+    // pattern.
+    if (getTarget().getTriple().isAMDGPU()) {
+      Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else {
+      // Produce the canonical string for this set of features.
+      for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
+        Features.push_back((Entry.getValue() ? "+" : "-") +
+                           Entry.getKey().str());
+    }
   } else {
     // Otherwise just add the existing target cpu and target features to the
     // function.
-    Features = getTarget().getTargetOpts().Features;
+    if (SetTargetFeatures && getTarget().getTriple().isAMDGPU()) {
+      llvm::StringMap<bool> FeatureMap;
+      if (FD) {
+        getContext().getFunctionFeatureMap(FeatureMap, GD);
+      } else {
+        getTarget().initFeatureMap(FeatureMap, getContext().getDiagnostics(),
+                                   TargetCPU,
+                                   getTarget().getTargetOpts().Features);
+      }
+      Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else {
+      Features = getTarget().getTargetOpts().Features;
+    }
   }
 
   if (!TargetCPU.empty()) {

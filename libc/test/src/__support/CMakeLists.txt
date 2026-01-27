@@ -280,6 +280,16 @@ add_libc_test(
     libc.src.__support.CPP.bit
 )
 
+add_libc_test(
+  weak_avl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    weak_avl_test.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(RPC)
