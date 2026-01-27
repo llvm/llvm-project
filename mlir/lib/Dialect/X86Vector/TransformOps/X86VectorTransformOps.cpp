@@ -49,8 +49,8 @@ void mlir::transform::ApplyShuffleVectorFMAOpsPatternsOp::populatePatterns(
   x86vector::populateShuffleVectorFMAOpsPatterns(patterns);
 }
 
-void mlir::transform::ApplyFlattenVectorTransferOpsPatternsOp::
-    populatePatterns(RewritePatternSet &patterns) {
+void mlir::transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
   vector::populateFlattenVectorTransferPatterns(patterns);
 }
 
