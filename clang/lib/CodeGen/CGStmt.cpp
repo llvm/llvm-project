@@ -1127,7 +1127,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
   if (EmitBoolCondBranch) {
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-    if (getIsCounterPair(&S).second || ConditionScope.requiresCleanups())
+    if (hasSkipCounter(&S) || ConditionScope.requiresCleanups())
       ExitBlock = createBasicBlock("while.exit");
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
@@ -1239,9 +1239,8 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
-  auto *LoopFalse =
-      (getIsCounterPair(&S).second ? createBasicBlock("do.loopfalse")
-                                   : LoopExit.getBlock());
+  auto *LoopFalse = (hasSkipCounter(&S) ? createBasicBlock("do.loopfalse")
+                                        : LoopExit.getBlock());
 
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
@@ -1339,8 +1338,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (getIsCounterPair(&S).second ||
-        (ForScope && ForScope->requiresCleanups()))
+    if (hasSkipCounter(&S) || (ForScope && ForScope->requiresCleanups()))
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1455,7 +1453,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  if (getIsCounterPair(&S).second || ForScope.requiresCleanups())
+  if (hasSkipCounter(&S) || ForScope.requiresCleanups())
     ExitBlock = createBasicBlock("for.cond.cleanup");
 
   // The loop body, consisting of the specified body and the loop variable.
