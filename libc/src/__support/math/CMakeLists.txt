@@ -1078,6 +1078,7 @@ add_header_library(
     sqrtf16.h
   DEPENDS
     libc.src.__support.FPUtil.sqrt
+    libc.include.llvm-libc-macros.float16_macros
 )
 
 add_header_library(

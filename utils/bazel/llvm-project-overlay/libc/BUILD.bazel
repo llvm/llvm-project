@@ -2410,6 +2410,7 @@ libc_support_library(
     hdrs = ["src/__support/math/sqrtf16.h"],
     deps = [
         ":__support_fputil_sqrt",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
