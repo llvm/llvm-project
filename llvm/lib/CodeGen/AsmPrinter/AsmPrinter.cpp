@@ -1672,7 +1672,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
 }
 
 void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
-  const std::string &OutputFilename = MF.getTarget().Options.StackUsageOutput;
+  const std::string &OutputFilename = MF.getTarget().Options.StackUsageFile;
 
   // OutputFilename empty implies -fstack-usage is not passed.
   if (OutputFilename.empty())
