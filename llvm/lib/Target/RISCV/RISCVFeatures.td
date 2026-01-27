@@ -270,7 +270,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExtension<1, 0, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
@@ -1044,6 +1044,10 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : RISCVExtension<1, 0, "Page-Based Memory Types">;
 
+def FeatureStdExtSvrsw60t59b
+    : RISCVExtension<1, 0,
+                     "PTE Reserved-for-Software Bits 60-59">;
+
 def FeatureStdExtSvvptc
     : RISCVExtension<1, 0,
                      "Obviating Memory-Management Instructions after Marking PTEs Valid">;
@@ -1118,6 +1122,12 @@ def HasStdExtZbkbOrP
       AssemblerPredicate<(any_of FeatureStdExtZbkb, FeatureStdExtP),
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
                          "'Base P' (Packed-SIMD)">;
+
+// "Y" extension (CHERI support)
+
+def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
+def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
+                 AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

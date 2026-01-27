@@ -203,9 +203,39 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   }
 }
 
+void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
+  auto *MD = ME->getMemberDecl();
+  if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
+    assert(ME->isGLValue() && "Field member should be GL value");
+    OriginList *Dst = getOriginsList(*ME);
+    assert(Dst && "Field member should have an origin list as it is GL value");
+    OriginList *Src = getOriginsList(*ME->getBase());
+    assert(Src && "Base expression should be a pointer/reference type");
+    // The field's glvalue (outermost origin) holds the same loans as the base
+    // expression.
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        Dst->getOuterOriginID(), Src->getOuterOriginID(),
+        /*Kill=*/true));
+  }
+}
+
+static bool isStdMove(const FunctionDecl *FD) {
+  return FD && FD->isInStdNamespace() && FD->getIdentifier() &&
+         FD->getName() == "move";
+}
+
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
   handleFunctionCall(CE, CE->getDirectCallee(),
                      {CE->getArgs(), CE->getNumArgs()});
+  // Track declarations that are moved via std::move.
+  // This is a flow-insensitive approximation: once a declaration is moved
+  // anywhere in the function, it's treated as moved everywhere. We do not
+  // generate expire facts for moved decls to avoid false alarms.
+  if (isStdMove(CE->getDirectCallee()))
+    if (CE->getNumArgs() == 1)
+      if (auto *DRE =
+              dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
+        MovedDecls.insert(DRE->getDecl());
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -373,9 +403,9 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   if (!MTEList)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
-  assert(!SubExprList ||
-         MTEList->getLength() == SubExprList->getLength() + 1 &&
-             "MTE top level origin should contain a loan to the MTE itself");
+  assert((!SubExprList ||
+          MTEList->getLength() == (SubExprList->getLength() + 1)) &&
+         "MTE top level origin should contain a loan to the MTE itself");
   MTEList = getRValueOrigins(MTE, MTEList);
   if (getChildBinding(MTE)) {
     // Issue a loan to MTE for the storage location represented by MTE.
@@ -395,6 +425,11 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+      // Skip loans for declarations that have been moved. When a value is
+      // moved, the original owner no longer has ownership and its destruction
+      // should not cause the loan to expire, preventing false positives.
+      if (MovedDecls.contains(BL->getAccessPath().getAsValueDecl()))
+        continue;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
       const AccessPath AP = BL->getAccessPath();
@@ -472,6 +507,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD || !CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
@@ -481,7 +517,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(Method);
+               shouldTrackImplicitObjectArg(
+                   Method, /*RunningUnderLifetimeSafety=*/true);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
@@ -500,7 +537,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       return false;
     return I == 0 &&
            isGslPointerType(Method->getFunctionObjectParameterType()) &&
-           shouldTrackImplicitObjectArg(Method);
+           shouldTrackImplicitObjectArg(Method,
+                                        /*RunningUnderLifetimeSafety=*/true);
   };
   if (Args.empty())
     return;
@@ -569,9 +607,10 @@ void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   OriginList *List = getOriginsList(*DRE);
   if (!List)
     return;
-  // Remove the outer layer of origin which borrows from the decl directly. This
-  // is a use of the underlying decl.
-  List = getRValueOrigins(DRE, List);
+  // Remove the outer layer of origin which borrows from the decl directly
+  // (e.g., when this is not a reference). This is a use of the underlying decl.
+  if (!DRE->getDecl()->getType()->isReferenceType())
+    List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;
@@ -594,6 +633,13 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     return {};
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
+    OriginList *List = *FactMgr.getOriginMgr().getThisOrigins();
+    const PlaceholderLoan *L =
+        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(MD);
+    PlaceholderLoanFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+  }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);
     if (!List)

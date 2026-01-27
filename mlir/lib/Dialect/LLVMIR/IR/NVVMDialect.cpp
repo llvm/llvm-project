@@ -164,7 +164,7 @@ static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
                                 size_t expectedIm2colOff) -> LogicalResult {
     if (isIm2col && (tensorDims < 3))
       return emitError(loc)
-             << "to use " << stringifyEnum(mode)
+             << "to use " << mode
              << " mode, the tensor has to be at least 3-dimensional";
 
     if (numIm2colOff != expectedIm2colOff)
@@ -493,16 +493,15 @@ LogicalResult PermuteOp::verify() {
   case Mode::F4E:
   case Mode::B4E:
     if (!hasHi)
-      return emitError("mode '")
-             << stringifyPermuteMode(getMode()) << "' requires 'hi' operand.";
+      return emitError("mode '") << getMode() << "' requires 'hi' operand.";
     break;
   case Mode::RC8:
   case Mode::ECL:
   case Mode::ECR:
   case Mode::RC16:
     if (hasHi)
-      return emitError("mode '") << stringifyPermuteMode(getMode())
-                                 << "' does not accept 'hi' operand.";
+      return emitError("mode '")
+             << getMode() << "' does not accept 'hi' operand.";
     break;
   }
 
@@ -944,8 +943,8 @@ LogicalResult MmaOp::verify() {
       kFactor = 16;
       break;
     default:
-      return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(getMultiplicandAPtxType().value()));
+      return emitError("invalid shape or multiplicand type: ")
+             << getMultiplicandAPtxType().value();
     }
 
     if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
@@ -1077,9 +1076,8 @@ LogicalResult MmaOp::verify() {
       return emitOpError("requires layoutA = #nvvm.mma_layout<row> and "
                          "layoutB = #nvvm.mma_layout<col> for shape <")
              << mmaShape[0] << ", " << mmaShape[1] << ", " << mmaShape[2]
-             << "> with element types "
-             << stringifyEnum(*getMultiplicandAPtxType()) << " and "
-             << stringifyEnum(*getMultiplicandBPtxType())
+             << "> with element types " << *getMultiplicandAPtxType() << " and "
+             << *getMultiplicandBPtxType()
              << ". Only m8n8k4 with f16 supports other layouts.";
     }
   }
@@ -1433,8 +1431,8 @@ LogicalResult MmaSpOp::verify() {
       allowedShapes.push_back({16, 8, 64});
       break;
     default:
-      return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(getMultiplicandAPtxType().value()));
+      return emitError("invalid shape or multiplicand type: ")
+             << getMultiplicandAPtxType().value();
     }
 
     if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
@@ -2579,8 +2577,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
 
   if (typeD != WGMMATypes::f32 && typeD != WGMMATypes::f16 &&
       typeD != WGMMATypes::s32) {
-    return emitOpError() << "does not support the given output type "
-                         << NVVM::stringifyWGMMATypes(typeD);
+    return emitOpError() << "does not support the given output type " << typeD;
   }
   if (typeD == WGMMATypes::s32 &&
       (getScaleA() == WGMMAScaleIn::neg || getScaleB() == WGMMAScaleIn::neg)) {
@@ -2588,9 +2585,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   }
 
   if (failed(isAllowedWGMMADataType(typeD, typeA, typeB))) {
-    return emitOpError() << NVVM::stringifyWGMMATypes(typeD)
-                         << " += " << NVVM::stringifyWGMMATypes(typeA) << " * "
-                         << NVVM::stringifyWGMMATypes(typeB)
+    return emitOpError() << typeD << " += " << typeA << " * " << typeB
                          << ", it is not supported.";
   }
 
@@ -2602,13 +2597,11 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   FailureOr<int> allowedK = getAllowedSizeK(typeA);
   if (failed(allowedK) || allowedK.value() != getShape().getK())
     return emitOpError() << "shape 'k' must be " << allowedK.value()
-                         << " for input type "
-                         << NVVM::stringifyWGMMATypes(typeA);
+                         << " for input type " << typeA;
 
   // Check N
   if (failed(isAllowedSizeN(getShape().getN(), typeA))) {
-    return emitOpError() << "has input type "
-                         << NVVM::stringifyWGMMATypes(typeA) << " n is set to "
+    return emitOpError() << "has input type " << typeA << " n is set to "
                          << getShape().getN() << ", it is not supported.";
   }
 
@@ -2620,13 +2613,11 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
        getLayoutB() == mlir::NVVM::MMALayout::row)) {
     return emitOpError()
-           << "given layouts layout_a = " << stringifyMMALayout(getLayoutA())
-           << " and layout_b = " << stringifyMMALayout(getLayoutB())
-           << " for input types " << stringifyWGMMATypes(typeA) << " and "
-           << stringifyWGMMATypes(typeB)
+           << "given layouts layout_a = " << getLayoutA()
+           << " and layout_b = " << getLayoutB() << " for input types " << typeA
+           << " and " << typeB
            << " requires transpose. However, this is only supported for: "
-           << stringifyMMATypes(MMATypes::f16) << " and "
-           << stringifyMMATypes(MMATypes::bf16);
+           << MMATypes::f16 << " and " << MMATypes::bf16;
   }
 
   // Check result registers
@@ -2647,7 +2638,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
     return emitOpError()
            << " `satfinite` can be only used with s32 accumulator, however "
               "the current accumulator is "
-           << NVVM::stringifyWGMMATypes(typeD);
+           << typeD;
   }
 
   return success();
@@ -2675,9 +2666,8 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
      << ((expectedOutputRegisters * 2) + 2)
      << ", 0;\n"
         "wgmma.mma_async.sync.aligned.m"
-     << m << "n" << n << "k" << k << "." << outputTypeName << "."
-     << stringifyWGMMATypes(getTypeA()) << "."
-     << stringifyWGMMATypes(getTypeB());
+     << m << "n" << n << "k" << k << "." << outputTypeName << "." << getTypeA()
+     << "." << getTypeB();
   if (getSatfinite().value_or(NVVM::MMAIntOverflow::wrapped) ==
       NVVM::MMAIntOverflow::satfinite)
     ss << ".satfinite";
@@ -2991,15 +2981,91 @@ LogicalResult NVVM::ReduxOp::verify() {
   case NVVM::ReduxKind::UMIN:
     if (!reduxType.isInteger(32))
       return emitOpError("'")
-             << stringifyEnum(kind) << "' redux kind unsupported with "
-             << reduxType << " type. Only supported type is 'i32'.";
+             << kind << "' redux kind unsupported with " << reduxType
+             << " type. Only supported type is 'i32'.";
     break;
   case NVVM::ReduxKind::FMIN:
   case NVVM::ReduxKind::FMAX:
     if (!reduxType.isF32())
       return emitOpError("'")
-             << stringifyEnum(kind) << "' redux kind unsupported with "
-             << reduxType << " type. Only supported type is 'f32'.";
+             << kind << "' redux kind unsupported with " << reduxType
+             << " type. Only supported type is 'f32'.";
+    break;
+  }
+
+  return success();
+}
+
+LogicalResult NVVM::TensormapReplaceOp::verify() {
+  auto ord = getOrd();
+  Value newVal = getNewValue();
+  auto newValAttr = getNewValueAttr();
+  auto fieldName = stringifyEnum(getField());
+
+  if (ord && !llvm::is_contained({NVVM::TensormapField::BOX_DIM,
+                                  NVVM::TensormapField::GLOBAL_DIM,
+                                  NVVM::TensormapField::GLOBAL_STRIDE,
+                                  NVVM::TensormapField::ELEMENT_STRIDE},
+                                 getField()))
+    return emitOpError("ordinal is not supported for ")
+           << fieldName << " field";
+
+  auto invalidNewVal = [&](llvm::Twine type) -> std::string {
+    return llvm::Twine("new_value must be specified and must be an " + type +
+                       " for " + llvm::Twine(fieldName) + " field")
+        .str();
+  };
+
+  auto invalidNewValAttr = [&]() -> std::string {
+    return (llvm::Twine(
+                "new_value_attr must be specified and must be a valid ") +
+            llvm::Twine(fieldName) + " attribute for " + fieldName + " field")
+        .str();
+  };
+
+  switch (getField()) {
+  case NVVM::TensormapField::GLOBAL_ADDRESS:
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError(invalidNewVal("i64"));
+    break;
+  case NVVM::TensormapField::RANK:
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(invalidNewVal("i32"));
+    break;
+  case NVVM::TensormapField::GLOBAL_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for global_stride field");
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError(invalidNewVal("i64"));
+    break;
+  case NVVM::TensormapField::BOX_DIM:
+  case NVVM::TensormapField::GLOBAL_DIM:
+  case NVVM::TensormapField::ELEMENT_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for ")
+             << stringifyEnum(getField()) << " field";
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(invalidNewVal("i32"));
+    break;
+  case NVVM::TensormapField::ELEMTYPE:
+    if (!(newValAttr && llvm::isa<TensormapElemtypeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::INTERLEAVE_LAYOUT:
+    if (!(newValAttr && llvm::isa<TensormapInterleaveLayoutAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::SWIZZLE_MODE:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleModeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::SWIZZLE_ATOMICITY:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleAtomicityAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::FILL_MODE:
+    if (!(newValAttr && llvm::isa<TensormapFillModeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
     break;
   }
 
@@ -4775,6 +4841,50 @@ PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(mt.lookupValue(thisOp.getSelector()));
 
   return {IDs[modeIndex], args};
+}
+
+mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::TensormapReplaceOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  if (thisOp.getOrd())
+    args.push_back(builder.getInt32(thisOp.getOrd().value()));
+  if (thisOp.getNewValue())
+    args.push_back(mt.lookupValue(thisOp.getNewValue()));
+  if (auto attr = thisOp.getNewValueAttr()) {
+    auto val =
+        llvm::TypeSwitch<mlir::Attribute, unsigned>(*attr)
+            .Case<TensormapElemtypeAttr, TensormapInterleaveLayoutAttr,
+                  TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr,
+                  TensormapFillModeAttr>([](auto attr) {
+              return static_cast<unsigned>(attr.getValue());
+            })
+            .Default([](auto attr) {
+              llvm_unreachable("Invalid attribute type");
+              return 0;
+            });
+    args.push_back(builder.getInt32(val));
+  }
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_tensormap_replace_global_address,
+      llvm::Intrinsic::nvvm_tensormap_replace_rank,
+      llvm::Intrinsic::nvvm_tensormap_replace_box_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_element_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_elemtype,
+      llvm::Intrinsic::nvvm_tensormap_replace_interleave_layout,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_mode,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_atomicity,
+      llvm::Intrinsic::nvvm_tensormap_replace_fill_mode,
+  };
+
+  unsigned fieldIndex = static_cast<unsigned>(thisOp.getField());
+
+  return {IDs[fieldIndex], args};
 }
 
 //===----------------------------------------------------------------------===//

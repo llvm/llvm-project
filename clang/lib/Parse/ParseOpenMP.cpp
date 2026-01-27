@@ -5056,6 +5056,23 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       ExpectAndConsume(tok::colon, diag::warn_pragma_expected_colon,
                        "adjust-op");
     }
+  } else if (Kind == OMPC_use_device_ptr) {
+    // Handle optional fallback modifier for use_device_ptr clause.
+    // use_device_ptr([fb_preserve | fb_nullify :] list)
+    Data.ExtraModifier = OMPC_USE_DEVICE_PTR_FALLBACK_unknown;
+    if (getLangOpts().OpenMP >= 61 && Tok.is(tok::identifier)) {
+      auto FallbackModifier = static_cast<OpenMPUseDevicePtrFallbackModifier>(
+          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), getLangOpts()));
+      if (FallbackModifier != OMPC_USE_DEVICE_PTR_FALLBACK_unknown) {
+        Data.ExtraModifier = FallbackModifier;
+        Data.ExtraModifierLoc = Tok.getLocation();
+        ConsumeToken();
+        if (Tok.is(tok::colon))
+          Data.ColonLoc = ConsumeToken();
+        else
+          Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
+      }
+    }
   }
 
   bool IsComma =

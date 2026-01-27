@@ -258,6 +258,7 @@ Clang-Tidy Checks
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
+   :doc:`llvm-use-vector-utils <llvm/use-vector-utils>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
@@ -331,6 +332,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
+   :doc:`modernize-use-string-view <modernize/use-string-view>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
@@ -363,6 +365,7 @@ Clang-Tidy Checks
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
+   :doc:`performance-string-view-conversions <performance/string-view-conversions>`, "Yes"
    :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes"
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
