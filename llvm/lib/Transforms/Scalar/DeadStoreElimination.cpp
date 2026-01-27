@@ -2079,9 +2079,13 @@ struct DSEState {
               .removeFnAttribute(Ctx, "alloc-variant-zeroed");
       FunctionCallee ZeroedVariant = Malloc->getModule()->getOrInsertFunction(
           ZeroedVariantName, InnerCallee->getFunctionType(), Attrs);
+      cast<Function>(ZeroedVariant.getCallee())
+          ->setCallingConv(Malloc->getCallingConv());
       SmallVector<Value *, 3> Args;
       Args.append(Malloc->arg_begin(), Malloc->arg_end());
-      Calloc = IRB.CreateCall(ZeroedVariant, Args, ZeroedVariantName);
+      CallInst *CI = IRB.CreateCall(ZeroedVariant, Args, ZeroedVariantName);
+      CI->setCallingConv(Malloc->getCallingConv());
+      Calloc = CI;
     } else {
       Type *SizeTTy = Malloc->getArgOperand(0)->getType();
       Calloc =

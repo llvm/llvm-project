@@ -601,6 +601,46 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   return KnownAbs;
 }
 
+KnownBits KnownBits::reduceAdd(unsigned NumElts) const {
+  if (NumElts == 0)
+    return KnownBits(getBitWidth());
+
+  unsigned BitWidth = getBitWidth();
+  KnownBits Result(BitWidth);
+
+  if (isConstant())
+    // If all elements are the same constant, we can simply compute it
+    return KnownBits::makeConstant(NumElts * getConstant());
+
+  // The main idea is as follows.
+  //
+  // If KnownBits for each element has L leading zeros then
+  // X_i < 2^(W - L) for every i from [1, N].
+  //
+  //   ADD X_i <= ADD max(X_i) = N * max(X_i)
+  //           <  N * 2^(W - L)
+  //           <  2^(W - L + ceil(log2(N)))
+  //
+  // As the result, we can conclude that
+  //
+  //   L' = L - ceil(log2(N))
+  //
+  // Similar logic can be applied to leading ones.
+  unsigned LostBits = Log2_32_Ceil(NumElts);
+
+  if (isNonNegative()) {
+    unsigned LeadingZeros = countMinLeadingZeros();
+    LeadingZeros = LeadingZeros > LostBits ? LeadingZeros - LostBits : 0;
+    Result.Zero.setHighBits(LeadingZeros);
+  } else if (isNegative()) {
+    unsigned LeadingOnes = countMinLeadingOnes();
+    LeadingOnes = LeadingOnes > LostBits ? LeadingOnes - LostBits : 0;
+    Result.One.setHighBits(LeadingOnes);
+  }
+
+  return Result;
+}
+
 static KnownBits computeForSatAddSub(bool Add, bool Signed,
                                      const KnownBits &LHS,
                                      const KnownBits &RHS) {

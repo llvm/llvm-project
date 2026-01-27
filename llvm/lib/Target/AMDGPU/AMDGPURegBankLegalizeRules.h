@@ -206,6 +206,7 @@ enum RegBankLLTMappingApplyID {
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
   Sgpr32ZExt,
+  Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
 };

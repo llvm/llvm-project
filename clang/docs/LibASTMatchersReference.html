@@ -2461,6 +2461,18 @@ arrayTypeLoc()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('functionTypeLoc0')"><a name="functionTypeLoc0Anchor">functionTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionTypeLoc.html">FunctionTypeLoc</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="functionTypeLoc0"><pre>Matches `FunctionTypeLoc`s.
+
+Given
+  void f(int);
+  using g = double (char, float);
+  char (*fn_ptr)();
+functionTypeLoc()
+  matches "void (int)", "double (char, float)", and "char ()".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('pointerTypeLoc0')"><a name="pointerTypeLoc0Anchor">pointerTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerTypeLoc.html">PointerTypeLoc</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="pointerTypeLoc0"><pre>Matches pointer `TypeLoc`s.
 

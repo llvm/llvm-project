@@ -949,6 +949,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32ZExt:
   case UniInVgprS32:
   case Vgpr32:
+  case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
     return LLT::scalar(32);
@@ -1121,6 +1122,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB128:
   case VgprB256:
   case VgprB512:
+  case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
     return VgprRB;
@@ -1406,6 +1408,13 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(RB == SgprRB);
       auto Zext = B.buildZExt({SgprRB, S32}, Reg);
       Op.setReg(Zext.getReg(0));
+      break;
+    }
+    case Vgpr32AExt: {
+      assert(Ty.getSizeInBits() < 32);
+      assert(RB == VgprRB);
+      auto Aext = B.buildAnyExt({VgprRB, S32}, Reg);
+      Op.setReg(Aext.getReg(0));
       break;
     }
     case Vgpr32SExt: {

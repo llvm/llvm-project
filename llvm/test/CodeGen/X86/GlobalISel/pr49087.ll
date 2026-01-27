@@ -14,7 +14,7 @@ define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %backedge
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    imulq $4, %rsi, %rcx
+; CHECK-NEXT:    leaq (,%rsi,4), %rcx
 ; CHECK-NEXT:    addq %rdi, %rcx
 ; CHECK-NEXT:    cmpl %edx, (%rcx)
 ; CHECK-NEXT:    sete %cl

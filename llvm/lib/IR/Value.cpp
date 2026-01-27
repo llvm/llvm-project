@@ -1103,8 +1103,6 @@ const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
   return this;
 }
 
-LLVMContext &Value::getContext() const { return VTy->getContext(); }
-
 void Value::reverseUseList() {
   if (!UseList || !UseList->Next)
     // No need to reverse 0 or 1 uses.

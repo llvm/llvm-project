@@ -2169,6 +2169,59 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
+  case SPIRV::OpArbitraryFloatEQALTERA:
+  case SPIRV::OpArbitraryFloatGEALTERA:
+  case SPIRV::OpArbitraryFloatGTALTERA:
+  case SPIRV::OpArbitraryFloatLEALTERA:
+  case SPIRV::OpArbitraryFloatLTALTERA:
+  case SPIRV::OpArbitraryFloatCbrtALTERA:
+  case SPIRV::OpArbitraryFloatCosALTERA:
+  case SPIRV::OpArbitraryFloatCosPiALTERA:
+  case SPIRV::OpArbitraryFloatExp10ALTERA:
+  case SPIRV::OpArbitraryFloatExp2ALTERA:
+  case SPIRV::OpArbitraryFloatExpALTERA:
+  case SPIRV::OpArbitraryFloatExpm1ALTERA:
+  case SPIRV::OpArbitraryFloatHypotALTERA:
+  case SPIRV::OpArbitraryFloatLog10ALTERA:
+  case SPIRV::OpArbitraryFloatLog1pALTERA:
+  case SPIRV::OpArbitraryFloatLog2ALTERA:
+  case SPIRV::OpArbitraryFloatLogALTERA:
+  case SPIRV::OpArbitraryFloatRecipALTERA:
+  case SPIRV::OpArbitraryFloatSinCosALTERA:
+  case SPIRV::OpArbitraryFloatSinCosPiALTERA:
+  case SPIRV::OpArbitraryFloatSinALTERA:
+  case SPIRV::OpArbitraryFloatSinPiALTERA:
+  case SPIRV::OpArbitraryFloatSqrtALTERA:
+  case SPIRV::OpArbitraryFloatACosALTERA:
+  case SPIRV::OpArbitraryFloatACosPiALTERA:
+  case SPIRV::OpArbitraryFloatAddALTERA:
+  case SPIRV::OpArbitraryFloatASinALTERA:
+  case SPIRV::OpArbitraryFloatASinPiALTERA:
+  case SPIRV::OpArbitraryFloatATan2ALTERA:
+  case SPIRV::OpArbitraryFloatATanALTERA:
+  case SPIRV::OpArbitraryFloatATanPiALTERA:
+  case SPIRV::OpArbitraryFloatCastFromIntALTERA:
+  case SPIRV::OpArbitraryFloatCastALTERA:
+  case SPIRV::OpArbitraryFloatCastToIntALTERA:
+  case SPIRV::OpArbitraryFloatDivALTERA:
+  case SPIRV::OpArbitraryFloatMulALTERA:
+  case SPIRV::OpArbitraryFloatPowALTERA:
+  case SPIRV::OpArbitraryFloatPowNALTERA:
+  case SPIRV::OpArbitraryFloatPowRALTERA:
+  case SPIRV::OpArbitraryFloatRSqrtALTERA:
+  case SPIRV::OpArbitraryFloatSubALTERA: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point))
+      report_fatal_error(
+          "Floating point instructions can't be translated correctly without "
+          "enabled SPV_ALTERA_arbitrary_precision_floating_point extension!",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point);
+    Reqs.addCapability(
+        SPIRV::Capability::ArbitraryPrecisionFloatingPointALTERA);
+    break;
+  }
   case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
     if (!ST.canUseExtension(
             SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate))

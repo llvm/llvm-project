@@ -1,7 +1,7 @@
 ;; This is a minimal reproducer that caused StackProtector to crash with a bad cast when
 ;; CrossDSOCFI is used. This test just needs to not crash.
 ; REQUIRES: x86-registered-target
-; RUN: opt -mtriple=x86_64-pc-linux-gnu %s -passes=lowertypetests,cross-dso-cfi,stack-protector
+; RUN: opt -mtriple=x86_64-pc-linux-gnu %s -passes='require<libcall-lowering-info>,lowertypetests,cross-dso-cfi,stack-protector'
 
 define hidden void @__stack_chk_fail() !type !1{
   unreachable

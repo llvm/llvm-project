@@ -2429,23 +2429,16 @@ static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &StartSlot,
 }
 
 // return true if there is something invalid, false otherwise
-static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
-                                   ASTContext &Ctx, RegisterType RegTy,
-                                   unsigned &Result) {
-  uint64_t SlotNum;
-  if (SlotNumStr.getAsInteger(10, SlotNum))
-    return true;
-
+static bool ValidateRegisterNumber(uint64_t SlotNum, Decl *TheDecl,
+                                   ASTContext &Ctx, RegisterType RegTy) {
   const uint64_t Limit = UINT32_MAX;
   if (SlotNum > Limit)
     return true;
 
   // after verifying the number doesn't exceed uint32max, we don't need
   // to look further into c or i register types
-  if (RegTy == RegisterType::C || RegTy == RegisterType::I) {
-    SlotNumStr.getAsInteger(10, Result);
+  if (RegTy == RegisterType::C || RegTy == RegisterType::I)
     return false;
-  }
 
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     uint64_t BaseSlot = SlotNum;
@@ -2456,26 +2449,17 @@ static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
 
     // After AccumulateHLSLResourceSlots runs, SlotNum is now
     // the first free slot; last used was SlotNum - 1
-    if (BaseSlot > Limit)
-      return true;
-
-    SlotNumStr.getAsInteger(10, Result);
-    return false;
+    return (BaseSlot > Limit);
   }
   // handle the cbuffer/tbuffer case
-  if (dyn_cast<HLSLBufferDecl>(TheDecl)) {
+  if (isa<HLSLBufferDecl>(TheDecl))
     // resources cannot be put within a cbuffer, so no need
     // to analyze the structure since the register number
     // won't be pushed any higher.
-    if (SlotNum > Limit)
-      return true;
-
-    SlotNumStr.getAsInteger(10, Result);
-    return false;
-  }
+    return (SlotNum > Limit);
 
   // we don't expect any other decl type, so fail
-  return true;
+  llvm_unreachable("unexpected decl type");
 }
 
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
@@ -2538,10 +2522,10 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     }
     const StringRef SlotNumStr = Slot.substr(1);
 
-    unsigned N;
+    uint64_t N;
 
     // validate that the slot number is a non-empty number
-    if (SlotNumStr.empty() || !llvm::all_of(SlotNumStr, llvm::isDigit)) {
+    if (SlotNumStr.getAsInteger(10, N)) {
       Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
       return;
     }
@@ -2549,13 +2533,13 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     // Validate register number. It should not exceed UINT32_MAX,
     // including if the resource type is an array that starts
     // before UINT32_MAX, but ends afterwards.
-    if (ValidateRegisterNumber(SlotNumStr, TheDecl, getASTContext(), RegType,
-                               N)) {
+    if (ValidateRegisterNumber(N, TheDecl, getASTContext(), RegType)) {
       Diag(SlotLoc, diag::err_hlsl_register_number_too_large);
       return;
     }
 
-    SlotNum = N;
+    // the slot number has been validated and does not exceed UINT32_MAX
+    SlotNum = (unsigned)N;
   }
 
   // Validate space

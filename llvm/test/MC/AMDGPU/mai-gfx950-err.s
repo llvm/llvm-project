@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 %s -filetype=null 2>&1 | FileCheck --implicit-check-not=error: %s
 
 v_mfma_ld_scale_b32 v0, 65
 // CHECK: :[[@LINE-1]]:25: error: literal operands are not supported
