@@ -33,28 +33,41 @@ class VPRecipeBuilder;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> PrintAfterEachVPlanPass;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
-  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
-  /// arguments to the transform. Returns the boolean returned by the transform.
-  template <typename... ArgsTy>
-  static bool runPass(bool (*Transform)(VPlan &, ArgsTy...), VPlan &Plan,
-                      typename std::remove_reference<ArgsTy>::type &...Args) {
-    bool Res = Transform(Plan, Args...);
-    if (VerifyEachVPlan)
-      verifyVPlanIsValid(Plan);
-    return Res;
+  /// Helper to run a VPlan pass \p Pass on \p VPlan, forwarding extra arguments
+  /// to the pass. Performs verification/printing after each VPlan pass if
+  /// requested via command line options.
+  template <typename PassTy, typename... ArgsTy>
+  static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
+                                ArgsTy &&...Args) {
+    auto PostTransformActions = [&]() {
+      // Make sure to print before verification, so that output is more useful
+      // in case of failures:
+      if (PrintAfterEachVPlanPass) {
+        dbgs() << "VPlan after " << PassName << '\n';
+        dbgs() << Plan << '\n';
+      }
+      if (VerifyEachVPlan)
+        verifyVPlanIsValid(Plan);
+    };
+
+    using ResTy = decltype(std::forward<PassTy>(Pass)(
+        Plan, std::forward<ArgsTy>(Args)...));
+    if constexpr (std::is_same_v<ResTy, void>) {
+      std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
+      PostTransformActions();
+    } else {
+      decltype(auto) Res =
+          std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
+      PostTransformActions();
+      return Res;
+    }
   }
-  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
-  /// arguments to the transform.
-  template <typename... ArgsTy>
-  static void runPass(void (*Fn)(VPlan &, ArgsTy...), VPlan &Plan,
-                      typename std::remove_reference<ArgsTy>::type &...Args) {
-    Fn(Plan, Args...);
-    if (VerifyEachVPlan)
-      verifyVPlanIsValid(Plan);
-  }
+#define RUN_VPLAN_PASS(PASS, ...)                                              \
+  llvm::VPlanTransforms::runPass(#PASS, PASS, __VA_ARGS__)
 
   /// Create a base VPlan0, serving as the common starting point for all later
   /// candidates. It consists of an initial plain CFG loop with loop blocks from
