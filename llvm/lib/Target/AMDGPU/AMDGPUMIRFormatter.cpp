@@ -33,27 +33,26 @@ void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm,
                                           llvm::raw_ostream &OS) const {
   bool NonePrinted = true;
   ListSeparator Delim(SWaitAluDelim);
-  auto PrintFieldIfNotMax = [&](StringRef Descr, auto &Fn, unsigned Max) {
-    unsigned Num = Fn(Imm);
+  auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
     if (Num != Max) {
       OS << Delim << Descr << SWaitAluDelim << Num;
       NonePrinted = false;
     }
   };
   OS << SWaitAluImmPrefix;
-  PrintFieldIfNotMax(VaVdstName, AMDGPU::DepCtr::decodeFieldVaVdst,
+  PrintFieldIfNotMax(VaVdstName, AMDGPU::DepCtr::decodeFieldVaVdst(Imm),
                      AMDGPU::DepCtr::getVaVdstBitMask());
-  PrintFieldIfNotMax(VaSdstName, AMDGPU::DepCtr::decodeFieldVaSdst,
+  PrintFieldIfNotMax(VaSdstName, AMDGPU::DepCtr::decodeFieldVaSdst(Imm),
                      AMDGPU::DepCtr::getVaSdstBitMask());
-  PrintFieldIfNotMax(VaSsrcName, AMDGPU::DepCtr::decodeFieldVaSsrc,
+  PrintFieldIfNotMax(VaSsrcName, AMDGPU::DepCtr::decodeFieldVaSsrc(Imm),
                      AMDGPU::DepCtr::getVaSsrcBitMask());
-  PrintFieldIfNotMax(HoldCntName, AMDGPU::DepCtr::decodeFieldHoldCnt,
+  PrintFieldIfNotMax(HoldCntName, AMDGPU::DepCtr::decodeFieldHoldCnt(Imm),
                      AMDGPU::DepCtr::getHoldCntBitMask(STI));
-  PrintFieldIfNotMax(VmVsrcName, AMDGPU::DepCtr::decodeFieldVmVsrc,
+  PrintFieldIfNotMax(VmVsrcName, AMDGPU::DepCtr::decodeFieldVmVsrc(Imm),
                      AMDGPU::DepCtr::getVmVsrcBitMask());
-  PrintFieldIfNotMax(VaVccName, AMDGPU::DepCtr::decodeFieldVaVcc,
+  PrintFieldIfNotMax(VaVccName, AMDGPU::DepCtr::decodeFieldVaVcc(Imm),
                      AMDGPU::DepCtr::getVaVccBitMask());
-  PrintFieldIfNotMax(SaSdstName, AMDGPU::DepCtr::decodeFieldSaSdst,
+  PrintFieldIfNotMax(SaSdstName, AMDGPU::DepCtr::decodeFieldSaSdst(Imm),
                      AMDGPU::DepCtr::getSaSdstBitMask());
   if (NonePrinted)
     OS << AllOff;
