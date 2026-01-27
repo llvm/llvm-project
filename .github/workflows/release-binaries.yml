@@ -75,7 +75,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         # Some of the python modules we install require this package to be installed on the system.
-        vcpkg install openssl:arm64-windows-static
+        vcpkg install openssl:arm64-windows-static-md
         vcpkg integrate install
 
     - name: Debug
@@ -89,10 +89,7 @@ jobs:
     - name: Install Dependencies
       #shell: bash
       env:
-        OPENSSL_DIR: "C:\vcpkg\installed\arm64-windows-static"
-      #env:
-      #  PIP_ONLY_BINARY: cryptography
-      env:
+        OPENSSL_DIR: "C:\\vcpkg\\installed\\arm64-windows-static-md"
         RUSTFLAGS: "-C link-arg=Advapi32.lib"
       run: |
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
