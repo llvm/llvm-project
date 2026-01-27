@@ -1,5 +1,4 @@
-//===-- Implementation header of sqrtf128 function
-//-------------------------------===//
+//===-- Implementation header of sqrtf128 ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,26 +53,27 @@
 //       x_reduced - r2^2.
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 using FPBits = fputil::FPBits<float128>;
 
-namespace {
+namespace sqrtf128_internal {
 
-template <typename T, typename U = T> static inline constexpr T prod_hi(T, U);
+using FPBits = fputil::FPBits<float128>;
+
+template <typename T, typename U = T> LIBC_INLINE static constexpr T prod_hi(T, U);
 
 // Get high part of integer multiplications.
 // Use template to prevent implicit conversion.
 template <>
-inline constexpr uint64_t prod_hi<uint64_t>(uint64_t x, uint64_t y) {
+LIBC_INLINE static constexpr uint64_t prod_hi<uint64_t>(uint64_t x, uint64_t y) {
   return static_cast<uint64_t>(
       (static_cast<UInt128>(x) * static_cast<UInt128>(y)) >> 64);
 }
 
 // Get high part of unsigned 128x64 bit multiplication.
 template <>
-inline constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x, uint64_t y) {
+LIBC_INLINE static constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x, uint64_t y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
   UInt128 xyl = static_cast<UInt128>(x_lo) * static_cast<UInt128>(y);
@@ -82,13 +82,13 @@ inline constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x, uint64_t y) {
 }
 
 // Get high part of signed 64x64 bit multiplication.
-template <> inline constexpr int64_t prod_hi<int64_t>(int64_t x, int64_t y) {
+template <> LIBC_INLINE static constexpr int64_t prod_hi<int64_t>(int64_t x, int64_t y) {
   return static_cast<int64_t>(
       (static_cast<Int128>(x) * static_cast<Int128>(y)) >> 64);
 }
 
 // Get high 128-bit part of unsigned 128x128 bit multiplication.
-template <> inline constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
+template <> LIBC_INLINE static constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
   uint64_t y_lo = static_cast<uint64_t>(y);
@@ -105,7 +105,7 @@ template <> inline constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
 
 // Get high 128-bit part of mixed sign 128x128 bit multiplication.
 template <>
-inline constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
+LIBC_INLINE static constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
   UInt128 mask = static_cast<UInt128>(x >> 127);
   UInt128 negative_part = y & mask;
   UInt128 prod = prod_hi(static_cast<UInt128>(x), y);
@@ -119,7 +119,7 @@ inline constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
 //   r1 = r0 - r0 * h / 2
 // which has error bounded by:
 //   |r1 - 1/sqrt(x)| < h^2 / 2.
-LIBC_INLINE uint64_t rsqrt_newton_raphson(uint64_t m, uint64_t r) {
+LIBC_INLINE static constexpr uint64_t rsqrt_newton_raphson(uint64_t m, uint64_t r) {
   uint64_t r2 = prod_hi(r, r);
   // h = r0^2*x - 1.
   int64_t h = static_cast<int64_t>(prod_hi(m, r2) + r2);
@@ -130,12 +130,12 @@ LIBC_INLINE uint64_t rsqrt_newton_raphson(uint64_t m, uint64_t r) {
 
 #ifdef LIBC_MATH_HAS_SMALL_TABLES
 // Degree-12 minimax polynomials for 1/sqrt(x) on [1, 2].
-constexpr uint32_t RSQRT_COEFFS[12] = {
+LIBC_INLINE_VAR constexpr uint32_t RSQRT_COEFFS[12] = {
     0xb5947a4a, 0x2d651e32, 0x9ad50532, 0x2d28d093, 0x0d8be653, 0x04239014,
     0x01492449, 0x0066ff7d, 0x001e74a1, 0x000984cc, 0x00049abc, 0x00018340,
 };
 
-LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
+LIBC_INLINE static constexpr uint64_t rsqrt_approx(uint64_t m) {
   int64_t x = static_cast<uint64_t>(m) ^ (uint64_t(1) << 63);
   int64_t x_26 = x >> 2;
   int64_t z = x >> 31;
@@ -171,7 +171,7 @@ LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
 #else
 // Cubic minimax polynomials for 1/sqrt(x) on [1 + k/64, 1 + (k + 1)/64]
 // for k = 0..63.
-constexpr uint32_t RSQRT_COEFFS[64][4] = {
+LIBC_INLINE_VAR constexpr uint32_t RSQRT_COEFFS[64][4] = {
     {0xffffffff, 0xfffff780, 0xbff55815, 0x9bb5b6e7},
     {0xfc0bd889, 0xfa1d6e7d, 0xb8a95a89, 0x938bf8f0},
     {0xf82ec882, 0xf473bea9, 0xb1bf4705, 0x8bed0079},
@@ -245,7 +245,7 @@ constexpr uint32_t RSQRT_COEFFS[64][4] = {
 // natural to round coefficients into 32 bit. The constant coefficient can be
 // rounded to 33 bits since the most significant bit is always 1 and implicitly
 // assumed in the table.
-LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
+LIBC_INLINE static constexpr uint64_t rsqrt_approx(uint64_t m) {
   // ULP(m) = 2^-64.
   // Use the top 6 bits as index for looking up polynomial coeffs.
   uint64_t indx = m >> 58;
@@ -276,9 +276,10 @@ LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
 }
 #endif // LIBC_MATH_HAS_SMALL_TABLES
 
-} // anonymous namespace
+} // namespace sqrtf128_internal
 
-static float128 sqrtf128(float128 x) {
+LIBC_INLINE static constexpr float128 sqrtf128(float128 x) {
+  using namespace sqrtf128_internal;
   using FPBits = fputil::FPBits<float128>;
   // Get rounding mode.
   uint32_t rm = fputil::get_round();
@@ -440,6 +441,7 @@ static float128 sqrtf128(float128 x) {
   v += static_cast<UInt128>(e2) << FPBits::FRACTION_LEN; // place exponent
   return cpp::bit_cast<float128>(v);
 }
+
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -1260,13 +1260,13 @@ add_header_library(
   HDRS
     sqrtf128.h
   DEPENDS
-    libc.src.__support.cpp.bit
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.common
     libc.src.__support.macros.optimization
-    libc.src.__support.uint128
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
     libc.include.llvm-libc-types.float128
 )
 
