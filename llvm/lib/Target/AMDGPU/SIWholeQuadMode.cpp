@@ -1111,9 +1111,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
   SlotIndex FirstIdx = FirstNonDbg != MBBE
                            ? LIS->getInstructionIndex(*FirstNonDbg)
                            : LIS->getMBBEndIdx(&MBB);
-  SlotIndex LastIdx = LastNonDbg != MBBE
-                          ? LIS->getInstructionIndex(*LastNonDbg)
-                          : LIS->getMBBEndIdx(&MBB);
+  SlotIndex LastIdx = LastNonDbg != MBBE ? LIS->getInstructionIndex(*LastNonDbg)
+                                         : LIS->getMBBEndIdx(&MBB);
   SlotIndex Idx = PreferLast ? LastIdx : FirstIdx;
   const LiveRange::Segment *S;
 
