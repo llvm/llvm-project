@@ -148,7 +148,7 @@ if "%skip-checkout%" == "true" (
   set llvm_src=%build_dir%\llvm-project
 )
 
-if "%local-libxml2" NEQ "true" (
+if "%local-libxml2%" NEQ "true" (
   curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
   tar zxf libxml2-v2.9.12.tar.gz
 )
@@ -216,7 +216,7 @@ call "%vsdevcmd%" -arch=x86 || exit /b 1
 @echo on
 mkdir build32_stage0
 cd build32_stage0
-if "%local-libxml2" NEQ "true" (
+if "%local-libxml2%" NEQ "true" (
   call :do_build_libxml || exit /b 1
 )
 
@@ -227,7 +227,7 @@ set cmake_flags=^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DPython3_ROOT_DIR=%PYTHONHOME%
 
-if "%local-libxml2" NEQ "true" (
+if "%local-libxml2%" NEQ "true" (
   set cmake_flags=%cmake_flags% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
@@ -283,7 +283,7 @@ call "%vsdevcmd%" -arch=%arch% || exit /b 1
 @echo on
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
-if "%local-libxml2" NEQ "true" (
+if "%local-libxml2%" NEQ "true" (
   call :do_build_libxml || exit /b 1
 )
 
@@ -293,7 +293,7 @@ set cmake_flags=^
   %common_cmake_flags% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DCLANG_DEFAULT_LINKER=lld
-if "%local-libxml2" NEQ "true" (
+if "%local-libxml2%" NEQ "true" (
   set cmake_flags=%cmake_flags% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
