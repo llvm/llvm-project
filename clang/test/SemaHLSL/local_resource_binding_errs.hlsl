@@ -47,3 +47,27 @@ void static_conditional_assignment(int idx) {
     StaticOut = cond ? Out0 : Out1;
     StaticOut[idx] = In[idx];
 }
+
+void scoped_else(int idx) {
+    RWStructuredBuffer<int> Out; // expected-note {{variable 'Out' is declared here}}
+    if (cond) {
+        Out = Out0;
+    } else {
+        // expected-error@+1 {{assignment of 'Out1' to local resource 'Out' is not to the same unique global resource}}
+        Out = Out1;
+    }
+    Out[idx] = In[idx];
+}
+
+void scoped_switch(int idx) {
+    RWStructuredBuffer<int> Out; // expected-note {{variable 'Out' is declared here}}
+    switch (idx) {
+    case 0: Out = Out0;
+    case 1: Out = Out0;
+    default: {
+        // expected-error@+1 {{assignment of 'Out1' to local resource 'Out' is not to the same unique global resource}}
+        Out = Out1;
+    }
+    }
+    Out[idx] = In[idx];
+}

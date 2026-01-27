@@ -116,6 +116,10 @@ public:
     const Scope *AssignScope;
     const DeclBindingInfo *Info;
 
+    // A new scope is not created for an else/else if it does not precede a
+    // compound stmt as per CXX specification. The CurMSManglingNumber at the
+    // time of parsing is used to differentiate the scope in this case.
+    uint32_t MSMangleNum;
     bool Invalidated;
 
     Assign(const Expr *AssignExpr, const Scope *AssignScope, const DeclBindingInfo *Info);

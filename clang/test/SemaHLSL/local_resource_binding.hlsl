@@ -69,3 +69,16 @@ void unused_reassign(int idx) {
     Out = Out0;
     Out[idx] = In[idx];
 }
+
+void scoped_switch(int idx) {
+    RWStructuredBuffer<int> Out;
+    switch (idx) {
+    case 0: Out = Out0;
+    case 1: Out = Out0;
+    default: {
+        Out = Out1;
+        Out = Out0;
+    }
+	}
+    Out[idx] = In[idx];
+}

@@ -199,7 +199,27 @@ bool ResourceBindings::hasBindingInfoForDecl(const VarDecl *VD) const {
 LocalResourceAssigns::Assign::Assign(const Expr *AssignExpr,
                                      const Scope *AssignScope,
                                      const DeclBindingInfo *Info)
-    : AssignExpr(AssignExpr), AssignScope(AssignScope), Info(Info), Invalidated(false) {}
+    : AssignExpr(AssignExpr), AssignScope(AssignScope), Info(Info),
+      MSMangleNum(AssignScope->getMSCurManglingNumber()), Invalidated(false) {}
+
+static bool isEquivalentScope(LocalResourceAssigns::Assign Cur,
+                              LocalResourceAssigns::Assign Prev) {
+  const Scope *CurScope = Cur.AssignScope;
+  const Scope *PrevScope = Prev.AssignScope;
+  if (CurScope != PrevScope)
+    return false;
+
+  // If these are not equivalent
+  if (Cur.MSMangleNum != Prev.MSMangleNum)
+    return false;
+
+  // A switch statement only creates a single scope for all single sub-stmts,
+  // we should not overwrite a previous case.
+  if (CurScope->getParent()->getFlags() & Scope::SwitchScope)
+    return false;
+
+  return true;
+}
 
 static bool isAncestorScope(const Scope *Ancestor, const Scope *Cur) {
   while (Cur != nullptr) {
@@ -218,20 +238,21 @@ void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
 
   auto AssignIt = Assignments.find(VD);
   if (AssignIt == Assignments.end()) {
-    // Empty so just insert
+    // No assign recorded so insert one
     Assignments.insert({VD, Cur});
     return;
   }
 
   Assign &Prev = AssignIt->getSecond();
-  if (isAncestorScope(Cur.AssignScope, Prev.AssignScope)) {
-    // If the current scope is an ancestor of the previous scope,
+
+  if (isEquivalentScope(Cur, Prev) ||
+      isAncestorScope(Cur.AssignScope, Prev.AssignScope->getParent())) {
+    // If the current scope is equivalent or an ancestor of the previous scope,
     // we should ignore the previous access and overwrite it
     Prev = Cur;
     return;
   }
 
-  // Otherwise, if info isn't equivalent, mark as invalid
   Cur.Invalidated = Cur.Info != Prev.Info;
   Prev = Cur;
 }
