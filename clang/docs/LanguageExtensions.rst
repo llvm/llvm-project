@@ -5006,6 +5006,25 @@ The types ``T`` currently supported are:
 Note that the compiler does not guarantee that non-temporal loads or stores
 will be used.
 
+.. warning::
+  Non-temporal memory accesses may not adhere to the usual memory model. If you
+  use them in a multi-threaded program, you may need to also emit additional
+  non-temporal-specific fences, which Clang does not currently provide in a
+  cross-target manner. (An ``atomic_thread_fence`` is not sufficient.)
+
+  The interaction between non-temporal memory instructions and cross-thread
+  memory ordering guarantees has not been fully explored across hardware
+  targets, nor has it been fully specified here. The interaction between these
+  relaxed memory ordering semantics and LLVM’s optimization passes has also not
+  yet been fully explored and verified.
+
+  Using these operations correctly is effectively "left as an exercise for the
+  reader" at the moment. See `issue #64521
+  <https://github.com/llvm/llvm-project/issues/64521>`_ for further discussion.
+  *Be very careful* if you use non-temporal memory operations in a multithreaded
+  program before this issue is resolved!
+
+
 C++ Coroutines support builtins
 --------------------------------
 

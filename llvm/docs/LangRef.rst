@@ -4002,6 +4002,54 @@ or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
 seq\_cst total orderings of other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
+.. _nontemporal:
+
+Non-temporal memory access
+--------------------------
+
+Certain memory access operations are marked as "non-temporal". The :ref:`load
+<i_load>` and :ref:`store <i_store>` instructions can be made non-temporal by
+attaching the ``!nontemporal`` metadata. Some target-specific intrinsics may
+also be specified as doing a non-temporal memory access.
+
+Hardware provides these special non-temporal access instructions (such as the
+``MOVNT`` instructions on x86), in order to permit specialized code to reduce
+cache utilization and bandwidth, when the program knows that the memory is
+unlikely to be reused in cache in the near future. However, because they avoid
+caches, these operations can also easily *reduce* your program's performance
+when used inappropriately.
+
+Non-temporal memory operations may also have relaxed memory ordering guarantees
+which do not conform with LLVM's Memory Model for Concurrent Operations. In
+particular, non-temporal memory accesses *might not* be ordered by a
+cross-thread "synchronizes-with" edge, unless additional fences are
+used. Converting a memory operation from normal to non-temporal will not change
+the semantics of a single-threaded program execution, but, because of the
+relaxed memory ordering, it *will* change the semantics of a multithreaded
+program.
+
+If your program requires non-temporal stores to become visible to another
+thread, or stores made from another thread to become visible to a non-temporal
+load, you must emit a special non-temporal fence between the non-temporal
+load/store and the cross-thread synchronizing operation. Unfortunately, no such
+such cross-target fence operation has yet been defined in LLVM IR. (Yes, this is
+a bug). You will therefore need to use a target-specific fence intrinsic if one
+exists, or inline assembly, or knowledge that on some particular target, no
+additional fence is required.
+
+.. warning::
+ The interaction between non-temporal memory instructions and cross-thread
+ memory ordering guarantees has not been fully explored across hardware
+ targets, nor has it been fully specified here. The interaction between these
+ relaxed memory ordering semantics and LLVM's optimization passes has also not
+ yet been fully explored and verified.
+
+ Using these operations correctly is effectively "left as an exercise for the
+ reader" at the moment. See `issue #64521
+ <https://github.com/llvm/llvm-project/issues/64521>`_ for further discussion.
+ *Be very careful* if you use non-temporal memory operations in a multithreaded
+ program before this issue is resolved!
+
 .. _floatenv:
 
 Floating-Point Environment
@@ -11658,13 +11706,11 @@ The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
 ABI alignment for the target.
 
-The optional ``!nontemporal`` metadata must reference a single
-metadata name ``<nontemp_node>`` corresponding to a metadata node with one
-``i32`` entry of value 1. The existence of the ``!nontemporal``
-metadata on the instruction tells the optimizer and code generator
-that this load is not expected to be reused in the cache. The code
-generator may select special instructions to save cache bandwidth, such
-as the ``MOVNT`` instruction on x86.
+The optional ``!nontemporal`` metadata must reference a single metadata name
+``<nontemp_node>`` corresponding to a metadata node with one ``i32`` entry of
+value 1. This permits the use of a non-temporal memory access instruction, which
+may have different semantics than a usual load/store. See the :ref:`Non-temporal
+memory access <nontemporal>` section for more information.
 
 The optional ``!invariant.load`` metadata must reference a single
 metadata name ``<empty_node>`` corresponding to a metadata node with no
@@ -11797,13 +11843,11 @@ The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
 ABI alignment for the target.
 
-The optional ``!nontemporal`` metadata must reference a single metadata
-name ``<nontemp_node>`` corresponding to a metadata node with one ``i32`` entry
-of value 1. The existence of the ``!nontemporal`` metadata on the instruction
-tells the optimizer and code generator that this load is not expected to
-be reused in the cache. The code generator may select special
-instructions to save cache bandwidth, such as the ``MOVNT`` instruction on
-x86.
+The optional ``!nontemporal`` metadata must reference a single metadata name
+``<nontemp_node>`` corresponding to a metadata node with one ``i32`` entry of
+value 1. This permits the use of a non-temporal memory access instruction, which
+may have different semantics than a usual load/store. See the :ref:`Non-temporal
+memory access <nontemporal>` section for more information.
 
 The optional ``!invariant.group`` metadata must reference a
 single metadata name ``<empty_node>``. See ``invariant.group`` metadata.
