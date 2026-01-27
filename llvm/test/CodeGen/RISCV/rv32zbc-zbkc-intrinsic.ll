@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBC-ZBKC
 
+; NOTE: This intrinsic has been removed so this tests autoupgrade to llvm.clmul.
 define i32 @clmul32(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC-LABEL: clmul32:
 ; RV32ZBC-ZBKC:       # %bb.0:
