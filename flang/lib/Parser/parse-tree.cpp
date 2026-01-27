@@ -50,20 +50,21 @@ bool Designator::EndsInBareName() const {
 }
 
 // R911 data-ref -> part-ref [% part-ref]...
-DataRef::DataRef(std::list<PartRef> &&prl) : u{std::move(prl.front().name)} {
+DataRef::DataRef(std::list<PartRef> &&prl)
+    : u{std::move(std::get<Name>(prl.front().t))} {
   for (bool first{true}; !prl.empty(); first = false, prl.pop_front()) {
-    PartRef &pr{prl.front()};
+    auto &&[name, subscripts, imageSelector]{prl.front().t};
     if (!first) {
       u = common::Indirection<StructureComponent>::Make(
-          std::move(*this), std::move(pr.name));
+          std::move(*this), std::move(name));
     }
-    if (!pr.subscripts.empty()) {
+    if (!subscripts.empty()) {
       u = common::Indirection<ArrayElement>::Make(
-          std::move(*this), std::move(pr.subscripts));
+          std::move(*this), std::move(subscripts));
     }
-    if (pr.imageSelector) {
+    if (imageSelector) {
       u = common::Indirection<CoindexedNamedObject>::Make(
-          std::move(*this), std::move(*pr.imageSelector));
+          std::move(*this), std::move(*imageSelector));
     }
   }
 }
@@ -101,8 +102,9 @@ static Designator MakeArrayElementRef(
     const Name &name, std::list<Expr> &&subscripts) {
   ArrayElement arrayElement{DataRef{Name{name}}, std::list<SectionSubscript>{}};
   for (Expr &expr : subscripts) {
-    arrayElement.subscripts.push_back(
-        SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
+    std::get<std::list<SectionSubscript>>(arrayElement.t)
+        .push_back(
+            SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
   }
   return Designator{DataRef{common::Indirection{std::move(arrayElement)}}};
 }
@@ -112,8 +114,9 @@ static Designator MakeArrayElementRef(
   ArrayElement arrayElement{DataRef{common::Indirection{std::move(sc)}},
       std::list<SectionSubscript>{}};
   for (Expr &expr : subscripts) {
-    arrayElement.subscripts.push_back(
-        SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
+    std::get<std::list<SectionSubscript>>(arrayElement.t)
+        .push_back(
+            SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
   }
   return Designator{DataRef{common::Indirection{std::move(arrayElement)}}};
 }
@@ -185,6 +188,7 @@ StructureConstructor FunctionReference::ConvertToStructureConstructor(
 
 StructureConstructor ArrayElement::ConvertToStructureConstructor(
     const semantics::DerivedTypeSpec &derived) {
+  auto &[base, subscripts]{t};
   Name name{std::get<parser::Name>(base.u)};
   std::list<ComponentSpec> components;
   for (auto &subscript : subscripts) {
@@ -197,6 +201,7 @@ StructureConstructor ArrayElement::ConvertToStructureConstructor(
 }
 
 Substring ArrayElement::ConvertToSubstring() {
+  auto &[base, subscripts]{t};
   auto iter{subscripts.begin()};
   CHECK(iter != subscripts.end());
   auto &triplet{std::get<SubscriptTriplet>(iter->u)};

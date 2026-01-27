@@ -666,6 +666,28 @@ class OpenMP_IfClauseSkip<
 def OpenMP_IfClause : OpenMP_IfClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.1]: `inbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_InbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$inbranch);
+
+  let optAssemblyFormat = [{
+    `inbranch` $inbranch
+  }];
+
+  let description = [{
+    The `inbranch` clause indicates that the generated SIMD function variant
+    is intended for use in conditional branches.
+  }];
+}
+def OpenMP_InbranchClause : OpenMP_InbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.5.10] `in_reduction` clause
 //===----------------------------------------------------------------------===//
 
@@ -914,6 +936,28 @@ class OpenMP_NontemporalClauseSkip<
 def OpenMP_NontemporalClause : OpenMP_NontemporalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.2]: `notinbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NotinbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$notinbranch);
+
+  let optAssemblyFormat = [{
+    `notinbranch` $notinbranch
+  }];
+
+  let description = [{
+    The `notinbranch` clause indicates that the generated SIMD function variant
+    is intended for use when not in conditional branches.
+  }];
+}
+def OpenMP_NotinbranchClause : OpenMP_NotinbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [15.6] `nowait` clause
 //===----------------------------------------------------------------------===//
 
@@ -974,22 +1018,51 @@ class OpenMP_NumTeamsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Optional<AnyInteger>:$num_teams_lower,
-    Optional<AnyInteger>:$num_teams_upper
+    Optional<IntLikeType>:$num_teams_lower,
+    Variadic<IntLikeType>:$num_teams_upper_vars
   );
 
   let optAssemblyFormat = [{
     `num_teams` `(` ( $num_teams_lower^ `:` type($num_teams_lower) )? `to`
-                      $num_teams_upper `:` type($num_teams_upper) `)`
+                  $num_teams_upper_vars `:` type($num_teams_upper_vars) `)`
   }];
 
   let description = [{
-    The optional `num_teams_upper` and `num_teams_lower` arguments specify the
-    limit on the number of teams to be created. If only the upper bound is
-    specified, it acts as if the lower bound was set to the same value. It is
-    not allowed to set `num_teams_lower` if `num_teams_upper` is not specified.
-    They define a closed range, where both the lower and upper bounds are
-    included.
+    The `num_teams` clause specifies the bounds on the league space formed by the
+    construct on which it appears.
+
+    Multi-dimensional (OpenMP 6.1 dims modifier):
+    - Uses `num_teams_upper_vars` with multiple values (one per dimension)
+    - Values may have different types; they will be cast at LLVM IR translation
+    - Format: `num_teams(to %v0, %v1, ... : type0, type1, ...)`
+    - Example: `num_teams(to %ub0, %ub1, %ub2 : i32, i64, i32)`
+    - The number of dimensions is implicitly `num_teams_upper_vars.size()`
+
+    Uni-dimensional (legacy format):
+    - Uses `num_teams_upper_vars` with one value and optional `num_teams_lower`
+    - If lower bound not specified, it defaults to upper bound value
+    - Format: `num_teams(%lb : type to %ub : type)` or `num_teams(to %ub : type)`
+    - Example: `num_teams(%lb : i32 to %ub : i32)` or `num_teams(to %ub : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if using the multi-dimensional values format
+    bool hasNumTeamsMultiDim() {
+      return getNumTeamsUpperVars().size() > 1;
+    }
+
+    /// Returns the number of dimensions specified for num_teams
+    unsigned getNumTeamsDimsCount() {
+      return getNumTeamsUpperVars().size();
+    }
+
+    /// Returns the value for a specific dimension index
+    /// Index must be less than getNumTeamsUpperVars().size()
+    ::mlir::Value getNumTeams(unsigned dim = 0) {
+      assert(dim < getNumTeamsDimsCount() &&
+             "Num teams dims index out of bounds");
+      return getNumTeamsUpperVars()[dim];
+    }
   }];
 }
 
@@ -1531,5 +1604,29 @@ class OpenMP_UseDevicePtrClauseSkip<
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [5.10] `uniform` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_UniformClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$uniform_vars);
+
+  let optAssemblyFormat = [{
+    `uniform` `(` custom<UniformClause>($uniform_vars, type($uniform_vars)) `)`
+  }];
+
+  let description = [{
+    The `uniform` clause declares one or more arguments to have an invariant
+    value for all concurrent invocations of the function in the execution of
+    a single SIMD loop.
+  }];
+}
+
+def OpenMP_UniformClause : OpenMP_UniformClauseSkip<>;
 
 #endif // OPENMP_CLAUSES

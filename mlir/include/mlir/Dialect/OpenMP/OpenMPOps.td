@@ -2247,8 +2247,9 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
 
 def DeclareSimdOp
     : OpenMP_Op<"declare_simd", traits = [AttrSizedOperandSegments],
-                clauses = [OpenMP_AlignedClause, OpenMP_LinearClause,
-                           OpenMP_SimdlenClause]> {
+                clauses = [OpenMP_AlignedClause, OpenMP_InbranchClause,
+                           OpenMP_LinearClause, OpenMP_NotinbranchClause,
+                           OpenMP_SimdlenClause, OpenMP_UniformClause]> {
   let summary = "declare simd directive";
   let description = [{
     "omp.declare_simd" models the OpenMP `declare simd` directive.

@@ -119,61 +119,6 @@ class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
 
-class DITypeRefArray {
-  const MDTuple *N = nullptr;
-
-public:
-  DITypeRefArray() = default;
-  DITypeRefArray(const MDTuple *N) : N(N) {}
-
-  explicit operator bool() const { return get(); }
-  explicit operator MDTuple *() const { return get(); }
-
-  MDTuple *get() const { return const_cast<MDTuple *>(N); }
-  MDTuple *operator->() const { return get(); }
-  MDTuple &operator*() const { return *get(); }
-
-  // FIXME: Fix callers and remove condition on N.
-  unsigned size() const { return N ? N->getNumOperands() : 0u; }
-  DIType *operator[](unsigned I) const {
-    return cast_or_null<DIType>(N->getOperand(I));
-  }
-
-  class iterator {
-    MDNode::op_iterator I = nullptr;
-
-  public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = DIType *;
-    using difference_type = std::ptrdiff_t;
-    using pointer = void;
-    using reference = DIType *;
-
-    iterator() = default;
-    explicit iterator(MDNode::op_iterator I) : I(I) {}
-
-    DIType *operator*() const { return cast_or_null<DIType>(*I); }
-
-    iterator &operator++() {
-      ++I;
-      return *this;
-    }
-
-    iterator operator++(int) {
-      iterator Temp(*this);
-      ++I;
-      return Temp;
-    }
-
-    bool operator==(const iterator &X) const { return I == X.I; }
-    bool operator!=(const iterator &X) const { return I != X.I; }
-  };
-
-  // FIXME: Fix callers and remove condition on N.
-  iterator begin() const { return N ? iterator(N->op_begin()) : iterator(); }
-  iterator end() const { return N ? iterator(N->op_end()) : iterator(); }
-};
-
 /// Tagged DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
@@ -2001,7 +1946,7 @@ class DISubroutineType : public DIType {
   ~DISubroutineType() = default;
 
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
-                                   uint8_t CC, DITypeRefArray TypeArray,
+                                   uint8_t CC, DITypeArray TypeArray,
                                    StorageType Storage,
                                    bool ShouldCreate = true) {
     return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
@@ -2017,7 +1962,7 @@ class DISubroutineType : public DIType {
 
 public:
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray),
+                    (DIFlags Flags, uint8_t CC, DITypeArray TypeArray),
                     (Flags, CC, TypeArray))
   DEFINE_MDNODE_GET(DISubroutineType,
                     (DIFlags Flags, uint8_t CC, Metadata *TypeArray),
@@ -2033,7 +1978,7 @@ public:
 
   uint8_t getCC() const { return CC; }
 
-  DITypeRefArray getTypeArray() const {
+  DITypeArray getTypeArray() const {
     return cast_or_null<MDTuple>(getRawTypeArray());
   }
 

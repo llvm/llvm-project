@@ -1551,10 +1551,10 @@ bool ARMTargetLowering::shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
 }
 
 // Create a fast isel object.
-FastISel *
-ARMTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
-  return ARM::createFastISel(funcInfo, libInfo);
+FastISel *ARMTargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return ARM::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 Sched::Preference ARMTargetLowering::getSchedulingPreference(SDNode *N) const {
@@ -21102,13 +21102,14 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
 }
 
-void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+void ARMTargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
@@ -21124,7 +21125,7 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
       F->addParamAttr(0, Attribute::AttrKind::InReg);
   }
 
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
