@@ -16236,9 +16236,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       EVT LaneVT = VT.getVectorElementType();
       EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
 
-      SDValue HiZero = LaneVT.isInteger()
-                           ? DAG.getConstant(0, DL, HalfVT)
-                           : DAG.getConstantFP(0.0, DL, HalfVT);
+      SDValue HiZero = LaneVT.isInteger() ? DAG.getConstant(0, DL, HalfVT)
+                                          : DAG.getConstantFP(0.0, DL, HalfVT);
 
       SDValue LoHalf =
           LaneVT.getSizeInBits() == 64
