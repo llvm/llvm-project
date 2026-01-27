@@ -1222,6 +1222,16 @@ def err_pragma_pop_visibility_mismatch : Error<
   "#pragma visibility pop with no matching #pragma visibility push">;
 def note_surrounding_namespace_starts_here : Note<
   "surrounding namespace with visibility attribute starts here">;
+def warn_failed_to_resolve_pragma : Warning<
+  "failed to resolve '#pragma %0' to a declaration">,
+  InGroup<IgnoredPragmas>;
+def warn_pragma_not_applied : Warning<
+  "#pragma %0 is applicable to symbols with external linkage only; "
+  "not applied to %1">,
+  InGroup<IgnoredPragmas>;
+def warn_pragma_not_applied_to_defined_symbol : Warning<
+  "#pragma %0 can only applied before a symbol is defined">,
+  InGroup<IgnoredPragmas>;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
 def err_pragma_loop_compatibility : Error<
@@ -10820,19 +10830,36 @@ def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 
-def warn_lifetime_safety_intra_tu_suggestion
+def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_cross_tu_suggestion
+def warn_lifetime_safety_cross_tu_param_suggestion
     : Warning<"parameter in cross-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
+def warn_lifetime_safety_intra_tu_this_suggestion
+    : Warning<"implicit this in intra-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_this_suggestion
+    : Warning<"implicit this in cross-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUSuggestions>,
+      DefaultIgnore;
+
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
+
+def warn_lifetime_safety_noescape_escapes
+    : Warning<"parameter is marked [[clang::noescape]] but escapes">,
+      InGroup<LifetimeSafetyNoescape>,
+      DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -11259,6 +11286,8 @@ def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
+def err_ppc_invalid_arg_type : Error<
+  "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<

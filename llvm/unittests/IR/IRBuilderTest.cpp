@@ -19,6 +19,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -26,6 +27,7 @@
 #include <type_traits>
 
 using namespace llvm;
+using namespace PatternMatch;
 using ::testing::UnorderedElementsAre;
 
 namespace {
@@ -255,6 +257,62 @@ TEST_F(IRBuilderTest, CreateStepVectorI3) {
   FunctionType *FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecI8Ty);
   EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::stepvector);
+}
+
+TEST_F(IRBuilderTest, CreateVectorSpliceLeft) {
+  IRBuilder<> Builder(BB);
+
+  // Fixed width vectors with constant offsets
+  Type *FixedTy = VectorType::get(Builder.getInt32Ty(), 4, false);
+  Value *FixedVec = Builder.CreateLoad(FixedTy, GV);
+  Value *Shuffle = Builder.CreateVectorSpliceLeft(FixedVec, FixedVec, 1);
+  EXPECT_TRUE(
+      match(Shuffle, m_Shuffle(m_Specific(FixedVec), m_Specific(FixedVec),
+                               m_SpecificMask({1, 2, 3, 4}))));
+
+  Value *Offset = Builder.CreateLoad(Builder.getInt32Ty(), GV);
+  Value *FixedSplice =
+      Builder.CreateVectorSpliceLeft(FixedVec, FixedVec, Offset);
+  EXPECT_TRUE(match(FixedSplice, m_Intrinsic<Intrinsic::vector_splice_left>(
+                                     m_Specific(FixedVec), m_Specific(FixedVec),
+                                     m_Specific(Offset))));
+
+  Type *ScalableTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  Value *ScalableVec = Builder.CreateLoad(ScalableTy, GV);
+  Value *ScalableSplice =
+      Builder.CreateVectorSpliceLeft(ScalableVec, ScalableVec, Offset);
+  EXPECT_TRUE(
+      match(ScalableSplice, m_Intrinsic<Intrinsic::vector_splice_left>(
+                                m_Specific(ScalableVec),
+                                m_Specific(ScalableVec), m_Specific(Offset))));
+}
+
+TEST_F(IRBuilderTest, CreateVectorSpliceRight) {
+  IRBuilder<> Builder(BB);
+
+  // Fixed width vectors with constant offsets
+  Type *FixedTy = VectorType::get(Builder.getInt32Ty(), 4, false);
+  Value *FixedVec = Builder.CreateLoad(FixedTy, GV);
+  Value *Shuffle = Builder.CreateVectorSpliceRight(FixedVec, FixedVec, 1);
+  EXPECT_TRUE(
+      match(Shuffle, m_Shuffle(m_Specific(FixedVec), m_Specific(FixedVec),
+                               m_SpecificMask({3, 4, 5, 6}))));
+
+  Value *Offset = Builder.CreateLoad(Builder.getInt32Ty(), GV);
+  Value *FixedSplice =
+      Builder.CreateVectorSpliceRight(FixedVec, FixedVec, Offset);
+  EXPECT_TRUE(match(FixedSplice, m_Intrinsic<Intrinsic::vector_splice_right>(
+                                     m_Specific(FixedVec), m_Specific(FixedVec),
+                                     m_Specific(Offset))));
+
+  Type *ScalableTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  Value *ScalableVec = Builder.CreateLoad(ScalableTy, GV);
+  Value *ScalableSplice =
+      Builder.CreateVectorSpliceRight(ScalableVec, ScalableVec, Offset);
+  EXPECT_TRUE(
+      match(ScalableSplice, m_Intrinsic<Intrinsic::vector_splice_right>(
+                                m_Specific(ScalableVec),
+                                m_Specific(ScalableVec), m_Specific(Offset))));
 }
 
 TEST_F(IRBuilderTest, ConstrainedFP) {
