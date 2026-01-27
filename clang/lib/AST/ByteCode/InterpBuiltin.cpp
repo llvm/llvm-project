@@ -5902,6 +5902,26 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::minimum(A, B);
         });
 
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+  case clang::X86::BI__builtin_ia32_minsh:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+    return interp__builtin_scalar_fp_round_mask_binop(
+        S, OpPC, Call, [](const APFloat &A, const APFloat &B) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
   case clang::X86::BI__builtin_ia32_maxph128:
@@ -5923,18 +5943,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::maximum(A, B);
         });
 
-  case clang::X86::BI__builtin_ia32_minss:
-  case clang::X86::BI__builtin_ia32_minsd:
-  case clang::X86::BI__builtin_ia32_minsh:
-    return interp__builtin_elementwise_fp_binop(
-        S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::minimum(A, B);
-        },
-        /*IsScalar=*/true);
-
   case clang::X86::BI__builtin_ia32_maxss:
   case clang::X86::BI__builtin_ia32_maxsd:
   case clang::X86::BI__builtin_ia32_maxsh:
@@ -5946,14 +5954,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::maximum(A, B);
         },
         /*IsScalar=*/true);
-
-  case clang::X86::BI__builtin_ia32_minsh_round_mask:
-    return interp__builtin_scalar_fp_round_mask_binop(
-        S, OpPC, Call, [](const APFloat &A, const APFloat &B) {
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::minimum(A, B);
-        });
 
   case clang::X86::BI__builtin_ia32_maxsh_round_mask:
     return interp__builtin_scalar_fp_round_mask_binop(
