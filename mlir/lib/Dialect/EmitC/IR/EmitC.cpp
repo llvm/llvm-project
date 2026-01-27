@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
+#include "mlir/Dialect/EmitC/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -412,6 +413,11 @@ LogicalResult DereferenceOp::verify() {
 // ExpressionOp
 //===----------------------------------------------------------------------===//
 
+void ExpressionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  populateExpressionCanonicalizationPatterns(results, context);
+}
+
 ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
   if (parser.parseOperandList(operands))
@@ -435,27 +441,45 @@ ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
                             "expected single return type");
   result.addTypes(fnType.getResults());
   Region *body = result.addRegion();
+  DenseSet<Value> uniqueOperands(result.operands.begin(),
+                                 result.operands.end());
+  bool enableNameShadowing = uniqueOperands.size() == result.operands.size();
   SmallVector<OpAsmParser::Argument> argsInfo;
-  for (auto [unresolvedOperand, operandType] :
-       llvm::zip(operands, fnType.getInputs())) {
-    OpAsmParser::Argument argInfo;
-    argInfo.ssaName = unresolvedOperand;
-    argInfo.type = operandType;
-    argsInfo.push_back(argInfo);
+  if (enableNameShadowing) {
+    for (auto [unresolvedOperand, operandType] :
+         llvm::zip(operands, fnType.getInputs())) {
+      OpAsmParser::Argument argInfo;
+      argInfo.ssaName = unresolvedOperand;
+      argInfo.type = operandType;
+      argsInfo.push_back(argInfo);
+    }
   }
-  if (parser.parseRegion(*body, argsInfo, /*enableNameShadowing=*/true))
+  SMLoc beforeRegionLoc = parser.getCurrentLocation();
+  if (parser.parseRegion(*body, argsInfo, enableNameShadowing))
     return failure();
+  if (!enableNameShadowing) {
+    if (body->front().getArguments().size() < result.operands.size()) {
+      return parser.emitError(
+          beforeRegionLoc, "with recurring operands expected block arguments");
+    }
+  }
   return success();
 }
 
 void emitc::ExpressionOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printOperands(getDefs());
+  auto operands = getDefs();
+  p.printOperands(operands);
   p << " : ";
   p.printFunctionalType(getOperation());
-  p.shadowRegionArgs(getRegion(), getDefs());
+  DenseSet<Value> uniqueOperands(operands.begin(), operands.end());
+  bool printEntryBlockArgs = true;
+  if (uniqueOperands.size() == operands.size()) {
+    p.shadowRegionArgs(getRegion(), getDefs());
+    printEntryBlockArgs = false;
+  }
   p << ' ';
-  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getRegion(), printEntryBlockArgs);
 }
 
 Operation *ExpressionOp::getRootOp() {
