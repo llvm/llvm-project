@@ -2448,18 +2448,22 @@ __attribute__((convergent)) uint4 WaveActiveBallot(bool Val);
 /// to all active non-helper lanes.
 /// \param Expr The integer expression to evaluate.
 /// \return The bitwise OR value of Expr across all active threads.
+#ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
 __attribute__((convergent)) int16_t WaveActiveBitOr(int16_t Expr);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint16_t WaveActiveBitOr(uint16_t Expr);
+#endif
+
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
 __attribute__((convergent)) int WaveActiveBitOr(int Expr);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
 __attribute__((convergent)) int64_t WaveActiveBitOr(int64_t Expr);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
-__attribute__((convergent)) uint16_t WaveActiveBitOr(uint16_t Expr);
+
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
 __attribute__((convergent)) uint WaveActiveBitOr(uint Expr);
