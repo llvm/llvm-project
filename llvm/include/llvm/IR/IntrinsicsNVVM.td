@@ -1373,6 +1373,12 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
     } // ftz
+    
+    def int_nvvm_mul_rn_ftz_f16 : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+    def int_nvvm_mul_rn_ftz_v2f16 : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
   }
 
   //
@@ -1612,6 +1618,12 @@ let TargetPrefix = "nvvm" in {
         DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
         
     } // ftz
+    
+    def int_nvvm_add_rn_ftz_f16 : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+    def int_nvvm_add_rn_ftz_v2f16 : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
   }
 
   //

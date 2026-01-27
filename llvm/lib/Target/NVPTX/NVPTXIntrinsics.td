@@ -1504,8 +1504,10 @@ def INT_NVVM_MUL24_I : F_MATH_2<"mul24.lo.s32", B32, B32, B32, int_nvvm_mul24_i>
 def INT_NVVM_MUL24_UI : F_MATH_2<"mul24.lo.u32", B32, B32, B32, int_nvvm_mul24_ui>;
 
 def INT_NVVM_MUL_RN_SAT_F16 : F_MATH_2<"mul.rn.sat.f16", B16, B16, B16, int_nvvm_mul_rn_sat_f16>;
+def INT_NVVM_MUL_RN_FTZ_F16 : F_MATH_2<"mul.rn.ftz.f16", B16, B16, B16, int_nvvm_mul_rn_ftz_f16>;
 def INT_NVVM_MUL_RN_FTZ_SAT_F16 : F_MATH_2<"mul.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_mul_rn_ftz_sat_f16>;
 def INT_NVVM_MUL_RN_SAT_F16X2 : F_MATH_2<"mul.rn.sat.f16x2", B32, B32, B32, int_nvvm_mul_rn_sat_v2f16>;
+def INT_NVVM_MUL_RN_FTZ_F16X2 : F_MATH_2<"mul.rn.ftz.f16x2", B32, B32, B32, int_nvvm_mul_rn_ftz_v2f16>;
 def INT_NVVM_MUL_RN_FTZ_SAT_F16X2 : F_MATH_2<"mul.rn.ftz.sat.f16x2", B32, B32, B32, int_nvvm_mul_rn_ftz_sat_v2f16>;
 
 //
@@ -1876,8 +1878,10 @@ let Predicates = [doRsqrtOpt] in {
 //
 
 def INT_NVVM_ADD_RN_SAT_F16 : F_MATH_2<"add.rn.sat.f16", B16, B16, B16, int_nvvm_add_rn_sat_f16>;
+def INT_NVVM_ADD_RN_FTZ_F16 : F_MATH_2<"add.rn.ftz.f16", B16, B16, B16, int_nvvm_add_rn_ftz_f16>;
 def INT_NVVM_ADD_RN_FTZ_SAT_F16 : F_MATH_2<"add.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_add_rn_ftz_sat_f16>;
 def INT_NVVM_ADD_RN_SAT_F16X2 : F_MATH_2<"add.rn.sat.f16x2", B32, B32, B32, int_nvvm_add_rn_sat_v2f16>;
+def INT_NVVM_ADD_RN_FTZ_F16X2 : F_MATH_2<"add.rn.ftz.f16x2", B32, B32, B32, int_nvvm_add_rn_ftz_v2f16>;
 def INT_NVVM_ADD_RN_FTZ_SAT_F16X2 : F_MATH_2<"add.rn.ftz.sat.f16x2", B32, B32, B32, int_nvvm_add_rn_ftz_sat_v2f16>;
 
 def INT_NVVM_ADD_RN_FTZ_F : F_MATH_2<"add.rn.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_f>;
@@ -1930,6 +1934,7 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 //
 
 def sub_rn_sat : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
+def sub_rn_ftz : SDNode<"NVPTXISD::SUB_RN_FTZ", SDTFPBinOp>;
 def sub_rn_ftz_sat : 
   SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
   
@@ -1940,8 +1945,10 @@ class INT_NVVM_SUB_RN<RegTyInfo TyInfo, string variant> :
      (!cast<SDNode>("sub_rn" # variant) TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
 
 def INT_NVVM_SUB_RN_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_F16 : INT_NVVM_SUB_RN<F16RT, "_ftz">;
 def INT_NVVM_SUB_RN_FTZ_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_ftz_sat">;
 def INT_NVVM_SUB_RN_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_ftz">;
 def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_ftz_sat">;
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
