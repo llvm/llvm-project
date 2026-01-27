@@ -54,6 +54,11 @@ MATCHER(declRange, "") {
   const Range &Range = ::testing::get<1>(arg);
   return Sym.PreferredDeclaration.range == Range;
 }
+MATCHER(defRange, "") {
+  const LocatedSymbol &Sym = ::testing::get<0>(arg);
+  const Range &Range = ::testing::get<1>(arg);
+  return Sym.Definition.value_or(Sym.PreferredDeclaration).range == Range;
+}
 
 // Extracts ranges from an annotated example, and constructs a matcher for a
 // highlight set. Ranges should be named $read/$write as appropriate.
@@ -1878,8 +1883,8 @@ TEST(FindImplementations, Inheritance) {
       virtual void B$2^ar();
       void Concrete();  // No implementations for concrete methods.
     };
-    struct Child2 : Child1 {
-      void $3[[Foo]]() override;
+    struct $0[[Child2]] : Child1 {
+      void $1[[$3[[Foo]]]]() override;
       void $2[[Bar]]() override;
     };
     void FromReference() {
@@ -1921,6 +1926,42 @@ TEST(FindImplementations, Inheritance) {
           << Code.code() << " at " << Point << " for Label " << Label;
     }
   }
+}
+
+TEST(FindImplementations, InheritanceRecursion) {
+  // Make sure inheritance is followed, but does not diverge.
+  llvm::StringRef Test = R"cpp(
+    template <int>
+    struct Ev^en;
+
+    template <int>
+    struct Odd;
+
+    template <>
+    struct Even<0> {
+      static const bool value = true;
+    };
+
+    template <>
+    struct Odd<0> {
+      static const bool value = false;
+    };
+
+    template <int I>
+    struct [[Even]] : Odd<I - 1> {};
+
+    template <int I>
+    struct [[Odd]] : Even<I - 1> {};
+
+    constexpr bool Answer = Even<42>::value;
+  )cpp";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+  EXPECT_THAT(findImplementations(AST, Code.point(), Index.get()),
+              UnorderedPointwise(defRange(), Code.ranges()));
 }
 
 TEST(FindImplementations, InheritanceObjC) {

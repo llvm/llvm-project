@@ -1514,7 +1514,28 @@ void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 void BarrierOp::build(mlir::OpBuilder &odsBuilder,
-                      mlir::OperationState &odsState) {}
+                      mlir::OperationState &odsState,
+                      std::optional<AddressSpace> addressSpace) {
+  ArrayAttr addressSpacesAttr;
+  if (addressSpace)
+    addressSpacesAttr = odsBuilder.getArrayAttr(
+        AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
+  build(odsBuilder, odsState, addressSpacesAttr);
+}
+
+/// Builds a barrier that causes memory operations affecting `memrefToFence` to
+/// be completed after the barrier is concluded. Currently, this means setting
+/// the fenced address spaces to those of the given memref if it is a gpu
+/// address space.
+void BarrierOp::build(OpBuilder &builder, OperationState &odsState,
+                      Value memrefToFence) {
+  std::optional<AddressSpace> addrSpaceToFence;
+  if (auto memrefType = dyn_cast<BaseMemRefType>(memrefToFence.getType()))
+    if (auto addrSpaceAttr = dyn_cast_if_present<gpu::AddressSpaceAttr>(
+            memrefType.getMemorySpace()))
+      addrSpaceToFence = addrSpaceAttr.getValue();
+  return build(builder, odsState, addrSpaceToFence);
+}
 
 //===----------------------------------------------------------------------===//
 // GPUFuncOp
