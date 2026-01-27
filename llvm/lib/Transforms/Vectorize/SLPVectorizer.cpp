@@ -24432,7 +24432,7 @@ bool SLPVectorizerPass::vectorizeStores(
           }
           if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
             break;
-          // For the MaxRegVF, save RangeSizes to limit compile time
+          // For the MaxRegVF case, save RangeSizes to limit compile time
           if (VF == MaxRegVF)
             for (std::pair<unsigned, unsigned> &P : RangeSizes)
               if (P.first != 0)
