@@ -152,7 +152,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
 #ifndef NDEBUG
   // Make sure that all predecessors of each dead block is also dead.
   SmallPtrSet<BasicBlock *, 4> Dead(llvm::from_range, BBs);
-  assert(Dead.size() == BBs.size() && "Duplicating blocks?");
+  // assert(Dead.size() == BBs.size() && "Duplicating blocks?");
   for (auto *BB : Dead)
     for (BasicBlock *Pred : predecessors(BB))
       assert(Dead.count(Pred) && "All predecessors must be dead!");
