@@ -1484,10 +1484,9 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
         if (!resultTypes.back())
           throw nb::cast_error();
       } catch (nb::cast_error &err) {
-        throw nb::value_error((std::string("Result ") +
-                               std::to_string(it.index()) + " of operation \"" +
-                               std::string(name) + "\" must be a Type (" +
-                               err.what() + ")")
+        throw nb::value_error(join("Result ", it.index(), " of operation \"", 
+                               name, "\" must be a Type (", 
+                               err.what(), ")")
                                   .c_str());
       }
     }
@@ -1495,11 +1494,10 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
     if (resultSegmentSpec.size() != resultTypeList.size()) {
-      throw nb::value_error((std::string("Operation \"") + std::string(name) +
-                             "\" requires " +
-                             std::to_string(resultSegmentSpec.size()) +
-                             " result segments but was provided " +
-                             std::to_string(resultTypeList.size()))
+      throw nb::value_error(join("Operation \"", name, 
+                             "\" requires ", resultSegmentSpec.size(), 
+                             " result segments but was provided ", 
+                             resultTypeList.size())
                                 .c_str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
@@ -1517,17 +1515,16 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
             // Allowed to be optional.
             resultSegmentLengths.push_back(0);
           } else {
-            throw nb::value_error(
-                (std::string("Result ") + std::to_string(it.index()) +
-                 " of operation \"" + std::string(name) +
+            throw nb::value_error(join
+                ("Result ", it.index(), 
+                 " of operation \"", name, 
                  "\" must be a Type (was None and result is not optional)")
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error((std::string("Result ") +
-                                 std::to_string(it.index()) +
-                                 " of operation \"" + std::string(name) +
-                                 "\" must be a Type (" + err.what() + ")")
+          throw nb::value_error(join("Result ", it.index(), 
+                                 " of operation \"" , name, 
+                                 "\" must be a Type (", err.what(), ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
@@ -1551,10 +1548,10 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(
-              (std::string("Result ") + std::to_string(it.index()) +
-               " of operation \"" + std::string(name) + "\" must be a Sequence of Types (" +
-               err.what() + ")")
+          throw nb::value_error(join
+              ("Result ", it.index(), 
+               " of operation \"", name, "\" must be a Sequence of Types (", 
+               err.what(), ")")
                   .c_str());
         }
       } else {
@@ -1568,9 +1565,8 @@ MlirValue getUniqueResult(MlirOperation operation) {
   auto numResults = mlirOperationGetNumResults(operation);
   if (numResults != 1) {
     auto name = mlirIdentifierStr(mlirOperationGetName(operation));
-    throw nb::value_error((std::string("Cannot call .result on operation ") +
-                           std::string(name.data, name.length) + " which has " +
-                           std::to_string(numResults) +
+    throw nb::value_error(join("Cannot call .result on operation ", 
+                           std::string_view(name.data, name.length), " which has ", numResults, 
                            " results (it is only valid for operations with a "
                            "single result)")
                               .c_str());
@@ -1623,17 +1619,17 @@ nb::object PyOpView::buildGeneric(
     regions = opMinRegionCount;
   }
   if (*regions < opMinRegionCount) {
-    throw nb::value_error(
-        (std::string("Operation \"") + std::string(name) +
-         "\" requires a minimum of " + std::to_string(opMinRegionCount) +
-         " regions but was built with regions=" + std::to_string(*regions))
+    throw nb::value_error(join
+        ("Operation \"", name, 
+         "\" requires a minimum of ", opMinRegionCount, 
+         " regions but was built with regions=", *regions)
             .c_str());
   }
   if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
-    throw nb::value_error(
-        (std::string("Operation \"") + std::string(name) +
-         "\" requires a maximum of " + std::to_string(opMinRegionCount) +
-         " regions but was built with regions=" + std::to_string(*regions))
+    throw nb::value_error(join
+        ("Operation \"", name, 
+         "\" requires a maximum of ", opMinRegionCount, 
+         " regions but was built with regions=", *regions)
             .c_str());
   }
 
@@ -1653,10 +1649,9 @@ nb::object PyOpView::buildGeneric(
       try {
         operands.push_back(getOpResultOrValue(it.value()));
       } catch (nb::builtin_exception &err) {
-        throw nb::value_error((std::string("Operand ") +
-                               std::to_string(it.index()) + " of operation \"" +
-                               std::string(name) + "\" must be a Value (" +
-                               err.what() + ")")
+        throw nb::value_error(join("Operand ", it.index(), " of operation \"", 
+                               name, "\" must be a Value (", 
+                               err.what(), ")")
                                   .c_str());
       }
     }
@@ -1664,11 +1659,11 @@ nb::object PyOpView::buildGeneric(
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
     if (operandSegmentSpec.size() != operandList.size()) {
-      throw nb::value_error((std::string("Operation \"") + std::string(name) +
-                             "\" requires " +
-                             std::to_string(operandSegmentSpec.size()) +
-                             "operand segments but was provided " +
-                             std::to_string(operandList.size()))
+      throw nb::value_error(join("Operation \"", name,
+                             "\" requires ", 
+                             operandSegmentSpec.size(), 
+                             "operand segments but was provided ", 
+                             operandList.size())
                                 .c_str());
     }
     operandSegmentLengths.reserve(operandList.size());
@@ -1683,10 +1678,9 @@ nb::object PyOpView::buildGeneric(
 
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error((std::string("Operand ") +
-                                   std::to_string(it.index()) +
-                                   " of operation \"" + std::string(name) +
-                                   "\" must be a Value (" + err.what() + ")")
+            throw nb::value_error(join("Operand ", it.index(), 
+                                   " of operation \"", name, 
+                                   "\" must be a Value (",  err.what(), ")")
                                       .c_str());
           }
 
@@ -1695,9 +1689,9 @@ nb::object PyOpView::buildGeneric(
           // Allowed to be optional.
           operandSegmentLengths.push_back(0);
         } else {
-          throw nb::value_error(
-              (std::string("Operand ") + std::to_string(it.index()) +
-               " of operation \"" + std::string(name) +
+          throw nb::value_error(join
+              ("Operand ", it.index(), 
+               " of operation \"", name, 
                "\" must be a Value (was None and operand is not optional)")
                   .c_str());
         }
@@ -1719,10 +1713,10 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(
-              (std::string("Operand ") + std::to_string(it.index()) +
-               " of operation \"" + std::string(name) +
-               "\" must be a Sequence of Values (" + err.what() + ")")
+          throw nb::value_error(join
+              ("Operand ", it.index(), 
+               " of operation \"", name, 
+               "\" must be a Sequence of Values (", err.what(), ")")
                   .c_str());
         }
       } else {
