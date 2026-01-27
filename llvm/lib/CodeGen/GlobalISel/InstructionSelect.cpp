@@ -356,7 +356,14 @@ bool InstructionSelect::selectInstr(MachineInstr &MI) {
     return true;
   }
 
-  // Eliminate hints or G_CONSTANT_FOLD_BARRIER.
+  if (MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
+    // Allow targets to provide custom handling before falling back to the
+    // generic elimination below.
+    if (ISel->select(MI))
+      return true;
+  }
+
+  // Eliminate hints or a remaining G_CONSTANT_FOLD_BARRIER.
   if (isPreISelGenericOptimizationHint(MI.getOpcode()) ||
       MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
     auto [DstReg, SrcReg] = MI.getFirst2Regs();
