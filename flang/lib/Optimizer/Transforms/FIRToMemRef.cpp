@@ -53,6 +53,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -223,6 +224,16 @@ mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
   llvm::SmallPtrSet<Operation *, 8> visited;
 
   while (currentVal) {
+    if (auto blockArg = llvm::dyn_cast<BlockArgument>(currentVal)) {
+      Block *owner = blockArg.getOwner();
+      if (owner)
+        if (auto funcLike =
+                dyn_cast<FunctionOpInterface>(owner->getParentOp()))
+          if (auto attr = funcLike.getArgAttr(blockArg.getArgNumber(),
+                                              cuf::getDataAttrName()))
+            return attr;
+      break;
+    }
     Operation *defOp = currentVal.getDefiningOp();
     if (!defOp || !visited.insert(defOp).second)
       break;
