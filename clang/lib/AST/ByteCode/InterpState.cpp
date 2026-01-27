@@ -20,13 +20,14 @@ using namespace clang::interp;
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
     : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M), P(P), Stk(Stk),
-      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame) {
+      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
   EvalMode = Parent.EvalMode;
-  StepsLeft = Ctx.getLangOpts().ConstexprStepLimit;
 }
 
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
@@ -34,13 +35,13 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
     : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
       Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
   EvalMode = Parent.EvalMode;
-  StepsLeft = Ctx.getLangOpts().ConstexprStepLimit;
 }
 
 bool InterpState::inConstantContext() const {
@@ -158,6 +159,9 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
 }
 
 bool InterpState::noteStep(CodePtr OpPC) {
+  if (InfiniteSteps)
+    return true;
+
   --StepsLeft;
   if (StepsLeft != 0)
     return true;
