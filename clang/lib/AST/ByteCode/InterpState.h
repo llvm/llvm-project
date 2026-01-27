@@ -164,6 +164,8 @@ private:
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   std::unique_ptr<DynamicAllocator> Alloc;
+  /// Allocator for everything else, e.g. floating-point values.
+  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -192,8 +194,6 @@ public:
   /// List of blocks we're currently running either constructors or destructors
   /// for.
   llvm::SmallVector<const Block *> InitializingBlocks;
-
-  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 };
 
 class InterpStateCCOverride final {

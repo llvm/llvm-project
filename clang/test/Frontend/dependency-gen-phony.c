@@ -25,8 +25,7 @@
 // STDIO-NEXT: {{.*}}empty.h:
 // STDIO-NOT:  {{.}}
 
-// STDIO-DARWIN:      -.o: \
-// STDIO-DARWIN-NEXT: SDKSettings.json \
+// STDIO-DARWIN:      -.o:{{.*[[:space:]].*}}SDKSettings.json
 // STDIO-DARWIN-NEXT: Inputs{{/|\\}}empty.h
 // STDIO-DARWIN-NEXT: {{.*}}SDKSettings.json:
 // STDIO-DARWIN-NEXT: {{.*}}empty.h:
