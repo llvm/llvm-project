@@ -39,6 +39,7 @@
 // OBJECT-DWARF: DW_TAG_compile_unit
 // OBJECT-DWARF: DW_AT_name        ("Left")
 // OBJECT-DWARF: DW_AT_dwo_name    ("llvmcas://
+// OBJECT-DWARF-NOT: DW_AT_LLVM_include_path
 
 /// Check debug info is correct.
 // RUN: %clang %t/tu.o -o %t/a.out

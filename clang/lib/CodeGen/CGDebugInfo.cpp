@@ -3533,7 +3533,9 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
       IsRootModule ? nullptr
                    : getOrCreateModuleRef(ASTSourceDescriptor(*M->Parent),
                                           CreateSkeletonCU);
-  std::string IncludePath = Mod.getPath().str();
+
+  // If Module is from CAS, there is not a valid include path for that module.
+  std::string IncludePath = Mod.getCASID().empty() ? Mod.getPath().str() : "";
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
                             RemapPath(IncludePath), M ? M->APINotesFile : "");
