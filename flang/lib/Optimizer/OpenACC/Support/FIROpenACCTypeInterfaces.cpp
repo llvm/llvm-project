@@ -1586,4 +1586,23 @@ template bool
     OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
                                                          mlir::Value) const;
 
+std::optional<mlir::arith::AtomicRMWKind>
+OpenACCReducibleLogicalModel::getAtomicRMWKind(
+    mlir::Type type, mlir::acc::ReductionOperator redOp) const {
+  switch (redOp) {
+  case mlir::acc::ReductionOperator::AccLand:
+    return mlir::arith::AtomicRMWKind::andi;
+  case mlir::acc::ReductionOperator::AccLor:
+    return mlir::arith::AtomicRMWKind::ori;
+  case mlir::acc::ReductionOperator::AccEqv:
+  case mlir::acc::ReductionOperator::AccNeqv:
+    // Eqv and Neqv are valid for logical types but don't have a direct
+    // AtomicRMWKind mapping yet.
+    return std::nullopt;
+  default:
+    // Other reduction operators are not valid for logical types.
+    return std::nullopt;
+  }
+}
+
 } // namespace fir::acc
