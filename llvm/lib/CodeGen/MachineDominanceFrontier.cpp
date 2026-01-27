@@ -22,30 +22,39 @@ template class ForwardDominanceFrontierBase<MachineBasicBlock>;
 }
 
 
-char MachineDominanceFrontier::ID = 0;
+char MachineDominanceFrontierWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MachineDominanceFrontier, "machine-domfrontier",
+INITIALIZE_PASS_BEGIN(MachineDominanceFrontierWrapperPass, "machine-domfrontier",
                 "Machine Dominance Frontier Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(MachineDominanceFrontier, "machine-domfrontier",
+INITIALIZE_PASS_END(MachineDominanceFrontierWrapperPass, "machine-domfrontier",
                 "Machine Dominance Frontier Construction", true, true)
 
-MachineDominanceFrontier::MachineDominanceFrontier()
+MachineDominanceFrontierWrapperPass::MachineDominanceFrontierWrapperPass()
     : MachineFunctionPass(ID) {}
 
-char &llvm::MachineDominanceFrontierID = MachineDominanceFrontier::ID;
+char &llvm::MachineDominanceFrontierID = MachineDominanceFrontierWrapperPass::ID;
 
-bool MachineDominanceFrontier::runOnMachineFunction(MachineFunction &) {
+bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(MachineFunction &) {
+  auto& MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return MDF.analyze(MDT);
+}
+
+bool MachineDominanceFrontier::analyze(MachineDominatorTree &MDT) {
   releaseMemory();
-  Base.analyze(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
+  Base.analyze(MDT);
   return false;
+}
+
+void MachineDominanceFrontierWrapperPass::releaseMemory() {
+  MDF.releaseMemory();
 }
 
 void MachineDominanceFrontier::releaseMemory() {
   Base.releaseMemory();
 }
 
-void MachineDominanceFrontier::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineDominanceFrontierWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -55,7 +64,8 @@ AnalysisKey MachineDominanceFrontierAnalysis::Key;
 
 MachineDominanceFrontierAnalysis::Result
 MachineDominanceFrontierAnalysis::run(MachineFunction &MF,
-                                      MachineFunctionAnalysisManager &) {
-  MDF.runOnMachineFunction(MF);
+                                      MachineFunctionAnalysisManager &MFAM) {
+  auto& MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MDF.analyze(MDT);
   return MDF;
 }

@@ -234,7 +234,7 @@ void X86LoadValueInjectionLoadHardeningPass::getAnalysisUsage(
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineDominanceFrontier>();
+  AU.addRequired<MachineDominanceFrontierWrapperPass>();
   AU.setPreservesCFG();
 }
 
@@ -267,7 +267,7 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
   LLVM_DEBUG(dbgs() << "Building gadget graph...\n");
   const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  const auto &MDF = getAnalysis<MachineDominanceFrontier>();
+  const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
   std::unique_ptr<MachineGadgetGraph> Graph = getGadgetGraph(MF, MLI, MDT, MDF);
   LLVM_DEBUG(dbgs() << "Building gadget graph... Done\n");
   if (Graph == nullptr)
@@ -796,7 +796,7 @@ INITIALIZE_PASS_BEGIN(X86LoadValueInjectionLoadHardeningPass, PASS_KEY,
                       "X86 LVI load hardening", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(X86LoadValueInjectionLoadHardeningPass, PASS_KEY,
                     "X86 LVI load hardening", false, false)
 

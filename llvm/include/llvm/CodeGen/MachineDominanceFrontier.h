@@ -12,13 +12,14 @@
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/DominanceFrontierImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
 
-class MachineDominanceFrontier : public MachineFunctionPass {
+class MachineDominanceFrontier {
   ForwardDominanceFrontierBase<MachineBasicBlock> Base;
 
 public:
@@ -28,11 +29,6 @@ public:
  using iterator = DominanceFrontierBase<MachineBasicBlock, false>::iterator;
  using const_iterator =
      DominanceFrontierBase<MachineBasicBlock, false>::const_iterator;
-
- MachineDominanceFrontier(const MachineDominanceFrontier &) = delete;
- MachineDominanceFrontier &operator=(const MachineDominanceFrontier &) = delete;
-
- static char ID;
 
  MachineDominanceFrontier();
 
@@ -74,11 +70,30 @@ public:
     return Base.find(B);
   }
 
+  bool analyze(MachineDominatorTree &MDT);
+
+  void releaseMemory();
+};
+
+class MachineDominanceFrontierWrapperPass : public MachineFunctionPass {
+private:
+  MachineDominanceFrontier MDF;
+
+public:
+  MachineDominanceFrontierWrapperPass();
+
+  MachineDominanceFrontierWrapperPass(const MachineDominanceFrontier &) = delete;
+  MachineDominanceFrontierWrapperPass &operator=(const MachineDominanceFrontier &) = delete;
+
+  static char ID;
+
   bool runOnMachineFunction(MachineFunction &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   void releaseMemory() override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  MachineDominanceFrontier &getMDF() { return MDF; }
 };
 
 class MachineDominanceFrontierAnalysis
@@ -88,9 +103,9 @@ class MachineDominanceFrontierAnalysis
   MachineDominanceFrontier MDF;
 
 public:
-  using Result = const MachineDominanceFrontier &;
+  using Result = MachineDominanceFrontier;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm
