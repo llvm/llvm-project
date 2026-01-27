@@ -184,7 +184,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   });
   if (HadProfile && !ProfcheckDisableMetadataFixes) {
     // At least one of the targets must've been taken.
-    assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
+    assert(llvm::any_of(BranchWeights, not_equal_to(0)));
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
                      /*IsExpected=*/false);
   } else

@@ -35,13 +35,13 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "tileconfig"
+#define DEBUG_TYPE "x86-tile-config"
 
 namespace {
 
-struct X86TileConfig : public MachineFunctionPass {
+struct X86TileConfigLegacy : public MachineFunctionPass {
 
-  X86TileConfig() : MachineFunctionPass(ID) {}
+  X86TileConfigLegacy() : MachineFunctionPass(ID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Tile Register Configure"; }
@@ -55,7 +55,7 @@ struct X86TileConfig : public MachineFunctionPass {
   }
 
   /// Perform register allocation.
-  bool runOnMachineFunction(MachineFunction &mf) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoPHIs();
@@ -66,15 +66,17 @@ struct X86TileConfig : public MachineFunctionPass {
 
 } // end anonymous namespace
 
-char X86TileConfig::ID = 0;
+char X86TileConfigLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86TileConfig, DEBUG_TYPE, "Tile Register Configure",
-                      false, false)
+INITIALIZE_PASS_BEGIN(X86TileConfigLegacy, DEBUG_TYPE,
+                      "Tile Register Configure", false, false)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(X86TileConfig, DEBUG_TYPE, "Tile Register Configure", false,
-                    false)
+INITIALIZE_PASS_END(X86TileConfigLegacy, DEBUG_TYPE, "Tile Register Configure",
+                    false, false)
 
-bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
+static bool tileConfig(MachineFunction &MF,
+                       llvm::function_ref<LiveIntervals *()> GetLIs,
+                       llvm::function_ref<VirtRegMap *()> GetVRM) {
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
   if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
@@ -84,8 +86,8 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   const X86RegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LiveIntervals &LIS = *GetLIs();
+  VirtRegMap &VRM = *GetVRM();
 
   if (VRM.isShapeMapEmpty())
     return false;
@@ -210,4 +212,23 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createX86TileConfigPass() { return new X86TileConfig(); }
+FunctionPass *llvm::createX86TileConfigLegacyPass() {
+  return new X86TileConfigLegacy();
+}
+
+bool X86TileConfigLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return tileConfig(
+      MF,
+      [this]() { return &getAnalysis<LiveIntervalsWrapperPass>().getLIS(); },
+      [this]() { return &getAnalysis<VirtRegMapWrapperLegacy>().getVRM(); });
+}
+
+PreservedAnalyses X86TileConfigPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = tileConfig(
+      MF, [&MFAM, &MF]() { return &MFAM.getResult<LiveIntervalsAnalysis>(MF); },
+      [&MFAM, &MF]() { return &MFAM.getResult<VirtRegMapAnalysis>(MF); });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
+}

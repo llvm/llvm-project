@@ -29,14 +29,13 @@ public:
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
   MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override;
 
-  bool softPromoteHalfType() const override { return true; }
-
 private:
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
                            const TargetLibraryInfo *LibInfo) const override;
