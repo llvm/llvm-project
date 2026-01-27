@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 -global-isel %s -o - | FileCheck %s
 
 ; CHECK-LABEL: test_asm:
 ; CHECK: {{APP|InlineAsm Start}}

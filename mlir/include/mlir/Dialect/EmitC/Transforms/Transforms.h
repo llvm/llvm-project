@@ -25,10 +25,6 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 // Populate functions
 //===----------------------------------------------------------------------===//
 
-/// Populates `patterns` with expression canonicalization patterns.
-void populateExpressionCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                MLIRContext *context);
-
 /// Populates `patterns` with expression-related patterns.
 void populateExpressionPatterns(RewritePatternSet &patterns);
 

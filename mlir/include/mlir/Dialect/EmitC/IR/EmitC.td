@@ -566,7 +566,6 @@ def EmitC_ExpressionOp
 
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
-  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
