@@ -254,6 +254,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
