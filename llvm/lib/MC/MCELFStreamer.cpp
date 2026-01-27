@@ -79,14 +79,6 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
     Symbol->setType(ELF::STT_TLS);
 }
 
-// If bundle alignment is used and there are any instructions in the section, it
-// needs to be aligned to at least the bundle size.
-static inline void setSectionAlignmentForBundling(const MCAssembler &Assembler,
-                                           MCSection *Section) {
-  if (Assembler.isBundlingEnabled() && Section->hasInstructions())
-    Section->ensureMinAlignment(Align(Assembler.getBundleAlignSize()));
-}
-
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   MCFragment *CF = getCurrentFragment();
@@ -103,7 +95,8 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     }
 
     // Ensure the previous section gets aligned if necessary.
-    setSectionAlignmentForBundling(Asm, CF->getParent());
+    if (Asm.isBundlingEnabled() && Section->hasInstructions())
+      Section->ensureMinAlignment(Align(Asm.getBundleAlignSize()));
   }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
   const MCSymbol *Grp = SectionELF->getGroup();

@@ -407,7 +407,6 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
   // as a relaxable fragment.
   if (Assembler.isBundlingEnabled()) {
     if (Sec->isBundleLocked() || Assembler.getRelaxAll()) {
-      // Is there any benefit if locked instructions are relax later.
       MCInst Relaxed = Inst;
       while (Backend.mayNeedRelaxation(Relaxed.getOpcode(),
                                        Relaxed.getOperands(), STI))
