@@ -1370,7 +1370,8 @@ struct AAAMDGPUMinAGPRAlloc
       case Intrinsic::trap:
       case Intrinsic::debugtrap:
       case Intrinsic::ubsantrap:
-        return !CB.hasFnAttr("trap-func-name");
+        return !CB.hasFnAttr("trap-func-name") ||
+               CB.hasFnAttr(Attribute::NoCallback);
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
