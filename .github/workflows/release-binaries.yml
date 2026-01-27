@@ -88,8 +88,8 @@ jobs:
 
     - name: Install Dependencies
       #shell: bash
-      #env:
-      #  OPENSSL_DIR: /c/vcpkg/installed/arm64-windows/
+      env:
+        OPENSSL_DIR: "C:\vcpkg\installed\arm64-windows-static"
       #env:
       #  PIP_ONLY_BINARY: cryptography
       env:
