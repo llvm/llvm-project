@@ -760,12 +760,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // The LLVM-libc environment stores its C headers in the Clang include
+  // After the resource directory, we prioritize the standard clang include
   // directory.
-  if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
-    if (std::optional<std::string> Path = getStdlibIncludePath())
-      addSystemInclude(DriverArgs, CC1Args, *Path);
-  }
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
 
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/local/include"));
