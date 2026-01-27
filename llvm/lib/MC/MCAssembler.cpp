@@ -1032,7 +1032,7 @@ void MCAssembler::layoutSection(MCSection &Sec) {
     F.Offset = Offset;
 
     // Bundling increases the number of MCBoundaryAlignFragment, lazy-relaxing
-    // BA becomes quadratically inefficient. This if statment eagerly decides
+    // BA becomes quadratically inefficient. This if statement eagerly decides
     // BA size.
     if (isBundlingEnabled() && F.getKind() == MCFragment::FT_BoundaryAlign) {
       auto &BF = cast<MCBoundaryAlignFragment>(F);
