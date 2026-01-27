@@ -11051,7 +11051,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     if(!RegSequence.second) //Lower 32 bits nonzero
       if (CmpValue > UINT32_MAX) {
-        //Build MOV instruction to hard-code EQ ? 0 : 1
+        // Hard-code EQ ? 0 : 1
+        CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
+        CmpInstr.getOperand(0).setImm(0);
+        CmpInstr.getOperand(1).setImm(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
       } else {
         CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr, SrcReg,
@@ -11060,7 +11063,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       }
     else // Upper 32 bits nonzero
       if (CmpValue % UINT32_MAX) {
-        // Build MOV instruction to hard-code EQ ? 0 : 1
+        // Hard-code EQ ? 0 : 1
+        CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
+        CmpInstr.getOperand(0).setImm(0);
+        CmpInstr.getOperand(1).setImm(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
       } else {
         CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr,SrcReg,RegSequence.first->getOperand(0).getReg());
