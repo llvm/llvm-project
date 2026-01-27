@@ -174,6 +174,20 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
   ++numCSE;
 }
 
+static llvm::SmallVector<SideEffects::Resource *>
+getAllUnitResources(Operation *op) {
+  llvm::SmallVector<SideEffects::Resource *> result;
+  std::optional<llvm::SmallVector<MemoryEffects::EffectInstance>> effects =
+      getEffectsRecursively(op);
+  if (!effects)
+    return {};
+  for (const MemoryEffects::EffectInstance &effect : *effects)
+    if (effect.getResource() && effect.getResource()->isUnitResource())
+      result.push_back(effect.getResource());
+
+  return result;
+}
+
 bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
                                                  Operation *toOp) {
   assert(fromOp->getBlock() == toOp->getBlock());
@@ -196,6 +210,12 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
       return true;
     }
   }
+
+  llvm::SmallVector<SideEffects::Resource *> fromResources =
+      getAllUnitResources(fromOp);
+  llvm::SmallVector<SideEffects::Resource *> toResources =
+      getAllUnitResources(toOp);
+
   while (nextOp && nextOp != toOp) {
     std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
         getEffectsRecursively(nextOp);
@@ -210,6 +230,27 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 
     for (const MemoryEffects::EffectInstance &effect : *effects) {
       if (isa<MemoryEffects::Write>(effect.getEffect())) {
+        // If fromOp/toOp are reading from a resource that the current
+        // effect does not affect, it is not a clobbering write
+        // and we may ignore it. At the same time, for operations
+        // that have read/write effects we can usually deduce the location
+        // and not the resource. So in general, we should assume that
+        // the read/write may happen to/from the same resource.
+        // Unit resources are special because they cannot be addressed
+        // via any location and we know exactly if an operation accesses
+        // a unit resource, so we can always reason whether operations
+        // read/write to/from the same unit resource.
+        SideEffects::Resource *opResource = effect.getResource();
+        if (opResource && opResource->isUnitResource() &&
+            llvm::all_of(fromResources,
+                         [&](SideEffects::Resource *fromResource) {
+                           return fromResource != opResource;
+                         }) &&
+            llvm::all_of(toResources, [&](SideEffects::Resource *toResource) {
+              return toResource != opResource;
+            }))
+          continue;
+
         result.first->second = {nextOp, MemoryEffects::Write::get()};
         return true;
       }
