@@ -13,6 +13,7 @@
   define amdgpu_ps void @multiple_basic_blocks1() { ret void }
   define amdgpu_ps void @multiple_basic_blocks2() { ret void }
   define amdgpu_ps void @multiple_basic_blocks3() { ret void }
+  define amdgpu_ps void @multiple_basic_blocks4() { ret void }
   define amdgpu_ps void @recursive_loop() { ret void }
   define amdgpu_ps void @recursive_loop_vmem() { ret void }
   define amdgpu_ps void @image_store() { ret void }
@@ -360,6 +361,68 @@ body:             |
     S_BRANCH %bb.4
 
   bb.4:
+    S_ENDPGM 0, implicit $vgpr97
+...
+
+# FIXME: The scratch store in the loop may still be pending at S_ENDPGM so we
+# should not insert S_SENDMSG.
+---
+name: multiple_basic_blocks4
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  ; OPT-LABEL: name: multiple_basic_blocks4
+  ; OPT: bb.0:
+  ; OPT-NEXT:   successors: %bb.1(0x80000000)
+  ; OPT-NEXT: {{  $}}
+  ; OPT-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
+  ; OPT-NEXT: {{  $}}
+  ; OPT-NEXT: bb.1:
+  ; OPT-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; OPT-NEXT: {{  $}}
+  ; OPT-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; OPT-NEXT: {{  $}}
+  ; OPT-NEXT: bb.2:
+  ; OPT-NEXT:   successors: %bb.1(0x80000000)
+  ; OPT-NEXT: {{  $}}
+  ; OPT-NEXT:   SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+  ; OPT-NEXT:   S_BRANCH %bb.1
+  ; OPT-NEXT: {{  $}}
+  ; OPT-NEXT: bb.3:
+  ; OPT-NEXT:   S_NOP 0
+  ; OPT-NEXT:   S_SENDMSG 3, implicit $exec, implicit $m0
+  ; OPT-NEXT:   S_ENDPGM 0, implicit $vgpr97
+  ;
+  ; NOOPT-LABEL: name: multiple_basic_blocks4
+  ; NOOPT: bb.0:
+  ; NOOPT-NEXT:   successors: %bb.1(0x80000000)
+  ; NOOPT-NEXT: {{  $}}
+  ; NOOPT-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
+  ; NOOPT-NEXT: {{  $}}
+  ; NOOPT-NEXT: bb.1:
+  ; NOOPT-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; NOOPT-NEXT: {{  $}}
+  ; NOOPT-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; NOOPT-NEXT: {{  $}}
+  ; NOOPT-NEXT: bb.2:
+  ; NOOPT-NEXT:   successors: %bb.1(0x80000000)
+  ; NOOPT-NEXT: {{  $}}
+  ; NOOPT-NEXT:   SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+  ; NOOPT-NEXT:   S_BRANCH %bb.1
+  ; NOOPT-NEXT: {{  $}}
+  ; NOOPT-NEXT: bb.3:
+  ; NOOPT-NEXT:   S_ENDPGM 0, implicit $vgpr97
+  bb.0:
+    GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
+
+  bb.1:
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+
+  bb.2:
+    SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    S_BRANCH %bb.1
+
+  bb.3:
     S_ENDPGM 0, implicit $vgpr97
 ...
 
