@@ -616,7 +616,6 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       // explicit shape-spec-list
       if (!isArray) {
         if (allocateShapeSpecRank_ != rank_) {
-          printf("%d != %d\n", allocateShapeSpecRank_, rank_);
           context
               .Say(name_.source,
                   "The number of shape specifications, when they appear, must match the rank of allocatable object"_err_en_US)
@@ -627,7 +626,6 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             allocateInfo_.sourceExprShape->size() ==
                 static_cast<std::size_t>(allocateShapeSpecRank_)) {
           std::size_t j{0};
-          printf("bool AllocationCheckerHelper::RunChecks in Semantics/check-allocate.cpp\n");
           for (const auto &shapeSpec :
               std::get<std::list<parser::AllocateShapeSpec>>((std::get<parser::AllocateShapeSpecArrayList>(allocation_.t)).u)) {
             if (j >= allocateInfo_.sourceExprShape->size()) {
