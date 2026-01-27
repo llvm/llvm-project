@@ -102,7 +102,7 @@ static Value getBase(Value v) {
 }
 
 /// Returns `true` if accesses to the given memory space could potentially be
-/// fenced by a barrier synchoronizing on the given `fencedAddressSpaces`. If
+/// fenced by a barrier synchronizing on the given `fencedAddressSpaces`. If
 /// the set of address spaces is not given, it is equal to all possible address
 /// spaces. Memory spaces that are not `#gpu.address_space` are deemed to
 /// overlap with all GPU address spaces.
@@ -173,7 +173,7 @@ static bool isBarrierWithCommonFencedMemory(
   // Barriers with unspecified fencing fence everything.
   if (!otherFencedSpaces)
     return true;
-  // while barriers that fence nothing can't close off our search.
+  // While barriers that fence nothing can't close off our search.
   if (otherFencedSpaces->empty())
     return false;
 
