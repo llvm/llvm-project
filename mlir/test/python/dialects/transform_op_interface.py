@@ -158,6 +158,11 @@ class OneOpInOneOpOut(MyTransform.Operation, name="one_op_in_one_op_out"):
 # CHECK-LABEL: Test: OneOpInOneOpOutTransformOpInterface
 @run
 def OneOpInOneOpOutTransformOpInterface():
+    """Tests a simple passthrough interface implementation.
+
+    Checks that the target ops are correctly identified and passed as results.
+    """
+
     # Define a simple passthrough implementation of the TransformOpInterface for OneOpInOneOpOut.
     class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
@@ -200,8 +205,12 @@ def OneOpInOneOpOutTransformOpInterface():
 # CHECK-LABEL: Test: OneOpInOneOpOutTransformOpInterfaceRewriterImpl
 @run
 def OneOpInOneOpOutTransformOpInterfaceRewriterImpl():
-    # Define an implementation of the TransformOpInterface for OneOpInOneOpOut where
-    # the rewriter is used (to replace arith.constants by index.constants).
+    """Tests an interface implementation using the rewriter to modify the IR.
+
+    Checks that `arith.constant` ops are replaced by `index.constant` ops and
+    that the results are correctly updated.
+    """
+
     class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
@@ -273,6 +282,12 @@ class OpValParamInParamOpValOut(
 # CHECK-LABEL: Test: OpValParamInParamOpValOutTransformOpInterface
 @run
 def OpValParamInParamOpValOutTransformOpInterface():
+    """Tests an interface implementation involving Op, Value, and Param types.
+
+    Checks that payload ops, values, and parameters are correctly permuted and
+    propagated and accessible from the (permuted) result handles.
+    """
+
     class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
@@ -372,6 +387,12 @@ class OpsParamsInValuesParamOut(
 # CHECK-LABEL: Test: OpsParamsInValuesParamOutTransformOpInterface
 @run
 def OpsParamsInValuesParamOutTransformOpInterface():
+    """Tests an interface with variadic Op and Param operands and variadic Value results.
+
+    Checks correct handling of multiple handles, parameter aggregation, and
+    result generation.
+    """
+
     class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
