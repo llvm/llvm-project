@@ -583,3 +583,57 @@ define i32 @ext_from_ashr_sexti16_i32(i16 %x) {
   %ashr = ashr i32 %sext, 24
   ret i32 %ashr
 }
+
+define i32 @c_extu_hints(i32 %x, i32 %y, i32 %z) {
+; RV32I-LABEL: c_extu_hints:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a1, 63
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a0, a0, 1286
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: c_extu_hints:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a1, a1, 6, 0
+; RV32XQCIBM-NEXT:    addi a0, a1, 2047
+; RV32XQCIBM-NEXT:    addi a0, a0, 1286
+; RV32XQCIBM-NEXT:    ret
+;
+; RV32XQCIBMZBB-LABEL: c_extu_hints:
+; RV32XQCIBMZBB:       # %bb.0:
+; RV32XQCIBMZBB-NEXT:    qc.extu a1, a1, 6, 0
+; RV32XQCIBMZBB-NEXT:    addi a0, a1, 2047
+; RV32XQCIBMZBB-NEXT:    addi a0, a0, 1286
+; RV32XQCIBMZBB-NEXT:    ret
+  %a = and i32 %y, 63
+  %b = add i32 %a, 3333
+  ret i32 %b
+}
+
+define i32 @c_extu_no_hints(i32 %x, i8 %y, i32 %z) {
+; RV32I-LABEL: c_extu_no_hints:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 24
+; RV32I-NEXT:    srai a1, a1, 29
+; RV32I-NEXT:    addi a0, a1, 2047
+; RV32I-NEXT:    addi a0, a0, 1286
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: c_extu_no_hints:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.ext a0, a1, 3, 5
+; RV32XQCIBM-NEXT:    addi a0, a0, 2047
+; RV32XQCIBM-NEXT:    addi a0, a0, 1286
+; RV32XQCIBM-NEXT:    ret
+;
+; RV32XQCIBMZBB-LABEL: c_extu_no_hints:
+; RV32XQCIBMZBB:       # %bb.0:
+; RV32XQCIBMZBB-NEXT:    qc.ext a0, a1, 3, 5
+; RV32XQCIBMZBB-NEXT:    addi a0, a0, 2047
+; RV32XQCIBMZBB-NEXT:    addi a0, a0, 1286
+; RV32XQCIBMZBB-NEXT:    ret
+  %sext = sext i8 %y to i32
+  %ashr = ashr i32 %sext, 5
+  %add = add i32 %ashr, 3333
+  ret i32 %add
+}

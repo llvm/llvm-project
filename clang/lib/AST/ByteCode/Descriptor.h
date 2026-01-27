@@ -203,6 +203,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
+  QualType getDataElemType() const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
@@ -275,7 +276,6 @@ public:
   void dump(llvm::raw_ostream &OS) const;
   void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
-
 } // namespace interp
 } // namespace clang
 

@@ -19,21 +19,45 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = sdiv i64 [[M]], [[CONV6]]
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP17]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP17]], [[CONV61]]
-; CHECK-NEXT:    [[TMP23:%.*]] = mul i32 [[X]], [[TMP19]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE8:.*]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
+; CHECK:       [[PRED_SDIV_IF]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = sdiv i64 [[M]], [[CONV6]]
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
+; CHECK:       [[PRED_SDIV_CONTINUE]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP6]], i32 1
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_SDIV_IF3:.*]], label %[[PRED_SDIV_CONTINUE4:.*]]
+; CHECK:       [[PRED_SDIV_IF3]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i64 [[M]], [[CONV6]]
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE4]]
+; CHECK:       [[PRED_SDIV_CONTINUE4]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP6]], i32 2
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_SDIV_IF5:.*]], label %[[PRED_SDIV_CONTINUE6:.*]]
+; CHECK:       [[PRED_SDIV_IF5]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = sdiv i64 [[M]], [[CONV6]]
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE6]]
+; CHECK:       [[PRED_SDIV_CONTINUE6]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_SDIV_IF7:.*]], label %[[PRED_SDIV_CONTINUE8]]
+; CHECK:       [[PRED_SDIV_IF7]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = sdiv i64 [[M]], [[CONV6]]
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE8]]
+; CHECK:       [[PRED_SDIV_CONTINUE8]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP8]], [[CONV61]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 [[INDEX]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP21]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = mul i32 [[X]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext i32 [[TMP24]] to i64
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]

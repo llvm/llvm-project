@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/WebAssembly/PlatformWasm.h"
+#include "Plugins/Platform/WebAssembly/PlatformWasmRemoteGDBServer.h"
 #include "Plugins/Process/wasm/ProcessWasm.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
@@ -19,6 +20,7 @@
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -122,9 +124,24 @@ static auto get_arg_range(const Args &args) {
                           args.GetArgumentArrayRef().end());
 }
 
+lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
+                                     Debugger &debugger, Target *target,
+                                     Status &status) {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->Attach(attach_info, debugger, target, status);
+
+  status = Status::FromErrorString(
+      "attaching is only supported when connected to a remote Wasm platform");
+  return nullptr;
+}
+
 lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
                                            Debugger &debugger, Target &target,
                                            Status &error) {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->DebugProcess(launch_info, debugger, target,
+                                              error);
+
   Log *log = GetLog(LLDBLog::Platform);
 
   const PluginProperties &properties = GetGlobalProperties();
@@ -197,8 +214,8 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
     // failing to connect.
     if (*exit_code)
       error = Status::FromError(llvm::joinErrors(
-          llvm::createStringError(llvm::formatv(
-              "WebAssembly runtime exited with exit code {0}", **exit_code)),
+          llvm::createStringErrorV(
+              "WebAssembly runtime exited with exit code {0}", **exit_code),
           error.takeError()));
 
     return nullptr;
@@ -210,4 +227,15 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
         launch_info.GetPTY().ReleasePrimaryFileDescriptor());
 #endif
   return process_sp;
+}
+
+Status PlatformWasm::ConnectRemote(Args &args) {
+  if (IsHost())
+    return Status::FromErrorString(
+        "can't connect to the host platform, always connected");
+
+  if (!m_remote_platform_sp)
+    m_remote_platform_sp = PlatformSP(new PlatformWasmRemoteGDBServer());
+
+  return m_remote_platform_sp->ConnectRemote(args);
 }

@@ -83,7 +83,49 @@ Ensure the shift operands are in proper range before shifting.
 
 core.CallAndMessage (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""
- Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers).
+Check for logical errors for function calls and Objective-C message expressions
+(e.g., uninitialized arguments, null function pointers).
+
+This checker is a collection of related checks that are controlled by checker
+options. The following checks are all enabled by default, but can be turned off
+by setting their option to ``false``:
+
+* **FunctionPointer** Check for null or undefined function pointer at function
+  call.
+* **CXXThisMethodCall** Check for null or undefined ``this`` pointer at method
+  call.
+* **CXXDeallocationArg** Check for null or undefined argument of
+  ``operator delete``.
+* **ArgInitializedness** Check for undefined pass-by-value function arguments.
+* **ParameterCount** Check for correct number of passed arguments to functions
+  or ObjC blocks. This will warn if the actual argument count is less (but not
+  if more) than the required count (by the declaration).
+* **NilReceiver** Check whether the receiver in a message expression is
+  ``nil``.
+* **UndefReceiver** Check whether the receiver in a message expression is
+  undefined.
+
+The following check is disabled by default (because it is more likely to
+produce false positives), this can be turned on by set the option to ``true``:
+
+* **ArgPointeeInitializedness** Check for undefined pass-by-reference (pointer
+  to constant value or constant reference) function arguments. In special cases
+  non-constant arguments are checked. This happens for C library functions
+  where it is required to initialize (at least partially) a passed structure
+  which is used for both input and output (for example last argument of
+  ``mktime`` or ``mbrlen``).
+
+**Additional options**
+
+* **ArgPointeeInitializednessComplete** Controls when to emit the warning at
+  the **ArgPointeeInitializedness** check. If this option is ``false`` (the
+  default), a ``struct`` is considered to be "initialized" when at least one
+  member is initialized. When this option is set to ``true``, structures are
+  only accepted as initialized when all members are initialized. (Arguments of
+  C library functions which require initialization are always checked as if the
+  option would be ``false``.)
+
+**Some examples**
 
 .. literalinclude:: checkers/callandmessage_example.c
     :language: objc
@@ -1785,6 +1827,19 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+The ``ReportMode`` option controls when warnings are reported:
+
+* ``all``: Reports all unsafe functions regardless of C standard or Annex K availability. Useful for security auditing and vulnerability scanning.
+
+* ``actionable``: Only reports when Annex K is available (C11 with ``__STDC_LIB_EXT1__`` and ``__STDC_WANT_LIB_EXT1__=1``).
+
+* ``c11-only``: Reports when C11 standard is enabled (does not take Annex K availability into account).
+
+To set this option, use:
+``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all``
+
+By default, this option is set to *c11-only*.
+
 .. _security-MmapWriteExec:
 
 security.MmapWriteExec (C)
@@ -1963,7 +2018,7 @@ unix.BlockInCriticalSection (C, C++)
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
 Critical section handling functions modeled by this checker:
-``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock, scoped_lock``.
 
 .. code-block:: c
 

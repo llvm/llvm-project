@@ -20,10 +20,6 @@
 #  error The _THROW_BAD_ALLOC macro should be already defined by libc++
 #endif
 
-#ifndef _LIBCPP_WEAK
-#  error The _LIBCPP_WEAK macro should be already defined by libc++
-#endif
-
 #if defined(_LIBCXXABI_NO_EXCEPTIONS) != !_LIBCPP_HAS_EXCEPTIONS
 #  error libc++ and libc++abi seem to disagree on whether exceptions are enabled
 #endif
@@ -63,14 +59,14 @@ static void* operator_new_impl(std::size_t size) {
   return p;
 }
 
-_LIBCPP_OVERRIDABLE_FUNCTION(void*, operator new, (std::size_t size)) _THROW_BAD_ALLOC {
+OVERRIDABLE_FUNCTION void* operator new(std::size_t size) _THROW_BAD_ALLOC {
   void* p = operator_new_impl(size);
   if (p == nullptr)
     __throw_bad_alloc_shim();
   return p;
 }
 
-_LIBCPP_WEAK void* operator new(size_t size, const std::nothrow_t&) noexcept {
+[[gnu::weak]] void* operator new(size_t size, const std::nothrow_t&) noexcept {
 #if !_LIBCPP_HAS_EXCEPTIONS
 #  if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
@@ -94,9 +90,9 @@ _LIBCPP_WEAK void* operator new(size_t size, const std::nothrow_t&) noexcept {
 #endif
 }
 
-_LIBCPP_OVERRIDABLE_FUNCTION(void*, operator new[], (size_t size)) _THROW_BAD_ALLOC { return ::operator new(size); }
+OVERRIDABLE_FUNCTION void* operator new[](size_t size) _THROW_BAD_ALLOC { return ::operator new(size); }
 
-_LIBCPP_WEAK void* operator new[](size_t size, const std::nothrow_t&) noexcept {
+[[gnu::weak]] void* operator new[](size_t size, const std::nothrow_t&) noexcept {
 #if !_LIBCPP_HAS_EXCEPTIONS
 #  if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
@@ -120,17 +116,17 @@ _LIBCPP_WEAK void* operator new[](size_t size, const std::nothrow_t&) noexcept {
 #endif
 }
 
-_LIBCPP_WEAK void operator delete(void* ptr) noexcept { std::free(ptr); }
+[[gnu::weak]] void operator delete(void* ptr) noexcept { std::free(ptr); }
 
-_LIBCPP_WEAK void operator delete(void* ptr, const std::nothrow_t&) noexcept { ::operator delete(ptr); }
+[[gnu::weak]] void operator delete(void* ptr, const std::nothrow_t&) noexcept { ::operator delete(ptr); }
 
-_LIBCPP_WEAK void operator delete(void* ptr, size_t) noexcept { ::operator delete(ptr); }
+[[gnu::weak]] void operator delete(void* ptr, size_t) noexcept { ::operator delete(ptr); }
 
-_LIBCPP_WEAK void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
+[[gnu::weak]] void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
 
-_LIBCPP_WEAK void operator delete[](void* ptr, const std::nothrow_t&) noexcept { ::operator delete[](ptr); }
+[[gnu::weak]] void operator delete[](void* ptr, const std::nothrow_t&) noexcept { ::operator delete[](ptr); }
 
-_LIBCPP_WEAK void operator delete[](void* ptr, size_t) noexcept { ::operator delete[](ptr); }
+[[gnu::weak]] void operator delete[](void* ptr, size_t) noexcept { ::operator delete[](ptr); }
 
 #if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
 
@@ -154,14 +150,14 @@ static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignm
   return p;
 }
 
-_LIBCPP_OVERRIDABLE_FUNCTION(void*, operator new, (std::size_t size, std::align_val_t alignment)) _THROW_BAD_ALLOC {
+OVERRIDABLE_FUNCTION void* operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
   void* p = operator_new_aligned_impl(size, alignment);
   if (p == nullptr)
     __throw_bad_alloc_shim();
   return p;
 }
 
-_LIBCPP_WEAK void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
+[[gnu::weak]] void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
 #  if !_LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
@@ -185,11 +181,11 @@ _LIBCPP_WEAK void* operator new(size_t size, std::align_val_t alignment, const s
 #  endif
 }
 
-_LIBCPP_OVERRIDABLE_FUNCTION(void*, operator new[], (size_t size, std::align_val_t alignment)) _THROW_BAD_ALLOC {
+OVERRIDABLE_FUNCTION void* operator new[](size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
   return ::operator new(size, alignment);
 }
 
-_LIBCPP_WEAK void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
+[[gnu::weak]] void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
 #  if !_LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
@@ -213,25 +209,25 @@ _LIBCPP_WEAK void* operator new[](size_t size, std::align_val_t alignment, const
 #  endif
 }
 
-_LIBCPP_WEAK void operator delete(void* ptr, std::align_val_t) noexcept { std::__libcpp_aligned_free(ptr); }
+[[gnu::weak]] void operator delete(void* ptr, std::align_val_t) noexcept { std::__libcpp_aligned_free(ptr); }
 
-_LIBCPP_WEAK void operator delete(void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept {
+[[gnu::weak]] void operator delete(void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept {
   ::operator delete(ptr, alignment);
 }
 
-_LIBCPP_WEAK void operator delete(void* ptr, size_t, std::align_val_t alignment) noexcept {
+[[gnu::weak]] void operator delete(void* ptr, size_t, std::align_val_t alignment) noexcept {
   ::operator delete(ptr, alignment);
 }
 
-_LIBCPP_WEAK void operator delete[](void* ptr, std::align_val_t alignment) noexcept {
+[[gnu::weak]] void operator delete[](void* ptr, std::align_val_t alignment) noexcept {
   ::operator delete(ptr, alignment);
 }
 
-_LIBCPP_WEAK void operator delete[](void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept {
+[[gnu::weak]] void operator delete[](void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept {
   ::operator delete[](ptr, alignment);
 }
 
-_LIBCPP_WEAK void operator delete[](void* ptr, size_t, std::align_val_t alignment) noexcept {
+[[gnu::weak]] void operator delete[](void* ptr, size_t, std::align_val_t alignment) noexcept {
   ::operator delete[](ptr, alignment);
 }
 

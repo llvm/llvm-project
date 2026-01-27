@@ -30,6 +30,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -7899,8 +7900,6 @@ ExprResult Sema::prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr) {
   assert(DestElemTy->isFloatingType() ||
          DestElemTy->isIntegralOrEnumerationType());
 
-  // TODO: Add support for boolean matrix once exposed
-  // https://github.com/llvm/llvm-project/issues/170920
   ExprResult CastExprRes = SplattedExpr;
   CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
   if (CastExprRes.isInvalid())
@@ -10276,7 +10275,8 @@ static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
                                       QualType OtherIntTy) {
-  if (Int->get()->containsErrors())
+  Expr *E = Int->get();
+  if (E->containsErrors() || E->isInstantiationDependent())
     return false;
 
   QualType IntTy = Int->get()->getType().getUnqualifiedType();

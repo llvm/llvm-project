@@ -1280,10 +1280,10 @@ name: vmop_vv_consumer_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_consumer_incompatible_eew
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVMSEQ_VV_M1 $noreg, %x, 1, 4 /* e16 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vr = PseudoVMSEQ_VV_M1 $noreg, %x, 1, 4 /* e16 */
     $v8 = COPY %y
 ...

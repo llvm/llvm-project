@@ -54,3 +54,38 @@
 // These are allowed for now..
 #define MAYBE1            *12.34
 #define MAYBE2            <<3
+#define MAYBE3            a < b * c
+
+#define CAST1(type, p)    (reinterpret_cast<type*>(p))
+#define CAST2(type, p)    (static_cast<type*>(p))
+#define CAST3(type, p)    (const_cast<type*>(p))
+#define CAST4(type, p)    (dynamic_cast<type*>(p))
+#define CAST5(type, p)    (static_cast<type&>(p))
+#define CAST6(type, p)    (static_cast<type&&>(p))
+#define CAST7(type, p)    (static_cast<const type*>(p))
+#define CAST8(type, p)    (static_cast<volatile type*>(p))
+#define CAST9(type, p)    (static_cast<type const*>(p))
+#define CAST10(type, p)   (reinterpret_cast<type * const &>(p))
+
+#define TEMPLATE1(T)      (std::vector<T*>)
+#define TEMPLATE2(T)      (std::vector<T&>)
+#define TEMPLATE3(T)      (std::vector<const T*>)
+#define TEMPLATE4(T)      (std::map<T*, T*>)
+
+#define BAD_TEMPLATE1(T)  (std::vector<T*2>)
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE2(T)  (std::map<T*2, int>)
+// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE3(T)  (std::map<int, T*2>)
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE4(T)  (std::vector<T+1>)
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE5(T)  (std::vector<T*T>)
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-2]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE6(T)  (std::vector<2*T>)
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_CAST1(T)      (reinterpret_cast<T*2>(0))
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_CAST2(T)      (reinterpret_cast<T+1>(0))
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]

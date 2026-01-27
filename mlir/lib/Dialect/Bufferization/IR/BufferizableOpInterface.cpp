@@ -125,6 +125,10 @@ SymbolTableCollection &BufferizationState::getSymbolTables() {
   return symbolTables;
 }
 
+SymbolTableCollection &BufferizationState::getSymbolTables() const {
+  return symbolTables;
+}
+
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
   assert(isRepetitiveRegion(region, options) && "expected repetitive region");
@@ -720,8 +724,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
   assert(llvm::isa<TensorLikeType>(value.getType()) &&
          "unexpected non-tensor type");
   invocationStack.push_back(value);
-  auto popFromStack =
-      llvm::make_scope_exit([&]() { invocationStack.pop_back(); });
+  llvm::scope_exit popFromStack([&]() { invocationStack.pop_back(); });
 
   // Try querying BufferizableOpInterface.
   Operation *op = getOwnerOfValue(value);
@@ -960,6 +963,14 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
     SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
   auto tensorType = cast<TensorType>(value.getType());
+
+  auto elementType = tensorType.getElementType();
+
+  if (!BaseMemRefType::isValidElementType(elementType))
+    return getOwnerOfValue(value)->emitError()
+           << "cannot bufferize value of type " << tensorType
+           << ": element type " << elementType
+           << " is not a valid memref element type";
 
   // No further analysis is possible for a block argument.
   if (llvm::isa<BlockArgument>(value)) {

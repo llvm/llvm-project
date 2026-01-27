@@ -229,6 +229,14 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
   }
 }
 
+static const MemRegion *getThisRegionBaseOrNull(const CallEvent &Call) {
+  if (const auto *CtorCall = dyn_cast<CXXConstructorCall>(&Call)) {
+    if (const MemRegion *R = CtorCall->getCXXThisVal().getAsRegion())
+      return R->getBaseRegion();
+  }
+  return nullptr;
+}
+
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
                                              ProgramStateRef State) const {
   // Don't invalidate anything if the callee is marked pure/const.
@@ -246,14 +254,26 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   if (!argumentsMayEscape())
     findPtrToConstParams(PreserveArgs, *this);
 
+  // We should not preserve the contents of the region pointed by "this" when
+  // constructing the object, even if an argument refers to it.
+  const auto *ThisRegionBaseOrNull = getThisRegionBaseOrNull(*this);
+
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
     // Mark this region for invalidation.  We batch invalidate regions
     // below for efficiency.
-    if (PreserveArgs.count(Idx))
-      if (const MemRegion *MR = getArgSVal(Idx).getAsRegion())
-        ETraits.setTrait(MR->getBaseRegion(),
-                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
-        // TODO: Factor this out + handle the lower level const pointers.
+    if (PreserveArgs.count(Idx)) {
+      if (const MemRegion *ArgBaseR = getArgSVal(Idx).getAsRegion()) {
+        ArgBaseR = ArgBaseR->getBaseRegion();
+
+        // Preserve the contents of the pointee of the argument - except if it
+        // refers to the object under construction (ctor call).
+        if (ArgBaseR != ThisRegionBaseOrNull) {
+          ETraits.setTrait(
+              ArgBaseR, RegionAndSymbolInvalidationTraits::TK_PreserveContents);
+          // TODO: Factor this out + handle the lower level const pointers.
+        }
+      }
+    }
 
     ValuesToInvalidate.push_back(getArgSVal(Idx));
 
@@ -668,12 +688,12 @@ bool AnyFunctionCall::argumentsMayEscape() const {
   // - Many CF containers allow objects to escape through custom
   //   allocators/deallocators upon container construction. (PR12101)
   if (FName.starts_with("CF") || FName.starts_with("CG")) {
-    return StrInStrNoCase(FName, "InsertValue")  != StringRef::npos ||
-           StrInStrNoCase(FName, "AddValue")     != StringRef::npos ||
-           StrInStrNoCase(FName, "SetValue")     != StringRef::npos ||
-           StrInStrNoCase(FName, "WithData")     != StringRef::npos ||
-           StrInStrNoCase(FName, "AppendValue")  != StringRef::npos ||
-           StrInStrNoCase(FName, "SetAttribute") != StringRef::npos;
+    return FName.contains_insensitive("InsertValue") ||
+           FName.contains_insensitive("AddValue") ||
+           FName.contains_insensitive("SetValue") ||
+           FName.contains_insensitive("WithData") ||
+           FName.contains_insensitive("AppendValue") ||
+           FName.contains_insensitive("SetAttribute");
   }
 
   return false;

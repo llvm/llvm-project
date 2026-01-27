@@ -148,7 +148,7 @@ static bool isRelExpr(RelExpr expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
                RE_PPC64_CALL, RE_PPC64_RELAX_TOC, RE_AARCH64_PAGE_PC,
                R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_PPC64_RELAX_GOT_PC,
-               RE_LOONGARCH_PAGE_PC>(expr);
+               RE_LOONGARCH_PAGE_PC, RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -1930,7 +1930,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *isec) {
     if (isec->outSecOff < first->outSecOff || last->outSecOff < isec->outSecOff)
       continue;
 
-    ts = addThunkSection(tos, isd, isec->outSecOff);
+    ts = addThunkSection(tos, isd, isec->outSecOff, /*isPrefix=*/true);
     thunkedSections[isec] = ts;
     return ts;
   }
@@ -1989,11 +1989,11 @@ void ThunkCreator::createInitialThunkSections(
 
 ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             InputSectionDescription *isd,
-                                            uint64_t off) {
+                                            uint64_t off, bool isPrefix) {
   auto *ts = make<ThunkSection>(ctx, os, off);
   ts->partition = os->partition;
   if ((ctx.arg.fixCortexA53Errata843419 || ctx.arg.fixCortexA8) &&
-      !isd->sections.empty()) {
+      !isd->sections.empty() && !isPrefix) {
     // The errata fixes are sensitive to addresses modulo 4 KiB. When we add
     // thunks we disturb the base addresses of sections placed after the thunks
     // this makes patches we have generated redundant, and may cause us to
@@ -2017,6 +2017,12 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
     // 2.) The InputSectionDescription is larger than 4 KiB. This will prevent
     //     any assertion failures that an InputSectionDescription is < 4 KiB
     //     in size.
+    //
+    // isPrefix is a ThunkSection explicitly inserted before its target
+    // section. We suppress the rounding up of the size of these ThunkSections
+    // as unlike normal ThunkSections, they are small in size, but when BTI is
+    // enabled very frequent. This can bloat code-size and push the errata
+    // patches out of branch range.
     uint64_t isdSize = isd->sections.back()->outSecOff +
                        isd->sections.back()->getSize() -
                        isd->sections.front()->outSecOff;
