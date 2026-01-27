@@ -66,6 +66,7 @@ add_fp_unittest(
     libc.src.__support.math.hypotf
     libc.src.__support.math.ilogbf
     libc.src.__support.math.ilogbf16
+    libc.src.__support.math.ilogbf128
     libc.src.__support.math.ilogbl
     libc.src.__support.math.ldexpf
     libc.src.__support.math.log
