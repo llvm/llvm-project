@@ -399,8 +399,7 @@ bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
 
 void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
-  if (LFIRewriter && LFIRewriter->isEnabled() &&
-      LFIRewriter->rewriteInst(Inst, *this, STI))
+  if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
     return;
 
   MCStreamer::emitInstruction(Inst, STI);

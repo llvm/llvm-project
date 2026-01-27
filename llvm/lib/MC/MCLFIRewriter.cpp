@@ -28,8 +28,6 @@ void MCLFIRewriter::disable() { Enabled = false; }
 
 void MCLFIRewriter::enable() { Enabled = true; }
 
-bool MCLFIRewriter::isEnabled() { return Enabled; }
-
 bool MCLFIRewriter::isCall(const MCInst &Inst) const {
   return InstInfo->get(Inst.getOpcode()).isCall();
 }

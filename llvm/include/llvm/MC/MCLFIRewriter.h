@@ -30,9 +30,9 @@ class MCSymbol;
 class MCLFIRewriter {
 private:
   MCContext &Ctx;
-  bool Enabled = true;
 
 protected:
+  bool Enabled = true;
   std::unique_ptr<MCInstrInfo> InstInfo;
   std::unique_ptr<MCRegisterInfo> RegInfo;
 
@@ -45,7 +45,6 @@ public:
 
   LLVM_ABI void disable();
   LLVM_ABI void enable();
-  LLVM_ABI bool isEnabled();
 
   LLVM_ABI bool isCall(const MCInst &Inst) const;
   LLVM_ABI bool isBranch(const MCInst &Inst) const;

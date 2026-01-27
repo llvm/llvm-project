@@ -2495,8 +2495,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  if (LFIRewriter && LFIRewriter->isEnabled() &&
-      LFIRewriter->rewriteInst(Inst, *this, STI))
+  if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
     return;
 
   if (CurFrag) {
