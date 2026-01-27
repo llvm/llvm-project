@@ -527,12 +527,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
           intrinsicToAttrMask(IID, NonKernelOnly, NeedsImplicit,
                               HasApertureRegs, SupportsGetDoorbellID, COV);
 
-      // if (TrapHandlers.contains(Callee)) {
-      //   if (!Callee->hasFnAttribute(Attribute::NoCallback))
-      //     return indicatePessimisticFixpoint();
-      //   continue;
-      // }
-
       if (AttrMask == UNKNOWN_INTRINSIC) {
         // Assume not-nocallback intrinsics may invoke a function which accesses
         // implicit arguments.
@@ -1349,15 +1343,6 @@ struct AAAMDGPUMinAGPRAlloc
         Maximum.takeAssumedMaximum(NumRegs);
         return true;
       }
-
-      // if (const Function *CalledFunc = CB.getCalledFunction()) {
-      //   if (isTrapLikeLeafIntrinsic(*CalledFunc)) {
-      //     if (CB.hasFnAttr("trap-func-name"))
-      //       return CB.hasFnAttr(Attribute::NoCallback);
-      //     return true;
-      //   }
-      // }
-
       switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
         break;
