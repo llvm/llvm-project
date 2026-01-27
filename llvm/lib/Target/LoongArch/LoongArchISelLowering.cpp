@@ -322,7 +322,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
 
-      setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
@@ -751,7 +751,7 @@ SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
 
   // Otherwise, extend or truncate the result to match the desired result type
   if (ResultVT.bitsGT(SetCCResultVT)) {
-    SetCCNode = DAG.getNode(ISD::ANY_EXTEND, DL, ResultVT, SetCCNode);
+    SetCCNode = DAG.getNode(ISD::SIGN_EXTEND, DL, ResultVT, SetCCNode);
   } else if (ResultVT.bitsLT(SetCCResultVT)) {
     SetCCNode = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, SetCCNode);
   }
