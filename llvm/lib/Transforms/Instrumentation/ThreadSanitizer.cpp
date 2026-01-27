@@ -88,15 +88,15 @@ static cl::opt<bool>
     ClOmitNonCaptured("tsan-omit-by-pointer-capturing", cl::init(true),
                       cl::desc("Omit accesses due to pointer capturing"),
                       cl::Hidden);
+// Eliminates redundant instrumentation based on (post-)dominance relationships
+// within the control flow graph. If an access A (post-)dominates an access B
+// targeting the same memory location, and there is no synchronization and calls
+// between them, instrumenting A is sufficient to catch the data race.
 static cl::opt<bool>
-    ClUseDominanceAnalysis("tsan-use-dominance-analysis", cl::init(false),
+    ClUseDominanceAnalysis("tsan-use-dominance-analysis", cl::init(true),
                            cl::desc("Eliminate duplicating instructions which "
                                     "(post)dominate given instruction"),
                            cl::Hidden);
-static cl::opt<bool> ClPostDomAggressive(
-    "tsan-postdom-aggressive", cl::init(false),
-    cl::desc("Allow post-dominance elimination across loops (unsafe)"),
-    cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -522,8 +522,7 @@ DominanceBasedElimination::traverseReachableAndCheckSafety(
 
     // Post-dom safety: any intermediate BB that is part of a loop
     // makes elimination unsafe (potential infinite loop).
-    if (!ClPostDomAggressive && PostDomSafety &&
-        BSC.HasDangerInBBPostDom.lookup(BB))
+    if (!PostDomSafety && BSC.HasDangerInBBPostDom.lookup(BB))
       PostDomSafety = false;
 
     // Any dangerous instruction in an intermediate BB makes the path “dirty”.
