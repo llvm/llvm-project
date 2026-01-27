@@ -55,7 +55,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-using FPBits = fputil::FPBits<float128>;
 
 namespace sqrtf128_internal {
 
