@@ -386,11 +386,11 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     std::stringstream ss;
     std::string_view delimiter;
     for (const std::optional<protocol::String> &file : stdio) {
-      #ifdef _WIN32
+#ifdef _WIN32
       ss << std::exchange(delimiter, ";");
-      #else
+#else
       ss << std::exchange(delimiter, ":");
-      #endif
+#endif
       if (file)
         ss << file->str();
     }
