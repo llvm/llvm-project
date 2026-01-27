@@ -1289,9 +1289,8 @@ nb::object PyOperation::create(std::string_view name,
       try {
         key = nb::cast<std::string>(it.first);
       } catch (nb::cast_error &err) {
-        std::string msg = "Invalid attribute key (not a string) when "
-                          "attempting to create the operation \"" +
-                          std::string(name) + "\" (" + err.what() + ")";
+        std::string msg = join("Invalid attribute key (not a string) when "
+                          "attempting to create the operation \"", name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
       }
       try {
@@ -1299,16 +1298,14 @@ nb::object PyOperation::create(std::string_view name,
         // TODO: Verify attribute originates from the same context.
         mlirAttributes.emplace_back(std::move(key), attribute);
       } catch (nb::cast_error &err) {
-        std::string msg = "Invalid attribute value for the key \"" + key +
-                          "\" when attempting to create the operation \"" +
-                          std::string(name) + "\" (" + err.what() + ")";
+        std::string msg = join("Invalid attribute value for the key \"", key, 
+                          "\" when attempting to create the operation \"", name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
       } catch (std::runtime_error &) {
         // This exception seems thrown when the value is "None".
-        std::string msg =
-            "Found an invalid (`None`?) attribute value for the key \"" + key +
-            "\" when attempting to create the operation \"" +
-            std::string(name) + "\"";
+        std::string msg =join(
+            "Found an invalid (`None`?) attribute value for the key \"", key, 
+            "\" when attempting to create the operation \"",name, "\"");
         throw std::runtime_error(msg);
       }
     }
@@ -2057,8 +2054,8 @@ nb::object PySymbolTable::dunderGetItem(const std::string &name) {
   MlirOperation symbol = mlirSymbolTableLookup(
       symbolTable, mlirStringRefCreate(name.data(), name.length()));
   if (mlirOperationIsNull(symbol))
-    throw nb::key_error(
-        ("Symbol '" + name + "' not in the symbol table.").c_str());
+    throw nb::key_error(join
+        ("Symbol '", name, "' not in the symbol table.").c_str());
 
   return PyOperation::forOperation(operation->getContext(), symbol,
                                    operation.getObject())
@@ -2940,8 +2937,8 @@ void populateIRCore(nb::module_ &m) {
             MlirDialect dialect = mlirContextGetOrLoadDialect(
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
-              throw nb::value_error(
-                  (std::string("Dialect '") + name + "' not found").c_str());
+              throw nb::value_error(join
+                  ("Dialect '", name, "' not found").c_str());
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
@@ -3931,8 +3928,8 @@ void populateIRCore(nb::module_ &m) {
             mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
         std::string_view parsedOpName(identifier.data, identifier.length);
         if (clsOpName != parsedOpName)
-          throw MLIRError(std::string("Expected a '") + std::string(clsOpName) +
-                          "' op, got: '" + std::string(parsedOpName) + "'");
+          throw MLIRError(join("Expected a '", clsOpName, 
+                          "' op, got: '", parsedOpName, "'"));
         return PyOpView::constructDerived(cls, parsed.getObject());
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
