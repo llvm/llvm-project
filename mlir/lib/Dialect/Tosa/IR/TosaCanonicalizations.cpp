@@ -2077,11 +2077,9 @@ OpFoldResult concatShapeFold(tosa::ConcatShapeOp *op) {
       return {};
 
     const auto vAttr = cast<DenseElementsAttr>(vConstShape.getValues());
-    if (!vAttr)
-      return {};
+    assert(vAttr);
 
     const auto vETy = vAttr.getElementType();
-    (void)vETy;
     assert(vETy.isIntOrIndex());
     auto const vAttrVals = vAttr.getValues<APInt>();
     for (auto const &v : vAttrVals) {
