@@ -1716,8 +1716,8 @@ mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMClearCacheOpLowering::matchAndRewrite(
     cir::ClearCacheOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto begin = adaptor.getBegin();
-  auto end = adaptor.getEnd();
+  mlir::Value begin = adaptor.getBegin();
+  mlir::Value end = adaptor.getEnd();
   auto intrinNameAttr =
       mlir::StringAttr::get(op.getContext(), "llvm.clear_cache");
   rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(

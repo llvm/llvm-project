@@ -19,7 +19,7 @@ char buffer[32] = "This is a largely unused buffer";
 // CIR:  %[[VAL_6:.*]] = cir.const #cir.int<32> : !s32i
 // CIR:  %[[VAL_7:.*]] = cir.ptr_stride %[[VAL_5]], %[[VAL_6]] : (!cir.ptr<!s8i>, !s32i) -> !cir.ptr<!s8i>
 // CIR:  %[[VAL_8:.*]] = cir.cast bitcast %[[VAL_7]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
-// CIR:  cir.clear_cache %[[VAL_3]] : !cir.ptr<!void>, %[[VAL_8]]
+// CIR:  cir.clear_cache %[[VAL_3]], %[[VAL_8]] : !cir.ptr<!void>
 
 // LLVM-LABEL: main
 // LLVM:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
