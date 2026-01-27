@@ -11065,7 +11065,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr,SrcReg,RegSequence.first->getOperand(0).getReg());
         replaceSourceImm(CmpInstr, CmpValue, (uint64_t)CmpValue >> 32);
-        RegSequence.first->getOperand(0).getReg();
+        SrcReg = RegSequence.first->getOperand(0).getReg();
         CmpValue = (uint64_t)CmpValue >> 32;
       }
     return true;
