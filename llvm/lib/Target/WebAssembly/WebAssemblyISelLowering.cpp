@@ -1749,10 +1749,10 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMINIMUMNUM:
-    return LowerFMINIMUMNUM(Op, DAG);
+    return LowerFMIN(Op, DAG);
   case ISD::FMAXNUM:
   case ISD::FMAXIMUMNUM:
-    return LowerFMAXIMUMNUM(Op, DAG);
+    return LowerFMAX(Op, DAG);
   case ISD::LOAD:
     return LowerLoad(Op, DAG);
   case ISD::STORE:
@@ -2873,8 +2873,8 @@ static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
           DAG.isKnownNeverZeroFloat(Op->getOperand(1)));
 }
 
-SDValue WebAssemblyTargetLowering::LowerFMINIMUMNUM(SDValue Op,
-                                                    SelectionDAG &DAG) const {
+SDValue WebAssemblyTargetLowering::LowerFMIN(SDValue Op,
+                                             SelectionDAG &DAG) const {
   if (Subtarget->hasRelaxedSIMD() && HasNoSignedZerosOrNaNs(Op, DAG)) {
     return DAG.getNode(WebAssemblyISD::RELAXED_FMIN, SDLoc(Op),
                        Op.getValueType(), Op.getOperand(0), Op.getOperand(1));
@@ -2882,8 +2882,8 @@ SDValue WebAssemblyTargetLowering::LowerFMINIMUMNUM(SDValue Op,
   return SDValue();
 }
 
-SDValue WebAssemblyTargetLowering::LowerFMAXIMUMNUM(SDValue Op,
-                                                    SelectionDAG &DAG) const {
+SDValue WebAssemblyTargetLowering::LowerFMAX(SDValue Op,
+                                             SelectionDAG &DAG) const {
   if (Subtarget->hasRelaxedSIMD() && HasNoSignedZerosOrNaNs(Op, DAG)) {
     return DAG.getNode(WebAssemblyISD::RELAXED_FMAX, SDLoc(Op),
                        Op.getValueType(), Op.getOperand(0), Op.getOperand(1));
