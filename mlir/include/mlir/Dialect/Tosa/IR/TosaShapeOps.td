@@ -139,6 +139,8 @@ def Tosa_DimOp : Tosa_ShapeOp<"dim", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1764,3 +1764,18 @@ OpFoldResult tosa::AddShapeOp::fold(FoldAdaptor adaptor) {
   return binaryFolder<FoldAddAdaptor>(
       input1Attr, input2Attr, input1Attr.getType(), /*foldDenseValues=*/true);
 }
+
+OpFoldResult tosa::DimOp::fold(FoldAdaptor adaptor) {
+  const auto inputTy = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  if (!inputTy || !inputTy.hasRank())
+    return {};
+  const int32_t axis = getAxis();
+  const int64_t dimSize = inputTy.getDimSize(axis);
+  if (ShapedType::isDynamic(dimSize))
+    return {};
+
+  OpBuilder builder(getContext());
+  const auto resultAttrTy =
+      RankedTensorType::get(/*rank=*/1, builder.getIndexType());
+  return DenseElementsAttr::get(resultAttrTy, dimSize);
+}
