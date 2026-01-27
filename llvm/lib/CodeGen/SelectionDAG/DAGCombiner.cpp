@@ -6976,12 +6976,36 @@ static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
   return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
 }
 
+// Widden int vector is not power of 2 in length.
+static SDValue widdenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
+                                     const TargetLowering &TLI, SDValue Cond,
+                                     SDValue TrueVal, SDValue FalseVal) {
+  EVT ResultVT = N->getValueType(0);
+  if (ResultVT.isSimple() || !ResultVT.isVector() ||
+      ResultVT.isPow2VectorType() ||
+      TLI.getTypeAction(*DAG.getContext(), ResultVT) !=
+          TargetLowering::TypeWidenVector)
+    return SDValue();
+
+  EVT EltVT = ResultVT.getVectorElementType();
+  if (!EltVT.isInteger() || ResultVT.getVectorElementCount().isScalar())
+    return SDValue();
+
+  SDValue WiddenTrue = DAG.WidenVector(TrueVal, SDLoc(TrueVal));
+  SDValue WiddenFalse = DAG.WidenVector(FalseVal, SDLoc(FalseVal));
+
+  EVT WiddenVT = WiddenTrue.getValueType();
+  SDValue WiddenSelect = DAG.getNode(ISD::SELECT, SDLoc(N), WiddenVT, Cond,
+                                     WiddenTrue, WiddenFalse);
+  return DAG.getExtractSubvector(SDLoc(N), ResultVT, WiddenSelect, 0);
+}
+
 // Try to convert vXiY into vZi32 with X * Y = Z * 32
 // This prevent promotion of integer vectors like v32i4 to v32i16
 // which can create extra operations on type casting.
-static SDValue castTypeSelect(SDNode *N, SelectionDAG &DAG,
-                              const TargetLowering &TLI, SDValue Cond,
-                              SDValue TrueVal, SDValue FalseVal) {
+static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
+                                   const TargetLowering &TLI, SDValue Cond,
+                                   SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
   if (ResultVT.isSimple() || !ResultVT.isVector() ||
       !ResultVT.isPow2VectorType() ||
@@ -12820,7 +12844,10 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
 
-  if (SDValue R = castTypeSelect(N, DAG, TLI, N0, N1, N2))
+  if (SDValue R = widdenIntVectorSelect(N, DAG, TLI, N0, N1, N2))
+    return R;
+
+  if (SDValue R = castIntVectorSelect(N, DAG, TLI, N0, N1, N2))
     return R;
 
   return SDValue();
