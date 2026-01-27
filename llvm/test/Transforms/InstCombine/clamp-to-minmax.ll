@@ -590,15 +590,13 @@ define <2 x float> @mixed_clamp_to_float_vec(<2 x i32> %x) {
   ret <2 x float> %r
 }
 
-; The min/max clamp code should NOT fire here because doing so results
-; in a form that is more poisonous than the original.
-define float @clamp_select_with_poison(float %x) {
-; CHECK-LABEL: @clamp_select_with_poison(
+define float @clamp_select_no_fmf_strengthening(float %x) {
+; CHECK-LABEL: @clamp_select_no_fmf_strengthening(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_INV:%.*]] = fcmp nnan ninf oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[B:%.*]] = select nnan ninf i1 [[A_INV]], float [[X]], float 2.550000e+02
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nnan ole float [[B]], 5.120000e+02
-; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[DOTINV]], float [[B]], float 5.120000e+02
+; CHECK-NEXT:    [[A_INV:%.*]] = fcmp oge float [[X:%.*]], 2.550000e+02
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[A_INV]], float [[X]], float 2.550000e+02
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp ole float [[B]], 5.120000e+02
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[DOTINV]], float [[B]], float 5.120000e+02
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
