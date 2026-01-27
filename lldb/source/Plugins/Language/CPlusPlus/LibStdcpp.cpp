@@ -403,6 +403,7 @@ lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator(
   return (valobj_sp ? new LibStdcppSharedPtrSyntheticFrontEnd(valobj_sp)
                     : nullptr);
 }
+
 static ValueObjectSP GetReferenceCountPointer(ValueObject &parent,
                                               bool is_atomic_child) {
   auto refcount = parent.GetChildMemberWithName("_M_refcount");

@@ -22,7 +22,7 @@ class LibStdcppAtomicSyntheticFrontEnd final
     : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppAtomicSyntheticFrontEnd(ValueObject &valobj)
-      : SyntheticChildrenFrontEnd(valobj), m_inner_name(ConstString("Value")) {}
+      : SyntheticChildrenFrontEnd(valobj) {}
 
   llvm::Expected<uint32_t> CalculateNumChildren() final {
     if (!m_inner)
@@ -32,7 +32,7 @@ public:
 
   ValueObjectSP GetChildAtIndex(uint32_t idx) final {
     if (idx == 0 && m_inner)
-      return m_inner->GetSP()->Clone(m_inner_name);
+      return m_inner->GetSP()->Clone(k_inner_name);
 
     return {};
   }
@@ -48,7 +48,7 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) final {
-    if (name == m_inner_name)
+    if (name == k_inner_name)
       return 0;
 
     return llvm::createStringError("Type has no child named '%s'",
@@ -94,7 +94,7 @@ public:
   }
 
 private:
-  ConstString m_inner_name;
+  inline static const ConstString k_inner_name = ConstString("Value");
   ValueObject *m_inner = nullptr;
 };
 
@@ -104,7 +104,7 @@ LibStdcppAtomicSyntheticFrontEndCreator(CXXSyntheticChildren * /*unused*/,
   if (!valobj_sp)
     return nullptr;
 
-  const lldb::ValueObjectSP member =
+  const ValueObjectSP member =
       LibStdcppAtomicSyntheticFrontEnd::ContainerFieldName(*valobj_sp);
   if (!member)
     return nullptr;
