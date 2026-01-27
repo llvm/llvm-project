@@ -1252,7 +1252,8 @@ static void maybeInsertOperation(PyOperationRef &op,
 
 nb::object PyOperation::create(std::string_view name,
                                std::optional<std::vector<PyType *>> results,
-                               llvm::ArrayRef<MlirValue> operands,
+                               const MlirValue *operands,
+                               size_t numOperands,
                                std::optional<nb::dict> attributes,
                                std::optional<std::vector<PyBlock *>> successors,
                                int regions, PyLocation &location,
@@ -1322,8 +1323,8 @@ nb::object PyOperation::create(std::string_view name,
   // point, exceptions cannot be thrown or else the state will leak.
   MlirOperationState state =
       mlirOperationStateGet(toMlirStringRef(name), location);
-  if (!operands.empty())
-    mlirOperationStateAddOperands(&state, operands.size(), operands.data());
+  if (numOperands)
+    mlirOperationStateAddOperands(&state, numOperands, operands);
   state.enableResultTypeInference = inferType;
   if (!mlirResults.empty())
     mlirOperationStateAddResults(&state, mlirResults.size(),
@@ -1763,7 +1764,8 @@ nb::object PyOpView::buildGeneric(
   // Delegate to create.
   return PyOperation::create(name,
                              /*results=*/std::move(resultTypes),
-                             /*operands=*/operands,
+                             /*operands=*/operands.data(),
+                             /*numOperands=*/operands.size(),
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
                              /*regions=*/*regions, location, maybeIp,
@@ -3761,7 +3763,7 @@ void populateIRCore(nb::module_ &m) {
             }
 
             PyLocation pyLoc = maybeGetTracebackLocation(location);
-            return PyOperation::create(name, results, mlirOperands, attributes,
+            return PyOperation::create(name, results, mlirOperands.data(), mlirOperands.size(), attributes,
                                        successors, regions, pyLoc, maybeIp,
                                        inferType);
           },

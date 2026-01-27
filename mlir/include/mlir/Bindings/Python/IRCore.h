@@ -10,6 +10,7 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRCORE_H
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
+#include <cstddef>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -687,7 +688,8 @@ public:
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
   create(std::string_view name, std::optional<std::vector<PyType *>> results,
-         llvm::ArrayRef<MlirValue> operands,
+         const MlirValue *operands,
+         size_t numOperands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
          PyLocation &location, const nanobind::object &ip, bool inferType);
