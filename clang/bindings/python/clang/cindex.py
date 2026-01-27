@@ -3073,36 +3073,59 @@ class _CXUnsavedFile(Structure):
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
 
 
-# Functions calls through the python interface are rather slow. Fortunately,
-# for most symbols, we do not need to perform a function call. Their spelling
-# never changes and is consequently provided by this spelling cache.
-SPELLING_CACHE = {
-    # 0: CompletionChunk.Kind("Optional"),
-    # 1: CompletionChunk.Kind("TypedText"),
-    # 2: CompletionChunk.Kind("Text"),
-    # 3: CompletionChunk.Kind("Placeholder"),
-    # 4: CompletionChunk.Kind("Informative"),
-    # 5 : CompletionChunk.Kind("CurrentParameter"),
-    6: "(",  # CompletionChunk.Kind("LeftParen"),
-    7: ")",  # CompletionChunk.Kind("RightParen"),
-    8: "[",  # CompletionChunk.Kind("LeftBracket"),
-    9: "]",  # CompletionChunk.Kind("RightBracket"),
-    10: "{",  # CompletionChunk.Kind("LeftBrace"),
-    11: "}",  # CompletionChunk.Kind("RightBrace"),
-    12: "<",  # CompletionChunk.Kind("LeftAngle"),
-    13: ">",  # CompletionChunk.Kind("RightAngle"),
-    14: ", ",  # CompletionChunk.Kind("Comma"),
-    # 15: CompletionChunk.Kind("ResultType"),
-    16: ":",  # CompletionChunk.Kind("Colon"),
-    17: ";",  # CompletionChunk.Kind("SemiColon"),
-    18: "=",  # CompletionChunk.Kind("Equal"),
-    19: " ",  # CompletionChunk.Kind("HorizontalSpace"),
-    # 20: CompletionChunk.Kind("VerticalSpace")
-}
-
-
 class CompletionChunk:
-    __kind_id: int
+    class SpellingCacheAlias:
+        """
+        A temporary utility that acts as an alias to CompletionChunk.SPELLING_CACHE.
+        This will be removed without deprecation warning in a future release.
+        Please do not use it directly!
+        """
+
+        deprecation_message = (
+            "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
+            "and adapted to use 'CompletionChunkKind's as keys instead of their "
+            "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
+            "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
+            "will be removed in a future release."
+        )
+
+        def __getattr__(self, _):
+            raise AttributeError(self.deprecation_message)
+
+        def __getitem__(self, value: int):
+            warnings.warn(self.deprecation_message, DeprecationWarning)
+            return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
+
+        def __contains__(self, value: int):
+            warnings.warn(self.deprecation_message, DeprecationWarning)
+            return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
+
+    # Functions calls through the python interface are rather slow. Fortunately,
+    # for most symbols, we do not need to perform a function call. Their spelling
+    # never changes and is consequently provided by this spelling cache.
+    SPELLING_CACHE = {
+        # 0: CompletionChunkKind.OPTIONAL
+        # 1: CompletionChunkKind.TYPED_TEXT
+        # 2: CompletionChunkKind.TEXT
+        # 3: CompletionChunkKind.PLACEHOLDER
+        # 4: CompletionChunkKind.INFORMATIVE
+        # 5: CompletionChunkKind.CURRENT_PARAMETER
+        CompletionChunkKind.LEFT_PAREN: "(",  # 6
+        CompletionChunkKind.RIGHT_PAREN: ")",  # 7
+        CompletionChunkKind.LEFT_BRACKET: "[",  # 8
+        CompletionChunkKind.RIGHT_BRACKET: "]",  # 9
+        CompletionChunkKind.LEFT_BRACE: "{",  # 10
+        CompletionChunkKind.RIGHT_BRACE: "}",  # 11
+        CompletionChunkKind.LEFT_ANGLE: "<",  # 12
+        CompletionChunkKind.RIGHT_ANGLE: ">",  # 13
+        CompletionChunkKind.COMMA: ", ",  # 14
+        # 15: CompletionChunkKind.RESULT_TYPE
+        CompletionChunkKind.COLON: ":",  # 16
+        CompletionChunkKind.SEMI_COLON: ";",  # 17
+        CompletionChunkKind.EQUAL: "=",  # 18
+        CompletionChunkKind.HORIZONTAL_SPACE: " ",  # 19
+        # 20: CompletionChunkKind.VERTICAL_SPACE
+    }
 
     def __init__(self, completionString: CObjP, key: int):
         self.cs = completionString
@@ -3113,9 +3136,9 @@ class CompletionChunk:
 
     @CachedProperty
     def spelling(self) -> str:
-        kind_id = conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
-        if kind_id in SPELLING_CACHE:
-            return SPELLING_CACHE[kind_id]
+        kind = self.kind
+        if kind in CompletionChunk.SPELLING_CACHE:
+            return CompletionChunk.SPELLING_CACHE[kind]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
@@ -3134,20 +3157,59 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
+    __deprecation_message = (
+        "'CompletionChunk.{}' will be removed in a future release. "
+        "All uses of 'CompletionChunk.{}' should be replaced by checking "
+        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
+    )
+
     def isKindOptional(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindOptional",
+            "isKindOptional",
+            "OPTIONAL",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.OPTIONAL
 
     def isKindTypedText(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindTypedText",
+            "isKindTypedText",
+            "TYPED_TEXT",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.TYPED_TEXT
 
     def isKindPlaceHolder(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindPlaceHolder",
+            "isKindPlaceHolder",
+            "PLACEHOLDER",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.PLACEHOLDER
 
     def isKindInformative(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindInformative",
+            "isKindInformative",
+            "INFORMATIVE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.INFORMATIVE
 
     def isKindResultType(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindResultType",
+            "isKindResultType",
+            "RESULT_TYPE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.RESULT_TYPE
+
+
+SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
 
 
 class CompletionString(ClangObject):
