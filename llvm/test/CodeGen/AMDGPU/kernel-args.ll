@@ -6225,7 +6225,7 @@ define amdgpu_kernel void @f16_arg(half %arg, ptr addrspace(1) %ptr) {
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 12, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 11, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -6234,14 +6234,13 @@ define amdgpu_kernel void @f16_arg(half %arg, ptr addrspace(1) %ptr) {
 ; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T0.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 9:
-; EG-NEXT:     FLT16_TO_FLT32 T0.W, T0.X,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].Z, literal.x,
+; EG-NEXT:     AND_INT T0.W, KC0[2].Z, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.y,
+; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     FLT32_TO_FLT16 T0.W, PV.W,
-; EG-NEXT:     LSHL * T1.W, PS, literal.x,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T0.X, PV.W, PS,
-; EG-NEXT:     LSHL * T0.W, literal.x, PS,
+; EG-NEXT:     LSHL T0.X, T1.W, PV.W,
+; EG-NEXT:     LSHL * T0.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     MOV T0.Y, 0.0,
 ; EG-NEXT:     MOV * T0.Z, 0.0,
@@ -6252,7 +6251,7 @@ define amdgpu_kernel void @f16_arg(half %arg, ptr addrspace(1) %ptr) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    ALU 0, @8, KC0[], KC1[]
 ; CM-NEXT:    TEX 0 @6
-; CM-NEXT:    ALU 12, @9, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    ALU 11, @9, KC0[CB0:0-32], KC1[]
 ; CM-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
@@ -6261,12 +6260,11 @@ define amdgpu_kernel void @f16_arg(half %arg, ptr addrspace(1) %ptr) {
 ; CM-NEXT:    ALU clause starting at 8:
 ; CM-NEXT:     MOV * T0.X, 0.0,
 ; CM-NEXT:    ALU clause starting at 9:
-; CM-NEXT:     AND_INT T0.Z, KC0[2].Z, literal.x,
-; CM-NEXT:     FLT16_TO_FLT32 * T0.W, T0.X,
+; CM-NEXT:     AND_INT * T0.W, KC0[2].Z, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; CM-NEXT:     FLT32_TO_FLT16 T1.Z, PV.W,
-; CM-NEXT:     LSHL * T0.W, PV.Z, literal.x,
-; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; CM-NEXT:     AND_INT T0.Z, T0.X, literal.x,
+; CM-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; CM-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
 ; CM-NEXT:     LSHL T0.X, PV.Z, PV.W,
 ; CM-NEXT:     LSHL * T0.W, literal.x, PV.W,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
@@ -6315,7 +6313,7 @@ define amdgpu_kernel void @v2f16_arg(<2 x half> %arg, ptr addrspace(1) %ptr) {
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 8, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -6325,13 +6323,9 @@ define amdgpu_kernel void @v2f16_arg(<2 x half> %arg, ptr addrspace(1) %ptr) {
 ; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T0.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     FLT16_TO_FLT32 * T0.W, T1.X,
-; EG-NEXT:     FLT32_TO_FLT16 T0.Z, PV.W,
-; EG-NEXT:     FLT16_TO_FLT32 * T0.W, T0.X,
-; EG-NEXT:     FLT32_TO_FLT16 T0.W, PV.W,
-; EG-NEXT:     LSHL * T1.W, PV.Z, literal.x,
+; EG-NEXT:     LSHL * T0.W, T1.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T0.X, PV.W, PS,
+; EG-NEXT:     OR_INT T0.X, T0.X, PV.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
@@ -6339,7 +6333,7 @@ define amdgpu_kernel void @v2f16_arg(<2 x half> %arg, ptr addrspace(1) %ptr) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    ALU 0, @10, KC0[], KC1[]
 ; CM-NEXT:    TEX 1 @6
-; CM-NEXT:    ALU 8, @11, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
@@ -6349,13 +6343,9 @@ define amdgpu_kernel void @v2f16_arg(<2 x half> %arg, ptr addrspace(1) %ptr) {
 ; CM-NEXT:    ALU clause starting at 10:
 ; CM-NEXT:     MOV * T0.X, 0.0,
 ; CM-NEXT:    ALU clause starting at 11:
-; CM-NEXT:     FLT16_TO_FLT32 * T0.W, T1.X,
-; CM-NEXT:     FLT16_TO_FLT32 T0.Z, T0.X,
-; CM-NEXT:     FLT32_TO_FLT16 * T0.W, PV.W,
-; CM-NEXT:     LSHL T1.Z, PV.W, literal.x,
-; CM-NEXT:     FLT32_TO_FLT16 * T0.W, PV.Z,
+; CM-NEXT:     LSHL * T0.W, T1.X, literal.x,
 ; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     OR_INT * T0.X, PV.W, PV.Z,
+; CM-NEXT:     OR_INT * T0.X, T0.X, PV.W,
 ; CM-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   store <2 x half> %arg, ptr addrspace(1) %ptr
