@@ -102,10 +102,10 @@ public:
     auto loc = scatter.getLoc();
 
     if (!isa<RankedTensorType>(valuesIn.getType()) ||
-    !isa<RankedTensorType>(indices.getType()) ||
-    !isa<RankedTensorType>(input.getType())) {
-      return rewriter.notifyMatchFailure(scatter,
-          "expected ranked tensor operands for scatter lowering");
+        !isa<RankedTensorType>(indices.getType()) ||
+        !isa<RankedTensorType>(input.getType())) {
+      return rewriter.notifyMatchFailure(
+          scatter, "expected ranked tensor operands for scatter lowering");
     }
 
     // N, W, C are chosen to match the TOSA spec
