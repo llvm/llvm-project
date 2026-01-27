@@ -2609,35 +2609,26 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
   return false;
 }
 
-static ArrayRef<IRMemLocation> keywordToLoc(lltok::Kind Tok) {
+static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
   using Loc = IRMemLocation;
 
-  static constexpr Loc ArgMem[] = {Loc::ArgMem};
-  static constexpr Loc InaccessibleMem[] = {Loc::InaccessibleMem};
-  static constexpr Loc ErrnoMem[] = {Loc::ErrnoMem};
-  static constexpr Loc TargetMem0[] = {Loc::TargetMem0};
-  static constexpr Loc TargetMem1[] = {Loc::TargetMem1};
-  static constexpr Loc TargetMem[] = {Loc::TargetMem0, Loc::TargetMem1};
   switch (Tok) {
   case lltok::kw_argmem:
-    return ArgMem;
-
+    return {Loc::ArgMem};
   case lltok::kw_inaccessiblemem:
-    return InaccessibleMem;
-
+    return {Loc::InaccessibleMem};
   case lltok::kw_errnomem:
-    return ErrnoMem;
-
+    return {Loc::ErrnoMem};
   case lltok::kw_target_mem0:
-    return TargetMem0;
-
+    return {Loc::TargetMem0};
   case lltok::kw_target_mem1:
-    return TargetMem1;
-
-  // In the case this represent all target memories
-  case lltok::kw_target_mem:
-    return TargetMem;
-
+    return {Loc::TargetMem1};
+  case lltok::kw_target_mem: {
+    SmallVector<MemoryEffects::Location, 2> Targets;
+    for (auto Loc : MemoryEffects::targetMemLocations())
+      Targets.push_back(Loc);
+    return Targets;
+  }
   default:
     return {};
   }
@@ -2691,7 +2682,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   bool SeenLoc = false;
   bool SeenTargetLoc = false;
   do {
-    llvm::ArrayRef<llvm::IRMemLocation> Locs = keywordToLoc(Lex.getKind());
+    SmallVector<IRMemLocation, 2> Locs = keywordToLoc(Lex.getKind());
     if (!Locs.empty()) {
       Lex.Lex();
       if (!EatIfPresent(lltok::colon)) {
@@ -2713,7 +2704,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
     Lex.Lex();
     if (!Locs.empty()) {
       SeenLoc = true;
-      for (const llvm::IRMemLocation &Loc : Locs) {
+      for (IRMemLocation Loc : Locs) {
         ME = ME.getWithModRef(Loc, *MR);
         if (ME.isTargetMemLoc(Loc) && Locs.size() == 1)
           SeenTargetLoc = true;
