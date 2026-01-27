@@ -469,7 +469,8 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           }
 
           ModuleSP module_sp = LoadModuleAtAddress(
-              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr,
+              /*base_addr_is_offset=*/true);
           if (!module_sp.get())
             return;
 
@@ -726,9 +727,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       task_group.async(load_module_fn, *I);
     task_group.wait();
   } else {
-    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
       load_module_fn(*I);
-    }
   }
 
   m_process->GetTarget().ModulesDidLoad(module_list);
@@ -901,10 +901,9 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 
+  module_spec.SetTarget(target.shared_from_this());
   const auto executable_search_paths(Target::GetDefaultExecutableSearchPaths());
-  auto error = platform_sp->ResolveExecutable(
-      module_spec, module_sp,
-      !executable_search_paths.IsEmpty() ? &executable_search_paths : nullptr);
+  auto error = platform_sp->ResolveExecutable(module_spec, module_sp);
   if (error.Fail()) {
     StreamString stream;
     module_spec.Dump(stream);

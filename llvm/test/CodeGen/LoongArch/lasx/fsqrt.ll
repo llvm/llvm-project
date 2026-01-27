@@ -174,9 +174,8 @@ define void @one_div_sqrt_v4f64(ptr %res, ptr %a0) nounwind {
 ; LA32-NEXT:    ld.w $a1, $a1, 0
 ; LA32-NEXT:    st.w $a1, $sp, 32
 ; LA32-NEXT:    xvld $xr0, $sp, 32
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
-; LA32-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI3_0)
 ; LA32-NEXT:    xvfsqrt.d $xr0, $xr0
+; LA32-NEXT:    xvldi $xr1, -912
 ; LA32-NEXT:    xvfdiv.d $xr0, $xr1, $xr0
 ; LA32-NEXT:    xvst $xr0, $sp, 64
 ; LA32-NEXT:    vld $vr0, $sp, 80

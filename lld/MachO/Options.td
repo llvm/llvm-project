@@ -188,6 +188,8 @@ def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
     HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def lto_emit_llvm: Flag<["--"], "lto-emit-llvm">,
+    HelpText<"Emit LLVM-IR bitcode">, Group<grp_lld>;
 def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,
@@ -1090,6 +1092,18 @@ defm separate_cstring_literal_sections
          "their section names.",
          "Emit all cstring literals into the __cstring section. As a special "
          "case, the __objc_methname section will still be emitted. (default)">,
+      Group<grp_rare>;
+defm tail_merge_strings
+    : BB<"tail-merge-strings", "Enable string tail merging",
+         "Disable string tail merging to improve link-time performance">,
+      Group<grp_rare>;
+def slop_scale_eq
+    : Joined<["--"], "slop_scale=">,
+      MetaVarName<"<unsigned_int>">,
+      HelpText<"Specify the slop scale. Default value is 256. If your binary "
+               "has too many consecutive branch instructions resulting in "
+               "thunk-range overrun, then you need to increase this value to a "
+               "higher value, such as 512 or 1024, etc">,
       Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;

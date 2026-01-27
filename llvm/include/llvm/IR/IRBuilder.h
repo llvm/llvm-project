@@ -1722,25 +1722,29 @@ public:
     return Insert(BinOp, Name);
   }
 
-  Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "") {
+  Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "",
+                          Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
     return CreateSelect(Cond1, Cond2,
-                        ConstantInt::getNullValue(Cond2->getType()), Name);
+                        ConstantInt::getNullValue(Cond2->getType()), Name,
+                        MDFrom);
   }
 
-  Value *CreateLogicalOr(Value *Cond1, Value *Cond2, const Twine &Name = "") {
+  Value *CreateLogicalOr(Value *Cond1, Value *Cond2, const Twine &Name = "",
+                         Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
     return CreateSelect(Cond1, ConstantInt::getAllOnesValue(Cond2->getType()),
-                        Cond2, Name);
+                        Cond2, Name, MDFrom);
   }
 
   Value *CreateLogicalOp(Instruction::BinaryOps Opc, Value *Cond1, Value *Cond2,
-                         const Twine &Name = "") {
+                         const Twine &Name = "",
+                         Instruction *MDFrom = nullptr) {
     switch (Opc) {
     case Instruction::And:
-      return CreateLogicalAnd(Cond1, Cond2, Name);
+      return CreateLogicalAnd(Cond1, Cond2, Name, MDFrom);
     case Instruction::Or:
-      return CreateLogicalOr(Cond1, Cond2, Name);
+      return CreateLogicalOr(Cond1, Cond2, Name, MDFrom);
     default:
       break;
     }
@@ -1920,6 +1924,20 @@ public:
     return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
   }
 
+  CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
+                                ArrayRef<Value *> Indices,
+                                const Twine &Name = "") {
+    SmallVector<Value *> Args;
+    Args.push_back(PtrBase);
+    llvm::append_range(Args, Indices);
+
+    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
+                                       {PtrBase->getType()}, Args, {}, Name);
+    Output->addParamAttr(
+        0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
+  }
+
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
@@ -1936,21 +1954,13 @@ public:
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::none()))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::none());
   }
 
   Value *CreateConstInBoundsGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0, unsigned Idx1,
@@ -1960,11 +1970,7 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, NWFlags))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs, NWFlags), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, NWFlags);
   }
 
   Value *CreateConstInBoundsGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1973,31 +1979,19 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP1_64(Type *Ty, Value *Ptr, uint64_t Idx0,
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::none()))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::none());
   }
 
   Value *CreateConstInBoundsGEP1_64(Type *Ty, Value *Ptr, uint64_t Idx0,
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0, uint64_t Idx1,
@@ -2006,11 +2000,7 @@ public:
       ConstantInt::get(Type::getInt64Ty(Context), Idx0),
       ConstantInt::get(Type::getInt64Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, GEPNoWrapFlags::none());
   }
 
   Value *CreateConstInBoundsGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0,
@@ -2019,11 +2009,7 @@ public:
       ConstantInt::get(Type::getInt64Ty(Context), Idx0),
       ConstantInt::get(Type::getInt64Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
@@ -2042,23 +2028,6 @@ public:
                               const Twine &Name = "") {
     return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
                      GEPNoWrapFlags::inBounds());
-  }
-
-  /// Same as CreateGlobalString, but return a pointer with "i8*" type
-  /// instead of a pointer to array of i8.
-  ///
-  /// If no module is given via \p M, it is take from the insertion point basic
-  /// block.
-  LLVM_DEPRECATED("Use CreateGlobalString instead", "CreateGlobalString")
-  Constant *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
-                                  unsigned AddressSpace = 0,
-                                  Module *M = nullptr, bool AddNull = true) {
-    GlobalVariable *GV =
-        CreateGlobalString(Str, Name, AddressSpace, M, AddNull);
-    Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
-    Constant *Indices[] = {Zero, Zero};
-    return ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
-                                                  Indices);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2188,7 +2157,7 @@ public:
                       FMFSource);
   }
   Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
-    return CreateCast(Instruction::PtrToInt, V,
+    return CreateCast(Instruction::PtrToAddr, V,
                       BB->getDataLayout().getAddressType(V->getType()), Name);
   }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
@@ -2545,6 +2514,17 @@ public:
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
+  LLVM_ABI Value *CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                 Value *False,
+                                                 StringRef PassName,
+                                                 const Twine &Name = "");
+
+  LLVM_ABI Value *CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                    Value *False,
+                                                    FMFSource FMFSource,
+                                                    StringRef PassName,
+                                                    const Twine &Name = "");
+
   LLVM_ABI Value *CreateSelect(Value *C, Value *True, Value *False,
                                const Twine &Name = "",
                                Instruction *MDFrom = nullptr);
@@ -2685,15 +2665,27 @@ public:
   /// Return a vector value that contains the vector V reversed
   LLVM_ABI Value *CreateVectorReverse(Value *V, const Twine &Name = "");
 
-  /// Return a vector splice intrinsic if using scalable vectors, otherwise
-  /// return a shufflevector. If the immediate is positive, a vector is
-  /// extracted from concat(V1, V2), starting at Imm. If the immediate
-  /// is negative, we extract -Imm elements from V1 and the remaining
-  /// elements from V2. Imm is a signed integer in the range
-  /// -VL <= Imm < VL (where VL is the runtime vector length of the
-  /// source/result vector)
-  LLVM_ABI Value *CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
-                                     const Twine &Name = "");
+  /// Create a vector.splice.left intrinsic call, or a shufflevector that
+  /// produces the same result if the result type is a fixed-length vector and
+  /// \p Offset is a constant.
+  LLVM_ABI Value *CreateVectorSpliceLeft(Value *V1, Value *V2, Value *Offset,
+                                         const Twine &Name = "");
+
+  Value *CreateVectorSpliceLeft(Value *V1, Value *V2, uint32_t Offset,
+                                const Twine &Name = "") {
+    return CreateVectorSpliceLeft(V1, V2, getInt32(Offset), Name);
+  }
+
+  /// Create a vector.splice.right intrinsic call, or a shufflevector that
+  /// produces the same result if the result type is a fixed-length vector and
+  /// \p Offset is a constant.
+  LLVM_ABI Value *CreateVectorSpliceRight(Value *V1, Value *V2, Value *Offset,
+                                          const Twine &Name = "");
+
+  Value *CreateVectorSpliceRight(Value *V1, Value *V2, uint32_t Offset,
+                                 const Twine &Name = "") {
+    return CreateVectorSpliceRight(V1, V2, getInt32(Offset), Name);
+  }
 
   /// Return a vector value that contains \arg V broadcasted to \p
   /// NumElts elements.

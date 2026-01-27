@@ -167,7 +167,7 @@ protected:
   LegalityResult &operator=(const LegalityResult &) = delete;
 
 public:
-  virtual ~LegalityResult() {}
+  virtual ~LegalityResult() = default;
   LegalityResultID getSubclassID() const { return ID; }
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS) const {

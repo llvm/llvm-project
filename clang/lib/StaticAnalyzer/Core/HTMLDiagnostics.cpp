@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HTMLDiagnostics.h"
 #include "PlistDiagnostics.h"
 #include "SarifDiagnostics.h"
 #include "clang/AST/Decl.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -82,7 +84,7 @@ public:
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override;
 
-  StringRef getName() const override { return "HTMLDiagnostics"; }
+  StringRef getName() const override { return HTML_DIAGNOSTICS_NAME; }
 
   bool supportsCrossFileDiagnostics() const override {
     return SupportsCrossFileDiagnostics;
@@ -254,20 +256,11 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
     ReportDiag(*Diag, filesMade);
 }
 
-static llvm::SmallString<32> getIssueHash(const PathDiagnostic &D,
-                                          const Preprocessor &PP) {
-  SourceManager &SMgr = PP.getSourceManager();
-  PathDiagnosticLocation UPDLoc = D.getUniqueingLoc();
-  FullSourceLoc L(SMgr.getExpansionLoc(UPDLoc.isValid()
-                                           ? UPDLoc.asLocation()
-                                           : D.getLocation().asLocation()),
-                  SMgr);
-  return getIssueHash(L, D.getCheckerName(), D.getBugType(),
-                      D.getDeclWithIssue(), PP.getLangOpts());
-}
-
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;
@@ -310,7 +303,8 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
       }
   }
 
-  SmallString<32> IssueHash = getIssueHash(D, PP);
+  SmallString<32> IssueHash =
+      D.getIssueHash(PP.getSourceManager(), PP.getLangOpts());
   auto [It, IsNew] = EmittedHashes.insert(IssueHash);
   if (!IsNew) {
     // We've already emitted a duplicate issue. It'll get overwritten anyway.
@@ -369,6 +363,12 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
     if (EC != llvm::errc::file_exists) {
       llvm::errs() << "warning: could not create file in '" << Directory
                    << "': " << EC.message() << '\n';
+    } else if (filesMade) {
+      // Record that we created the file so that it gets referenced in the
+      // plist and SARIF reports for every translation unit that found the
+      // issue.
+      filesMade->addDiagnostic(D, getName(),
+                               llvm::sys::path::filename(ResultPath));
     }
     return;
   }
@@ -679,8 +679,8 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
 
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
-    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT " << getIssueHash(D, PP)
-       << " -->\n";
+    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
+       << D.getIssueHash(PP.getSourceManager(), PP.getLangOpts()) << " -->\n";
 
     os << "\n<!-- BUGLINE "
        << LineNumber

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NON_CONST_PARAMETER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NON_CONST_PARAMETER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NONCONSTPARAMETERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NONCONSTPARAMETERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -39,7 +39,7 @@ private:
   };
 
   /// Track all nonconst integer/float parameters.
-  std::map<const ParmVarDecl *, ParmInfo> Parameters;
+  llvm::DenseMap<const ParmVarDecl *, ParmInfo> Parameters;
 
   /// Add function parameter.
   void addParm(const ParmVarDecl *Parm);
@@ -59,4 +59,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NON_CONST_PARAMETER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NONCONSTPARAMETERCHECK_H

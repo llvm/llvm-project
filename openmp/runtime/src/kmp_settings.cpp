@@ -1069,10 +1069,10 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
 static void __kmp_stg_parse_nesting_mode(char const *name, char const *value,
                                          void *data) {
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_nesting_mode);
-#if KMP_AFFINITY_SUPPORTED && KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   if (__kmp_nesting_mode > 0)
     __kmp_affinity_top_method = affinity_top_method_hwloc;
-#endif
+#endif // KMP_HWLOC_ENABLED
 } // __kmp_stg_parse_nesting_mode
 
 static void __kmp_stg_print_nesting_mode(kmp_str_buf_t *buffer,
@@ -3301,11 +3301,11 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
   if (__kmp_str_match("all", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_all;
   }
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   else if (__kmp_str_match("hwloc", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_hwloc;
   }
-#endif
+#endif // KMP_HWLOC_ENABLED
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   else if (__kmp_str_match("cpuid_leaf31", 12, value) ||
            __kmp_str_match("cpuid 1f", 8, value) ||
@@ -3409,11 +3409,11 @@ static void __kmp_stg_print_topology_method(kmp_str_buf_t *buffer,
     break;
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   case affinity_top_method_hwloc:
     value = "hwloc";
     break;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
   case affinity_top_method_cpuinfo:
     value = "cpuinfo";
@@ -6277,7 +6277,7 @@ void __kmp_env_initialize(char const *string) {
 #if KMP_AFFINITY_SUPPORTED
 
   if (!TCR_4(__kmp_init_middle)) {
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     // Force using hwloc when either tiles or numa nodes requested within
     // KMP_HW_SUBSET or granularity setting and no other topology method
     // is requested
@@ -6292,12 +6292,12 @@ void __kmp_env_initialize(char const *string) {
     if (__kmp_affinity.gran == KMP_HW_NUMA ||
         __kmp_affinity.gran == KMP_HW_TILE)
       __kmp_affinity_top_method = affinity_top_method_hwloc;
-#endif
+#endif // KMP_HWLOC_ENABLED
     // Determine if the machine/OS is actually capable of supporting
     // affinity.
     const char *var = "KMP_AFFINITY";
     KMPAffinity::pick_api();
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     // If Hwloc topology discovery was requested but affinity was also disabled,
     // then tell user that Hwloc request is being ignored and use default
     // topology discovery method.
@@ -6306,7 +6306,7 @@ void __kmp_env_initialize(char const *string) {
       KMP_WARNING(AffIgnoringHwloc, var);
       __kmp_affinity_top_method = affinity_top_method_all;
     }
-#endif
+#endif // KMP_HWLOC_ENABLED
     if (__kmp_affinity.type == affinity_disabled) {
       KMP_AFFINITY_DISABLE();
     } else if (!KMP_AFFINITY_CAPABLE()) {

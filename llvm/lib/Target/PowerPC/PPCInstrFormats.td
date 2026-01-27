@@ -850,6 +850,36 @@ class XForm_45<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = 0;
 }
 
+class XForm_RSB5_UIMM2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                              string asmstr, list<dag> pattern>
+    : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+
+  bits<5> RS;
+  bits<5> RB;
+  bits<2> RIC;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{11} = 0;
+  let Inst{12...13} = RIC;
+  let Inst{14...15} = 0;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
+  let Inst{31} = 0;
+}
+
+class XForm_RSB5_UIMM2_2UIMM1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                              string asmstr, list<dag> pattern>
+    : XForm_RSB5_UIMM2<opcode, xo, OOL, IOL, asmstr, pattern> {
+
+  bits<1> PRS;
+  bits<1> R;
+
+  let Inst{14} = PRS;
+  let Inst{15} = R;
+}
+
 class X_FRT5_XO2_XO3_XO10<bits<6> opcode, bits<2> xo1, bits<3> xo2, bits<10> xo,
                          dag OOL, dag IOL, string asmstr, InstrItinClass itin,
                          list<dag> pattern>

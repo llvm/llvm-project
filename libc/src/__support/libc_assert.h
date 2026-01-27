@@ -14,9 +14,11 @@
 // The build is configured to just use the public <assert.h> API
 // for libc's internal assertions.
 
+#ifndef LIBC_ASSERT
 #include <assert.h>
 
 #define LIBC_ASSERT(COND) assert(COND)
+#endif // LIBC_ASSERT
 
 #else // Not LIBC_COPT_USE_C_ASSERT
 

@@ -93,10 +93,7 @@ void LiveDebugVariablesWrapperLegacy::getAnalysisUsage(
 }
 
 LiveDebugVariablesWrapperLegacy::LiveDebugVariablesWrapperLegacy()
-    : MachineFunctionPass(ID) {
-  initializeLiveDebugVariablesWrapperLegacyPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 enum : unsigned { UndefLocNo = ~0U };
 
@@ -1263,7 +1260,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
 
 void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
 
   for (const auto &UV : userValues) {
     UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);

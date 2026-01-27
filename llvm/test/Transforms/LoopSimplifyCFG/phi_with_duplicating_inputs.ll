@@ -20,7 +20,7 @@ define void @f1(i1 %cond) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP0]], 0
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[C_1:%.*]] = phi i16 [ 2, [[IF_THEN]] ], [ 1, [[FOR_COND]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = phi i16 [ 1, [[FOR_COND]] ], [ 2, [[IF_THEN]] ]
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
 entry:

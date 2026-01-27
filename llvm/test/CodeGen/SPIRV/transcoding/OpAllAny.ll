@@ -13,7 +13,7 @@
 ; CHECK-SPIRV: OpAll %[[#BoolTypeID]]
 ; CHECK-SPIRV: OpAll %[[#BoolTypeID]]
 
-define dso_local spir_func void @test_vector(i32 addrspace(4)* nocapture writeonly %out, <2 x i8> %c, <2 x i16> %s, <2 x i32> %i, <2 x i64> %l) local_unnamed_addr {
+define dso_local spir_func void @test_vector(ptr addrspace(4) nocapture writeonly %out, <2 x i8> %c, <2 x i16> %s, <2 x i32> %i, <2 x i64> %l) local_unnamed_addr {
 entry:
   %call = tail call spir_func i32 @_Z3anyDv2_c(<2 x i8> %c)
   %call1 = tail call spir_func i32 @_Z3anyDv2_s(<2 x i16> %s)
@@ -30,7 +30,7 @@ entry:
   %add11 = add nsw i32 %add9, %call10
   %call12 = tail call spir_func i32 @_Z3allDv2_l(<2 x i64> %l)
   %add13 = add nsw i32 %add11, %call12
-  store i32 %add13, i32 addrspace(4)* %out, align 4
+  store i32 %add13, ptr addrspace(4) %out, align 4
   ret void
 }
 

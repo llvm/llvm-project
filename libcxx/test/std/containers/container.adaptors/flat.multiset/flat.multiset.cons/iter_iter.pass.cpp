@@ -30,7 +30,8 @@
 #include "test_macros.h"
 #include "../../../test_compare.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -38,8 +39,8 @@ void test() {
     using C     = test_less<int>;
     using A1    = test_allocator<int>;
     using A2    = other_allocator<int>;
-    using V1    = std::vector<int, A1>;
-    using V2    = std::vector<int, A2>;
+    using V1    = KeyContainer<int, A1>;
+    using V2    = KeyContainer<int, A2>;
     using M1    = std::flat_multiset<int, C, V1>;
     using M2    = std::flat_multiset<int, C, V2>;
     using Iter1 = typename M1::iterator;
@@ -60,7 +61,7 @@ void test() {
   {
     // flat_multiset(InputIterator , InputIterator)
     // cpp17_input_iterator
-    using M = std::flat_multiset<int>;
+    using M = std::flat_multiset<int, std::less<int>, KeyContainer<int>>;
     auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
     assert(std::ranges::equal(m, expected));
 
@@ -71,21 +72,21 @@ void test() {
   {
     // flat_multiset(InputIterator , InputIterator)
     // greater
-    using M = std::flat_multiset<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
+    using M = std::flat_multiset<int, std::greater<int>, KeyContainer<int, min_allocator<int>>>;
     auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
     assert(std::ranges::equal(m, expected | std::views::reverse));
   }
   {
     // flat_multiset(InputIterator , InputIterator)
     // Test when the operands are of array type (also contiguous iterator type)
-    using M = std::flat_multiset<int, std::greater<int>, std::vector<int, min_allocator<int>>>;
+    using M = std::flat_multiset<int, std::greater<int>, KeyContainer<int, min_allocator<int>>>;
     auto m  = M(ar, ar);
     assert(m.empty());
   }
   {
     // flat_multiset(InputIterator , InputIterator, const key_compare&)
     using C = test_less<int>;
-    using M = std::flat_multiset<int, C, std::vector<int>>;
+    using M = std::flat_multiset<int, C, KeyContainer<int>>;
     auto m  = M(ar, ar + 9, C(3));
     assert(std::ranges::equal(m, expected));
     assert(m.key_comp() == C(3));
@@ -98,7 +99,7 @@ void test() {
   {
     // flat_multiset(InputIterator , InputIterator, const Allocator&)
     using A1 = test_allocator<int>;
-    using M  = std::flat_multiset<int, std::less<int>, std::vector<int, A1>>;
+    using M  = std::flat_multiset<int, std::less<int>, KeyContainer<int, A1>>;
     auto m   = M(ar, ar + 9, A1(5));
     assert(std::ranges::equal(m, expected));
     assert(std::move(m).extract().get_allocator() == A1(5));
@@ -107,7 +108,7 @@ void test() {
     // flat_multiset(InputIterator , InputIterator, const Allocator&)
     // explicit(false)
     using A1 = test_allocator<int>;
-    using M  = std::flat_multiset<int, std::less<int>, std::vector<int, A1>>;
+    using M  = std::flat_multiset<int, std::less<int>, KeyContainer<int, A1>>;
     M m      = {ar, ar + 9, A1(5)}; // implicit ctor
     assert(std::ranges::equal(m, expected));
     assert(std::move(m).extract().get_allocator() == A1(5));
@@ -116,7 +117,7 @@ void test() {
     // flat_multiset(InputIterator , InputIterator, const key_compare&, const Allocator&)
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
-    using M  = std::flat_multiset<int, C, std::vector<int, A1>>;
+    using M  = std::flat_multiset<int, C, KeyContainer<int, A1>>;
     auto m   = M(ar, ar + 9, C(3), A1(5));
     assert(std::ranges::equal(m, expected));
     assert(m.key_comp() == C(3));
@@ -126,7 +127,7 @@ void test() {
     // flat_multiset(InputIterator , InputIterator, const key_compare&, const Allocator&)
     // explicit(false)
     using A1 = test_allocator<int>;
-    using M  = std::flat_multiset<int, std::less<int>, std::deque<int, A1>>;
+    using M  = std::flat_multiset<int, std::less<int>, KeyContainer<int, A1>>;
     M m      = {ar, ar + 9, {}, A1(5)}; // implicit ctor
     assert(std::ranges::equal(m, expected));
     LIBCPP_ASSERT(std::ranges::equal(m, expected));
@@ -134,8 +135,21 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

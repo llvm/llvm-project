@@ -64,7 +64,6 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
       /* CodeAlignmentFactor */ 1, /* DataAlignmentFactor */ 1,
       Context->getTargetTriple().getArch());
 
-  auto MaybeCurrentRow = getCurrentUnwindRow();
   switch (Directive.getOperation()) {
   case MCCFIInstruction::OpSameValue:
     CFIP.addInstruction(dwarf::DW_CFA_same_value, Directive.getRegister());

@@ -18,7 +18,6 @@ c$   !1                                                                 B
 *$1   continue
       end
 
-!PREPRO:!$   &
 !PREPRO:              continue
 !PREPRO:      k=0
 !PREPRO:      k=0

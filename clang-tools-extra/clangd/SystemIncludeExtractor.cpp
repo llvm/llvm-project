@@ -106,7 +106,7 @@ struct DriverArgs {
     // relative or absolute).
     if (llvm::any_of(Driver,
                      [](char C) { return llvm::sys::path::is_separator(C); })) {
-      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
+      llvm::sys::path::make_absolute(Cmd.Directory, Driver);
     }
     this->Driver = Driver.str().str();
     for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
@@ -332,7 +332,7 @@ std::optional<std::string> run(llvm::ArrayRef<llvm::StringRef> Argv,
          EC.message());
     return std::nullopt;
   }
-  auto CleanUp = llvm::make_scope_exit(
+  llvm::scope_exit CleanUp(
       [&OutputPath]() { llvm::sys::fs::remove(OutputPath); });
 
   std::optional<llvm::StringRef> Redirects[] = {{""}, {""}, {""}};

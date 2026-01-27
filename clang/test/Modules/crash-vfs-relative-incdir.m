@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell, system-darwin
+// REQUIRES: crash-recovery, system-darwin
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/m
@@ -53,4 +53,4 @@
 
 // RUN: cd %t
 // RUN: chmod 755 crash-vfs-*.sh
-// RUN: ./crash-vfs-*.sh
+// RUN: bash ./crash-vfs-*.sh

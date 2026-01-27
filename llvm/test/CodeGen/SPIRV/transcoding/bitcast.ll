@@ -5,16 +5,16 @@
 
 ; CHECK: Bitcast
 
-define spir_kernel void @test_fn(<2 x i8> addrspace(1)* nocapture readonly %src, i16 addrspace(1)* nocapture %dst) {
+define spir_kernel void @test_fn(ptr addrspace(1) nocapture readonly %src, ptr addrspace(1) nocapture %dst) {
 entry:
   %call = tail call spir_func i64 @_Z13get_global_idj(i32 0)
   %sext = shl i64 %call, 32
   %idxprom = ashr exact i64 %sext, 32
-  %arrayidx = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %src, i64 %idxprom
-  %0 = load <2 x i8>, <2 x i8> addrspace(1)* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds <2 x i8>, ptr addrspace(1) %src, i64 %idxprom
+  %0 = load <2 x i8>, ptr addrspace(1) %arrayidx, align 2
   %astype = bitcast <2 x i8> %0 to i16
-  %arrayidx2 = getelementptr inbounds i16, i16 addrspace(1)* %dst, i64 %idxprom
-  store i16 %astype, i16 addrspace(1)* %arrayidx2, align 2
+  %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %dst, i64 %idxprom
+  store i16 %astype, ptr addrspace(1) %arrayidx2, align 2
   ret void
 }
 

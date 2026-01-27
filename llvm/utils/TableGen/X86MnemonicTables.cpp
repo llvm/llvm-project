@@ -30,6 +30,7 @@ public:
   // Output X86 mnemonic tables.
   void run(raw_ostream &OS);
 };
+} // namespace
 
 void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 Mnemonic tables", OS);
@@ -82,8 +83,6 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   OS << "#endif // GET_X86_MNEMONIC_TABLES_CPP\n\n";
   OS << "} // end namespace X86\n} // end namespace llvm";
 }
-
-} // namespace
 
 static TableGen::Emitter::OptClass<X86MnemonicTablesEmitter>
     X("gen-x86-mnemonic-tables", "Generate X86 mnemonic tables");

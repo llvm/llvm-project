@@ -1,0 +1,13 @@
+RUN: %lldb -b %p/Inputs/section-overflow-binary \
+RUN:   -o 'script dwarf = lldb.target.module[0].sections[0]' \
+RUN:   -o 'script section = dwarf.GetSubSectionAtIndex(0)' \
+RUN:   -o "script print(f'{section.GetName()} file_offset=0x{section.GetFileOffset():016x}')" \
+RUN:   -o 'script section = dwarf.GetSubSectionAtIndex(1)' \
+RUN:   -o "script print(f'{section.GetName()} file_offset=0x{section.GetFileOffset():016x}')" \
+RUN:   -o 'script section = dwarf.GetSubSectionAtIndex(2)' \
+RUN:   -o "script print(f'{section.GetName()} file_offset=0x{section.GetFileOffset():016x}')" \
+RUN:   | FileCheck %s
+
+CHECK: __debug_abbrev file_offset=0x00000000fffffff0
+CHECK: __debug_info file_offset=0x0000000100000010
+CHECK: __debug_line file_offset=0x0000000300000010

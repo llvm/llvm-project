@@ -29,7 +29,7 @@ public:
     assert(isa<llvm::Argument>(Val) && "Expected Argument!");
   }
   void printAsOperand(raw_ostream &OS) const;
-  void dumpOS(raw_ostream &OS) const final;
+  LLVM_ABI_FOR_TEST void dumpOS(raw_ostream &OS) const final;
 #endif
 };
 

@@ -597,10 +597,6 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       Reserved.set(*AI);
   }
 
-  // Reserve low half pair registers in case they are used by RA aggressively.
-  Reserved.set(X86::TMM0_TMM1);
-  Reserved.set(X86::TMM2_TMM3);
-
   assert(checkAllSuperRegsMarked(Reserved,
                                  {X86::SIL, X86::DIL, X86::BPL, X86::SPL,
                                   X86::SIH, X86::DIH, X86::BPH, X86::SPH}));
@@ -621,7 +617,7 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
   // and try to return the minimum number of registers supported by the target.
   static_assert((X86::R15WH + 1 == X86::YMM0) && (X86::YMM15 + 1 == X86::K0) &&
                     (X86::K6_K7 + 1 == X86::TMMCFG) &&
-                    (X86::TMM6_TMM7 + 1 == X86::R16) &&
+                    (X86::TMM7 + 1 == X86::R16) &&
                     (X86::R31WH + 1 == X86::NUM_TARGET_REGS),
                 "Register number may be incorrect");
 
@@ -694,8 +690,7 @@ bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
 }
 
 bool X86RegisterInfo::isTileRegisterClass(const TargetRegisterClass *RC) const {
-  return RC->getID() == X86::TILERegClassID ||
-         RC->getID() == X86::TILEPAIRRegClassID;
+  return RC->getID() == X86::TILERegClassID;
 }
 
 void X86RegisterInfo::adjustStackMapLiveOutMask(uint32_t *Mask) const {
@@ -1062,17 +1057,9 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPFP16PSV:
   case X86::PTCMMIMFP16PSV:
   case X86::PTCMMRLFP16PSV:
-  case X86::PTTRANSPOSEDV:
-  case X86::PTTDPBF16PSV:
-  case X86::PTTDPFP16PSV:
-  case X86::PTTCMMIMFP16PSV:
-  case X86::PTTCMMRLFP16PSV:
-  case X86::PTCONJTCMMIMFP16PSV:
-  case X86::PTCONJTFP16V:
   case X86::PTILELOADDRSV:
   case X86::PTILELOADDRST1V:
   case X86::PTMMULTF32PSV:
-  case X86::PTTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
@@ -1083,56 +1070,7 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
     VRM->assignVirt2Shape(VirtReg, Shape);
     return Shape;
   }
-  case X86::PT2RPNTLVWZ0V:
-  case X86::PT2RPNTLVWZ0T1V:
-  case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V:
-  case X86::PT2RPNTLVWZ0RSV:
-  case X86::PT2RPNTLVWZ0RST1V:
-  case X86::PT2RPNTLVWZ1RSV:
-  case X86::PT2RPNTLVWZ1RST1V: {
-    MachineOperand &MO1 = MI->getOperand(1);
-    MachineOperand &MO2 = MI->getOperand(2);
-    MachineOperand &MO3 = MI->getOperand(3);
-    ShapeT Shape({&MO1, &MO2, &MO1, &MO3}, MRI);
-    VRM->assignVirt2Shape(VirtReg, Shape);
-    return Shape;
   }
-  }
-}
-
-static bool canHintShape(ShapeT &PhysShape, ShapeT &VirtShape) {
-  unsigned PhysShapeNum = PhysShape.getShapeNum();
-  unsigned VirtShapeNum = VirtShape.getShapeNum();
-
-  if (PhysShapeNum < VirtShapeNum)
-    return false;
-
-  if (PhysShapeNum == VirtShapeNum) {
-    if (PhysShapeNum == 1)
-      return PhysShape == VirtShape;
-
-    for (unsigned I = 0; I < PhysShapeNum; I++) {
-      ShapeT PShape(PhysShape.getRow(I), PhysShape.getCol(I));
-      ShapeT VShape(VirtShape.getRow(I), VirtShape.getCol(I));
-      if (VShape != PShape)
-        return false;
-    }
-    return true;
-  }
-
-  // Hint subreg of mult-tile reg to single tile reg.
-  if (VirtShapeNum == 1) {
-    for (unsigned I = 0; I < PhysShapeNum; I++) {
-      ShapeT PShape(PhysShape.getRow(I), PhysShape.getCol(I));
-      if (VirtShape == PShape)
-        return true;
-    }
-  }
-
-  // Note: Currently we have no requirement for case of
-  // (VirtShapeNum > 1 and PhysShapeNum > VirtShapeNum)
-  return false;
 }
 
 bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
@@ -1153,7 +1091,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   if (!VRM)
     return BaseImplRetVal;
 
-  if (ID != X86::TILERegClassID && ID != X86::TILEPAIRRegClassID) {
+  if (ID != X86::TILERegClassID) {
     if (DisableRegAllocNDDHints || !ST.hasNDD() ||
         !TRI.isGeneralPurposeRegisterClass(&RC))
       return BaseImplRetVal;
@@ -1204,7 +1142,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       return;
     }
     ShapeT PhysShape = getTileShape(VReg, const_cast<VirtRegMap *>(VRM), MRI);
-    if (canHintShape(PhysShape, VirtShape))
+    if (PhysShape == VirtShape)
       Hints.push_back(PhysReg);
   };
 

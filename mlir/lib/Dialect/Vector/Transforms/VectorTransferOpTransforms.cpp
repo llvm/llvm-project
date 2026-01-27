@@ -1081,7 +1081,7 @@ private:
 /// Rewrite transfer_writes of vectors of size 1 (e.g., vector<1x1xf32>)
 /// to memref.store.
 class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {

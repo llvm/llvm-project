@@ -83,7 +83,6 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <map>
 #include <memory>
 #include <queue>
 #include <string>
@@ -115,6 +114,8 @@ STATISTIC(NumCSInlinedHitMaxLimit,
 STATISTIC(
     NumCSInlinedHitGrowthLimit,
     "Number of functions with FDO inline stopped due to growth size limit");
+
+namespace llvm {
 
 // Command line option to specify the file to read samples from. This is
 // mainly used for debugging.
@@ -198,7 +199,6 @@ static cl::opt<bool> DisableSampleLoaderInlining(
         "pass, and merge (or scale) profiles (as configured by "
         "--sample-profile-merge-inlinee)."));
 
-namespace llvm {
 cl::opt<bool>
     SortProfiledSCC("sort-profiled-scc-member", cl::init(true), cl::Hidden,
                     cl::desc("Sort profiled recursion by edge weights."));
@@ -1664,8 +1664,9 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
-                           /*IsExpected=*/false);
+          setBranchWeights(
+              I, ArrayRef<uint32_t>{static_cast<uint32_t>(BlockWeights[BB])},
+              /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1676,7 +1677,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
+            setBranchWeights(I, ArrayRef<uint32_t>{uint32_t(0)},
+                             /*IsExpected=*/false);
           }
         }
       }
@@ -2290,7 +2292,6 @@ bool SampleProfileLoader::runOnFunction(Function &F,
   // count value.
   if (!F.getEntryCount())
     F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
-  std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
                   .getManager();
   ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);

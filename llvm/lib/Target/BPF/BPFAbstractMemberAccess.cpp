@@ -97,7 +97,6 @@
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
 namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::AmaAttr;
 uint32_t BPFCoreSharedInfo::SeqNum;
 
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,

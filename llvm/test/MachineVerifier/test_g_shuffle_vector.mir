@@ -1,10 +1,9 @@
-# RUN: not --crash llc -o - -mtriple=arm64  -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
+
 ---
-name:            g_shuffle_vector
-tracksRegLiveness: true
-liveins:
-body:             |
+name: g_shuffle_vector
+body: |
   bb.0:
     %0:_(<2 x s32>) = G_IMPLICIT_DEF
     %1:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -50,10 +49,15 @@ body:             |
     %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %3, %19, shufflemask(1, 0)
 
     ; CHECK: Bad machine code: G_SHUFFLE_VECTOR cannot change element type
-    %21:_(s16) = G_SHUFFLE_VECTOR %3, %4, shufflemask(0)
+    %21:_(s16) = G_SHUFFLE_VECTOR %3, %4, shufflemask(0, 1)
+
+    ; CHECK: Bad machine code: G_SHUFFLE_VECTOR must have vector src
+    %22:_(<2 x s32>) = G_SHUFFLE_VECTOR %3, %4, shufflemask(0, 0)
+
+    %23:_(p0) = G_IMPLICIT_DEF
+    ; CHECK: Bad machine code: G_SHUFFLE_VECTOR must have vector src
+    %24:_(<2 x p0>) = G_SHUFFLE_VECTOR %23, %23, shufflemask(0, 0)
 
     ; CHECK: Bad machine code: Out of bounds shuffle index
-    %22:_(s32) = G_IMPLICIT_DEF
-    %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %22, %22, shufflemask(0, 2)
-
+    %26:_(<2 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 7)
 ...

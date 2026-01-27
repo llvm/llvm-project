@@ -221,7 +221,7 @@ LogicalResult arith::ConstantOp::verify() {
   // However, this would most likely require updating the lowerings to LLVM.
   if (isa<ScalableVectorType>(type) && !isa<SplatElementsAttr>(getValue()))
     return emitOpError(
-        "intializing scalable vectors with elements attribute is not supported"
+        "initializing scalable vectors with elements attribute is not supported"
         " unless it's a vector splat");
   return success();
 }
@@ -1281,6 +1281,13 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   // mulf(x, 1) -> x
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
+
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
+                                                   arith::FastMathFlags::nsz)) {
+    // mulf(x, 0) -> 0
+    if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
+      return getRhs();
+  }
 
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
@@ -2744,7 +2751,7 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MaxSIOp op) { return AtomicRMWKind::maxs; })
           .Case([](arith::MinSIOp op) { return AtomicRMWKind::mins; })
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
-          .Default([](Operation *op) { return std::nullopt; });
+          .Default(std::nullopt);
   if (!maybeKind) {
     return std::nullopt;
   }

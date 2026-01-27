@@ -16,7 +16,6 @@ static_library("Common") {
     "CodeGenRegisters.cpp",
     "CodeGenSchedule.cpp",
     "CodeGenTarget.cpp",
-    "DAGISelMatcher.cpp",
     "GlobalISel/CXXPredicates.cpp",
     "GlobalISel/CodeExpander.cpp",
     "GlobalISel/CombinerUtils.cpp",

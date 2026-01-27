@@ -75,6 +75,10 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
         if (Src != Dst)
           MRI->replaceRegWith(Dst, Src);
 
+        if (MI.getOperand(1).isUndef())
+          for (MachineOperand &MO : MRI->use_operands(Dst))
+            MO.setIsUndef();
+
         // MI must be erased from the basic block before recalculating the live
         // interval.
         LIS->RemoveMachineInstrFromMaps(MI);

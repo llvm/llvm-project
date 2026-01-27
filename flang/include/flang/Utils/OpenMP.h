@@ -29,8 +29,9 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap = false,
+    mlir::omp::ClauseMapFlags mapType,
+    mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
+    bool partialMap = false,
     mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 
 /// For an mlir value that does not have storage, allocate temporary storage

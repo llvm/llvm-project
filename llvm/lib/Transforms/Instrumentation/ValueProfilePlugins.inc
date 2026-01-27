@@ -21,7 +21,9 @@
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
+namespace llvm {
 extern cl::opt<bool> MemOPOptMemcmpBcmp;
+} // end namespace llvm
 
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {

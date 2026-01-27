@@ -160,6 +160,41 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
+static void reportIfDeniedShaderStageAccess(Module &M,
+                                            const dxbc::RootFlags &Flags,
+                                            const dxbc::RootFlags &Mask) {
+  if ((Flags & Mask) != Mask)
+    return;
+
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "Shader has root bindings but root signature uses a DENY flag to "
+        "disallow root binding access to the shader stage.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static std::optional<dxbc::RootFlags>
+getEnvironmentDenyFlagMask(Triple::EnvironmentType ShaderProfile) {
+  switch (ShaderProfile) {
+  case Triple::Pixel:
+    return dxbc::RootFlags::DenyPixelShaderRootAccess;
+  case Triple::Vertex:
+    return dxbc::RootFlags::DenyVertexShaderRootAccess;
+  case Triple::Geometry:
+    return dxbc::RootFlags::DenyGeometryShaderRootAccess;
+  case Triple::Hull:
+    return dxbc::RootFlags::DenyHullShaderRootAccess;
+  case Triple::Domain:
+    return dxbc::RootFlags::DenyDomainShaderRootAccess;
+  case Triple::Mesh:
+    return dxbc::RootFlags::DenyMeshShaderRootAccess;
+  case Triple::Amplification:
+    return dxbc::RootFlags::DenyAmplificationShaderRootAccess;
+  default:
+    return std::nullopt;
+  }
+}
+
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
                                   dxil::ModuleMetadataInfo &MMI,
@@ -225,7 +260,9 @@ static void validateRootSignature(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+
   const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
+  bool HasBindings = false;
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
@@ -236,22 +273,33 @@ static void validateRootSignature(Module &M,
         BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
                                Binding.LowerBound + Binding.Size - 1);
 
-    if (Reg != nullptr) {
-      const auto *ParamInfo =
-          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
-
-      if (RC != ResourceClass::SRV && RC != ResourceClass::UAV)
-        continue;
-
-      if (ParamInfo->Type == dxbc::RootParameterType::DescriptorTable)
-        continue;
-
-      if (RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer)
-        reportInvalidHandleTyError(M, RC, Binding);
-    } else {
+    if (!Reg) {
       reportRegNotBound(M, RC, Binding);
+      continue;
     }
+
+    const auto *ParamInfo =
+        static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+
+    bool IsSRVOrUAV = RC == ResourceClass::SRV || RC == ResourceClass::UAV;
+    bool IsDescriptorTable =
+        ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
+    bool IsRawOrStructuredBuffer =
+        RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer;
+    if (IsSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer) {
+      reportInvalidHandleTyError(M, RC, Binding);
+      continue;
+    }
+
+    HasBindings = true;
   }
+
+  if (!HasBindings)
+    return;
+
+  if (std::optional<dxbc::RootFlags> Mask =
+          getEnvironmentDenyFlagMask(MMI.ShaderProfile))
+    reportIfDeniedShaderStageAccess(M, dxbc::RootFlags(RSD.Flags), *Mask);
 }
 
 static mcdxbc::RootSignatureDesc *

@@ -440,7 +440,7 @@ template <> struct tuple_size<cwg2386::Bad2> {
 namespace cwg2386 {
 void no_value() { auto [x, y] = Bad1(); }
 void wrong_value() { auto [x, y] = Bad2(); }
-// since-cxx17-error@-1 {{type 'Bad2' decomposes into 42 elements, but only 2 names were provided}}
+// since-cxx17-error@-1 {{type 'Bad2' binds to 42 elements, but only 2 names were provided}}
 #endif
 } // namespace cwg2386
 

@@ -160,6 +160,14 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x100 | FileCheck -check-prefix=MCPU-SPACEMIT-X100 %s
+// MCPU-SPACEMIT-X100: "-target-cpu" "spacemit-x100"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-spacemit-x100.c`
+// MCPU-SPACEMIT-X100-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=spacemit-x100 | FileCheck -check-prefix=MTUNE-SPACEMIT-X100 %s
+// MTUNE-SPACEMIT-X100: "-tune-cpu" "spacemit-x100"
+
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
 // RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
@@ -231,6 +239,7 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zba"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zbb"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zbs"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zkr"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zkt"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvbb"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvbc"
@@ -255,10 +264,16 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl256b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl32b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl64b"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+smaia"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+smmpm"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+smnpm"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+smrnmi"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+smstateen"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+sscofpmf"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svinval"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svnapot"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svpbmt"
+// MCPU-TT-ASCALON-D8-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=veyron-v1 | FileCheck -check-prefix=MCPU-VEYRON-V1 %s
 // MCPU-VEYRON-V1: "-target-cpu" "veyron-v1"
@@ -462,7 +477,6 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+ziccrse"
-// MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zihintntl"
@@ -473,6 +487,7 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P450-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P450-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p470 | FileCheck -check-prefix=MCPU-SIFIVE-P470 %s
@@ -491,7 +506,6 @@
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccrse"
-// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zihintntl"
@@ -503,6 +517,7 @@
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbb"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbc"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve32f"
@@ -553,7 +568,6 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+ziccrse"
-// MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zihintntl"
@@ -564,6 +578,7 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P670-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvbb"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvbc"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zve32f"

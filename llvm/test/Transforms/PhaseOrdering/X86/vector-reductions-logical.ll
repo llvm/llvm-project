@@ -486,7 +486,7 @@ define i32 @test_separate_allof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP5]], i32 0, i32 [[ADD]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[IF_END]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SPEC_SELECT]], [[IF_END]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -564,7 +564,7 @@ define i32 @test_separate_anyof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[DOTNOT6]], i32 [[ADD]], i32 0
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[IF_END]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SPEC_SELECT]], [[IF_END]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:

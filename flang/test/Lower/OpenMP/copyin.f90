@@ -335,7 +335,7 @@ subroutine common_2()
   integer :: y
   common /d/ x, y
   !$omp threadprivate(/d/)
-  
+
   !$omp parallel do copyin(/d/)
      do i = 1, x
         y = y + i

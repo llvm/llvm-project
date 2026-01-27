@@ -312,3 +312,11 @@ namespace resolved_nttp {
 
   using TC2 = decltype(C<bool, 2, 3>::p); // expected-note {{instantiation of}}
 }
+
+namespace OuterSubstFailure {
+  template <class T> struct A {
+      template <class> using B = T&;
+      // expected-error@-1 {{cannot form a reference to 'void'}}
+  };
+  template struct A<void>; // expected-note {{requested here}}
+} // namespace OuterSubstFailure

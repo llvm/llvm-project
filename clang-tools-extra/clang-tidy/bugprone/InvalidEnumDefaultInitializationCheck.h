@@ -24,6 +24,10 @@ public:
                                         ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  std::vector<StringRef> IgnoredEnums;
 };
 
 } // namespace clang::tidy::bugprone

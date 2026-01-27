@@ -49,10 +49,12 @@ intermediate LLVM representation.
    InstrProfileFormat
    InstrRefDebugInfo
    KeyInstructionsDebugInfo
+   LFI
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
    MemorySSA
+   MemProf
    MergeFunctions
    MCJITDesignAndImplementation
    MisExpect
@@ -153,6 +155,9 @@ Optimizations
 
 :doc:`MemorySSA`
    Information about the MemorySSA utility in LLVM, as well as how to use it.
+
+:doc:`MemProf`
+   User guide and internals of MemProf, profile guided optimizations for memory.
 
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
@@ -309,3 +314,6 @@ Additional Topics
 
 :doc:`Telemetry`
    This document describes the Telemetry framework in LLVM.
+
+:doc:`LFI <LFI>`
+    This document describes the Lightweight Fault Isolation (LFI) target in LLVM.

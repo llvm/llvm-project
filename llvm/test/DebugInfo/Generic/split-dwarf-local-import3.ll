@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK:   [[ABSTRACT_FOO:0x[0-9a-f]+]]: DW_TAG_subprogram
 ; CHECK:     DW_AT_name	("foo")
 ; CHECK:     DW_TAG_imported_declaration
-; CHECK:       DW_AT_import  ([[A:0x[0-9a-f]+]])
+; CHECK:       DW_AT_import  ([[A:0x[0-9a-f]+]]
 ; CHECK:     NULL
 
 ; CHECK:   DW_TAG_base_type

@@ -60,7 +60,7 @@ const NamedDecl *getDeclForType(const Type *T) {
   case Type::Enum:
   case Type::Record:
   case Type::InjectedClassName:
-    return cast<TagType>(T)->getOriginalDecl();
+    return cast<TagType>(T)->getDecl();
   case Type::TemplateSpecialization:
     return cast<TemplateSpecializationType>(T)
         ->getTemplateName()
@@ -697,6 +697,32 @@ public:
     assert(ParamIdx < InstantiatedFunction->getNumParams() &&
            "Instantiated function has fewer (non-pack) parameters?");
     return InstantiatedFunction->getParamDecl(ParamIdx);
+  }
+
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+    if (!Cfg.InlayHints.Designators)
+      return true;
+
+    if (const auto *CXXRecord = E->getType()->getAsCXXRecordDecl()) {
+      const auto &InitExprs = E->getUserSpecifiedInitExprs();
+
+      if (InitExprs.size() <= CXXRecord->getNumBases())
+        return true;
+
+      // Inherited members are first, skip hinting them for now.
+      // FIXME: '.base=' or 'base:' hint?
+      const auto &MemberInitExprs =
+          InitExprs.drop_front(CXXRecord->getNumBases());
+
+      // Then the fields in this record
+      for (const auto &[InitExpr, Field] :
+           llvm::zip(MemberInitExprs, CXXRecord->fields())) {
+        addDesignatorHint(InitExpr->getSourceRange(),
+                          "." + Field->getName().str());
+      }
+    }
+
+    return true;
   }
 
   bool VisitInitListExpr(InitListExpr *Syn) {

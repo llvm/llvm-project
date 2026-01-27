@@ -80,9 +80,6 @@ public:
   /// make as little assumptions as possible about the program state when
   /// RunSafely has returned false.
   LLVM_ABI bool RunSafely(function_ref<void()> Fn);
-  bool RunSafely(void (*Fn)(void*), void *UserData) {
-    return RunSafely([&]() { Fn(UserData); });
-  }
 
   /// Execute the provide callback function (with the given arguments) in
   /// a protected context which is run in another thread (optionally with a
@@ -94,10 +91,6 @@ public:
   /// propagated to the new thread as well.
   LLVM_ABI bool RunSafelyOnThread(function_ref<void()>,
                                   unsigned RequestedStackSize = 0);
-  bool RunSafelyOnThread(void (*Fn)(void*), void *UserData,
-                         unsigned RequestedStackSize = 0) {
-    return RunSafelyOnThread([&]() { Fn(UserData); }, RequestedStackSize);
-  }
 
   LLVM_ABI bool RunSafelyOnNewStack(function_ref<void()>,
                                     unsigned RequestedStackSize = 0);

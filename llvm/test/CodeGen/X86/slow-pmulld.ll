@@ -336,13 +336,13 @@ define <4 x i32> @test_mul_v4i32_v4i16(<4 x i16> %A) {
 ; SSE4-32-LABEL: test_mul_v4i32_v4i16:
 ; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; SSE4-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [18778,18778,18778,18778]
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v4i32_v4i16:
 ; SSE4-64:       # %bb.0:
 ; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [18778,18778,18778,18778]
 ; SSE4-64-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: test_mul_v4i32_v4i16:
@@ -838,13 +838,13 @@ define <4 x i32> @test_mul_v4i32_v4i16_minsize(<4 x i16> %A) minsize {
 ; SSE-32-LABEL: test_mul_v4i32_v4i16_minsize:
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; SSE-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [18778,18778,18778,18778]
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: test_mul_v4i32_v4i16_minsize:
 ; SSE-64:       # %bb.0:
 ; SSE-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [18778,18778,18778,18778]
 ; SSE-64-NEXT:    retq
 ;
 ; AVX2-LABEL: test_mul_v4i32_v4i16_minsize:

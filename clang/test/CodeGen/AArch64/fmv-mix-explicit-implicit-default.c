@@ -107,22 +107,26 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default_decl_first.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@implicit_default_decl_first.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @implicit_default_decl_first.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default_def_first.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@explicit_default_def_first.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @explicit_default_def_first.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default_def_first.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@implicit_default_def_first.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @implicit_default_def_first.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default_decl_first.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@explicit_default_decl_first.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @explicit_default_decl_first.default
 //

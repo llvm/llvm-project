@@ -115,6 +115,7 @@ class CDE_CX1_Instr<string iname, CX_Params params>
                   !con(params.Iops1, (ins imm_13b:$imm), params.PredOp),
                   !strconcat(iname, params.PAsm, "\t$coproc, $Rd, $imm"),
                   params.Cstr> {
+  bits<0> p;
   bits<13> imm;
   bits<4> Rd;
 
@@ -131,6 +132,7 @@ class CDE_CX2_Instr<string iname, CX_Params params>
                   !con(params.Iops2, (ins imm_9b:$imm), params.PredOp),
                   !strconcat(iname, params.PAsm, "\t$coproc, $Rd, $Rn, $imm"),
                   params.Cstr> {
+  bits<0> p;
   bits<9> imm;
   bits<4> Rd;
   bits<4> Rn;
@@ -149,6 +151,7 @@ class CDE_CX3_Instr<string iname, CX_Params params>
                   !con(params.Iops3, (ins imm_6b:$imm), params.PredOp),
                   !strconcat(iname, params.PAsm, "\t$coproc, $Rd, $Rn, $Rm, $imm"),
                   params.Cstr> {
+  bits<0> p;
   bits<6> imm;
   bits<4> Rd;
   bits<4> Rn;
@@ -268,6 +271,7 @@ class CDE_Vec_Instr<bit acc, dag oops, dag iops, string asm, string cstr,
                      !con(iops, (ins vpred:$vp)), asm,
                      !strconcat(cstr, vpred.vpred_constraint)>,
     CDE_RequiresQReg {
+  bits<0> vp;
 }
 
 
