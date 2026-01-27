@@ -216,6 +216,11 @@ MLIR_CAPI_EXPORTED void
 mlirTransformOnlyReadsHandle(MlirOpOperand *operands, intptr_t numOperands,
                              MlirMemoryEffectInstancesList effects);
 
+/// Helper to mark operands as consuming handles.
+MLIR_CAPI_EXPORTED void
+mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
+                            MlirMemoryEffectInstancesList effects);
+
 /// Helper to mark results as producing handles.
 MLIR_CAPI_EXPORTED void
 mlirTransformProducesHandle(MlirOpResult *results, intptr_t numResults,

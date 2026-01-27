@@ -106,7 +106,10 @@ public:
     mlirTransformStateForEachPayloadOp(
         state, value,
         [](MlirOperation op, void *userData) {
-          static_cast<nanobind::list *>(userData)->append(op);
+          PyMlirContextRef context =
+              PyMlirContext::forContext(mlirOperationGetContext(op));
+          auto opview = PyOperation::forOperation(context, op)->createOpView();
+          static_cast<nanobind::list *>(userData)->append(opview);
         },
         &result);
     return result;
@@ -379,18 +382,24 @@ struct ParamType : PyConcreteType<ParamType> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-void onlyReadsHandle(nb::list &operands, PyMemoryEffectsInstanceList effects) {
+void onlyReadsHandle(nb::iterable &operands, PyMemoryEffectsInstanceList effects) {
   std::vector<MlirOpOperand> operandsVec;
-  operandsVec.reserve(operands.size());
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
   mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(),
                                effects.effects);
 };
 
-void producesHandle(nb::list &results, PyMemoryEffectsInstanceList effects) {
+void consumesHandle(nb::iterable &operands, PyMemoryEffectsInstanceList effects) {
+  std::vector<MlirOpOperand> operandsVec;
+  for (auto operand : operands)
+    operandsVec.push_back(nb::cast<PyOpOperand>(operand));
+  mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(),
+                              effects.effects);
+};
+
+void producesHandle(nb::iterable &results, PyMemoryEffectsInstanceList effects) {
   std::vector<MlirOpResult> resultsVec;
-  resultsVec.reserve(results.size());
   for (auto result : results)
     resultsVec.push_back(nb::cast<PyOpResult>(result));
   mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
@@ -418,6 +427,10 @@ static void populateDialectTransformSubmodule(nb::module_ &m) {
 
   m.def("only_reads_handle", onlyReadsHandle,
         "Mark operands as only reading handles.", nb::arg("operands"),
+        nb::arg("effects"));
+
+  m.def("consumes_handle", consumesHandle,
+        "Mark operands as consuming handles.", nb::arg("operands"),
         nb::arg("effects"));
 
   m.def("produces_handle", producesHandle, "Mark results as producing handles.",

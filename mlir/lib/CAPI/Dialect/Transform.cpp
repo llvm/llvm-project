@@ -312,6 +312,13 @@ void mlirTransformOnlyReadsHandle(MlirOpOperand *operands, intptr_t numOperands,
   transform::onlyReadsHandle(operandArray, *unwrap(effects));
 }
 
+/// Set the effect for the operands to consuming the transform handles.
+void mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
+                                 MlirMemoryEffectInstancesList effects) {
+  MutableArrayRef<OpOperand> operandArray(unwrap(*operands), numOperands);
+  transform::consumesHandle(operandArray, *unwrap(effects));
+}
+
 /// Set the effect for the results to that they produce transform handles.
 void mlirTransformProducesHandle(MlirOpResult *results, intptr_t numResults,
                                  MlirMemoryEffectInstancesList effects) {
