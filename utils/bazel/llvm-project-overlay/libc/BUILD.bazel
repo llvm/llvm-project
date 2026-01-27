@@ -5193,6 +5193,7 @@ libc_math_function(
     name = "sincos",
     additional_deps = [
         ":__support_math_sincos",
+        ":errno",
     ],
 )
 
