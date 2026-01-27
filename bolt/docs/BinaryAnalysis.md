@@ -634,6 +634,22 @@ As an example of false-negative, it is possible that an instruction like
 of iterations, making it technically possible for an attacker to replace a
 valid pointer with a pointer to an arbitrary *higher* address.
 
+#### Tail call detection
+
+`ptrauth-tail-calls` detector uses a heuristic to classify each branch
+instruction either as a tail call or as an unrelated branch instruction.
+
+Most other parts of BOLT should not break code when rewriting. Unlike them,
+this analyzer tries to keep reasonable balance between false positive reports
+and missed issues. For this reason, it inspects some other branch instructions
+in addition to those BOLT is sure about.
+
+While it should provide reasonable balance between false positives and false
+negatives on general code, this may not be the case for some specific patterns.
+An example of a generally uncommon code pattern that is likely to yield false
+positives is [labels-as-values GCC extension](https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html)
+which is also supported by Clang.
+
 #### Other known issues
 
 * Not handling "no-return" functions. See issue
