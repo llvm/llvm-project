@@ -387,6 +387,20 @@ def ApplyInterleaveToShufflePatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDeinterleaveToShufflePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.deinterleave_to_shuffle",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that 1D vector deinterleave operations should be rewritten as
+    vector shuffle operations.
+
+    This is motivated by some current codegen backends not handling vector
+    deinterleave operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.rewrite_narrow_types",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

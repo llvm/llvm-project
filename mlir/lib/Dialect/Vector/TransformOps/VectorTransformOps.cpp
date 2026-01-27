@@ -195,6 +195,11 @@ void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
   vector::populateVectorInterleaveToShufflePatterns(patterns);
 }
 
+void transform::ApplyDeinterleaveToShufflePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorDeinterleaveToShufflePatterns(patterns);
+}
+
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   populateVectorNarrowTypeRewritePatterns(patterns);
