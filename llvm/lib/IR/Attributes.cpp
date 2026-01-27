@@ -663,6 +663,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         OS << ", ";
       First = false;
 
+      // isTargetMemLocSameForAll is fine for target location < 3
+      // If more targets are added it should do something like:
+      // memory(target_mem:read, target_mem3:none, target_mem5:write).
       if (ME.isTargetMemLoc(Loc) && ME.isTargetMemLocSameForAll()) {
         if (!TargetPrintedForAll) {
           OS << "target_mem: ";
