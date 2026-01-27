@@ -5736,6 +5736,20 @@ option.
     }];
 }
 
+def StackProtectorIgnoreDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``stack_protector_ignore`` attribute skips analysis of the given local
+variable when determining if a function should use a stack protector.
+
+The ``-fstack-protector`` option uses a heuristic to only add stack protectors
+to functions which contain variables or buffers over some size threshold.  This
+attribute overrides that heuristic for the attached variable, opting
+them out.  If this results in no variables or buffers remaining over the stack
+protector threshold, then the function will no longer use a stack protector.
+  }];
+}
+
 def StrictGuardStackCheckDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

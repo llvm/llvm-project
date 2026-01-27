@@ -609,6 +609,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
         break;
 
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1396, DecoderTableGFX13_FAKE1696, MI,
+                        DecW, Address, CS))
+        break;
+
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
         // Return 8 bytes for a potential literal.
         Bytes = Bytes_.slice(4, MaxInstBytesNum - 4);
@@ -694,7 +699,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
         break;
 
-      if (isGFX13() && tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS))
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1364, DecoderTableGFX13_FAKE1664, MI, QW,
+                        Address, CS))
         break;
 
       // Reinitialize Bytes
@@ -742,6 +749,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
+                        Address, CS))
+        break;
+
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1332, DecoderTableGFX13_FAKE1632, MI, DW,
                         Address, CS))
         break;
     }
