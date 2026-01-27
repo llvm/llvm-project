@@ -192,17 +192,15 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void*)
 template <class Mmap>
 static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
+#  if SANITIZER_POSIX
   if (length == 0)
     return real_mmap(addr, length, prot, flags, fd, offset);
-
-#  if SANITIZER_POSIX
   uptr start = reinterpret_cast<uptr>(addr);
   uptr end_excl;
   if (UNLIKELY(__builtin_add_overflow(start, (uptr)length, &end_excl))) {
     errno = errno_EINVAL;
     return (void*)-1;
   }
-
   if (flags & map_fixed) {
     if (__asan::IntersectsShadowOrGap(start, end_excl)) {
       errno = errno_EINVAL;
@@ -212,37 +210,34 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
       errno = errno_ENOMEM;
       return (void*)-1;
     }
-  } else {
-    if (addr && __asan::IntersectsShadowOrGap(start, start + 1))
-      addr = nullptr;
   }
 #  endif  // SANITIZER_POSIX
 
   void* res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (res != (void*)-1) {
+  if (length && res != (void*)-1) {
     const uptr beg = reinterpret_cast<uptr>(res);
-    const uptr page = GetPageSize();
-    const uptr sz = RoundUpTo(length, page);
-    if (AddrIsInMem(beg) && AddrIsInMem(beg + sz - 1)) {
-      PoisonShadow(beg, sz, 0);
-    }
+    DCHECK(IsAligned(beg, GetPageSize()));
+    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+    // Only unpoison shadow if it's an ASAN managed address.
+    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
+      PoisonShadow(beg, RoundUpTo(length, GetPageSize()), 0);
   }
   return res;
 }
 
 template <class Munmap>
 static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
+  const uptr beg = reinterpret_cast<uptr>(addr);
+
+#  if SANITIZER_POSIX
   if (length == 0)
     return real_munmap(addr, length);
 
-#  if SANITIZER_POSIX
-  const uptr beg = reinterpret_cast<uptr>(addr);
   uptr end_excl;
   if (UNLIKELY(__builtin_add_overflow(beg, (uptr)length, &end_excl))) {
     errno = errno_EINVAL;
     return -1;
   }
-
   bool beg_in_mem = AddrIsInMem(beg);
   bool end_in_mem = AddrIsInMem(end_excl - 1);
   if ((beg_in_mem || end_in_mem) && (beg_in_mem != end_in_mem)) {
@@ -251,17 +246,15 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
   }
 #  endif  // SANITIZER_POSIX
 
-  int res = real_munmap(addr, length);
-
-  if (res == 0) {
-    const uptr page = GetPageSize();
-    const uptr aligned_beg = RoundDownTo(beg, page);
-    const uptr aligned_end = RoundUpTo(end_excl, page);
-    if (AddrIsInMem(aligned_beg) && AddrIsInMem(aligned_end - 1)) {
-      PoisonShadow(aligned_beg, aligned_end - aligned_beg, 0);
-    }
+  // We should not tag if munmap fail, but it's to late to tag after
+  // real_munmap, as the pages could be mmaped by another thread.
+  if (length && IsAligned(beg, GetPageSize())) {
+    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+    // Protect from unmapping the shadow.
+    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
+      PoisonShadow(beg, rounded_length, 0);
   }
-  return res;
+  return real_munmap(addr, length);
 }
 
 #  define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, \
