@@ -248,7 +248,7 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
 
-  return arrangeCIRFunctionInfo(fpt->getExtInfo(), resultType, argTypes,
+  return arrangeCIRFunctionInfo(resultType, argTypes, fpt->getExtInfo(),
                                 required);
 }
 
@@ -286,7 +286,7 @@ arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
   assert(!cir::MissingFeatures::opCallExtParameterInfo());
   appendParameterTypes(cgt, prefix, fpt);
   CanQualType resultType = fpt->getReturnType().getUnqualifiedType();
-  return cgt.arrangeCIRFunctionInfo(fpt->getExtInfo(), resultType, prefix,
+  return cgt.arrangeCIRFunctionInfo(resultType, prefix, fpt->getExtInfo(),
                                     required);
 }
 
@@ -353,7 +353,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   CanQualType retType = fnType->getReturnType()->getCanonicalTypeUnqualified();
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  return cgt.arrangeCIRFunctionInfo(fnType->getExtInfo(), retType, argTypes,
+  return cgt.arrangeCIRFunctionInfo(retType, argTypes, fnType->getExtInfo(),
                                     required);
 }
 
@@ -393,7 +393,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
-  return arrangeCIRFunctionInfo(fpt->getExtInfo(), resultType, argTypes,
+  return arrangeCIRFunctionInfo(resultType, argTypes, fpt->getExtInfo(),
                                 required);
 }
 
@@ -415,9 +415,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return arrangeCIRFunctionInfo(
-      proto->getExtInfo(),
       proto->getReturnType()->getCanonicalTypeUnqualified(), argTypes,
-      required);
+      proto->getExtInfo(), required);
 }
 
 const CIRGenFunctionInfo &
@@ -487,8 +486,8 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
           funcTy.getAs<FunctionNoProtoType>()) {
     assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
     assert(!cir::MissingFeatures::opCallFnInfoOpts());
-    return arrangeCIRFunctionInfo(
-        noProto->getExtInfo(), noProto->getReturnType(), {}, RequiredArgs::All);
+    return arrangeCIRFunctionInfo(noProto->getReturnType(), {},
+                                  noProto->getExtInfo(), RequiredArgs::All);
   }
 
   return arrangeFreeFunctionType(funcTy.castAs<FunctionProtoType>());
@@ -566,7 +565,7 @@ const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt) {
   CanQualType resultType = fnpt->getReturnType().getUnqualifiedType();
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  return arrangeCIRFunctionInfo(fnpt->getExtInfo(), resultType, {},
+  return arrangeCIRFunctionInfo(resultType, {}, fnpt->getExtInfo(),
                                 RequiredArgs(0));
 }
 

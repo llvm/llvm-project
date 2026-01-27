@@ -663,8 +663,8 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    FunctionType::ExtInfo info, CanQualType returnType,
-    llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
+    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info, RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
