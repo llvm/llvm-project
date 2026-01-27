@@ -4230,7 +4230,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Vector->getType());
     llvm::CallBase *Reduce = Builder.CreateCall(F, Args, "rdx.addf");
     if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_fadd) {
-      // `__builtin_reduce_fadd` an unordered reduction, which requires the
+      // `__builtin_reduce_fadd` is an unordered reduction which requires the
       // reassoc FMF flag.
       llvm::FastMathFlags FMF;
       FMF.setAllowReassoc();
