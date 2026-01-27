@@ -506,7 +506,8 @@ static bool mayAlias(MemoryEffects::EffectInstance a,
     return false;
   if (Value v2 = b.getValue()) {
     return mayAlias(a, v2);
-  } else if (Value v = a.getValue()) {
+  }
+  if (Value v = a.getValue()) {
     return mayAlias(b, v);
   }
   return true;
