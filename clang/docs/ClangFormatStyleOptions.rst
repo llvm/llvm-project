@@ -5532,6 +5532,18 @@ the configuration (without a prefix: ``Auto``).
         nullable, nonnull, null_resettable, null_unspecified
     ]
 
+.. _ObjCSpaceAfterMethodDeclarationPrefix:
+
+**ObjCSpaceAfterMethodDeclarationPrefix** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <ObjCSpaceAfterMethodDeclarationPrefix>`
+  Add or remove a space between the '-'/'+' and the return type in
+  Objective-C method declarations. i.e
+
+  .. code-block:: objc
+
+     false:                      true:
+
+     -(void)method      vs.      - (void)method
+
 .. _ObjCSpaceAfterProperty:
 
 **ObjCSpaceAfterProperty** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ObjCSpaceAfterProperty>`

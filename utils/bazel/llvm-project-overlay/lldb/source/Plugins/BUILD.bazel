@@ -1765,6 +1765,7 @@ cc_library(
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",

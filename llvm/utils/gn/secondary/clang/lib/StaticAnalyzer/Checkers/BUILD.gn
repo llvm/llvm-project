@@ -140,6 +140,7 @@ static_library("Checkers") {
     "WebKit/ASTUtils.cpp",
     "WebKit/ForwardDeclChecker.cpp",
     "WebKit/MemoryUnsafeCastChecker.cpp",
+    "WebKit/NoDeleteChecker.cpp",
     "WebKit/PtrTypesSemantics.cpp",
     "WebKit/RawPtrRefCallArgsChecker.cpp",
     "WebKit/RawPtrRefLambdaCapturesChecker.cpp",

@@ -302,6 +302,8 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
+  '-'/'+' and the return type in Objective-C method declarations
 
 libclang
 --------
