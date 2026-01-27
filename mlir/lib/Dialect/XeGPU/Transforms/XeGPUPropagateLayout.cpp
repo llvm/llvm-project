@@ -1150,87 +1150,42 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     xegpu::LoadGatherOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
 
-  LayoutInfo loadLayout;
-  LayoutInfo maskLayout;
+  xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
+  xegpu::DistributeLayoutAttr anchorLayoutAttr = load.getLayoutAttr();
   auto uArch = getUArch(getChipStr(load).value_or(""));
-  const int subgroupSize = uArch->getSubgroupSize();
-  xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
-  if (hasParamsOfLayoutKind(anchorLayout)) {
-    loadLayout = LayoutInfo(anchorLayout);
-    maskLayout = loadLayout;
+  auto subgroupSize = uArch->getSubgroupSize();
+  VectorType resVecTy = load.getValueType();
+  VectorType maskTy = llvm::dyn_cast<VectorType>(load.getMask().getType());
+  int chunkSize = load.getChunkSize().value_or(1);
+
+  if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
   } else {
-    LayoutInfo valueLayout = results[0]->getValue();
-    // Need the layout of the value to propagate to the tensor descriptor.
-    if (!valueLayout.isAssigned())
-      return;
-
-    auto resAttr = dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
-    auto instDataIncoming = resAttr.getEffectiveInstDataAsInt();
-    if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
-      instDataIncoming = SmallVector<int64_t>(
-          cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent())
-              .getInstData()
-              .asArrayRef());
-
-    VectorType payloadTy = load.getValueType();
-    if (!payloadTy) {
+    if (!resVecTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-    const auto *uArchInstruction =
-        dyn_cast<xegpu::uArch::LoadGatherInstruction>(
-            uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-
-    // Check if value inst_data complies with uArch
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      // Each lane loads either one element
-      SmallVector<int> instDataUarch{subgroupSize};
-      // Or multiple elements as 2D with lane's elements in the inner dimension
-      if (payloadTy.getRank() != 1) {
-        if (payloadTy.getRank() != 2) {
-          load.emitWarning("Expected 2D payload for LoadGatherOp.");
-          return;
-        }
-        instDataUarch.push_back(
-            (std::min(static_cast<int>(payloadTy.getShape().back()),
-                      uArchInstruction->getMaxLaneLoadStoreSize())));
-      }
-      // If inst data does not match, enforce the uArch-based one
-      if (!llvm::equal(instDataIncoming, instDataUarch)) {
-        xegpu::LayoutAttr sourceAttr = dyn_cast<xegpu::LayoutAttr>(resAttr);
-        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr)) {
-          sourceAttr = cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent());
-        }
-        assert(sourceAttr);
-        xegpu::DistributeLayoutAttr updatedLayoutAttr = xegpu::LayoutAttr::get(
-            load.getContext(), sourceAttr.getSgLayout(), sourceAttr.getSgData(),
-            DenseI32ArrayAttr::get(load.getContext(), instDataUarch),
-            sourceAttr.getLaneLayout(), sourceAttr.getLaneData(),
-            sourceAttr.getOrder());
-
-        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
-          updatedLayoutAttr = xegpu::SliceAttr::get(
-              load.getContext(), updatedLayoutAttr, sliceAttr.getDims());
-        valueLayout = LayoutInfo(updatedLayoutAttr);
-      }
-    }
-    loadLayout = valueLayout;
-    load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
+    requiredAnchorLayoutAttr = xegpu::setupLoadGatherAnchorLayout(
+        layoutKind, resVecTy, chunkSize, uArch);
+    load.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  // If no user-defined anchor or we deal with a chunked op, set the default
-  // mask layout.
-  // Rank 1 data : Keep the mask layout aligned with data.
-  // Rank >1 data: Enforce the default xegpu 1D layout for mask.
-  if (!hasParamsOfLayoutKind(anchorLayout) ||
-      load.getValueType().getRank() > 1) {
+  auto maskLayoutAttr = anchorLayoutAttr;
+  // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
+  // layout for mask.
+  if (chunkSize > 1) {
     if (layoutKind == xegpu::LayoutKind::InstData)
-      maskLayout = LayoutInfo(
-          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}));
+      maskLayoutAttr =
+          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize});
     else if (layoutKind == xegpu::LayoutKind::Lane)
-      maskLayout =
-          getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
+      maskLayoutAttr =
+          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}, {1});
+    else
+      assert(false &&
+             "chunked StoreScatterOp should not be used at workgroup level");
   }
+
+  LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
 
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
@@ -1263,36 +1218,45 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
 
-  LayoutInfo srcLayoutInfo;
-  LayoutInfo maskLayoutInfo;
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
-  xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayoutAttr = storeScatter.getLayoutAttr();
   auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
+  auto subgroupSize = uArch->getSubgroupSize();
   VectorType srcVecTy = storeScatter.getValueType();
   VectorType maskTy =
       llvm::dyn_cast<VectorType>(storeScatter.getMask().getType());
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
-  if (hasParamsOfLayoutKind(anchorLayout)) {
-    requiredAnchorLayoutAttr = LayoutInfo(anchorLayout);
+  if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
   } else {
     if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-    requiredAnchorLayoutAttr = xegpu::storeScatterSetupAnchorLayout(
+    requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
         layoutKind, srcVecTy, chunkSize, uArch);
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  srcLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
-  maskLayoutInfo = srcLayoutInfo;
-  if (maskTy.getRank() < srcVecTy.getRank()) {
-    assert((maskTy.getRank() == (srcVecTy.getRank() - 1)) &&
-           "Expecting mask vector only 1 dimension less than value vector.");
-    // ToDO： Infer the proper mask layout based on the value layout.
-    maskLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
+  LayoutInfo srcLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
+  auto maskLayoutAttr = anchorLayoutAttr;
+  // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
+  // layout for mask.
+  if (chunkSize > 1) {
+    if (layoutKind == xegpu::LayoutKind::InstData)
+      maskLayoutAttr =
+          xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize});
+    else if (layoutKind == xegpu::LayoutKind::Lane)
+      maskLayoutAttr = xegpu::LayoutAttr::get(storeScatter->getContext(),
+                                              {subgroupSize}, {1});
+    else
+      assert(false &&
+             "chunked StoreScatterOp should not be used at workgroup level");
   }
+
+  LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
+
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
   // Propagate the destination (if tdesc) operand layout
@@ -1316,7 +1280,8 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
 
   xegpu::DistributeLayoutAttr anchorLayout = loadMatrixOp.getLayoutAttr();
 
-  // only need to set anchor layout, no need to porpagate to memdesc and offset
+  // only need to set anchor layout, no need to porpagate to memdesc and
+  // offset
   if (!hasParamsOfLayoutKind(anchorLayout)) {
     VectorType resVecTy =
         llvm::cast<VectorType>(loadMatrixOp.getRes().getType());

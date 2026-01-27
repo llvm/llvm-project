@@ -90,6 +90,12 @@ DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
 
+/// Infers the source layout attribute for mask operand of scatter IO operation
+/// given the result layout attribute, value shape, and mask shape.
+DistributeLayoutAttr inferScatterIOMaskLayout(DistributeLayoutAttr resLayout,
+                                              ArrayRef<int64_t> valShape,
+                                              ArrayRef<int64_t> maskShape);
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///
@@ -98,11 +104,11 @@ DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
 /// consumer's preferred layout. This minimizes data redistribution overhead.
 /// The SliceAttr for the result is then created based on the derived source
 /// layout and the specified reduction dimensions.
-SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
-                                     VectorType srcVectorTy,
-                                     DistributeLayoutAttr consumerLayout,
-                                     SmallVector<int64_t> reductionDims,
-                                     const uArch::uArch *uArch);
+SliceAttr setupMultiReductionResultLayout(xegpu::LayoutKind layoutKind,
+                                          VectorType srcVectorTy,
+                                          DistributeLayoutAttr consumerLayout,
+                                          SmallVector<int64_t> reductionDims,
+                                          const uArch::uArch *uArch);
 
 /// Setup the result layout attribute for a bitcast operation based on element
 /// type bitwidths. This ensures the source layout can always be derived from
@@ -113,25 +119,25 @@ SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
 /// (inst_data, lane_data) are scaled up by the bitwidth ratio. This
 /// maintains the invariant that the source layout can be recovered by inverse
 /// scaling during layout inference.
-DistributeLayoutAttr bitCastSetupResultLayout(
+DistributeLayoutAttr setupBitCastResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 xegpu::DistributeLayoutAttr
-xegpu::loadMatrixSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+xegpu::setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                                    xegpu::DistributeLayoutAttr consumerLayout,
                                    const uArch::uArch *uArch);
 
-DistributeLayoutAttr storeMatrixSetupAnchorLayout(LayoutKind layoutKind,
+DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   const uArch::uArch *uArch);
 
-xegpu::DistributeLayoutAttr xegpu::loadGatherSetupAnchorLayout(
+xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int chunkSize,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 xegpu::DistributeLayoutAttr
-xegpu::storeScatterSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+xegpu::setupStoreScatterAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                                      int chunkSize, const uArch::uArch *uArch);
 } // namespace xegpu
 

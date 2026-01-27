@@ -513,15 +513,11 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
   SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
 
   DenseI32ArrayAttr orderAttr = getOrder();
-  SmallVector<int64_t> order;
+  SmallVector<int64_t> orderVec;
   if (orderAttr && !orderAttr.empty()) {
-    order = llvm::to_vector(
+    orderVec = llvm::to_vector(
         llvm::map_range(orderAttr.asArrayRef(),
                         [](int32_t idx) { return static_cast<int64_t>(idx); }));
-  } else {
-    // Default order: [1, 0] for 2D (row-major), [2, 1, 0] for 3D, etc.
-    order =
-        llvm::to_vector(llvm::reverse(llvm::seq<int64_t>(0, sgLayout.size())));
   }
 
   SmallVector<int64_t> collapsedSgLayout;
@@ -555,22 +551,6 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
     collapsedOrder.push_back(collapsedOrderValue);
   }
 
-  // go through the values inside collapsedOrder, and re-map the order values to
-  // be in range of [0, N-1] where N is the number of dimensions in collapsed
-  // shape
-  int64_t orderSize = static_cast<int64_t>(collapsedOrder.size());
-  SmallVector<int64_t> remappedOrder(orderSize, -1);
-  for (int64_t i = 0; i < orderSize; ++i) {
-    int64_t originalOrderValue = collapsedOrder[i];
-    // count how many values in collapsedOrder are less than originalOrderValue
-    int64_t count = 0;
-    for (int64_t j = 0; j < orderSize; ++j) {
-      if (collapsedOrder[j] < originalOrderValue)
-        count++;
-    }
-    remappedOrder[i] = count;
-  }
-
   // Create collapsed layout
   SmallVector<int32_t> collapsedSgLayout32(collapsedSgLayout.begin(),
                                            collapsedSgLayout.end());
@@ -582,8 +562,28 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
                                              collapsedLaneLayout.end());
   SmallVector<int32_t> collapsedLaneData32(collapsedLaneData.begin(),
                                            collapsedLaneData.end());
-  SmallVector<int32_t> remappedOrder32(remappedOrder.begin(),
-                                       remappedOrder.end());
+
+  // go through the values inside collapsedOrder, and re-map the order values to
+  // be in range of [0, N-1] where N is the number of dimensions in collapsed
+  // shape
+  SmallVector<int32_t> remappedOrder32;
+  if (!orderVec.empty()) {
+    int64_t orderSize = static_cast<int64_t>(collapsedOrder.size());
+    SmallVector<int64_t> remappedOrder(orderSize, -1);
+    for (int64_t i = 0; i < orderSize; ++i) {
+      int64_t originalOrderValue = collapsedOrder[i];
+      // count how many values in collapsedOrder are less than
+      // originalOrderValue
+      int64_t count = 0;
+      for (int64_t j = 0; j < orderSize; ++j) {
+        if (collapsedOrder[j] < originalOrderValue)
+          count++;
+      }
+      remappedOrder[i] = count;
+    }
+    remappedOrder32 =
+        SmallVector<int32_t>(remappedOrder.begin(), remappedOrder.end());
+  }
 
   auto collapsedLayout = xegpu::LayoutAttr::get(
       getContext(), DenseI32ArrayAttr::get(getContext(), collapsedSgLayout32),
@@ -591,7 +591,9 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
       DenseI32ArrayAttr::get(getContext(), collapsedInstData32),
       DenseI32ArrayAttr::get(getContext(), collapsedLaneLayout32),
       DenseI32ArrayAttr::get(getContext(), collapsedLaneData32),
-      DenseI32ArrayAttr::get(getContext(), remappedOrder32));
+      remappedOrder32.empty()
+          ? nullptr
+          : DenseI32ArrayAttr::get(getContext(), remappedOrder32));
   return collapsedLayout;
 }
 
