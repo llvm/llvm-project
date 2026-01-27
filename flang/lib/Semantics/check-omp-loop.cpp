@@ -860,6 +860,42 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
         /*paramName=*/"parameter", /*allowZero=*/false);
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
+  llvm::omp::Clause clause = llvm::omp::Clause::OMPC_permutation;
+  CheckAllowedClause(clause);
+  if (c.v.size() < 2)
+    context_.Say(GetContext().clauseSource,
+        "The %s clause must have a length of at least two"_err_en_US,
+        parser::ToUpperCaseLetters(getClauseName(clause).str()));
+
+  llvm::SmallVector<bool> found(c.v.size(), false);
+  bool cont = true;
+  for (const auto &val : c.v) {
+    if (const auto v{GetIntValue(val)}) {
+      if (*v <= 0) {
+        cont = false;
+        context_.Say(GetContext().clauseSource,
+            "The parameter of the %s clause must be "
+            "a constant positive integer expression"_err_en_US,
+            parser::ToUpperCaseLetters(getClauseName(clause).str()));
+      } else if ((unsigned)*v - 1 < c.v.size()) {
+        found[*v - 1] = true;
+      }
+    } else
+      cont = false;
+  }
+
+  if (!cont)
+    return;
+  for (auto i : found) {
+    if (!i) {
+      context_.Say(GetContext().clauseSource,
+          "Every integer from 1 must appear in the %s clause"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
   auto &[first, count]{x.v.t};

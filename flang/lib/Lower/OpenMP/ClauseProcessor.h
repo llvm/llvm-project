@@ -71,6 +71,8 @@ public:
   bool processLooprange(StatementContext &stmtCtx,
                         mlir::omp::LooprangeClauseOps &result,
                         int64_t &count) const;
+  bool processPermutation(StatementContext &stmtCtx,
+                          mlir::omp::PermutationClauseOps &result) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
