@@ -923,13 +923,18 @@ static bool isConstantPoolLoad(const MachineInstr *MI) {
          });
 }
 
-  return false;
+/// Check if there are any calls in the range (From, To].
+static bool callInRange(const MachineInstr *From, const MachineInstr *To) {
+  return any_of(make_range(std::next(From->getIterator()), To->getIterator()),
+                [](const MachineInstr &MI) { return MI.isCall(); });
 }
 
 /// Check if a register's value comes from a memory load by walking the
 /// def-use chain. We want to prioritize converting branches which
 /// depend on values loaded from memory (unless they are loop invariant,
-/// or come from a constant pool).
+/// or come from a constant pool). Only consider loads that are in the
+/// same basic block as the branch to ensure the load is "immediately"
+/// before the branch in program time.
 bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
   if (!Reg.isVirtual())
     return false;
@@ -945,10 +950,6 @@ bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
   if (!DefMI)
     return false;
 
-  // Get the loop containing the branch to ensure we only consider loads
-  // that are "recent" in program time (i.e., in the same loop iteration).
-  MachineLoop *BranchLoop = Loops->getLoopFor(IfConv.Head);
-
   Worklist.push_back(DefMI);
   VisitedRegs.push_back(Reg);
 
@@ -957,15 +958,17 @@ bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
     if (!VisitedInstrs.insert(MI).second)
       continue;
 
-    // Check if this instruction is a load.
+    // Stop walking if we encounter an instruction outside the head block.
+    if (MI->getParent() != IfConv.Head)
+      break;
+
+    // Check if this instruction is a load, and there are no calls between
+    // the load and the branch (which would break the "close in time"
+    // assumption).
     if (MI->mayLoad() && !isConstantPoolLoad(MI) &&
-        !MI->isDereferenceableInvariantLoad()) {
-      // Only consider the load as data-dependent if it's in the same loop
-      // as the branch.
-      MachineLoop *LoadLoop = Loops->getLoopFor(MI->getParent());
-      if (LoadLoop == BranchLoop)
-        return true;
-    }
+        !MI->isDereferenceableInvariantLoad() &&
+        !callInRange(MI, &*IfConv.Head->getFirstTerminator()))
+      return true;
 
     // Walk through all register use operands and find their definitions.
     for (const MachineOperand &MO : MI->operands()) {
