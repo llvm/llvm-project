@@ -533,24 +533,30 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
-def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
-def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
+def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive">;
+def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict">;
+def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
   code Documentation = [{
     Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"experimental-lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"experimental-lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
 def LifetimeSafetySuggestions
-    : DiagGroup<"experimental-lifetime-safety-suggestions",
+    : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,
                  LifetimeSafetyIntraTUSuggestions]> {
   code Documentation = [{
     Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
+  }];
+}
+def LifetimeSafetyNoescape
+    : DiagGroup<"lifetime-safety-noescape"> {
+  code Documentation = [{
+    Detects misuse of [[clang::noescape]] annotation where the parameter escapes (for example, through return).
   }];
 }
 

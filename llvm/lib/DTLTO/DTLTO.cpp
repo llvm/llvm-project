@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -160,7 +161,9 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     std::string PID = utohexstr(sys::Process::getProcessId());
     std::string Seq = std::to_string(InputFiles.size());
 
-    NewModuleId = {sys::path::filename(ModuleId), ".", Seq, ".", PID, ".o"};
+    NewModuleId = sys::path::parent_path(LinkerOutputFile);
+    sys::path::append(NewModuleId, sys::path::filename(ModuleId) + "." + Seq +
+                                       "." + PID + ".o");
   }
 
   // Update the module identifier and save it.
@@ -176,6 +179,9 @@ Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
   if (Input->shouldMaterialize()) {
     TimeTraceScope TimeScope("Materialize bitcode input for DTLTO", ModuleId);
+    // Cleanup this file on abnormal process exit.
+    if (!SaveTemps)
+      llvm::sys::RemoveFileOnSignal(ModuleId);
     MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
     if (Error EC = saveBuffer(MemoryBufferRef.getBuffer(), ModuleId))
       return EC;
@@ -209,11 +215,18 @@ llvm::Error lto::DTLTO::handleArchiveInputs() {
 
 // Remove temporary archive member files created to enable distribution.
 void lto::DTLTO::cleanup() {
-  {
+  if (!SaveTemps) {
     TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
-    for (auto &Input : InputFiles)
-      if (Input->shouldMaterialize())
-        sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
+    for (auto &Input : InputFiles) {
+      if (!Input->shouldMaterialize())
+        continue;
+      std::error_code EC =
+          sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
+      if (EC &&
+          EC != std::make_error_code(std::errc::no_such_file_or_directory))
+        errs() << "warning: could not remove temporary DTLTO input file '"
+               << Input->getName() << "': " << EC.message() << "\n";
+    }
   }
   Base::cleanup();
 }
