@@ -851,10 +851,58 @@ def unmerge_merge : GICombineRule<
 
 // Fold merge(unmerge).
 def merge_unmerge : GICombineRule<
-  (defs root:$d, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_MERGE_VALUES):$d,
-  [{ return Helper.matchCombineMergeUnmerge(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${d}, ${matchinfo}); }])
+  (defs root:$dst, register_matchinfo:$src),
+  (match (G_MERGE_VALUES $dst, GIVariadic<1>:$merge_srcs):$merge,
+         [{
+           assert(!${merge_srcs}.empty() && "GIVariadic<1> should guarantee non-empty.");
+
+           // Check if first source comes from G_UNMERGE_VALUES.
+           Register FirstMergeSrc = ${merge_srcs}[0].getReg();
+           MachineInstr *UnmergeMI = MRI.getVRegDef(FirstMergeSrc);
+
+           if (!UnmergeMI || UnmergeMI->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+             return false;
+
+           // Check counts match.
+           unsigned NumMergeSrcs = ${merge_srcs}.size();
+           unsigned NumUnmergeDefs = UnmergeMI->getNumDefs();
+           if (NumMergeSrcs != NumUnmergeDefs)
+             return false;
+
+           // Verify all merge sources match unmerge defs in order.
+           for (unsigned I = 0; I < NumMergeSrcs; ++I) {
+             Register MergeSrc = ${merge_srcs}[I].getReg();
+             Register UnmergeDef = UnmergeMI->getOperand(I).getReg();
+
+             if (MergeSrc != UnmergeDef)
+               return false;
+
+             if (!MRI.hasOneNonDBGUse(MergeSrc))
+               return false;
+           }
+
+           // Get the source of the unmerge.
+           ${src} = UnmergeMI->getOperand(NumUnmergeDefs).getReg();
+
+           // Check size compatibility.
+           LLT SrcTy = MRI.getType(${src});
+           LLT DstTy = MRI.getType(${dst}.getReg());
+           return SrcTy.getSizeInBits() == DstTy.getSizeInBits();
+         }]),
+  (apply [{
+           LLT SrcTy = MRI.getType(${src});
+           LLT DstTy = MRI.getType(${dst}.getReg());
+
+           Helper.getBuilder().setInstrAndDebugLoc(*${merge});
+
+           if (SrcTy == DstTy) {
+             Helper.replaceRegWith(MRI, ${dst}.getReg(), ${src});
+           } else {
+             Helper.getBuilder().buildBitcast(${dst}.getReg(), ${src});
+           }
+
+           ${merge}->eraseFromParent();
+         }])
 >;
 
 // Fold (fabs (fneg x)) -> (fabs x).
