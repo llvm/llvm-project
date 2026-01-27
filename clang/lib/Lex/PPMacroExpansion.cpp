@@ -1443,7 +1443,7 @@ already_lexed:
       PP.Diag(LParenLoc, diag::note_matching) << tok::l_paren;
       SuppressDiagnostic = true;
     }
-  }
+}
 }
 
 /// Helper function to return the IdentifierInfo structure of a Token
