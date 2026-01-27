@@ -28,9 +28,6 @@ flags = (test_dir / 'flags.subs').open().read().strip()
 link_flags = (test_dir / 'link_flags.subs').open().read().strip()
 spec_dir = pathlib.Path((test_dir / 'spec_dir.subs').open().read().strip())
 
-# Remove -Wall, -Wextra and -Werror from the flags since we don't care about enabling all warnings inside SPEC
-compile_flags = compile_flags.replace('-Wall', '').replace('-Wextra', '').replace('-Werror', '')
-
 # Setup the configuration file
 test_dir.mkdir(parents=True, exist_ok=True)
 spec_config = test_dir / 'spec-config.cfg'
@@ -49,7 +46,7 @@ default:
     copies               = 1
     threads              = 1
     CC                   = cc -O3 -std=c18 -Wno-implicit-function-declaration
-    CXX                  = {cxx} {compile_flags} {flags} {link_flags}
+    CXX                  = {cxx} {compile_flags} {flags} {link_flags} -w # turn off all warnings
     CC_VERSION_OPTION    = --version
     CXX_VERSION_OPTION   = --version
     EXTRA_PORTABILITY    = -DSPEC_NO_CXX17_SPECIAL_MATH_FUNCTIONS # because libc++ doesn't implement the special math functions yet
