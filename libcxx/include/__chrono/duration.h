@@ -291,13 +291,13 @@ typedef duration<long long, nano> nanoseconds;
 typedef duration<long long, micro> microseconds;
 typedef duration<long long, milli> milliseconds;
 typedef duration<long long > seconds;
-typedef duration< long, ratio< 60> > minutes;
-typedef duration< long, ratio<3600> > hours;
+typedef duration<long, ratio<60> > minutes;
+typedef duration<long, ratio<60 * 60> > hours;
 #if _LIBCPP_STD_VER >= 20
-typedef duration< int, ratio_multiply<ratio<24>, hours::period>> days;
-typedef duration< int, ratio_multiply<ratio<7>, days::period>> weeks;
-typedef duration< int, ratio_multiply<ratio<146097, 400>, days::period>> years;
-typedef duration< int, ratio_divide<years::period, ratio<12>>> months;
+typedef duration<int, ratio<60 * 60 * 24>> days;
+typedef duration<int, ratio<60 * 60 * 24 * 7>> weeks;
+typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24)>> years;
+typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24) / 12>> months;
 #endif
 // Duration ==
 
