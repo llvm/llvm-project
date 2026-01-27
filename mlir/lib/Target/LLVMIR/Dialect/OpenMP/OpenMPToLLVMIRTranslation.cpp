@@ -2818,7 +2818,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(lowerBounds[i]), builder.getInt32(1));
       llvm::Value *loopTripCount = builder.CreateSub(
           moduleTranslation.lookupValue(upperBounds[i]), lowerBoundMinusOne);
-      // For loops that have a step value greater than 1, we need to adjust the
+      // For loops that have a step value not equal to 1, we need to adjust the
       // trip count to ensure the correct number of iterations for the loop is
       // captured.
       llvm::Value *loopTripCountDivStep = builder.CreateUDiv(

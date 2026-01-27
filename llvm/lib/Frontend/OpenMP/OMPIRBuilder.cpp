@@ -2362,25 +2362,26 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                            CLI->getBody()->getFirstInsertionPt());
 
     if (NumOfCollapseLoops > 1) {
+      std::vector<User *> UsersToReplace;
       // When using the collapse clause, the bounds of the loop have to be
       // adjusted to properly represent the iterator of the outer loop.
       Value *IVPlusTaskLB = Builder.CreateAdd(
           CLI->getIndVar(),
           Builder.CreateSub(CastedTaskLB, ConstantInt::get(IVTy, 1)));
+      // To ensure every Use is correctly captured, we first want to record which
+      // users to replace the value in, and then replace the value.
       for (auto IVUse = CLI->getIndVar()->uses().begin();
-           IVUse != CLI->getIndVar()->uses().end();) {
+           IVUse != CLI->getIndVar()->uses().end(); IVUse++) {
         User *IVUser = IVUse->getUser();
-        // To ensure every Use is correctly captured, we want to iterate before
-        // replacing the uses of the loop index. If this is done after replacing
-        // the uses, then it is possible for uses to be missed, and values are
-        // not calculated correctly
-        IVUse++;
         if (auto *Op = dyn_cast<BinaryOperator>(IVUser)) {
           if (Op->getOpcode() == Instruction::URem ||
               Op->getOpcode() == Instruction::UDiv) {
-            IVUser->replaceUsesOfWith(CLI->getIndVar(), IVPlusTaskLB);
+            UsersToReplace.push_back(IVUser);
           }
         }
+      }
+      for (User *User : UsersToReplace) {
+        User->replaceUsesOfWith(CLI->getIndVar(), IVPlusTaskLB);
       }
     } else {
       // The canonical loop is generated with a fixed lower bound. We need to
