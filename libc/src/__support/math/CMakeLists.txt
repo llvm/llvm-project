@@ -612,33 +612,6 @@ add_header_library(
 )
 
 add_header_library(
-  f16sqrtl
-  HDRS
-    f16sqrtl.h
-  DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
-    libc.src.__support.macros.properties.types
-)
-
-add_header_library(
-  frexpf128
-  HDRS
-    frexpf128.h
-  DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
-)
-
-add_header_library(
-  frexpf128
-  HDRS
-    frexpf128.h
-  DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
-)
-
-add_header_library(
   fsqrt
   HDRS
     fsqrt.h
