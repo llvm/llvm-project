@@ -32,14 +32,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
-void MCSection::enterBundleLock() { ++BundleLockNestingDepth; }
-
-void MCSection::exitBundleLock() {
-  if (BundleLockNestingDepth == 0)
-    report_fatal_error("Mismatched bundle_lock/unlock directives");
-  --BundleLockNestingDepth;
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
     DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)

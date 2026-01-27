@@ -89,8 +89,8 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
           "unterminated .bundle_lock when changing a section");
       // Clean up bundle state to allow continuing.
       MCSection *CurSec = CF->getParent();
-      while (CurSec->isBundleLocked())
-        CurSec->exitBundleLock();
+      if (CurSec->isBundleLocked())
+        CurSec->setIsBundleLocked(false);
       BundleBA = nullptr;
     }
 
@@ -358,17 +358,11 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd,
     return;
   }
 
-  Sec.enterBundleLock();
-
-  // Early exit for nested locks.
-  if (Sec.isNestedBundleLock()) {
-    assert(BundleBA);
-    // An inner bundle that aligns to the end forces outer bundle (if existed)
-    // to be align_to_end. It might be potentially better to raise an error.
-    if (AlignToEnd != BundleBA->isAlignToEnd())
-      BundleBA->setAlignToEnd(true);
+  if (Sec.isBundleLocked()) {
+    getContext().reportError(getStartTokLoc(), "nested .bundle_lock is not allowed");
     return;
   }
+  Sec.setIsBundleLocked(true);
 
   auto AlignBoundary = Asm.getBundleAlignSize();
   BundleBA =
@@ -390,11 +384,7 @@ void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
     return;
   }
 
-  Sec.exitBundleLock();
-
-  // Delay BundleBA until the outermost bundle lock.
-  if (Sec.isBundleLocked())
-    return;
+  Sec.setIsBundleLocked(false);
 
   MCFragment *CF = getCurrentFragment();
   BundleBA->setLastFragment(CF);

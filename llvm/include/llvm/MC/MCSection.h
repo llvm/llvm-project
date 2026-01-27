@@ -559,8 +559,7 @@ private:
   // fragment may not be fully resolved.
   unsigned FirstLinkerRelaxable = -1u;
 
-  /// Current nesting depth of bundle_lock directives.
-  unsigned BundleLockNestingDepth = 0;
+  bool IsBundleLocked;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -628,10 +627,8 @@ public:
   bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
   void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
 
-  void enterBundleLock();
-  void exitBundleLock();
-  bool isBundleLocked() const { return BundleLockNestingDepth > 0; }
-  bool isNestedBundleLock() const { return BundleLockNestingDepth > 1; }
+  bool isBundleLocked() const { return IsBundleLocked; }
+  void setIsBundleLocked(bool Value) { IsBundleLocked = Value; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 
