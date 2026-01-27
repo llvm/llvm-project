@@ -2971,7 +2971,6 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
   Register OldReg = MI.getOperand(0).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
   replaceRegWith(MRI, OldReg, Replacement);
-
   MI.eraseFromParent();
 }
 
