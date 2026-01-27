@@ -651,8 +651,10 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
   if (!I)
     return VectorInstrContext::None;
 
-  // For inserts, check if the value being inserted comes from a load.
-  if (isa<InsertElementInst>(I) && isa<LoadInst>(I->getOperand(1)))
+  // For inserts, check if the value being inserted comes from a single-use
+  // load.
+  if (isa<InsertElementInst>(I) && isa<LoadInst>(I->getOperand(1)) &&
+      I->getOperand(1)->hasOneUse())
     return VectorInstrContext::Load;
 
   // For extracts, check if it has a single use that is a store.
