@@ -44,6 +44,9 @@ static cl::opt<unsigned>
                              "vectorization while tail-folding."),
                     cl::init(5), cl::Hidden);
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-riscv-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) const {
@@ -3486,4 +3489,23 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
+}
+
+bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
+    const Instruction *I) const {
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<BranchInst>(I->getNextNode()) &&
+        cast<BranchInst>(I->getNextNode())->isUnconditional())
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }
