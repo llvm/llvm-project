@@ -5,18 +5,22 @@
 // RUN: mkdir %t.dir/Inputs
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/target-filename-cdb.json > %t.cdb
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s %if system-darwin %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 // CHECK: target-filename_input.o:
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: target-filename_input.cpp
 
 // CHECK-NEXT: a.o:
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: target-filename_input.cpp
 
 // CHECK-NEXT: b.o:
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: target-filename_input.cpp
 
 // CHECK-NEXT: last.o:
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: target-filename_input.cpp
 
 // CHECK: target-filename_input.o:
