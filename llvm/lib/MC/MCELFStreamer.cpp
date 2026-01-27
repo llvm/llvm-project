@@ -90,8 +90,16 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   if (auto *F = getCurrentFragment()) {
-    if (isBundleLocked())
-      report_fatal_error("Unterminated .bundle_lock when changing a section");
+    if (isBundleLocked()) {
+      getContext().reportError(
+          getStartTokLoc(),
+          "unterminated .bundle_lock when changing a section");
+      // Clean up bundle state to allow continuing.
+      MCSection *CurSec = F->getParent();
+      while (CurSec->isBundleLocked())
+        CurSec->exitBundleLock();
+      BundleBA = nullptr;
+    }
 
     // Ensure the previous section gets aligned if necessary.
     setSectionAlignmentForBundling(Asm, F->getParent());
@@ -341,7 +349,8 @@ void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
                         Assembler.getBundleAlignSize() == Alignment.value()))
     Assembler.setBundleAlignSize(Alignment.value());
   else
-    report_fatal_error(".bundle_align_mode cannot be changed once set");
+    getContext().reportError(getStartTokLoc(),
+                             ".bundle_align_mode cannot be changed once set");
 }
 
 void MCELFStreamer::emitBundleLock(bool AlignToEnd,
@@ -349,8 +358,11 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd,
   MCSection &Sec = *getCurrentSectionOnly();
   auto &Asm = getAssembler();
 
-  if (!Asm.isBundlingEnabled())
-    report_fatal_error(".bundle_lock forbidden when bundling is disabled");
+  if (!Asm.isBundlingEnabled()) {
+    getContext().reportError(
+        getStartTokLoc(), ".bundle_lock forbidden when bundling is disabled");
+    return;
+  }
 
   Sec.enterBundleLock();
 
@@ -373,10 +385,16 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd,
 void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
   MCSection &Sec = *getCurrentSectionOnly();
 
-  if (!getAssembler().isBundlingEnabled())
-    report_fatal_error(".bundle_unlock forbidden when bundling is disabled");
-  else if (!isBundleLocked())
-    report_fatal_error(".bundle_unlock without matching lock");
+  if (!getAssembler().isBundlingEnabled()) {
+    getContext().reportError(
+        getStartTokLoc(), ".bundle_unlock forbidden when bundling is disabled");
+    return;
+  }
+  if (!isBundleLocked()) {
+    getContext().reportError(getStartTokLoc(),
+                             ".bundle_unlock without matching lock");
+    return;
+  }
 
   Sec.exitBundleLock();
 
@@ -396,7 +414,8 @@ void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
   BundleBA = nullptr;
 
   if (AlignedSize > getAssembler().getBundleAlignSize())
-    report_fatal_error("Fragment can't be larger than a bundle size");
+    getContext().reportError(getStartTokLoc(),
+                             "fragment can't be larger than a bundle size");
 
   newFragment();
 

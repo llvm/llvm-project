@@ -1,7 +1,7 @@
-# RUN: not --crash llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
-# RUN: not --crash llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mc-relax-all %s -o - 2>&1 | FileCheck %s
+# RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
+# RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mc-relax-all %s -o - 2>&1 | FileCheck %s
 
-# CHECK: ERROR: Fragment can't be larger than a bundle size
+# CHECK: error: fragment can't be larger than a bundle size
 
   .text
 foo:

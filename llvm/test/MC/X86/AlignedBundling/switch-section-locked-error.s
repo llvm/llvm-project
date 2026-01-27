@@ -1,9 +1,9 @@
-# RUN: not --crash llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
+# RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
 
 # This test invokes .bundle_lock and then switches to a different section
 # w/o the appropriate unlock.
 
-# CHECK: ERROR: Unterminated .bundle_lock
+# CHECK: error: unterminated .bundle_lock
 
   .bundle_align_mode 3
   .section text1, "x"
