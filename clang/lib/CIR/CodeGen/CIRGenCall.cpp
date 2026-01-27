@@ -21,7 +21,7 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenFunctionInfo *
-CIRGenFunctionInfo::create(CanQualType resultType,
+CIRGenFunctionInfo::create(FunctionType::ExtInfo info, CanQualType resultType,
                            llvm::ArrayRef<CanQualType> argTypes,
                            RequiredArgs required) {
   // The first slot allocated for arg type slot is for the return value.
@@ -31,6 +31,8 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoParamInfo());
 
   CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
+
+  fi->noReturn = info.getNoReturn();
 
   fi->required = required;
   fi->numArgs = argTypes.size();
@@ -120,6 +122,11 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
   assert(!cir::MissingFeatures::opCallCallConv());
   sideEffect = cir::SideEffect::All;
 
+  if (info.isNoReturn())
+    attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+              mlir::UnitAttr::get(&getMLIRContext()));
+  // TODO(cir): Check/add cmse_nonsecure_call attribute here.
+
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
                                      calleeInfo.getCalleeFunctionProtoType());
 
@@ -129,11 +136,30 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
     if (targetDecl->hasAttr<NoThrowAttr>())
       attrs.set(cir::CIRDialect::getNoThrowAttrName(),
                 mlir::UnitAttr::get(&getMLIRContext()));
+    // TODO(cir): This is actually only possible if targetDecl isn't a
+    // declarator, which ObjCMethodDecl seems to be the only way to get this to
+    // happen.  We're including it here for completeness, but we should add a
+    // test for this when we start generating ObjectiveC.
+    if (targetDecl->hasAttr<NoReturnAttr>())
+      attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+                mlir::UnitAttr::get(&getMLIRContext()));
 
     if (const FunctionDecl *func = dyn_cast<FunctionDecl>(targetDecl)) {
       addAttributesFromFunctionProtoType(
           getBuilder(), attrs, func->getType()->getAs<FunctionProtoType>());
       assert(!cir::MissingFeatures::opCallAttrs());
+
+      const CXXMethodDecl *md = dyn_cast<CXXMethodDecl>(func);
+      bool isVirtualCall = md && md->isVirtual();
+
+      // Don't use [[noreturn]], _Noreturn or [[no_builtin]] for a call to a
+      // virtual function. These attributes are not inherited by overloads.
+      if (!(attrOnCallSite && isVirtualCall)) {
+        if (func->isNoReturn())
+          attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+                    mlir::UnitAttr::get(&getMLIRContext()));
+        // TODO(cir): Set NoBuiltinAttr here.
+      }
     }
 
     assert(!cir::MissingFeatures::opCallAttrs());
@@ -222,7 +248,8 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
 
-  return arrangeCIRFunctionInfo(resultType, argTypes, required);
+  return arrangeCIRFunctionInfo(resultType, argTypes, fpt->getExtInfo(),
+                                required);
 }
 
 /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
@@ -259,7 +286,8 @@ arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
   assert(!cir::MissingFeatures::opCallExtParameterInfo());
   appendParameterTypes(cgt, prefix, fpt);
   CanQualType resultType = fpt->getReturnType().getUnqualifiedType();
-  return cgt.arrangeCIRFunctionInfo(resultType, prefix, required);
+  return cgt.arrangeCIRFunctionInfo(resultType, prefix, fpt->getExtInfo(),
+                                    required);
 }
 
 void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
@@ -325,7 +353,8 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   CanQualType retType = fnType->getReturnType()->getCanonicalTypeUnqualified();
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
+  return cgt.arrangeCIRFunctionInfo(retType, argTypes, fnType->getExtInfo(),
+                                    required);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
@@ -364,7 +393,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
-  return arrangeCIRFunctionInfo(resultType, argTypes, required);
+  return arrangeCIRFunctionInfo(resultType, argTypes, fpt->getExtInfo(),
+                                required);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
@@ -386,7 +416,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return arrangeCIRFunctionInfo(
       proto->getReturnType()->getCanonicalTypeUnqualified(), argTypes,
-      required);
+      proto->getExtInfo(), required);
 }
 
 const CIRGenFunctionInfo &
@@ -457,7 +487,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
     assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
     assert(!cir::MissingFeatures::opCallFnInfoOpts());
     return arrangeCIRFunctionInfo(noProto->getReturnType(), {},
-                                  RequiredArgs::All);
+                                  noProto->getExtInfo(), RequiredArgs::All);
   }
 
   return arrangeFreeFunctionType(funcTy.castAs<FunctionProtoType>());
@@ -535,7 +565,8 @@ const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt) {
   CanQualType resultType = fnpt->getReturnType().getUnqualifiedType();
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  return arrangeCIRFunctionInfo(resultType, {}, RequiredArgs(0));
+  return arrangeCIRFunctionInfo(resultType, {}, fnpt->getExtInfo(),
+                                RequiredArgs(0));
 }
 
 RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
