@@ -469,4 +469,33 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
   ];
 }
 
+def OpenACC_ReducibleTypeInterface : TypeInterface<"ReducibleType"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    This interface should be attached to value types that can participate in
+    OpenACC reductions. For PointerLikeType types, attach this interface to the
+    pointee type rather than the pointer type itself.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the `arith::AtomicRMWKind` corresponding to the given OpenACC
+        reduction operator for this type. Returns `std::nullopt` if the
+        reduction operator is not valid for this type.
+
+        For example:
+        - Integer types typically map `AccAdd` to `arith::AtomicRMWKind::addi`
+        - Float types typically map `AccAdd` to `arith::AtomicRMWKind::addf`
+        - Boolean/logical types map `AccLand` to `arith::AtomicRMWKind::andi`
+        - A float type would return `std::nullopt` for `AccLand`
+      }],
+      /*retTy=*/"::std::optional<::mlir::arith::AtomicRMWKind>",
+      /*methodName=*/"getAtomicRMWKind",
+      /*args=*/(ins "::mlir::acc::ReductionOperator":$redOp)
+    >,
+  ];
+}
+
 #endif // OPENACC_TYPE_INTERFACES

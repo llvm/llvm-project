@@ -683,3 +683,30 @@ func.func @test_no_fold_add_shape_negative_overflow() -> !tosa.shape<6> {
   %c = tosa.add_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<6>
   return %c : !tosa.shape<6>
 }
+
+// -----
+
+// CHECK-LABEL: @test_fold_dim
+// CHECK: tosa.const_shape  {values = dense<6> : tensor<1xindex>} : () -> !tosa.shape<1>
+func.func @test_fold_dim(%arg0: tensor<6xi32>) -> !tosa.shape<1> {
+  %dim = tosa.dim %arg0 {axis = 0 : i32} : (tensor<6xi32>) -> !tosa.shape<1>
+  return %dim : !tosa.shape<1>
+}
+
+// -----
+
+// CHECK-LABEL: @test_no_fold_dim_unranked_input
+// CHECK: tosa.dim
+func.func @test_no_fold_dim_unranked_input(%arg0: tensor<*xi32>) -> !tosa.shape<1> {
+  %dim = tosa.dim %arg0 {axis = 0 : i32} : (tensor<*xi32>) -> !tosa.shape<1>
+  return %dim : !tosa.shape<1>
+}
+
+// -----
+
+// CHECK-LABEL: @test_no_fold_dim_dynamic
+// CHECK: tosa.dim
+func.func @test_no_fold_dim_dynamic(%arg0: tensor<4x?xi32>) -> !tosa.shape<1> {
+  %dim = tosa.dim %arg0 {axis = 1 : i32} : (tensor<4x?xi32>) -> !tosa.shape<1>
+  return %dim : !tosa.shape<1>
+}
