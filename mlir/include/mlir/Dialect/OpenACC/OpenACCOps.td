@@ -1669,10 +1669,11 @@ def OpenACC_ParallelOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getSuccessorInputs"]>,
+                  DeclareOpInterfaceMethods<
+                      RegionBranchOpInterface, ["getSuccessorInputs"]>,
                   OffloadRegionOpInterface,
-                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "parallel construct";
   let description = [{
@@ -1871,10 +1872,11 @@ def OpenACC_SerialOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getSuccessorInputs"]>,
+                  DeclareOpInterfaceMethods<
+                      RegionBranchOpInterface, ["getSuccessorInputs"]>,
                   OffloadRegionOpInterface,
-                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "serial construct";
   let description = [{
@@ -2013,10 +2015,11 @@ def OpenACC_KernelsOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getSuccessorInputs"]>,
+                  DeclareOpInterfaceMethods<
+                      RegionBranchOpInterface, ["getSuccessorInputs"]>,
                   OffloadRegionOpInterface,
-                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "kernels construct";
   let description = [{
@@ -2195,9 +2198,10 @@ def OpenACC_KernelsOp
 def OpenACC_DataOp
     : OpenACC_Op<
           "data", [AttrSizedOperandSegments, RecursiveMemoryEffects,
-                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                             ["getSuccessorInputs"]>,
-                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                   DeclareOpInterfaceMethods<
+                       RegionBranchOpInterface, ["getSuccessorInputs"]>,
+                   MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                  MemWrite<OpenACC_ConstructResource>,
                                   MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "data construct";
 
@@ -2323,10 +2327,12 @@ def OpenACC_TerminatorOp
 // 2.6.6 Enter Data Directive
 //===----------------------------------------------------------------------===//
 
-def OpenACC_EnterDataOp : OpenACC_Op<"enter_data",
-    [AttrSizedOperandSegments,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_EnterDataOp
+    : OpenACC_Op<"enter_data",
+                 [AttrSizedOperandSegments,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "enter data operation";
 
   let description = [{
@@ -2395,10 +2401,12 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data",
 // 2.6.6 Exit Data Directive
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
-    [AttrSizedOperandSegments,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_ExitDataOp
+    : OpenACC_Op<"exit_data",
+                 [AttrSizedOperandSegments,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "exit data operation";
 
   let description = [{
@@ -2472,9 +2480,10 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 def OpenACC_HostDataOp
     : OpenACC_Op<"host_data",
                  [AttrSizedOperandSegments,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getSuccessorInputs"]>,
-                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                  DeclareOpInterfaceMethods<
+                      RegionBranchOpInterface, ["getSuccessorInputs"]>,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "host_data construct";
 
@@ -2519,9 +2528,10 @@ def OpenACC_LoopOp
                    RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                             ["getSuccessorInputs"]>,
-                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
+                   DeclareOpInterfaceMethods<
+                       RegionBranchOpInterface, ["getSuccessorInputs"]>,
+                   MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                  MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 
   let description = [{
@@ -3034,9 +3044,11 @@ def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
 // 2.13 Declare Directive
 //===----------------------------------------------------------------------===//
 
-def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter",
-    [MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_DeclareEnterOp
+    : OpenACC_Op<"declare_enter",
+                 [MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "declare directive - entry to implicit data region";
 
   let description = [{
@@ -3065,10 +3077,12 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter",
   let hasVerifier = 1;
 }
 
-def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit",
-    [AttrSizedOperandSegments,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_DeclareExitOp
+    : OpenACC_Op<"declare_exit",
+                 [AttrSizedOperandSegments,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "declare directive - exit from implicit data region";
 
   let description = [{
@@ -3169,9 +3183,11 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
   let hasVerifier = 0;
 }
 
-def OpenACC_DeclareOp : OpenACC_Op<"declare",
-    [RecursiveMemoryEffects,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
+def OpenACC_DeclareOp
+    : OpenACC_Op<
+          "declare", [RecursiveMemoryEffects,
+                      MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                     MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "declare implicit region";
 
   let description = [{
@@ -3501,10 +3517,12 @@ def OpenACC_SetOp : OpenACC_Op<"set", [AttrSizedOperandSegments,
 // 2.14.4. Update Directive
 //===----------------------------------------------------------------------===//
 
-def OpenACC_UpdateOp : OpenACC_Op<"update",
-    [AttrSizedOperandSegments,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_UpdateOp
+    : OpenACC_Op<"update",
+                 [AttrSizedOperandSegments,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "update operation";
 
   let description = [{
