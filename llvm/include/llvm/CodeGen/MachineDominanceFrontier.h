@@ -30,7 +30,7 @@ public:
  using const_iterator =
      DominanceFrontierBase<MachineBasicBlock, false>::const_iterator;
 
- MachineDominanceFrontier();
+ MachineDominanceFrontier() = default;
 
  ForwardDominanceFrontierBase<MachineBasicBlock> &getBase() { return Base; }
 
