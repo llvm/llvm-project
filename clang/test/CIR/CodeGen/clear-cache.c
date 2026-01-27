@@ -28,6 +28,6 @@ char buffer[32] = "This is a largely unused buffer";
 // OGCG:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds (i8, ptr @buffer, i64 32))
 
 int main(void) {
-  __builtin___clear_cache(buffer, buffer+32);
+  __builtin___clear_cache(buffer, buffer + 32);
   return 0;
 }
