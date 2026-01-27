@@ -318,8 +318,6 @@ defvar WaveOpKind_Product = 1;
 defvar WaveOpKind_Min = 2;
 defvar WaveOpKind_Max = 3;
 
-defvar WavePrefixOpKind_BitCount = 136;
-
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
 
@@ -1127,21 +1125,11 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
-def WavePrefixOp : DXILOp<121, wavePrefixOp> {
-  let Doc = "returns the result of the operation on prior lanes";
-
-  let intrinsics = [
-    IntrinSelect<int_dx_wave_prefix_bit_count,
-      [ 
-        IntrinArgI32<WavePrefixOpKind_BitCount>, IntrinArgIndex<0>, 
-        IntrinArgI8<SignedOpKind_Unsigned> 
-      ]>
-  ];
-
-  let arguments = [ Int32Ty, Int1Ty, Int8Ty ];
-
+def WavePrefixCountBits : DXILOp<136, wavePrefixOp> {
+  let Doc = "returns the count of bits of Expr set to 1 on prior lanes";
+  let intrinsics = [IntrinSelect<int_dx_wave_prefix_bit_count>];
+  let arguments = [Int1Ty];
   let result = Int32Ty;
-
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, []>];
 }

@@ -4,7 +4,7 @@
 
 define noundef i32 @wave_prefix_count_bits(i1 noundef %expr) {
 entry:
-; CHECK: call i32 @dx.op.wavePrefixOp(i32 121, i32 136, i1 %expr, i8 1)
+; CHECK: call i32 @dx.op.wavePrefixOp(i32 136, i1 %expr)
   %ret = call i32 @llvm.dx.wave.prefix.bit.count(i1 %expr)
   ret i32 %ret
 }

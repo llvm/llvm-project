@@ -384,33 +384,13 @@ static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
-// select and return a specific wave prefix op intrinsic,
-// based on the provided op kind.
-// OpKinds:
-// CountBits = 136, count all bits set in previous threads
-// This is the only operation in DXIL so far under this class
-static Intrinsic::ID getPrefixOpIntrinsic(int OpKind,
-                                          llvm::Triple::ArchType Arch,
-                                          CGHLSLRuntime &RT, QualType QT) {
+static Intrinsic::ID getPrefixCountBitsIntrinsic(
+                                          llvm::Triple::ArchType Arch) {
   switch (Arch) {
   case llvm::Triple::spirv:
-    switch (OpKind) {
-    case 136: {
-      return Intrinsic::spv_subgroup_prefix_bit_count;
-    }
-    default: {
-      llvm_unreachable("Unexpected SubOp ID");
-    }
-    }
+    return Intrinsic::spv_subgroup_prefix_bit_count;
   case llvm::Triple::dxil: {
-    switch (OpKind) {
-    case 136: {
-      return Intrinsic::dx_wave_prefix_bit_count;
-    }
-    default: {
-      llvm_unreachable("Unexpected SubOp ID");
-    }
-    }
+    return Intrinsic::dx_wave_prefix_bit_count;
   }
   default:
     llvm_unreachable(
@@ -903,9 +883,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(Op->getType()->isIntegerTy(1) &&
            "WavePrefixBitCount operand must be a boolean type");
 
-    Intrinsic::ID IID = getPrefixOpIntrinsic(
-        /* OpKind */ 136, getTarget().getTriple().getArch(),
-        CGM.getHLSLRuntime(), E->getArg(0)->getType());
+    Intrinsic::ID IID = getPrefixCountBitsIntrinsic(
+         getTarget().getTriple().getArch());
 
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), IID), ArrayRef{Op},
