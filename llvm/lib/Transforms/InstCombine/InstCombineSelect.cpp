@@ -492,62 +492,53 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
-template <Intrinsic::ID ID>
-static Instruction *foldSelectIntrinsicUnary(SelectInst &SI,
-                                             InstCombiner::BuilderTy &Builder) {
-  Value *TrueV = SI.getTrueValue();
-  Value *FalseV = SI.getFalseValue();
-  Value *TV = nullptr, *FV = nullptr;
-
-  if (match(TrueV, m_Intrinsic<ID>(m_Value(TV))) &&
-      match(FalseV, m_Intrinsic<ID>(m_Value(FV)))) {
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
-    Instruction *NewCall =
-        Builder.CreateIntrinsic(ID, {NewSel->getType()}, {NewSel});
-    return NewCall;
-  }
-  return nullptr;
-}
-
-template <Intrinsic::ID ID>
-static Instruction *
-foldSelectIntrinsicBinary(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
-  Value *TrueV = SI.getTrueValue();
-  Value *FalseV = SI.getFalseValue();
-  Value *TV = nullptr, *FV = nullptr;
-  ConstantInt *TZ = nullptr, *FZ = nullptr;
-
-  if (match(TrueV, m_Intrinsic<ID>(m_Value(TV), m_ConstantInt(TZ))) &&
-      match(FalseV, m_Intrinsic<ID>(m_Value(FV), m_ConstantInt(FZ))) &&
-      TZ == FZ) {
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
-    Instruction *NewCall =
-        Builder.CreateIntrinsic(ID, {NewSel->getType()}, {NewSel, TZ});
-    return NewCall;
-  }
-  return nullptr;
-}
-
 /// This transforms patterns of the form:
 ///   select cond, intrinsic(x, ...), intrinsic(y, ...)
 /// into:
 ///   intrinsic(select cond, x, y, ...)
 Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
-  Instruction *ResCall = nullptr;
+  auto *LHSIntrinsic = dyn_cast<IntrinsicInst>(SI.getTrueValue());
+  if (!LHSIntrinsic)
+    return nullptr;
+  auto *RHSIntrinsic = dyn_cast<IntrinsicInst>(SI.getFalseValue());
+  if (!RHSIntrinsic ||
+      LHSIntrinsic->getIntrinsicID() != RHSIntrinsic->getIntrinsicID() ||
+      (!LHSIntrinsic->hasOneUse() || !RHSIntrinsic->hasOneUse()))
+    return nullptr;
 
-  if ((ResCall = foldSelectIntrinsicUnary<Intrinsic::ctpop>(SI, Builder))) {
-    return replaceInstUsesWith(SI, ResCall);
+  const Intrinsic::ID IID = LHSIntrinsic->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::abs:
+  case Intrinsic::cttz:
+  case Intrinsic::ctlz: {
+    auto *TZ = dyn_cast<ConstantInt>(LHSIntrinsic->getArgOperand(1));
+    auto *FZ = dyn_cast<ConstantInt>(RHSIntrinsic->getArgOperand(1));
+    if (!TZ || !FZ)
+      return nullptr;
+
+    Value *TV = LHSIntrinsic->getArgOperand(0);
+    Value *FV = RHSIntrinsic->getArgOperand(0);
+
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
+    Value *NewPoisonFlag = Builder.CreateAnd(TZ, FZ);
+    Instruction *NewCall = Builder.CreateIntrinsic(IID, {NewSel->getType()},
+                                                   {NewSel, NewPoisonFlag});
+
+    return replaceInstUsesWith(SI, NewCall);
   }
-  if ((ResCall = foldSelectIntrinsicBinary<Intrinsic::ctlz>(SI, Builder))) {
-    return replaceInstUsesWith(SI, ResCall);
+  case Intrinsic::ctpop: {
+    Value *TV = LHSIntrinsic->getArgOperand(0);
+    Value *FV = RHSIntrinsic->getArgOperand(0);
+
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
+    Instruction *NewCall =
+        Builder.CreateIntrinsic(IID, {NewSel->getType()}, {NewSel});
+
+    return replaceInstUsesWith(SI, NewCall);
   }
-  if ((ResCall = foldSelectIntrinsicBinary<Intrinsic::cttz>(SI, Builder))) {
-    return replaceInstUsesWith(SI, ResCall);
+  default:
+    return nullptr;
   }
-  if ((ResCall = foldSelectIntrinsicBinary<Intrinsic::abs>(SI, Builder))) {
-    return replaceInstUsesWith(SI, ResCall);
-  }
-  return nullptr;
 }
 
 static bool isSelect01(const APInt &C1I, const APInt &C2I) {
