@@ -1775,7 +1775,7 @@ OpFoldResult tosa::DimOp::fold(FoldAdaptor adaptor) {
     return {};
 
   OpBuilder builder(getContext());
-  const int64_t rank = cast<tosa::shapeType>(getResult().getType()).getRank();
-  const auto resultAttrTy = RankedTensorType::get(rank, builder.getIndexType());
+  const auto resultAttrTy =
+      RankedTensorType::get(/*rank=*/1, builder.getIndexType());
   return DenseElementsAttr::get(resultAttrTy, dimSize);
 }
