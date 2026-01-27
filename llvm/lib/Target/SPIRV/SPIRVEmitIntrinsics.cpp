@@ -98,37 +98,45 @@ public:
     // and which functions reference each global variables.
     OneToManyMapTy<GlobalVariable *, GlobalVariable *>
         GlobalIsReferencedByGlobal;
-    GlobalIsReferencedByGlobal.clear();
-    for (GlobalVariable &GV : M.globals()) {
-      GlobalIsReferencedByGlobal.try_emplace(&GV);
+    GlobalIsReferencedByFun.clear();
+    for (GlobalVariable &GV : M.globals())
       collectGlobalReferences(&GV, GlobalIsReferencedByGlobal,
                               GlobalIsReferencedByFun);
-    }
 
     // Compute indirect references by iterating until a fixed point is found.
     bool Changed;
     do {
       Changed = false;
       for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
-        SmallPtrSet<GlobalVariable *, 4> NewRefs = ReferencedBy;
-        for (GlobalVariable *ReferencedGV : ReferencedBy)
-          Changed |=
-              set_union(NewRefs, GlobalIsReferencedByGlobal[ReferencedGV]);
-
-        if (NewRefs.size() > ReferencedBy.size())
-          ReferencedBy = std::move(NewRefs);
+        SmallVector<GlobalVariable *> OldReferencedBy(ReferencedBy.begin(),
+                                                      ReferencedBy.end());
+        for (GlobalVariable *ReferencedGV : OldReferencedBy) {
+          auto It = GlobalIsReferencedByGlobal.find(ReferencedGV);
+          if (It == GlobalIsReferencedByGlobal.end())
+            continue;
+          Changed |= set_union(ReferencedBy, It->second);
+        }
       }
     } while (Changed);
 
     for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
       auto &ReferencedByF = GlobalIsReferencedByFun[GV];
-      for (GlobalVariable *ReferencedGV : ReferencedBy)
-        set_union(ReferencedByF, GlobalIsReferencedByFun[ReferencedGV]);
+      for (GlobalVariable *ReferencedGV : ReferencedBy) {
+        auto It = GlobalIsReferencedByFun.find(ReferencedGV);
+        if (It == GlobalIsReferencedByFun.end())
+          continue;
+        set_union(ReferencedByF, It->second);
+      }
     }
   }
 
   const auto &getReferencedBy(GlobalVariable &GV) const {
-    return GlobalIsReferencedByFun.at(&GV);
+    auto It = GlobalIsReferencedByFun.find(&GV);
+    if (It != GlobalIsReferencedByFun.end())
+      return It->second;
+
+    const static SmallPtrSet<Function *, 4> Empty;
+    return Empty;
   }
 };
 
