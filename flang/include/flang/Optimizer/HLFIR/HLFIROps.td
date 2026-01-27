@@ -37,7 +37,8 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
 // don't want to remove it as dead code
 def hlfir_DeclareOp
     : hlfir_Op<"declare", [AttrSizedOperandSegments,
-                           MemoryEffects<[MemAlloc<DebuggingResource>]>,
+                           MemoryEffects<[MemAlloc<DebuggingResource>,
+                                          MemRead<DebuggingResource>]>,
                            DeclareOpInterfaceMethods<
                                fir_FortranVariableStorageOpInterface>,
                            fir_FortranObjectViewOpInterface]> {
@@ -77,6 +78,14 @@ def hlfir_DeclareOp
     The attribute skip_rebox can be set to indicate that the second and first
     result are known to be the same descriptors (the input descriptor is known
     to already have the correct attributes and lower bounds).
+
+    A read from a synthetic DebuggingResource allows reordering
+    fir.declare operations relative to each other, but prevents
+    their reordering relative to the fir.dummy_scope operations
+    which define the procedure scope the variables are declared in.
+    The allocation effect on the DebuggingResource is used to prevent
+    classifying the operation as trivially dead when its result
+    is unused (we still need hlfir.declare to generate debug information).
 
     Example:
 
