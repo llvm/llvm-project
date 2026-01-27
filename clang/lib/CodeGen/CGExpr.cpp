@@ -7194,8 +7194,8 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
       // Matrices are represented as flat arrays in memory, but has a vector
       // value type. So we use ConvertMatrixAddress to convert the address from
       // array to vector, and extract elements similar to the vector case above.
-      // The order in which we iterate over the elements must respect the
-      // matrix memory layout, computing the proper index for each (row, col).
+      // The matrix elements are iterated over in row-major order regardless of
+      // the memory layout of the matrix.
       llvm::Type *LLVMT = ConvertTypeForMem(T);
       CharUnits Align = getContext().getTypeAlignInChars(T);
       Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
@@ -7208,7 +7208,6 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
                               LangOptions::MatrixMemoryLayout::MatrixRowMajor;
       llvm::MatrixBuilder MB(Builder);
       for (unsigned I = 0, E = MT->getNumElementsFlattened(); I < E; I++) {
-        // Compute (row, col) from linear index assuming row-major iteration.
         unsigned Row = I / NumCols;
         unsigned Col = I % NumCols;
         llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
