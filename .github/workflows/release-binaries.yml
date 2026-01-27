@@ -77,7 +77,9 @@ jobs:
         # Some of the python modules we install require this package to be installed on the system.
         vcpkg install openssl:arm64-windows-static-md
         vcpkg install libsodium:arm64-windows-static-md
-        vcpkg integrate install
+        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
+        echo "SODIUM_INSTALL=system" >> $env:GITHUB_ENV
+        echo "SODIUM_INSTALL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
 
     - name: Debug
       shell: bash
@@ -89,9 +91,6 @@ jobs:
 
     - name: Install Dependencies
       #shell: bash
-      env:
-        OPENSSL_DIR: "C:\\vcpkg\\installed\\arm64-windows-static-md"
-        RUSTFLAGS: "-C link-arg=Advapi32.lib"
       run: |
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
