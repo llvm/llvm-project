@@ -1319,7 +1319,7 @@ unsigned getVaSdstBitMask();
 unsigned getVaSsrcBitMask();
 
 /// \returns Maximum HoldCnt value that can be encoded.
-unsigned getHoldCntBitMask(const MCSubtargetInfo &STI);
+unsigned getHoldCntBitMask(const IsaVersion &Version);
 
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
@@ -1349,7 +1349,7 @@ unsigned decodeFieldVaVcc(unsigned Encoded);
 unsigned decodeFieldVaSsrc(unsigned Encoded);
 
 /// \returns Decoded HoldCnt from given immediate \p Encoded.
-unsigned decodeFieldHoldCnt(unsigned Encoded);
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
@@ -1385,7 +1385,8 @@ unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
 unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);

@@ -13,6 +13,7 @@
 
 #include "AMDGPUMIRFormatter.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 
@@ -46,8 +47,11 @@ void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm,
                      AMDGPU::DepCtr::getVaSdstBitMask());
   PrintFieldIfNotMax(VaSsrcName, AMDGPU::DepCtr::decodeFieldVaSsrc(Imm),
                      AMDGPU::DepCtr::getVaSsrcBitMask());
-  PrintFieldIfNotMax(HoldCntName, AMDGPU::DepCtr::decodeFieldHoldCnt(Imm),
-                     AMDGPU::DepCtr::getHoldCntBitMask(STI));
+  PrintFieldIfNotMax(
+      HoldCntName,
+      AMDGPU::DepCtr::decodeFieldHoldCnt(Imm,
+                                         AMDGPU::getIsaVersion(STI.getCPU())),
+      AMDGPU::DepCtr::getHoldCntBitMask(AMDGPU::getIsaVersion(STI.getCPU())));
   PrintFieldIfNotMax(VmVsrcName, AMDGPU::DepCtr::decodeFieldVmVsrc(Imm),
                      AMDGPU::DepCtr::getVmVsrcBitMask());
   PrintFieldIfNotMax(VaVccName, AMDGPU::DepCtr::decodeFieldVaVcc(Imm),
@@ -199,8 +203,9 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
       Max = llvm::AMDGPU::DepCtr::getVaSsrcBitMask();
       Imm = llvm::AMDGPU::DepCtr::encodeFieldVaSsrc(Imm, Num);
     } else if (Name == HoldCntName) {
-      Max = llvm::AMDGPU::DepCtr::getHoldCntBitMask(STI);
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num);
+      const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+      Max = llvm::AMDGPU::DepCtr::getHoldCntBitMask(Version);
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num, Version);
     } else if (Name == VaVccName) {
       Max = llvm::AMDGPU::DepCtr::getVaVccBitMask();
       Imm = llvm::AMDGPU::DepCtr::encodeFieldVaVcc(Imm, Num);

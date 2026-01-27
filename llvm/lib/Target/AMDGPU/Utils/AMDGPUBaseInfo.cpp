@@ -177,7 +177,14 @@ inline unsigned getVaSsrcBitWidth() { return 1; }
 inline unsigned getVaSsrcBitShift() { return 8; }
 
 /// \returns HoldCnt bit shift
-inline unsigned getHoldCntWidth() { return 1; }
+inline unsigned getHoldCntWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  static constexpr const unsigned MinMajor = 10;
+  static constexpr const unsigned MinMinor = 3;
+  return (VersionMajor == MinMajor && VersionMinor >= MinMinor) ||
+                 VersionMajor > MinMajor
+             ? 1
+             : 0;
+}
 
 /// \returns HoldCnt bit shift
 inline unsigned getHoldCntBitShift() { return 7; }
@@ -2078,12 +2085,8 @@ unsigned getVaSdstBitMask() { return (1 << getVaSdstBitWidth()) - 1; }
 
 unsigned getVaSsrcBitMask() { return (1 << getVaSsrcBitWidth()) - 1; }
 
-unsigned getHoldCntBitMask(const MCSubtargetInfo &STI) {
-  // TODO: Currently HoldCnt is the only counter that has a different default
-  // value for different targets, but ideally all bitmasks should be computed in
-  // a similar way.
-  unsigned DefaultMask = getDefaultDepCtrEncoding(STI);
-  return (DefaultMask >> getHoldCntBitShift()) & ((1 << getHoldCntWidth()) - 1);
+unsigned getHoldCntBitMask(const IsaVersion &Version) {
+  return (1 << getHoldCntWidth(Version.Major, Version.Minor)) - 1;
 }
 
 unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
@@ -2116,8 +2119,9 @@ unsigned decodeFieldVaSsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned decodeFieldHoldCnt(unsigned Encoded) {
-  return unpackBits(Encoded, getHoldCntBitShift(), getHoldCntWidth());
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version) {
+  return unpackBits(Encoded, getHoldCntBitShift(),
+                    getHoldCntWidth(Version.Major, Version.Minor));
 }
 
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
@@ -2174,13 +2178,15 @@ unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
   return encodeFieldVaSsrc(Encoded, VaSsrc);
 }
 
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
-  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(),
+                  getHoldCntWidth(Version.Major, Version.Minor));
 }
 
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
   unsigned Encoded = getDefaultDepCtrEncoding(STI);
-  return encodeFieldHoldCnt(Encoded, HoldCnt);
+  return encodeFieldHoldCnt(Encoded, HoldCnt, getIsaVersion(STI.getCPU()));
 }
 
 } // namespace DepCtr
