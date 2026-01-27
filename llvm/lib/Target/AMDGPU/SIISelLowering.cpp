@@ -17850,6 +17850,17 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     Ops.push_back(ImpDef.getValue(1));
     return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
   }
+  case AMDGPU::V_READFIRSTLANE_B32:
+    // V_READFIRSTLANE_B32 is convergent in a general case, but can be hoisted
+    // and sinked in the control flow if used with a uniform operand.
+    // The node can also have a convergence token attached to it, leave it
+    // alone then.
+    if (!Node->getOperand(0)->isDivergent() && !Node->getGluedNode()) {
+      SDNodeFlags Flags = Node->getFlags();
+      Flags.setNoConvergent(true);
+      Node->setFlags(Flags);
+    }
+    break;
   default:
     break;
   }

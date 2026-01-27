@@ -12,7 +12,7 @@ define amdgpu_ps i32 @s_or_i32_disjoint(i32 inreg %a, i32 inreg %b) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = disjoint S_OR_B32 [[COPY1]], [[COPY]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = noconvergent V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0
   %result = or disjoint i32 %a, %b
@@ -33,10 +33,10 @@ define amdgpu_ps <2 x i32> @s_or_v2i32_disjoint(<2 x i32> inreg %a, <2 x i32> in
   ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = disjoint S_OR_B64 killed [[REG_SEQUENCE1]], killed [[REG_SEQUENCE]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = noconvergent V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = noconvergent V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1
@@ -100,9 +100,9 @@ define amdgpu_ps i64 @s_or_i64_disjoint(i64 inreg %a, i64 inreg %b) {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY6]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = noconvergent V_READFIRSTLANE_B32 killed [[COPY6]], implicit $exec
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = noconvergent V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1

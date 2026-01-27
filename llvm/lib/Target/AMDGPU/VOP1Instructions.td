@@ -246,6 +246,7 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
                                        [], 1> {
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 foreach vt = Reg32Types.types in {
