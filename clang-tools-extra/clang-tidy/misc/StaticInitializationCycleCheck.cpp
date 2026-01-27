@@ -229,8 +229,14 @@ template <> struct GraphTraits<const VarUseNode *> {
   using ChildIteratorType = NodeType::const_iterator;
 
   static NodeType *getEntryNode(const VarUseNode *N) { return N; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); } // NOLINT(readability-identifier-naming)
-  static ChildIteratorType child_end(NodeType *N) { return N->end(); } // NOLINT(readability-identifier-naming)
+  static ChildIteratorType
+  child_begin(NodeType *N) { // NOLINT(readability-identifier-naming)
+    return N->begin();
+  }
+  static ChildIteratorType
+  child_end(NodeType *N) { // NOLINT(readability-identifier-naming)
+    return N->end();
+  }
 };
 
 template <>

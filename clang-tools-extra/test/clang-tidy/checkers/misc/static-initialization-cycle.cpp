@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-static-initialization-cycle %t
+// RUN: %check_clang_tidy %s misc-static-initialization-cycle %t -- -- -fno-delayed-template-parsing
 
 namespace simple_cycle {
 struct S { static int A; };
@@ -156,7 +156,6 @@ S *get_S() {
 namespace template_test {
 template <class T>
 struct S {
-  char X;
   static T f1();
   static T A;
 };
