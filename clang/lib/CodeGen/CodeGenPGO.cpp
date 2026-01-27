@@ -1195,7 +1195,8 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
-std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
+std::pair<bool, bool>
+CodeGenPGO::getExecSkipCounterExistence(const Stmt *S) const {
   if (!RegionCounterMap)
     return {false, false};
 
@@ -1574,8 +1575,9 @@ void CodeGenFunction::incrementProfileCounter(CounterForIncrement ExecSkip,
   PGO->setCurrentStmt(S);
 }
 
-std::pair<bool, bool> CodeGenFunction::getIsCounterPair(const Stmt *S) const {
-  return PGO->getIsCounterPair(S);
+std::pair<bool, bool>
+CodeGenFunction::getExecSkipCounterExistence(const Stmt *S) const {
+  return PGO->getExecSkipCounterExistence(S);
 }
 void CodeGenFunction::markStmtAsUsed(bool Skipped, const Stmt *S) {
   PGO->markStmtAsUsed(Skipped, S);

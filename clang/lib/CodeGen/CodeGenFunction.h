@@ -1652,7 +1652,13 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
-  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+  /// Returns Counter existence {hasExec, hasSkip}.
+  std::pair<bool, bool> getExecSkipCounterExistence(const Stmt *S) const;
+
+  bool hasSkipCounter(const Stmt *S) const {
+    return getExecSkipCounterExistence(S).second;
+  }
+
   void markStmtAsUsed(bool Skipped, const Stmt *S);
   void markStmtMaybeUsed(const Stmt *S);
 
