@@ -80,6 +80,17 @@ def int_dx_resource_updatecounter
 def int_dx_resource_getdimensions_x
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;
 
+def int_dx_resource_sample
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty], [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [IntrReadMem]>;
+
+def int_dx_resource_sample_clamp
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty,
+                             llvm_float_ty],
+                            [IntrReadMem]>;
+
 // Cast between target extension handle types and dxil-style opaque handles
 def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 
@@ -142,6 +153,9 @@ def int_dx_isnan : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1
 
 def int_dx_legacyf16tof32 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_float_ty>],
     [llvm_anyint_ty], [IntrNoMem]>;
+
+def int_dx_legacyf32tof16 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>],
+    [llvm_anyfloat_ty], [IntrNoMem]>;
 
 def int_dx_lerp : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>,LLVMMatchType<0>],
     [IntrNoMem]>;
