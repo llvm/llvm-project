@@ -313,6 +313,84 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 };
 
+struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
+  GPUBarrierOpLowering(const LLVMTypeConverter &converter,
+                       amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::BarrierOp>(converter), chipset(chipset) {}
+
+  amdgpu::Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(gpu::BarrierOp op, gpu::BarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    // Analyze the address_spaces attribute to determine fence behavior.
+    bool fenceGlobal = false;
+    bool fenceLDS = false;
+    std::optional<ArrayAttr> addrSpacesToFence = op.getAddressSpaces();
+
+    if (addrSpacesToFence) {
+      for (auto spaceAttr :
+           addrSpacesToFence->getAsRange<gpu::AddressSpaceAttr>()) {
+        switch (spaceAttr.getValue()) {
+        case gpu::AddressSpace::Global:
+          fenceGlobal = true;
+          break;
+        case gpu::AddressSpace::Workgroup:
+          fenceLDS = true;
+          break;
+        case gpu::AddressSpace::Private:
+          break;
+        }
+      }
+    } else {
+      // Default semantics match __syncthreads() and fence both global and LDS.
+      fenceGlobal = true;
+      fenceLDS = true;
+    }
+
+    Attribute mmra;
+    if (fenceLDS && !fenceGlobal) {
+      mmra =
+          rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
+    } else if (fenceGlobal && !fenceLDS) {
+      mmra = rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as",
+                                                 "global");
+    }
+
+    constexpr llvm::StringLiteral scope = "workgroup";
+
+    bool emitFences = fenceGlobal || fenceLDS;
+    // Emit release fence if needed.
+    if (emitFences) {
+      auto relFence = LLVM::FenceOp::create(
+          rewriter, loc, LLVM::AtomicOrdering::release, scope);
+      if (mmra)
+        relFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(),
+                                     mmra);
+    }
+
+    if (chipset.majorVersion < 12) {
+      ROCDL::SBarrierOp::create(rewriter, loc);
+    } else {
+      ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
+      ROCDL::BarrierWaitOp::create(rewriter, loc, -1);
+    }
+
+    if (emitFences) {
+      auto acqFence = LLVM::FenceOp::create(
+          rewriter, loc, LLVM::AtomicOrdering::acquire, scope);
+      if (mmra)
+        acqFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(),
+                                     mmra);
+    }
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Import the GPU Ops to ROCDL Patterns.
 #include "GPUToROCDL.cpp.inc"
 
@@ -508,7 +586,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
                GPUSubgroupBroadcastOpToROCDL>(converter);
-  patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
+  patterns.add<GPUSubgroupSizeOpToROCDL, GPUBarrierOpLowering>(converter,
+                                                               chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns, chipset);
 }
