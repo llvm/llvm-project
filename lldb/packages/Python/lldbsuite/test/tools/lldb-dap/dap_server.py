@@ -181,6 +181,21 @@ class NotSupportedError(KeyError):
     """Raised if a feature is not supported due to its capabilities."""
 
 
+class RequestError(Exception):
+    """Raised if a DAP request fails."""
+
+    def __init__(self, request: Request, response: Optional[Response] = None):
+        super().__init__()
+        self.request = request
+        self.response = response
+
+    def __str__(self) -> str:
+        desc = f"request failed request={self.request!r}"
+        if self.response:
+            desc += f" response={self.response!r}"
+        return desc
+
+
 class ReplayMods(TypedDict, total=False):
     """Fields that can be overwritten in requests during a replay."""
 
@@ -237,22 +252,6 @@ class DebugCommunication(object):
         """Returns True if the debuggee is stopped, otherwise False."""
         return len(self.thread_stop_reasons) > 0 or self.exit_status is not None
 
-    @property
-    def launch_or_attach_sent(self) -> bool:
-        return any(
-            req
-            for dir, req in self._log.requests
-            if dir == Log.Dir.SENT and req["command"] in ["launch", "attach"]
-        )
-
-    @property
-    def configuration_done_sent(self) -> bool:
-        return any(
-            req
-            for dir, req in self._log.requests
-            if dir == Log.Dir.SENT and req["command"] == "configurationDone"
-        )
-
     def __init__(
         self,
         recv: BinaryIO,
@@ -283,6 +282,8 @@ class DebugCommunication(object):
         self.capabilities: Dict = {}
         self.initialized: bool = False
         self.process_event_body: Optional[Dict] = None
+        self.configuration_done_sent = False
+        self.launch_or_attach_sent = False
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
@@ -314,14 +315,14 @@ class DebugCommunication(object):
         return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
 
     @classmethod
-    def validate_response(cls, command, response):
-        if command["command"] != response["command"]:
+    def validate_response(cls, request: Request, response: Response) -> None:
+        if request["command"] != response["command"]:
             raise ValueError(
-                f"command mismatch in response {command['command']} != {response['command']}"
+                f"command mismatch in response {request['command']} != {response['command']}"
             )
-        if command["seq"] != response["request_seq"]:
+        if request["seq"] != response["request_seq"]:
             raise ValueError(
-                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+                f"seq mismatch in response {request['seq']} != {response['request_seq']}"
             )
 
     def _read_packet(self) -> Optional[ProtocolMessage]:
@@ -638,12 +639,15 @@ class DebugCommunication(object):
         response. Validates that the response is the correct sequence and
         command in the reply. Any events that are received are added to the
         events list in this object"""
-        seq = self.send_packet(request)
-        response = self.receive_response(seq)
-        if response is None:
-            raise ValueError(f"no response for {request!r}")
-        self.validate_response(request, response)
-        return response
+        response = None
+        try:
+            seq = self.send_packet(request)
+            response = self.receive_response(seq)
+            self.validate_response(request, response)
+            return response
+        except Exception as exc:
+            # Add additional context for the request and response.
+            raise RequestError(request, response) from exc
 
     def receive_response(self, seq: int) -> Response:
         """Waits for a response with the associated request_sec."""
@@ -680,13 +684,13 @@ class DebugCommunication(object):
                 break
         return events
 
-    def wait_for_initialized(self):
+    def wait_for_initialized(self) -> None:
         """Wait for the debugger to become initialized."""
         if self.initialized:
             return
         self.wait_for_event(["initialized"])
 
-    def ensure_initialized(self):
+    def ensure_initialized(self) -> None:
         """Validates that we can wait for initialized."""
         if self.initialized:
             return
@@ -704,7 +708,7 @@ class DebugCommunication(object):
         """Wait for the next 'module' event to occur, coalescing all module events within a given quiet period."""
         return self.collect_events(["module"])
 
-    def wait_for_breakpoint_events(self):
+    def wait_for_breakpoint_events(self) -> List[Event]:
         """wait for the next 'breakpoint' event to occur, coalescing all breakpoint events within a given quiet period."""
         return self.collect_events(["breakpoint"])
 
@@ -934,7 +938,7 @@ class DebugCommunication(object):
         gdbRemotePort: Optional[int] = None,
         gdbRemoteHostname: Optional[str] = None,
     ) -> int:
-        args_dict = {}
+        args_dict: Dict[str, Any] = {}
         if pid is not None:
             args_dict["pid"] = pid
         if program is not None:
@@ -968,7 +972,13 @@ class DebugCommunication(object):
             args_dict["gdb-remote-port"] = gdbRemotePort
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
-        command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
+        command_dict: Request = {
+            "seq": 0,
+            "command": "attach",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        self.launch_or_attach_sent = True
         return self.send_packet(command_dict)
 
     def request_breakpointLocations(
@@ -1000,6 +1010,7 @@ class DebugCommunication(object):
             "arguments": {},
         }
         response = self._send_recv(command_dict)
+        self.configuration_done_sent = True
         if response and response["success"]:
             stopped_on_entry = self.is_stopped
             threads_response = self.request_threads()
@@ -1217,7 +1228,7 @@ class DebugCommunication(object):
         customFrameFormat: Optional[str] = None,
         customThreadFormat: Optional[str] = None,
     ) -> int:
-        args_dict = {"program": program}
+        args_dict: Dict[str, Any] = {"program": program}
         if args:
             args_dict["args"] = args
         if cwd:
@@ -1266,7 +1277,13 @@ class DebugCommunication(object):
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
         if commandEscapePrefix is not None:
             args_dict["commandEscapePrefix"] = commandEscapePrefix
-        command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
+        command_dict: Request = {
+            "seq": 0,
+            "command": "launch",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        self.launch_or_attach_sent = True
         return self.send_packet(command_dict)
 
     def request_next(self, threadId, granularity="statement"):

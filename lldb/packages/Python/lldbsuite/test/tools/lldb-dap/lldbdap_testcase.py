@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Optional, Callable, Any, List, Mapping, Final, Literal, overload
+from typing import Optional, Callable, Any, List, Mapping, Final
 import uuid
 
 import dap_server
@@ -158,6 +158,8 @@ class DAPTestCaseBase(TestBase):
         "breakpoint_ids" should be a list of breakpoint IDs
         ([1, 2]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
+        if not all(isinstance(i, int) for i in breakpoint_ids):
+            raise TypeError(f"breakpoint ids must be an int in {breakpoint_ids!r}")
         stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -184,6 +186,8 @@ class DAPTestCaseBase(TestBase):
         """Wait for the process we are debugging to stop, and verify we hit
         all of the breakpoint locations in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
+        if not all(isinstance(i, int) for i in breakpoint_ids):
+            raise TypeError(f"breakpoint ids must be an int in {breakpoint_ids!r}")
         stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -200,7 +204,7 @@ class DAPTestCaseBase(TestBase):
                 hit_bps = body["hitBreakpointIds"]
                 if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
                     return
-        self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
+        self.fail(f"breakpoints not hit, stopped_events={stopped_events}")
 
     def verify_stop_exception_info(self, expected_description):
         """Wait for the process we are debugging to stop, and verify the stop
