@@ -429,7 +429,7 @@ def any_riscv_fsetccs_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$cc, node:$p
 let HasMaskOp = true in {
   // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
   // for passthru and VL, except that out of bound indices result in a poison
-  // result not zero.  Operands are (src, index, mask, passthru, vl).
+  // result not zero.  Operands are (src, index, passthru, mask, vl).
   def riscv_vrgather_vx_vl : RVSDNode<"VRGATHER_VX_VL",
                                       SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                           SDTCisSameAs<0, 1>,
