@@ -31,42 +31,43 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
     out-of-tree operations.
   }];
   let cppNamespace = "::mlir::memref";
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/[{
-        Return the accessed memref. If the operation
-        is still in tensor form, return the null value.
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/[{
+        Return the accessed memref. If the operation is still in tensor form, return
+         the null value.
       }],
-      /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
-      /*methodName=*/"getAccessedMemref",
-      /*args=*/(ins)>,
-    InterfaceMethod<
-      /*desc=*/[{
+           /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
+           /*methodName=*/"getAccessedMemref",
+           /*args=*/(ins)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Return the indices that are used to access the memref returned by `getAccessedMemref()`.
 
         The size of this range must be equal to the rank of the memref returned by
         `getAccessedMemref()`.
       }],
-      /*retType=*/"::mlir::Operation::operand_range",
-      /*methodName=*/"getIndices",
-      /*args=*/(ins)>,
-    InterfaceMethod<
-      /*desc=*/[{
+           /*retType=*/"::mlir::Operation::operand_range",
+           /*methodName=*/"getIndices",
+           /*args=*/(ins)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Return the shape of the portion of the memref that is being accessed by
         this operation, if known, ignoring leading unit dimensions.
+
         Reindexing transformations may not modify the *strides* of the trailing
         N dimensions, where N is the size returned value, and should ensure that
         at least N indexing dimensions remain after the transformation.
       }],
-      /*retType=*/"::llvm::SmallVector<int64_t>",
-      /*methodName=*/"getAccessedShape",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+           /*retType=*/"::llvm::SmallVector<int64_t>",
+           /*methodName=*/"getAccessedShape",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         return ::llvm::SmallVector<int64_t>{};
       }]>,
-    InterfaceMethod<
-      /*desc=*/[{
+       InterfaceMethod<
+           /*desc=*/[{
         Updates the memref being accessed to `newMemref` and the indices to
         `newIndices`. If `std::nullopt` is returned, the operation was
         updated in-place (the common case), while if a vector of values
@@ -84,25 +85,24 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
 
         The element types of the memref may not change.
       }],
-      /*retType=*/"std::optional<llvm::SmallVector<mlir::Value>>",
-      /*methodName=*/"updateMemrefAndIndices",
-      /*args=*/(ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newMemref,
-        "::mlir::ValueRange":$newIndices)
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
+           /*retType=*/"std::optional<llvm::SmallVector<mlir::Value>>",
+           /*methodName=*/"updateMemrefAndIndices",
+           /*args=*/
+           (ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newMemref,
+               "::mlir::ValueRange":$newIndices)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Return true if, either by definition or due to some attribute,
         it's known that all indices are non-negative and less than the size
         of the dimension they index.
       }],
-      /*retType=*/"bool",
-      /*methodName=*/"hasInboundsIndices",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+           /*retType=*/"bool",
+           /*methodName=*/"hasInboundsIndices",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         return true;
-      }]>
-  ];
+      }]>];
 
   let verify = [{
     return ::mlir::memref::detail::verifyIndexedAccessOpInterface($_op);
@@ -133,43 +133,43 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
     the space between the length-three rows.
   }];
   let cppNamespace = "::mlir::memref";
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/[{
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/[{
         Return the source memref for this copy operation.
-      }],
-      /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
-      /*methodName=*/"getSrc",
-      /*args=*/(ins)>,
-    InterfaceMethod<
-      /*desc=*/[{
+        }],
+           /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
+           /*methodName=*/"getSrc",
+           /*args=*/(ins)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Return the indices that are used to access the source memref.
 
         The size of this range must be equal to the rank of the memref returned by
         `getSrc()`.
       }],
-      /*retType=*/"::mlir::Operation::operand_range",
-      /*methodName=*/"getSrcIndices",
-      /*args=*/(ins)>,
-    InterfaceMethod<
-      /*desc=*/[{
+           /*retType=*/"::mlir::Operation::operand_range",
+           /*methodName=*/"getSrcIndices",
+           /*args=*/(ins)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Return the destination memref for this copy operation.
       }],
-      /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
-      /*methodName=*/"getDst",
-      /*args=*/(ins)>,
-    InterfaceMethod<
-      /*desc=*/[{
+           /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
+           /*methodName=*/"getDst",
+           /*args=*/(ins)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Return the indices that are used to access the destination memref.
 
         The size of this range must be equal to the rank of the memref returned by
         `getDst()`.
       }],
-      /*retType=*/"::mlir::Operation::operand_range",
-      /*methodName=*/"getDstIndices",
-      /*args=*/(ins)>,
-    InterfaceMethod<
-      /*desc=*/[{
+           /*retType=*/"::mlir::Operation::operand_range",
+           /*methodName=*/"getDstIndices",
+           /*args=*/(ins)>,
+       InterfaceMethod<
+           /*desc=*/[{
         Update the operation with `newSrcMemref` as the new source memref,
         `newSrcIndices` as the new source indices, `newDst` as the new destination
         memref, and `newDstIndices` as the new destination indices, leaving
@@ -186,13 +186,12 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
         The caller must ensure that the new memref/index pairs point to the same
         location in memory.
       }],
-      /*retType=*/"void",
-      /*methodName=*/"setMemrefsAndIndices",
-      /*args=*/(ins "::mlir::RewriterBase&":$rewriter,
-        "::mlir::Value":$newSrc, "::mlir::ValueRange":$newSrcIndices,
-        "::mlir::Value":$newDst, "::mlir::ValueRange":$newDstIndices)
-    >
-  ];
+           /*retType=*/"void",
+           /*methodName=*/"setMemrefsAndIndices",
+           /*args=*/
+           (ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newSrc,
+               "::mlir::ValueRange":$newSrcIndices, "::mlir::Value":$newDst,
+               "::mlir::ValueRange":$newDstIndices)>];
   let verify = [{
     return ::mlir::memref::detail::verifyIndexedMemCopyOpInterface($_op);
   }];
