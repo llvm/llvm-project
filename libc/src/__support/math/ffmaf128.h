@@ -1,4 +1,4 @@
-//===-- Implementation header for ffmaf128 --------------------------*- C++ -*-===//
+//===-- Implementation header for ffmaf128 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

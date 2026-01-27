@@ -2808,6 +2808,7 @@ libc_support_library(
     name = "__support_math_ffmaf128",
     hdrs = ["src/__support/math/ffmaf128.h"],
     deps = [
+        ":__support_fputil_fma",
         ":__support_macros_properties_types",
     ],
 )
