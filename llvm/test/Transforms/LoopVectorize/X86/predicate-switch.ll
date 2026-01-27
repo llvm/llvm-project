@@ -12,7 +12,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
+; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST:       [[VECTOR_PH]]:
 ; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
