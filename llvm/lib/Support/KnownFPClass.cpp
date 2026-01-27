@@ -482,7 +482,7 @@ void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
 KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
                                DenormalMode Mode) {
   KnownFPClass Known;
-  Known.knownNot(fcNegZero);
+  Known.knownNot(fcNegZero | fcSubnormal);
 
   if (KnownSrc.isKnownNeverPosInfinity())
     Known.knownNot(fcPosInf);

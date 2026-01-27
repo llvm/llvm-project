@@ -152,6 +152,10 @@ std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
 
+/// \returns true if \p F's return type is annotated with
+/// [[clang::annotate_type("webkit.nodelete")]].
+bool isNoDeleteFunction(const FunctionDecl *F);
+
 /// \returns true if \p F is a builtin function which is considered trivial.
 bool isTrivialBuiltinFunction(const FunctionDecl *F);
 

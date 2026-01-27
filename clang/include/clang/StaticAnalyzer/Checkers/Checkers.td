@@ -1710,6 +1710,10 @@ def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
   Documentation<HasDocumentation>;
 
+def NoDeleteChecker : Checker<"NoDeleteChecker">,
+  HelpText<"Check for [[clang::annotate_type(\"webkit.nodelete\")]] annotation">,
+  Documentation<HasDocumentation>;
+
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
   Documentation<HasDocumentation>;
