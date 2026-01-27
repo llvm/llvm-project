@@ -39,10 +39,9 @@
 @gsfuf = external addrspace(10) global %struct.SFUF
 ; CHECK-DAG: %[[#gsfuf:]] = OpVariable %[[#sfuf_pp]] Private
 
-define internal spir_func void @foo() {
+define internal spir_func void @foo() #0 {
   %1 = alloca %struct.SF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sf_fp]] Function
-  call void @escape(ptr %1)
 
   store float 0.0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
@@ -51,10 +50,9 @@ define internal spir_func void @foo() {
   ret void
 }
 
-define internal spir_func void @bar() {
+define internal spir_func void @bar() #0 {
   %1 = alloca %struct.SU, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#su_fp]] Function
-  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]]
@@ -63,10 +61,9 @@ define internal spir_func void @bar() {
   ret void
 }
 
-define internal spir_func void @baz() {
+define internal spir_func void @baz() #0 {
   %1 = alloca %struct.SFUF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sfuf_fp]] Function
-  call void @escape(ptr %1)
 
   store float 0.0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
@@ -75,7 +72,7 @@ define internal spir_func void @baz() {
   ret void
 }
 
-define internal spir_func void @biz() {
+define internal spir_func void @biz() #0 {
   store float 0.0, ptr addrspace(10) @gsfuf, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_pp]] %[[#gsfuf]] %[[#uint_0]]
 ; CHECK:               OpStore %[[#tmp]] %[[#float_0]] Aligned 4
@@ -83,10 +80,9 @@ define internal spir_func void @biz() {
   ret void
 }
 
-define internal spir_func void @nested_store() {
+define internal spir_func void @nested_store() #0 {
   %1 = alloca %struct.SSU, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#ssu_fp]] Function
-  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]]
@@ -95,10 +91,9 @@ define internal spir_func void @nested_store() {
   ret void
 }
 
-define internal spir_func void @nested_store_vector() {
+define internal spir_func void @nested_store_vector() #0 {
   %1 = alloca %struct.SSV, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#ssv_fp]] Function
-  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
@@ -107,10 +102,9 @@ define internal spir_func void @nested_store_vector() {
   ret void
 }
 
-define internal spir_func void @nested_array_vector() {
+define internal spir_func void @nested_array_vector() #0 {
   %1 = alloca %struct.SSASSV, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#ssassv_fp]] Function
-  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
@@ -119,4 +113,4 @@ define internal spir_func void @nested_array_vector() {
   ret void
 }
 
-declare void @escape(ptr)
+attributes #0 = { optnone noinline }

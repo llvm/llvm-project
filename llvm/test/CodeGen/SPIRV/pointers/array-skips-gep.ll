@@ -13,10 +13,9 @@
 @gv = external addrspace(10) global [10 x i32]
 ; CHECK: %[[#gv:]] = OpVariable %[[#array_pp]] Private
 
-define internal spir_func i32 @foo() {
+define internal spir_func i32 @foo() #0 {
   %array = alloca [10 x i32], align 4
 ; CHECK: %[[#array:]] = OpVariable %[[#array_fp:]] Function
-  call void @escape(ptr %array)
 
   ; Direct load from the pointer index. This requires an OpAccessChain
   %1 = load i32, ptr %array, align 4
@@ -27,7 +26,7 @@ define internal spir_func i32 @foo() {
 ; CHECK: OpReturnValue %[[#val]]
 }
 
-declare void @escape(ptr)
+attributes #0 = { optnone noinline }
 
 define internal spir_func i32 @bar() {
   ; Direct load from the pointer index. This requires an OpAccessChain
