@@ -335,17 +335,20 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
 
   if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
                                          StmtSeqOffset)) {
-    // if StmtSeqOffset had a value and the lookup succceeds, then we had an
-    // invalid value in DW_AT_LLVM_stmt_sequence, but we did find some line
-    // entries without using it.
-    if (StmtSeqOffset && CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
-        Out.Report("Invalid DW_AT_LLVM_stmt_sequence value", [&](raw_ostream &OS) {
-          OS << "error: function DIE at " << HEX32(Die.getOffset())
-              << " has a DW_AT_LLVM_stmt_sequence value "
-              << HEX32(*StmtSeqOffset) << " which doesn't match any line table "
-              << "sequence offset but there are " << RowVector.size()
-              <<" matching line entries in other sequences.\n";
-        });
+    // If StmtSeqOffset had a value but the lookup failed, try again without it.
+    // If the second lookup succeeds, we know the DW_AT_LLVM_stmt_sequence value
+    // was invalid, but we still have valid line entries.
+    if (StmtSeqOffset &&
+        CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
+      Out.Report("Invalid DW_AT_LLVM_stmt_sequence value",
+                 [&](raw_ostream &OS) {
+                   OS << "error: function DIE at " << HEX32(Die.getOffset())
+                      << " has a DW_AT_LLVM_stmt_sequence value "
+                      << HEX32(*StmtSeqOffset)
+                      << " which doesn't match any line table "
+                      << "sequence offset but there are " << RowVector.size()
+                      << " matching line entries in other sequences.\n";
+                 });
     } else {
       // If we have a DW_TAG_subprogram but no line entries, fall back to using
       // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
@@ -360,17 +363,18 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
         // error if it isn't there.
         if (DwarfFileIdx == UINT32_MAX)
           return;
-        Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream &OS) {
+        Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream
+                                                                    &OS) {
           OS << "error: function DIE at " << HEX32(Die.getOffset())
-              << " has an invalid file index " << DwarfFileIdx
-              << " in its DW_AT_decl_file attribute, unable to create a single "
-              << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
-              << "attributes.\n";
+             << " has an invalid file index " << DwarfFileIdx
+             << " in its DW_AT_decl_file attribute, unable to create a single "
+             << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
+             << "attributes.\n";
         });
         return;
       }
-      if (auto Line =
-              dwarf::toUnsigned(Die.findRecursively({dwarf::DW_AT_decl_line}))) {
+      if (auto Line = dwarf::toUnsigned(
+              Die.findRecursively({dwarf::DW_AT_decl_line}))) {
         LineEntry LE(StartAddress, Gsym.insertFile(FilePath), *Line);
         FI.OptLineTable = LineTable();
         FI.OptLineTable->push(LE);
