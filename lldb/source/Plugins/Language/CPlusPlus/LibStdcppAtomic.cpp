@@ -21,13 +21,12 @@ namespace lldb_private::formatters {
 class LibStdcppAtomicSyntheticFrontEnd final
     : public SyntheticChildrenFrontEnd {
 public:
-  explicit LibStdcppAtomicSyntheticFrontEnd(ValueObject &valobj_sp)
-      : SyntheticChildrenFrontEnd(valobj_sp),
-        m_inner_name(ConstString("Value")) {}
+  explicit LibStdcppAtomicSyntheticFrontEnd(ValueObject &valobj)
+      : SyntheticChildrenFrontEnd(valobj), m_inner_name(ConstString("Value")) {}
 
   llvm::Expected<uint32_t> CalculateNumChildren() final {
     if (!m_inner)
-      return llvm::createStringError("invalide atomic ValueObject");
+      return llvm::createStringError("Invalid atomic ValueObject.");
     return 1;
   }
 
@@ -75,7 +74,7 @@ public:
       return backend.GetChildAtNamePath({"_M_base", "_M_i"});
 
     const uint32_t float_mask = lldb::eTypeIsFloat | lldb::eTypeIsBuiltIn;
-    if (first_type.GetTypeInfo() & float_mask) {
+    if ((first_type.GetTypeInfo() & float_mask) == float_mask) {
       // added float types specialization in c++17
       if (const auto child = backend.GetChildMemberWithName("_M_fp"))
         return child;
@@ -125,7 +124,7 @@ bool LibStdcppAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
       return true;
     }
 
-    auto aparent = atomic_value->GetParent();
+    ValueObject *aparent = atomic_value->GetParent();
     if (aparent && aparent->GetName().GetStringRef() == "_M_impl") {
       return LibStdcppSmartPointerSummaryProvider(*aparent, stream, options,
                                                   /*is_atomic_child=*/true);
