@@ -76,6 +76,7 @@ jobs:
       run: |
         # Some of the python modules we install require this package to be installed on the system.
         vcpkg install openssl:arm64-windows-static-md
+        vcpkg install libsodium:arm64-windows-static-md
         vcpkg integrate install
 
     - name: Debug
