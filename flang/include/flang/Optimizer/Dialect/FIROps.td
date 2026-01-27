@@ -270,7 +270,7 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
+def fir_FreeMemOp : fir_Op<"freemem", []> {
   let summary = "free a heap object";
 
   let description = [{
