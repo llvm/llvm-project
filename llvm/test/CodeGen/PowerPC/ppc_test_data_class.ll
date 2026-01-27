@@ -10,7 +10,6 @@ define noundef zeroext i1 @_Z16ossIsValidDoubled(double noundef %in) local_unnam
 ; PWR9-LABEL: _Z16ossIsValidDoubled:
 ; PWR9:       # %bb.0: # %entry
 ; PWR9-NEXT:    xststdcdp cr0, f1, 115
-; PWR9-NEXT:    li r3, 0
 ; PWR9-NEXT:    li r4, 1
 ; PWR9-NEXT:    iseleq r3, r4, r3
 ; PWR9-NEXT:    cntlzw r3, r3
@@ -36,7 +35,6 @@ define noundef zeroext i1 @_Z16ossIsValidDoubled(double noundef %in) local_unnam
 ; BIT64-PWR9-NEXT:    cntlzw r3, r3
 ; BIT64-PWR9-NEXT:    srwi r3, r3, 5
 ; BIT64-PWR9-NEXT:    blr
-
 entry:
   %test_data_class = tail call i32 @llvm.ppc.test.data.class.f64(double %in, i32 115)
   %tobool.not = icmp eq i32 %test_data_class, 0
