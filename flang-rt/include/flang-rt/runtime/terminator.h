@@ -113,12 +113,12 @@ private:
   else \
     Terminator{__FILE__, __LINE__}.CheckFailed(#pred)
 
-struct ExitHandler {
-  ExitHandler() {};
+void SetNormalEndCallback(void (*callback)(int));
+void SetFailImageCallback(void (*callback)(void));
+void SetErrorCallback(void (*callback)(int));
 
-  [[noreturn]] void NormalExit(int exitCode);
-  [[noreturn]] void ErrorExit(int exitCode);
-};
+[[noreturn]] void NormalExit(int exitCode);
+[[noreturn]] void ErrorExit(int exitCode);
 
 RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int);
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();

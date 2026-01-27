@@ -77,6 +77,5 @@ void fir::runtime::genMain(
 
   mlir::Value ret = builder.createIntegerConstant(loc, argcTy, 0);
   fir::CallOp::create(builder, loc, stopFn);
-
   mlir::func::ReturnOp::create(builder, loc, ret);
 }

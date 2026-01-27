@@ -41,13 +41,6 @@ void Terminator::InvokeCrashHandler(const char *message, ...) const {
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
-#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
-RT_VAR_ATTRS ExitHandler exitHandler;
-RT_VAR_ATTRS void (*normalEndCallback)(int);
-RT_VAR_ATTRS void (*failImageCallback)(void);
-RT_VAR_ATTRS void (*errorCallback)(int);
-#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
-
 RT_API_ATTRS void Terminator::CrashHeader() const {
 #if defined(RT_DEVICE_COMPILATION)
   std::printf("\nfatal Fortran runtime error");
@@ -100,20 +93,29 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
       sourceFileName_, sourceLine_);
 }
 
-static RT_VAR_ATTRS ExitHandler exitHandler;
 static RT_VAR_ATTRS void (*normalEndCallback)(int) = nullptr;
 static RT_VAR_ATTRS void (*failImageCallback)(void) = nullptr;
 static RT_VAR_ATTRS void (*errorCallback)(int) = nullptr;
 
+void SetNormalEndCallback(void (*callback)(int)) {
+  normalEndCallback = callback;
+}
+
+void SetFailImageCallback(void (*callback)(void)) {
+  failImageCallback = callback;
+}
+
+void SetErrorCallback(void (*callback)(int)) { errorCallback = callback; }
+
 [[noreturn]]
-void ExitHandler::NormalExit(int exitCode) {
+void NormalExit(int exitCode) {
   SynchronizeImagesOfNormalEnd(exitCode); // might never return
 
   std::exit(exitCode);
 }
 
 [[noreturn]]
-void ExitHandler::ErrorExit(int exitCode) {
+void ErrorExit(int exitCode) {
   NotifyOtherImagesOfErrorTermination(exitCode); // might never return
 
   std::exit(exitCode);

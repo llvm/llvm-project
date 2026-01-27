@@ -6,5 +6,6 @@ program test_init
 end
 
 ! ALL-LABEL: func.func @main
+! ALL: fir.call @_FortranAProgramStart
 ! COARRAY: mif.init -> i32
 ! NOCOARRAY-NOT: mif.init
