@@ -3261,7 +3261,7 @@ void ConvertCIRToLLVMPass::resolveBlockAddressOp(
     mlir::LLVM::BlockTagOp resolvedLabel =
         blockInfoAddr.lookupBlockTag(blockInfo);
     assert(resolvedLabel && "expected BlockTagOp to already be emitted");
-    auto fnSym = blockInfo.getFunc();
+    mlir::FlatSymbolRefAttr fnSym = blockInfo.getFunc();
     auto blkAddTag = mlir::LLVM::BlockAddressAttr::get(
         opBuilder.getContext(), fnSym, resolvedLabel.getTagAttr());
     blockAddOp.setBlockAddrAttr(blkAddTag);
@@ -4410,9 +4410,8 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   llvm::SmallVector<mlir::Block *, 8> successors;
   llvm::SmallVector<mlir::ValueRange, 8> succOperands;
   bool poison = op.getPoison();
-  for (mlir::Block *succ : op->getSuccessors()) {
+  for (mlir::Block *succ : op->getSuccessors())
     successors.push_back(succ);
-  }
 
   for (mlir::ValueRange operand : op.getSuccOperands()) {
     succOperands.push_back(operand);
