@@ -1521,6 +1521,12 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
   auto currTDescType = dyn_cast<xegpu::TensorDescType>(tdescValue.getType());
   assert(anchorOp && currTDescType &&
          "Expected anchor layout op and tensor descriptor consumer.");
+  // TODO: Scattered tensor desc is not supported for now.
+  if (currTDescType.isScattered()) {
+    DBGS() << "Scattered tensor descriptor not supported: " << tdescValue
+           << "\n";
+    return failure();
+  }
   Attribute currLayout = currTDescType.getLayout();
   Attribute expectedLayout = anchorOp.getAnchorLayout();
   // A conflict exists in tensot descriptor operand if tensor descriptor's
