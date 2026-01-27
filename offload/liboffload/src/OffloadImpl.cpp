@@ -1236,10 +1236,10 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
 
 Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
                          ol_memory_register_flags_t Flags, void **LockedPtr) {                     
-  Expected<void *> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size, 
-                                                             Flags & OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY,
-                                                             Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY,
-                                                             Flags & OL_MEMORY_REGISTER_FLAG_IGNORE_LOCK_FAILURE);
+  Expected<void *> LockedPtrOrErr = Device->Device->dataLock(
+      Ptr, Size, Flags & OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY,
+      Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY,
+      Flags & OL_MEMORY_REGISTER_FLAG_IGNORE_LOCK_FAILURE);
   if (!LockedPtrOrErr)
     return LockedPtrOrErr.takeError();
 
@@ -1250,9 +1250,9 @@ Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
 
 Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
                            ol_memory_register_flags_t Flags) {
-  return Device->Device->dataUnlock(Ptr,
-                                    Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY,
-                                    Flags & OL_MEMORY_REGISTER_FLAG_IGNORE_LOCK_FAILURE);
+  return Device->Device->dataUnlock(
+      Ptr, Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY,
+      Flags & OL_MEMORY_REGISTER_FLAG_IGNORE_LOCK_FAILURE);
 }
 
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
@@ -1262,11 +1262,6 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
       return Err;
   }
   return Error::success();
-}
-
-Error olGetHostDevice_impl(ol_device_handle_t *Device) {
-  *Device = OffloadContext::get().HostDevice;
-return Error::success();
 }
 
 } // namespace offload

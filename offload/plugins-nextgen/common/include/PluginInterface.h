@@ -746,8 +746,7 @@ public:
   /// Unlock the host buffer at \p HstPtr or unregister a user if other users
   /// are still using the pinned allocation. If this was the last user, the
   /// pinned allocation is removed from the map and the memory is unlocked.
-  Error unlockHostBuffer(void *HstPtr,
-                         bool LockMappedMemory = true,
+  Error unlockHostBuffer(void *HstPtr, bool LockMappedMemory = true,
                          bool IgnoreLockErrors = false);
 
   /// Lock or register a host buffer that was recently mapped by libomptarget.
@@ -892,16 +891,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                             bool RegisterMappedBuffer = false,
                             bool LockMappedMemory = true,
                             bool IgnoreLockErrors = false) {
-    return PinnedAllocs.lockHostBuffer(HstPtr, Size, RegisterMappedBuffer, 
+    return PinnedAllocs.lockHostBuffer(HstPtr, Size, RegisterMappedBuffer,
                                        LockMappedMemory, IgnoreLockErrors);
   }
 
   /// Unpin a host memory buffer that was previously pinned.
-  Error dataUnlock(void *HstPtr,
-                   bool LockMappedMemory = true,
+  Error dataUnlock(void *HstPtr, bool LockMappedMemory = true,
                    bool IgnoreLockErrors = false) {
-    return PinnedAllocs.unlockHostBuffer(HstPtr,
-                                         LockMappedMemory, 
+    return PinnedAllocs.unlockHostBuffer(HstPtr, LockMappedMemory,
                                          IgnoreLockErrors);
   }
 

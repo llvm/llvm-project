@@ -1024,11 +1024,9 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
   return eraseEntry(*Entry);
 }
 
-Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
-                                                       size_t Size,
-                                                       bool RegisterMappedBuffer,
-                                                       bool LockMappedMemory,
-                                                       bool IgnoreLockErrors) {
+Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
+    void *HstPtr, size_t Size, bool RegisterMappedBuffer, bool LockMappedMemory,
+    bool IgnoreLockErrors) {
   assert(HstPtr && "Invalid pointer");
   assert(Size && "Invalid size");
 
@@ -1052,14 +1050,14 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
 
     // Check if it was externally pinned by a vendor-specific API.
     auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
-                                              BaseDevAccessiblePtr, BaseSize);
+                                                BaseDevAccessiblePtr, BaseSize);
     if (!IsPinnedOrErr)
       return std::move(IsPinnedOrErr.takeError());
 
     // If pinned, just insert the entry representing the whole pinned buffer.
-    if (*IsPinnedOrErr){
+    if (*IsPinnedOrErr) {
       if (auto Err = insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
-                       /*Externallylocked=*/true))
+                                 /*Externallylocked=*/true))
         return std::move(Err);
       return BaseDevAccessiblePtr;
     }
@@ -1134,7 +1132,8 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr,
 }
 
 Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
-  auto Result = lockHostBuffer(HstPtr, Size, true, LockMappedBuffers, IgnoreLockMappedFailures);
+  auto Result = lockHostBuffer(HstPtr, Size, true, LockMappedBuffers,
+                               IgnoreLockMappedFailures);
   if (!Result)
     return Result.takeError();
 
