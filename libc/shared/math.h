@@ -87,6 +87,7 @@
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
 #include "math/sinf.h"
+#include "math/sinhf.h"
 #include "math/tan.h"
 #include "math/tanf.h"
 
