@@ -257,7 +257,7 @@ else in the file, that would not count: "``grep subl``" matches if "``subl``"
 exists anywhere in the file.
 
 The FileCheck -check-prefixes option
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The FileCheck `-check-prefixes` option allows multiple test
 configurations to be driven from one `.ll` file.  This is useful in many
