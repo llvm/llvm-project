@@ -181,16 +181,20 @@ public:
   using PlatformInfoStorageType = SmallVector<SDKPlatformInfo, 2>;
 
   DarwinSDKInfo(
-      VersionTuple Version, VersionTuple MaximumDeploymentTarget,
+      std::string FilePath, VersionTuple Version,
+      VersionTuple MaximumDeploymentTarget,
       PlatformInfoStorageType PlatformInfos,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
           VersionMappings =
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
-      : Version(Version), MaximumDeploymentTarget(MaximumDeploymentTarget),
+      : FilePath(FilePath), Version(Version),
+        MaximumDeploymentTarget(MaximumDeploymentTarget),
         PlatformInfos(std::move(PlatformInfos)),
         VersionMappings(std::move(VersionMappings)) {}
+
+  StringRef getFilePath() const { return FilePath; }
 
   const llvm::VersionTuple &getVersion() const { return Version; }
 
@@ -224,9 +228,11 @@ public:
   }
 
   static std::optional<DarwinSDKInfo>
-  parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj);
+  parseDarwinSDKSettingsJSON(std::string FilePath,
+                             const llvm::json::Object *Obj);
 
 private:
+  std::string FilePath;
   VersionTuple Version;
   VersionTuple MaximumDeploymentTarget;
   PlatformInfoStorageType PlatformInfos;

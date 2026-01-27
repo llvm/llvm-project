@@ -43,8 +43,7 @@ define nofpclass(inf zero sub norm) half @ret_only_nan(half %x, half %y) {
 define nofpclass(snan inf zero sub norm) half @ret_only_qnan(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y]]
-; CHECK-NEXT:    ret half [[ADD]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %add = fadd half %x, %y
   ret half %add

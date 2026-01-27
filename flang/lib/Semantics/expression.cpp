@@ -2651,6 +2651,13 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 "Base of procedure component reference must be scalar"_err_en_US);
           }
         }
+        if (IsFunction(*sym) == isSubroutine &&
+            sym->has<semantics::ProcBindingDetails>()) {
+          AttachDeclaration(
+              Say(sc.Component().source, "Binding '%s' is not a %s"_err_en_US,
+                  sym->name(), isSubroutine ? "subroutine" : "function"),
+              *sym);
+        }
         if (const Symbol *resolution{
                 GetBindingResolution(dtExpr->GetType(), *sym)}) {
           AddPassArg(arguments, std::move(*dtExpr), *sym, false);
