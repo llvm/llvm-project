@@ -5159,6 +5159,7 @@ libc_math_function(
     name = "sinf16",
     additional_deps = [
         ":__support_math_sinf16",
+        ":errno",
     ],
 )
 
