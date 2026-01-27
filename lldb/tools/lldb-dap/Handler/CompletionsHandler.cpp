@@ -83,7 +83,7 @@ static size_t GetPartialTokenCodeUnits(StringRef line, size_t cursor_pos) {
 
   if (convertUTF8ToUTF16String(byte_token, utf16_token))
     return utf16_token.size();
-  return byte_token.size(); // fallback to back to byte offset.
+  return byte_token.size(); // fallback back to byte offset.
 }
 
 /// Returns a list of possible completions for a given caret position and text.

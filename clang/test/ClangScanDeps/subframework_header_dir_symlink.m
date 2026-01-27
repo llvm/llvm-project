@@ -8,14 +8,16 @@
 // RUN: cp -R %S/Inputs/frameworks %t.dir/Inputs/frameworks
 // RUN: ln -s %t.dir/Inputs/frameworks %t.dir/Inputs/frameworks_symlink
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/subframework_header_dir_symlink_cdb.json > %t.cdb
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 |  FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 |  FileCheck %s %if system-darwin %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 #ifndef EMPTY
 #include "Framework/Framework.h"
 #endif
 
 // CHECK: subframework_header_dir_symlink_input.o
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: subframework_header_dir_symlink_input.m
 // CHECK: subframework_header_dir_symlink_input2.o
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: subframework_header_dir_symlink_input2.m
 // CHECK-NEXT: Inputs{{/|\\}}frameworks_symlink{{/|\\}}Framework.framework{{/|\\}}Headers{{/|\\}}Framework.h

@@ -1117,7 +1117,7 @@ public:
                                                       fir::LocationKind::Base));
 
         // Gather include location information if any.
-        Fortran::parser::ProvenanceRange *prov = &*provenance;
+        std::optional<Fortran::parser::ProvenanceRange> prov = provenance;
         while (prov) {
           if (std::optional<Fortran::parser::ProvenanceRange> include =
                   cooked->allSources().GetInclusionInfo(*prov)) {
@@ -1127,9 +1127,9 @@ public:
               locAttrs.push_back(fir::LocationKindAttr::get(
                   &getMLIRContext(), fir::LocationKind::Inclusion));
             }
-            prov = &*include;
+            prov = include;
           } else {
-            prov = nullptr;
+            prov.reset();
           }
         }
         if (locs.size() > 1) {
@@ -2406,7 +2406,8 @@ private:
             // In some loops, the HLFIR AssignOp operation can be translated
             // into FIR operation(s) containing StoreOp. It is therefore
             // necessary to forward the AccessGroups attribute.
-            assignOp.getOperation()->setAttr("access_groups", attrs);
+            assignOp.getOperation()->setAttr(fir::getAccessGroupsAttrName(),
+                                             attrs);
           } else if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
             callOp.setAccessGroupsAttr(attrs);
           }
