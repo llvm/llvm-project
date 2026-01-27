@@ -38,39 +38,28 @@
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %sub1 = add i64 %i.02, -1
 ; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %sub1
+; CHECK-NEXT:    %1 = load float, ptr %arrayidx2, align 4
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N8]]
+; CHECK-NEXT:  [def-use] to [[N9:0x[0-9a-f]*]]
+; CHECK-NEXT:  [memory] to [[N8]]
 
 ; CHECK: Node Address:[[N4]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, ptr %b, i64 %i.02
 ; CHECK-NEXT:    %0 = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N8]]
+; CHECK-NEXT:  [def-use] to [[N9]]
 
-; CHECK: Node Address:[[N8]]:pi-block
-; CHECK-NEXT: --- start of nodes in pi-block ---
-; CHECK: Node Address:[[N9:0x[0-9a-f]*]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %1 = load float, ptr %arrayidx2, align 4
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N10:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N10]]:single-instruction
+; CHECK: Node Address:[[N9]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %add = fadd float %0, %1
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N11:0x[0-9a-f]*]]
+; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[N11]]:single-instruction
+; CHECK: Node Address:[[N8]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    store float %add, ptr %arrayidx3, align 4
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [memory] to [[N9]]
-; CHECK-NEXT:--- end of nodes in pi-block ---
 ; CHECK-NEXT: Edges:none!
-
-
 
 ;; Loop-carried dependence requiring edge-reversal to expose a cycle
 ;; in the graph.
