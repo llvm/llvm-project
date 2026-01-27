@@ -7216,6 +7216,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
                              .Case("c11", "-std=c11")
                              .Case("c17", "-std=c17")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO: add c23 when MSVC supports it.
                              .Case("clatest", "-std=c23")
                              .Default("");
@@ -7233,6 +7238,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO add c++23 and c++26 when MSVC supports it.
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
@@ -7935,36 +7945,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
-                               options::OPT_fno_global_isel)) {
-    CmdArgs.push_back("-mllvm");
-    if (A->getOption().matches(options::OPT_fglobal_isel)) {
-      CmdArgs.push_back("-global-isel=1");
-
-      // GISel is on by default on AArch64 -O0, so don't bother adding
-      // the fallback remarks for it. Other combinations will add a warning of
-      // some kind.
-      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
-      bool IsOptLevelSupported = false;
-
-      Arg *A = Args.getLastArg(options::OPT_O_Group);
-      if (Triple.getArch() == llvm::Triple::aarch64) {
-        if (!A || A->getOption().matches(options::OPT_O0))
-          IsOptLevelSupported = true;
-      }
-      if (!IsArchSupported || !IsOptLevelSupported) {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-global-isel-abort=2");
-
-        if (!IsArchSupported)
-          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
-        else
-          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
-      }
-    } else {
-      CmdArgs.push_back("-global-isel=0");
-    }
-  }
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
 
   if (Arg *A = Args.getLastArg(options::OPT_fforce_enable_int128,
                                options::OPT_fno_force_enable_int128)) {
