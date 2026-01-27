@@ -174,13 +174,14 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
 
 AllocaInterestingness
 StackInfoBuilder::getAllocaInterestingness(const AllocaInst &AI) {
-  if (AI.getAllocatedType()->isSized() &&
+  std::optional<TypeSize> Size = AI.getAllocationSize(AI.getDataLayout());
+  if (Size &&
       // FIXME: support vscale.
-      !AI.getAllocatedType()->isScalableTy() &&
+      !Size->isScalable() &&
       // FIXME: instrument dynamic allocas, too
       AI.isStaticAlloca() &&
       // alloca() may be called with 0 size, ignore it.
-      memtag::getAllocaSizeInBytes(AI) > 0 &&
+      !Size->isZero() &&
       // We are only interested in allocas not promotable to registers.
       // Promotable allocas are common under -O0.
       !isAllocaPromotable(&AI) &&
