@@ -1344,7 +1344,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
+std::string MachO::getCompilerRT(const ArgList &Args, StringRef Component,
                                  FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1363,7 +1363,7 @@ std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
   return std::string(FullPath);
 }
 
-std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
+std::string Darwin::getCompilerRT(const ArgList &Args, StringRef Component,
                                   FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1917,7 +1917,7 @@ struct DarwinPlatform {
     StringRef PlatformPrefix =
         (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
     return DarwinSDKInfo(
-        getOSVersion(), /*MaximumDeploymentTarget=*/
+        "", getOSVersion(), /*MaximumDeploymentTarget=*/
         VersionTuple(getOSVersion().getMajor(), 0, 99),
         {DarwinSDKInfo::SDKPlatformInfo(llvm::Triple::Apple, OS,
                                         llvm::Triple::UnknownEnvironment,
@@ -3288,6 +3288,16 @@ void Darwin::addClangTargetOptions(
     CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
+
+  if (SDKInfo) {
+    // Make the SDKSettings.json an explicit dependency for the compiler
+    // invocation, in case the compiler needs to read it to remap versions.
+    if (!SDKInfo->getFilePath().empty()) {
+      SmallString<64> ExtraDepOpt("-fdepfile-entry=");
+      ExtraDepOpt += SDKInfo->getFilePath();
+      CC1Args.push_back(DriverArgs.MakeArgString(ExtraDepOpt));
+    }
+  }
 
   // Enable compatibility mode for NSItemProviderCompletionHandler in
   // Foundation/NSItemProvider.h.

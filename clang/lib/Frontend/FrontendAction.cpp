@@ -1317,7 +1317,7 @@ llvm::Error FrontendAction::Execute() {
   if (CI.shouldBuildGlobalModuleIndex() && CI.hasFileManager() &&
       CI.hasPreprocessor()) {
     StringRef Cache =
-        CI.getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
+        CI.getPreprocessor().getHeaderSearchInfo().getSpecificModuleCachePath();
     if (!Cache.empty()) {
       if (llvm::Error Err = GlobalModuleIndex::writeIndex(
               CI.getFileManager(), CI.getPCHContainerReader(), Cache)) {

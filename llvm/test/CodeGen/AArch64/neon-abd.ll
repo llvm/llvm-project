@@ -554,6 +554,195 @@ define <2 x i32> @combine_sabd_2s_zerosign_negative(<2 x i32> %a, <2 x i32> %b) 
   ret <2 x i32> %mask
 }
 
+; select pattern with constant and type shrinking
+define <8 x i32> @sabd_8h_splat_imm(<8 x i16> %a) {
+; CHECK-LABEL: sabd_8h_splat_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.4h, #89
+; CHECK-NEXT:    movi v1.8h, #89
+; CHECK-NEXT:    sabdl2 v1.4s, v0.8h, v1.8h
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v2.4h
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <8 x i16> %a to <8 x i32>
+  %sub = sub <8 x i32> %conv, splat(i32 89)
+  %cmp.i = icmp slt <8 x i32> %sub, splat(i32 0)
+  %sub.i = sub <8 x i32> splat(i32 89), %conv
+  %cond.i = select <8 x i1> %cmp.i, <8 x i32> %sub.i, <8 x i32> %sub
+  %conv1 = trunc <8 x i32> %cond.i to <8 x i16>
+  %r = zext <8 x i16> %conv1 to <8 x i32>
+  ret <8 x i32> %r
+}
+
+; ... with uabd
+define <8 x i32> @uabd_8h_splat_imm(<8 x i16> %a) {
+; CHECK-LABEL: uabd_8h_splat_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.4h, #89
+; CHECK-NEXT:    movi v1.8h, #89
+; CHECK-NEXT:    uabdl2 v1.4s, v0.8h, v1.8h
+; CHECK-NEXT:    uabdl v0.4s, v0.4h, v2.4h
+; CHECK-NEXT:    ret
+entry:
+  %conv = zext <8 x i16> %a to <8 x i32>
+  %sub = sub <8 x i32> %conv, splat(i32 89)
+  %cmp.i = icmp slt <8 x i32> %sub, splat(i32 0)
+  %sub.i = sub <8 x i32> splat(i32 89), %conv
+  %cond.i = select <8 x i1> %cmp.i, <8 x i32> %sub.i, <8 x i32> %sub
+  %conv1 = trunc <8 x i32> %cond.i to <8 x i16>
+  %r = zext <8 x i16> %conv1 to <8 x i32>
+  ret <8 x i32> %r
+}
+
+; And now it's buildvector of const
+define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
+; CHECK-LABEL: sabd_8h_bv_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    adrp x8, .LCPI45_0
+; CHECK-NEXT:    adrp x9, .LCPI45_1
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI45_0]
+; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI45_1]
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v3.4h
+; CHECK-NEXT:    sabdl v1.4s, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <8 x i16> %a to <8 x i32>
+  %sub = sub <8 x i32> %conv, <i32 39, i32 42, i32 51, i32 51, i32 0, i32 -128, i32 127, i32 69>
+  %cmp.i = icmp slt <8 x i32> %sub, splat(i32 0)
+  %sub.i = sub <8 x i32> <i32 39, i32 42, i32 51, i32 51, i32 0, i32 -128, i32 127, i32 69>, %conv
+  %cond.i = select <8 x i1> %cmp.i, <8 x i32> %sub.i, <8 x i32> %sub
+  %conv1 = trunc <8 x i32> %cond.i to <8 x i16>
+  %r = zext <8 x i16> %conv1 to <8 x i32>
+  ret <8 x i32> %r
+}
+
+; ... uabd version
+define <8 x i32> @uabd_8h_bv_imm(<8 x i16> %a) {
+; CHECK-LABEL: uabd_8h_bv_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    adrp x8, .LCPI46_0
+; CHECK-NEXT:    adrp x9, .LCPI46_1
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI46_0]
+; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI46_1]
+; CHECK-NEXT:    uabdl v0.4s, v0.4h, v3.4h
+; CHECK-NEXT:    uabdl v1.4s, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+entry:
+  %conv = zext <8 x i16> %a to <8 x i32>
+  %sub = sub <8 x i32> %conv, <i32 39, i32 42, i32 51, i32 51, i32 0, i32 64000, i32 127, i32 69>
+  %cmp.i = icmp slt <8 x i32> %sub, splat(i32 0)
+  %sub.i = sub <8 x i32> <i32 39, i32 42, i32 51, i32 51, i32 0, i32 64000, i32 127, i32 69>, %conv
+  %cond.i = select <8 x i1> %cmp.i, <8 x i32> %sub.i, <8 x i32> %sub
+  %conv1 = trunc <8 x i32> %cond.i to <8 x i16>
+  %r = zext <8 x i16> %conv1 to <8 x i32>
+  ret <8 x i32> %r
+}
+
+; And now it's buildvector with sext and constants
+define <4 x i32> @sabd_4h_bv_non_imm(<4 x i16> %a, i16 %b) {
+; CHECK-LABEL: sabd_4h_bv_non_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sxth w9, w0
+; CHECK-NEXT:    mov w8, #-128 // =0xffffff80
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    mov v1.s[1], w8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    mov v1.s[2], w8
+; CHECK-NEXT:    mov w8, #69 // =0x45
+; CHECK-NEXT:    mov v1.s[3], w8
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %exted.b = sext i16 %b to i32
+  %ze.vec = insertelement <4 x i32> <i32 poison, i32 -128, i32 42, i32 69>, i32 %exted.b, i32 0
+  %sub = sub <4 x i32> %conv, %ze.vec
+  %cmp.i = icmp slt <4 x i32> %sub, splat(i32 0)
+  %sub.i = sub <4 x i32> %ze.vec, %conv
+  %cond.i = select <4 x i1> %cmp.i, <4 x i32> %sub.i, <4 x i32> %sub
+  %conv1 = trunc <4 x i32> %cond.i to <4 x i16>
+  %r = zext <4 x i16> %conv1 to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; ... uabd
+define <4 x i32> @uabd_4h_bv_non_imm(<4 x i16> %a, i16 %b) {
+; CHECK-LABEL: uabd_4h_bv_non_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    mov w8, #64000 // =0xfa00
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    mov v1.s[1], w8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    mov v1.s[2], w8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    mov v1.s[3], w8
+; CHECK-NEXT:    uabd v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %exted.b = zext i16 %b to i32
+  %ze.vec = insertelement <4 x i32> <i32 poison, i32 64000, i32 13, i32 37>, i32 %exted.b, i32 0
+  %sub = sub <4 x i32> %conv, %ze.vec
+  %cmp.i = icmp slt <4 x i32> %sub, splat(i32 0)
+  %sub.i = sub <4 x i32> %ze.vec, %conv
+  %cond.i = select <4 x i1> %cmp.i, <4 x i32> %sub.i, <4 x i32> %sub
+  %conv1 = trunc <4 x i32> %cond.i to <4 x i16>
+  %r = zext <4 x i16> %conv1 to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; negative: immediate wont fit in signed i16
+define <8 x i32> @sabd_8s_splat_imm_no_shrink(<8 x i16> %a) {
+; CHECK-LABEL: sabd_8s_splat_imm_no_shrink:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.4s, #250, lsl #8
+; CHECK-NEXT:    sshll2 v2.4s, v0.8h, #0
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sabd v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    bic v1.4s, #3, lsl #16
+; CHECK-NEXT:    bic v0.4s, #3, lsl #16
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <8 x i16> %a to <8 x i32>
+  %sub = sub <8 x i32> %conv, splat(i32 64000)
+  %cmp.i = icmp slt <8 x i32> %sub, splat(i32 0)
+  %sub.i = sub <8 x i32> splat(i32 64000), %conv
+  %cond.i = select <8 x i1> %cmp.i, <8 x i32> %sub.i, <8 x i32> %sub
+  %conv1 = trunc <8 x i32> %cond.i to <8 x i16>
+  %r = zext <8 x i16> %conv1 to <8 x i32>
+  ret <8 x i32> %r
+}
+
+; negative: value out of range of unsigned i16
+define <8 x i32> @uabd_8s_splat_imm_no_shrink(<8 x i16> %a) {
+; CHECK-LABEL: uabd_8s_splat_imm_no_shrink:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-NEXT:    ushll2 v2.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    movi v3.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sub v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    ret
+entry:
+  %conv = zext <8 x i16> %a to <8 x i32>
+  %sub = sub <8 x i32> %conv, splat(i32 -1)
+  %cmp.i = icmp slt <8 x i32> %sub, splat(i32 0)
+  %sub.i = sub <8 x i32> splat(i32 -1), %conv
+  %cond.i = select <8 x i1> %cmp.i, <8 x i32> %sub.i, <8 x i32> %sub
+  %conv1 = trunc <8 x i32> %cond.i to <8 x i16>
+  %r = zext <8 x i16> %conv1 to <8 x i32>
+  ret <8 x i32> %r
+}
+
 declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 

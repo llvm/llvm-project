@@ -534,12 +534,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
   case TargetLowering::TypeSoftPromoteHalf:
     // Promote the integer operand by hand.
     return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, GetSoftPromotedHalf(InOp));
-  case TargetLowering::TypePromoteFloat: {
-    // Convert the promoted float by hand.
-    if (!NOutVT.isVector())
-      return DAG.getNode(ISD::FP_TO_FP16, dl, NOutVT, GetPromotedFloat(InOp));
-    break;
-  }
   case TargetLowering::TypeExpandInteger:
   case TargetLowering::TypeExpandFloat:
     break;
@@ -2752,7 +2746,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
 
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
     // Scalarize vector FPOWI instead of promoting the type. This allows the
     // scalar FPOWIs to be visited and converted to libcalls before promoting
@@ -3255,7 +3249,7 @@ std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   TargetLowering::MakeLibCallOptions CallOptions;
   SmallVector<SDValue, 4> Ops;
 
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl != RTLIB::Unsupported) {
     Ops.append(Node->op_begin() + 2, Node->op_end());
     Ops.push_back(Node->getOperand(1));
@@ -3264,7 +3258,7 @@ std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
     assert(LC != RTLIB::UNKNOWN_LIBCALL &&
            "Unexpected atomic op or value type!");
     Ops.append(Node->op_begin() + 1, Node->op_end());
-    LCImpl = TLI.getLibcallImpl(LC);
+    LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   }
   return TLI.makeLibCall(DAG, LCImpl, RetVT, Ops, CallOptions, SDLoc(Node),
                          Node->getOperand(0));
@@ -4171,7 +4165,7 @@ void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
     assert(LC != RTLIB::UNKNOWN_LIBCALL &&
            "LibCall explicitly requested, but not available");
 
-    if (RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC)) {
+    if (RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC)) {
       TargetLowering::MakeLibCallOptions CallOptions;
       EVT IntVT =
           EVT::getIntegerVT(*DAG.getContext(), DAG.getLibInfo().getIntSize());
@@ -4250,8 +4244,6 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
-    Op = GetPromotedFloat(Op);
 
   // If the input is bf16 or needs to be soft promoted, extend to f32.
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf ||
@@ -4291,9 +4283,6 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
-
-  assert(getTypeAction(Op.getValueType()) != TargetLowering::TypePromoteFloat &&
-         "Input type needs to be promoted!");
 
   EVT VT = Op.getValueType();
 
@@ -4479,7 +4468,7 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
 
   // If nothing else, we can make a libcall.
   RTLIB::Libcall LC = RTLIB::getMUL(VT);
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
     // Perform a wide multiplication where the wide type is the original VT and
     // the 4 parts are the split arguments.
@@ -5067,7 +5056,7 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     LC = RTLIB::getSRA(VT);
   }
 
-  if (RTLIB::LibcallImpl LibcallImpl = TLI.getLibcallImpl(LC)) {
+  if (RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC)) {
     EVT ShAmtTy =
         EVT::getIntegerVT(*DAG.getContext(), DAG.getLibInfo().getIntSize());
     SDValue ShAmt = DAG.getZExtOrTrunc(N->getOperand(1), dl, ShAmtTy);
@@ -5236,12 +5225,13 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
 
   // Replace this with a libcall that will check overflow.
   RTLIB::Libcall LC = RTLIB::getMULO(VT);
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
 
   // If we don't have the libcall or if the function we are compiling is the
   // implementation of the expected libcall (avoid inf-loop), expand inline.
   if (LCImpl == RTLIB::Unsupported ||
-      TLI.getLibcallImplName(LCImpl) == DAG.getMachineFunction().getName()) {
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl) ==
+          DAG.getMachineFunction().getName()) {
     // FIXME: This is not an optimal expansion, but better than crashing.
     SDValue MulLo, MulHi;
     TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, N->getOperand(0),
@@ -5284,8 +5274,8 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(TLI.getLibcallImplCallingConv(LCImpl), RetTy, Func,
-                    std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                    Func, std::move(Args))
       .setSExtResult();
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
