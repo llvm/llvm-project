@@ -2156,7 +2156,8 @@ void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // Mark all blocks for predication, including those that ordinarily do not
   // need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    [[maybe_unused]] bool R = blockCanBePredicated(BB, SafePointers, MaskedOp);
+    [[maybe_unused]] bool R =
+        blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }

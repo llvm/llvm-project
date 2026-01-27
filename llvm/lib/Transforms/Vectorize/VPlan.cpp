@@ -1590,13 +1590,16 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   }
 }
 
-VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
-  assert(count_if(VPlans,
+VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF,
+                                            bool ForEpilogue) const {
+  bool UseEpilogueTailFoldedPlans = ForEpilogue && isEpilogueTailFolded();
+  assert(count_if(UseEpilogueTailFoldedPlans ? EpilogueTailFoldedPlans : VPlans,
                   [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
              1 &&
          "Multiple VPlans for VF.");
 
-  for (const VPlanPtr &Plan : VPlans) {
+  for (const VPlanPtr &Plan :
+       UseEpilogueTailFoldedPlans ? EpilogueTailFoldedPlans : VPlans) {
     if (Plan->hasVF(VF))
       return *Plan.get();
   }
@@ -1741,6 +1744,15 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
     return;
   }
   for (const auto &Plan : VPlans)
+    if (PrintVPlansInDotFormat)
+      Plan->printDOT(O);
+    else
+      Plan->print(O);
+
+  if (EpilogueTailFoldedPlans.empty())
+    return;
+  O << "LV: Printing out predicated plans\n";
+  for (const auto &Plan : EpilogueTailFoldedPlans)
     if (PrintVPlansInDotFormat)
       Plan->printDOT(O);
     else

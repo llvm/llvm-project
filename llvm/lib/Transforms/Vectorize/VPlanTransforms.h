@@ -165,7 +165,8 @@ struct VPlanTransforms {
   static void addMinimumVectorEpilogueIterationCheck(
       VPlan &Plan, Value *TripCount, Value *VectorTripCount,
       bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
-      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE);
+      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE,
+      bool EpilogueTailFolded);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
