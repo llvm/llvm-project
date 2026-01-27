@@ -54,6 +54,11 @@ MATCHER(declRange, "") {
   const Range &Range = ::testing::get<1>(arg);
   return Sym.PreferredDeclaration.range == Range;
 }
+MATCHER(defRange, "") {
+  const LocatedSymbol &Sym = ::testing::get<0>(arg);
+  const Range &Range = ::testing::get<1>(arg);
+  return Sym.Definition.value_or(Sym.PreferredDeclaration).range == Range;
+}
 
 // Extracts ranges from an annotated example, and constructs a matcher for a
 // highlight set. Ranges should be named $read/$write as appropriate.
@@ -1927,10 +1932,10 @@ TEST(FindImplementations, InheritanceRecursion) {
   // Make sure inheritance is followed, but does not diverge.
   llvm::StringRef Test = R"cpp(
     template <int>
-    struct [[Ev^en]];
+    struct Ev^en;
 
     template <int>
-    struct [[Odd]];
+    struct Odd;
 
     template <>
     struct Even<0> {
@@ -1943,10 +1948,10 @@ TEST(FindImplementations, InheritanceRecursion) {
     };
 
     template <int I>
-    struct Even : Odd<I - 1> {};
+    struct [[Even]] : Odd<I - 1> {};
 
     template <int I>
-    struct Odd : Even<I - 1> {};
+    struct [[Odd]] : Even<I - 1> {};
 
     constexpr bool Answer = Even<42>::value;
   )cpp";
@@ -1956,7 +1961,7 @@ TEST(FindImplementations, InheritanceRecursion) {
   auto AST = TU.build();
   auto Index = TU.index();
   EXPECT_THAT(findImplementations(AST, Code.point(), Index.get()),
-              UnorderedPointwise(declRange(), Code.ranges()));
+              UnorderedPointwise(defRange(), Code.ranges()));
 }
 
 TEST(FindImplementations, InheritanceObjC) {
