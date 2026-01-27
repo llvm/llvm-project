@@ -193,14 +193,14 @@ define void @fmul_bf16() {
 
 define void @fdiv() {
 ; CHECK-LABEL: 'fdiv'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V4F16 = fdiv <vscale x 4 x half> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V8F16 = fdiv <vscale x 8 x half> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16F16 = fdiv <vscale x 16 x half> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V2F32 = fdiv <vscale x 2 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V4F32 = fdiv <vscale x 4 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8F32 = fdiv <vscale x 8 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V2F64 = fdiv <vscale x 2 x double> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4F64 = fdiv <vscale x 4 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:4 for: %V4F16 = fdiv <vscale x 4 x half> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:4 for: %V8F16 = fdiv <vscale x 8 x half> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V16F16 = fdiv <vscale x 16 x half> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:4 for: %V2F32 = fdiv <vscale x 2 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:4 for: %V4F32 = fdiv <vscale x 4 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V8F32 = fdiv <vscale x 8 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:4 for: %V2F64 = fdiv <vscale x 2 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V4F64 = fdiv <vscale x 4 x double> poison, poison
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V4F16 = fdiv <vscale x 4 x half> poison, poison
@@ -219,9 +219,9 @@ define void @fdiv() {
 
 define void @fdiv_bf16() {
 ; CHECK-LABEL: 'fdiv_bf16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %NXV4BF16 = fdiv <vscale x 4 x bfloat> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:4 Lat:4 SizeLat:4 for: %NXV8BF16 = fdiv <vscale x 8 x bfloat> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:4 Lat:4 SizeLat:4 for: %NXV16BF16 = fdiv <vscale x 16 x bfloat> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:4 SizeLat:4 for: %NXV4BF16 = fdiv <vscale x 4 x bfloat> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:1 Lat:4 SizeLat:4 for: %NXV8BF16 = fdiv <vscale x 8 x bfloat> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:1 Lat:4 SizeLat:4 for: %NXV16BF16 = fdiv <vscale x 16 x bfloat> poison, poison
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %NXV4BF16 = fdiv <vscale x 4 x bfloat> poison, poison
@@ -233,14 +233,14 @@ define void @fdiv_bf16() {
 
 define void @frem() {
 ; CHECK-LABEL: 'frem'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V4F16 = frem <vscale x 4 x half> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V8F16 = frem <vscale x 8 x half> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V16F16 = frem <vscale x 16 x half> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V2F32 = frem <vscale x 2 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V4F32 = frem <vscale x 4 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V8F32 = frem <vscale x 8 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V2F64 = frem <vscale x 2 x double> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %V4F64 = frem <vscale x 4 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V4F16 = frem <vscale x 4 x half> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V8F16 = frem <vscale x 8 x half> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V16F16 = frem <vscale x 16 x half> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V2F32 = frem <vscale x 2 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V4F32 = frem <vscale x 4 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V8F32 = frem <vscale x 8 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V2F64 = frem <vscale x 2 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %V4F64 = frem <vscale x 4 x double> poison, poison
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V4F16 = frem <vscale x 4 x half> poison, poison
@@ -259,9 +259,9 @@ define void @frem() {
 
 define void @frem_bf16() {
 ; CHECK-LABEL: 'frem_bf16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %NXV4BF16 = frem <vscale x 4 x bfloat> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %NXV8BF16 = frem <vscale x 8 x bfloat> poison, poison
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %NXV16BF16 = frem <vscale x 16 x bfloat> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %NXV4BF16 = frem <vscale x 4 x bfloat> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %NXV8BF16 = frem <vscale x 8 x bfloat> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:4 SizeLat:4 for: %NXV16BF16 = frem <vscale x 16 x bfloat> poison, poison
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %NXV4BF16 = frem <vscale x 4 x bfloat> poison, poison

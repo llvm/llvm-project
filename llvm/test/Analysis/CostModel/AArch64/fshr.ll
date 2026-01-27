@@ -246,7 +246,7 @@ entry:
 
 define <4 x i30> @fshr_v4i30_3rd_arg_var(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c) {
 ; CHECK-LABEL: 'fshr_v4i30_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:10 Lat:10 SizeLat:10 for: %r = tail call <4 x i30> @llvm.fshr.v4i30(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:10 SizeLat:10 for: %r = tail call <4 x i30> @llvm.fshr.v4i30(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i30> %r
 ;
 entry:
