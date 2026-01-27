@@ -33,10 +33,9 @@ protected:
   // Helpers providing access to implementation details of basic data structures
   // for efficient serialization/deserialization.
   static EntityIdTable &getIdTableForDeserialization(TUSummary &S);
-  static NestedBuildNamespace &
-  getCommonNamespaceForDeserialization(TUSummary &S);
+  static BuildNamespace &getTUNamespaceForDeserialization(TUSummary &S);
   static const EntityIdTable &getIdTable(const TUSummary &S);
-  static const NestedBuildNamespace &getCommonNamespace(const TUSummary &S);
+  static const BuildNamespace &getTUNamespace(const TUSummary &S);
 
   static BuildNamespaceKind getBuildNamespaceKind(const BuildNamespace &BN);
   static llvm::StringRef getBuildNamespaceName(const BuildNamespace &BN);
