@@ -66,6 +66,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Removed TypePromoteFloat legalization from SelectionDAG
+
 Changes to building LLVM
 ------------------------
 
