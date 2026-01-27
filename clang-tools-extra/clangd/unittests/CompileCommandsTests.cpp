@@ -536,6 +536,7 @@ TEST(CommandMangler, StdLatestFlag) {
 }
 
 TEST(CommandMangler, ClangClStdFlags_Inference) {
+  // Check that clang-cl-specific /std: flags are not dropped during inference.
   const auto Mangler = CommandMangler::forTests();
 
   {
