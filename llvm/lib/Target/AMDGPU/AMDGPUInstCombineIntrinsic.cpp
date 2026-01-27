@@ -591,7 +591,7 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
     Value *Tid;
     uint64_t Mask;
     uint64_t RowIdx = 0;
-    bool CanDPP16Optimize = false;
+    bool CanDPP16RowShare = false;
 
     // DPP16 Row Share 0: Idx = Tid & Mask
     auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
@@ -610,7 +610,7 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
       // wave64 requires Mask & 0x3F = 0x30
       if (ST.isWave64() && (Mask & 0x3F) != 0x30)
         return std::nullopt;
-      CanDPP16Optimize = true;
+      CanDPP16RowShare = true;
     }
     else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) &&
         RowIdx < 15 && RowIdx > 0) {
@@ -620,14 +620,14 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
       // wave64 requires Mask & 0x3F = 0x30
       if (ST.isWave64() && (Mask & 0x3F) != 0x30)
         return std::nullopt;
-      CanDPP16Optimize = true;
+      CanDPP16RowShare = true;
     }
     else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid) &&
         RowIdx == 15) {
-      CanDPP16Optimize = true;
+      CanDPP16RowShare = true;
     }
 
-    if (CanDPP16Optimize) {
+    if (CanDPP16RowShare) {
       CallInst *UpdateDPP = B.CreateIntrinsic(
           Intrinsic::amdgcn_update_dpp, Val->getType(),
           {B.getInt32(0), Val, B.getInt32(AMDGPU::DPP::ROW_SHR0 | RowIdx),
