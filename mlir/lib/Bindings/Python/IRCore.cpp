@@ -29,7 +29,6 @@ using namespace mlir;
 
 using llvm::SmallVector;
 using llvm::StringRef;
-using llvm::Twine;
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
@@ -100,9 +99,8 @@ MlirBlock createBlock(const nb::sequence &pyArgTypes,
   }
 
   if (argTypes.size() != argLocs.size())
-    throw nb::value_error(("Expected " + Twine(argTypes.size()) +
-                           " locations, got: " + Twine(argLocs.size()))
-                              .str()
+    throw nb::value_error(("Expected " + std::to_string(argTypes.size()) +
+                           " locations, got: " + std::to_string(argLocs.size()))
                               .c_str());
   return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
 }
@@ -824,7 +822,7 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
   MlirDialect dialect = mlirContextGetOrLoadDialect(getContext()->get(),
                                                     {key.data(), key.size()});
   if (mlirDialectIsNull(dialect)) {
-    std::string msg = (Twine("Dialect '") + key + "' not found").str();
+    std::string msg = (std::string("Dialect '") + key + "' not found");
     if (attrError)
       throw nb::attribute_error(msg.c_str());
     throw nb::index_error(msg.c_str());
@@ -1105,9 +1103,8 @@ void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
       operation, config, accum.getCallback(), accum.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
-    throw nb::value_error((Twine("Unable to honor desired bytecode version ") +
-                           Twine(*bytecodeVersion))
-                              .str()
+    throw nb::value_error((std::string("Unable to honor desired bytecode version ") +
+                           std::to_string(*bytecodeVersion))
                               .c_str());
 }
 
@@ -1481,10 +1478,9 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
         if (!resultTypes.back())
           throw nb::cast_error();
       } catch (nb::cast_error &err) {
-        throw nb::value_error((llvm::Twine("Result ") +
-                               llvm::Twine(it.index()) + " of operation \"" +
-                               name + "\" must be a Type (" + err.what() + ")")
-                                  .str()
+        throw nb::value_error((std::string("Result ") +
+                               std::to_string(it.index()) + " of operation \"" +
+                               std::string(name) + "\" must be a Type (" + err.what() + ")")
                                   .c_str());
       }
     }
@@ -1492,12 +1488,11 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
     if (resultSegmentSpec.size() != resultTypeList.size()) {
-      throw nb::value_error((llvm::Twine("Operation \"") + name +
+      throw nb::value_error((std::string("Operation \"") + std::string(name) +
                              "\" requires " +
-                             llvm::Twine(resultSegmentSpec.size()) +
+                             std::to_string(resultSegmentSpec.size()) +
                              " result segments but was provided " +
-                             llvm::Twine(resultTypeList.size()))
-                                .str()
+                             std::to_string(resultTypeList.size()))
                                 .c_str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
@@ -1516,18 +1511,16 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
             resultSegmentLengths.push_back(0);
           } else {
             throw nb::value_error(
-                (llvm::Twine("Result ") + llvm::Twine(it.index()) +
-                 " of operation \"" + name +
+                (std::string("Result ") + std::to_string(it.index()) +
+                 " of operation \"" + std::string(name) +
                  "\" must be a Type (was None and result is not optional)")
-                    .str()
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error((llvm::Twine("Result ") +
-                                 llvm::Twine(it.index()) + " of operation \"" +
-                                 name + "\" must be a Type (" + err.what() +
+          throw nb::value_error((std::string("Result ") +
+                                 std::to_string(it.index()) + " of operation \"" +
+                                 std::string(name) + "\" must be a Type (" + err.what() +
                                  ")")
-                                    .str()
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
@@ -1551,8 +1544,8 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error((llvm::Twine("Result ") +
-                                 llvm::Twine(it.index()) + " of operation \"" +
+          throw nb::value_error((std::string("Result ") +
+                                 std::to_string(it.index()) + " of operation \"" +
                                  name + "\" must be a Sequence of Types (" +
                                  err.what() + ")")
                                     .str()
@@ -1569,9 +1562,9 @@ MlirValue getUniqueResult(MlirOperation operation) {
   auto numResults = mlirOperationGetNumResults(operation);
   if (numResults != 1) {
     auto name = mlirIdentifierStr(mlirOperationGetName(operation));
-    throw nb::value_error((Twine("Cannot call .result on operation ") +
+    throw nb::value_error((std::string("Cannot call .result on operation ") +
                            StringRef(name.data, name.length) + " which has " +
-                           Twine(numResults) +
+                           std::to_string(numResults) +
                            " results (it is only valid for operations with a "
                            "single result)")
                               .str()
@@ -1626,18 +1619,16 @@ nb::object PyOpView::buildGeneric(
   }
   if (*regions < opMinRegionCount) {
     throw nb::value_error(
-        (llvm::Twine("Operation \"") + name + "\" requires a minimum of " +
-         llvm::Twine(opMinRegionCount) +
-         " regions but was built with regions=" + llvm::Twine(*regions))
-            .str()
+        (std::string("Operation \"") + std::string(name) + "\" requires a minimum of " +
+         std::to_string(opMinRegionCount) +
+         " regions but was built with regions=" + std::to_string(*regions))
             .c_str());
   }
   if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
     throw nb::value_error(
-        (llvm::Twine("Operation \"") + name + "\" requires a maximum of " +
-         llvm::Twine(opMinRegionCount) +
-         " regions but was built with regions=" + llvm::Twine(*regions))
-            .str()
+        (std::string("Operation \"") + std::string(name) + "\" requires a maximum of " +
+         std::to_string(opMinRegionCount) +
+         " regions but was built with regions=" + std::to_string(*regions))
             .c_str());
   }
 
@@ -1657,10 +1648,9 @@ nb::object PyOpView::buildGeneric(
       try {
         operands.push_back(getOpResultOrValue(it.value()));
       } catch (nb::builtin_exception &err) {
-        throw nb::value_error((llvm::Twine("Operand ") +
-                               llvm::Twine(it.index()) + " of operation \"" +
-                               name + "\" must be a Value (" + err.what() + ")")
-                                  .str()
+        throw nb::value_error((std::string("Operand ") +
+                               std::to_string(it.index()) + " of operation \"" +
+                               std::string(name) + "\" must be a Value (" + err.what() + ")")
                                   .c_str());
       }
     }
@@ -1668,12 +1658,11 @@ nb::object PyOpView::buildGeneric(
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
     if (operandSegmentSpec.size() != operandList.size()) {
-      throw nb::value_error((llvm::Twine("Operation \"") + name +
+      throw nb::value_error((std::string("Operation \"") + std::string(name) +
                              "\" requires " +
-                             llvm::Twine(operandSegmentSpec.size()) +
+                             std::to_string(operandSegmentSpec.size()) +
                              "operand segments but was provided " +
-                             llvm::Twine(operandList.size()))
-                                .str()
+                             std::to_string(operandList.size()))
                                 .c_str());
     }
     operandSegmentLengths.reserve(operandList.size());
@@ -1688,11 +1677,11 @@ nb::object PyOpView::buildGeneric(
 
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error((llvm::Twine("Operand ") +
-                                   llvm::Twine(it.index()) +
-                                   " of operation \"" + name +
+            throw nb::value_error((std::string("Operand ") +
+                                   std::to_string(it.index()) +
+                                   " of operation \"" 
+                                   + std::string(name) +
                                    "\" must be a Value (" + err.what() + ")")
-                                      .str()
                                       .c_str());
           }
 
@@ -1702,10 +1691,9 @@ nb::object PyOpView::buildGeneric(
           operandSegmentLengths.push_back(0);
         } else {
           throw nb::value_error(
-              (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-               " of operation \"" + name +
+              (std::string("Operand ") + std::to_string(it.index()) +
+               " of operation \"" + std::string(name) +
                "\" must be a Value (was None and operand is not optional)")
-                  .str()
                   .c_str());
         }
       } else if (segmentSpec == -1) {
@@ -1726,11 +1714,10 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error((llvm::Twine("Operand ") +
-                                 llvm::Twine(it.index()) + " of operation \"" +
-                                 name + "\" must be a Sequence of Values (" +
+          throw nb::value_error((std::string("Operand ") +
+                                 std::to_string(it.index()) + " of operation \"" +
+                                 std::string(name) + "\" must be a Sequence of Values (" +
                                  err.what() + ")")
-                                    .str()
                                     .c_str());
         }
       } else {
@@ -2954,7 +2941,7 @@ void populateIRCore(nb::module_ &m) {
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
               throw nb::value_error(
-                  (Twine("Dialect '") + name + "' not found").str().c_str());
+                  (std::string("Dialect '") + name + "' not found").c_str());
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
@@ -3944,8 +3931,8 @@ void populateIRCore(nb::module_ &m) {
             mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
         std::string_view parsedOpName(identifier.data, identifier.length);
         if (clsOpName != parsedOpName)
-          throw MLIRError(Twine("Expected a '") + clsOpName + "' op, got: '" +
-                          parsedOpName + "'");
+          throw MLIRError(std::string("Expected a '") + std::string(clsOpName) + "' op, got: '" +
+                          std::string(parsedOpName) + "'");
         return PyOpView::constructDerived(cls, parsed.getObject());
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
@@ -4478,7 +4465,7 @@ void populateIRCore(nb::module_ &m) {
               return PyTypeID(mlirTypeID);
             auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(self)));
             throw nb::value_error(
-                (origRepr + llvm::Twine(" has no typeid.")).str().c_str());
+                (origRepr + std::string(" has no typeid.")).c_str());
           },
           "Returns the `TypeID` of the `Type`, or raises `ValueError` if "
           "`Type` has no "

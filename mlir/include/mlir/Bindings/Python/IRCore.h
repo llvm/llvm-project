@@ -947,10 +947,9 @@ public:
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
-      throw nanobind::value_error((::llvm::Twine("Cannot cast type to ") +
+      throw nanobind::value_error((std::string("Cannot cast type to ") +
                                    DerivedTy::pyClassName + " (from " +
                                    origRepr + ")")
-                                      .str()
                                       .c_str());
     }
     return orig;
@@ -966,8 +965,7 @@ public:
           if (DerivedTy::getTypeIdFunction)
             return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + ::llvm::Twine(" has no typeid."))
-                  .str()
+              (DerivedTy::pyClassName + std::string(" has no typeid."))
                   .c_str());
         },
         nanobind::sig("def static_typeid(/) -> TypeID"));
@@ -1080,10 +1078,9 @@ public:
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
-      throw nanobind::value_error((::llvm::Twine("Cannot cast attribute to ") +
+      throw nanobind::value_error((std::string("Cannot cast attribute to ") +
                                    DerivedTy::pyClassName + " (from " +
                                    origRepr + ")")
-                                      .str()
                                       .c_str());
     }
     return orig;
@@ -1111,8 +1108,7 @@ public:
           if (DerivedTy::getTypeIdFunction)
             return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + ::llvm::Twine(" has no typeid."))
-                  .str()
+              (DerivedTy::pyClassName + std::string(" has no typeid."))
                   .c_str());
         },
         nanobind::sig("def static_typeid(/) -> TypeID"));
@@ -1329,9 +1325,9 @@ private:
 /// Custom exception that allows access to error diagnostic information. This is
 /// converted to the `ir.MLIRError` python exception when thrown.
 struct MLIR_PYTHON_API_EXPORTED MLIRError {
-  MLIRError(::llvm::Twine message,
+  MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
-      : message(message.str()), errorDiagnostics(std::move(errorDiagnostics)) {}
+      : message(message), errorDiagnostics(std::move(errorDiagnostics)) {}
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
@@ -1549,10 +1545,9 @@ public:
     if (!DerivedTy::isaFunction(orig.get())) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
-      throw nanobind::value_error((::llvm::Twine("Cannot cast value to ") +
+      throw nanobind::value_error((std::string("Cannot cast value to ") +
                                    DerivedTy::pyClassName + " (from " +
                                    origRepr + ")")
-                                      .str()
                                       .c_str());
     }
     return orig.get();
@@ -1561,9 +1556,8 @@ public:
   /// Binds the Python module objects to functions of this class.
   static void bind(nanobind::module_ &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic(),
-                       nanobind::sig((::llvm::Twine("class ") +
+                       nanobind::sig((std::string("class ") +
                                       DerivedTy::pyClassName + "(Value[_T])")
-                                         .str()
                                          .c_str()));
     cls.def(nanobind::init<PyValue &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("value"));
