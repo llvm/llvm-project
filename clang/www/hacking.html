@@ -184,13 +184,11 @@
   <a href="https://www.python.org/downloads/">https://www.python.org/downloads/</a>.
   Download the latest stable version.</p>
 
-  <p>The GnuWin32 tools are also necessary for running the tests.
-  Get them from <a href="http://getgnuwin32.sourceforge.net/">
-  http://getgnuwin32.sourceforge.net/</a>.
-  If the environment variable <tt>%PATH%</tt> does not have GnuWin32,
-  or if other grep(s) supercedes GnuWin32 on <tt>%PATH%,</tt>
-  you should specify <tt>LLVM_LIT_TOOLS_DIR</tt>
-  to CMake explicitly.</p>
+  <p>The GNU core utilities included in <b>Git For Windows</b>
+  are also required to run the tests.  This is available from
+  <a href="https://git-scm.com/download"> https://git-scm.com/download</a>.
+  You can specify the <tt>LLVM_LIT_TOOLS_DIR</tt> to CMake explicitly
+  to override the location of the GNU core utilities used for testing.</p>
 
   <p>The cmake build tool is set up to create Visual Studio project files
   for running the tests, "check-clang" being the root.  Therefore, to

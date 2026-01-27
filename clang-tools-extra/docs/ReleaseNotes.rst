@@ -131,6 +131,11 @@ Changes in existing checks
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
+  the invalidating function in the warning message when a custom invalidation
+  function is used (via the `InvalidationFunctions` option).
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and

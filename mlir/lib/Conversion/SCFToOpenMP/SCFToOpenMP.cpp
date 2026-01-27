@@ -486,10 +486,11 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     }
     rewriter.eraseOp(reduce);
 
-    Value numThreadsVar;
+    SmallVector<Value> numThreadsVars;
     if (numThreads > 0) {
-      numThreadsVar = LLVM::ConstantOp::create(
+      Value numThreadsVar = LLVM::ConstantOp::create(
           rewriter, loc, rewriter.getI32IntegerAttr(numThreads));
+      numThreadsVars.push_back(numThreadsVar);
     }
     // Create the parallel wrapper.
     auto ompParallel = omp::ParallelOp::create(
@@ -497,7 +498,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
         /* if_expr = */ Value{},
-        /* num_threads = */ numThreadsVar,
+        /* num_threads_vars = */ numThreadsVars,
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
         /* private_needs_barrier = */ nullptr,

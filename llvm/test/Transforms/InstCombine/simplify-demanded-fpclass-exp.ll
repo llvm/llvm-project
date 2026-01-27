@@ -563,6 +563,46 @@ define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec_partiall
   ret <2 x float> %exp
 }
 
+define nofpclass(snan) float @ret_no_snan__exp__no_inf(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_no_snan__exp__no_inf(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp.f32(float [[X]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call float @llvm.exp.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(inf) float @ret_no_inf__exp__no_inf(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_no_inf__exp__no_inf(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call ninf float @llvm.exp.f32(float [[X]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call float @llvm.exp.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(pinf) float @ret_no_pinf__exp__no_pinf(float nofpclass(pinf) %x) {
+; CHECK-LABEL: define nofpclass(pinf) float @ret_no_pinf__exp__no_pinf(
+; CHECK-SAME: float nofpclass(pinf) [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp.f32(float [[X]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call float @llvm.exp.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(nan inf) float @ret_no_inf_no_nan__exp__no_inf(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_no_inf_no_nan__exp__no_inf(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp.f32(float [[X]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call noundef float @llvm.exp.f32(float %x)
+  ret float %exp
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
