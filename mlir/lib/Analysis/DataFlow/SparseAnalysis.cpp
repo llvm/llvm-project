@@ -134,8 +134,7 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(getProgramPointAfter(branch), branch,
-                          /*successor=*/{branch, branch->getResults()},
-                          resultLattices);
+                          RegionSuccessor::parent(), resultLattices);
     return success();
   }
 
@@ -187,9 +186,9 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     // Otherwise, we can't reason about the data-flow.
-    return visitNonControlFlowArgumentsImpl(block->getParentOp(),
-                                            RegionSuccessor(block->getParent()),
-                                            argLattices, /*firstIndex=*/0);
+    return visitNonControlFlowArgumentsImpl(
+        block->getParentOp(), RegionSuccessor(block->getParent()), ValueRange(),
+        argLattices, /*firstIndex=*/0);
   }
 
   // Iterate over the predecessors of the non-entry block.
@@ -316,24 +315,23 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(
-                branch, branch->getResults().slice(firstIndex, inputs.size())),
-            lattices, firstIndex);
+            branch, RegionSuccessor::parent(),
+            branch->getResults().slice(firstIndex, inputs.size()), lattices,
+            firstIndex);
       } else {
         if (!inputs.empty())
           firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
         Region *region = point->getBlock()->getParent();
         visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(region, region->getArguments().slice(
-                                        firstIndex, inputs.size())),
-            lattices, firstIndex);
+            branch, RegionSuccessor(region),
+            region->getArguments().slice(firstIndex, inputs.size()), lattices,
+            firstIndex);
       }
     }
 
-    for (auto it : llvm::zip(*operands, lattices.drop_front(firstIndex)))
-      join(std::get<1>(it), *getLatticeElementFor(point, std::get<0>(it)));
+    for (auto [lattice, operand] :
+         llvm::zip(lattices.drop_front(firstIndex), *operands))
+      join(lattice, *getLatticeElementFor(point, operand));
   }
 }
 
@@ -609,7 +607,6 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
       unaccounted.reset(operand->getOperandNumber());
     }
   }
-
   Operation *op = branch.getOperation();
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
@@ -617,17 +614,11 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   for (RegionSuccessor &successor : successors) {
     if (successor.isParent())
       continue;
-    SmallVector<BlockArgument> noControlFlowArguments;
-    MutableArrayRef<BlockArgument> arguments =
-        successor.getSuccessor()->getArguments();
-    ValueRange inputs = successor.getSuccessorInputs();
-    for (BlockArgument argument : arguments) {
-      // Visit blockArgument of RegionBranchOp which isn't "control
-      // flow block arguments". For example, the IV of a loop.
-      if (!llvm::is_contained(inputs, argument)) {
-        noControlFlowArguments.push_back(argument);
-      }
-    }
+    auto valueToArgument = [](Value value) {
+      return cast<BlockArgument>(value);
+    };
+    SmallVector<BlockArgument> noControlFlowArguments = llvm::map_to_vector(
+        branch.getNonSuccessorInputs(successor), valueToArgument);
     visitNonControlFlowArguments(successor, noControlFlowArguments);
   }
 
@@ -642,8 +633,6 @@ void AbstractSparseBackwardDataFlowAnalysis::
     visitRegionSuccessorsFromTerminator(
         RegionBranchTerminatorOpInterface terminator,
         RegionBranchOpInterface branch) {
-  assert(isa<RegionBranchTerminatorOpInterface>(terminator) &&
-         "expected a `RegionBranchTerminatorOpInterface` op");
   assert(terminator->getParentOp() == branch.getOperation() &&
          "expected `branch` to be the parent op of `terminator`");
 

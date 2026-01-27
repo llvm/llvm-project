@@ -1799,7 +1799,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                 return;
               }
               if (SrcReg != DestReg &&
-                  any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
+                  any_of(RegMask, not_equal_to(PoisonMaskElem))) {
                 // Just a copy of the source register.
                 Cost += TTI::TCC_Free;
               }
@@ -4815,6 +4815,10 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
    };
 
   assert(Val->isVectorTy() && "This must be a vector type");
+  auto *VT = cast<VectorType>(Val);
+  if (VT->isScalableTy())
+    return InstructionCost::getInvalid();
+
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
 

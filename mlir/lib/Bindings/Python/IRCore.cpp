@@ -191,13 +191,15 @@ nb::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-PyRegion PyRegionIterator::dunderNext() {
+nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
   operation->checkValid();
   if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-    throw nb::stop_iteration();
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
   }
   MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-  return PyRegion(operation, region);
+  return nb::cast(PyRegion(operation, region));
 }
 
 void PyRegionIterator::bind(nb::module_ &m) {
@@ -241,15 +243,17 @@ PyRegionList PyRegionList::slice(intptr_t startIndex, intptr_t length,
   return PyRegionList(operation, startIndex, length, step);
 }
 
-PyBlock PyBlockIterator::dunderNext() {
+nb::typed<nb::object, PyBlock> PyBlockIterator::dunderNext() {
   operation->checkValid();
   if (mlirBlockIsNull(next)) {
-    throw nb::stop_iteration();
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
   }
 
   PyBlock returnBlock(operation, next);
   next = mlirBlockGetNextInRegion(next);
-  return returnBlock;
+  return nb::cast(returnBlock);
 }
 
 void PyBlockIterator::bind(nb::module_ &m) {
@@ -324,7 +328,9 @@ void PyBlockList::bind(nb::module_ &m) {
 nb::typed<nb::object, PyOpView> PyOperationIterator::dunderNext() {
   parentOperation->checkValid();
   if (mlirOperationIsNull(next)) {
-    throw nb::stop_iteration();
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
   }
 
   PyOperationRef returnOperation =
@@ -407,13 +413,16 @@ void PyOpOperand::bind(nb::module_ &m) {
                    "Returns the operand number in the owning operation.");
 }
 
-PyOpOperand PyOpOperandIterator::dunderNext() {
-  if (mlirOpOperandIsNull(opOperand))
-    throw nb::stop_iteration();
+nb::typed<nb::object, PyOpOperand> PyOpOperandIterator::dunderNext() {
+  if (mlirOpOperandIsNull(opOperand)) {
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
+  }
 
   PyOpOperand returnOpOperand(opOperand);
   opOperand = mlirOpOperandGetNextUse(opOperand);
-  return returnOpOperand;
+  return nb::cast(returnOpOperand);
 }
 
 void PyOpOperandIterator::bind(nb::module_ &m) {
@@ -4528,7 +4537,8 @@ void populateIRCore(nb::module_ &m) {
           kDumpDocstring)
       .def_prop_ro(
           "owner",
-          [](PyValue &self) -> nb::typed<nb::object, PyOpView> {
+          [](PyValue &self)
+              -> nb::typed<nb::object, std::variant<PyOpView, PyBlock>> {
             MlirValue v = self.get();
             if (mlirValueIsAOpResult(v)) {
               assert(mlirOperationEqual(self.getParentOperation()->get(),

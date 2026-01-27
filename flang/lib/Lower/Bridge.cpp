@@ -1117,7 +1117,7 @@ public:
                                                       fir::LocationKind::Base));
 
         // Gather include location information if any.
-        Fortran::parser::ProvenanceRange *prov = &*provenance;
+        std::optional<Fortran::parser::ProvenanceRange> prov = provenance;
         while (prov) {
           if (std::optional<Fortran::parser::ProvenanceRange> include =
                   cooked->allSources().GetInclusionInfo(*prov)) {
@@ -1127,9 +1127,9 @@ public:
               locAttrs.push_back(fir::LocationKindAttr::get(
                   &getMLIRContext(), fir::LocationKind::Inclusion));
             }
-            prov = &*include;
+            prov = include;
           } else {
-            prov = nullptr;
+            prov.reset();
           }
         }
         if (locs.size() > 1) {
@@ -2048,8 +2048,9 @@ private:
     llvm::SmallVector<int64_t> indexList;
     llvm::SmallVector<Fortran::parser::Label> labelList;
     int64_t index = 0;
+    const auto &call{std::get<Fortran::parser::Call>(stmt.t)};
     for (const Fortran::parser::ActualArgSpec &arg :
-         std::get<std::list<Fortran::parser::ActualArgSpec>>(stmt.call.t)) {
+         std::get<std::list<Fortran::parser::ActualArgSpec>>(call.t)) {
       const auto &actual = std::get<Fortran::parser::ActualArg>(arg.t);
       if (const auto *altReturn =
               std::get_if<Fortran::parser::AltReturnSpec>(&actual.u)) {
@@ -2132,8 +2133,8 @@ private:
       }
     }
     if (!labelList.empty()) {
-      auto selectExpr =
-          fir::LoadOp::create(*builder, loc, getSymbolAddress(symbol));
+      mlir::Value selectExpr = hlfir::loadTrivialScalar(
+          loc, *builder, hlfir::Entity{getSymbolAddress(symbol)});
       // Add a default error target in case the goto is nonconforming.
       mlir::Block *errorBlock =
           builder->getBlock()->splitBlock(builder->getInsertionPoint());
@@ -2490,8 +2491,8 @@ private:
                        &loopControl->u)) {
       // Non-concurrent increment loop.
       IncrementLoopInfo &info = incrementLoopNestInfo.emplace_back(
-          *bounds->name.thing.symbol, bounds->lower, bounds->upper,
-          bounds->step);
+          *bounds->Name().thing.symbol, bounds->Lower(), bounds->Upper(),
+          bounds->Step());
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
         info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
@@ -3849,22 +3850,22 @@ private:
         assert(bounds && "Expected bounds on the loop construct");
 
         Fortran::semantics::Symbol &ivSym =
-            bounds->name.thing.symbol->GetUltimate();
+            bounds->Name().thing.symbol->GetUltimate();
         ivValues.push_back(getSymbolAddress(ivSym));
 
         lbs.push_back(builder->createConvert(
             crtLoc, idxTy,
             fir::getBase(genExprValue(
-                *Fortran::semantics::GetExpr(bounds->lower), stmtCtx))));
+                *Fortran::semantics::GetExpr(bounds->Lower()), stmtCtx))));
         ubs.push_back(builder->createConvert(
             crtLoc, idxTy,
             fir::getBase(genExprValue(
-                *Fortran::semantics::GetExpr(bounds->upper), stmtCtx))));
-        if (bounds->step)
+                *Fortran::semantics::GetExpr(bounds->Upper()), stmtCtx))));
+        if (auto &step = bounds->Step())
           steps.push_back(builder->createConvert(
               crtLoc, idxTy,
-              fir::getBase(genExprValue(
-                  *Fortran::semantics::GetExpr(bounds->step), stmtCtx))));
+              fir::getBase(
+                  genExprValue(*Fortran::semantics::GetExpr(step), stmtCtx))));
         else // If `step` is not present, assume it is `1`.
           steps.push_back(builder->createIntegerConstant(loc, idxTy, 1));
 
@@ -4180,28 +4181,45 @@ private:
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(getEval(), stmtCtx);
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    bool unstructuredContext = eval.lowerAsUnstructured();
 
-    for (Fortran::lower::pft::Evaluation &e :
-         getEval().getNestedEvaluations()) {
-      if (e.getIf<Fortran::parser::ChangeTeamStmt>()) {
-        maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
-        genFIR(e);
-      } else if (e.getIf<Fortran::parser::EndChangeTeamStmt>()) {
-        maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
-        genFIR(e);
-      } else {
-        genFIR(e);
-      }
-    }
+    // CHANGE TEAM statement
+    Fortran::lower::pft::Evaluation &changeTeamStmtEval =
+        eval.getFirstNestedEvaluation();
+    auto *changeTeamStmt =
+        changeTeamStmtEval.getIf<Fortran::parser::ChangeTeamStmt>();
+    assert(changeTeamStmt && "ChangeTeamStmt not found");
+    mif::ChangeTeamOp changeOp =
+        genChangeTeamStmt(*this, changeTeamStmtEval, *changeTeamStmt);
+    mlir::Block *entryBlock = changeOp.getBody();
+    builder->setInsertionPointToStart(entryBlock);
+
+    if (unstructuredContext)
+      Fortran::lower::createEmptyRegionBlocks<mif::EndTeamOp>(
+          *builder, eval.getNestedEvaluations());
+    builder->setInsertionPointToStart(entryBlock);
+
+    // CHANGE TEAM body code.
+    auto iter = eval.getNestedEvaluations().begin()++;
+    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+      genFIR(*iter, unstructuredContext);
+
+    // END TEAM statement
+    Fortran::lower::pft::Evaluation &endTeamEval = *iter;
+    auto *endTeamStmt = endTeamEval.getIf<Fortran::parser::EndChangeTeamStmt>();
+    assert(endTeamStmt && "EndChangeTeamStmt not found");
+    if (unstructuredContext)
+      maybeStartBlock(endTeamEval.block);
+
+    mlir::Block &endBody = changeOp.getRegion().back();
+    builder->setInsertionPointToEnd(&endBody);
+    genEndChangeTeamStmt(*this, endTeamEval, *endTeamStmt);
+    assert(mlir::isa_and_nonnull<mif::EndTeamOp>(endBody.getTerminator()) &&
+           "missing end team terminator");
+    builder->setInsertionPointAfter(changeOp.getOperation());
+
     popActiveConstruct();
-  }
-  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    genChangeTeamStmt(*this, getEval(), stmt);
-  }
-  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
@@ -6180,6 +6198,8 @@ private:
   void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
+  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
+  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {} // nop
 
   /// Generate FIR for Evaluation \p eval.
   void genFIR(Fortran::lower::pft::Evaluation &eval,

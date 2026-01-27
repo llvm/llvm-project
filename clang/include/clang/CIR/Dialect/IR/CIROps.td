@@ -241,6 +241,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+  let hasCXXABILowering = 1;
 
   let extraLLVMLoweringPatternDecl = [{
     mlir::Type convertTy(mlir::Type ty) const;
@@ -340,6 +341,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   }];
 
   let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -539,7 +541,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     UnitAttr:$init,
     UnitAttr:$constant,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
     OptionalAttr<ArrayAttr>:$annotations
   );
 
@@ -748,7 +750,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 //===----------------------------------------------------------------------===//
 
 def CIR_IfOp : CIR_Op<"if", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "the if-then-else operation";
@@ -1009,7 +1011,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 //===----------------------------------------------------------------------===//
 
 def CIR_ScopeOp : CIR_Op<"scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1078,7 +1080,7 @@ def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
 ]>;
 
 def CIR_CaseOp : CIR_Op<"case", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "Case operation";
@@ -1116,7 +1118,7 @@ def CIR_CaseOp : CIR_Op<"case", [
 
 def CIR_SwitchOp : CIR_Op<"switch", [
   SameVariadicOperandSize,
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1642,6 +1644,10 @@ class CIR_LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
         llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
       LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
     }
+    ValueRange $cppClass::getSuccessorInputs(
+        mlir::RegionSuccessor successor) {
+      return LoopOpInterface::getLoopOpSuccessorInputs(*this, successor);
+    }
     llvm::SmallVector<Region *> $cppClass::getLoopRegions() {
       return {&getBody()};
     }
@@ -2085,7 +2091,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 //===----------------------------------------------------------------------===//
 
 def CIR_TernaryOp : CIR_Op<"ternary", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
@@ -2186,7 +2192,7 @@ def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
 ]>;
 
 def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   NoRegionArguments
 ]> {
@@ -2862,6 +2868,10 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
   >
 >;
 
+// TODO(CIR): CallingConv is a placeholder here so we can use it in
+// infrastructure calls, but it currently has no values.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
+
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2931,7 +2941,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
     SymbolNameAttr:$sym_name,
     CIR_VisibilityAttr:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
@@ -2950,6 +2960,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    OptionalAttr<CIR_SideEffect>:$side_effect,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -3075,35 +3086,6 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 //===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
-
-def CIR_SideEffect : CIR_I32EnumAttr<
-    "SideEffect", "allowed side effects of a function", [
-      I32EnumAttrCase<"All", 0, "all">,
-      I32EnumAttrCase<"Pure", 1, "pure">,
-      I32EnumAttrCase<"Const", 2, "const">
-]> {
-  let description = [{
-    The side effect attribute specifies the possible side effects of the callee
-    of a call operation. This is an enumeration attribute and all possible
-    enumerators are:
-
-    - all: The callee can have any side effects. This is the default if no side
-      effects are explicitly listed.
-    - pure: The callee may read data from memory, but it cannot write data to
-      memory. This has the same effect as the GNU C/C++ attribute
-      `__attribute__((pure))`.
-    - const: The callee may not read or write data from memory. This has the
-      same effect as the GNU C/C++ attribute `__attribute__((const))`.
-
-    Examples:
-
-    ```mlir
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
-    ```
-  }];
-}
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
@@ -3304,7 +3286,7 @@ def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
 ]>;
 
 def CIR_AwaitOp : CIR_Op<"await",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, NoRegionArguments
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
@@ -3434,6 +3416,58 @@ def CIR_CopyOp : CIR_Op<"copy",[
     }    
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// MemCpyOp && MemMoveOp
+//===----------------------------------------------------------------------===//
+
+class CIR_MemOp<string mnemonic> : CIR_Op<mnemonic, [
+  AllTypesMatch<["dst", "src"]>
+]> {
+  dag commonArgs = (ins
+    Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
+    Arg<CIR_VoidPtrType, "", [MemRead]>:$src
+  );
+}
+
+def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
+  let summary = "Equivalent to libc's `memcpy`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memcpy` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    While `cir.copy` is meant to be used for implicit copies in the code where
+    the length of the copy is known, `cir.memcpy` copies only from and to void
+    pointers, requiring the copy length to be passed as an argument.
+
+    As is the case for memcpy in the C standard library, this operation
+    exhibits undefined behavior (UB) if any of the following conditions hold:
+      * `src` and/or `dst` are null pointers; or
+      * the memory regions referenced by `src` and `dst` overlap.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a record:
+      %2 = cir.const #cir.int<2> : !u32i
+      cir.libc.memcpy %2 bytes from %arr to %record : !cir.ptr<!arr> -> !cir.ptr<!record>
+    ```
+  }];
+
+  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` type($len) `,` qualified(type($src)) `->` qualified(type($dst))
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
+
+// TODO: MemMoveOp
 
 //===----------------------------------------------------------------------===//
 // ReturnAddrOp and FrameAddrOp
@@ -3803,6 +3837,60 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
 
   let hasCXXABILowering = true;
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// GetMethodOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetMethodOp : CIR_Op<"get_method"> {
+  let summary = "Resolve a method to a function pointer as callee";
+  let description = [{
+    The `cir.get_method` operation takes a pointer to method (!cir.method) and
+    a pointer to a class object (!cir.ptr<!cir.record>>) as input, and
+    yields a function pointer that points to the actual function corresponding
+    to the input method. The operation also applies any necessary adjustments to
+    the input object pointer for calling the method and yields the adjusted
+    pointer.
+
+    This operation is generated when calling a method through a pointer-to-
+    member-function in C++:
+
+    ```cpp
+    // Foo *object;
+    // int arg;
+    // void (Foo::*method)(int);
+
+    (object->*method)(arg);
+    ```
+
+    The code above will generate CIR similar to:
+
+    ```mlir
+    %callee, %this = cir.get_method %method, %object
+    cir.call %callee(%this, %arg)
+    ```
+
+    The method type must match the callee type. That is:
+    - The return type of the method must match the return type of the callee.
+    - The first parameter of the callee must have type `!cir.ptr<!cir.void>`.
+    - Types of other parameters of the callee must match the parameters of the
+      method.
+  }];
+
+  let arguments = (ins CIR_MethodType:$method, CIR_PtrToRecordType:$object);
+  let results = (outs CIR_PtrToFunc:$callee, CIR_VoidPtrType:$adjusted_this);
+
+  let assemblyFormat = [{
+    $method `,` $object
+    `:` `(` qualified(type($method)) `,` qualified(type($object)) `)`
+    `->` `(` qualified(type($callee)) `,` qualified(type($adjusted_this)) `)`
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5496,7 +5584,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_TryOp : CIR_Op<"try",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "C++ try block";

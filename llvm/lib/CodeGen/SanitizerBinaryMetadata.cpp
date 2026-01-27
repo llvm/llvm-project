@@ -51,10 +51,7 @@ char &llvm::MachineSanitizerBinaryMetadataID =
     MachineSanitizerBinaryMetadataLegacy::ID;
 
 MachineSanitizerBinaryMetadataLegacy::MachineSanitizerBinaryMetadataLegacy()
-    : MachineFunctionPass(ID) {
-  initializeMachineSanitizerBinaryMetadataLegacyPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 bool MachineSanitizerBinaryMetadataLegacy::runOnMachineFunction(
     MachineFunction &MF) {

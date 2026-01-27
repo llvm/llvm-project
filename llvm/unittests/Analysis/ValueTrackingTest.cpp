@@ -1666,7 +1666,7 @@ TEST_F(ComputeKnownFPClassTest, FMul) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A5);
+  expectKnownFPClass(fcPositive, false, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FMulNoZero) {

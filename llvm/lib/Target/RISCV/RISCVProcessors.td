@@ -106,6 +106,7 @@ def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 
+// clang-format off
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
                                      [Feature64Bit,
@@ -619,10 +620,15 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                  TTAscalonD8Model,
                                                  !listconcat(RVA23S64Features,
                                                  [FeatureStdExtSmaia,
+                                                  FeatureStdExtSmmpm,
+                                                  FeatureStdExtSmnpm,
+                                                  FeatureStdExtSmrnmi,
+                                                  FeatureStdExtSmstateen,
                                                   FeatureStdExtSsaia,
                                                   FeatureStdExtSsstrict,
                                                   FeatureStdExtZfbfmin,
                                                   FeatureStdExtZfh,
+                                                  FeatureStdExtZkr,
                                                   FeatureStdExtZvbc,
                                                   FeatureStdExtZvfbfmin,
                                                   FeatureStdExtZvfbfwma,
@@ -761,6 +767,34 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
   let MImpID = 0x1000000049772200;
 }
 
+def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
+                                        NoSchedModel,
+                                        !listconcat(RVA23U64Features,
+                                        [FeatureStdExtZbc,
+                                         FeatureStdExtZbkc,
+                                         FeatureStdExtZcd,
+                                         FeatureStdExtZfbfmin,
+                                         FeatureStdExtZfh,
+                                         FeatureStdExtZvbc,
+                                         FeatureStdExtZvfbfwma,
+                                         FeatureStdExtZvfh,
+                                         FeatureStdExtZvkng,
+                                         FeatureStdExtZvknha,
+                                         FeatureStdExtZvksc,
+                                         FeatureStdExtZvksg,
+                                         FeatureStdExtZvl256b,
+                                         FeatureVendorXSMTVDot,
+                                         FeatureUnalignedScalarMem]),
+                                        [TuneDLenFactor2,
+                                         TuneOptimizedNF2SegmentLoadStore,
+                                         TuneOptimizedNF3SegmentLoadStore,
+                                         TuneOptimizedNF4SegmentLoadStore,
+                                         TuneVXRMPipelineFlush]> {
+  let MVendorID = 0x710;
+  let MArchID = 0x8000000058000002;
+  let MImpID = 0x33d8a600;
+}
+
 def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
                                          NoSchedModel,
                                          [Feature32Bit,
@@ -881,3 +915,20 @@ def ANDES_AX45MPV : RISCVProcessorModel<"andes-ax45mpv",
                                          FeatureStdExtV,
                                          FeatureVendorXAndesPerf],
                                         Andes45TuneFeatures>;
+
+def ESPERANTO_SOC1 : RISCVProcessorModel<"et-soc1",
+                                         NoSchedModel,
+                                         [Feature64Bit,
+                                          FeatureStdExtM,
+                                          FeatureStdExtF,
+                                          FeatureStdExtC,
+                                          FeatureVendorXAIFET]>;
+
+def AINEKKO_ERBIUM : RISCVProcessorModel<"an-erbium",
+                                         NoSchedModel,
+                                         [Feature64Bit,
+                                          FeatureStdExtM,
+                                          FeatureStdExtF,
+                                          FeatureStdExtC,
+                                          FeatureVendorXAIFET]>;
+// clang-format on

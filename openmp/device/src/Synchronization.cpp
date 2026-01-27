@@ -33,41 +33,7 @@ namespace impl {
 ///{
 #ifdef __AMDGPU__
 
-uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope) {
-  // builtin_amdgcn_atomic_inc32 should expand to this switch when
-  // passed a runtime value, but does not do so yet. Workaround here.
-
-#define ScopeSwitch(ORDER)                                                     \
-  switch (MemScope) {                                                          \
-  case atomic::MemScopeTy::system:                                             \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "");                     \
-  case atomic::MemScopeTy::device:                                             \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "agent");                \
-  case atomic::MemScopeTy::workgroup:                                          \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "workgroup");            \
-  case atomic::MemScopeTy::wavefront:                                          \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "wavefront");            \
-  case atomic::MemScopeTy::single:                                             \
-    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "singlethread");         \
-  }
-
-#define Case(ORDER)                                                            \
-  case ORDER:                                                                  \
-    ScopeSwitch(ORDER)
-
-  switch (Ordering) {
-    Case(atomic::relaxed);
-    Case(atomic::acquire);
-    Case(atomic::release);
-    Case(atomic::acq_rel);
-    Case(atomic::seq_cst);
-#undef Case
-#undef ScopeSwitch
-  }
-}
-
-[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
+[[clang::loader_uninitialized]] static Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -121,34 +87,15 @@ void namedBarrier() {
   fence::team(atomic::release);
 }
 
-void fenceTeam(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
-}
-
-void fenceKernel(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::device);
-}
-
-void fenceSystem(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::system);
-}
-
 void syncWarp(__kmpc_impl_lanemask_t) {
   // This is a no-op on current AMDGPU hardware but it is used by the optimizer
   // to enforce convergent behaviour between control flow graphs.
   __builtin_amdgcn_wave_barrier();
 }
 
-void syncThreads(atomic::OrderingTy Ordering) {
-  if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::release : atomic::seq_cst);
-
-  __builtin_amdgcn_s_barrier();
-
-  if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::acquire : atomic::seq_cst);
+void syncThreadsAligned(atomic::OrderingTy Ordering) {
+  synchronize::threads(Ordering);
 }
-void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 
 // TODO: Don't have wavefront lane locks. Possibly can't have them.
 void unsetLock(omp_lock_t *) { __builtin_trap(); }
@@ -161,18 +108,19 @@ constexpr uint32_t UNSET = 0;
 constexpr uint32_t SET = 1;
 
 void unsetCriticalLock(omp_lock_t *Lock) {
-  (void)atomicExchange((uint32_t *)Lock, UNSET, atomic::acq_rel);
+  [[maybe_unused]] uint32_t before =
+      atomicExchange((uint32_t *)Lock, UNSET, atomic::acq_rel);
 }
 
 void setCriticalLock(omp_lock_t *Lock) {
   uint64_t LowestActiveThread = utils::ffs(mapping::activemask()) - 1;
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
-    fenceKernel(atomic::release);
+    fence::kernel(atomic::release);
     while (
         !cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
-    fenceKernel(atomic::acquire);
+    fence::kernel(atomic::acquire);
   }
 }
 
@@ -183,11 +131,6 @@ void setCriticalLock(omp_lock_t *Lock) {
 ///
 ///{
 #ifdef __NVPTX__
-
-uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope) {
-  return __nvvm_atom_inc_gen_ui(Address, Val);
-}
 
 void namedBarrierInit() {}
 
@@ -201,34 +144,19 @@ void namedBarrier() {
   __nvvm_barrier_sync_cnt(BarrierNo, NumThreads);
 }
 
-void fenceTeam(atomic::OrderingTy) { __nvvm_membar_cta(); }
-
-void fenceKernel(atomic::OrderingTy) { __nvvm_membar_gl(); }
-
-void fenceSystem(atomic::OrderingTy) { __nvvm_membar_sys(); }
-
-void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
-
-void syncThreads(atomic::OrderingTy Ordering) {
-  constexpr int BarrierNo = 8;
-  __nvvm_barrier_sync(BarrierNo);
-}
-
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
 constexpr uint32_t UNSET = 0;
 constexpr uint32_t SET = 1;
 
-// TODO: This seems to hide a bug in the declare variant handling. If it is
-// called before it is defined
-//       here the overload won't happen. Investigate lalter!
 void unsetLock(omp_lock_t *Lock) {
-  (void)atomicExchange((uint32_t *)Lock, UNSET, atomic::seq_cst);
+  [[maybe_unused]] uint32_t before = atomicExchange(
+      reinterpret_cast<uint32_t *>(Lock), UNSET, atomic::seq_cst);
 }
 
 int testLock(omp_lock_t *Lock) {
-  return atomic::add((uint32_t *)Lock, 0u, atomic::seq_cst);
+  return atomic::add(reinterpret_cast<uint32_t *>(Lock), 0u, atomic::seq_cst);
 }
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -237,8 +165,8 @@ void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setLock(omp_lock_t *Lock) {
   // TODO: not sure spinning is a good idea here..
-  while (atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
-                     atomic::seq_cst) != UNSET) {
+  while (atomic::cas(reinterpret_cast<uint32_t *>(Lock), UNSET, SET,
+                     atomic::seq_cst, atomic::seq_cst) != UNSET) {
     int32_t start = __nvvm_read_ptx_sreg_clock();
     int32_t now;
     for (;;) {
@@ -265,25 +193,8 @@ void synchronize::init(bool IsSPMD) {
     impl::namedBarrierInit();
 }
 
-void synchronize::warp(LaneMaskTy Mask) { impl::syncWarp(Mask); }
-
-void synchronize::threads(atomic::OrderingTy Ordering) {
-  impl::syncThreads(Ordering);
-}
-
 void synchronize::threadsAligned(atomic::OrderingTy Ordering) {
   impl::syncThreadsAligned(Ordering);
-}
-
-void fence::team(atomic::OrderingTy Ordering) { impl::fenceTeam(Ordering); }
-
-void fence::kernel(atomic::OrderingTy Ordering) { impl::fenceKernel(Ordering); }
-
-void fence::system(atomic::OrderingTy Ordering) { impl::fenceSystem(Ordering); }
-
-uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
-                     atomic::MemScopeTy MemScope) {
-  return impl::atomicInc(Addr, V, Ordering, MemScope);
 }
 
 void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
@@ -372,6 +283,6 @@ void ompx_sync_block_acq_rel() {
   impl::syncThreadsAligned(atomic::OrderingTy::acq_rel);
 }
 void ompx_sync_block_divergent(int Ordering) {
-  impl::syncThreads(atomic::OrderingTy(Ordering));
+  synchronize::threads(atomic::OrderingTy(Ordering));
 }
 } // extern "C"
