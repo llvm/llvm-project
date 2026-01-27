@@ -936,10 +936,9 @@ void VPlan::execute(VPTransformState *State) {
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');
   setName("Final VPlan");
-  // TODO: -debug-only=loop-vectorize should probably just imply
-  // `-vplan-print-after-all`, but the latter is much more verbose than the
-  // former, so doing that would require updating existing tests and that hasn't
-  // been done (yet). For now, just do both:
+  // TODO: RUN_VPLAN_PASS/VPlanTransforms::runPass should automatically dump
+  // VPlans after some specific stages when "-debug" is specified, but that
+  // hasn't been implemented yet. For now, just do both:
   LLVM_DEBUG(dump());
   RUN_VPLAN_PASS(printFinalVPlan, *this);
 
