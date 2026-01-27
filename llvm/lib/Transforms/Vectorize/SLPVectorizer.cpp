@@ -7389,7 +7389,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   }
 
   SortedIndices.clear();
-  SortedIndices = SortedIndicesDraft;
+  SortedIndices = std::move(SortedIndicesDraft);
   SPtrInfo.StrideSCEV = Stride0;
   SPtrInfo.Ty = StridedLoadTy;
   return true;
