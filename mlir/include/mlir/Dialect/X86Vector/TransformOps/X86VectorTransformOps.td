@@ -79,9 +79,15 @@ def ApplyFlattenVectorTransferOpsPatternsOp : Op<Transform_Dialect,
     vector.transfer_write operations to a 1D operation.
   }];
 
-  let assemblyFormat = "attr-dict";
-}
+  let arguments = (ins
+  DefaultValuedAttr<UI32Attr,
+    "std::numeric_limits<unsigned>::max()">:$target_vector_bitwidth
+  );
 
+  let assemblyFormat = [{
+    (`target_vector_bitwidth` `=` $target_vector_bitwidth^)? attr-dict
+  }];
+}
 
 #endif // X86VECTOR_TRANSFORM_OPS
 

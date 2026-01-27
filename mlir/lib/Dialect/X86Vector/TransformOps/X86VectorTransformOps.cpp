@@ -51,7 +51,8 @@ void mlir::transform::ApplyShuffleVectorFMAOpsPatternsOp::populatePatterns(
 
 void mlir::transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateFlattenVectorTransferPatterns(patterns);
+  vector::populateFlattenVectorTransferPatterns(patterns,
+                                                getTargetVectorBitwidth());
 }
 
 //===----------------------------------------------------------------------===//
