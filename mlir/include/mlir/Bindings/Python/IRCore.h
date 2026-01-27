@@ -688,8 +688,7 @@ public:
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
   create(std::string_view name, std::optional<std::vector<PyType *>> results,
-         const MlirValue *operands,
-         size_t numOperands,
+         const MlirValue *operands, size_t numOperands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
          PyLocation &location, const nanobind::object &ip, bool inferType);

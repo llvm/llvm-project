@@ -25,7 +25,6 @@ namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
 
-
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
 
@@ -1099,9 +1098,10 @@ void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
       operation, config, accum.getCallback(), accum.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
-    throw nb::value_error((std::string("Unable to honor desired bytecode version ") +
-                           std::to_string(*bytecodeVersion))
-                              .c_str());
+    throw nb::value_error(
+        (std::string("Unable to honor desired bytecode version ") +
+         std::to_string(*bytecodeVersion))
+            .c_str());
 }
 
 void PyOperationBase::walk(std::function<PyWalkResult(MlirOperation)> callback,
@@ -1248,8 +1248,7 @@ static void maybeInsertOperation(PyOperationRef &op,
 
 nb::object PyOperation::create(std::string_view name,
                                std::optional<std::vector<PyType *>> results,
-                               const MlirValue *operands,
-                               size_t numOperands,
+                               const MlirValue *operands, size_t numOperands,
                                std::optional<nb::dict> attributes,
                                std::optional<std::vector<PyBlock *>> successors,
                                int regions, PyLocation &location,
@@ -1477,7 +1476,8 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
       } catch (nb::cast_error &err) {
         throw nb::value_error((std::string("Result ") +
                                std::to_string(it.index()) + " of operation \"" +
-                               std::string(name) + "\" must be a Type (" + err.what() + ")")
+                               std::string(name) + "\" must be a Type (" +
+                               err.what() + ")")
                                   .c_str());
       }
     }
@@ -1515,9 +1515,9 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
           }
         } catch (nb::cast_error &err) {
           throw nb::value_error((std::string("Result ") +
-                                 std::to_string(it.index()) + " of operation \"" +
-                                 std::string(name) + "\" must be a Type (" + err.what() +
-                                 ")")
+                                 std::to_string(it.index()) +
+                                 " of operation \"" + std::string(name) +
+                                 "\" must be a Type (" + err.what() + ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
@@ -1541,12 +1541,12 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error((std::string("Result ") +
-                                 std::to_string(it.index()) + " of operation \"" +
-                                 name + "\" must be a Sequence of Types (" +
-                                 err.what() + ")")
-                                    .str()
-                                    .c_str());
+          throw nb::value_error(
+              (std::string("Result ") + std::to_string(it.index()) +
+               " of operation \"" + name + "\" must be a Sequence of Types (" +
+               err.what() + ")")
+                  .str()
+                  .c_str());
         }
       } else {
         throw nb::value_error("Unexpected segment spec");
@@ -1616,15 +1616,15 @@ nb::object PyOpView::buildGeneric(
   }
   if (*regions < opMinRegionCount) {
     throw nb::value_error(
-        (std::string("Operation \"") + std::string(name) + "\" requires a minimum of " +
-         std::to_string(opMinRegionCount) +
+        (std::string("Operation \"") + std::string(name) +
+         "\" requires a minimum of " + std::to_string(opMinRegionCount) +
          " regions but was built with regions=" + std::to_string(*regions))
             .c_str());
   }
   if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
     throw nb::value_error(
-        (std::string("Operation \"") + std::string(name) + "\" requires a maximum of " +
-         std::to_string(opMinRegionCount) +
+        (std::string("Operation \"") + std::string(name) +
+         "\" requires a maximum of " + std::to_string(opMinRegionCount) +
          " regions but was built with regions=" + std::to_string(*regions))
             .c_str());
   }
@@ -1647,7 +1647,8 @@ nb::object PyOpView::buildGeneric(
       } catch (nb::builtin_exception &err) {
         throw nb::value_error((std::string("Operand ") +
                                std::to_string(it.index()) + " of operation \"" +
-                               std::string(name) + "\" must be a Value (" + err.what() + ")")
+                               std::string(name) + "\" must be a Value (" +
+                               err.what() + ")")
                                   .c_str());
       }
     }
@@ -1676,8 +1677,7 @@ nb::object PyOpView::buildGeneric(
           } catch (nb::builtin_exception &err) {
             throw nb::value_error((std::string("Operand ") +
                                    std::to_string(it.index()) +
-                                   " of operation \"" 
-                                   + std::string(name) +
+                                   " of operation \"" + std::string(name) +
                                    "\" must be a Value (" + err.what() + ")")
                                       .c_str());
           }
@@ -1711,11 +1711,11 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error((std::string("Operand ") +
-                                 std::to_string(it.index()) + " of operation \"" +
-                                 std::string(name) + "\" must be a Sequence of Values (" +
-                                 err.what() + ")")
-                                    .c_str());
+          throw nb::value_error(
+              (std::string("Operand ") + std::to_string(it.index()) +
+               " of operation \"" + std::string(name) +
+               "\" must be a Sequence of Values (" + err.what() + ")")
+                  .c_str());
         }
       } else {
         throw nb::value_error("Unexpected segment spec");
@@ -3759,9 +3759,9 @@ void populateIRCore(nb::module_ &m) {
             }
 
             PyLocation pyLoc = maybeGetTracebackLocation(location);
-            return PyOperation::create(name, results, mlirOperands.data(), mlirOperands.size(), attributes,
-                                       successors, regions, pyLoc, maybeIp,
-                                       inferType);
+            return PyOperation::create(
+                name, results, mlirOperands.data(), mlirOperands.size(),
+                attributes, successors, regions, pyLoc, maybeIp, inferType);
           },
           "name"_a, "results"_a = nb::none(), "operands"_a = nb::none(),
           "attributes"_a = nb::none(), "successors"_a = nb::none(),
@@ -3929,8 +3929,8 @@ void populateIRCore(nb::module_ &m) {
             mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
         std::string_view parsedOpName(identifier.data, identifier.length);
         if (clsOpName != parsedOpName)
-          throw MLIRError(std::string("Expected a '") + std::string(clsOpName) + "' op, got: '" +
-                          std::string(parsedOpName) + "'");
+          throw MLIRError(std::string("Expected a '") + std::string(clsOpName) +
+                          "' op, got: '" + std::string(parsedOpName) + "'");
         return PyOpView::constructDerived(cls, parsed.getObject());
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
