@@ -25,9 +25,9 @@
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-#include "src/__support/math/range_reduction_double_fma.h"
+#include "range_reduction_double_fma.h"
 #else
-#include "src/__support/math/range_reduction_double_nofma.h"
+#include "range_reduction_double_nofma.h"
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
