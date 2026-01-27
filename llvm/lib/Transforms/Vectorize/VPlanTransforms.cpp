@@ -4171,20 +4171,19 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   VPValue *A, *B;
   VPValue *Tmp = nullptr;
 
-  // Try to match reduce.fadd(fmul(...)).
-  if (match(VecOp, m_FMul(m_VPValue(A), m_VPValue(B)))) {
+  // Try to match reduce.fadd(fmul(fpext(...), fpext(...))).
+  if (match(VecOp, m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue())))) {
     assert(Opcode == Instruction::FAdd &&
            "MulAccumulateReduction from an FMul must accumulate into an FAdd "
            "instruction");
-    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(A);
-    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(B);
-    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
+    if (auto *FMul = dyn_cast<VPWidenRecipe>(VecOp)) {
+      auto *RecipeA = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(0));
+      auto *RecipeB = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(1));
 
-    // Match reduce.fadd(fmul(ext, ext)).
-    if (FMul && RecipeA && RecipeB && match(RecipeA, m_FPExt(m_VPValue())) &&
-        match(RecipeB, m_FPExt(m_VPValue())) &&
-        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
-      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
+      if (RecipeA && RecipeB &&
+          IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
+        return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
+      }
     }
   }
   if (RedTy->isFloatingPointTy())

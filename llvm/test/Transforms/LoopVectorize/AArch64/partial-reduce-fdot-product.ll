@@ -272,11 +272,10 @@ for.exit:                        ; preds = %for.body
   ret float %add
 }
 
-define fp128 @not_fdot_f64_f128(ptr %a, ptr %b) #0 {
+define fp128 @not_fdot_f64_f128(ptr %a, ptr %b, fp128 %zero) #0 {
 ; CHECK-LABEL: define fp128 @not_fdot_f64_f128(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], fp128 [[ZERO:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ZERO:%.*]] = fpext double 0.000000e+00 to fp128
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), fp128 [[ZERO]], i32 0
@@ -302,7 +301,6 @@ define fp128 @not_fdot_f64_f128(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    ret fp128 [[TMP14]]
 ;
 entry:
-  %zero = fpext double 0.0 to fp128
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
@@ -422,11 +420,10 @@ for.exit:                        ; preds = %for.body
   ret double %add
 }
 
-define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b) {
+define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b, fp128 %zero) {
 ; CHECK-LABEL: define fp128 @not_fdot_f64_f128_nosve(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], fp128 [[ZERO:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ZERO:%.*]] = fpext double 0.000000e+00 to fp128
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), fp128 [[ZERO]], i32 0
@@ -452,7 +449,6 @@ define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ret fp128 [[TMP14]]
 ;
 entry:
-  %zero = fpext double 0.0 to fp128
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
@@ -646,9 +642,7 @@ for.exit:                        ; preds = %for.body
 define float @not_fdot_ext_outside_plan(ptr %a, half %b, i64 %n) #0 {
 ; CHECK-LABEL: define float @not_fdot_ext_outside_plan(
 ; CHECK-SAME: ptr [[A:%.*]], half [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_PH:.*]]
-; CHECK:       [[FOR_PH]]:
+; CHECK-NEXT:  [[FOR_PH:.*:]]
 ; CHECK-NEXT:    [[EXT_B:%.*]] = fpext half [[B]] to float
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
@@ -680,15 +674,12 @@ define float @not_fdot_ext_outside_plan(ptr %a, half %b, i64 %n) #0 {
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
-  br label %for.ph
-
-for.ph:                                   ; preds = %entry
   %ext.b = fpext half %b to float
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %iv = phi i64 [ 0, %for.ph ], [ %iv.next, %for.body ]
-  %accum = phi float [ 0.0, %for.ph ], [ %add, %for.body ]
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds half, ptr %a, i64 %iv
   %load.a = load half, ptr %gep.a, align 2
   %ext.a = fpext half %load.a to float
@@ -698,7 +689,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:                                 ; preds = %for.body
   %result = phi float [ %add, %for.body ]
   ret float %result
 }
