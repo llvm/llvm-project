@@ -205,11 +205,10 @@ struct PackOpInterface
                           const BufferizationOptions &options,
                           BufferizationState &state) const {
     auto packOp = cast<linalg::PackOp>(op);
-    if (packOp.hasPureBufferSemantics())
-      return success();
+    assert(!packOp.hasPureBufferSemantics() && "expected op with tensors");
     if (!packOp.hasPureTensorSemantics())
-      return packOp.emitError() << "op does not have pure tensor semantics";
-
+      return packOp.emitError()
+             << "mixed tensor/buffer semantic op not supported yet";
     FailureOr<Value> sourceBuffer =
         getBuffer(rewriter, packOp.getSource(), options, state);
     if (failed(sourceBuffer))
