@@ -30,7 +30,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -256,7 +255,7 @@ private:
   // extension mechanism on the MlirContext for stashing user pointers.
   // Note that this holds a handle, which does not imply ownership.
   // Mappings will be removed when the context is destructed.
-  using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
+  using LiveContextMap = std::unordered_map<void *, PyMlirContext *>;
   static nanobind::ft_mutex live_contexts_mutex;
   static LiveContextMap &getLiveContexts();
 
@@ -265,7 +264,7 @@ private:
   // from this map, and while it still exists as an instance, any
   // attempt to access it will raise an error.
   using LiveModuleMap =
-      llvm::DenseMap<const void *, std::pair<nanobind::handle, PyModule *>>;
+      std::unordered_map<const void *, std::pair<nanobind::handle, PyModule *>>;
   LiveModuleMap liveModules;
 
   bool emitErrorDiagnostics = false;
