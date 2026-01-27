@@ -450,6 +450,7 @@ add_entrypoint_object(
     ../sincosf.h
   DEPENDS
     libc.src.__support.math.sincosf
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
