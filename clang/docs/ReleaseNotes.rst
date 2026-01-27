@@ -134,6 +134,11 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Added new attribute ``stack_protector_ignore`` to opt specific local variables out of
+  the analysis which determines if a function should get a stack protector.  A function
+  will still generate a stack protector if other local variables or command line flags
+  require it.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
@@ -164,6 +169,24 @@ Improvements to Clang's diagnostics
     int* p(int *in) { return in; }
                              ^~
 
+- Added ``-Wlifetime-safety-noescape`` to detect misuse of ``[[clang::noescape]]``
+  annotation where the parameter escapes through return. For example:
+
+  .. code-block:: c++
+
+    int* p(int *in [[clang::noescape]]) { return in; }
+
+  Clang will warn:
+
+  .. code-block:: c++
+
+    warning: parameter is marked [[clang::noescape]] but escapes
+    int* p(int *in [[clang::noescape]]) { return in; }
+           ^~~~~~~
+    note: returned here
+    int* p(int *in [[clang::noescape]]) { return in; }
+                                                 ^~
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -172,6 +195,7 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+- Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
 
@@ -306,6 +330,13 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Add deprecation warnings to ``CompletionChunk.isKind...`` methods.
+  These will be removed in a future release. Existing uses should be adapted
+  to directly compare equality of the ``CompletionChunk`` kind with
+  the corresponding ``CompletionChunkKind`` variant.
+
+  Affected methods: ``isKindOptional``, ``isKindTypedText``, ``isKindPlaceHolder``,
+  ``isKindInformative`` and ``isKindResultType``.
 
 OpenMP Support
 --------------

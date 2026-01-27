@@ -2097,6 +2097,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = Known2.unionWith(Known3);
         break;
       }
+      case Intrinsic::clmul:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::clmul(Known, Known2);
+        break;
       case Intrinsic::uadd_sat:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
@@ -6227,6 +6232,54 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
   default:
     return false;
   }
+}
+
+bool llvm::isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
+                           FastMathFlags FMF) {
+  if (isa<PoisonValue>(V))
+    return true;
+  if (isa<UndefValue>(V))
+    return false;
+
+  if (match(V, m_CheckedFp([](const APFloat &Val) { return Val.isInteger(); })))
+    return true;
+
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
+  switch (I->getOpcode()) {
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+    // TODO: Could check nofpclass(inf) on incoming argument
+    if (FMF.noInfs())
+      return true;
+
+    // Need to check int size cannot produce infinity, which computeKnownFPClass
+    // knows how to do already.
+    return isKnownNeverInfinity(I, SQ);
+  case Instruction::Call: {
+    const CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::trunc:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven:
+      return (FMF.noInfs() && FMF.noNaNs()) || isKnownNeverInfOrNaN(I, SQ);
+    default:
+      break;
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
