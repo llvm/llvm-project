@@ -6812,7 +6812,7 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
 
     UsedInputs.push_back(Inputs[i]);
   }
-  Inputs = UsedInputs;
+  Inputs = std::move(UsedInputs);
 }
 
 /// Calls getTargetShuffleAndZeroables to resolve a target shuffle mask's inputs
