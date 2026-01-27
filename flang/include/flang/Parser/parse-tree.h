@@ -1943,21 +1943,6 @@ struct AllocateShapeSpecArrayList {
 };
 struct Allocation {
   TUPLE_CLASS_BOILERPLATE(Allocation);
-    // What was previously there but I formatted it.
-    // std::tuple<
-    //   AllocateObject, 
-    //   std::list<AllocateShapeSpec>,
-    //   std::optional<AllocateCoarraySpec>
-    // >
-  // I think this is what I want but can't have nested tuples.
-  // Use a wrapper on innermost tuple.
-  // std::tuple<
-  //   AllocateObject, 
-  //   std::variant<
-  //     std::list<AllocateShapeSpec>, 
-  //     std::tuple<std::optional<BoundsExpr>, BoundsExpr>,
-  //   std::optional<AllocateCoarraySpec>>
-  //     t;
   std::tuple<
     AllocateObject, 
     AllocateShapeSpecArrayList,

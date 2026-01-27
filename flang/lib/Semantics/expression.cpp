@@ -4364,148 +4364,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
   return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
-static bool isRank1Array(const parser::Expr& expr) {
-  if(std::get_if<parser::ArrayConstructor>(&expr.u)) {
-    return true;
-  }
-  else if(const auto *designator{
-          std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {    
-    if (const auto *dataRef{std::get_if<parser::DataRef>(&designator->value().u)}) {
-      if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
-        if (const Symbol *symbol{name->symbol}) {
-          int varRank{symbol->Rank()};
-          if (varRank == 1) { 
-            return true;
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
-// returns 0, 1, or 2
-static int countRank1Arrays(const parser::Allocation &x) {
-  int result = 0;
-  auto &shapeSpecList{
-      std::get<std::list<parser::AllocateShapeSpec>>(
-          (std::get<parser::AllocateShapeSpecArrayList>(x.t)).u)};
-  const auto &shapeSpec{shapeSpecList.front()};
-
-  const auto &upperExpr = parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t));
-  if(isRank1Array(upperExpr)) {
-    result++;
-  } 
-  const auto &lowerBoundOpt = std::get<0>(shapeSpec.t);
-  if(lowerBoundOpt) {
-    const auto &upperExpr = parser::UnwrapRef<parser::Expr>(*lowerBoundOpt);
-    if(isRank1Array(upperExpr)) {
-      result++;
-    }
-  }
-  return result;
-}
-
-static void scalarToBoundExprs(std::vector<parser::BoundExpr>& exprsList, const parser::Expr& scalarInt, int count) {
-  if(const auto *literalConst{
-     std::get_if<parser::LiteralConstant>(&scalarInt.u) }) {
-    if(const auto *intConst{
-       std::get_if<parser::IntLiteralConstant>(&literalConst->u)}) {
-      for(size_t i = 0; i < count; i++) {
-        parser::BoundExpr boundExpr{parser::Integer(
-            common::Indirection<parser::Expr>{
-                parser::Expr{std::move(const_cast<parser::LiteralConstant&>(*literalConst))}
-            })};
-        exprsList.push_back(std::move(boundExpr));
-      }
-    }
-  }
-}
-
-// handles both ArrayConstructor and Designator
-static void rank1IntArrayToBoundExprs(evaluate::FoldingContext& foldingContext_, std::vector<parser::BoundExpr>& exprsList, const parser::Expr& designatorOrArrayCtrExpr) {
-  if (const auto *arrayConstructor{
-      std::get_if<parser::ArrayConstructor>(&designatorOrArrayCtrExpr.u)}) {
-    const auto &acSpec{arrayConstructor->v}; // AcSpec
-    const auto &acValues{std::get<1>(acSpec.t)}; // Get the list of values
-    for (const auto &acValue : acValues) {
-      if (const auto *indirExpr = 
-          std::get_if<common::Indirection<parser::Expr>>(&acValue.u)) {
-        parser::BoundExpr newBoundExpr{parser::Integer(
-          std::move(const_cast<common::Indirection<parser::Expr>&>(*indirExpr)))};
-        exprsList.push_back(std::move(newBoundExpr));
-      }
-    }
-  }
-  else if(const auto *designator{
-      std::get_if<common::Indirection<parser::Designator>>(&designatorOrArrayCtrExpr.u)}) {    
-    // Handle Designator case: allocate(array(dims)) where dims is a variable
-    if (const auto *dataRef{std::get_if<parser::DataRef>(&designator->value().u)}) {
-      if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
-        // It's a simple name reference like 'dims'
-        if (const Symbol *symbol{name->symbol}) {
-          int varRank{symbol->Rank()};
-          // Only expand if it's a 1D array (dims is rank-1)
-          if (varRank == 1) {
-            // Get the size of the dims array from its type
-            if (const auto shape{GetShape(foldingContext_, *symbol)}) {
-              if (auto dimSize{ToInt64(shape->at(0))}) {
-                for (std::int64_t i = 0; i < *dimSize; ++i) {
-                  // Get lower bound of dims array (dimension 0)
-                  auto lowerBound{GetLBOUND(foldingContext_, NamedEntity{*symbol}, 0)};
-                  auto lb{ToInt64(lowerBound)};
-                  std::int64_t subscriptIndex = (lb ? *lb : 1) + i;
-                  
-                  static const char* subscriptStrings[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
-                  const char* subscriptStr = (subscriptIndex <= 9) ? subscriptStrings[subscriptIndex-1] : "?";
-                  
-                  // Create the integer subscript expression: dims(i)
-                  auto literalInt = parser::IntLiteralConstant{
-                      parser::CharBlock{subscriptStr, 1},
-                      std::optional<parser::KindParam>{}
-                  };
-                  
-                  auto subscriptExpr = common::Indirection<parser::Expr>{
-                      parser::Expr{
-                          parser::LiteralConstant{std::move(literalInt)}
-                      }
-                  };
-                  
-                  // Create subscript list: [dims(i)]
-                  std::list<parser::SectionSubscript> subscripts;
-                  subscripts.emplace_back(parser::IntExpr{std::move(subscriptExpr)});
-                  
-                  // Create PartRef with the name and subscripts - move the Name
-                  std::list<parser::PartRef> partRefs;
-                  partRefs.emplace_back(
-                      std::move(const_cast<parser::Name&>(*name)),
-                      std::move(subscripts),
-                      std::optional<parser::ImageSelector>{}
-                  );
-                  
-                  // Create DataRef from the PartRef
-                  parser::DataRef dataRef{std::move(partRefs)};
-                  
-                  // Create the full designator: dims(i)
-                  auto dimDesignator = parser::Designator{std::move(dataRef)};
-                  auto dimExpr = common::Indirection<parser::Expr>{
-                      parser::Expr{std::move(dimDesignator)}
-                  };
-                  
-                  // Create BoundExpr wrapping the subscripted reference
-                  parser::BoundExpr newBoundExpr{parser::Integer{std::move(dimExpr)}};
-                  exprsList.push_back(std::move(newBoundExpr));
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return;
-}
-
 // Everything comes in as an 
 // AllocateShapeSpecArrayList -> AllocateShapeSpecList at the root of the relevant tree,
 // with the assumption that it's a misparse if there is a rank-1 array in at least one of the 
@@ -4542,9 +4400,8 @@ static void rank1IntArrayToBoundExprs(evaluate::FoldingContext& foldingContext_,
 // | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
 // | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
 // We can decide that a misparsed AllocateShapeSpecList is supposed to be 
-// Aan AllocateShapeSpecArray if the list is 1 entry long AND either of the expressions
+// an AllocateShapeSpecArray if the list is 1 entry long AND either of the expressions
 // is a rank-1 array. 
-// ...existing code...
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &x) {
   auto &shapeSpecList{
     std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
