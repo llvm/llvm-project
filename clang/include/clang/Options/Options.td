@@ -2726,8 +2726,10 @@ defm sanitize_handler_preserve_all_regs
       Group<f_clang_Group>;
 defm sanitize_trap_loop : BoolOption<"f", "sanitize-trap-loop",
   CodeGenOpts<"SanitizeTrapLoop">, DefaultFalse,
-  PosFlag<SetTrue>,
-  NegFlag<SetFalse>>,
+  PosFlag<SetTrue, [], [],
+          "Use infinite loops in trapping mode">,
+  NegFlag<SetFalse, [], [],
+          "Do not use infinite loops in trapping mode">>,
   Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
