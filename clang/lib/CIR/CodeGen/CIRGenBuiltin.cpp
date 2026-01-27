@@ -1082,7 +1082,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_readsteadycounter:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin___clear_cache: {
-    mlir::Type voidTy = cir::VoidType::get(&getMLIRContext());
     mlir::Value begin =
         builder.createPtrBitcast(emitScalarExpr(e->getArg(0)), cgm.voidTy);
     mlir::Value end =
