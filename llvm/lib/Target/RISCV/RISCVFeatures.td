@@ -1871,6 +1871,10 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+def FeatureEnableSelectOptimize
+    : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
+                       "Enable the select optimize pass for select loop heuristics">;
+
 foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
       SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
