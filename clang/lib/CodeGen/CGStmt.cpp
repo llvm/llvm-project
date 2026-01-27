@@ -2476,7 +2476,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   EmitBranch(SwitchExit.getBlock());
 
   // Insert a False Counter if SwitchStmt doesn't have DefaultStmt.
-  if (getIsCounterPair(S.getCond()).second) {
+  if (hasSkipCounter(S.getCond())) {
     auto *ImplicitDefaultBlock = createBasicBlock("sw.false");
     EmitBlock(ImplicitDefaultBlock);
     incrementProfileCounter(UseSkipPath, S.getCond());
