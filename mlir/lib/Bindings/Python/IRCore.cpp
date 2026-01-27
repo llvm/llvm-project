@@ -2422,8 +2422,7 @@ bool PyOpAttributeMap::dunderContains(const std::string &name) {
 }
 
 void PyOpAttributeMap::forEachAttr(
-    MlirOperation op,
-    llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
+    MlirOperation op, std::function<void(MlirStringRef, MlirAttribute)> fn) {
   intptr_t n = mlirOperationGetNumAttributes(op);
   for (intptr_t i = 0; i < n; ++i) {
     MlirNamedAttribute na = mlirOperationGetAttribute(op, i);

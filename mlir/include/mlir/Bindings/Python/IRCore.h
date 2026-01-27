@@ -1820,9 +1820,8 @@ public:
 
   bool dunderContains(const std::string &name);
 
-  static void
-  forEachAttr(MlirOperation op,
-              llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn);
+  static void forEachAttr(MlirOperation op,
+                          std::function<void(MlirStringRef, MlirAttribute)> fn);
 
   static void bind(nanobind::module_ &m);
 
