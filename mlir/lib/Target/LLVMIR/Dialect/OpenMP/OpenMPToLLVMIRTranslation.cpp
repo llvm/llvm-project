@@ -380,6 +380,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
   };
+  auto checkNumThreads = [&todo](auto op, LogicalResult &result) {
+    if (op.hasNumThreadsMultiDim())
+      result = todo("num_threads with multi-dimensional values");
+  };
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
@@ -431,6 +435,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::ParallelOp op) {
         checkAllocate(op, result);
         checkReduction(op, result);
+        checkNumThreads(op, result);
       })
       .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -3268,8 +3273,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   if (auto ifVar = opInst.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   llvm::Value *numThreads = nullptr;
-  if (auto numThreadsVar = opInst.getNumThreads())
-    numThreads = moduleTranslation.lookupValue(numThreadsVar);
+  if (!opInst.getNumThreadsVars().empty())
+    numThreads = moduleTranslation.lookupValue(opInst.getNumThreads(0));
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
   if (auto bind = opInst.getProcBindKind())
     pbKind = getProcBindKind(*bind);
@@ -6051,7 +6056,8 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               llvm_unreachable("unsupported host_eval use");
           })
           .Case([&](omp::ParallelOp parallelOp) {
-            if (parallelOp.getNumThreads() == blockArg)
+            if (!parallelOp.getNumThreadsVars().empty() &&
+                parallelOp.getNumThreads(0) == blockArg)
               numThreads = hostEvalVar;
             else
               llvm_unreachable("unsupported host_eval use");
@@ -6170,8 +6176,10 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
       threadLimit = teamsOp.getThreadLimit();
     }
 
-    if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp))
-      numThreads = parallelOp.getNumThreads();
+    if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
+      if (!parallelOp.getNumThreadsVars().empty())
+        numThreads = parallelOp.getNumThreads(0);
+    }
   }
 
   // Handle clauses impacting the number of teams.

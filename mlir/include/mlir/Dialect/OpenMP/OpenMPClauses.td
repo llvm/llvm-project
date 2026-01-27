@@ -1107,16 +1107,47 @@ class OpenMP_NumThreadsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Optional<IntLikeType>:$num_threads
+    Variadic<IntLikeType>:$num_threads_vars
   );
 
   let optAssemblyFormat = [{
-    `num_threads` `(` $num_threads `:` type($num_threads) `)`
+    `num_threads` `(` $num_threads_vars `:` type($num_threads_vars) `)`
   }];
 
   let description = [{
-    The optional `num_threads` parameter specifies the number of threads which
-    should be used to execute the parallel region.
+    The `num_threads` clause specifies the number of threads.
+
+    Multi-dimensional format (dims modifier):
+    - Multiple values can be specified for multi-dimensional thread counts.
+    - The number of dimensions is derived from the number of values.
+    - Values can have different integer types.
+    - Format: `num_threads(%v1, %v2, ... : type1, type2, ...)`
+    - Example: `num_threads(%n, %m : i32, i64)`
+
+    Single value format:
+    - A single value specifies the number of threads.
+    - Format: `num_threads(%value : type)`
+    - Example: `num_threads(%n : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if using multi-dimensional values (more than one value)
+    bool hasNumThreadsMultiDim() {
+      return getNumThreadsVars().size() > 1;
+    }
+
+    /// Returns the number of dimensions specified for num_threads
+    unsigned getNumThreadsDimsCount() {
+      return getNumThreadsVars().size();
+    }
+
+    /// Returns the value for a specific dimension index
+    /// Index must be less than getNumThreadsVars().size()
+    ::mlir::Value getNumThreads(unsigned dim = 0) {
+      assert(dim < getNumThreadsDimsCount() &&
+             "Num threads index out of bounds");
+      return getNumThreadsVars()[dim];
+    }
   }];
 }
 
