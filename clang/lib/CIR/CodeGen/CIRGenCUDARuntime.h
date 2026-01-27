@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides an abstract class for CUDA CIR generation. Concrete
-// subclasses of this implement code generation for specific OpenCL
+// This provides an abstract class for CUDA code generation.  Concrete
+// subclasses of this implement code generation for specific CUDA
 // runtime libraries.
 //
 //===----------------------------------------------------------------------===//
