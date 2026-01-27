@@ -3791,8 +3791,15 @@ defm LDNPQ : LoadPairNoAlloc<0b10, 1, FPR128Op, simm7s16, "ldnp">;
 def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (LDPXi GPR64sp:$Rn, simm7s8:$offset)>;
 
-def : Pat<(AArch64ldnp (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
-          (LDNPQi GPR64sp:$Rn, simm7s16:$offset)>;
+// Currently we only support NT loads lowering for little-endian targets.
+//
+// Coordinated with LDNP constraints in `AArch64TargetLowering::ReplaceNodeResults`
+// and `AArch64TTIImpl::isLegalNTLoad`.
+let Predicates = [IsLE] in {
+  def : Pat<(AArch64ldnp(am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+            (LDNPQi GPR64sp:$Rn, simm7s16:$offset)>;
+}
+
 //---
 // (register offset)
 //---
@@ -10743,6 +10750,11 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 // Patterns for nontemporal/no-allocate stores.
 // We have to resort to tricks to turn a single-input store into a store pair,
 // because there is no single-input nontemporal store, only STNP.
+//
+// Currently we only support NT stores lowering for little-endian targets.
+//
+// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
+// and `AArch64TTIImpl::isLegalNTStore`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.
