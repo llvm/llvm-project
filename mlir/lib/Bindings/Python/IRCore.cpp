@@ -50,7 +50,7 @@ operations.
 
 /// Local helper to concatenate string and integer arguments into a std::string.
 template <typename... Ts>
-std::string join(const Ts&... args) {
+std::string join(const Ts &...args) {
   std::ostringstream oss;
   (oss << ... << args);
   return oss.str();
@@ -104,9 +104,9 @@ MlirBlock createBlock(const nb::sequence &pyArgTypes,
   }
 
   if (argTypes.size() != argLocs.size())
-    throw nb::value_error(join("Expected ", argTypes.size(), 
-                           " locations, got: ", argLocs.size())
-                              .c_str());
+    throw nb::value_error(
+        join("Expected ", argTypes.size(), " locations, got: ", argLocs.size())
+            .c_str());
   return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
 }
 
@@ -1108,9 +1108,8 @@ void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
       operation, config, accum.getCallback(), accum.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
-    throw nb::value_error(join
-        ("Unable to honor desired bytecode version ", 
-         *bytecodeVersion)
+    throw nb::value_error(
+        join("Unable to honor desired bytecode version ", *bytecodeVersion)
             .c_str());
 }
 
@@ -1290,7 +1289,8 @@ nb::object PyOperation::create(std::string_view name,
         key = nb::cast<std::string>(it.first);
       } catch (nb::cast_error &err) {
         std::string msg = join("Invalid attribute key (not a string) when "
-                          "attempting to create the operation \"", name, "\" (", err.what(), ")");
+                               "attempting to create the operation \"",
+                               name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
       }
       try {
@@ -1298,14 +1298,15 @@ nb::object PyOperation::create(std::string_view name,
         // TODO: Verify attribute originates from the same context.
         mlirAttributes.emplace_back(std::move(key), attribute);
       } catch (nb::cast_error &err) {
-        std::string msg = join("Invalid attribute value for the key \"", key, 
-                          "\" when attempting to create the operation \"", name, "\" (", err.what(), ")");
+        std::string msg = join("Invalid attribute value for the key \"", key,
+                               "\" when attempting to create the operation \"",
+                               name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
       } catch (std::runtime_error &) {
         // This exception seems thrown when the value is "None".
-        std::string msg =join(
-            "Found an invalid (`None`?) attribute value for the key \"", key, 
-            "\" when attempting to create the operation \"",name, "\"");
+        std::string msg = join(
+            "Found an invalid (`None`?) attribute value for the key \"", key,
+            "\" when attempting to create the operation \"", name, "\"");
         throw std::runtime_error(msg);
       }
     }
@@ -1481,9 +1482,8 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
         if (!resultTypes.back())
           throw nb::cast_error();
       } catch (nb::cast_error &err) {
-        throw nb::value_error(join("Result ", it.index(), " of operation \"", 
-                               name, "\" must be a Type (", 
-                               err.what(), ")")
+        throw nb::value_error(join("Result ", it.index(), " of operation \"",
+                                   name, "\" must be a Type (", err.what(), ")")
                                   .c_str());
       }
     }
@@ -1491,11 +1491,10 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
     if (resultSegmentSpec.size() != resultTypeList.size()) {
-      throw nb::value_error(join("Operation \"", name, 
-                             "\" requires ", resultSegmentSpec.size(), 
-                             " result segments but was provided ", 
-                             resultTypeList.size())
-                                .c_str());
+      throw nb::value_error(
+          join("Operation \"", name, "\" requires ", resultSegmentSpec.size(),
+               " result segments but was provided ", resultTypeList.size())
+              .c_str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
     for (const auto &it :
@@ -1512,16 +1511,15 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
             // Allowed to be optional.
             resultSegmentLengths.push_back(0);
           } else {
-            throw nb::value_error(join
-                ("Result ", it.index(), 
-                 " of operation \"", name, 
-                 "\" must be a Type (was None and result is not optional)")
+            throw nb::value_error(
+                join("Result ", it.index(), " of operation \"", name,
+                     "\" must be a Type (was None and result is not optional)")
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error(join("Result ", it.index(), 
-                                 " of operation \"" , name, 
-                                 "\" must be a Type (", err.what(), ")")
+          throw nb::value_error(join("Result ", it.index(), " of operation \"",
+                                     name, "\" must be a Type (", err.what(),
+                                     ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
@@ -1545,11 +1543,10 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join
-              ("Result ", it.index(), 
-               " of operation \"", name, "\" must be a Sequence of Types (", 
-               err.what(), ")")
-                  .c_str());
+          throw nb::value_error(join("Result ", it.index(), " of operation \"",
+                                     name, "\" must be a Sequence of Types (",
+                                     err.what(), ")")
+                                    .c_str());
         }
       } else {
         throw nb::value_error("Unexpected segment spec");
@@ -1562,11 +1559,13 @@ MlirValue getUniqueResult(MlirOperation operation) {
   auto numResults = mlirOperationGetNumResults(operation);
   if (numResults != 1) {
     auto name = mlirIdentifierStr(mlirOperationGetName(operation));
-    throw nb::value_error(join("Cannot call .result on operation ", 
-                           std::string_view(name.data, name.length), " which has ", numResults, 
-                           " results (it is only valid for operations with a "
-                           "single result)")
-                              .c_str());
+    throw nb::value_error(
+        join("Cannot call .result on operation ",
+             std::string_view(name.data, name.length), " which has ",
+             numResults,
+             " results (it is only valid for operations with a "
+             "single result)")
+            .c_str());
   }
   return mlirOperationGetResult(operation, 0);
 }
@@ -1616,18 +1615,16 @@ nb::object PyOpView::buildGeneric(
     regions = opMinRegionCount;
   }
   if (*regions < opMinRegionCount) {
-    throw nb::value_error(join
-        ("Operation \"", name, 
-         "\" requires a minimum of ", opMinRegionCount, 
-         " regions but was built with regions=", *regions)
-            .c_str());
+    throw nb::value_error(join("Operation \"", name,
+                               "\" requires a minimum of ", opMinRegionCount,
+                               " regions but was built with regions=", *regions)
+                              .c_str());
   }
   if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
-    throw nb::value_error(join
-        ("Operation \"", name, 
-         "\" requires a maximum of ", opMinRegionCount, 
-         " regions but was built with regions=", *regions)
-            .c_str());
+    throw nb::value_error(join("Operation \"", name,
+                               "\" requires a maximum of ", opMinRegionCount,
+                               " regions but was built with regions=", *regions)
+                              .c_str());
   }
 
   // Unpack results.
@@ -1646,9 +1643,9 @@ nb::object PyOpView::buildGeneric(
       try {
         operands.push_back(getOpResultOrValue(it.value()));
       } catch (nb::builtin_exception &err) {
-        throw nb::value_error(join("Operand ", it.index(), " of operation \"", 
-                               name, "\" must be a Value (", 
-                               err.what(), ")")
+        throw nb::value_error(join("Operand ", it.index(), " of operation \"",
+                                   name, "\" must be a Value (", err.what(),
+                                   ")")
                                   .c_str());
       }
     }
@@ -1656,12 +1653,10 @@ nb::object PyOpView::buildGeneric(
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
     if (operandSegmentSpec.size() != operandList.size()) {
-      throw nb::value_error(join("Operation \"", name,
-                             "\" requires ", 
-                             operandSegmentSpec.size(), 
-                             "operand segments but was provided ", 
-                             operandList.size())
-                                .c_str());
+      throw nb::value_error(
+          join("Operation \"", name, "\" requires ", operandSegmentSpec.size(),
+               "operand segments but was provided ", operandList.size())
+              .c_str());
     }
     operandSegmentLengths.reserve(operandList.size());
     for (const auto &it :
@@ -1675,9 +1670,9 @@ nb::object PyOpView::buildGeneric(
 
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error(join("Operand ", it.index(), 
-                                   " of operation \"", name, 
-                                   "\" must be a Value (",  err.what(), ")")
+            throw nb::value_error(join("Operand ", it.index(),
+                                       " of operation \"", name,
+                                       "\" must be a Value (", err.what(), ")")
                                       .c_str());
           }
 
@@ -1686,10 +1681,9 @@ nb::object PyOpView::buildGeneric(
           // Allowed to be optional.
           operandSegmentLengths.push_back(0);
         } else {
-          throw nb::value_error(join
-              ("Operand ", it.index(), 
-               " of operation \"", name, 
-               "\" must be a Value (was None and operand is not optional)")
+          throw nb::value_error(
+              join("Operand ", it.index(), " of operation \"", name,
+                   "\" must be a Value (was None and operand is not optional)")
                   .c_str());
         }
       } else if (segmentSpec == -1) {
@@ -1710,11 +1704,10 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join
-              ("Operand ", it.index(), 
-               " of operation \"", name, 
-               "\" must be a Sequence of Values (", err.what(), ")")
-                  .c_str());
+          throw nb::value_error(join("Operand ", it.index(), " of operation \"",
+                                     name, "\" must be a Sequence of Values (",
+                                     err.what(), ")")
+                                    .c_str());
         }
       } else {
         throw nb::value_error("Unexpected segment spec");
@@ -2054,8 +2047,8 @@ nb::object PySymbolTable::dunderGetItem(const std::string &name) {
   MlirOperation symbol = mlirSymbolTableLookup(
       symbolTable, mlirStringRefCreate(name.data(), name.length()));
   if (mlirOperationIsNull(symbol))
-    throw nb::key_error(join
-        ("Symbol '", name, "' not in the symbol table.").c_str());
+    throw nb::key_error(
+        join("Symbol '", name, "' not in the symbol table.").c_str());
 
   return PyOperation::forOperation(operation->getContext(), symbol,
                                    operation.getObject())
@@ -2937,8 +2930,8 @@ void populateIRCore(nb::module_ &m) {
             MlirDialect dialect = mlirContextGetOrLoadDialect(
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
-              throw nb::value_error(join
-                  ("Dialect '", name, "' not found").c_str());
+              throw nb::value_error(
+                  join("Dialect '", name, "' not found").c_str());
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
@@ -3928,8 +3921,8 @@ void populateIRCore(nb::module_ &m) {
             mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
         std::string_view parsedOpName(identifier.data, identifier.length);
         if (clsOpName != parsedOpName)
-          throw MLIRError(join("Expected a '", clsOpName, 
-                          "' op, got: '", parsedOpName, "'"));
+          throw MLIRError(join("Expected a '", clsOpName, "' op, got: '",
+                               parsedOpName, "'"));
         return PyOpView::constructDerived(cls, parsed.getObject());
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
