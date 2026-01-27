@@ -3,6 +3,8 @@
 // RUN: %clang -target x86_64-apple-darwin -emit-llvm -S -o - %s -fstack-protector-all | FileCheck %s
 // RUN: %clang -target x86_64-apple-darwin -Xclang -verify -fstack-protector-all %s -o %t -c
 
+// REQUIRES: x86-reigstered-target
+
 typedef __SIZE_TYPE__ size_t;
 
 int printf(const char * _Format, ...);
