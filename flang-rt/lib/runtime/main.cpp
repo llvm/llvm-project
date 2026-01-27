@@ -28,9 +28,7 @@ static void ConfigureFloatingPoint() {
 
 extern "C" {
 void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
-    const EnvironmentDefaultList *envDefaults,
-    const bool multiImageInitialized) {
-  Fortran::runtime::exitHandler.Configure(multiImageInitialized);
+    const EnvironmentDefaultList *envDefaults) {
   Fortran::runtime::executionEnvironment.Configure(
       argc, argv, envp, envDefaults);
   ConfigureFloatingPoint();

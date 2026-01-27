@@ -100,22 +100,21 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
       sourceFileName_, sourceLine_);
 }
 
-void ExitHandler::Configure(bool mifEnabled) {
-  multiImageFeatureEnabled = mifEnabled;
-}
+static RT_VAR_ATTRS ExitHandler exitHandler;
+static RT_VAR_ATTRS void (*normalEndCallback)(int) = nullptr;
+static RT_VAR_ATTRS void (*failImageCallback)(void) = nullptr;
+static RT_VAR_ATTRS void (*errorCallback)(int) = nullptr;
 
 [[noreturn]]
 void ExitHandler::NormalExit(int exitCode) {
-  if (multiImageFeatureEnabled)
-    SynchronizeImagesOfNormalEnd(exitCode); // might never return
+  SynchronizeImagesOfNormalEnd(exitCode); // might never return
 
   std::exit(exitCode);
 }
 
 [[noreturn]]
 void ExitHandler::ErrorExit(int exitCode) {
-  if (multiImageFeatureEnabled)
-    NotifyOtherImagesOfErrorTermination(exitCode); // might never return
+  NotifyOtherImagesOfErrorTermination(exitCode); // might never return
 
   std::exit(exitCode);
 }
@@ -134,7 +133,6 @@ RT_API_ATTRS void NotifyOtherImagesOfErrorTermination(int code) {
   if (errorCallback)
     (*errorCallback)(code);
 }
-
 RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime

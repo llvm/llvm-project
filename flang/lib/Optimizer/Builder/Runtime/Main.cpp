@@ -29,14 +29,12 @@ void fir::runtime::genMain(
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
-  auto logTy = builder.getIntegerType(1);
 
   // void ProgramStart(int argc, char** argv, char** envp,
   //                   _QQEnvironmentDefaults* env)
   auto startFn = builder.createFunction(
       loc, RTNAME_STRING(ProgramStart),
-      mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy, ptrTy, logTy},
-                              {}));
+      mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy, ptrTy}, {}));
   // void ProgramStop()
   auto stopFn =
       builder.createFunction(loc, RTNAME_STRING(ProgramEndStatement),
@@ -61,12 +59,9 @@ void fir::runtime::genMain(
   // it only happens once and to provide consistent results if multiple files
   // are compiled separately.
   auto env = fir::runtime::genEnvironmentDefaults(builder, loc, defs);
-  mlir::Value multiImageFeatureEnabled =
-      builder.createBool(loc, initCoarrayEnv);
 
   llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
   args.push_back(env);
-  args.push_back(multiImageFeatureEnabled);
 
   fir::CallOp::create(builder, loc, startFn, args);
 

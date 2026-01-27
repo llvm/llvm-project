@@ -116,17 +116,10 @@ private:
 struct ExitHandler {
   ExitHandler() {};
 
-  void Configure(bool multiImageFeatureEnabled);
   [[noreturn]] void NormalExit(int exitCode);
   [[noreturn]] void ErrorExit(int exitCode);
-
-  bool multiImageFeatureEnabled{false};
 };
-extern RT_VAR_ATTRS ExitHandler exitHandler;
 
-extern RT_VAR_ATTRS void (*normalEndCallback)(int);
-extern RT_VAR_ATTRS void (*failImageCallback)(void);
-extern RT_VAR_ATTRS void (*errorCallback)(int);
 RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int);
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();
 RT_API_ATTRS void NotifyOtherImagesOfErrorTermination(int);

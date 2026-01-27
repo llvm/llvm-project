@@ -11,9 +11,8 @@ end
 ! Try to test that -fconvert=<value> flag results in a environment default list
 ! with the FORT_CONVERT option correctly specified.
 
-! ALL: %false = arith.constant false
 ! ALL:  %0 = fir.address_of(@_QQEnvironmentDefaults.list) : !fir.ref<tuple<i32, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
-! ALL: fir.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %0, %false)
+! ALL: fir.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %0)
 
 ! ALL: fir.global linkonce @_QQEnvironmentDefaults.items constant : !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>> {
 ! ALL: %[[VAL_0:.*]] = fir.undefined !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>

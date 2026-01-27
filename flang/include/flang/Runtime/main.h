@@ -15,8 +15,8 @@
 struct EnvironmentDefaultList;
 
 FORTRAN_EXTERN_C_BEGIN
-void RTNAME(ProgramStart)(int, const char *[], const char *[],
-    const struct EnvironmentDefaultList *, const bool multiImageInitialized);
+void RTNAME(ProgramStart)(
+    int, const char *[], const char *[], const struct EnvironmentDefaultList *);
 void RTNAME(ByteswapOption)(void); // -byteswapio
 FORTRAN_EXTERN_C_END
 

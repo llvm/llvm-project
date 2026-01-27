@@ -59,7 +59,6 @@ void Fortran::lower::genStopStatement(
                        Fortran::parser::StopStmt::Kind::ErrorStop;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
-
   Fortran::lower::StatementContext stmtCtx;
   llvm::SmallVector<mlir::Value> operands;
   mlir::func::FuncOp callee;

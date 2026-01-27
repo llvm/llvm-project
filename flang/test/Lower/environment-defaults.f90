@@ -9,6 +9,5 @@ end
 
 ! CHECK-NOT: @_QQEnvironmentDefaults
 
-! CHECK: %false = arith.constant false
 ! CHECK: %0 = fir.zero_bits !fir.ref<tuple<i32, !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
-! CHECK-NEXT: @_FortranAProgramStart(%arg0, %arg1, %arg2, %0, %false)
+! CHECK-NEXT: @_FortranAProgramStart(%arg0, %arg1, %arg2, %0)
