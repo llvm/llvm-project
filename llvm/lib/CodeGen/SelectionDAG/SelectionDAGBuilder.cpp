@@ -11323,6 +11323,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // Set InReg Flag
         Flags.setInReg();
       }
+      if (Args[i].IsArgInReg)
+        Flags.setArgInReg();
       if (Args[i].IsSRet)
         Flags.setSRet();
       if (Args[i].IsSwiftSelf)
