@@ -37,6 +37,46 @@ class MemoryMonitorLinux : public MemoryMonitor {
 public:
   using MemoryMonitor::MemoryMonitor;
 
+  explicit MemoryMonitorLinux(Callback callback)
+      : MemoryMonitor(std::move(callback)),
+        m_stop_fd(::eventfd(0, EFD_NONBLOCK)) {}
+
+  ~MemoryMonitorLinux() {
+    if (m_memory_monitor_thread.IsJoinable())
+      m_memory_monitor_thread.Join(nullptr);
+    if (m_stop_fd != 1)
+      ::close(m_stop_fd);
+  }
+
+  void Start() override {
+    if (m_stop_fd < 0) {
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Host),
+          llvm::errorCodeToError(llvm::errnoAsErrorCode()),
+          "failed to create stop file descriptor for memory monitor: {0}");
+      return;
+    }
+
+    llvm::Expected<HostThread> memory_monitor_thread =
+        ThreadLauncher::LaunchThread("memory.monitor",
+                                     [this] { return MonitorThread(); });
+    if (memory_monitor_thread) {
+      m_memory_monitor_thread = *memory_monitor_thread;
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), memory_monitor_thread.takeError(),
+                     "failed to launch host thread: {0}");
+    }
+  }
+
+  void Stop() override {
+    if (m_memory_monitor_thread.IsJoinable()) {
+      if (m_stop_fd != -1)
+        ::eventfd_write(m_stop_fd, 1);
+      m_memory_monitor_thread.Join(nullptr);
+    }
+  }
+
+private:
   lldb::thread_result_t MonitorThread() {
     constexpr size_t pressure_idx = 0;
     constexpr size_t stop_idx = 1;
@@ -44,25 +84,17 @@ public:
     std::array<pollfd, fd_count> pfds{};
 
     // Setup stop file descriptor.
-    m_stop_fd = ::eventfd(0, O_NONBLOCK);
-    if (m_stop_fd < 0)
-      return {};
     pfds[stop_idx].fd = m_stop_fd;
     pfds[stop_idx].events = POLLIN;
 
     // Setup pressure file descriptor.
     pfds[pressure_idx].fd =
         ::open("/proc/pressure/memory", O_RDWR | O_NONBLOCK);
-    if (pfds[pressure_idx].fd < 0) {
-      ::close(m_stop_fd);
+    if (pfds[pressure_idx].fd < 0)
       return {};
-    }
     pfds[pressure_idx].events = POLLPRI;
 
-    llvm::scope_exit cleanup([&]() {
-      ::close(pfds[pressure_idx].fd);
-      ::close(m_stop_fd);
-    });
+    llvm::scope_exit cleanup([&]() { ::close(pfds[pressure_idx].fd); });
 
     // Detect a 50ms stall in a 2 second time window.
     constexpr llvm::StringRef trigger = "some 50000 2000000";
@@ -85,27 +117,6 @@ public:
     }
     return {};
   }
-
-  void Start() override {
-    llvm::Expected<HostThread> memory_monitor_thread =
-        ThreadLauncher::LaunchThread("memory.monitor",
-                                     [this] { return MonitorThread(); });
-    if (memory_monitor_thread) {
-      m_memory_monitor_thread = *memory_monitor_thread;
-    } else {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), memory_monitor_thread.takeError(),
-                     "failed to launch host thread: {0}");
-    }
-  }
-
-  void Stop() override {
-    if (m_memory_monitor_thread.IsJoinable()) {
-      ::eventfd_write(m_stop_fd, 1);
-      m_memory_monitor_thread.Join(nullptr);
-    }
-  }
-
-private:
   int m_stop_fd = -1;
   HostThread m_memory_monitor_thread;
 };
