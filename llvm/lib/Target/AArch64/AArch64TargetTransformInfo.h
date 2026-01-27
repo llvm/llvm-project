@@ -396,7 +396,17 @@ public:
     return false;
   }
 
-  bool isLegalNTStoreLoad(Type *DataType, Align Alignment) const {
+  std::optional<bool> isLegalNTStoreLoad(Type *DataType,
+                                         Align Alignment) const {
+    // Currently we only support NT load and store lowering for little-endian
+    // targets.
+    //
+    // Coordinated with LDNP and STNP constraints in
+    // `llvm/lib/Target/AArch64/AArch64InstrInfo.td` and
+    // `AArch64TargetLowering`
+    if (!ST->isLittleEndian())
+      return false;
+
     // NOTE: The logic below is mostly geared towards LV, which calls it with
     //       vectors with 2 elements. We might want to improve that, if other
     //       users show up.
@@ -410,17 +420,20 @@ public:
       return NumElements > 1 && isPowerOf2_64(NumElements) && EltSize >= 8 &&
              EltSize <= 128 && isPowerOf2_64(EltSize);
     }
-    return BaseT::isLegalNTStore(DataType, Alignment);
+    return std::nullopt;
   }
 
   bool isLegalNTStore(Type *DataType, Align Alignment) const override {
-    return isLegalNTStoreLoad(DataType, Alignment);
+    if (auto Result = isLegalNTStoreLoad(DataType, Alignment))
+      return *Result;
+    // Fallback to target independent logic
+    return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
   bool isLegalNTLoad(Type *DataType, Align Alignment) const override {
-    // Only supports little-endian targets.
-    if (ST->isLittleEndian())
-      return isLegalNTStoreLoad(DataType, Alignment);
+    if (auto Result = isLegalNTStoreLoad(DataType, Alignment))
+      return *Result;
+    // Fallback to target independent logic
     return BaseT::isLegalNTLoad(DataType, Alignment);
   }
 

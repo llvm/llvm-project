@@ -72,6 +72,10 @@ public:
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
+  // Whether this function has noreturn.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned noReturn : 1;
+
   RequiredArgs required;
 
   unsigned numArgs;
@@ -81,8 +85,19 @@ class CIRGenFunctionInfo final
 
   CIRGenFunctionInfo() : required(RequiredArgs::All) {}
 
+  FunctionType::ExtInfo getExtInfo() const {
+    // TODO(cir): as we add this information to this type, we need to add calls
+    // here instead of explicit false/0.
+    return FunctionType::ExtInfo(
+        isNoReturn(), /*getHasRegParm=*/false, /*getRegParm=*/false,
+        /*getASTCallingConvention=*/CallingConv(0), /*isReturnsRetained=*/false,
+        /*isNoCallerSavedRegs=*/false, /*isNoCfCheck=*/false,
+        /*isCmseNSCall=*/false);
+  }
+
 public:
-  static CIRGenFunctionInfo *create(CanQualType resultType,
+  static CIRGenFunctionInfo *create(FunctionType::ExtInfo info,
+                                    CanQualType resultType,
                                     llvm::ArrayRef<CanQualType> argTypes,
                                     RequiredArgs required);
 
@@ -97,9 +112,10 @@ public:
 
   // This function has to be CamelCase because llvm::FoldingSet requires so.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  static void Profile(llvm::FoldingSetNodeID &id, RequiredArgs required,
-                      CanQualType resultType,
+  static void Profile(llvm::FoldingSetNodeID &id, FunctionType::ExtInfo info,
+                      RequiredArgs required, CanQualType resultType,
                       llvm::ArrayRef<CanQualType> argTypes) {
+    id.AddBoolean(info.getNoReturn());
     id.AddBoolean(required.getOpaqueData());
     resultType.Profile(id);
     for (const CanQualType &arg : argTypes)
@@ -111,7 +127,7 @@ public:
     // If the Profile functions get out of sync, we can end up with incorrect
     // function signatures, so we call the static Profile function here rather
     // than duplicating the logic.
-    Profile(id, required, getReturnType(), arguments());
+    Profile(id, getExtInfo(), required, getReturnType(), arguments());
   }
 
   llvm::ArrayRef<CanQualType> arguments() const {
@@ -144,6 +160,8 @@ public:
     return isVariadic() ? getRequiredArgs().getNumRequiredArgs()
                         : argTypeSize();
   }
+
+  bool isNoReturn() const { return noReturn; }
 };
 
 } // namespace clang::CIRGen

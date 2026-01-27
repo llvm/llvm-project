@@ -249,7 +249,6 @@ Transforms/InstCombine/fmul-bool.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/fneg.ll
 Transforms/InstCombine/icmp-mul-and.ll
-Transforms/InstCombine/icmp-with-selects.ll
 Transforms/InstCombine/intrinsic-select.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
