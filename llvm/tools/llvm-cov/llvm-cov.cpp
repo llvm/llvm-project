@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
@@ -55,17 +56,18 @@ static int versionMain(int argc, const char *argv[]) {
   return 0;
 }
 
-int main(int argc, const char **argv) {
-  InitLLVM X(argc, argv);
+int llvm_cov_main(int argc, char **argv, const llvm::ToolContext &) {
+  SmallVector<const char *, 8> ArgStorage(argv, argv + argc);
+  const char **Argv = ArgStorage.data();
 
   // If argv[0] is or ends with 'gcov', always be gcov compatible
-  if (sys::path::stem(argv[0]).ends_with_insensitive("gcov"))
-    return gcovMain(argc, argv);
+  if (sys::path::stem(Argv[0]).ends_with_insensitive("gcov"))
+    return gcovMain(argc, Argv);
 
   // Check if we are invoking a specific tool command.
   if (argc > 1) {
     typedef int (*MainFunction)(int, const char *[]);
-    MainFunction Func = StringSwitch<MainFunction>(argv[1])
+    MainFunction Func = StringSwitch<MainFunction>(Argv[1])
                             .Case("convert-for-testing", convertForTestingMain)
                             .Case("export", exportMain)
                             .Case("gcov", gcovMain)
@@ -76,19 +78,19 @@ int main(int argc, const char **argv) {
                             .Default(nullptr);
 
     if (Func) {
-      std::string Invocation = std::string(argv[0]) + " " + argv[1];
-      argv[1] = Invocation.c_str();
-      return Func(argc - 1, argv + 1);
+      std::string Invocation = std::string(Argv[0]) + " " + Argv[1];
+      ArgStorage[1] = Invocation.c_str();
+      return Func(argc - 1, Argv + 1);
     }
   }
 
   if (argc > 1) {
     if (sys::Process::StandardErrHasColors())
       errs().changeColor(raw_ostream::RED);
-    errs() << "Unrecognized command: " << argv[1] << ".\n\n";
+    errs() << "Unrecognized command: " << Argv[1] << ".\n\n";
     if (sys::Process::StandardErrHasColors())
       errs().resetColor();
   }
-  helpMain(argc, argv);
+  helpMain(argc, Argv);
   return 1;
 }

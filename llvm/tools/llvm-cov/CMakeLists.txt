@@ -20,6 +20,12 @@ add_llvm_tool(llvm-cov
   SourceCoverageViewHTML.cpp
   SourceCoverageViewText.cpp
   TestingSupport.cpp
+
+  GENERATE_DRIVER
   )
+
+if(LLVM_TOOL_LLVM_DRIVER_BUILD)
+  set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_HIDDEN_TOOL_ALIASES_llvm-cov gcov)
+endif()
 
 target_link_libraries(llvm-cov PRIVATE LLVMDebuginfod)
