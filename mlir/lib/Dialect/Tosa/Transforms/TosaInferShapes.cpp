@@ -20,6 +20,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/FoldUtils.h"
 
 namespace mlir {
 namespace tosa {
@@ -160,6 +161,13 @@ void validateSameOperandsAndResultRankTrait(Region &region) {
 struct TosaInferShapes
     : public tosa::impl::TosaInferShapesPassBase<TosaInferShapes> {
 public:
+  explicit TosaInferShapes() = default;
+  explicit TosaInferShapes(const TosaInferShapesPassOptions &options)
+      : TosaInferShapes() {
+    this->foldShapeExpressions = options.foldShapeExpressions;
+    this->convertFunctionBoundaries = options.convertFunctionBoundaries;
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     TypeModificationState state;
@@ -167,6 +175,9 @@ public:
     state.commit();
 
     validateSameOperandsAndResultRankTrait(func.getBody());
+
+    if (convertFunctionBoundaries)
+      convertFunctionReturnTypes(func);
   }
 
 private:
@@ -286,15 +297,24 @@ private:
   }
 
   void propagateShapesInRegion(Region &region, TypeModificationState &state) {
-    Dialect *tosaDialect = region.getContext()->getLoadedDialect<TosaDialect>();
+    MLIRContext *ctx = region.getContext();
+    Dialect *tosaDialect = ctx->getLoadedDialect<TosaDialect>();
+    OperationFolder folder(ctx);
 
     for (auto &block : region) {
-      for (Operation &op : block) {
+      for (auto it = block.begin(); it != block.end();) {
+        Operation &op = *it++;
         if (op.getDialect() != tosaDialect)
           continue;
 
         propagateShapesToTosaIf(op, state);
         propagateShapesToTosaWhile(op, state);
+
+        if (foldShapeExpressions &&
+            op.hasTrait<OpTrait::tosa::TosaShapeOperator>()) {
+          (void)folder.tryToFold(&op);
+          continue;
+        }
 
         InferShapedTypeOpInterface shapeInterface =
             dyn_cast<InferShapedTypeOpInterface>(op);
@@ -342,6 +362,39 @@ private:
         }
       }
     }
+  }
+
+  void convertFunctionReturnTypes(func::FuncOp func) {
+    IRRewriter rewriter(func.getContext());
+    SmallVector<Type> newReturnTypes;
+
+    // Rewrite func.return ops, removing dead tensor.cast ops if possible
+    func.walk([&rewriter, &newReturnTypes](func::ReturnOp ret) {
+      SmallVector<Value> newReturnValues;
+      OperandRange returnOperands = ret.getOperands();
+      newReturnValues.reserve(returnOperands.size());
+      newReturnTypes.reserve(returnOperands.size());
+
+      for (const Value &v : returnOperands) {
+        Value newReturnValue = v;
+        if (auto castOp = v.getDefiningOp<tensor::CastOp>()) {
+          newReturnValue = castOp.getSource();
+          if (castOp->use_empty())
+            rewriter.eraseOp(castOp);
+        }
+        newReturnValues.push_back(newReturnValue);
+        newReturnTypes.push_back(newReturnValue.getType());
+      }
+
+      rewriter.setInsertionPoint(ret);
+      rewriter.replaceOpWithNewOp<func::ReturnOp>(ret, newReturnValues);
+    });
+
+    // Update function return types with newly inferred types
+    const FunctionType oldType = func.getFunctionType();
+    const FunctionType newType = FunctionType::get(
+        func.getContext(), oldType.getInputs(), newReturnTypes);
+    func.setType(newType);
   }
 };
 } // namespace
