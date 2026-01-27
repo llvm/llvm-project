@@ -20,6 +20,8 @@
 #include "mlir-c/Support.h"
 
 #include <optional>
+#include <sstream>
+#include <string>
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -45,6 +47,14 @@ operations.
 //------------------------------------------------------------------------------
 // Utilities.
 //------------------------------------------------------------------------------
+
+/// Local helper to concatenate string and integer arguments into a std::string.
+template <typename... Ts>
+std::string join(const Ts&... args) {
+  std::ostringstream oss;
+  (oss << ... << args);
+  return oss.str();
+}
 
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
@@ -94,8 +104,8 @@ MlirBlock createBlock(const nb::sequence &pyArgTypes,
   }
 
   if (argTypes.size() != argLocs.size())
-    throw nb::value_error(("Expected " + std::to_string(argTypes.size()) +
-                           " locations, got: " + std::to_string(argLocs.size()))
+    throw nb::value_error(join("Expected ", argTypes.size(), 
+                           " locations, got: ", argLocs.size())
                               .c_str());
   return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
 }
@@ -1098,9 +1108,9 @@ void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
       operation, config, accum.getCallback(), accum.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
-    throw nb::value_error(
-        (std::string("Unable to honor desired bytecode version ") +
-         std::to_string(*bytecodeVersion))
+    throw nb::value_error(join
+        ("Unable to honor desired bytecode version ", 
+         *bytecodeVersion)
             .c_str());
 }
 
