@@ -930,14 +930,14 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
   }
 
-  auto HasSkip = getIsCounterPair(&S);
+  auto HasSkip = hasSkipCounter(&S);
 
   // Otherwise, the condition did not fold, or we couldn't elide it.  Just emit
   // the conditional branch.
   llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
   llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
   llvm::BasicBlock *ElseBlock =
-      (Else || HasSkip.second ? createBasicBlock("if.else") : ContBlock);
+      (Else || HasSkip ? createBasicBlock("if.else") : ContBlock);
   // Prefer the PGO based weights over the likelihood attribute.
   // When the build isn't optimized the metadata isn't used, so don't generate
   // it.
@@ -988,7 +988,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       EmitBlock(ElseBlock);
     }
     // Add a counter to else block unless it has CounterExpr.
-    if (HasSkip.second)
+    if (HasSkip)
       incrementProfileCounter(UseSkipPath, &S);
     {
       RunCleanupsScope ElseScope(*this);
@@ -999,7 +999,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBranch(ContBlock);
     }
-  } else if (HasSkip.second) {
+  } else if (HasSkip) {
     EmitBlock(ElseBlock);
     incrementProfileCounter(UseSkipPath, &S);
     EmitBranch(ContBlock);
