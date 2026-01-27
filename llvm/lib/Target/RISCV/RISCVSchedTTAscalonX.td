@@ -1,4 +1,4 @@
-//=- RISCVSchedTTAscalonD8.td - TT Ascalon D8 Sched Defs -----*- tablegen -*-=//
+//=- RISCVSchedTTAscalonX.td - TT Ascalon X Sched Defs -------*- tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -95,7 +95,7 @@ class AscalonGetCyclesStridedSegmented<string mx, int sew> {
 
 //===----------------------------------------------------------------------===//
 
-def TTAscalonD8Model : SchedMachineModel {
+def TTAscalonXModel : SchedMachineModel {
   let IssueWidth        =   8; // 8-way decode and dispatch
   let MicroOpBufferSize = 256; // 256 micro-op re-order buffer
   let LoadLatency       =   4; // Optimistic load latency
@@ -110,7 +110,7 @@ def TTAscalonD8Model : SchedMachineModel {
                              HasStdExtZkr];
 }
 
-let SchedModel = TTAscalonD8Model in {
+let SchedModel = TTAscalonXModel in {
 
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available.
