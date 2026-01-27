@@ -5650,11 +5650,17 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore())) {
 
+    TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
+    if (isa<LoadInst>(I))
+      VIC = TTI::VectorInstrContext::Load;
+    else if (isa<StoreInst>(I))
+      VIC = TTI::VectorInstrContext::Store;
+
     for (Type *VectorTy : getContainedTypes(RetTy)) {
       Cost += TTI.getScalarizationOverhead(
           cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/true,
-          /*Extract=*/false, CostKind);
+          /*Insert=*/true, /*Extract=*/false, CostKind,
+          /*ForPoisonSrc=*/true, {}, VIC);
     }
   }
 
@@ -5675,7 +5681,11 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   SmallVector<Type *> Tys;
   for (auto *V : filterExtractingOperands(Ops, VF))
     Tys.push_back(maybeVectorizeType(V->getType(), VF));
-  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind);
+
+  TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
+                                           ? TTI::VectorInstrContext::Store
+                                           : TTI::VectorInstrContext::None;
+  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind, OperandVIC);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
