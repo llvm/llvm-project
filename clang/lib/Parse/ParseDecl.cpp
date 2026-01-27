@@ -4094,15 +4094,26 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         auto IsTypeSpecifier = [&]() {
-          if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Unspecified)
+          if (DS.hasTypeSpecifier() &&
+              DS.getTypeSpecType() != DeclSpec::TST_auto)
             return true;
 
           unsigned I = 1;
-          while (GetLookAheadToken(I).isOneOf(tok::kw_const, tok::kw_volatile,
-                                              tok::kw_restrict))
-            ++I;
+          while (true) {
+            const Token &T = GetLookAheadToken(I);
+            if (isKnownToBeTypeSpecifier(T))
+              return true;
 
-          return isKnownToBeTypeSpecifier(GetLookAheadToken(I));
+            if (T.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual,
+                          tok::kw__Atomic) &&
+                GetLookAheadToken(I + 1).is(tok::l_paren))
+              return true;
+
+            if (isTypeSpecifierQualifier(T))
+              ++I;
+            else
+              return false;
+          }
         };
 
         if (IsTypeSpecifier()) {
@@ -5569,7 +5580,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   }
 }
 
-bool Parser::isTypeSpecifierQualifier() {
+bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   switch (Tok.getKind()) {
   default: return false;
 
@@ -5582,9 +5593,9 @@ bool Parser::isTypeSpecifierQualifier() {
     // recurse to handle whatever we get.
     if (TryAnnotateTypeOrScopeToken())
       return true;
-    if (Tok.is(tok::identifier))
+    if (getCurToken().is(tok::identifier))
       return false;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(getCurToken());
 
   case tok::coloncolon:   // ::foo::bar
     if (NextToken().is(tok::kw_new) ||    // ::new
@@ -5593,7 +5604,7 @@ bool Parser::isTypeSpecifierQualifier() {
 
     if (TryAnnotateTypeOrScopeToken())
       return true;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(getCurToken());
 
     // GNU attributes support.
   case tok::kw___attribute:

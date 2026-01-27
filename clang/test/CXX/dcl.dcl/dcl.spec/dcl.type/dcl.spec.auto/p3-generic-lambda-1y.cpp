@@ -63,12 +63,10 @@ int main()
     auto l = [](auto 
                       (*)(auto)) { }; //expected-error{{'auto' not allowed}}
     //FIXME: These diagnostics might need some work.
-    auto l2 = [](char auto::*pm) { };  //expected-error{{cannot combine with previous}}\
-                                         expected-error{{'pm' does not point into a class}}
+    auto l2 = [](char auto::*pm) { };  // expected-error {{'pm' does not point into a class}} \
+                                          expected-warning {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
     auto l3 = [](char (auto::*pmf)()) { };  //expected-error{{'auto' not allowed}}\
                                               expected-error{{'pmf' does not point into a class}}\
                                               expected-error{{function cannot return function type 'char ()'}}
   }
 }
-
-

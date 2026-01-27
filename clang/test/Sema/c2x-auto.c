@@ -6,14 +6,14 @@ void test_basic_types(void) {
   auto auto_int = 4;
   auto auto_long = 4UL;
   auto int auto_int_ts = 12;
-  signed auto a = 1L; // expected-error {{'auto' cannot be signed or unsigned}}
+  signed auto a = 1L;
 
   _Static_assert(_Generic(auto_int, int : 1));
   _Static_assert(_Generic(auto_long, unsigned long : 1));
 }
 
 void test_complex_types(void) {
-  _Complex auto i = 12.0; // expected-error {{'_Complex auto' is invalid}}
+  _Complex auto i = 12.0; // expected-warning {{plain '_Complex' requires a type specifier; assuming '_Complex double'}}
 }
 
 void test_gnu_extensions(void) {

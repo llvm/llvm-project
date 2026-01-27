@@ -1114,7 +1114,7 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
   SourceLocation TypeStartLoc = Tok.getLocation();
 
   ParsedType Ty;
-  if (isTypeSpecifierQualifier() || isObjCInstancetype()) {
+  if (isTypeSpecifierQualifier(Tok) || isObjCInstancetype()) {
     // Parse an abstract declarator.
     DeclSpec declSpec(AttrFactory);
     declSpec.setObjCQualifiers(&DS);
