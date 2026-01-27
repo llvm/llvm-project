@@ -142,7 +142,7 @@ SwiftLanguageRuntime::GetObjCRuntime(lldb_private::Process &process) {
   return nullptr;
 }
 
-AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
+AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() const {
   return GetObjCRuntime(*m_process);
 }
 
@@ -1019,8 +1019,9 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
-static llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
-                                         Process &process) {
+llvm::Error
+SwiftLanguageRuntime::PrintObjectViaPointer(Stream &strm, ValueObject &object,
+                                            Process &process) const {
   Flags flags(object.GetCompilerType().GetTypeInfo());
   addr_t addr = LLDB_INVALID_ADDRESS;
   if (flags.Test(eTypeInstanceIsPointer)) {
@@ -1040,7 +1041,7 @@ static llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
     return llvm::createStringError("invalid address 0x%x", addr);
 
   StringRef mangled_type_name;
-  if (auto static_object = object.GetStaticValue())
+  if (auto static_object = object.GetStaticValue()) {
     // Dynamic types can expose private types. This causes problems when
     // querying the Swift runtime for classes by mangled name. Use the static
     // type instead.
@@ -1052,9 +1053,16 @@ static llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
     // This discriminator (_8CC290D01A98D2866F487ABF00E545A7) is a hash based on
     // the path of the source file. This info is not present in the runtime, and
     // thus cannot be used to lookup a type.
+    if (static_object->GetObjectRuntimeLanguage() == lldb::eLanguageTypeObjC) {
+      AppleObjCRuntimeV2 *objc_runtime = GetObjCRuntime();
+      if (!objc_runtime)
+        return llvm::createStringError("no Objective-C runtime");
+      return objc_runtime->GetObjectDescription(strm, *static_object);
+    }
     mangled_type_name = static_object->GetMangledTypeName();
-  else
+  } else {
     mangled_type_name = object.GetMangledTypeName();
+  }
 
   // Swift APIs that receive mangled names require the prefix removed.
   mangled_type_name.consume_front("$s");
