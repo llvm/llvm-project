@@ -82,8 +82,10 @@ private:
 public:
   MachineDominanceFrontierWrapperPass();
 
-  MachineDominanceFrontierWrapperPass(const MachineDominanceFrontier &) = delete;
-  MachineDominanceFrontierWrapperPass &operator=(const MachineDominanceFrontier &) = delete;
+  MachineDominanceFrontierWrapperPass(const MachineDominanceFrontier &) =
+      delete;
+  MachineDominanceFrontierWrapperPass &
+  operator=(const MachineDominanceFrontier &) = delete;
 
   static char ID;
 

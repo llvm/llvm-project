@@ -21,22 +21,24 @@ template class DominanceFrontierBase<MachineBasicBlock, true>;
 template class ForwardDominanceFrontierBase<MachineBasicBlock>;
 }
 
-
 char MachineDominanceFrontierWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MachineDominanceFrontierWrapperPass, "machine-domfrontier",
-                "Machine Dominance Frontier Construction", true, true)
+INITIALIZE_PASS_BEGIN(MachineDominanceFrontierWrapperPass,
+                      "machine-domfrontier",
+                      "Machine Dominance Frontier Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineDominanceFrontierWrapperPass, "machine-domfrontier",
-                "Machine Dominance Frontier Construction", true, true)
+                    "Machine Dominance Frontier Construction", true, true)
 
 MachineDominanceFrontierWrapperPass::MachineDominanceFrontierWrapperPass()
     : MachineFunctionPass(ID) {}
 
-char &llvm::MachineDominanceFrontierID = MachineDominanceFrontierWrapperPass::ID;
+char &llvm::MachineDominanceFrontierID =
+    MachineDominanceFrontierWrapperPass::ID;
 
-bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(MachineFunction &) {
-  auto& MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(
+    MachineFunction &) {
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   return MDF.analyze(MDT);
 }
 
@@ -54,7 +56,8 @@ void MachineDominanceFrontier::releaseMemory() {
   Base.releaseMemory();
 }
 
-void MachineDominanceFrontierWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineDominanceFrontierWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -65,7 +68,7 @@ AnalysisKey MachineDominanceFrontierAnalysis::Key;
 MachineDominanceFrontierAnalysis::Result
 MachineDominanceFrontierAnalysis::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
-  auto& MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MDF.analyze(MDT);
   return MDF;
 }
