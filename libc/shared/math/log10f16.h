@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SHARED_MATH_LOG10F16_H
 
 #include "include/llvm-libc-macros/float16-macros.h"
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "shared/libc_common.h"

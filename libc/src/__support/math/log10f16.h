@@ -84,7 +84,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_LOG10F16_EXCEPTS>
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 } // namespace log10f16_internal
 
-LIBC_INLINE static constexpr float16 log10f16(float16 x) {
+LIBC_INLINE float16 log10f16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
