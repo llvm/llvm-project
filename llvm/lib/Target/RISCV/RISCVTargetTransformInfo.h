@@ -496,6 +496,12 @@ public:
 
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
+  bool enableSelectOptimize() const override {
+    return ST->enableSelectOptimize();
+  }
+
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
 };
 
 } // end namespace llvm

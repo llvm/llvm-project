@@ -2909,6 +2909,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbf128",
+    hdrs = ["src/__support/math/ilogbf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_properties_types",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fsqrt",
     hdrs = ["src/__support/math/fsqrt.h"],
     deps = [
@@ -3017,6 +3027,16 @@ libc_support_library(
     hdrs = ["src/__support/math/llogbf.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogb",
+    hdrs = ["src/__support/math/llogb.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -3498,6 +3518,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sinhf16",
+    hdrs = ["src/__support/math/sinhf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_expxf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinhfcoshf_utils",
     hdrs = ["src/__support/math/sinhfcoshf_utils.h"],
     deps = [
@@ -3518,6 +3555,19 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sinhf",
+    hdrs = ["src/__support/math/sinhf.h"],
+    deps = [
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_sinhfcoshf_utils",
     ],
 )
 
@@ -4656,7 +4706,12 @@ libc_math_function(
     additional_deps = ["__support_math_ilogbl"],
 )
 
-libc_math_function(name = "ilogbf128")
+libc_math_function(
+    name = "ilogbf128",
+    additional_deps = [
+        ":__support_math_ilogbf128",
+    ],
+)
 
 libc_math_function(
     name = "ilogbf16",
@@ -4690,7 +4745,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "llogb")
+libc_math_function(
+    name = "llogb",
+    additional_deps = [
+        ":__support_math_llogb",
+    ],
+)
 
 libc_math_function(
     name = "llogbf",
@@ -5135,21 +5195,14 @@ libc_math_function(
 libc_math_function(
     name = "sinhf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_math_sinhfcoshf_utils",
-        ":__support_math_common_constants",
+        ":__support_math_sinhf",
     ],
 )
 
 libc_math_function(
     name = "sinhf16",
     additional_deps = [
-        ":__support_math_expxf16_utils",
+        ":__support_math_sinhf16",
     ],
 )
 
