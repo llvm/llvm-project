@@ -3125,7 +3125,9 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strcpy64 : RuntimeLibcallImpl<STRCPY>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr64 : RuntimeLibcallImpl<STRSTR>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
@@ -3133,7 +3135,9 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strcpy : RuntimeLibcallImpl<STRCPY>;
   def ___strlen : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr : RuntimeLibcallImpl<STRSTR>;
 }
 
 defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);

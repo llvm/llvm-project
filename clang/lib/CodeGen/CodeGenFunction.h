@@ -303,9 +303,6 @@ public:
   /// nest would extend.
   SmallVector<llvm::CanonicalLoopInfo *, 4> OMPLoopNestStack;
 
-  /// Stack to track the Logical Operator recursion nest for MC/DC.
-  SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
-
   /// Stack to track the controlled convergence tokens.
   SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 
@@ -1647,9 +1644,6 @@ private:
 
   std::unique_ptr<CodeGenPGO> PGO;
 
-  /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
-  Address MCDCCondBitmapAddr = Address::invalid();
-
   /// Calculate branch weights appropriate for PGO data
   llvm::MDNode *createProfileWeights(uint64_t TrueCount,
                                      uint64_t FalseCount) const;
@@ -1658,13 +1652,25 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
-  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+  /// Returns Counter existence {hasExec, hasSkip}.
+  std::pair<bool, bool> getExecSkipCounterExistence(const Stmt *S) const;
+
+  bool hasSkipCounter(const Stmt *S) const {
+    return getExecSkipCounterExistence(S).second;
+  }
+
   void markStmtAsUsed(bool Skipped, const Stmt *S);
   void markStmtMaybeUsed(const Stmt *S);
 
+  /// Used to specify which counter in a pair shall be incremented.
+  /// For non-binary counters, a skip counter is derived as (Parent - Exec).
+  /// In contrast for binary counters, a skip counter cannot be computed from
+  /// the Parent counter. In such cases, dedicated SkipPath counters must be
+  /// allocated and marked (incremented as binary counters). (Parent can be
+  /// synthesized with (Exec + Skip) in simple cases)
   enum CounterForIncrement {
-    UseExecPath = 0,
-    UseSkipPath,
+    UseExecPath = 0, ///< Exec (true)
+    UseSkipPath,     ///< Skip (false)
   };
 
   /// Increment the profiler's counter for the given statement by \p StepV.
@@ -1696,6 +1702,9 @@ public:
     const BinaryOperator *BOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
     return (BOp && BOp->isLogicalOp());
   }
+
+  bool isMCDCDecisionExpr(const Expr *E) const;
+  bool isMCDCBranchExpr(const Expr *E) const;
 
   /// Zero-init the MCDC temp value.
   void maybeResetMCDCCondBitmap(const Expr *E);

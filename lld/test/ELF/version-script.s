@@ -8,8 +8,9 @@
 # RUN: ld.lld --version-script %t.script -shared %t.o %t2.so -o %t.so --fatal-warnings
 # RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
+## `:` in `local:*` is lexed as a separate token.
 # RUN: echo "# comment" > %t3.script
-# RUN: echo "{ local: *; # comment" >> %t3.script
+# RUN: echo "{ local:*; # comment" >> %t3.script
 # RUN: echo -n "}; # comment" >> %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o %t2.so -o %t3.so
 # RUN: llvm-readelf --dyn-syms %t3.so | FileCheck --check-prefix=DSO2 %s

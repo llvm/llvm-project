@@ -315,7 +315,7 @@ namespace ReturnLocalPtr {
   }
 
   static_assert(p2() == 12, ""); // both-error {{not an integral constant expression}} \
-                                 // both-note {{read of variable whose lifetime has ended}}
+                                 // both-note {{read of object outside its lifetime}}
 }
 
 namespace VoidReturn {

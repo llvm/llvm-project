@@ -926,14 +926,14 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
   }
 
-  auto HasSkip = getIsCounterPair(&S);
+  auto HasSkip = hasSkipCounter(&S);
 
   // Otherwise, the condition did not fold, or we couldn't elide it.  Just emit
   // the conditional branch.
   llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
   llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
   llvm::BasicBlock *ElseBlock =
-      (Else || HasSkip.second ? createBasicBlock("if.else") : ContBlock);
+      (Else || HasSkip ? createBasicBlock("if.else") : ContBlock);
   // Prefer the PGO based weights over the likelihood attribute.
   // When the build isn't optimized the metadata isn't used, so don't generate
   // it.
@@ -984,7 +984,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       EmitBlock(ElseBlock);
     }
     // Add a counter to else block unless it has CounterExpr.
-    if (HasSkip.second)
+    if (HasSkip)
       incrementProfileCounter(UseSkipPath, &S);
     {
       RunCleanupsScope ElseScope(*this);
@@ -995,7 +995,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBranch(ContBlock);
     }
-  } else if (HasSkip.second) {
+  } else if (HasSkip) {
     EmitBlock(ElseBlock);
     incrementProfileCounter(UseSkipPath, &S);
     EmitBranch(ContBlock);
@@ -1119,7 +1119,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
   if (EmitBoolCondBranch) {
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-    if (getIsCounterPair(&S).second || ConditionScope.requiresCleanups())
+    if (hasSkipCounter(&S) || ConditionScope.requiresCleanups())
       ExitBlock = createBasicBlock("while.exit");
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
@@ -1231,15 +1231,14 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
-  auto *LoopFalse =
-      (getIsCounterPair(&S).second ? createBasicBlock("do.loopfalse")
-                                   : LoopExit.getBlock());
+  auto *LoopFalse = (hasSkipCounter(&S) ? createBasicBlock("do.loopfalse")
+                                        : LoopExit.getBlock());
 
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
     auto *I = Builder.CreateCondBr(
-        BoolCondVal, LoopBody, LoopExit.getBlock(),
+        BoolCondVal, LoopBody, LoopFalse,
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
 
     // Key Instructions: Emit the condition and branch as separate source
@@ -1331,8 +1330,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (getIsCounterPair(&S).second ||
-        (ForScope && ForScope->requiresCleanups()))
+    if (hasSkipCounter(&S) || (ForScope && ForScope->requiresCleanups()))
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1447,7 +1445,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  if (getIsCounterPair(&S).second || ForScope.requiresCleanups())
+  if (hasSkipCounter(&S) || ForScope.requiresCleanups())
     ExitBlock = createBasicBlock("for.cond.cleanup");
 
   // The loop body, consisting of the specified body and the loop variable.
@@ -2517,43 +2515,6 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   CaseRangeBlock = SavedCRBlock;
 }
 
-/// AddVariableConstraints - Look at AsmExpr and if it is a variable declared
-/// as using a particular register add that as a constraint that will be used
-/// in this asm stmt.
-static std::string
-AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
-                       const TargetInfo &Target, CodeGenModule &CGM,
-                       const AsmStmt &Stmt, const bool EarlyClobber,
-                       std::string *GCCReg = nullptr) {
-  const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
-  if (!AsmDeclRef)
-    return Constraint;
-  const ValueDecl &Value = *AsmDeclRef->getDecl();
-  const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
-  if (!Variable)
-    return Constraint;
-  if (Variable->getStorageClass() != SC_Register)
-    return Constraint;
-  AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
-  if (!Attr)
-    return Constraint;
-  StringRef Register = Attr->getLabel();
-  assert(Target.isValidGCCRegisterName(Register));
-  // We're using validateOutputConstraint here because we only care if
-  // this is a register constraint.
-  TargetInfo::ConstraintInfo Info(Constraint, "");
-  if (Target.validateOutputConstraint(Info) &&
-      !Info.allowsRegister()) {
-    CGM.ErrorUnsupported(&Stmt, "__asm__");
-    return Constraint;
-  }
-  // Canonicalize the register here before returning it.
-  Register = Target.getNormalizedGCCRegisterName(Register);
-  if (GCCReg != nullptr)
-    *GCCReg = Register.str();
-  return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
-}
-
 std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
     const TargetInfo::ConstraintInfo &Info, LValue InputValue,
     QualType InputType, std::string &ConstraintStr, SourceLocation Loc) {
@@ -2576,7 +2537,6 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
   ConstraintStr += '*';
   return {InputValue.getPointer(*this), Addr.getElementType()};
 }
-
 std::pair<llvm::Value *, llvm::Type *>
 CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
                               const Expr *InputExpr,
@@ -2905,10 +2865,12 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
     std::string GCCReg;
-    OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
-                                              getTarget(), CGM, S,
-                                              Info.earlyClobber(),
-                                              &GCCReg);
+    OutputConstraint = S.addVariableConstraints(
+        OutputConstraint, *OutExpr, getTarget(), Info.earlyClobber(),
+        [&](const Stmt *UnspStmt, StringRef Msg) {
+          CGM.ErrorUnsupported(UnspStmt, Msg);
+        },
+        &GCCReg);
     // Give an error on multiple outputs to same physreg.
     if (!GCCReg.empty() && !PhysRegOutputs.insert(GCCReg).second)
       CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + GCCReg);
@@ -3063,9 +3025,12 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     InputConstraint =
         getTarget().simplifyConstraint(InputConstraint, &OutputConstraintInfos);
 
-    InputConstraint = AddVariableConstraints(
+    InputConstraint = S.addVariableConstraints(
         InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
-        getTarget(), CGM, S, false /* No EarlyClobber */);
+        getTarget(), false /* No EarlyClobber */,
+        [&](const Stmt *UnspStmt, std::string_view Msg) {
+          CGM.ErrorUnsupported(UnspStmt, Msg);
+        });
 
     std::string ReplaceConstraint (InputConstraint);
     llvm::Value *Arg;

@@ -84,11 +84,14 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     // container plug-ins can use these bytes to see if they can parse this
     // file.
     if (file_size > 0) {
-      DataBufferSP buffer_sp = FileSystem::Instance().CreateDataBuffer(
-          file->GetPath(), g_initial_bytes_to_read, file_offset);
-      extractor_sp = std::make_shared<DataExtractor>();
-      extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
-      data_offset = 0;
+      // Check that we made a data buffer. For instance, a directory node is
+      // not 0 size, but we can't make a data buffer for it.
+      if (DataBufferSP buffer_sp = FileSystem::Instance().CreateDataBuffer(
+              file->GetPath(), g_initial_bytes_to_read, file_offset)) {
+        extractor_sp = std::make_shared<DataExtractor>();
+        extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
+        data_offset = 0;
+      }
     }
   }
 

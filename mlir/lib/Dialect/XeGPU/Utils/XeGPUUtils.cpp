@@ -380,6 +380,42 @@ void xegpu::removeLayoutAttr(const T &operandOrResult) {
     owner->removeAttr(name);
 }
 
+SmallVector<NamedAttribute>
+xegpu::dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
+  SmallVector<NamedAttribute> out;
+  out.reserve(attrs.size());
+
+  for (auto attr : attrs) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
+      auto newLayout = dist.dropSgLayoutAndData();
+      if (newLayout)
+        out.emplace_back(attr.getName(), newLayout);
+    } else {
+      out.push_back(attr);
+    }
+  }
+
+  return out;
+}
+
+SmallVector<NamedAttribute>
+xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
+  SmallVector<NamedAttribute> out;
+  out.reserve(attrs.size());
+
+  for (auto attr : attrs) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
+      auto newLayout = dist.dropInstData();
+      if (newLayout)
+        out.emplace_back(attr.getName(), newLayout);
+    } else {
+      out.push_back(attr);
+    }
+  }
+
+  return out;
+}
+
 // Explicit instantiation for OpResult
 template void
 xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);

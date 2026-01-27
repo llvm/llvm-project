@@ -744,7 +744,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
+  if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
     DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
@@ -829,7 +829,7 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   assert(VT == N->getValueType(1) &&
          "expected both return values to have the same type");
 
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported)
     return false;
 
@@ -891,8 +891,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   RTLIB::Libcall CosLC = RTLIB::getCOS(VT);
 
   SDValue SoftSin, SoftCos;
-  if (TLI.getLibcallImpl(SinLC) == RTLIB::Unsupported ||
-      TLI.getLibcallImpl(CosLC) == RTLIB::Unsupported) {
+  if (DAG.getLibcalls().getLibcallImpl(SinLC) == RTLIB::Unsupported ||
+      DAG.getLibcalls().getLibcallImpl(CosLC) == RTLIB::Unsupported) {
     DAG.getContext()->emitError("do not know how to soften fsincos");
 
     EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -3828,15 +3828,21 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FAKE_USE:
     Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
     break;
-  case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;
-  case ISD::STRICT_FP_TO_SINT:
-  case ISD::STRICT_FP_TO_UINT:
+  case ISD::FCOPYSIGN:
+    Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo);
+    break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-  case ISD::LRINT:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::LLRINT:
-  case ISD::LROUND:
   case ISD::LLROUND:
+  case ISD::LRINT:
+  case ISD::LROUND:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LROUND:
     Res = SoftPromoteHalfOp_Op0WithStrict(N);
     break;
   case ISD::FP_TO_SINT_SAT:

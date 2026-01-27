@@ -30,8 +30,8 @@ using namespace lld::macho;
 // Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
-static_assert(sizeof(void *) != 8 ||
-                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
+                                         sizeof(std::vector<Relocation>) + 88,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -177,9 +177,9 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
   return {};
 }
 
-const Reloc *InputSection::getRelocAt(uint32_t off) const {
-  auto it = llvm::find_if(
-      relocs, [=](const macho::Reloc &r) { return r.offset == off; });
+const Relocation *InputSection::getRelocAt(uint32_t off) const {
+  auto it = llvm::find_if(relocs,
+                          [=](const Relocation &r) { return r.offset == off; });
   if (it == relocs.end())
     return nullptr;
   return &*it;
@@ -215,7 +215,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
   memcpy(buf, data.data(), data.size());
 
   for (size_t i = 0; i < relocs.size(); i++) {
-    const Reloc &r = relocs[i];
+    const Relocation &r = relocs[i];
     uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
 
@@ -223,7 +223,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
                             target->hasAttr(r.type, RelocAttrBits::UNSIGNED);
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
       const Symbol *fromSym = cast<Symbol *>(r.referent);
-      const Reloc &minuend = relocs[++i];
+      const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
         minuendVA = toSym->getVA() + minuend.addend;

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -1075,11 +1076,8 @@ void EmptyOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult EmptyOp::verify() {
-  if (getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitOpError("incorrect number of dynamic sizes, has ")
-           << getDynamicSizes().size() << ", expected "
-           << getType().getNumDynamicDims();
-  return success();
+  return verifyDynamicDimensionCount(getOperation(), getType(),
+                                     getDynamicSizes());
 }
 
 LogicalResult
@@ -1109,12 +1107,12 @@ Value EmptyOp::getDynamicSize(unsigned idx) {
 SmallVector<OpFoldResult> EmptyOp::getMixedSizes() {
   SmallVector<OpFoldResult> result;
   unsigned ctr = 0;
-  OpBuilder b(getContext());
-  for (int64_t i = 0; i < getType().getRank(); ++i) {
-    if (getType().isDynamicDim(i)) {
+  Builder b(getContext());
+  for (int64_t dim : getType().getShape()) {
+    if (ShapedType::isDynamic(dim)) {
       result.push_back(getDynamicSizes()[ctr++]);
     } else {
-      result.push_back(b.getIndexAttr(getType().getShape()[i]));
+      result.push_back(b.getIndexAttr(dim));
     }
   }
   return result;
@@ -1666,9 +1664,9 @@ LogicalResult GenerateOp::verify() {
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
   RankedTensorType resultType = llvm::cast<RankedTensorType>(getType());
-  if (getNumOperands() != resultType.getNumDynamicDims())
-    return emitError("must have as many index operands as dynamic extents "
-                     "in the result type");
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOperands())))
+    return failure();
   return success();
 }
 
@@ -2257,7 +2255,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
-      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp, CastOp>,
       ConvertToStaticExpandShape, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
       FoldReshapeWithFromElements<ExpandShapeOp>>(context);
@@ -4039,11 +4037,8 @@ void SplatOp::getAsmResultNames(
 }
 
 LogicalResult SplatOp::verify() {
-  if (getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitOpError("incorrect number of dynamic sizes, has ")
-           << getDynamicSizes().size() << ", expected "
-           << getType().getNumDynamicDims();
-  return success();
+  return verifyDynamicDimensionCount(getOperation(), getType(),
+                                     getDynamicSizes());
 }
 
 LogicalResult
