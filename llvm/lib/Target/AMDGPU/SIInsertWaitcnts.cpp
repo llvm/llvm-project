@@ -410,15 +410,6 @@ void WaitEventSet::dump() const {
   dbgs() << "\n";
 }
 
-// Mapping from event to counter according to the table masks.
-InstCounterType eventCounter(const WaitEventSet *masks, WaitEventType E) {
-  for (auto T : inst_counter_types()) {
-    if (masks[T].contains(E))
-      return T;
-  }
-  llvm_unreachable("event type has no associated counter");
-}
-
 class WaitcntBrackets;
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -486,6 +477,16 @@ public:
   // Returns an array of WaitEventSets which can be used to map values in
   // WaitEventType to corresponding counter values in InstCounterType.
   virtual const WaitEventSet *getWaitEventMask() const = 0;
+
+  /// \Returns the counter that corresponds to event \p E.
+  InstCounterType getCounterFromEvent(WaitEventType E) const {
+    const WaitEventSet *WaitEvents = getWaitEventMask();
+    for (auto T : inst_counter_types()) {
+      if (WaitEvents[T].contains(E))
+        return T;
+    }
+    llvm_unreachable("event type has no associated counter");
+  }
 
   // Returns a new waitcnt with all counters except VScnt set to 0. If
   // IncludeVSCnt is true, VScnt is set to 0, otherwise it is set to ~0u.
@@ -736,6 +737,9 @@ public:
                                    AtomicRMWState PrevState) const;
   const WaitEventSet *getWaitEventMask() const {
     return WCG->getWaitEventMask();
+  }
+  InstCounterType getCounterFromEvent(WaitEventType E) const {
+    return WCG->getCounterFromEvent(E);
   }
 };
 
@@ -1090,7 +1094,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
 }
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
-  InstCounterType T = eventCounter(Context->getWaitEventMask(), E);
+  InstCounterType T = Context->getCounterFromEvent(E);
   assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
@@ -3402,7 +3406,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  SmemAccessCounter = eventCounter(WCG->getWaitEventMask(), SMEM_ACCESS);
+  SmemAccessCounter = WCG->getCounterFromEvent(SMEM_ACCESS);
 
   BlockInfos.clear();
   bool Modified = false;
