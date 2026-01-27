@@ -219,24 +219,6 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
              *MRI.getRegClassOrNull(SrcReg));
 }
 
-bool llvm::canReplaceRegNoTypeCheck(Register DstReg, Register SrcReg,
-                                    MachineRegisterInfo &MRI) {
-  // Give up if either DstReg or SrcReg  is a physical register.
-  if (DstReg.isPhysical() || SrcReg.isPhysical())
-    return false;
-  // Replace if either DstReg has no constraints or the register
-  // constraints match.
-  const auto &DstRBC = MRI.getRegClassOrRegBank(DstReg);
-  if (!DstRBC || DstRBC == MRI.getRegClassOrRegBank(SrcReg))
-    return true;
-
-  // Otherwise match if the Src is already a regclass that is covered by the Dst
-  // RegBank.
-  return isa<const RegisterBank *>(DstRBC) && MRI.getRegClassOrNull(SrcReg) &&
-         cast<const RegisterBank *>(DstRBC)->covers(
-             *MRI.getRegClassOrNull(SrcReg));
-}
-
 bool llvm::isTriviallyDead(const MachineInstr &MI,
                            const MachineRegisterInfo &MRI) {
   // Instructions without side-effects are dead iff they only define dead regs.
