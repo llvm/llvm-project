@@ -442,7 +442,7 @@ private:
   /// Calculate the rewrite cost and undo the state change (e.g. rewriting) done
   /// in initHeuristics. Uses \p CopyForUse and \p CopyForDef to calculate copy
   /// costs, and \p RewriteCands to undo rewriting.
-  int64_t getRewriteCost(
+  double getRewriteCost(
       const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
       const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
       const SmallPtrSetImpl<MachineInstr *> &CopyForDef);
