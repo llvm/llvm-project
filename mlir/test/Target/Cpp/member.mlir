@@ -31,9 +31,9 @@ func.func @member(%arg0: !emitc.opaque<"mystruct">, %arg1: i32, %arg2: index) {
 // CPP-DEFAULT-NEXT: int32_t [[V3:[^ ]*]] = [[V2]].b;
 // CPP-DEFAULT-NEXT: int32_t [[V4:[^ ]*]];
 // CPP-DEFAULT-NEXT: [[V4]] = [[V3]];
-// CPP-DEFAULT-NEXT: int32_t [[V5:[^ ]*]] = [[V2]].c[[[Index]]];
+// CPP-DEFAULT-NEXT: int32_t [[V5:[^ ]*]] = ([[V2]].c)[[[Index]]];
 // CPP-DEFAULT-NEXT: [[V4]] = [[V5]];
-// CPP-DEFAULT-NEXT: [[V2]].d[[[Index]]] = [[V1]];
+// CPP-DEFAULT-NEXT: ([[V2]].d)[[[Index]]] = [[V1]];
 
 
 func.func @member_of_pointer(%arg0: !emitc.ptr<!emitc.opaque<"mystruct">>, %arg1: i32, %arg2: index) {
@@ -67,6 +67,6 @@ func.func @member_of_pointer(%arg0: !emitc.ptr<!emitc.opaque<"mystruct">>, %arg1
 // CPP-DEFAULT-NEXT: int32_t [[V3:[^ ]*]] = [[V2]]->b;
 // CPP-DEFAULT-NEXT: int32_t [[V4:[^ ]*]];
 // CPP-DEFAULT-NEXT: [[V4]] = [[V3]];
-// CPP-DEFAULT-NEXT: int32_t [[V5:[^ ]*]] = [[V2]]->c[[[Index]]];
+// CPP-DEFAULT-NEXT: int32_t [[V5:[^ ]*]] = ([[V2]]->c)[[[Index]]];
 // CPP-DEFAULT-NEXT: [[V4]] = [[V5]];
-// CPP-DEFAULT-NEXT: [[V2]]->d[[[Index]]] = [[V1]];
+// CPP-DEFAULT-NEXT: ([[V2]]->d)[[[Index]]] = [[V1]];

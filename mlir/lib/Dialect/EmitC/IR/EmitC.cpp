@@ -512,7 +512,8 @@ LogicalResult ExpressionOp::verify() {
     Operation *op = worklist.back();
     worklist.pop_back();
     if (visited.contains(op)) {
-      if (cast<CExpressionInterface>(op).hasSideEffects())
+      auto cExpr = cast<CExpressionInterface>(op);
+      if (!cExpr.alwaysInline() && cExpr.hasSideEffects())
         return emitOpError(
             "requires exactly one use for operations with side effects");
     }
@@ -521,6 +522,14 @@ LogicalResult ExpressionOp::verify() {
       if (Operation *def = operand.getDefiningOp()) {
         worklist.push_back(def);
       }
+  }
+
+  // It is illegal to forbid inlining of expressions whose root operation must
+  // be inlined.
+  if (getDoNotInline() &&
+      cast<emitc::CExpressionInterface>(rootOp).alwaysInline()) {
+    return emitOpError("root operation must be inlined but expression is marked"
+                       " do-not-inline");
   }
 
   return success();
@@ -1017,6 +1026,10 @@ LogicalResult emitc::YieldOp::verify() {
 
   if (!isa<DoOp>(containingOp) && !result && containingOp->getNumResults() != 0)
     return emitOpError() << "does not yield a value to be returned by parent";
+
+  if (result && isa<emitc::LValueType>(result.getType()) &&
+      !isa<ExpressionOp>(containingOp))
+    return emitOpError() << "yielding lvalues is not supported for this op";
 
   return success();
 }
