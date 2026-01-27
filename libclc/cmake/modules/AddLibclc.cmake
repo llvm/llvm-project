@@ -376,6 +376,9 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
+  if (NOT DEFINED ARG_OUTPUT_FILENAME OR ARG_OUTPUT_FILENAME STREQUAL "")
+    message(FATAL_ERROR "OUTPUT_FILENAME parameter is required and must be non-empty.")
+  endif()
   set( LIBCLC_OUTPUT_FILENAME ${ARG_OUTPUT_FILENAME} )
   set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
 
