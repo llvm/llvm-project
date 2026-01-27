@@ -240,21 +240,21 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether location is target memory location.
   bool isTargetMemLoc(IRMemLocation Loc) const {
     return static_cast<unsigned>(Loc) >=
            static_cast<unsigned>(Location::FirstTarget);
   }
 
-  // Whether the target memory locations are all the same.
-  // So it behaves as the default read/write, but for Target
-  // locations only
+  /// Whether the target memory locations are all the same.
+  /// So it behaves as the default read/write, but for Target
+  /// locations only.
   bool isTargetMemLocSameForAll() const {
-    ModRefInfo First = getModRef(IRMemLocation::FirstTarget);
-    for (unsigned ILoc = static_cast<unsigned>(IRMemLocation::FirstTarget) + 1;
-         ILoc <= static_cast<unsigned>(IRMemLocation::Last); ++ILoc) {
-      const auto Loc = static_cast<IRMemLocation>(ILoc);
-      ModRefInfo MR = getModRef(Loc);
-      if (First != MR)
+    ModRefInfo Expected = getModRef(IRMemLocation::FirstTarget);
+    auto First = static_cast<unsigned>(IRMemLocation::FirstTarget);
+    auto Last = static_cast<unsigned>(IRMemLocation::Last);
+    for (unsigned ILoc = First + 1; ILoc <= Last; ++ILoc) {
+      if (Expected != getModRef(static_cast<IRMemLocation>(ILoc)))
         return false;
     }
     return true;
