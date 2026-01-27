@@ -1906,11 +1906,9 @@ void GCNSchedStage::revertScheduling() {
 
     MachineBasicBlock::iterator MII = MI->getIterator();
     if (MII != DAG.RegionEnd) {
-      // Will subsequent splice move a non-debug MI up past a non-debug
-      // instruction?
+      // Will subsequent splice move MI up past a non-debug instruction?
       bool NonDebugReordered =
-          (!MI->isDebugInstr() &&
-           skipDebugInstructionsForward(DAG.RegionEnd, MII) != MII);
+          skipDebugInstructionsForward(DAG.RegionEnd, MII) != MII;
       DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
       // Only update LiveIntervals information if non-debug instructions are
       // reordered. Otherwise debug instructions could cause code generation to
