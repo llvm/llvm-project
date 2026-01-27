@@ -180,3 +180,56 @@ export void call8(int3x1 M) {
     int3 V = (int3)M;
 }
 
+// vector flat cast from matrix of same size (bool)
+// CHECK-LABEL: call9
+// CHECK:    [[M_ADDR:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[V:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
+// CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <2 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
+// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[MATRIXEXT]] to i1
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> [[TMP2]], i1 [[LOADEDV]], i64 0
+// CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
+// CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
+// CHECK-NEXT:    [[LOADEDV2:%.*]] = trunc i32 [[MATRIXEXT1]] to i1
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> [[TMP4]], i1 [[LOADEDV2]], i64 1
+// CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i1> [[TMP6]] to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[V]], align 8
+// CHECK-NEXT:    ret void
+export void call9(bool1x2 M) {
+    bool2 V = (bool2)M;
+}
+
+struct BoolVecStruct {
+    bool2 V;
+};
+
+// vector flat cast from struct containing bool vector
+// CHECK-LABEL: call10
+// CHECK:    [[V:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %struct.BoolVecStruct, align 1
+// CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 %s, i32 8, i1 false)
+// CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr inbounds %struct.BoolVecStruct, ptr [[AGG_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[VECTOR_GEP]], align 8
+// CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[VECEXT]] to i1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> [[TMP0]], i1 [[LOADEDV]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[VECTOR_GEP]], align 8
+// CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+// CHECK-NEXT:    [[LOADEDV2:%.*]] = trunc i32 [[VECEXT1]] to i1
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> [[TMP2]], i1 [[LOADEDV2]], i64 1
+// CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[V]], align 8
+// CHECK-NEXT:    ret void
+export void call10(BoolVecStruct s) {
+    bool2 V = (bool2)s;
+}
