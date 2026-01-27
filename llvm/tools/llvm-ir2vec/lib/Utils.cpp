@@ -25,6 +25,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/CodeGen/MIR2Vec.h"
@@ -41,17 +42,17 @@ namespace llvm {
 
 namespace ir2vec {
 
-bool IR2VecTool::initializeVocabulary(StringRef VocabPath) {
+Error IR2VecTool::initializeVocabulary(StringRef VocabPath) {
   auto VocabOrErr = Vocabulary::fromFile(VocabPath);
-
-  if (!VocabOrErr) {
-    llvm::errs() << "Failed to load vocabulary: "
-                 << toString(VocabOrErr.takeError()) << "\n";
-    return false;
-  }
+  if (!VocabOrErr)
+    return VocabOrErr.takeError();
 
   Vocab = std::make_unique<Vocabulary>(std::move(*VocabOrErr));
-  return Vocab->isValid();
+
+  if (!Vocab->isValid())
+    return createStringError(errc::invalid_argument,
+                            "Failed to initialize IR2Vec vocabulary");
+  return Error::success();
 }
 
 TripletResult IR2VecTool::generateTriplets(const Function &F) const {

@@ -92,8 +92,8 @@ private:
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
 
-  /// Initialize the IR2Vec vocabulary analysis
-  bool initializeVocabulary(StringRef VocabPath);
+  /// Initialize the IR2Vec vocabulary from the specified file path.
+  Error initializeVocabulary(StringRef VocabPath);
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:

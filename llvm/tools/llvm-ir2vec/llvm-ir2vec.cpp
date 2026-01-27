@@ -160,9 +160,9 @@ static Error processModule(Module &M, raw_ostream &OS) {
           "IR2Vec vocabulary file path not specified; "
           "You may need to set it using --ir2vec-vocab-path");
     }
-    auto VocabStatus = Tool.initializeVocabulary(VocabFile);
-    assert(VocabStatus && "Failed to initialize IR2Vec vocabulary");
-    (void)VocabStatus;
+
+    if (Error Err = Tool.initializeVocabulary(VocabFile))
+      return Err;
 
     if (!FunctionName.empty()) {
       // Process single function
