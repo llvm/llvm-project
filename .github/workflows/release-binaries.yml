@@ -77,6 +77,7 @@ jobs:
         # Some of the python modules we install require this package to be installed on the system.
         vcpkg install openssl:arm64-windows-static-md
         vcpkg install libsodium:arm64-windows-static-md
+        vcpkg install libxml2[core]:x64-windows-static
         echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
         echo "SODIUM_INSTALL=system" >> $env:GITHUB_ENV
         echo "SODIUM_INSTALL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
@@ -293,7 +294,7 @@ jobs:
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
-        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
+        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-libxml2 --local-python --skip-checkout
         $installer = (Get-ChildItem -Recurse -Filter "*.exe" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.

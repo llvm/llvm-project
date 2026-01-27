@@ -20,6 +20,7 @@ echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
 echo --local-python: use installed Python and does not try to use a specific version (3.11)
+echo --local-libxml2: Use install libxml2 instead of downloading and building it.
 echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
@@ -39,6 +40,7 @@ set x64=
 set arm64=
 set skip-checkout=
 set local-python=
+set local-libxml2=
 set force-msvc=
 call :parse_args %*
 
@@ -146,9 +148,11 @@ if "%skip-checkout%" == "true" (
   set llvm_src=%build_dir%\llvm-project
 )
 
-curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
-tar zxf libxml2-v2.9.12.tar.gz
-
+if "%local-libxml2" != "true" (
+  curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
+  tar zxf libxml2-v2.9.12.tar.gz
+)
+ 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
 set common_compiler_flags=-DLIBXML_STATIC
@@ -212,16 +216,22 @@ call "%vsdevcmd%" -arch=x86 || exit /b 1
 @echo on
 mkdir build32_stage0
 cd build32_stage0
-call :do_build_libxml || exit /b 1
+if "%local-libxml2" != "true" (
+  call :do_build_libxml || exit /b 1
+)
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
-  -DPython3_ROOT_DIR=%PYTHONHOME% ^
+  -DPython3_ROOT_DIR=%PYTHONHOME%
+
+if "%local-libxml2" != "true" (
+  set cmake_flags=%cmake_flags% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+)
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
@@ -273,16 +283,21 @@ call "%vsdevcmd%" -arch=%arch% || exit /b 1
 @echo on
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
-call :do_build_libxml || exit /b 1
+if "%local-libxml2" != "true" (
+  call :do_build_libxml || exit /b 1
+)
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DCLANG_DEFAULT_LINKER=lld
+if "%local-libxml2" != "true" (
+  set cmake_flags=%cmake_flags% ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+)
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
     -DCOMPILER_RT_BUILD_SANITIZERS=OFF
