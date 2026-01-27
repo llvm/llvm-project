@@ -616,8 +616,8 @@ def SYNTACORE_SCR7 : RISCVProcessorModel<"syntacore-scr7",
                                                FeatureStdExtZkn],
                                               [TuneNoDefaultUnroll, TunePostRAScheduler]>;
 
-def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
-                                                 TTAscalonD8Model,
+def TENSTORRENT_ASCALON_X : RISCVProcessorModel<"tt-ascalon-x",
+                                                 TTAscalonXModel,
                                                  !listconcat(RVA23S64Features,
                                                  [FeatureStdExtSmaia,
                                                   FeatureStdExtSmmpm,
