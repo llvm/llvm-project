@@ -30,6 +30,9 @@ define i32 @test_wave_shuffle_self_select(i32 %val) {
   ret i32 %res
 }
 
+; In the Row Share 0 case, the logic is the same with and without the or.
+; In fact, the or will likely be optimized out before reaching the DPP
+; optimization step anyway. So this case should work with or without the or
 define i32 @test_wave_shuffle_dpp_row_share_0(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
@@ -54,6 +57,32 @@ define i32 @test_wave_shuffle_dpp_row_share_0(i32 %val) {
   %masked = and i32 %tid, 65520   ; 0xFFF0
   %share_0 = or i32 %masked, 0
   %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %val, i32 %share_0)
+  ret i32 %res
+}
+
+define i32 @test_wave_shuffle_dpp_row_share_0_no_or(i32 %val) {
+; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
+; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 [[VAL]], i32 272, i32 15, i32 15, i1 false)
+; CHECK-W32-NEXT:    ret i32 [[RES]]
+;
+; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
+; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 [[VAL]], i32 272, i32 15, i32 15, i1 false)
+; CHECK-W64-NEXT:    ret i32 [[RES]]
+;
+; CHECK-DPP-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
+; CHECK-DPP-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-DPP-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-DPP-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-DPP-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 65520
+; CHECK-DPP-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[MASKED]])
+; CHECK-DPP-NEXT:    ret i32 [[RES]]
+;
+  %lo = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tid = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %masked = and i32 %tid, 65520   ; 0xFFF0
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %val, i32 %masked)
   ret i32 %res
 }
 
