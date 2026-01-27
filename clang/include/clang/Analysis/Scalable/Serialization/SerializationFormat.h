@@ -21,10 +21,10 @@
 
 namespace clang::ssaf {
 
-class TUSummary;
+class EntityId;
 class EntityIdTable;
 class EntityName;
-class EntityId;
+class TUSummary;
 class TUSummaryData;
 
 /// Abstract base class for serialization formats.
