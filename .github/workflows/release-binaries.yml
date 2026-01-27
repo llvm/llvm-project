@@ -245,6 +245,11 @@ jobs:
       run: |
         echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\x64\libs" >> $env:GITHUB_ENV
 
+    - name: Debug
+      shell: bash
+      run: |
+        find /c/hostedtoolcahce/windows -iname python3.lib
+
     # Install Windows dependncies
     - name: Windows Depenencies
       if: runner.os == 'Windows'
