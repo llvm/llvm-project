@@ -6,21 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace ento;
@@ -45,19 +42,20 @@ public:
 
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
-    // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    // want to visit those, so we make our own visitor.
+    struct LocalVisitor final : public ConstDynamicRecursiveASTVisitor {
       const NoDeleteChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
       explicit LocalVisitor(const NoDeleteChecker *Checker) : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldWalkTypesOfTypeLocs = true;
+        ShouldVisitImplicitCode = false;
+        ShouldVisitLambdaBody = true;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool VisitFunctionDecl(FunctionDecl *FD) {
+      bool VisitFunctionDecl(const FunctionDecl *FD) override {
         Checker->visitFunctionDecl(FD);
         return true;
       }
