@@ -1624,10 +1624,10 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   Released>,
     CmdLineOption<Boolean,
                   "EnableDefaultConfig",
-                  "If set to true, the default source, sink and "
-                  "propagation rules are added. Consider setting "
-                  "it to false if you want to use a fully custom "
-                  "taint configuration.",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
                   "true",
                   Released>
   ]>,
