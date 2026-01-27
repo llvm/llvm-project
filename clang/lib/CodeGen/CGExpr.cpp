@@ -7207,16 +7207,17 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
       bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                               LangOptions::MatrixMemoryLayout::MatrixRowMajor;
       llvm::MatrixBuilder MB(Builder);
-      for (unsigned I = 0, E = MT->getNumElementsFlattened(); I < E; I++) {
-        unsigned Row = I / NumCols;
-        unsigned Col = I % NumCols;
-        llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
-        llvm::Value *ColIdx = llvm::ConstantInt::get(IdxTy, Col);
-        llvm::Value *Idx =
-            MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
-        LValue LV = LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
-                                          Base.getBaseInfo(), TBAAAccessInfo());
-        AccessList.emplace_back(LV);
+      for (unsigned Row = 0; Row < MT->getNumRows(); Row++) {
+        for (unsigned Col = 0; Col < MT->getNumColumns(); Col++) {
+          llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
+          llvm::Value *ColIdx = llvm::ConstantInt::get(IdxTy, Col);
+          llvm::Value *Idx = MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols,
+                                            IsMatrixRowMajor);
+          LValue LV =
+              LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
+                                    Base.getBaseInfo(), TBAAAccessInfo());
+          AccessList.emplace_back(LV);
+        }
       }
     } else { // a scalar/builtin type
       if (!IdxList.empty()) {
