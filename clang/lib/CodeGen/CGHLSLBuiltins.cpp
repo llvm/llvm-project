@@ -384,8 +384,7 @@ static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
-static Intrinsic::ID getPrefixCountBitsIntrinsic(
-                                          llvm::Triple::ArchType Arch) {
+static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
   switch (Arch) {
   case llvm::Triple::spirv:
     return Intrinsic::spv_subgroup_prefix_bit_count;
@@ -883,8 +882,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(Op->getType()->isIntegerTy(1) &&
            "WavePrefixBitCount operand must be a boolean type");
 
-    Intrinsic::ID IID = getPrefixCountBitsIntrinsic(
-         getTarget().getTriple().getArch());
+    Intrinsic::ID IID =
+        getPrefixCountBitsIntrinsic(getTarget().getTriple().getArch());
 
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), IID), ArrayRef{Op},
