@@ -18,8 +18,6 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 
 #include <optional>
 
@@ -27,8 +25,6 @@ namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
 
-using llvm::SmallVector;
-using llvm::StringRef;
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
@@ -80,13 +76,13 @@ namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 MlirBlock createBlock(const nb::sequence &pyArgTypes,
                       const std::optional<nb::sequence> &pyArgLocs) {
-  SmallVector<MlirType> argTypes;
+  std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
   for (const auto &pyType : pyArgTypes)
     argTypes.push_back(
         nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyType &>(pyType));
 
-  SmallVector<MlirLocation> argLocs;
+  std::vector<MlirLocation> argLocs;
   if (pyArgLocs) {
     argLocs.reserve(nb::len(*pyArgLocs));
     for (const auto &pyLoc : *pyArgLocs)
@@ -1258,9 +1254,9 @@ nb::object PyOperation::create(std::string_view name,
                                std::optional<std::vector<PyBlock *>> successors,
                                int regions, PyLocation &location,
                                const nb::object &maybeIp, bool inferType) {
-  llvm::SmallVector<MlirType, 4> mlirResults;
-  llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
-  llvm::SmallVector<std::pair<std::string, MlirAttribute>, 4> mlirAttributes;
+  std::vector<MlirType> mlirResults;
+  std::vector<MlirBlock> mlirSuccessors;
+  std::vector<std::pair<std::string, MlirAttribute>> mlirAttributes;
 
   // General parameter validation.
   if (regions < 0)
@@ -1333,7 +1329,7 @@ nb::object PyOperation::create(std::string_view name,
     // Note that the attribute names directly reference bytes in
     // mlirAttributes, so that vector must not be changed from here
     // on.
-    llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
+    std::vector<MlirNamedAttribute> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
     for (auto &it : mlirAttributes)
       mlirNamedAttributes.push_back(mlirNamedAttributeGet(
@@ -1347,7 +1343,7 @@ nb::object PyOperation::create(std::string_view name,
     mlirOperationStateAddSuccessors(&state, mlirSuccessors.size(),
                                     mlirSuccessors.data());
   if (regions) {
-    llvm::SmallVector<MlirRegion, 4> mlirRegions;
+    std::vector<MlirRegion> mlirRegions;
     mlirRegions.resize(regions);
     for (int i = 0; i < regions; ++i)
       mlirRegions[i] = mlirRegionCreate();
@@ -1641,7 +1637,7 @@ nb::object PyOpView::buildGeneric(
   }
 
   // Unpack operands.
-  llvm::SmallVector<MlirValue, 4> operands;
+  std::vector<MlirValue> operands;
   operands.reserve(operands.size());
   if (operandSegmentSpecObj.is_none()) {
     // Non-sized operand unpacking.
@@ -3248,7 +3244,7 @@ void populateIRCore(nb::module_ &m) {
           [](const std::vector<PyLocation> &pyLocations,
              std::optional<PyAttribute> metadata,
              DefaultingPyMlirContext context) {
-            llvm::SmallVector<MlirLocation, 4> locations;
+            std::vector<MlirLocation> locations;
             locations.reserve(pyLocations.size());
             for (auto &pyLocation : pyLocations)
               locations.push_back(pyLocation.get());
@@ -3752,7 +3748,7 @@ void populateIRCore(nb::module_ &m) {
              const nb::object &maybeIp,
              bool inferType) -> nb::typed<nb::object, PyOperation> {
             // Unpack/validate operands.
-            llvm::SmallVector<MlirValue, 4> mlirOperands;
+            std::vector<MlirValue> mlirOperands;
             if (operands) {
               mlirOperands.reserve(operands->size());
               for (PyValue *operand : *operands) {
@@ -4658,8 +4654,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "replace_all_uses_except",
           [](PyValue &self, PyValue &with, const nb::list &exceptions) {
-            // Convert Python list to a SmallVector of MlirOperations
-            llvm::SmallVector<MlirOperation> exceptionOps;
+            // Convert Python list to a std::vector of MlirOperations
+            std::vector<MlirOperation> exceptionOps;
             for (nb::handle exception : exceptions) {
               exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
             }
@@ -4680,8 +4676,8 @@ void populateIRCore(nb::module_ &m) {
           "replace_all_uses_except",
           [](PyValue &self, PyValue &with,
              std::vector<PyOperation> &exceptions) {
-            // Convert Python list to a SmallVector of MlirOperations
-            llvm::SmallVector<MlirOperation> exceptionOps;
+            // Convert Python list to a std::vector of MlirOperations
+            std::vector<MlirOperation> exceptionOps;
             for (PyOperation &exception : exceptions)
               exceptionOps.push_back(exception);
             mlirValueReplaceAllUsesExcept(
