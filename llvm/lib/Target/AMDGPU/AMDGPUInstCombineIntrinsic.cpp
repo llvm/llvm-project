@@ -611,9 +611,8 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
       if (ST.isWave64() && (Mask & 0x3F) != 0x30)
         return std::nullopt;
       CanDPP16RowShare = true;
-    }
-    else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) &&
-        RowIdx < 15 && RowIdx > 0) {
+    } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
+               RowIdx > 0) {
       // wave32 requires Mask & 0x1F = 0x10
       if (ST.isWave32() && (Mask & 0x1F) != 0x10)
         return std::nullopt;
@@ -621,9 +620,8 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
       if (ST.isWave64() && (Mask & 0x3F) != 0x30)
         return std::nullopt;
       CanDPP16RowShare = true;
-    }
-    else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid) &&
-        RowIdx == 15) {
+    } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid) &&
+               RowIdx == 15) {
       CanDPP16RowShare = true;
     }
 
