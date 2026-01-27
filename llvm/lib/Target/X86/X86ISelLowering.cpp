@@ -36053,6 +36053,43 @@ bool X86TargetLowering::isLegalStoreImmediate(int64_t Imm) const {
   return isInt<32>(Imm);
 }
 
+bool X86TargetLowering::isLegalNTLoad(Type *DataType, Align Alignment,
+                                      const DataLayout &DL) const {
+  unsigned DataSize = DL.getTypeStoreSize(DataType);
+  // The only supported nontemporal loads are for aligned vectors of 16 or 32
+  // bytes.  Note that 32-byte nontemporal vector loads are supported by AVX2
+  // (the equivalent stores only require AVX).
+  if (Alignment >= DataSize && (DataSize == 16 || DataSize == 32))
+    return DataSize == 16 ? Subtarget.hasSSE1() : Subtarget.hasAVX2();
+
+  return false;
+}
+
+bool X86TargetLowering::isLegalNTStore(Type *DataType, Align Alignment,
+                                       const DataLayout &DL) const {
+  unsigned DataSize = DL.getTypeStoreSize(DataType);
+
+  // SSE4A supports nontemporal stores of float and double at arbitrary
+  // alignment.
+  if (Subtarget.hasSSE4A() && (DataType->isFloatTy() || DataType->isDoubleTy()))
+    return true;
+
+  // Besides the SSE4A subtarget exception above, only aligned stores are
+  // available nontemporaly on any other subtarget.  And only stores with a size
+  // of 4..32 bytes (powers of 2, only) are permitted.
+  if (Alignment < DataSize || DataSize < 4 || DataSize > 32 ||
+      !isPowerOf2_32(DataSize))
+    return false;
+
+  // 32-byte vector nontemporal stores are supported by AVX (the equivalent
+  // loads require AVX2).
+  if (DataSize == 32)
+    return Subtarget.hasAVX();
+  if (DataSize == 16)
+    return Subtarget.hasSSE1();
+  return true;
+}
+
 bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isScalarInteger() || !VT2.isScalarInteger())
     return false;

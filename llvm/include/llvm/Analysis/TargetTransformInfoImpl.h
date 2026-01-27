@@ -363,17 +363,11 @@ public:
   }
 
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) const {
-    // By default, assume nontemporal memory stores are available for stores
-    // that are aligned and have a size that is a power of 2.
-    unsigned DataSize = DL.getTypeStoreSize(DataType);
-    return Alignment >= DataSize && isPowerOf2_32(DataSize);
+    return false;
   }
 
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) const {
-    // By default, assume nontemporal memory loads are available for loads that
-    // are aligned and have a size that is a power of 2.
-    unsigned DataSize = DL.getTypeStoreSize(DataType);
-    return Alignment >= DataSize && isPowerOf2_32(DataSize);
+    return false;
   }
 
   virtual bool isLegalBroadcastLoad(Type *ElementTy,

@@ -477,6 +477,16 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  bool isLegalNTStore(Type *DataType, Align Alignment) const override {
+    const DataLayout &DL = this->getDataLayout();
+    return getTLI()->isLegalNTStore(DataType, Alignment, DL);
+  }
+
+  bool isLegalNTLoad(Type *DataType, Align Alignment) const override {
+    const DataLayout &DL = this->getDataLayout();
+    return getTLI()->isLegalNTLoad(DataType, Alignment, DL);
+  }
+
   int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset, int64_t MaxOffset) {
     return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
   }

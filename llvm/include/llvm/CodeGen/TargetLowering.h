@@ -2988,6 +2988,24 @@ public:
     return Value == 0;
   }
 
+  /// Return true if the target supports nontemporal store.
+  virtual bool isLegalNTStore(Type *DataType, Align Alignment,
+                              const DataLayout &DL) const {
+    // By default, assume nontemporal memory stores are available for stores
+    // that are aligned and have a size that is a power of 2.
+    unsigned DataSize = DL.getTypeStoreSize(DataType);
+    return Alignment >= DataSize && isPowerOf2_32(DataSize);
+  }
+
+  /// Return true if the target supports nontemporal load.
+  virtual bool isLegalNTLoad(Type *DataType, Align Alignment,
+                             const DataLayout &DL) const {
+    // By default, assume nontemporal memory loads are available for loads that
+    // are aligned and have a size that is a power of 2.
+    unsigned DataSize = DL.getTypeStoreSize(DataType);
+    return Alignment >= DataSize && isPowerOf2_32(DataSize);
+  }
+
   /// Given a shuffle vector SVI representing a vector splat, return a new
   /// scalar type of size equal to SVI's scalar type if the new type is more
   /// profitable. Returns nullptr otherwise. For example under MVE float splats

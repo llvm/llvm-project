@@ -278,8 +278,6 @@ public:
   isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
                      TTI::MaskKind MaskKind =
                          TTI::MaskKind::VariableOrConstantMask) const override;
-  bool isLegalNTLoad(Type *DataType, Align Alignment) const override;
-  bool isLegalNTStore(Type *DataType, Align Alignment) const override;
   bool isLegalBroadcastLoad(Type *ElementTy,
                             ElementCount NumElements) const override;
   bool forceScalarizeMaskedGather(VectorType *VTy,

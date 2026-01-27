@@ -29607,7 +29607,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
     //
     // Coordinated with LDNP constraints in
     // `llvm/lib/Target/AArch64/AArch64InstrInfo.td`
-    // and `AArch64TTIImpl::isLegalNTLoad`.
+    // and `AArch64TargetLowering::isLegalNTLoad`.
     if (LoadNode->isNonTemporal() && Subtarget->isLittleEndian() &&
         MemVT.getSizeInBits() == 256u &&
         (MemVT.getScalarSizeInBits() == 8u ||

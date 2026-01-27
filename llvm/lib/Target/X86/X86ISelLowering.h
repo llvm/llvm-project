@@ -1456,6 +1456,11 @@ namespace llvm {
 
     bool isLegalStoreImmediate(int64_t Imm) const override;
 
+    bool isLegalNTLoad(Type *DataType, Align Alignment,
+                       const DataLayout &DL) const override;
+    bool isLegalNTStore(Type *DataType, Align Alignment,
+                        const DataLayout &DL) const override;
+
     /// Add x86-specific opcodes to the default list.
     bool isBinOp(unsigned Opcode) const override;
 
