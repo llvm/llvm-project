@@ -35,7 +35,8 @@ class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
   bits<5> vs2;
   bits<6> imm;
 
-  // This overwrites the lsb of funct6 in the RVInstVBase base class.
+  // This overwrites the lsb of funct6 in the RVInstVBase base class with imm{5}
+  assert !eq(funct6{0}, 0), "funct6 LSB should be zero";
   let Inst{26} = imm{5};
   let Inst{24-20} = vs2;
   let Inst{19-15} = imm{4-0};
