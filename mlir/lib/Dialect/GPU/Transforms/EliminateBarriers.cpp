@@ -86,11 +86,11 @@ static Value getBase(Value v) {
       break;
 
     bool shouldContinue = TypeSwitch<Operation *, bool>(v.getDefiningOp())
-                              .Case<ViewLikeOpInterface>([&](auto op) {
+                              .Case([&](ViewLikeOpInterface op) {
                                 v = op.getViewSource();
                                 return true;
                               })
-                              .Case<memref::TransposeOp>([&](auto op) {
+                              .Case([&](memref::TransposeOp op) {
                                 v = op.getIn();
                                 return true;
                               })
