@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -1575,3 +1575,44 @@ std::string_view& refViewMemberReturnView2(RefMember a) { return a.view; } // ex
 std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
 std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access
+
+namespace attr_on_template_params {
+struct MyObj {
+  ~MyObj();
+};
+
+template <typename T>
+struct MemberFuncsTpl {
+  ~MemberFuncsTpl();
+  // Template Version A: Attribute on declaration only
+  const T* memberA(const T& x [[clang::lifetimebound]]);
+  // Template Version B: Attribute on definition only
+  const T* memberB(const T& x);
+  // Template Version C: Attribute on BOTH declaration and definition
+  const T* memberC(const T& x [[clang::lifetimebound]]);
+};
+
+template <typename T>
+const T* MemberFuncsTpl<T>::memberA(const T& x) {
+    return &x;
+}
+template <typename T>
+const T* MemberFuncsTpl<T>::memberB(const T& x [[clang::lifetimebound]]) {
+    return &x;
+}
+template <typename T>
+const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) {
+    return &x;
+}
+
+void test() {
+  MemberFuncsTpl<MyObj> mtf;
+  const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} // expected-note {{destroyed here}}
+  const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} // tu-note {{destroyed here}}
+  const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} // expected-note {{destroyed here}}
+  (void)pTMA; // expected-note {{later used here}}
+  (void)pTMB; // tu-note {{later used here}}
+  (void)pTMC; // expected-note {{later used here}}
+}
+
+} // namespace attr_on_template_params

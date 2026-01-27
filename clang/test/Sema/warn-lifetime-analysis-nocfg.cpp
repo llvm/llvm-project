@@ -1260,8 +1260,7 @@ void test() {
 
     // Templated tests (generic templates)
     const auto ptrTA = StringTemplateA<char>().data();  // Declaration-only attribute // expected-warning {{temporary whose address is used}}
-    // FIXME: Definition is not instantiated until the end of TU. The attribute is not merged when this call is processed.
-    const auto ptrTB = StringTemplateB<char>().data();  // Definition-only attribute
+    const auto ptrTB = StringTemplateB<char>().data();  // Definition-only attribute  // expected-warning {{temporary whose address is used}}
     const auto ptrTC = StringTemplateC<char>().data();  // Both have attribute        // expected-warning {{temporary whose address is used}}
 
     // Template specialization tests
