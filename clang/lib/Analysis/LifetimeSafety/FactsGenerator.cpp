@@ -417,6 +417,12 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   flow(MTEList, SubExprList, /*Kill=*/true);
 }
 
+void FactsGenerator::VisitCXXBindTemporaryExpr(
+    const CXXBindTemporaryExpr *BTE) {
+  if (hasOrigins(BTE))
+    killAndFlowOrigin(*BTE, *BTE->getSubExpr());
+}
+
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   /// TODO: Handle loans to temporaries.
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();

@@ -49,6 +49,7 @@ public:
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);

@@ -27,6 +27,13 @@ struct [[gsl::Pointer()]] View {
   void use() const;
 };
 
+struct [[gsl::Pointer]] ViewWithDtor {
+  ViewWithDtor(const MyObj&);
+  ViewWithDtor();
+  ~ViewWithDtor();
+  void use() const;
+};
+
 class TriviallyDestructedClass {
   View a, b;
 };
@@ -1575,3 +1582,46 @@ std::string_view& refViewMemberReturnView2(RefMember a) { return a.view; } // ex
 std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
 std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access
+
+namespace nontrivial_view_types {
+
+ViewWithDtor return_view_from_param(MyObj a) {
+  return ViewWithDtor(a);  // expected-warning {{address of stack memory is returned later}}
+}                          // expected-note@-1 {{returned here}}
+
+ViewWithDtor return_view_via_local(MyObj a) {
+  auto v = ViewWithDtor(a);  // expected-warning {{address of stack memory is returned later}}
+  return v;                  // expected-note {{returned here}}
+}
+
+void uaf_nontrivial_view() {
+  ViewWithDtor v = ViewWithDtor(MyObj{});  // expected-warning {{does not live long enough}}
+  v.use();                                 // expected-note {{later used here}}
+}                                          // expected-note@-2 {{destroyed here}}
+
+void chain_nontrivial_view() {
+  ViewWithDtor v1, v2;
+  {
+    MyObj obj;
+    v1 = ViewWithDtor(obj);  // expected-warning {{does not live long enough}}
+    v2 = v1;
+  }                          // expected-note {{destroyed here}}
+  v2.use();                  // expected-note {{later used here}}
+}
+
+void safe_nontrivial_view() {
+  MyObj obj;
+  ViewWithDtor v = ViewWithDtor(obj);
+  v.use();
+}
+
+void assign_nontrivial_view() {
+  ViewWithDtor v;
+  {
+    MyObj obj;
+    v = ViewWithDtor(obj);  // expected-warning {{does not live long enough}}
+  }                         // expected-note {{destroyed here}}
+  v.use();                  // expected-note {{later used here}}
+}
+
+} // namespace nontrivial_view_types
