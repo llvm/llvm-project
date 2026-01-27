@@ -37,6 +37,9 @@ int hipConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
 extern "C" hipError_t __hipPushCallConfiguration(dim3 gridSize, dim3 blockSize,
                                                  size_t sharedSize = 0,
                                                  hipStream_t stream = 0);
+extern "C" int __hipPopCallConfiguration(dim3 *gridSize, dim3 *blockSize,
+                                         size_t *sharedSize,
+                                         hipStream_t *stream);
 #ifndef __HIP_API_PER_THREAD_DEFAULT_STREAM__
 extern "C" hipError_t hipLaunchKernel(const void *func, dim3 gridDim,
                                       dim3 blockDim, void **args,
@@ -62,6 +65,9 @@ extern "C" int cudaConfigureCall(dim3 gridSize, dim3 blockSize,
 extern "C" int __cudaPushCallConfiguration(dim3 gridSize, dim3 blockSize,
                                            size_t sharedSize = 0,
                                            cudaStream_t stream = 0);
+extern "C" int __cudaPopCallConfiguration(dim3 *gridSize, dim3 *blockSize,
+                                          size_t *sharedSize,
+                                          cudaStream_t *stream);
 extern "C" cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim,
                                         dim3 blockDim, void **args,
                                         size_t sharedMem, cudaStream_t stream);

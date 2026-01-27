@@ -1,13 +1,13 @@
 // Based on clang/test/CodeGenCUDA/kernel-stub-name.cu.
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s \
-// RUN:   -I%S/../inputs/ -x cuda -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-sdk-version=9.2 \
+// RUN:   -emit-cir %s -I%S/../inputs/ -x cuda -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 #include "cuda.h"
 
-// CHECK: cir.func {{.*}} @__device_stub__ckernel()
-// CHECK-NEXT:   cir.return
+// CHECK: cir.func {{.*}} @[[CSTUB:__device_stub__ckernel]]()
+// CHECK: cir.return
 // CHECK-NEXT: }
 extern "C" __global__ void ckernel() {}
 
