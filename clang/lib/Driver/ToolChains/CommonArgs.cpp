@@ -3045,57 +3045,59 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
           << LibOmpTargetName << ArchPrefix;
   }
 }
-void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                                 const llvm::opt::ArgList &Args,
-                                 llvm::opt::ArgStringList &CmdArgs) {
-  if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      (!Args.hasArg(options::OPT_nostdlib) ||
-       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
-      !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
-    TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
-  } else {
-    // Claim "no HIP libraries" arguments if any
-    for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
-      Arg->claim();
-    }
-  }
-}
 
 void tools::addOpenCLBuiltinsLib(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  // Check whether user specifies a libclc bytecode library
   const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
   if (!A)
     return;
 
-  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
-  SmallString<128> LibclcPath(D.ResourceDir);
-  llvm::sys::path::append(LibclcPath, "lib", "libclc");
-
-  // If the namespec is of the form :filename, search for that file.
+  // If the namespec is of the form :filename we use it exactly.
   StringRef LibclcNamespec(A->getValue());
   bool FilenameSearch = LibclcNamespec.consume_front(":");
-  SmallString<128> LibclcTargetFile(LibclcNamespec);
-
-  if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
-  } else {
-    // Search the library paths for the file
-    if (!FilenameSearch)
-      LibclcTargetFile += ".bc";
-
-    llvm::sys::path::append(LibclcPath, LibclcTargetFile);
-    if (llvm::sys::fs::exists(LibclcPath)) {
+  if (FilenameSearch) {
+    SmallString<128> LibclcFile(LibclcNamespec);
+    if (llvm::sys::fs::exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
-    } else {
-      // Since the user requested a library, if we haven't one then report an
-      // error.
-      D.Diag(diag::err_drv_libclc_not_found) << LibclcTargetFile;
+      CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
+      return;
+    }
+    D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
+    return;
+  }
+
+  // The OpenCL libraries are stored in <ResourceDir>/lib/<triple>.
+  SmallString<128> BasePath(D.ResourceDir);
+  llvm::sys::path::append(BasePath, "lib");
+  llvm::sys::path::append(BasePath, D.getTargetTriple());
+
+  // First check for a CPU-specific library in <ResourceDir>/lib/<triple>/<CPU>.
+  // TODO: Factor this into common logic that checks for valid subtargets.
+  if (const Arg *CPUArg =
+          DriverArgs.getLastArg(options::OPT_mcpu_EQ, options::OPT_march_EQ)) {
+    StringRef CPU = CPUArg->getValue();
+    if (!CPU.empty()) {
+      SmallString<128> CPUPath(BasePath);
+      llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
+      if (llvm::sys::fs::exists(CPUPath)) {
+        CC1Args.push_back("-mlink-builtin-bitcode");
+        CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
+        return;
+      }
     }
   }
+
+  // Fall back to the generic library for the triple.
+  SmallString<128> GenericPath(BasePath);
+  llvm::sys::path::append(GenericPath, "libclc.bc");
+  if (llvm::sys::fs::exists(GenericPath)) {
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
+    return;
+  }
+
+  D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
 }
 
 void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
@@ -3298,6 +3300,41 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
         << TripleStr;
 
   return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
+}
+
+void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs,
+                                    const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    CmdArgs.push_back("-mllvm");
+    if (A->getOption().matches(options::OPT_fglobal_isel)) {
+      CmdArgs.push_back("-global-isel=1");
+
+      // GISel is on by default on AArch64 -O0, so don't bother adding
+      // the fallback remarks for it. Other combinations will add a warning of
+      // some kind.
+      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
+      bool IsOptLevelSupported = false;
+
+      Arg *A = Args.getLastArg(options::OPT_O_Group);
+      if (IsArchSupported) {
+        if (!A || A->getOption().matches(options::OPT_O0))
+          IsOptLevelSupported = true;
+      }
+      if (!IsArchSupported || !IsOptLevelSupported) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-global-isel-abort=2");
+
+        if (!IsArchSupported)
+          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
+        else
+          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
+      }
+    } else {
+      CmdArgs.push_back("-global-isel=0");
+    }
+  }
 }
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,

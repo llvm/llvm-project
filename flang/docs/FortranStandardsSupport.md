@@ -56,7 +56,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Simple procedures                                          | N      | |
 | Using integer arrays to specify subscripts                 | N      | |
 | Using integer arrays to specify rank and bound of an array | N      | |
-| Using an integer constant to specify rank                  | N      | |
+| Using an integer constant to specify rank                  | Y      | |
 | Reduction specifier for do concurrent                      | P      | Syntax is accepted |
 | Enumerations                                               | N      | |
 

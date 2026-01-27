@@ -9,6 +9,7 @@
 #ifndef ORC_RT_ERROR_H
 #define ORC_RT_ERROR_H
 
+#include "orc-rt-c/CoreTypes.h"
 #include "orc-rt-c/config.h"
 #include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Compiler.h"
@@ -88,6 +89,8 @@ class ORC_RT_NODISCARD Error {
 
   template <typename... HandlerTs>
   friend Error handleErrors(Error E, HandlerTs &&...Hs);
+
+  friend orc_rt_ErrorRef wrap(Error Err) noexcept;
 
 public:
   /// Destroy this error. Aborts if error was not checked, or was checked but
@@ -210,6 +213,15 @@ template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&...Args) {
   static_assert(std::is_base_of<ErrorInfoBase, ErrT>::value,
                 "ErrT is not an ErrorInfoBase subclass");
   return make_error(std::make_unique<ErrT>(std::forward<ArgTs>(Args)...));
+}
+
+inline orc_rt_ErrorRef wrap(Error Err) noexcept {
+  return reinterpret_cast<orc_rt_ErrorRef>(Err.takePayload().release());
+}
+
+inline Error unwrap(orc_rt_ErrorRef ErrRef) noexcept {
+  return make_error(std::unique_ptr<ErrorInfoBase>(
+      reinterpret_cast<ErrorInfoBase *>(ErrRef)));
 }
 
 namespace detail {
