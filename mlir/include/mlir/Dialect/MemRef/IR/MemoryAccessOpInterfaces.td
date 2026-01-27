@@ -13,20 +13,20 @@ include "mlir/IR/OpBase.td"
 
 def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
   let description = [{
-    An interface for operations that operate on (by loading from or
+    An interface for operations that access (by loading from or
     storing to, atomically modifying, or otherwise) memory located at an
     index within a memref whose semantics don't depend on the indexing scheme.
 
     That is, a direct access op is one where, if `%b[%j0, %j1, ..., %jL]`
     points to the same memory as `%a[%i0, %i1, ... %iK]`, it would be
-    trivial to replace `%a[%i0, ..., %iK]` with %b[%j0, ... %jL]`.
+    legal to replace `%a[%i0, ..., %iK]` with %b[%j0, ... %jL]`.
 
     Operations may impose constraints on allowable reindexings.
     Returning a non-empty result from `getAccessedShape()` imposes constraints
     on the dimensions whose strides need to be preserved.
 
     This interface is intended to enable transformations such as folding in
-    aliasing operations (like memref.subview or memref.collapse_shape) or
+    aliasing operations (like `memref.subview` or `memref.collapse_shape`) or
     linearizing memrefs (making them 1-D) to be generic over in-tree and
     out-of-tree operations.
   }];
@@ -42,10 +42,10 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
       /*args=*/(ins)>,
     InterfaceMethod<
       /*desc=*/[{
-        Return the indices that are used to access the memref returned by getAccessedMemref().
+        Return the indices that are used to access the memref returned by `getAccessedMemref()`.
 
         The size of this range must be equal to the rank of the memref returned by
-        getAccessedMemref().
+        `getAccessedMemref()`.
       }],
       /*retType=*/"::mlir::Operation::operand_range",
       /*methodName=*/"getIndices",
@@ -112,11 +112,11 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
 def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
   let description = [{
     This is an interface for operations that perform a copy of some number
-    of values from `%src[%srcIndices...]` to `%dst[%dstIndices...]`.The copy
+    of values from `%src[%srcIndices...]` to `%dst[%dstIndices...]`. The copy
     does not necessarily target some linear sequence of elements (it may, for
-    example, be strided), and tere may be implicit offsets added to the source
+    example, be strided), and there may be implicit offsets added to the source
     and/or destination indices (for example, `amdgpu.gather_to_lds` can validly
-    implmenet this interface even though the destination index gets a lane ID *
+    implement this interface even though the destination index gets a lane ID *
     copy size term added to it implicitly).
 
     The motivating examples for this interface are operations that perform
@@ -127,8 +127,8 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
 
     Unlike `IndexedAccessOpInterface`, this interface assumes that the elements
     being copied are contiguous in memory and that the producers of the
-    operation has ensured this. That is, if the source memref is a
-    `memref<8x3xf32, strided<[9, 1]>>`, it is presumed that a memcopy of
+    operation have ensured this. That is, if the source memref is a
+    `memref<8x3xf32, strided<[9, 1]>>`, it is presumed that a memcpy of
     4 floats starting at the indices `[%x, %y]` is intended to read into
     the space between the length-three rows.
   }];
@@ -146,7 +146,7 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
         Return the indices that are used to access the source memref.
 
         The size of this range must be equal to the rank of the memref returned by
-        getSrc().
+        `getSrc()`.
       }],
       /*retType=*/"::mlir::Operation::operand_range",
       /*methodName=*/"getSrcIndices",
@@ -163,7 +163,7 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
         Return the indices that are used to access the destination memref.
 
         The size of this range must be equal to the rank of the memref returned by
-        getDst().
+        `getDst()`.
       }],
       /*retType=*/"::mlir::Operation::operand_range",
       /*methodName=*/"getDstIndices",

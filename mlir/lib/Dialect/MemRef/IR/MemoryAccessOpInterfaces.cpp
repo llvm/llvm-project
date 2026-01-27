@@ -33,9 +33,9 @@ mlir::memref::detail::verifyIndexedAccessOpInterface(Operation *op) {
   if (memref.getType().getRank() !=
       static_cast<int64_t>(iface.getIndices().size()))
     return op->emitOpError(
-        "invalid number of indices for accessed memref, expected " +
-        Twine(memref.getType().getRank()) + " but got " +
-        Twine(iface.getIndices().size()));
+        "invalid number of indices for accessed memref, expected ") <<
+        memref.getType().getRank() << " but got " <<
+        iface.getIndices().size());
   return success();
 }
 
@@ -46,7 +46,7 @@ mlir::memref::detail::verifyIndexedMemCopyOpInterface(Operation *op) {
   TypedValue<MemRefType> dst = iface.getDst();
   if (!src || !dst) {
     // Allow operations to not always have memref arguments.
-    return ::mlir::success();
+    return success();
   }
   if (src.getType().getRank() !=
       static_cast<int64_t>(iface.getSrcIndices().size()))
