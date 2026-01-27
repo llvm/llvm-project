@@ -69,77 +69,123 @@ using namespace clang;
 // Unreachable code analysis.
 //===----------------------------------------------------------------------===//
 
+static bool isTrivialInitializer(const Expr *Init) {
+  if (!Init)
+    return true;
+  const auto *CE = dyn_cast<CXXConstructExpr>(Init);
+  if (!CE)
+    return false;
+  const auto *Ctor = CE->getConstructor();
+  return Ctor && Ctor->isTrivial() && Ctor->isDefaultConstructor() &&
+         !CE->requiresZeroInitialization();
+}
+
+static bool wouldTrivialAutoVarInitApply(const LangOptions &LangOpts,
+                                         const VarDecl *VD) {
+  if (LangOpts.getTrivialAutoVarInit() ==
+      LangOptions::TrivialAutoVarInitKind::Uninitialized)
+    return false;
+  if (VD->isConstexpr() || VD->hasAttr<UninitializedAttr>())
+    return false;
+  if (const auto *TD = VD->getType()->getAsTagDecl())
+    if (TD->hasAttr<NoTrivialAutoVarInitAttr>())
+      return false;
+  if (const auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext()))
+    if (FD->hasAttr<NoTrivialAutoVarInitAttr>())
+      return false;
+  return true;
+}
+
 namespace {
-  class UnreachableCodeHandler : public reachable_code::Callback {
-    Sema &S;
-    SourceRange PreviousSilenceableCondVal;
+class UnreachableCodeHandler : public reachable_code::Callback {
+  Sema &S;
+  SourceRange PreviousSilenceableCondVal;
+  bool CheckTrivialAutoVarInit;
 
-  public:
-    UnreachableCodeHandler(Sema &s) : S(s) {}
+public:
+  UnreachableCodeHandler(Sema &S, bool CheckTrivialAutoVarInit)
+      : S(S), CheckTrivialAutoVarInit(CheckTrivialAutoVarInit) {}
 
-    void HandleUnreachable(reachable_code::UnreachableKind UK, SourceLocation L,
-                           SourceRange SilenceableCondVal, SourceRange R1,
-                           SourceRange R2, bool HasFallThroughAttr) override {
-      // If the diagnosed code is `[[fallthrough]];` and
-      // `-Wunreachable-code-fallthrough` is  enabled, suppress `code will never
-      // be executed` warning to avoid generating diagnostic twice
-      if (HasFallThroughAttr &&
-          !S.getDiagnostics().isIgnored(diag::warn_unreachable_fallthrough_attr,
-                                        SourceLocation()))
-        return;
+  void HandleUnreachable(reachable_code::UnreachableKind UK, SourceLocation L,
+                         SourceRange SilenceableCondVal, SourceRange R1,
+                         SourceRange R2, bool HasFallThroughAttr) override {
+    // If the diagnosed code is `[[fallthrough]];` and
+    // `-Wunreachable-code-fallthrough` is  enabled, suppress `code will never
+    // be executed` warning to avoid generating diagnostic twice
+    if (HasFallThroughAttr &&
+        !S.getDiagnostics().isIgnored(diag::warn_unreachable_fallthrough_attr,
+                                      SourceLocation()))
+      return;
 
-      // Avoid reporting multiple unreachable code diagnostics that are
-      // triggered by the same conditional value.
-      if (PreviousSilenceableCondVal.isValid() &&
-          SilenceableCondVal.isValid() &&
-          PreviousSilenceableCondVal == SilenceableCondVal)
-        return;
-      PreviousSilenceableCondVal = SilenceableCondVal;
+    // Avoid reporting multiple unreachable code diagnostics that are
+    // triggered by the same conditional value.
+    if (PreviousSilenceableCondVal.isValid() && SilenceableCondVal.isValid() &&
+        PreviousSilenceableCondVal == SilenceableCondVal)
+      return;
+    PreviousSilenceableCondVal = SilenceableCondVal;
 
-      unsigned diag = diag::warn_unreachable;
-      switch (UK) {
-        case reachable_code::UK_Break:
-          diag = diag::warn_unreachable_break;
-          break;
-        case reachable_code::UK_Return:
-          diag = diag::warn_unreachable_return;
-          break;
-        case reachable_code::UK_Loop_Increment:
-          diag = diag::warn_unreachable_loop_increment;
-          break;
-        case reachable_code::UK_Other:
-          break;
-      }
+    unsigned DiagID = diag::warn_unreachable;
+    switch (UK) {
+    case reachable_code::UK_Break:
+      DiagID = diag::warn_unreachable_break;
+      break;
+    case reachable_code::UK_Return:
+      DiagID = diag::warn_unreachable_return;
+      break;
+    case reachable_code::UK_Loop_Increment:
+      DiagID = diag::warn_unreachable_loop_increment;
+      break;
+    case reachable_code::UK_Other:
+      break;
+    }
 
-      S.Diag(L, diag) << R1 << R2;
+    S.Diag(L, DiagID) << R1 << R2;
 
-      SourceLocation Open = SilenceableCondVal.getBegin();
-      if (Open.isValid()) {
-        SourceLocation Close = SilenceableCondVal.getEnd();
-        Close = S.getLocForEndOfToken(Close);
-        if (Close.isValid()) {
-          S.Diag(Open, diag::note_unreachable_silence)
+    SourceLocation Open = SilenceableCondVal.getBegin();
+    if (Open.isValid()) {
+      SourceLocation Close = S.getLocForEndOfToken(SilenceableCondVal.getEnd());
+      if (Close.isValid()) {
+        S.Diag(Open, diag::note_unreachable_silence)
             << FixItHint::CreateInsertion(Open, "/* DISABLES CODE */ (")
             << FixItHint::CreateInsertion(Close, ")");
-        }
       }
     }
-  };
+  }
+
+  void HandleUnreachableBlock(const CFGBlock *B) override {
+    // We only currently use this method for -Wtrivial-auto-var-init
+    if (!CheckTrivialAutoVarInit)
+      return;
+
+    for (const CFGElement &Elem : *B) {
+      auto CS = Elem.getAs<CFGStmt>();
+      if (!CS)
+        continue;
+      const auto *DS = dyn_cast<DeclStmt>(CS->getStmt());
+      if (!DS)
+        continue;
+      for (const Decl *DI : DS->decls()) {
+        const auto *VD = dyn_cast<VarDecl>(DI);
+        if (!VD || !VD->getDeclName() || !VD->hasLocalStorage())
+          continue;
+        if (!isTrivialInitializer(VD->getInit()))
+          continue;
+        if (!wouldTrivialAutoVarInitApply(S.getLangOpts(), VD))
+          continue;
+        S.Diag(VD->getLocation(), diag::warn_trivial_auto_var_init_unreachable)
+            << VD;
+      }
+    }
+  }
+};
 } // anonymous namespace
 
-/// CheckUnreachable - Check for unreachable code.
-static void CheckUnreachable(Sema &S, AnalysisDeclContext &AC) {
-  // As a heuristic prune all diagnostics not in the main file.  Currently
-  // the majority of warnings in headers are false positives.  These
-  // are largely caused by configuration state, e.g. preprocessor
-  // defined code, etc.
-  //
-  // Note that this is also a performance optimization.  Analyzing
-  // headers many times can be expensive.
+static void CheckUnreachable(Sema &S, AnalysisDeclContext &AC,
+                             bool CheckTrivialAutoVarInit) {
   if (!S.getSourceManager().isInMainFile(AC.getDecl()->getBeginLoc()))
     return;
 
-  UnreachableCodeHandler UC(S);
+  UnreachableCodeHandler UC(S, CheckTrivialAutoVarInit);
   reachable_code::FindUnreachableCode(AC, S.getPreprocessor(), UC);
 }
 
@@ -3156,7 +3202,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Warning: check for unreachable code
-  if (P.enableCheckUnreachable) {
+  bool CheckTrivialAutoVarInit = !Diags.isIgnored(
+      diag::warn_trivial_auto_var_init_unreachable, D->getBeginLoc());
+  if (P.enableCheckUnreachable || CheckTrivialAutoVarInit) {
     // Only check for unreachable code on non-template instantiations.
     // Different template instantiations can effectively change the control-flow
     // and it is very difficult to prove that a snippet of code in a template
@@ -3165,7 +3213,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(D))
       isTemplateInstantiation = Function->isTemplateInstantiation();
     if (!isTemplateInstantiation)
-      CheckUnreachable(S, AC);
+      CheckUnreachable(S, AC, CheckTrivialAutoVarInit);
   }
 
   // Check for thread safety violations

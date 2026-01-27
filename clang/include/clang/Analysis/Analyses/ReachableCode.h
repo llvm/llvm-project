@@ -51,6 +51,7 @@ public:
   virtual void HandleUnreachable(UnreachableKind UK, SourceLocation L,
                                  SourceRange ConditionVal, SourceRange R1,
                                  SourceRange R2, bool HasFallThroughAttr) = 0;
+  virtual void HandleUnreachableBlock(const CFGBlock *B) {}
 };
 
 /// ScanReachableFromBlock - Mark all blocks reachable from Start.

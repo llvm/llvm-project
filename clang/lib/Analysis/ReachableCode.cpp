@@ -761,6 +761,8 @@ void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
     if (reachable[block->getBlockID()])
       continue;
 
+    CB.HandleUnreachableBlock(block);
+
     DeadCodeScan DS(reachable, PP, AC.getASTContext());
     numReachable += DS.scanBackwards(block, CB);
 

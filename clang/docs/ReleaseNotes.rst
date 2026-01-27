@@ -187,6 +187,9 @@ Improvements to Clang's diagnostics
     int* p(int *in [[clang::noescape]]) { return in; }
                                                  ^~
 
+- Added ``-Wtrivial-auto-var-init`` to detect when ``-ftrivial-auto-var-init``
+  cannot initialize a variable because it is in unreachable code.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
