@@ -209,7 +209,7 @@ define amdgpu_kernel void @uniform_vec_f16_neg_0(ptr addrspace(1) %out, half %a)
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX9-NEXT:    s_pack_ll_b32_b16 s2, s2, 0x8000
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -220,7 +220,7 @@ define amdgpu_kernel void @uniform_vec_f16_neg_0(ptr addrspace(1) %out, half %a)
 ; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX906-NEXT:    s_pack_ll_b32_b16 s2, s2, 0x8000
 ; GFX906-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX906-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX906-NEXT:    s_endpgm
@@ -231,7 +231,7 @@ define amdgpu_kernel void @uniform_vec_f16_neg_0(ptr addrspace(1) %out, half %a)
 ; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX11-NEXT:    s_pack_ll_b32_b16 s2, s2, 0x8000
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -254,13 +254,17 @@ define float @divergent_vec_f16_neg_0(half %a) {
 ; GFX9-LABEL: divergent_vec_f16_neg_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x8000
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v0, s4, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_f16_neg_0:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX906-NEXT:    s_mov_b32 s4, 0x8000
+; GFX906-NEXT:    v_mov_b32_e32 v1, 0x5040100
+; GFX906-NEXT:    v_perm_b32 v0, s4, v0, v1
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: divergent_vec_f16_neg_0:
@@ -275,14 +279,15 @@ define float @divergent_vec_f16_neg_0(half %a) {
 ; GFX11-FAKE16-LABEL: divergent_vec_f16_neg_0:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 0x8000
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x half> poison, half %a, i32 0
   %vec = insertelement <2 x half> %tmp, half -0.0, i32 1
   %val = bitcast <2 x half> %vec to float
   ret float %val
 }
-
 
 define amdgpu_kernel void @uniform_vec_f16_0(ptr addrspace(1) %out, half %a) {
 ; GCN-LABEL: uniform_vec_f16_0:
