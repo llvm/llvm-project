@@ -408,18 +408,13 @@ bool ClauseProcessor::processInitializer(
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
         std::string name = object.sym()->name().ToString();
-        // Get length parameters for types that need them (e.g., characters)
+        // Get length parameters for types that need them (e.g., characters).
+        // Note: DeclareOp requires exactly one type parameter for non-boxed
+        // characters, unlike EmboxOp which doesn't allow them for constant-len.
         llvm::SmallVector<mlir::Value> typeParams;
         if (hlfir::isFortranEntity(addr)) {
           hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
                                      typeParams);
-          // EmboxOp verifier doesn't allow length parameters when character
-          // already has static LEN, so clear them in that case
-          if (auto charTy = mlir::dyn_cast<fir::CharacterType>(
-                  fir::getFortranElementType(addr.getType()))) {
-            if (charTy.hasConstantLen())
-              typeParams.clear();
-          }
         }
         auto declareOp = hlfir::DeclareOp::create(builder, loc, addr, name,
                                                   nullptr, typeParams, nullptr,
