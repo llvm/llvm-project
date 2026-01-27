@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVESIZE-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64 %s -filetype=null 2>&1 | FileCheck --check-prefix=WAVESIZE-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s -filetype=null 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: %s
 
 global_load_tr8_b64 v[2:3], v0, s[0:1]
 // GFX1250: global_load_tr8_b64 v[2:3], v0, s[0:1]  ; encoding: [0x00,0x00,0x16,0xee,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00]

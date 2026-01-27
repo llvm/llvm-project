@@ -298,6 +298,10 @@ void test_format_attr(char * Str, std::string StdStr) {
   myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
 			         expected-note{{string argument is not guaranteed to be null-terminated}}
 
+  extern int errno;
+  extern char *strerror(int errnum);
+  myprintf("errno: %s", strerror(errno));
+
   myprintf_2("hello", 0, Str);
   myprintf_2("hello %s", 0, StdStr.c_str());
   myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \

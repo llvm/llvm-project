@@ -269,3 +269,17 @@ func.func @test_dca_doesnt_crash() -> () {
 func.func @test_dca_doesnt_crash_2() -> () attributes {symbol = @notexistant} {
    return
 }
+
+func.func @test_forall_op_control_flow(%num_threads: index) {
+  // CHECK: test_forall_op_control_flow:
+  // CHECK:  region #0
+  // CHECK:   ^bb0 = live
+  // CHECK: region_preds: (all) predecessors:
+  // CHECK:   scf.forall (%{{.*}}) in (%{{.*}}) {...} {tag = "test_forall_op_control_flow"}
+  // CHECK: op_preds: (all) predecessors:
+  // CHECK:   scf.forall (%{{.*}}) in (%{{.*}}) {...} {tag = "test_forall_op_control_flow"}
+  // CHECK:   scf.forall.in_parallel {...}
+  scf.forall (%arg0) in (%num_threads) {
+  } {tag = "test_forall_op_control_flow"}
+  return
+}

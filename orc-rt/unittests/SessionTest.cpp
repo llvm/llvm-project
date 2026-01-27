@@ -227,8 +227,8 @@ private:
                        orc_rt_WrapperFunctionBuffer ResultBytes) {
     // Abuse "session" to refer to the ControllerAccess object.
     // We can just re-use sendFunctionResult for this.
-    reinterpret_cast<MockControllerAccess *>(S)->sendWrapperResult(CallId,
-                                                                   ResultBytes);
+    reinterpret_cast<MockControllerAccess *>(S)->sendWrapperResult(
+        CallId, WrapperFunctionBuffer(ResultBytes));
   }
 
   Session &SS;

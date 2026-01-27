@@ -433,35 +433,6 @@ struct ParseTreeVisitorLookupScope {
         x, mutator);
   }
 
-  template <typename V> static void Walk(const Designator &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.u, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(Designator &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.u, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const FunctionReference &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.v, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(FunctionReference &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.v, mutator);
-      mutator.Post(x);
-    }
-  }
   template <typename V> static void Walk(const CallStmt &x, V &visitor) {
     if (visitor.Pre(x)) {
       Walk(x.source, visitor);
@@ -509,22 +480,6 @@ struct ParseTreeVisitorLookupScope {
       Walk(x.format, mutator);
       Walk(x.controls, mutator);
       Walk(x.items, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const SignedIntLiteralConstant &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.t, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(SignedIntLiteralConstant &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.t, mutator);
       mutator.Post(x);
     }
   }
@@ -733,33 +688,6 @@ struct ParseTreeVisitorLookupScope {
       Walk(x.width, mutator);
       Walk(x.digits, mutator);
       Walk(x.exponentWidth, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const CompilerDirective &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.u, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(CompilerDirective &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.u, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const CompilerDirective::Unrecognized &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(CompilerDirective::Unrecognized &x, M &mutator) {
-    if (mutator.Pre(x)) {
       mutator.Post(x);
     }
   }

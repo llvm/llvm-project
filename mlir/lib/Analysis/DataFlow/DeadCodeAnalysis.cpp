@@ -527,7 +527,8 @@ void DeadCodeAnalysis::visitRegionBranchEdges(
     auto *predecessors = getOrCreate<PredecessorState>(point);
     propagateIfChanged(
         predecessors,
-        predecessors->join(predecessorOp, successor.getSuccessorInputs()));
+        predecessors->join(predecessorOp,
+                           regionBranchOp.getSuccessorInputs(successor)));
     LDBG() << "Added region branch as predecessor for successor: " << *point;
   }
 }

@@ -64,8 +64,8 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "Access": "public",
       "End": true,
-      "HasPublicFunctions": true,
       "HasPublicMembers": true,
+      "HasPublicMethods": true,
       "InfoType": "record",
       "IsParent": true,
       "IsTypedef": false,
@@ -73,7 +73,14 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
       "MangledName": "",
       "Name": "F",
       "Path": "path/to/F",
-      "PublicFunctions": [
+      "PublicMembers": [
+        {
+          "IsStatic": false,
+          "Name": "N",
+          "Type": "int"
+        }
+      ],
+      "PublicMethods": [
         {
           "InfoType": "function",
           "IsStatic": false,
@@ -86,13 +93,6 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
             "USR": "0000000000000000000000000000000000000000"
           },
           "USR": "0000000000000000000000000000000000000000"
-        }
-      ],
-      "PublicMembers": [
-        {
-          "IsStatic": false,
-          "Name": "N",
-          "Type": "int"
         }
       ],
       "TagType": "struct",
@@ -118,7 +118,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   "HasEnums": true,
   "HasParents": true,
   "HasProtectedMembers": true,
-  "HasPublicFunctions": true,
+  "HasPublicMethods": true,
   "HasRecords": true,
   "HasVirtualParents": true,
   "InfoType": "record",
@@ -148,7 +148,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
       "Type": "int"
     }
   ],
-  "PublicFunctions": [
+  "PublicMethods": [
     {
       "InfoType": "function",
       "IsStatic": false,
