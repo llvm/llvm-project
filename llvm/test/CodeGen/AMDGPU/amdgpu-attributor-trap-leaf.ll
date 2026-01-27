@@ -24,7 +24,7 @@ define amdgpu_kernel void @trap_kernel() {
 define amdgpu_kernel void @trap_kernel_with_handler() {
 ; CHECK-LABEL: define amdgpu_kernel void @trap_kernel_with_handler(
 ; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.trap() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.trap() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.trap() #0
@@ -33,7 +33,7 @@ define amdgpu_kernel void @trap_kernel_with_handler() {
 
 define amdgpu_kernel void @debugtrap_kernel() {
 ; CHECK-LABEL: define amdgpu_kernel void @debugtrap_kernel(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @llvm.debugtrap()
 ; CHECK-NEXT:    ret void
 ;
@@ -47,7 +47,6 @@ attributes #0 = { "trap-func-name"="handler" }
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR3]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR5]] = { "trap-func-name"="handler" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR4]] = { "trap-func-name"="handler" }
 ;.

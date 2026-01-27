@@ -141,26 +141,6 @@ static bool hasSanitizerAttributes(const Function &F) {
          F.hasFnAttribute(Attribute::SanitizeMemTag);
 }
 
-/// Returns true if F looks like a leaf-style trap intrinsic that cannot
-/// possibly callback into user code.
-static bool isTrapLikeLeafIntrinsic(const Function &F) {
-  if (!F.isIntrinsic())
-    return false;
-
-  // If we already know this intrinsic is nocallback, there is nothing left to
-  // classify.
-  if (F.hasFnAttribute(Attribute::NoCallback))
-    return true;
-
-  if (!F.hasFnAttribute(Attribute::NoReturn))
-    return false;
-
-  if (F.doesNotAccessMemory())
-    return true;
-
-  return F.onlyAccessesInaccessibleMemory();
-}
-
 namespace {
 class AMDGPUInformationCache : public InformationCache {
 public:
@@ -516,17 +496,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     // The current assumed state used to determine a change.
     auto OrigAssumed = getAssumed();
 
-    SmallPtrSet<const Function *, 4> TrapHandlers;
-    for (Instruction &I : instructions(F)) {
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB || !CB->hasFnAttr("trap-func-name"))
-        continue;
-
-      if (const Function *CalledFunc = CB->getCalledFunction())
-        if (isTrapLikeLeafIntrinsic(*CalledFunc))
-          TrapHandlers.insert(CalledFunc);
-    }
-
     // Check for Intrinsics and propagate attributes.
     const AACallEdges *AAEdges = A.getAAFor<AACallEdges>(
         *this, this->getIRPosition(), DepClassTy::REQUIRED);
@@ -558,11 +527,11 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
           intrinsicToAttrMask(IID, NonKernelOnly, NeedsImplicit,
                               HasApertureRegs, SupportsGetDoorbellID, COV);
 
-      if (TrapHandlers.contains(Callee)) {
-        if (!Callee->hasFnAttribute(Attribute::NoCallback))
-          return indicatePessimisticFixpoint();
-        continue;
-      }
+      // if (TrapHandlers.contains(Callee)) {
+      //   if (!Callee->hasFnAttribute(Attribute::NoCallback))
+      //     return indicatePessimisticFixpoint();
+      //   continue;
+      // }
 
       if (AttrMask == UNKNOWN_INTRINSIC) {
         // Assume not-nocallback intrinsics may invoke a function which accesses
@@ -573,8 +542,7 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         // of whether it's internal to the module or not.
         //
         // TODO: Ignoring callsite attributes.
-        if (!isTrapLikeLeafIntrinsic(*Callee) &&
-            !Callee->hasFnAttribute(Attribute::NoCallback))
+        if (!Callee->hasFnAttribute(Attribute::NoCallback))
           return indicatePessimisticFixpoint();
         continue;
       }
@@ -1382,13 +1350,13 @@ struct AAAMDGPUMinAGPRAlloc
         return true;
       }
 
-      if (const Function *CalledFunc = CB.getCalledFunction()) {
-        if (isTrapLikeLeafIntrinsic(*CalledFunc)) {
-          if (CB.hasFnAttr("trap-func-name"))
-            return CB.hasFnAttr(Attribute::NoCallback);
-          return true;
-        }
-      }
+      // if (const Function *CalledFunc = CB.getCalledFunction()) {
+      //   if (isTrapLikeLeafIntrinsic(*CalledFunc)) {
+      //     if (CB.hasFnAttr("trap-func-name"))
+      //       return CB.hasFnAttr(Attribute::NoCallback);
+      //     return true;
+      //   }
+      // }
 
       switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
@@ -1407,6 +1375,17 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
+      // Trap-like intrinsics such as llvm.trap and llvm.debugtrap do not have
+      // the nocallback attribute, so the AMDGPU attributor can conservatively
+      // drop all implicitly-known inputs and AGPR allocation information. Make
+      // sure we still infer that no implicit inputs are required and that the
+      // AGPR allocation stays at zero. Trap-like intrinsics may invoke a
+      // function which requires AGPRs, so we need to check if the called
+      // function has the "trap-func-name" attribute.
+      case Intrinsic::trap:
+      case Intrinsic::debugtrap:
+      case Intrinsic::ubsantrap:
+        return !CB.hasFnAttr("trap-func-name");
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
