@@ -51,7 +51,7 @@ Error IR2VecTool::initializeVocabulary(StringRef VocabPath) {
 
   if (!Vocab->isValid())
     return createStringError(errc::invalid_argument,
-                            "Failed to initialize IR2Vec vocabulary");
+                             "Failed to initialize IR2Vec vocabulary");
   return Error::success();
 }
 
