@@ -536,52 +536,51 @@ TEST(ParseArchString, RejectsDuplicateExtensionNames) {
 TEST(ParseArchString,
      RejectsExperimentalExtensionsIfNotEnableExperimentalExtension) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64izalasr", false).takeError()),
+      toString(RISCVISAInfo::parseArchString("rv64izibi", false).takeError()),
       "requires '-menable-experimental-extensions' for experimental extension "
-      "'zalasr'");
+      "'zibi'");
 }
 
 TEST(ParseArchString,
      AcceptsExperimentalExtensionsIfEnableExperimentalExtension) {
-  // Note: If zalasr becomes none-experimental, this test will need
+  // Note: If zibi becomes none-experimental, this test will need
   // updating (and unfortunately, it will still pass). The failure of
   // RejectsExperimentalExtensionsIfNotEnableExperimentalExtension will
   // hopefully serve as a reminder to update.
-  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64izalasr", true, false);
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64izibi", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_EQ(Exts.count("zalasr"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p9", true);
+  EXPECT_EQ(Exts.count("zibi"), 1U);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izibi0p1", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
-  EXPECT_EQ(Exts2.count("zalasr"), 1U);
+  EXPECT_EQ(Exts2.count("zibi"), 1U);
 }
 
 TEST(ParseArchString,
      RequiresExplicitVersionNumberForExperimentalExtensionByDefault) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64izalasr", true).takeError()),
-      "experimental extension requires explicit version number `zalasr`");
+      toString(RISCVISAInfo::parseArchString("rv64izibi", true).takeError()),
+      "experimental extension requires explicit version number `zibi`");
 }
 
 TEST(ParseArchString,
      AcceptsUnrecognizedVersionIfNotExperimentalExtensionVersionCheck) {
   auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64izalasr9p9", true, false);
+      RISCVISAInfo::parseArchString("rv64izibi9p9", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_TRUE(Exts.at("zalasr") == (RISCVISAUtils::ExtensionVersion{9, 9}));
+  EXPECT_TRUE(Exts.at("zibi") == (RISCVISAUtils::ExtensionVersion{9, 9}));
 }
 
 TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64izalasr9p9", true).takeError()),
-      "unsupported version number 9.9 for experimental extension 'zalasr' "
-      "(this compiler supports 0.9)");
+      toString(RISCVISAInfo::parseArchString("rv64izibi9p9", true).takeError()),
+      "unsupported version number 9.9 for experimental extension 'zibi' "
+      "(this compiler supports 0.1)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -832,13 +831,13 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
       RISCVISAInfo::parseArchString("rv64im_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
-              ElementsAre("+i", "+m", "+zmmul", "+experimental-zalasr"));
+              ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
       "rv32e_zalasr_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+experimental-zalasr", "+xventanacondops"));
+              ElementsAre("+e", "+zalasr", "+xventanacondops"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1192,6 +1191,7 @@ R"(All available -march extensions for RISC-V
     zaamo                1.0
     zabha                1.0
     zacas                1.0
+    zalasr               1.0
     zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
@@ -1312,6 +1312,7 @@ R"(All available -march extensions for RISC-V
     svinval              1.0
     svnapot              1.0
     svpbmt               1.0
+    svrsw60t59b          1.0
     svvptc               1.0
     xaifet               1.0
     xandesbfhcvt         5.0
@@ -1392,10 +1393,10 @@ R"(All available -march extensions for RISC-V
 
 Experimental extensions
     p                    0.18
+    y                    0.96
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zalasr               0.9
     zvbc32e              0.7
     zvfbfa               0.1
     zvfofp8min           0.2

@@ -666,6 +666,28 @@ class OpenMP_IfClauseSkip<
 def OpenMP_IfClause : OpenMP_IfClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.1]: `inbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_InbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$inbranch);
+
+  let optAssemblyFormat = [{
+    `inbranch` $inbranch
+  }];
+
+  let description = [{
+    The `inbranch` clause indicates that the generated SIMD function variant
+    is intended for use in conditional branches.
+  }];
+}
+def OpenMP_InbranchClause : OpenMP_InbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.5.10] `in_reduction` clause
 //===----------------------------------------------------------------------===//
 
@@ -912,6 +934,28 @@ class OpenMP_NontemporalClauseSkip<
 }
 
 def OpenMP_NontemporalClause : OpenMP_NontemporalClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.2]: `notinbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NotinbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$notinbranch);
+
+  let optAssemblyFormat = [{
+    `notinbranch` $notinbranch
+  }];
+
+  let description = [{
+    The `notinbranch` clause indicates that the generated SIMD function variant
+    is intended for use when not in conditional branches.
+  }];
+}
+def OpenMP_NotinbranchClause : OpenMP_NotinbranchClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [15.6] `nowait` clause
@@ -1531,5 +1575,29 @@ class OpenMP_UseDevicePtrClauseSkip<
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [5.10] `uniform` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_UniformClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$uniform_vars);
+
+  let optAssemblyFormat = [{
+    `uniform` `(` custom<UniformClause>($uniform_vars, type($uniform_vars)) `)`
+  }];
+
+  let description = [{
+    The `uniform` clause declares one or more arguments to have an invariant
+    value for all concurrent invocations of the function in the execution of
+    a single SIMD loop.
+  }];
+}
+
+def OpenMP_UniformClause : OpenMP_UniformClauseSkip<>;
 
 #endif // OPENMP_CLAUSES

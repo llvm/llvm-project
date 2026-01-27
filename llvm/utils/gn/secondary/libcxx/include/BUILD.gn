@@ -75,6 +75,18 @@ if (current_toolchain == default_toolchain) {
         [ "LIBCXX_CONFIG_SITE_MODULE_ENTRY=textual header \"__config_site\"" ]
   }
 
+  # FIXME: Remove this after a while.
+  action("remove_float_h") {
+    stamp = "$target_gen_dir/remove_float_h.stamp"
+    outputs = [ stamp ]
+    script = "//llvm/utils/gn/build/remove_if_exists.py"
+    args = [
+      "--stamp",
+      rebase_path(stamp, root_build_dir),
+      rebase_path("$root_build_dir/include/c++/v1/float.h", root_build_dir),
+    ]
+  }
+
   copy("copy_headers") {
     sources = [
       "__algorithm/adjacent_find.h",
@@ -235,6 +247,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/ranges_set_intersection.h",
       "__algorithm/ranges_set_symmetric_difference.h",
       "__algorithm/ranges_set_union.h",
+      "__algorithm/ranges_shift_left.h",
       "__algorithm/ranges_shuffle.h",
       "__algorithm/ranges_sort.h",
       "__algorithm/ranges_sort_heap.h",
@@ -292,6 +305,7 @@ if (current_toolchain == default_toolchain) {
       "__atomic/atomic_lock_free.h",
       "__atomic/atomic_ref.h",
       "__atomic/atomic_sync.h",
+      "__atomic/atomic_sync_timed.h",
       "__atomic/atomic_waitable_traits.h",
       "__atomic/check_memory_order.h",
       "__atomic/contention_t.h",
@@ -1677,7 +1691,6 @@ if (current_toolchain == default_toolchain) {
       "filesystem",
       "flat_map",
       "flat_set",
-      "float.h",
       "format",
       "forward_list",
       "fstream",
@@ -1751,6 +1764,7 @@ if (current_toolchain == default_toolchain) {
       "wctype.h",
     ]
     deps = [
+      ":remove_float_h",
       ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",

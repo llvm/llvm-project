@@ -73,12 +73,14 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
 
   if (Is("bitcode-strip") || Is("bitcode_strip"))
     return parseBitcodeStripOptions(Args, reportWarning);
-  else if (Is("strip"))
+
+  if (Is("strip"))
     return parseStripOptions(Args, reportWarning);
-  else if (Is("install-name-tool") || Is("install_name_tool"))
+
+  if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
-  else
-    return parseObjcopyOptions(Args, reportWarning);
+
+  return parseObjcopyOptions(Args, reportWarning);
 }
 
 /// The function executeObjcopyOnIHex does the dispatch based on the format

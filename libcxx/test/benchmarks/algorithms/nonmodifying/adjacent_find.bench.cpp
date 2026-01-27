@@ -27,13 +27,6 @@ int main(int argc, char** argv) {
       return x == y;
     });
   };
-  auto ranges_adjacent_find_pred = [](auto first, auto last) {
-    return std::ranges::adjacent_find(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
-  };
 
   // Benchmark {std,ranges}::adjacent_find on a sequence of the form xyxyxyxyxyxyxyxyxyxy,
   // which means we never find adjacent equal elements (the worst case of the algorithm).
@@ -68,17 +61,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::adjacent_find(vector<int>)", std_adjacent_find);
     bm.operator()<std::deque<int>>("std::adjacent_find(deque<int>)", std_adjacent_find);
     bm.operator()<std::list<int>>("std::adjacent_find(list<int>)", std_adjacent_find);
-    bm.operator()<std::vector<int>>("rng::adjacent_find(vector<int>)", std::ranges::adjacent_find);
-    bm.operator()<std::deque<int>>("rng::adjacent_find(deque<int>)", std::ranges::adjacent_find);
-    bm.operator()<std::list<int>>("rng::adjacent_find(list<int>)", std::ranges::adjacent_find);
 
     // {std,ranges}::adjacent_find(pred)
     bm.operator()<std::vector<int>>("std::adjacent_find(vector<int>, pred)", std_adjacent_find_pred);
     bm.operator()<std::deque<int>>("std::adjacent_find(deque<int>, pred)", std_adjacent_find_pred);
     bm.operator()<std::list<int>>("std::adjacent_find(list<int>, pred)", std_adjacent_find_pred);
-    bm.operator()<std::vector<int>>("rng::adjacent_find(vector<int>, pred)", ranges_adjacent_find_pred);
-    bm.operator()<std::deque<int>>("rng::adjacent_find(deque<int>, pred)", ranges_adjacent_find_pred);
-    bm.operator()<std::list<int>>("rng::adjacent_find(list<int>, pred)", ranges_adjacent_find_pred);
   }
 
   benchmark::Initialize(&argc, argv);
