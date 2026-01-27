@@ -2826,8 +2826,9 @@ libc_support_library(
     hdrs = ["src/__support/math/f16sqrt.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_generic_sqrt",
+        ":__support_fputil_sqrt",
         ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
     ]
 )
 
