@@ -1580,20 +1580,14 @@ void CodeGenModule::Release() {
         StringRef MangledName = getMangledName(GlobalDecl(FD));
         llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
 
-        if (!Entry) {
-          Visibility Vis = FD->getVisibility();
-          if (Vis == DefaultVisibility)
-            getDiags().Report(I.second, diag::err_mips_impossible_musttail)
-                << 1;
+        if (!Entry)
           continue;
-        }
 
         bool CalleeIsLocal;
         if (Entry->isDeclarationForLinker()) {
-          bool HasLocalLinkage = Entry->hasLocalLinkage();
-          bool HasHiddenVisibility =
+          // For declarations, only visibility can indicate locality.
+          CalleeIsLocal =
               Entry->hasHiddenVisibility() || Entry->hasProtectedVisibility();
-          CalleeIsLocal = HasLocalLinkage || HasHiddenVisibility;
         } else {
           CalleeIsLocal = Entry->isDSOLocal();
         }
