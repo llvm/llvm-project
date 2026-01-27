@@ -276,6 +276,7 @@ public:
   /// Returns true if \p VPB is a loop latch, using isHeader().
   static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
 };
+
 } // namespace llvm
 
 #endif
