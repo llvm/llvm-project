@@ -19,4 +19,4 @@
 #include <string>
 #include <vector>
 
-// expected-error@*:* {{We can't disable ASAN container checks when libc++ has been built with these checks enabled}}
+// expected-error@*:* {{We can't disable ASAN container checks when libc++ has been built with ASAN container checks enabled}}

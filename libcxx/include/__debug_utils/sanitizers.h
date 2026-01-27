@@ -39,7 +39,7 @@
 #endif
 
 #if _LIBCPP_INSTRUMENTED_WITH_ASAN && !_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
-#  error "We can't disable ASAN container checks when libc++ has been built with these checks enabled"
+#  error "We can't disable ASAN container checks when libc++ has been built with ASAN container checks enabled"
 #endif
 
 #if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
