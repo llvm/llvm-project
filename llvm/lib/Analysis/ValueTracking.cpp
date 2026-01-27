@@ -5350,8 +5350,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass::log(KnownSrc, Mode);
       }
 
-      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
-        Known.knownNot(fcSubnormal);
       break;
     }
     case Intrinsic::powi: {
