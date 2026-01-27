@@ -74,8 +74,8 @@ DistributeLayoutAttr inferBroadcastSourceLayout(DistributeLayoutAttr resLayout,
 /// Infers the source layout attribute for a reduction operation given the
 /// result layout attribute and reduced dims.
 DistributeLayoutAttr
-inferReductionSourceLayout(DistributeLayoutAttr resLayout,
-                           SmallVector<int64_t> reduceDims);
+inferMultiReductionSourceLayout(DistributeLayoutAttr resLayout,
+                                SmallVector<int64_t> reduceDims);
 
 /// Infers the source layout attribute for a bitcast operation given the
 /// result layout attribute, result element type bitwidth, and source element
@@ -89,12 +89,6 @@ DistributeLayoutAttr inferBitCastSourceLayout(DistributeLayoutAttr resLayout,
 DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
-
-/// Infers the source layout attribute for mask operand of scatter IO operation
-/// given the result layout attribute, value shape, and mask shape.
-DistributeLayoutAttr inferScatterIOMaskLayout(DistributeLayoutAttr resLayout,
-                                              ArrayRef<int64_t> valShape,
-                                              ArrayRef<int64_t> maskShape);
 
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
@@ -123,22 +117,24 @@ DistributeLayoutAttr setupBitCastResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
-xegpu::DistributeLayoutAttr
-xegpu::setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                                   xegpu::DistributeLayoutAttr consumerLayout,
-                                   const uArch::uArch *uArch);
+DistributeLayoutAttr
+setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                            DistributeLayoutAttr consumerLayout,
+                            const uArch::uArch *uArch);
 
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   const uArch::uArch *uArch);
 
-xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
-    LayoutKind layoutKind, VectorType vectorTy, int chunkSize,
-    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+DistributeLayoutAttr
+setupLoadGatherAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                            int chunkSize, DistributeLayoutAttr consumerLayout,
+                            const uArch::uArch *uArch);
 
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreScatterAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                                     int chunkSize, const uArch::uArch *uArch);
+DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
+                                                   VectorType vectorTy,
+                                                   int chunkSize,
+                                                   const uArch::uArch *uArch);
 } // namespace xegpu
 
 } // namespace mlir

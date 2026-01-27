@@ -362,8 +362,8 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// Infers the source layout attribute for a reduction operation given the
 /// result layout attribute and reduced dims.
 xegpu::DistributeLayoutAttr
-xegpu::inferReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
-                                  SmallVector<int64_t> reduceDims) {
+xegpu::inferMultiReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
+                                       SmallVector<int64_t> reduceDims) {
 
   //  assert the resLayout must be slice layout
   assert(isa<xegpu::SliceAttr>(resLayout) &&
@@ -530,61 +530,6 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 
   // TODO: Complete implementation for other shape cast scenarios
   return nullptr;
-}
-
-xegpu::DistributeLayoutAttr
-inferScatterIOMaskLayout(xegpu::DistributeLayoutAttr resLayout,
-                         ArrayRef<int64_t> valShape,
-                         ArrayRef<int64_t> maskShape) {
-
-  xegpu::LayoutAttr resPlainLayout = dyn_cast<xegpu::LayoutAttr>(resLayout);
-  assert(resPlainLayout &&
-         "Expecting plain layout for scatter IO mask inference.");
-  xegpu::LayoutAttr maskLayout = resPlainLayout;
-
-  if (maskShape.size() < valShape.size()) {
-    int valShapeSize = valShape.size();
-    int maskShapeSize = maskShape.size();
-    assert((maskShapeSize == (valShapeSize - 1)) &&
-           "Expecting mask vector only 1 dimension less than value vector.");
-
-    maskLayout = resPlainLayout.setUnitDimData(valShapeSize - 1);
-    maskLayout = maskLayout.collapseDim(valShapeSize - 1);
-    // SmallVector<int> sgLayout(valShapeSize);
-    // sgLayout = resPlainLayout.getSgLayout();
-    // SmallVector<int> sgData(valShapeSize) = resPlainLayout.getSgData();
-    // SmallVector<int> instData(valShapeSize) = resPlainLayout.getSgLayout();
-    // SmallVector<int> laneLayout(valShapeSize) =
-    // resPlainLayout.getLaneLayout(); SmallVector<int> laneData(valShapeSize) =
-    // resPlainLayout.getSgLayout(); SmallVector<int> order(valShapeSize) =
-    // resPlainLayout.getOrder();
-
-    // // drop the innermost dimension for mask layout
-    // sgLayout.pop_back();
-    // sgData.pop_back();
-    // instData.pop_back();
-    // laneLayout.pop_back();
-    // laneData.pop_back();
-    // order.pop_back();
-
-    // SmallVector<int64_t> remappedOrder(maskShapeSize, -1);
-    // for (int64_t i = 0; i < maskShapeSize; ++i) {
-    //   int64_t originalOrderValue = order[i];
-    //   // count how many values in collapsed Order are less than
-    //   // originalOrderValue
-    //   int64_t count = 0;
-    //   for (int64_t j = 0; j < maskShapeSize; ++j) {
-    //     if (order[j] < originalOrderValue)
-    //       count++;
-    //   }
-    //   remappedOrder[i] = count;
-    // }
-
-    // maskLayout =
-    //     xegpu::LayoutAttr::get(resLayout.getContext(), sgLayout, sgData,
-    //                            instData, laneLayout, laneData, order);
-  }
-  return maskLayout;
 }
 
 /// Sets up layout for reduction operations by creating a SliceAttr for the
@@ -968,14 +913,27 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType resVecTy, int chunkSize,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
 
+  llvm::dbgs() << "setupLoadGatherAnchorLayout: layoutKind="
+               << static_cast<int>(layoutKind) << ", chunkSize=" << chunkSize
+               << "\n";
+
   xegpu::DistributeLayoutAttr requiredLayout;
   const int subgroupSize = uArch->getSubgroupSize();
   const int spirVectorSize = 16; // vector size from SPRIV vector restriction
 
   auto resShape = resVecTy.getShape();
   int resShapeSize = resShape.size();
-  SmallVector<int64_t> instData(subgroupSize);
+  SmallVector<int> instData(resShapeSize);
   auto context = resVecTy.getContext();
+
+  llvm::dbgs() << "setupLoadGatherAnchorLayout: resVecTy.getRank()="
+               << resVecTy.getRank() << ", resShape=[";
+  for (size_t i = 0; i < resShape.size(); ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << resShape[i];
+  }
+  llvm::dbgs() << "]\n";
 
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstruction>(
@@ -985,32 +943,48 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
       consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int32_t> instData32;
 
+  llvm::dbgs() << "setupLoadGatherAnchorLayout: consumerInstData=[";
+  for (size_t i = 0; i < consumerInstData.size(); ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << consumerInstData[i];
+  }
+  llvm::dbgs() << "]\n";
+
   switch (layoutKind) {
   case xegpu::LayoutKind::Subgroup:
+    llvm::dbgs() << "setupLoadGatherAnchorLayout: LayoutKind::Subgroup\n";
     requiredLayout = consumerLayout;
     break;
   case xegpu::LayoutKind::InstData:
+    llvm::dbgs() << "setupLoadGatherAnchorLayout: LayoutKind::InstData\n";
     if (resVecTy.getRank() == 1) {
       instData[0] = subgroupSize;
+      llvm::dbgs() << "setupLoadGatherAnchorLayout: 1D case, instData[0]="
+                   << instData[0] << "\n";
     } else {
-      assert((resVecTy.getRank() > 2) && "StoreScatterOp can access 2D tensor "
-                                         "tile at maximum at subgroup level.");
+      assert((resVecTy.getRank() == 2) && "StoreScatterOp can access 2D tensor "
+                                          "tile at maximum at subgroup level.");
       if (chunkSize == 1) {
         instData[0] = 1;
         instData[1] = subgroupSize;
+        llvm::dbgs() << "setupLoadGatherAnchorLayout: chunkSize==1, instData=["
+                     << instData[0] << ", " << instData[1] << "]\n";
       } else {
         instData[0] = subgroupSize;
-        instData[1] = std::min(
-            resShape[1],
-            static_cast<int64_t>(uArchInstruction->getMaxLaneLoadStoreSize()));
-        instData[1] = std::min(instData[1], consumerInstData[1]);
+        instData[1] = std::min(static_cast<int>(resShape[1]),
+                               uArchInstruction->getMaxLaneLoadStoreSize());
+        instData[1] =
+            std::min(instData[1], static_cast<int>(consumerInstData[1]));
+        llvm::dbgs() << "setupLoadGatherAnchorLayout: chunkSize>1, instData=["
+                     << instData[0] << ", " << instData[1] << "]\n";
       }
     }
-    instData32 = SmallVector<int32_t>(instData.begin(), instData.end());
     requiredLayout = xegpu::LayoutAttr::get(
-        context, DenseI32ArrayAttr::get(context, instData32));
+        context, DenseI32ArrayAttr::get(context, instData));
     break;
   case xegpu::LayoutKind::Lane:
+    llvm::dbgs() << "setupLoadGatherAnchorLayout: LayoutKind::Lane\n";
     if (chunkSize == 1)
       requiredLayout =
           getDefaultLaneLayoutAttr(context, resVecTy.getRank(), uArch);
@@ -1027,6 +1001,7 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   default:
     llvm_unreachable("unsupported layout kind");
   }
+  llvm::dbgs() << "setupLoadGatherAnchorLayout: returning requiredLayout\n";
   return requiredLayout;
 }
 
@@ -1034,13 +1009,26 @@ xegpu::DistributeLayoutAttr
 xegpu::setupStoreScatterAnchorLayout(LayoutKind layoutKind, VectorType srcVecTy,
                                      int chunkSize, const uArch::uArch *uArch) {
 
+  llvm::dbgs() << "setupStoreScatterAnchorLayout: layoutKind="
+               << static_cast<int>(layoutKind) << ", chunkSize=" << chunkSize
+               << "\n";
+
   xegpu::DistributeLayoutAttr requiredLayout;
   const int subgroupSize = uArch->getSubgroupSize();
   const int spirVectorSize = 16; // vector size from SPRIV vector restriction
 
   auto srcShape = srcVecTy.getShape();
   int srcShapeSize = srcShape.size();
-  SmallVector<int64_t> instData(subgroupSize);
+  SmallVector<int> instData(srcShapeSize);
+
+  llvm::dbgs() << "setupStoreScatterAnchorLayout: srcVecTy.getRank()="
+               << srcVecTy.getRank() << ", srcShape=[";
+  for (size_t i = 0; i < srcShape.size(); ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << srcShape[i];
+  }
+  llvm::dbgs() << "]\n";
 
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstruction>(
@@ -1049,27 +1037,39 @@ xegpu::setupStoreScatterAnchorLayout(LayoutKind layoutKind, VectorType srcVecTy,
 
   switch (layoutKind) {
   case xegpu::LayoutKind::Subgroup:
-    assert(false &&
-           "subgroup layout assignment not supported yet for loadMatrix.");
+    llvm::dbgs() << "setupStoreScatterAnchorLayout: LayoutKind::Subgroup\n";
+    assert(
+        false &&
+        "subgroup layout assignment not supported yet for store scatter op.");
     break;
   case xegpu::LayoutKind::InstData:
+    llvm::dbgs() << "setupStoreScatterAnchorLayout: LayoutKind::InstData\n";
     if (srcVecTy.getRank() == 1) {
       instData[0] = subgroupSize;
+      llvm::dbgs() << "setupStoreScatterAnchorLayout: 1D case, instData[0]="
+                   << instData[0] << "\n";
     } else {
       assert((srcVecTy.getRank() <= 2) && "StoreScatterOp can access 2D tensor "
                                           "tile at maximum at subgroup level.");
       if (chunkSize == 1) {
         instData[0] = 1;
         instData[1] = subgroupSize;
+        llvm::dbgs()
+            << "setupStoreScatterAnchorLayout: chunkSize==1, instData=["
+            << instData[0] << ", " << instData[1] << "]\n";
       } else {
         instData[0] = subgroupSize;
-        instData[1] = std::min(
-            srcShape[1],
-            static_cast<int64_t>(uArchInstruction->getMaxLaneLoadStoreSize()));
+        instData[1] = std::min(static_cast<int>(srcShape[1]),
+                               uArchInstruction->getMaxLaneLoadStoreSize());
+        llvm::dbgs() << "setupStoreScatterAnchorLayout: chunkSize>1, instData=["
+                     << instData[0] << ", " << instData[1] << "]\n";
       }
     }
+    requiredLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, instData));
     break;
   case xegpu::LayoutKind::Lane:
+    llvm::dbgs() << "setupStoreScatterAnchorLayout: LayoutKind::Lane\n";
     if (chunkSize == 1)
       requiredLayout =
           getDefaultLaneLayoutAttr(context, srcVecTy.getRank(), uArch);
@@ -1086,5 +1086,6 @@ xegpu::setupStoreScatterAnchorLayout(LayoutKind layoutKind, VectorType srcVecTy,
   default:
     llvm_unreachable("unsupported layout kind");
   }
+  llvm::dbgs() << "setupStoreScatterAnchorLayout: returning requiredLayout\n";
   return requiredLayout;
 }

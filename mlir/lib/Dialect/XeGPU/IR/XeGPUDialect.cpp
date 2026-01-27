@@ -540,7 +540,8 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
       collapsedInst *= instData[dimIdx];
       collapsedLaneL *= laneLayout[dimIdx];
       collapsedLaneD *= laneData[dimIdx];
-      collapsedOrderValue = order[dimIdx]; // take the last one's order
+      if (!orderVec.empty())
+        collapsedOrderValue = orderVec[dimIdx]; // take the last one's order
     }
 
     collapsedSgLayout.push_back(collapsedSg);
