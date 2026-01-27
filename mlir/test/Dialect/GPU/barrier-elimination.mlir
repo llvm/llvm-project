@@ -373,3 +373,36 @@ func.func @read_write_loop_no_workgroup(%arg0: memref<?xf32, #gpu.address_space<
   }
   return
 }
+
+// CHECK-LABEL: @global_barrier_buffer_cast
+func.func @global_barrier_buffer_cast(
+    %global: memref<?xf32, #gpu.address_space<global>>,
+    %idx: index, %val: f32) -> f32
+attributes {__parallel_region_boundary_for_test} {
+  // CHECK: store
+  memref.store %val, %global[%idx] : memref<?xf32, #gpu.address_space<global>>
+  // The buffer cast below shouldn't make this barrier go away
+  // CHECK: gpu.barrier memfence [#gpu.address_space<global>]
+  gpu.barrier memfence [#gpu.address_space<global>]
+  %cast = amdgpu.fat_raw_buffer_cast %global : memref<?xf32, #gpu.address_space<global>> to memref<?xf32, #amdgpu.address_space<fat_raw_buffer>>
+  // CHECK: load
+  %0 = memref.load %cast[%idx] : memref<?xf32, #amdgpu.address_space<fat_raw_buffer>>
+  return %0 : f32
+}
+
+// CHECK-LABEL: @workgroup_barrier_buffer_cast
+func.func @workgroup_barrier_buffer_cast(
+    %global: memref<?xf32, #gpu.address_space<global>>,
+    %idx: index, %val: f32) -> f32
+attributes {__parallel_region_boundary_for_test} {
+  // CHECK: store
+  memref.store %val, %global[%idx] : memref<?xf32, #gpu.address_space<global>>
+  // The amdgpu buffer resource is formed from global memory, and so can't alias
+  // workgroup memory, so this barrier can be eliminated.
+  // CHECK-NOT: gpu.barrierw
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  %cast = amdgpu.fat_raw_buffer_cast %global : memref<?xf32, #gpu.address_space<global>> to memref<?xf32, #amdgpu.address_space<fat_raw_buffer>>
+  // CHECK: load
+  %0 = memref.load %cast[%idx] : memref<?xf32, #amdgpu.address_space<fat_raw_buffer>>
+  return %0 : f32
+}

@@ -120,19 +120,22 @@ static bool isAddressSpacePotentiallyFenced(
   return llvm::is_contained(*fencedAddressSpaces, gpuMemSpace);
 }
 
-/// Returns `true` if the effect operates on a memref whose memory  space
-/// cannot be one of the given fenced address spaces. This will both look at the
-/// address space of the effect's operand and of the base memref for that
-/// operand so as to handle casts that add and remove address space information.
-static bool effectCannotAffectAddressSpaces(
+/// Succeeds if the effect operates on a memref whose memory  space
+/// could be one of the given fenced address spaces. This will both look at the
+/// address space of the effect's operand and of the view-like operations that
+/// define that memref, so as to inspect any memory-space casts or similar
+/// operations (like amdgpu buffer casts) that may provide more information.
+/// This assumes that directly-conflicting casts (that is, for example, casting
+/// a memref in global memory to make it one in workspace memory) can't happen.
+static LogicalResult effectMightAffectAddressSpaces(
     const MemoryEffects::EffectInstance &effect,
     std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedAddressSpaces) {
   if (!fencedAddressSpaces)
-    return false;
+    return success();
 
   Value value = effect.getValue();
   if (!value)
-    return false;
+    return success();
 
   auto mightMatch = [&](Value v) {
     auto memrefType = dyn_cast<BaseMemRefType>(v.getType());
@@ -143,10 +146,18 @@ static bool effectCannotAffectAddressSpaces(
   };
 
   if (!mightMatch(value))
-    return true;
+    return failure();
 
-  Value base = getBase(value);
-  return !mightMatch(base);
+  Value base = value;
+  while (auto viewLike = base.getDefiningOp<ViewLikeOpInterface>()) {
+    base = viewLike.getViewSource();
+    // We assume that we won't see directly incompatible casts, like global =>
+    // flat/null => workspace.
+    if (!mightMatch(base))
+      return failure();
+  }
+
+  return success();
 }
 
 /// Returns `true` if `op` is a `BarrierOp` that fences any address spaces that
@@ -207,7 +218,8 @@ static bool collectEffects(
     iface.getEffects(localEffects);
     // Filter out effects that cannot affect the fenced address spaces.
     for (const MemoryEffects::EffectInstance &effect : localEffects) {
-      if (!effectCannotAffectAddressSpaces(effect, fencedAddressSpaces))
+      if (succeeded(
+              effectMightAffectAddressSpaces(effect, fencedAddressSpaces)))
         effects.push_back(effect);
     }
     return true;
@@ -678,8 +690,8 @@ public:
     SmallVector<gpu::AddressSpaceAttr> fencedSpacesStorage;
     std::optional<ArrayRef<gpu::AddressSpaceAttr>> fencedSpaces;
     if (fencedMemSpaces) {
-      for (Attribute attr : *fencedMemSpaces)
-        fencedSpacesStorage.push_back(cast<gpu::AddressSpaceAttr>(attr));
+      fencedSpacesStorage = llvm::map_to_vector(
+          *fencedMemSpaces, llvm::CastTo<gpu::AddressSpaceAttr>);
       fencedSpaces = fencedSpacesStorage;
     }
 
