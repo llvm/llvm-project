@@ -134,6 +134,11 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Added new attribute ``stack_protector_ignore`` to opt specific local variables out of
+  the analysis which determines if a function should get a stack protector.  A function
+  will still generate a stack protector if other local variables or command line flags
+  require it.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
@@ -254,6 +259,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -297,6 +304,8 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
+  '-'/'+' and the return type in Objective-C method declarations
 
 libclang
 --------

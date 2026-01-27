@@ -52,6 +52,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
   EXPECT_FP_EQ(0x1.921fb6p+0f16, LIBC_NAMESPACE::shared::acosf16(0.0f16));
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::f16sqrtl(1.0L));
+  EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::sinf16(0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -115,6 +116,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log1p(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log2(1.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogb(1.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::tan(0.0));
 }
 

@@ -43,8 +43,10 @@ template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
-template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
+template <typename... Classes> struct class_match {
+  template <typename ITy> bool match(ITy *V) const {
+    return isa<Classes...>(V);
+  }
 };
 
 /// Match an arbitrary VPValue and ignore it.
@@ -959,13 +961,7 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
 }
 
-struct live_in_vpvalue {
-  template <typename ITy> bool match(ITy *V) const {
-    return isa<VPIRValue, VPSymbolicValue>(V);
-  }
-};
-
-inline live_in_vpvalue m_LiveIn() { return live_in_vpvalue(); }
+inline auto m_LiveIn() { return class_match<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
 /// and bind the source element type and operands.

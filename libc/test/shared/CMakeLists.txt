@@ -69,6 +69,7 @@ add_fp_unittest(
     libc.src.__support.math.ilogbf128
     libc.src.__support.math.ilogbl
     libc.src.__support.math.ldexpf
+    libc.src.__support.math.llogb
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log1p
@@ -85,6 +86,7 @@ add_fp_unittest(
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.sin
     libc.src.__support.math.sinf
+    libc.src.__support.math.sinf16
     libc.src.__support.math.sinhf
     libc.src.__support.math.sinhf16
     libc.src.__support.math.tan

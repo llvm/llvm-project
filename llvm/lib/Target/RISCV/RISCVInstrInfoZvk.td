@@ -1057,15 +1057,8 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
 
 multiclass VPatBinaryV_VV_VX_VROL<string intrinsic, string instruction,
                                   string instruction2, list<VTypeInfo> vtilist>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
+    : VPatBinaryV_VV_VX<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI_VROL<intrinsic, instruction2, vtilist>;
-
-multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
-                                     list<VTypeInfo> vtilist>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic, instruction, vtilist, uimm6>;
 
 multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
                                       list<VTypeInfoToWide> vtilist>
@@ -1106,7 +1099,7 @@ let Predicates = [HasStdExtZvkb] in {
   defm : VPatUnaryV_V<"int_riscv_vbrev8", "PseudoVBREV8", AllIntegerVectors>;
   defm : VPatUnaryV_V<"int_riscv_vrev8", "PseudoVREV8", AllIntegerVectors>;
   defm : VPatBinaryV_VV_VX_VROL<"int_riscv_vrol", "PseudoVROL", "PseudoVROR", AllIntegerVectors>;
-  defm : VPatBinaryV_VV_VX_VI_VROR<"int_riscv_vror", "PseudoVROR", AllIntegerVectors>;
+  defm : VPatBinaryV_VV_VX_VI<"int_riscv_vror", "PseudoVROR", AllIntegerVectors, uimm6>;
 } // Predicates = [HasStdExtZvkb]
 
 let Predicates = [HasStdExtZvkg] in {

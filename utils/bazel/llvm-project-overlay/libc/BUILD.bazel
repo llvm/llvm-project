@@ -3031,6 +3031,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_llogb",
+    hdrs = ["src/__support/math/llogb.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_log",
     hdrs = ["src/__support/math/log.h"],
     deps = [
@@ -3504,6 +3514,25 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_range_reduction",
         ":__support_sincosf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sinf16",
+    hdrs = ["src/__support/math/sinf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_math_sincosf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -4735,7 +4764,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "llogb")
+libc_math_function(
+    name = "llogb",
+    additional_deps = [
+        ":__support_math_llogb",
+    ],
+)
 
 libc_math_function(
     name = "llogbf",
@@ -5148,9 +5182,8 @@ libc_math_function(
 libc_math_function(
     name = "sinf16",
     additional_deps = [
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_math_sincosf16_utils",
+        ":__support_math_sinf16",
+        ":errno",
     ],
 )
 
