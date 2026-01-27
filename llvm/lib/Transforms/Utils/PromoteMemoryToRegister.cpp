@@ -247,6 +247,9 @@ struct AllocaInfo {
         OnlyStore = SI;
         if (!ValueType)
           ValueType = SI->getValueOperand()->getType();
+        else
+          assert(ValueType == SI->getValueOperand()->getType() &&
+                 "All stores were checked to have used the same type");
       } else {
         LoadInst *LI = cast<LoadInst>(User);
         // Otherwise it must be a load instruction, keep track of variable
@@ -254,6 +257,9 @@ struct AllocaInfo {
         UsingBlocks.push_back(LI->getParent());
         if (!ValueType)
           ValueType = LI->getType();
+        else
+          assert(ValueType == LI->getType() &&
+                 "All loads where checked to have used the same type");
       }
 
       if (OnlyUsedInOneBlock) {
