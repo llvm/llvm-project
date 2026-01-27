@@ -552,10 +552,11 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 ///    the consumer.
 
 xegpu::SliceAttr xegpu::reductionSetupResultLayout(
-    xegpu::LayoutKind layoutKind, ArrayRef<int64_t> srcShape,
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
     const xegpu::uArch::uArch *uArch) {
 
+  auto srcShape = srcVecTy.getShape();
   xegpu::SliceAttr consumerSliceLayout =
       dyn_cast<xegpu::SliceAttr>(consumerLayout);
 
@@ -782,9 +783,13 @@ xegpu::SliceAttr xegpu::reductionSetupResultLayout(
 }
 
 xegpu::DistributeLayoutAttr xegpu::bitCastSetupResultLayout(
-    xegpu::LayoutKind layoutKind, ArrayRef<int64_t> srcShape,
-    DistributeLayoutAttr consumerLayout, int resElemTyBitWidth,
-    int srcElemTyBitWidth, const xegpu::uArch::uArch *uArch) {
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
+    DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
+
+  int srcElemTyBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
+  int resElemTyBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
+
+  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
@@ -850,7 +855,7 @@ xegpu::storeMatrixSetupAnchorLayout(xegpu::LayoutKind layoutKind,
   SmallVector<int> instData = {1, uArch->getSubgroupSize()};
   switch (layoutKind) {
   case xegpu::LayoutKind::Subgroup:
-    assert(false &&
+    assert(true &&
            "subgroup layout assignment not supported yet for storeMatrix.");
     break;
   case xegpu::LayoutKind::InstData:
@@ -860,6 +865,89 @@ xegpu::storeMatrixSetupAnchorLayout(xegpu::LayoutKind layoutKind,
     requiredLayout = xegpu::LayoutAttr::get(
         vectorTy.getContext(), {1, uArch->getSubgroupSize()}, {1, 1});
 
+    break;
+  default:
+    llvm_unreachable("unsupported layout kind");
+  }
+  return requiredLayout;
+}
+
+xegpu::DistributeLayoutAttr
+xegpu::loadMatrixSetupAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   VectorType vectorTy,
+                                   const xegpu::uArch::uArch *uArch) {
+  xegpu::DistributeLayoutAttr requiredLayout;
+  SmallVector<int> instData = {1, uArch->getSubgroupSize()};
+  switch (layoutKind) {
+  case xegpu::LayoutKind::Subgroup:
+    assert(true &&
+           "subgroup layout assignment not supported yet for loadMatrix.");
+    break;
+  case xegpu::LayoutKind::InstData:
+    requiredLayout = xegpu::LayoutAttr::get(vectorTy.getContext(), instData);
+    break;
+  case xegpu::LayoutKind::Lane:
+    requiredLayout = xegpu::LayoutAttr::get(
+        vectorTy.getContext(), {1, uArch->getSubgroupSize()}, {1, 1});
+    break;
+  default:
+    llvm_unreachable("unsupported layout kind");
+  }
+  return requiredLayout;
+}
+
+static xegpu::DistributeLayoutAttr
+getDefaultSIMTLaneLayoutAttr(mlir::MLIRContext *ctx, unsigned rank,
+                             int subgroupSize) {
+  assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
+  if (rank == 1) {
+    return xegpu::LayoutAttr::get(ctx, {subgroupSize}, {1});
+  }
+  return xegpu::LayoutAttr::get(ctx, {1, subgroupSize}, {1, 1});
+}
+
+xegpu::DistributeLayoutAttr
+xegpu::loadGatherSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                                   const uArch::uArch *uArch) {}
+
+xegpu::DistributeLayoutAttr
+xegpu::storeScatterSetupAnchorLayout(LayoutKind layoutKind, VectorType srcVecTy,
+                                     const uArch::uArch *uArch) {
+
+  xegpu::DistributeLayoutAttr requiredLayout;
+  const int subgroupSize = uArch->getSubgroupSize();
+  const int spirVectorSize = 16; // vector size from SPRIV vector restriction
+
+  auto srcShape = srcVecTy.getShape();
+  int srcShapeSize = srcVecTy.getShape().size();
+
+  SmallVector<int64_t> instData(srcShapeSize);
+  SmallVector<int64_t> laneLayout(srcShapeSize);
+  SmallVector<int64_t> laneData(srcShapeSize);
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::StoreScatterInstruction>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
+
+  switch (layoutKind) {
+  case xegpu::LayoutKind::Subgroup:
+    assert(false &&
+           "subgroup layout assignment not supported yet for loadMatrix.");
+    break;
+  case xegpu::LayoutKind::InstData:
+    assert((srcVecTy.getRank() > 2) && "StoreScatterOp can access 2D tensor "
+                                       "tile at maximum at subgroup level.");
+    if (srcVecTy.getRank() == 1)
+      instData[0] = subgroupSize;
+    else {
+      instData[0] = std::min(srcShape[0], static_cast<int64_t>(spirVectorSize));
+      instData[1] = subgroupSize;
+    }
+    requiredLayout = xegpu::LayoutAttr::get(srcVecTy.getContext(), instData);
+    break;
+  case xegpu::LayoutKind::Lane:
+    requiredLayout = getDefaultSIMTLaneLayoutAttr(
+        srcVecTy.getContext(), srcVecTy.getRank(), subgroupSize);
     break;
   default:
     llvm_unreachable("unsupported layout kind");

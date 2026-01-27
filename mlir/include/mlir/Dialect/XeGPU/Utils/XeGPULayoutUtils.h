@@ -99,7 +99,7 @@ DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
 /// The SliceAttr for the result is then created based on the derived source
 /// layout and the specified reduction dimensions.
 SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
-                                     ArrayRef<int64_t> srcShape,
+                                     VectorType srcVectorTy,
                                      DistributeLayoutAttr consumerLayout,
                                      SmallVector<int64_t> reductionDims,
                                      const uArch::uArch *uArch);
@@ -113,17 +113,25 @@ SliceAttr reductionSetupResultLayout(xegpu::LayoutKind layoutKind,
 /// (inst_data, lane_data) are scaled up by the bitwidth ratio. This
 /// maintains the invariant that the source layout can be recovered by inverse
 /// scaling during layout inference.
-DistributeLayoutAttr
-bitCastSetupResultLayout(LayoutKind layoutKind, ArrayRef<int64_t> srcShape,
-                         DistributeLayoutAttr consumerLayout,
-                         int resElemTyBitWidth, int srcElemTyBitWidth,
-                         const uArch::uArch *uArch);
+DistributeLayoutAttr bitCastSetupResultLayout(
+    LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 // Setup the anchor layout attribute for a storeMatrix operation
 DistributeLayoutAttr storeMatrixSetupAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   const uArch::uArch *uArch);
+xegpu::DistributeLayoutAttr
+xegpu::loadMatrixSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                                   const uArch::uArch *uArch);
 
+xegpu::DistributeLayoutAttr
+xegpu::loadGatherSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                                   const uArch::uArch *uArch);
+
+xegpu::DistributeLayoutAttr
+xegpu::storeScatterSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                                     const uArch::uArch *uArch);
 } // namespace xegpu
 
 } // namespace mlir
