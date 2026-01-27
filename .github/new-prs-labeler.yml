@@ -686,6 +686,14 @@ clang:analysis:
       - clang/include/clang/Analysis/**
       - clang/lib/Analysis/**
 
+clang:ssaf:
+  - changed-files:
+    - any-glob-to-any-file:
+      - clang/include/clang/Analysis/Scalable/**
+      - clang/lib/Analysis/Scalable/**
+      - clang/unittests/Analysis/Scalable/**
+      - clang/docs/ScalableStaticAnalysisFramework/**
+
 clang:static analyzer:
   - changed-files:
     - any-glob-to-any-file:
