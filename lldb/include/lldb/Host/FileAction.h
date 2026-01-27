@@ -35,6 +35,8 @@ public:
 
   int GetFD() const { return m_fd; }
 
+  void *GetHandle() const;
+
   Action GetAction() const { return m_action; }
 
   int GetActionArgument() const { return m_arg; }
