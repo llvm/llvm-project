@@ -117,21 +117,22 @@ DistributeLayoutAttr bitCastSetupResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
-// Setup the anchor layout attribute for a storeMatrix operation
+xegpu::DistributeLayoutAttr
+xegpu::loadMatrixSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                                   xegpu::DistributeLayoutAttr consumerLayout,
+                                   const uArch::uArch *uArch);
+
 DistributeLayoutAttr storeMatrixSetupAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   const uArch::uArch *uArch);
-xegpu::DistributeLayoutAttr
-xegpu::loadMatrixSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                                   const uArch::uArch *uArch);
 
-xegpu::DistributeLayoutAttr
-xegpu::loadGatherSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                                   const uArch::uArch *uArch);
+xegpu::DistributeLayoutAttr xegpu::loadGatherSetupAnchorLayout(
+    LayoutKind layoutKind, VectorType vectorTy, int chunkSize,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 xegpu::DistributeLayoutAttr
 xegpu::storeScatterSetupAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                                     const uArch::uArch *uArch);
+                                     int chunkSize, const uArch::uArch *uArch);
 } // namespace xegpu
 
 } // namespace mlir

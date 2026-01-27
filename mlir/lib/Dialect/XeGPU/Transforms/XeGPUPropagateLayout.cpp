@@ -427,6 +427,14 @@ private:
                           ArrayRef<LayoutInfoLattice *> operands,
                           ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitLoadGatherOp(xegpu::LoadMatrixOp load,
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results);
+
+  void visitStoreScatterOp(xegpu::StoreMatrixOp store,
+                           ArrayRef<LayoutInfoLattice *> operands,
+                           ArrayRef<const LayoutInfoLattice *> results);
+
   bool hasParamsOfLayoutKind(xegpu::DistributeLayoutAttr anchorLayout);
 
 public:
@@ -1263,19 +1271,17 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   VectorType srcVecTy = storeScatter.getValueType();
   VectorType maskTy =
       llvm::dyn_cast<VectorType>(storeScatter.getMask().getType());
+  int chunkSize = storeScatter.getChunkSize().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayout)) {
     requiredAnchorLayoutAttr = LayoutInfo(anchorLayout);
   } else {
-
     if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-    assert(srcVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
-    auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
-    requiredAnchorLayoutAttr =
-        xegpu::storeScatterSetupAnchorLayout(layoutKind, srcVecTy, uArch);
+    requiredAnchorLayoutAttr = xegpu::storeScatterSetupAnchorLayout(
+        layoutKind, srcVecTy, chunkSize, uArch);
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
@@ -1284,66 +1290,66 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (maskTy.getRank() < srcVecTy.getRank()) {
     assert((maskTy.getRank() == (srcVecTy.getRank() - 1)) &&
            "Expecting mask vector only 1 dimension less than value vector.");
-    maskLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr.dropDim(-1));
-
-    // Propagate the payload operand layout
-    propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
-    // Propagate the destination (if tdesc) operand layout
-    if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
-      propagateIfChanged(operands[1], operands[1]->meet(srcLayoutInfo));
-    // Propagate the new layout to the mask and optional offset operand.
-    propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
-    if (storeScatter.getOffsets())
-      propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
+    // ToDO： Infer the proper mask layout based on the value layout.
+    maskLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
   }
+  // Propagate the payload operand layout
+  propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
+  // Propagate the destination (if tdesc) operand layout
+  if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
+    propagateIfChanged(operands[1], operands[1]->meet(srcLayoutInfo));
+  // Propagate the new layout to the mask and optional offset operand.
+  propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
+  if (storeScatter.getOffsets())
+    propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
+}
 
-  void LayoutInfoPropagation::visitLoadMatrixOp(
-      xegpu::LoadMatrixOp loadMatrixOp, ArrayRef<LayoutInfoLattice *> operands,
-      ArrayRef<const LayoutInfoLattice *> results) {
-    Value resVal = loadMatrixOp.getRes();
-    unsigned index =
-        std::distance(loadMatrixOp.operand_begin(),
-                      llvm::find(loadMatrixOp.getOperands(), operand));
+void LayoutInfoPropagation::visitLoadMatrixOp(
+    xegpu::LoadMatrixOp loadMatrixOp, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
 
-    xegpu::DistributeLayoutAttr anchorLayout = loadMatrixOp.getLayoutAttr();
-    LayoutInfo layout;
-    if (hasParamsOfLayoutKind(anchorLayout)) {
-      layout = LayoutInfo(anchorLayout);
-    } else {
-      VectorType resVecTy = llvm::cast<VectorType>(resVal.getType());
-      assert(resVecTy.getRank() == 2 &&
-             "Expecting 2D vector for store matrix.");
-      auto uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
-      auto requiredAnchorLayoutAttr =
-          xegpu::loadMatrixSetupAnchorLayout(layoutKind, resVecTy, uArch);
-      loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
-      layout = LayoutInfo(requiredAnchorLayoutAttr);
-    }
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  xegpu::DistributeLayoutAttr anchorLayout = loadMatrixOp.getLayoutAttr();
+
+  // only need to set anchor layout, no need to porpagate to memdesc and offset
+  if (!hasParamsOfLayoutKind(anchorLayout)) {
+    VectorType resVecTy =
+        llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
+    assert(resVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
+    auto uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
+    auto requiredAnchorLayoutAttr = xegpu::loadMatrixSetupAnchorLayout(
+        layoutKind, resVecTy, consumerLayoutAttr, uArch);
+    loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
   }
+}
 
 // Store matrix is a flavor of scattered store for 2D shapes.
-  void LayoutInfoPropagation::visitStoreMatrixOp(
-      xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
-      ArrayRef<const LayoutInfoLattice *> results) {
+void LayoutInfoPropagation::visitStoreMatrixOp(
+    xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
 
-    xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
-    LayoutInfo layout;
-    if (hasParamsOfLayoutKind(anchorLayout)) {
-      layout = LayoutInfo(anchorLayout);
-    } else {
-      VectorType srcVecTy =
-          llvm::cast<VectorType>(storeMatrix.getData().getType());
-      assert(srcVecTy.getRank() == 2 &&
-             "Expecting 2D vector for store matrix.");
-      auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
-      auto requiredAnchorLayoutAttr =
-          xegpu::storeMatrixSetupAnchorLayout(layoutKind, srcVecTy, uArch);
-      storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
-      layout = LayoutInfo(requiredAnchorLayoutAttr);
-    }
-
-    propagateIfChanged(operands[0], operands[0]->meet(layout));
+  xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
+  LayoutInfo layout;
+  if (hasParamsOfLayoutKind(anchorLayout)) {
+    layout = LayoutInfo(anchorLayout);
+  } else {
+    VectorType srcVecTy =
+        llvm::cast<VectorType>(storeMatrix.getData().getType());
+    assert(srcVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
+    auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
+    auto requiredAnchorLayoutAttr =
+        xegpu::storeMatrixSetupAnchorLayout(layoutKind, srcVecTy, uArch);
+    storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
+    layout = LayoutInfo(requiredAnchorLayoutAttr);
   }
+
+  propagateIfChanged(operands[0], operands[0]->meet(layout));
+}
 
 namespace {
 //===----------------------------------------------------------------------===//
