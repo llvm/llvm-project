@@ -5057,7 +5057,7 @@ private:
                       {"MI300A", {.OMPX_UseMultipleSdmaEngines = false}},
                       {"MI300X", {.OMPX_UseMultipleSdmaEngines = true}},
                       // Default config for unknown devices.
-                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = true}}};
+                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = false}}};
 
   const DeviceEnvarConfigTy &getEnvarConfig() const {
     std::string DeviceMarketingName = getNormMarketingName();
