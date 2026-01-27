@@ -212,7 +212,9 @@ void setLock(omp_lock_t *Lock) {
 
 void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
-void syncThreadsAligned(atomic::OrderingTy Ordering) { synchronize::threads(Ordering); }
+void syncThreadsAligned(atomic::OrderingTy Ordering) {
+  synchronize::threads(Ordering);
+}
 #endif
 
 } // namespace impl
