@@ -5112,6 +5112,26 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ClearCacheOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ClearCacheOp : CIR_Op<"clear_cache", [
+  AllTypesMatch<["begin", "end"]>
+]> {
+  let summary = "clear cache operation";
+  let description = [{
+    CIR representation for `__builtin___clear_cache`.
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$begin, CIR_VoidPtrType:$end);
+  let assemblyFormat = [{
+    $begin `:` qualified(type($begin)) `,`
+    $end `,`
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ObjSizeOp
 //===----------------------------------------------------------------------===//
 
