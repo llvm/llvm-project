@@ -21,7 +21,7 @@ class Stmt;
 
 namespace tidy::utils::lexer {
 
-/// Returns previous token.
+/// Returns previous token or ``std::nullopt`` if not found.
 std::optional<Token> getPreviousToken(SourceLocation Location,
                                       const SourceManager &SM,
                                       const LangOptions &LangOpts,
