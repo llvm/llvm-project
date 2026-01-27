@@ -495,9 +495,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
+  bool HasVecMulU64 = ST->hasVectorMulU64();
   addRulesForGOpcs({G_MUL}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S64, {{SgprB64}, {SgprB64, SgprB64}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
+      .Div(S64, {{VgprB64}, {VgprB64, VgprB64}}, HasVecMulU64)
+      .Div(S64, {{VgprB64}, {VgprB64, VgprB64}, SplitTo32Mul}, !HasVecMulU64);
 
   bool hasMulHi = ST->hasScalarMulHiInsts();
   addRulesForGOpcs({G_UMULH, G_SMULH}, Standard)
@@ -508,6 +516,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_AMDGPU_MAD_U64_U32}, Standard)
       .Div(S64, {{Vgpr64, Vcc}, {Vgpr32, Vgpr32, Vgpr64}})
       .Uni(S64, {{Sgpr64, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr64}, UniMAD64});
+
+  bool HasScalarSMulU64 = ST->hasScalarSMulU64();
+  addRulesForGOpcs({G_AMDGPU_S_MUL_U64_U32, G_AMDGPU_S_MUL_I64_I32}, Standard)
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}, UniMul64}, HasScalarSMulU64)
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}, DivSMulToMAD});
 
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
@@ -1045,7 +1058,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
-  addRulesForGOpcs({G_FLDEXP}, Standard)
+  addRulesForGOpcs({G_FLDEXP, G_STRICT_FLDEXP}, Standard)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}})
@@ -1074,6 +1087,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_AMDGPU_FMED3}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}})
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
+
+  // TODO: This opcode is generated from the i64->i16 signed clamped pattern in
+  // the PreLegalizerCombiner. Move the combine to RegBankCombiner to keep more
+  // instructions on SALU.
+  addRulesForGOpcs({G_AMDGPU_SMED3}, Standard)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
@@ -1123,6 +1143,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
       .Any({{UniS32, S16}, {{UniInVgprS32}, {Vgpr16}}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_AMDGPU_CVT_PK_I16_I32}, Standard)
+      .Uni(V2S16, {{UniInVgprV2S16}, {Vgpr32, Vgpr32}})
+      .Div(V2S16, {{VgprV2S16}, {Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_AMDGPU_FMIN_LEGACY, G_AMDGPU_FMAX_LEGACY}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
   addRulesForGOpcs({G_FPTRUNC})
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
@@ -1187,5 +1215,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                    Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_frexp_mant, amdgcn_fract}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}});
+
+  addRulesForIOpcs({amdgcn_ubfe, amdgcn_sbfe}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32, Sgpr32, Sgpr32}, S_BFE})
+      .Uni(S64, {{Sgpr64}, {IntrId, Sgpr64, Sgpr32, Sgpr32}, S_BFE})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32, Vgpr32}, V_BFE});
 
 } // end initialize rules

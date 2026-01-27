@@ -51,7 +51,7 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
 void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
                                         const MCSpecifierExpr &Expr) const {
   auto S = Expr.getSpecifier();
-  bool HasSpecifier = S != 0 && S != ELF::R_RISCV_CALL_PLT;
+  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
   if (HasSpecifier)
     OS << '%' << RISCV::getSpecifierName(S) << '(';
   printExpr(OS, *Expr.getSubExpr());
@@ -67,7 +67,19 @@ RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
   CommentString = ";";
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
+  UseDataRegionDirectives = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
+}
+
+void RISCVMCAsmInfoDarwin::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
+  auto S = Expr.getSpecifier();
+  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
+  if (HasSpecifier)
+    OS << '%' << RISCV::getSpecifierName(S) << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (HasSpecifier)
+    OS << ')';
 }
