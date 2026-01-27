@@ -281,11 +281,23 @@ static bool hasUnoccupiedSlot(const MachineInstr *MI) {
 }
 
 /// Check if a branch is a short backward loop that triggers the R5900 erratum.
-/// The erratum occurs when:
-/// - A loop has 6 or fewer instructions (including branch + delay slot)
-/// - The branch is a conditional backward branch
-/// - The delay slot is not NOP
-/// - No other branches exist in the loop body
+/// Quote from binutils-gdb/gas/config/tc-mips.c:
+///
+/// On the R5900 short loops need to be fixed by inserting a NOP in the
+/// branch delay slot.
+///
+/// The short loop bug under certain conditions causes loops to execute
+/// only once or twice.  We must ensure that the assembler never
+/// generates loops that satisfy all of the following conditions:
+///
+/// - a loop consists of less than or equal to six instructions
+///   (including the branch delay slot);
+/// - a loop contains only one conditional branch instruction at the end
+///   of the loop;
+/// - a loop does not contain any other branch or jump instructions;
+/// - a branch delay slot of the loop is not NOP (EE 2.9 or later).
+///
+/// We need to do this because of a hardware bug in the R5900 chip.
 static bool isR5900ShortLoopBranch(const MachineInstr *MI,
                                    const MachineBasicBlock &MBB) {
   // Must be a conditional branch (not jump or indirect branch)
