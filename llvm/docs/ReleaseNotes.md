@@ -339,6 +339,27 @@ Other Changes
   memory allocators enabling various heap organization strategies, such as heap
   partitioning.
 
+* Integrated Distributed ThinLTO (DTLTO) aims to support distribution of ThinLTO
+  backend compilations for any in-process ThinLTO invocation. To enable this,
+  support for the ThinLTO cache (for incremental builds) has been added in this
+  release, and support for additional input file types has been implemented.
+
+  Bitcode objects contained in static libraries and archives (e.g. libc.a) are
+  now handled transparently by temporarily extracting referenced objects for
+  distribution. When thin archives are used (supported since LLVM 21), no
+  extraction is required.
+  
+  DTLTO creates a number of temporary files during operation, which are now
+  cleaned up correctly when the process exits abnormally, for example due to
+  Ctrl+C or similar termination events.
+  
+  A new DTLTO linker option, --thinlto-remote-compiler-prepend-arg, has been
+  added to support multi-call LLVM drivers. This option allows specifying an
+  additional argument to select the desired subcommand, for example
+  `llvm clang ....`
+  
+  Note that ELF and COFF remain the only supported platforms.
+
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
 
