@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -74,11 +75,20 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
-static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
-  auto globalOpName =
-      mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
-  return fir::valueHasFirAttribute(
-      v, fir::GlobalOp::getTargetAttrName(globalOpName));
+bool fir::AliasAnalysis::symbolMayHaveTargetAttr(mlir::SymbolRefAttr symbol,
+                                                 mlir::Operation *from) {
+  assert(from);
+
+  // If we cannot find the nearest SymbolTable assume the worst.
+  const mlir::SymbolTable *symTab = getNearestSymbolTable(from);
+  if (!symTab)
+    return true;
+
+  if (auto globalOp = symTab->lookup<fir::GlobalOp>(symbol.getLeafReference()))
+    return globalOp.getTarget().value_or(false);
+
+  // If the symbol is not defined by fir.global assume the worst.
+  return true;
 }
 
 static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
@@ -520,10 +530,8 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   return ModRefResult::getNoModRef();
 }
 
-/// This is mostly inspired by MLIR::LocalAliasAnalysis with 2 notable
-/// differences 1) Regions are not handled here but will be handled by a data
-/// flow analysis to come 2) Allocate and Free effects are considered
-/// modifying
+/// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
+/// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   if (auto call = llvm::dyn_cast<fir::CallOp>(op))
     return getCallModRef(call, location);
@@ -556,6 +564,9 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   interface.getEffects(effects);
 
   for (const MemoryEffects::EffectInstance &effect : effects) {
+    // MemAlloc and MemFree are not mod-ref effects.
+    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
 
     // Check for an alias between the effect and our memory location.
     AliasResult aliasResult = AliasResult::MayAlias;
@@ -715,19 +726,27 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           type = SourceKind::Indirect;
           breakFromLoop = true;
         })
-        .Case<fir::AddrOfOp>([&](auto op) {
+        .Case<fir::AddrOfOp, cuf::DeviceAddressOp>([&](auto op) {
           // Address of a global scope object.
           ty = v.getType();
           type = SourceKind::Global;
-
-          if (hasGlobalOpTargetAttr(v, op))
-            attributes.set(Attribute::Target);
-
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
           if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
-          global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
+
+          if constexpr (std::is_same_v<std::decay_t<decltype(op)>,
+                                       fir::AddrOfOp>)
+            global = op.getSymbol();
+          else if constexpr (std::is_same_v<std::decay_t<decltype(op)>,
+                                            cuf::DeviceAddressOp>)
+            global = op.getHostSymbol();
+          else
+            llvm_unreachable("unexpected operation");
+
+          if (symbolMayHaveTargetAttr(global, op))
+            attributes.set(Attribute::Target);
+
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
@@ -896,6 +915,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           attributes,
           approximateSource,
           isCapturedInInternalProcedure};
+}
+
+const mlir::SymbolTable *
+fir::AliasAnalysis::getNearestSymbolTable(mlir::Operation *from) {
+  assert(from);
+  Operation *symTabOp = mlir::SymbolTable::getNearestSymbolTable(from);
+  if (!symTabOp)
+    return nullptr;
+  auto it = symTabMap.find(symTabOp);
+  if (it != symTabMap.end())
+    return &it->second;
+  return &symTabMap.try_emplace(symTabOp, symTabOp).first->second;
 }
 
 } // namespace fir

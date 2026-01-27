@@ -246,7 +246,7 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
 /// Match a VPValue, capturing it if we match.
 inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
-// Match a VPIRValue.
+/// Match a VPIRValue.
 inline bind_ty<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
 
 /// Match a VPInstruction, capturing if we match.
@@ -473,6 +473,17 @@ template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ComputeReductionResult, Op0_t>
 m_ComputeReductionResult(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ComputeReductionResult>(Op0);
+}
+
+/// Match FindIV result pattern:
+/// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
+///        ComputeReductionResult(ReducedIV), Start.
+template <typename Op0_t, typename Op1_t>
+inline bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV, Op1_t Start) {
+  return match(VPI, m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                            m_ComputeReductionResult(ReducedIV),
+                                            m_VPValue()),
+                             m_ComputeReductionResult(ReducedIV), Start));
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>

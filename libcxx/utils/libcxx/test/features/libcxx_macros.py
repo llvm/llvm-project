@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import Feature, compilerMacros
+from libcxx.test.dsl import Feature, compilerMacros, programSucceeds
 
 features = []
 
@@ -24,6 +24,7 @@ macros = {
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL": "libcpp-has-abi-bounded-iterators-in-optional",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING": "libcpp-has-abi-bounded-iterators-in-string",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY": "libcpp-has-abi-bounded-iterators-in-std-array",
@@ -72,5 +73,24 @@ for macro, feature in inverted_macros.items():
             name=feature,
             when=lambda cfg, m=macro: m in compilerMacros(cfg)
             and compilerMacros(cfg)[m] == "0",
+        )
+    )
+
+for mode in ("none", "fast", "extensive", "debug"):
+    check_program = f"""
+        #include <stddef.h> // any header to get the definitions
+        int main(int, char**) {{
+        #if defined(_LIBCPP_VERSION) && \\
+                defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()}
+            return 0;
+        #else
+            return 1;
+        #endif
+        }}
+    """
+    features.append(
+        Feature(
+            name=f"libcpp-hardening-mode={mode}",
+            when=lambda cfg, prog=check_program: programSucceeds(cfg, prog)
         )
     )
