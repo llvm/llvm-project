@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck %s
+#
+# Test that the VALU mask write hazard pass correctly handles bundled
+# instructions when iterating backwards to find wait instructions to merge.
+# This requires using reverse_instr_iterator instead of reverse_iterator
+# to properly traverse out of bundles.
+#
+# MIR test for https://github.com/llvm/llvm-project/issues/172331
+
+--- |
+  @mem = internal unnamed_addr addrspace(4) constant [4 x <4 x i32>] [<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>]
+
+  define amdgpu_gs void @hazard_in_bundle_merge_wait() { ret void }
+...
+
+# CHECK-LABEL: name: hazard_in_bundle_merge_wait
+# CHECK:      $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
+# CHECK-NEXT: BUNDLE implicit-def $sgpr0_sgpr1 {
+# CHECK-NEXT:   $sgpr0_sgpr1 = S_GETPC_B64
+# CHECK-NEXT:   S_WAITCNT_DEPCTR 65438
+# CHECK-NEXT:   $sgpr0 = S_ADD_U32 $sgpr0, target-flags(amdgpu-rel32-lo) @mem + 8, implicit-def $scc
+# CHECK-NEXT:   $sgpr1 = S_ADDC_U32 $sgpr1, target-flags(amdgpu-rel32-lo) @mem + 16, implicit-def $scc, implicit $scc
+# CHECK-NEXT: }
+# CHECK-NEXT: S_ENDPGM 0
+
+---
+name:            hazard_in_bundle_merge_wait
+body:            |
+  bb.0:
+    ; V_CNDMASK reads $sgpr0_sgpr1 as mask - creates hazard with subsequent write
+    $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
+
+    ; Existing S_WAITCNT_DEPCTR (simulating a prior hazard mitigation).
+    ; This should be found during backward iteration from inside the bundle
+    ; and merged into the new wait. With reverse_iterator bug, this wouldn't
+    ; be found, causing assertion failure.
+    S_WAITCNT_DEPCTR 65438
+
+    ; Bundle with S_GETPC_B64 writing $sgpr0_sgpr1 - triggers hazard.
+    ; The pass iterates backward from S_GETPC_B64 to find waits to merge.
+    BUNDLE implicit-def $sgpr0_sgpr1 {
+      $sgpr0_sgpr1 = S_GETPC_B64
+      $sgpr0 = S_ADD_U32 $sgpr0, target-flags(amdgpu-rel32-lo) @mem + 4, implicit-def $scc
+      $sgpr1 = S_ADDC_U32 $sgpr1, target-flags(amdgpu-rel32-lo) @mem + 12, implicit-def $scc, implicit $scc
+    }
+    S_ENDPGM 0
+...
