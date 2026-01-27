@@ -898,8 +898,7 @@ class HandleVectorExtractPattern
     auto src = op.getV1();
     // 1. Hoist past unary element-wise operations
     if (auto srcOp = src.getDefiningOp()) {
-      if (isa<LLVM::FPExtOp>(srcOp) || isa<LLVM::FPTruncOp>(srcOp) ||
-          isa<LLVM::BitcastOp>(srcOp)) {
+      if (isa<LLVM::FPExtOp>(srcOp) || isa<LLVM::FPTruncOp>(srcOp)) {
         Value srcInput = srcOp->getOperand(0);
         // Create new shuffle vector op with unary input as source.
         auto srcVecTy = dyn_cast<VectorType>(srcInput.getType());
@@ -911,12 +910,43 @@ class HandleVectorExtractPattern
         Value newUnaryOp;
         if (isa<LLVM::FPExtOp>(srcOp)) {
           newUnaryOp = LLVM::FPExtOp::create(rewriter, loc, ty, newShuffle);
-        } else if (isa<LLVM::FPTruncOp>(srcOp)) {
+        } else {
           newUnaryOp = LLVM::FPTruncOp::create(rewriter, loc, ty, newShuffle);
-        } else if (isa<LLVM::BitcastOp>(srcOp)) {
-          newUnaryOp = LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
         }
         rewriter.replaceOp(op, newUnaryOp);
+      } else if (isa<LLVM::BitcastOp>(srcOp)) {
+        Value srcInput = srcOp->getOperand(0);
+        // Create new shuffle vector op with unary input as source.
+        auto srcInputVecTy = dyn_cast<VectorType>(srcInput.getType());
+        auto srcInputSize = srcInputVecTy.getNumElements();
+        auto srcResVecTy = dyn_cast<VectorType>(srcOp->getResult(0).getType());
+        auto srcResSize = srcResVecTy.getNumElements();
+        auto maskSize = static_cast<int32_t>(mask.size());
+        if (srcInputSize > srcResSize) {
+          return failure();
+        }
+        if (srcResSize % srcInputSize != 0) {
+          return failure();
+        }
+        auto maskScale = srcResSize / srcInputSize;
+        if (maskScale != 1) {
+          // Create a new mask that maps to the source vector
+          SmallVector<int32_t> newMask;
+          int32_t newMaskSize = maskSize / maskScale;
+          int32_t maskStart = mask[0] / maskScale;
+          for (int32_t i = 0; i < newMaskSize; ++i) {
+            newMask.push_back(maskStart + i);
+          }
+          mask = newMask;
+        }
+        auto newShuffleVecTy =
+            VectorType::get(srcInputSize, srcInputVecTy.getElementType());
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, newShuffleVecTy, srcInput, srcInput, mask);
+        // Create new unary op with new shuffle as input.
+        auto newBitcast =
+            LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
+        rewriter.replaceOp(op, newBitcast);
       } else if (isa<LLVM::ShuffleVectorOp>(srcOp)) {
         // 2. Merge with another shuffle vector op
         auto srcShuffle = cast<LLVM::ShuffleVectorOp>(srcOp);
@@ -988,9 +1018,10 @@ struct ConvertXeVMToLLVMPass
       // Effectively just this single pattern is applied without any
       // op folding patterns from dialects.
       config.enableFolding(false);
-      if (failed(applyPatternsGreedily(getOperation(),
-                                       std::move(vectorPatterns), config)))
-        signalPassFailure();
+      // config.setMaxIterations(GreedyRewriteConfig::kNoLimit);
+      // config.setMaxNumRewrites(GreedyRewriteConfig::kNoLimit);
+      (void)applyPatternsGreedily(getOperation(), std::move(vectorPatterns),
+                                  config);
     }
   }
 };
