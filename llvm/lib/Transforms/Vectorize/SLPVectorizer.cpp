@@ -3921,7 +3921,8 @@ private:
 
   /// Checks if the tree represents disjoint or reduction of shl(zext, (0, 8,
   /// .., 56))-like pattern.
-  bool matchesShlZExt(const TreeEntry &TE) const;
+  /// If the int shifts unique, also strided, but not ordered, sets \p Order.
+  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const;
 
   class TreeEntry {
   public:
@@ -13339,7 +13340,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   return FMACost < FMulPlusFAddCost ? FMACost : InstructionCost::getInvalid();
 }
 
-bool BoUpSLP::matchesShlZExt(const TreeEntry &TE) const {
+bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
   assert(TE.hasState() && TE.getOpcode() == Instruction::Shl &&
          "Expected Shl node.");
   if (TE.State != TreeEntry::Vectorize || !TE.ReorderIndices.empty() ||
@@ -13366,24 +13367,46 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE) const {
     return false;
   Type *SrcScalarTy = cast<ZExtInst>(LhsTE->getMainOp())->getSrcTy();
   unsigned Stride = DL->getTypeSizeInBits(SrcScalarTy);
-  if (!isPowerOf2_64(Stride))
+  if (!isPowerOf2_64(Stride) || Stride >= Sz)
     return false;
-  // Rhs should be (0, Stride, 2 * Stride, , ..., Sz-Stride).
-  unsigned CurrentValue = 0;
   if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
-        RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE) &&
-        all_of(RhsTE->Scalars,
-               [&](Value *V) {
-                 CurrentValue += Stride;
-                 if (isa<UndefValue>(V))
-                   return true;
-                 auto *C = dyn_cast<Constant>(V);
-                 if (!C)
-                   return false;
-                 return C->getUniqueInteger() == CurrentValue - Stride;
-               }) &&
-        CurrentValue == Sz))
+        RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE)))
     return false;
+  Order.clear();
+  unsigned CurrentValue = 0;
+  // Rhs should be (0, Stride, 2 * Stride, ..., Sz-Stride).
+  if (all_of(RhsTE->Scalars,
+             [&](Value *V) {
+               CurrentValue += Stride;
+               if (isa<UndefValue>(V))
+                 return true;
+               auto *C = dyn_cast<Constant>(V);
+               if (!C)
+                 return false;
+               return C->getUniqueInteger() == CurrentValue - Stride;
+             }) &&
+      CurrentValue == Sz) {
+    Order.clear();
+  } else {
+    const unsigned VF = RhsTE->getVectorFactor();
+    Order.assign(VF, VF);
+    // Check if need to reorder Rhs to make it in form (0, Stride, 2 * Stride,
+    // ..., Sz-Stride).
+    for (const auto [Idx, V] : enumerate(RhsTE->Scalars)) {
+      if (isa<UndefValue>(V))
+        continue;
+      auto *C = dyn_cast<Constant>(V);
+      if (!C)
+        return false;
+      const APInt &Val = C->getUniqueInteger();
+      if (Val.isNegative() || Val.uge(Sz) || Val.getZExtValue() % Stride != 0)
+        return false;
+      unsigned Pos = Val.getZExtValue() / Stride;
+      if (Order[Idx] != VF)
+        return false;
+      Order[Idx] = Pos;
+    }
+  }
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   FastMathFlags FMF;
   SmallPtrSet<Value *, 4> CheckedExtracts;
@@ -13401,6 +13424,13 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE) const {
           CostKind);
   InstructionCost BitcastCost = TTI->getCastInstrCost(
       Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
+  if (!Order.empty()) {
+    fixupOrderingIndices(Order);
+    SmallVector<int> Mask;
+    inversePermutation(Order, Mask);
+    BitcastCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, SrcVecTy,
+                                    Mask, CostKind);
+  }
   return BitcastCost < VecCost;
 }
 
@@ -13818,10 +13848,12 @@ void BoUpSLP::transformNodes() {
             return !match(V, m_DisjointOr(m_Value(), m_Value()));
           }))
         break;
-      if (!matchesShlZExt(E))
+      OrdersType Order;
+      if (!matchesShlZExt(E, Order))
         break;
       // This node is a (reduced disjoint or) bitcast node.
       E.CombinedOp = TreeEntry::ReducedBitcast;
+      E.ReorderIndices = std::move(Order);
       TreeEntry *ZExtEntry = getOperandEntry(&E, 0);
       assert(ZExtEntry->UserTreeIndex &&
              ZExtEntry->State == TreeEntry::Vectorize &&
@@ -14880,6 +14912,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
+  } else if (E->Idx == 0 && E->CombinedOp == TreeEntry::ReducedBitcast) {
+    const TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
+    ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
   }
   auto *VecTy = getWidenedType(ScalarTy, VL.size());
   unsigned EntryVF = E->getVectorFactor();
@@ -21121,6 +21156,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Const->VectorizedValue = PoisonValue::get(getWidenedType(
           Const->Scalars.front()->getType(), Const->getVectorFactor()));
       Value *Op = vectorizeOperand(ZExt, 0);
+      // Set the scalar type properly to avoid casting to the extending type.
+      ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
+      Op = FinalShuffle(Op, E);
       auto *V = Builder.CreateBitCast(
           Op, IntegerType::get(
                   Op->getContext(),
