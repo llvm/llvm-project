@@ -12,22 +12,22 @@ define void @global_store_different_block(ptr addrspace(1) %data_ptr, ptr addrsp
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
 ; GFX950-NEXT:    v_mov_b32_e32 v4, 42
 ; GFX950-NEXT:    global_store_dword v[0:1], v4, off
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX950-NEXT:    s_cbranch_execz .LBB1_2
+; GFX950-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX950-NEXT:  ; %bb.1: ; %do_atomic
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], 0
 ; GFX950-NEXT:    buffer_wbl2 sc1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    global_atomic_swap_x2 v[2:3], v[0:1], off
-; GFX950-NEXT:  .LBB1_2: ; %exit
+; GFX950-NEXT:  .LBB0_2: ; %exit
 ; GFX950-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; Global store in entry block
   store i32 42, ptr addrspace(1) %data_ptr, align 4
-  call void @llvm.amdgcn.s.waitcnt(i32 3952)
+  call void @llvm.amdgcn.s.waitcnt(i32 112)
   br i1 %cond, label %do_atomic, label %exit
 
 do_atomic:

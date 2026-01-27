@@ -2733,10 +2733,10 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (Inst.getOpcode() == AMDGPU::BUFFER_WBL2) {
     // BUFFER_WBL2 needs vmcnt waitcnt only when there have been stores
     // that need to be written back.
-    // if (ScoreBrackets->hasVmemStore()) {
-    //   IsVMEMAccess = true;
-    //   ScoreBrackets->updateByEvent(VMEM_ACCESS, Inst);
-    // }
+    if (ScoreBrackets->hasVmemStore()) {
+      IsVMEMAccess = true;
+      ScoreBrackets->updateByEvent(VMEM_ACCESS, Inst);
+    }
   } else if (TII->isSMRD(Inst)) {
     IsSMEMAccess = true;
     ScoreBrackets->updateByEvent(SMEM_ACCESS, Inst);
