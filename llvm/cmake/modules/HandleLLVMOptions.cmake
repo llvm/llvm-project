@@ -1313,20 +1313,27 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   endif()
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
+    # Clang before version 18 has problems with mixed default visibility.
+    # Therefore, disable PCH with older Clang versions by default.
+    message(NOTICE "Precompiled headers are disabled by default with Clang <18. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
 
   # Warn on possibly unintended interactions with ccache/sccache if the user
   # sets this via CMAKE_CXX_COMPILER_LAUNCHER (and not using LLVM_CCACHE_BUILD).
-  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "sccache")
-    # It is unclear to what extent sccache supports PCH.
-    # https://github.com/mozilla/sccache/issues/615
-    message(WARNING "Using sccache with precompiled headers is unsupported. "
-      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
-  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # ccache with PCH can lead to false-positives when only a macro
     # definition changes with non-Clang compilers, because macro definitions
     # are not compared in preprocessed mode.
     # See: https://github.com/ccache/ccache/issues/1668
-    message(WARNING "Using ccache with precompiled headers with non-Clang "
+    #
+    # It is unclear to what extent sccache supports PCH, but Clang seems to work
+    # fine.
+    # See: https://github.com/mozilla/sccache/issues/615
+    # See: https://github.com/mozilla/sccache/issues/2562
+    message(WARNING "Using sccache/ccache with precompiled headers with non-Clang "
       "compilers is not supported and may lead to false positives. "
       "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
   endif()
