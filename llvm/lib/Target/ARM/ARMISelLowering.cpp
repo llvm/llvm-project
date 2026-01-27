@@ -10037,8 +10037,8 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
-  if ((MF.getFunction().hasMinSize()) && !AllowsUnaligned &&
-      (Alignment <= llvm::Align(2))) {
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
 
     RTLIB::Libcall LC =
         (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
@@ -10082,8 +10082,8 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
-  if ((MF.getFunction().hasMinSize()) && !AllowsUnaligned &&
-      (Alignment <= llvm::Align(2))) {
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
 
     SDLoc dl(Op);
 
