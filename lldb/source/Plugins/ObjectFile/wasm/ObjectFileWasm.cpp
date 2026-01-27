@@ -328,10 +328,16 @@ static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
   for (uint32_t i = 0; c && i < *count; ++i) {
     // We don't need module and field names, so we can just get them as raw
     // strings and discard.
-    if (!GetWasmString(data, c))
-      return llvm::createStringError("failed to parse module name");
-    if (!GetWasmString(data, c))
-      return llvm::createStringError("failed to parse field name");
+    llvm::Expected<std::string> module_name = GetWasmString(data, c);
+    if (!module_name)
+      return llvm::joinErrors(
+          llvm::createStringError("failed to parse module name"),
+          module_name.takeError());
+    llvm::Expected<std::string> field_name = GetWasmString(data, c);
+    if (!field_name)
+      return llvm::joinErrors(
+          llvm::createStringError("failed to parse field name"),
+          field_name.takeError());
 
     uint8_t kind = data.getU8(c);
     if (kind == llvm::wasm::WASM_EXTERNAL_FUNCTION)
