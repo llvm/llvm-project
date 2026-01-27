@@ -639,7 +639,7 @@ defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
 defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
 defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
 
-defm : VPatBinarySDNode_VV_VX<rotl, "PseudoVROL">;
+defm : VPatBinarySDNode_VV_VX<rotl, "PseudoVROL", ExtraPreds=[HasStdExtZvkb]>;
 
 // Invert the immediate and mask it to SEW for readability.
 def InvRot8Imm : SDNodeXForm<imm, [{
@@ -673,7 +673,7 @@ foreach vti = AllIntegerVectors in {
                  vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
-defm : VPatBinarySDNode_VV_VX_VI<rotr, "PseudoVROR", uimm6>;
+defm : VPatBinarySDNode_VV_VX_VI<rotr, "PseudoVROR", uimm6, ExtraPreds=[HasStdExtZvkb]>;
 
 foreach vtiToWti = AllWidenableIntVectors in {
   defvar vti = vtiToWti.Vti;
@@ -787,7 +787,7 @@ defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
 defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
 defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
 
-defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL">;
+defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL", ExtraPreds=[HasStdExtZvkb]>;
 // Although there is no vrol.vi, an immediate rotate left can be achieved by
 // negating the immediate in vror.vi
 foreach vti = AllIntegerVectors in {
@@ -804,7 +804,7 @@ foreach vti = AllIntegerVectors in {
                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
-defm : VPatBinaryVL_VV_VX_VI<riscv_rotr_vl, "PseudoVROR", uimm6>;
+defm : VPatBinaryVL_VV_VX_VI<riscv_rotr_vl, "PseudoVROR", uimm6, ExtraPreds=[HasStdExtZvkb]>;
 
 foreach vtiToWti = AllWidenableIntVectors in {
   defvar vti = vtiToWti.Vti;
