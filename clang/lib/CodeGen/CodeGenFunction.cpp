@@ -1814,7 +1814,6 @@ void CodeGenFunction::EmitBranchToCounterBlock(
     return EmitBranchOnBoolExpr(Cond, TrueBlock, FalseBlock, TrueCount, LH);
 
   const Stmt *CntrStmt = (CntrIdx ? CntrIdx : Cond);
-  auto HasSkip = getIsCounterPair(CntrStmt);
 
   llvm::BasicBlock *ThenBlock = nullptr;
   llvm::BasicBlock *ElseBlock = nullptr;
@@ -1824,7 +1823,7 @@ void CodeGenFunction::EmitBranchToCounterBlock(
   llvm::BasicBlock *CounterIncrBlock = createBasicBlock("lop.rhscnt");
 
   llvm::BasicBlock *SkipIncrBlock =
-      (HasSkip.second ? createBasicBlock("lop.rhsskip") : nullptr);
+      (hasSkipCounter(CntrStmt) ? createBasicBlock("lop.rhsskip") : nullptr);
   llvm::BasicBlock *SkipNextBlock = nullptr;
 
   // Set block pointers according to Logical-AND (BO_LAnd) semantics. This
@@ -1900,7 +1899,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
   Cond = Cond->IgnoreParens();
 
   if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(Cond)) {
-    auto HasSkip = getIsCounterPair(CondBOp);
+    bool HasSkip = hasSkipCounter(CondBOp);
 
     // Handle X && Y in a condition.
     if (CondBOp->getOpcode() == BO_LAnd) {
@@ -1930,7 +1929,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
       // want to jump to the FalseBlock.
       llvm::BasicBlock *LHSTrue = createBasicBlock("land.lhs.true");
       llvm::BasicBlock *LHSFalse =
-          (HasSkip.second ? createBasicBlock("land.lhsskip") : FalseBlock);
+          (HasSkip ? createBasicBlock("land.lhsskip") : FalseBlock);
       // The counter tells us how often we evaluate RHS, and all of TrueCount
       // can be propagated to that branch.
       uint64_t RHSCount = getProfileCount(CondBOp->getRHS());
@@ -1943,7 +1942,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
         // __builtin_expect(X && Y, 0) -> only Y is unlikely
         EmitBranchOnBoolExpr(CondBOp->getLHS(), LHSTrue, LHSFalse, RHSCount,
                              LH == Stmt::LH_Unlikely ? Stmt::LH_None : LH);
-        if (HasSkip.second) {
+        if (HasSkip) {
           EmitBlock(LHSFalse);
           incrementProfileCounter(UseSkipPath, CondBOp);
           EmitBranch(FalseBlock);
@@ -1987,7 +1986,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
       // Emit the LHS as a conditional.  If the LHS conditional is true, we
       // want to jump to the TrueBlock.
       llvm::BasicBlock *LHSTrue =
-          (HasSkip.second ? createBasicBlock("lor.lhsskip") : TrueBlock);
+          (HasSkip ? createBasicBlock("lor.lhsskip") : TrueBlock);
       llvm::BasicBlock *LHSFalse = createBasicBlock("lor.lhs.false");
       // We have the count for entry to the RHS and for the whole expression
       // being true, so we can divy up True count between the short circuit and
@@ -2004,7 +2003,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
         ApplyDebugLocation DL(*this, Cond);
         EmitBranchOnBoolExpr(CondBOp->getLHS(), LHSTrue, LHSFalse, LHSCount,
                              LH == Stmt::LH_Likely ? Stmt::LH_None : LH);
-        if (HasSkip.second) {
+        if (HasSkip) {
           EmitBlock(LHSTrue);
           incrementProfileCounter(UseSkipPath, CondBOp);
           EmitBranch(TrueBlock);
