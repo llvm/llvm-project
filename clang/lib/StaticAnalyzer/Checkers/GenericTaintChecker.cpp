@@ -804,9 +804,10 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   CheckerManager *Mgr = C.getAnalysisManager().getCheckerManager();
 
   StaticTaintRules = RuleLookupTy{};
-  if (Mgr->getAnalyzerOptions().getCheckerBooleanOption(this, "EnableDefaultConfig"))
+  if (Mgr->getAnalyzerOptions().getCheckerBooleanOption(this,
+                                                        "EnableDefaultConfig"))
     StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
-                            std::make_move_iterator(GlobalCRules.end()));
+                             std::make_move_iterator(GlobalCRules.end()));
 
   // User-provided taint configuration.
   const GenericTaintRuleParser ConfigParser{*Mgr};
