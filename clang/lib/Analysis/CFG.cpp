@@ -5525,6 +5525,7 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
     case CFGElement::CXXRecordTypedCall:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
+    case CFGElement::FullExprCleanup:
     case CFGElement::CleanupFunction:
       llvm_unreachable("getDestructorDecl should only be used with "
                        "ImplicitDtors");
