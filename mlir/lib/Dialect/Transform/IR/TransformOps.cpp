@@ -2883,7 +2883,7 @@ static bool isValueUsePotentialConsumer(OpOperand &use) {
   return isHandleConsumed(use.get(), iface);
 }
 
-LogicalResult
+static LogicalResult
 checkDoubleConsume(Value value,
                    function_ref<InFlightDiagnostic()> reportError) {
   OpOperand *potentialConsumer = nullptr;

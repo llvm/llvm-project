@@ -162,7 +162,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cr, false> _
   return __result;
 }
 
-// 2+1 iterators: size2 >= size1; used by std::swap_ranges.
 template <class, class _Cl, class _Cr>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cl, false>, __bit_iterator<_Cr, false> >
 __swap_ranges(__bit_iterator<_Cl, false> __first1,
@@ -173,32 +172,6 @@ __swap_ranges(__bit_iterator<_Cl, false> __first1,
   return std::make_pair(__last1, std::__swap_ranges_unaligned(__first1, __last1, __first2));
 }
 
-// 2+2 iterators: used by std::ranges::swap_ranges.
-template <class _AlgPolicy, class _Cl, class _Cr>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cl, false>, __bit_iterator<_Cr, false> >
-__swap_ranges(__bit_iterator<_Cl, false> __first1,
-              __bit_iterator<_Cl, false> __last1,
-              __bit_iterator<_Cr, false> __first2,
-              __bit_iterator<_Cr, false> __last2) {
-  if (__last1 - __first1 < __last2 - __first2)
-    return std::make_pair(__last1, std::__swap_ranges<_AlgPolicy>(__first1, __last1, __first2).second);
-  return std::make_pair(std::__swap_ranges<_AlgPolicy>(__first2, __last2, __first1).second, __last2);
-}
-
-// 2+2 iterators: the shorter size will be used.
-template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _ForwardIterator2, class _Sentinel2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator1, _ForwardIterator2>
-__swap_ranges(_ForwardIterator1 __first1, _Sentinel1 __last1, _ForwardIterator2 __first2, _Sentinel2 __last2) {
-  while (__first1 != __last1 && __first2 != __last2) {
-    _IterOps<_AlgPolicy>::iter_swap(__first1, __first2);
-    ++__first1;
-    ++__first2;
-  }
-
-  return pair<_ForwardIterator1, _ForwardIterator2>(std::move(__first1), std::move(__first2));
-}
-
-// 2+1 iterators: size2 >= size1.
 template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _ForwardIterator2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator1, _ForwardIterator2>
 __swap_ranges(_ForwardIterator1 __first1, _Sentinel1 __last1, _ForwardIterator2 __first2) {
