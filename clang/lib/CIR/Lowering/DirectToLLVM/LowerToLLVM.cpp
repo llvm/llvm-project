@@ -1688,7 +1688,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     newOp.setMemoryEffectsAttr(memoryEffects);
   newOp.setNoUnwind(noUnwind);
   newOp.setWillReturn(willReturn);
-  newOp.setNoReturn(noReturn);
+  newOp.setNoreturn(noReturn);
 
   return mlir::success();
 }
@@ -2158,7 +2158,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   }
 
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
-    fn.setNoReturn(true);
+    fn.setNoreturn(true);
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);

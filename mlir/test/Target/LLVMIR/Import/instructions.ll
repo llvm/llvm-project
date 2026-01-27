@@ -703,7 +703,7 @@ declare void @f()
 
 ; CHECK-LABEL: @call_noreturn
 define void @call_noreturn() {
-; CHECK: llvm.call @f() {no_return}
+; CHECK: llvm.call @f() {noreturn}
   call void @f() noreturn
   ret void
 }

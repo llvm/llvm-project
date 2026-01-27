@@ -2633,7 +2633,7 @@ llvm.func @willreturn() attributes { will_return } {
 
 // CHECK-LABEL: @noreturn
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
-llvm.func @noreturn() attributes { no_return } {
+llvm.func @noreturn() attributes { noreturn } {
   llvm.return
 }
 
@@ -2689,7 +2689,7 @@ llvm.func @f()
 // CHECK-LABEL: @noreturn_call
 // CHECK: call void @f() #[[ATTRS:[0-9]+]]
 llvm.func @noreturn_call() {
-  llvm.call @f() {no_return} : () -> ()
+  llvm.call @f() {noreturn} : () -> ()
   llvm.return
 }
 

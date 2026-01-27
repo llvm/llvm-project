@@ -324,9 +324,9 @@ module {
     llvm.return
   }
 
-  llvm.func @noreturn_function() attributes {no_return} {
+  llvm.func @noreturn_function() attributes {noreturn} {
     // CHECK: @noreturn_function
-    // CHECK-SAME: attributes {no_return}
+    // CHECK-SAME: attributes {noreturn}
     llvm.return
   }
 

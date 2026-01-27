@@ -412,7 +412,7 @@ declare void @willreturn_attribute() willreturn
 // -----
 
 ; CHECK-LABEL: @noreturn_attribute
-; CHECK-SAME: attributes {no_return}
+; CHECK-SAME: attributes {noreturn}
 declare void @noreturn_attribute() noreturn
 
 // -----

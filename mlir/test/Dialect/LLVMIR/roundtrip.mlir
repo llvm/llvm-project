@@ -123,7 +123,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
   llvm.call @baz() {will_return} : () -> ()
 
 // CHECK: llvm.call @baz() {noreturn} : () -> ()
-  llvm.call @baz() {no_return} : () -> ()
+  llvm.call @baz() {noreturn} : () -> ()
 
 // CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
   llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
