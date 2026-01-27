@@ -384,6 +384,8 @@ add_entrypoint_object(
     ../sinf16.h
   DEPENDS
     libc.src.__support.math.sinf16
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
 )
 
 add_entrypoint_object(
