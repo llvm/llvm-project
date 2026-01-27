@@ -7171,6 +7171,41 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fms-define-stdc");
   }
 
+  // -fms-anonymous-struct=0 default.
+  bool EnableMSAnon = false;
+  bool SeenRelevantOption = false;
+  for (const Arg *A : Args) {
+    switch (A->getOption().getID()) {
+    case options::OPT_fms_anonymous_structs:
+      A->claim();
+      EnableMSAnon = true;
+      SeenRelevantOption = true;
+      break;
+    case options::OPT_fno_ms_anonymous_structs:
+      A->claim();
+      EnableMSAnon = false;
+      SeenRelevantOption = true;
+      break;
+    case options::OPT_fms_extensions:
+    case options::OPT_fms_compatibility:
+      EnableMSAnon = true;
+      SeenRelevantOption = true;
+      break;
+    case options::OPT_fno_ms_extensions:
+    case options::OPT_fno_ms_compatibility:
+      EnableMSAnon = false;
+      SeenRelevantOption = true;
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (SeenRelevantOption) {
+    CmdArgs.push_back(EnableMSAnon ? "-fms-anonymous-structs"
+                                   : "-fno-ms-anonymous-structs");
+  }
+
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
     ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
