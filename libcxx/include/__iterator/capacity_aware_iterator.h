@@ -64,6 +64,8 @@ public:
     requires is_default_constructible_v<_Iter>
   = default;
 
+  friend struct pointer_traits<__capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements>>;
+
   template <typename _Iter2>
     requires is_convertible_v<_Iter2, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator(
@@ -78,11 +80,7 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const noexcept
-    requires requires { __iter_.operator->(); }
-  {
-    return __iter_.operator->();
-  }
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const noexcept { return std::__to_address(__iter_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator++() noexcept {
     ++__iter_;
@@ -181,6 +179,17 @@ template <class _It, class _Tag2, size_t _RangeMaxElems2>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept {
   return __capacity_aware_iterator<_It, _Tag2, _RangeMaxElems2>(__iter);
 }
+
+template <class _Iter, class _Tag, std::size_t _RangeMaxElements>
+struct pointer_traits<__capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements>> {
+  using pointer         = __capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements>;
+  using element_type    = typename pointer_traits<_Iter>::element_type;
+  using difference_type = typename pointer_traits<_Iter>::difference_type;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
+    return std::__to_address(__it.__iter_);
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 
