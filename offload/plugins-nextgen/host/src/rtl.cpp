@@ -383,7 +383,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Product Name", "Host", "", DeviceInfo::PRODUCT_NAME);
     Info.add("Vendor", "Unknown", "", DeviceInfo::VENDOR);
     Info.add("Vendor ID", 1, "", DeviceInfo::VENDOR_ID);
-    Info.add("Device Name", " Host Offload Device", "", DeviceInfo::NAME);
+    Info.add("Device Name", "Host Offload Device", "", DeviceInfo::NAME);
     Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
     Info.add("Number of total EUs", 1, "", DeviceInfo::NUM_COMPUTE_UNITS);
     Info.add("Max memory clock frequency (MHz)", 1, "",
