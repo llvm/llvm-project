@@ -1364,7 +1364,7 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
 
   Token ResultTok;
   bool SuppressDiagnostic = false;
-  while (true) {
+  while (Tok.isNoneOf(tok::eod, tok::eof)) {
     // Parse next token.
     if (ExpandArgs)
       PP.Lex(Tok);
