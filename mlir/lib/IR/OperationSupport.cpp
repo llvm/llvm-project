@@ -575,7 +575,7 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
 
 ResultRange::ResultRange(OpResult result)
     : ResultRange(static_cast<detail::OpResultImpl *>(Value(result).getImpl()),
-                  0) {}
+                  1) {}
 
 ResultRange::use_range ResultRange::getUses() const {
   return {use_begin(), use_end()};

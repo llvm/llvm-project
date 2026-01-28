@@ -193,6 +193,13 @@ class Operation(ir.OpView):
     Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
     """
 
+    def __init__(*args, **kwargs):
+        raise TypeError(
+            "This class is a template and cannot be instantiated directly. "
+            "Please use a subclass that defines the operation."
+        )
+
+
     @classmethod
     def __init_subclass__(cls, *, name: str = None, **kwargs):
         """
@@ -428,9 +435,6 @@ class Dialect(ir.Dialect):
     ```
     """
 
-    class ExtOperation(Operation):
-        def __init__(*args, **kwargs):
-            raise RuntimeError("Cannot instantiate Dialect.ExtOperation directly.")
 
     @classmethod
     def __init_subclass__(cls, name: str, **kwargs):
@@ -439,7 +443,7 @@ class Dialect(ir.Dialect):
         cls.operations = []
         cls.Operation = type(
             "Operation",
-            (cls.ExtOperation,),
+            (Operation,),
             {"_dialect_obj": cls, "_dialect_name": name},
         )
 
