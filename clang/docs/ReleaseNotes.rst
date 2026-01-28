@@ -210,6 +210,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+- Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
