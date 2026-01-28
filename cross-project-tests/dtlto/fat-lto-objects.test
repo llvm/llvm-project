@@ -45,9 +45,11 @@ OBJECTS-DAG: start.o
 #--- foo.c
 extern int boo(int), _start(int);
 __attribute__((retain)) int foo(int x) { return x + boo(x) + _start(x); }
+
 #--- boo.c
 extern int foo(int), _start(int);
 __attribute__((retain)) int boo(int x) { return x + foo(x) + _start(x); }
+
 #--- start.c
 extern int foo(int), boo(int);
 __attribute__((retain)) int _start(int x) { return x + foo(x) + boo(x); }
