@@ -75,7 +75,14 @@ public:
 
   void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
-  Expected<ExecutorAddrRange> awaitTargetMem() { return FinalizeFuture.get(); }
+  bool hasPendingTargetMem() const { return FinalizeFuture.valid(); }
+
+  Expected<ExecutorAddrRange> awaitTargetMem() {
+    assert(FinalizeFuture.valid() &&
+           "FinalizeFuture is not valid. Perhaps there is no pending target "
+           "memory transaction?");
+    return FinalizeFuture.get();
+  }
 
   void reportTargetMem(ExecutorAddrRange TargetMem) {
     FinalizePromise.set_value(TargetMem);
@@ -342,6 +349,9 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // register the memory range with the GDB JIT Interface in an allocation
     // action of the LinkGraph's own allocation
     DebugObject *DebugObj = getPendingDebugObj(MR);
+    assert(DebugObj && "no debug object?");
+    if (!DebugObj->hasPendingTargetMem())
+      return Error::success();
     Expected<ExecutorAddrRange> R = DebugObj->awaitTargetMem();
     if (!R)
       return R.takeError();
