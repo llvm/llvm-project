@@ -191,30 +191,16 @@ void UppercaseLiteralSuffixCheck::registerMatchers(MatchFinder *Finder) {
   // E.g. i32 suffix still results in 'BuiltinType::Kind::Int'.
   // And such an info is not stored in the *Literal itself.
 
-  Finder->addMatcher(userDefinedLiteral().bind("expr"), this);
-  Finder->addMatcher(integerLiteral().bind("expr"), this);
-  Finder->addMatcher(floatLiteral().bind("expr"), this);
+  Finder->addMatcher(
+      integerLiteral(unless(hasParent(userDefinedLiteral()))).bind("expr"),
+      this);
+  Finder->addMatcher(
+      floatLiteral(unless(hasParent(userDefinedLiteral()))).bind("expr"), this);
 }
 
 void UppercaseLiteralSuffixCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *const Literal = Result.Nodes.getNodeAs<Expr>("expr");
-
-  // We don't want to warn on user-defined literals, which appear in
-  // the AST like so:
-  //    UserDefinedLiteral
-  //    \- IntegerLiteral/FLoatLiteral
-  // The obvious way to exclude them is to add
-  //    unless(hasParent(userDefinedLiteral()))
-  // to our matchers. However, profiling shows that doing so is over 3x slower
-  // than the (rather ugly) approach below based on source locations.
-  if (isa<UserDefinedLiteral>(Literal)) {
-    LatestUserDefinedLiteralLoc = Literal->getBeginLoc();
-    return;
-  }
-  if (Literal->getBeginLoc() == LatestUserDefinedLiteralLoc)
-    return;
-
   const bool IsInteger = isa<IntegerLiteral>(Literal);
 
   // We won't *always* want to diagnose.

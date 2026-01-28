@@ -32,7 +32,6 @@ public:
 private:
   const std::vector<StringRef> NewSuffixes;
   const bool IgnoreMacros;
-  SourceLocation LatestUserDefinedLiteralLoc;
 };
 
 } // namespace clang::tidy::readability
