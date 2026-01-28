@@ -96,7 +96,8 @@ static cl::opt<bool> AnnotateStaticDataSectionPrefix(
 // After the option, string literal partitioning should be implied by
 // AnnotateStaticDataSectionPrefix above and this option should be cleaned up.
 static cl::opt<bool> AnnotateStringLiteralSectionPrefix(
-    "memprof-annotate-string-literal-section-prefix", cl::init(false), cl::Hidden,
+    "memprof-annotate-string-literal-section-prefix", cl::init(false),
+    cl::Hidden,
     cl::desc("If true, annotate the string literal data section prefix"));
 
 // Matching statistics
@@ -240,7 +241,8 @@ static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
                     << Reason << ".\n");
 }
 
-// Computes the LLVM version of MD5 hash for the string content of a string literal.
+// Computes the LLVM version of MD5 hash for the string content of a string
+// literal.
 static std::optional<uint64_t>
 getStringContentHash(const GlobalVariable &GVar) {
   auto *Initializer = GVar.getInitializer();
@@ -958,7 +960,9 @@ bool MemProfUsePass::annotateGlobalVariables(
     // compiler to categeorize the hotness string literals.
     if (Name.starts_with(".str")) {
       if (!AnnotateStringLiteralSectionPrefix) {
-        LLVM_DEBUG(dbgs() << "String literal annotation is off. Skip annotating " << Name << "\n");
+        LLVM_DEBUG(
+            dbgs() << "String literal annotation is off. Skip annotating "
+                   << Name << "\n");
         continue;
       }
       std::optional<uint64_t> Hash = getStringContentHash(GVar);
@@ -983,7 +987,8 @@ bool MemProfUsePass::annotateGlobalVariables(
                           << " is annotated as unlikely\n");
       } else {
         ++NumOfMemProfUnknownGlobalVars;
-        LLVM_DEBUG(dbgs() << "Global variable " << Name << " is not annotated\n");
+        LLVM_DEBUG(dbgs() << "Global variable " << Name
+                          << " is not annotated\n");
       }
 
       continue;
