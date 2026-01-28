@@ -118,7 +118,7 @@ Sections:
   DataVisualization::Categories::GetCategory(ConstString("default"), category);
   ASSERT_TRUE(category != nullptr);
 
-  ASSERT_EQ(category->GetCount(), 2);
+  ASSERT_EQ(category->GetCount(), 2u);
 
   TypeSummaryImplSP point_summary_sp =
       category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
