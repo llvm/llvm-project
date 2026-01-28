@@ -3319,8 +3319,8 @@ void UnwrappedLineParser::parseForOrWhileLoop(bool HasParens) {
     nextToken();
   if (HasParens && FormatTok->is(tok::l_paren)) {
     // The type is only set for Verilog basically because we were afraid to
-    // change the existing behavior for loops. See the discussion on D121756
-    // for details.
+    // change the existing behavior for loops. See the discussion on D121756 for
+    // details.
     if (Style.isVerilog())
       FormatTok->setFinalizedType(TT_ConditionLParen);
     parseParens();
@@ -3478,8 +3478,7 @@ bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
     parseRequiresExpression();
     return false;
   case tok::l_paren:
-    // Clauses and expression can start with a paren, it's unclear what we
-    // have.
+    // Clauses and expression can start with a paren, it's unclear what we have.
     break;
   default:
     // All other tokens can only be a clause.
@@ -3542,8 +3541,8 @@ bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
   // Now we look forward and try to check if the paren content is a parameter
   // list. The parameters can be cv-qualified and contain references or
   // pointers.
-  // So we want basically to check for TYPE NAME, but TYPE can contain all
-  // kinds of stuff: typename, const, *, &, &&, ::, identifiers.
+  // So we want basically to check for TYPE NAME, but TYPE can contain all kinds
+  // of stuff: typename, const, *, &, &&, ::, identifiers.
 
   unsigned StoredPosition = Tokens->getPosition();
   FormatToken *NextToken = Tokens->getNextToken();
@@ -3615,8 +3614,8 @@ void UnwrappedLineParser::parseRequiresClause() {
   assert(FormatTok->is(tok::kw_requires) && "'requires' expected");
 
   // If there is no previous token, we are within a requires expression,
-  // otherwise we will always have the template or function declaration in
-  // front of it.
+  // otherwise we will always have the template or function declaration in front
+  // of it.
   bool InRequiresExpression =
       !FormatTok->Previous ||
       FormatTok->Previous->is(TT_RequiresExpressionLBrace);
@@ -3661,21 +3660,21 @@ void UnwrappedLineParser::parseRequiresExpression() {
 /// This is the body of a requires clause. It returns, when the parsing is
 /// complete, or the expression is incorrect.
 void UnwrappedLineParser::parseConstraintExpression() {
-  // The special handling for lambdas is needed since tryToParseLambda() eats
-  // a token and if a requires expression is the last part of a requires
-  // clause and followed by an attribute like [[nodiscard]] the
-  // ClosesRequiresClause is not set on the correct token. Thus we need to be
-  // aware if we even expect a lambda to be possible. template <typename T>
-  // requires requires { ... } [[nodiscard]] ...;
+  // The special handling for lambdas is needed since tryToParseLambda() eats a
+  // token and if a requires expression is the last part of a requires clause
+  // and followed by an attribute like [[nodiscard]] the ClosesRequiresClause is
+  // not set on the correct token. Thus we need to be aware if we even expect a
+  // lambda to be possible.
+  // template <typename T> requires requires { ... } [[nodiscard]] ...;
   bool LambdaNextTimeAllowed = true;
 
-  // Within lambda declarations, it is permitted to put a requires clause
-  // after its template parameter list, which would place the requires clause
-  // right before the parentheses of the parameters of the lambda declaration.
-  // Thus, we track if we expect to see grouping parentheses at all. Without
-  // this check, `requires foo<T> (T t)` in the below example would be seen as
-  // the whole requires clause, accidentally eating the parameters of the
-  // lambda.
+  // Within lambda declarations, it is permitted to put a requires clause after
+  // its template parameter list, which would place the requires clause right
+  // before the parentheses of the parameters of the lambda declaration. Thus,
+  // we track if we expect to see grouping parentheses at all.
+  // Without this check, `requires foo<T> (T t)` in the below example would be
+  // seen as the whole requires clause, accidentally eating the parameters of
+  // the lambda.
   // [&]<typename T> requires foo<T> (T t) { ... };
   bool TopLevelParensAllowed = true;
 
@@ -3808,9 +3807,9 @@ bool UnwrappedLineParser::parseEnum() {
   if (FormatTok->is(tok::kw_enum))
     nextToken();
 
-  // In TypeScript, "enum" can also be used as property name, e.g. in
-  // interface declarations. An "enum" keyword followed by a colon would be a
-  // syntax error and thus assume it is just an identifier.
+  // In TypeScript, "enum" can also be used as property name, e.g. in interface
+  // declarations. An "enum" keyword followed by a colon would be a syntax
+  // error and thus assume it is just an identifier.
   if (Style.isJavaScript() && FormatTok->isOneOf(tok::colon, tok::question))
     return false;
 
@@ -4121,8 +4120,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
         FormatToken *Previous = FormatTok->Previous;
         if (!Previous || (Previous->isNot(tok::r_paren) &&
                           !Previous->isTypeOrIdentifier(LangOpts))) {
-          // Don't try parsing a lambda if we had a closing parenthesis
-          // before, it was probably a pointer to an array: int (*)[].
+          // Don't try parsing a lambda if we had a closing parenthesis before,
+          // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())
             continue;
         } else {
@@ -4173,13 +4172,12 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
       }
 
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
-      parseBlock(/*MustBeDeclaration=*/true, AddLevels,
-                 /*MunchSemi=*/false);
+      parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
     }
     setPreviousRBraceType(ClosingBraceType);
   }
-  // There is no addUnwrappedLine() here so that we fall through to
-  // parsing a structural element afterwards. Thus, in "class A {} n, m;",
+  // There is no addUnwrappedLine() here so that we fall through to parsing a
+  // structural element afterwards. Thus, in "class A {} n, m;",
   // "} n, m;" will end up in one unwrapped line.
 }
 
@@ -4267,8 +4265,8 @@ void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
     parseBlock(/*MustBeDeclaration=*/true);
   }
 
-  // With instance variables, this puts '}' on its own line.  Without
-  // instance variables, this ends the @interface line.
+  // With instance variables, this puts '}' on its own line.  Without instance
+  // variables, this ends the @interface line.
   addUnwrappedLine();
 
   parseObjCUntilAtEnd();
@@ -4306,8 +4304,7 @@ bool UnwrappedLineParser::parseObjCProtocol() {
   nextToken();
 
   if (FormatTok->is(tok::l_paren)) {
-    // The expression form of @protocol, e.g. "Protocol* p =
-    // @protocol(foo);".
+    // The expression form of @protocol, e.g. "Protocol* p = @protocol(foo);".
     return false;
   }
 
@@ -4342,9 +4339,9 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
   if (FormatTok->is(tok::kw_default))
     nextToken();
 
-  // Consume "async function", "function" and "default function", so that
-  // these get parsed as free-standing JS functions, i.e. do not require a
-  // trailing semicolon.
+  // Consume "async function", "function" and "default function", so that these
+  // get parsed as free-standing JS functions, i.e. do not require a trailing
+  // semicolon.
   if (FormatTok->is(Keywords.kw_async))
     nextToken();
   if (FormatTok->is(Keywords.kw_function)) {
@@ -4352,10 +4349,10 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
     return;
   }
 
-  // For imports, `export *`, `export {...}`, consume the rest of the line
-  // up to the terminating `;`. For everything else, just return and
-  // continue parsing the structural element, i.e. the declaration or
-  // expression for `export default`.
+  // For imports, `export *`, `export {...}`, consume the rest of the line up
+  // to the terminating `;`. For everything else, just return and continue
+  // parsing the structural element, i.e. the declaration or expression for
+  // `export default`.
   if (!IsImport && FormatTok->isNoneOf(tok::l_brace, tok::star) &&
       !FormatTok->isStringLiteral() &&
       !(FormatTok->is(Keywords.kw_type) &&
@@ -4367,8 +4364,8 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
     if (FormatTok->is(tok::semi))
       return;
     if (Line->Tokens.empty()) {
-      // Common issue: Automatic Semicolon Insertion wrapped the line, so
-      // the import statement should terminate.
+      // Common issue: Automatic Semicolon Insertion wrapped the line, so the
+      // import statement should terminate.
       return;
     }
     if (FormatTok->is(tok::l_brace)) {
@@ -4547,11 +4544,11 @@ void UnwrappedLineParser::parseVerilogTable() {
 }
 
 void UnwrappedLineParser::parseVerilogCaseLabel() {
-  // The label will get unindented in AnnotatingParser. If there are no
-  // leading spaces, indent the rest here so that things inside the block
-  // will be indented relative to things outside. We don't use parseLabel
-  // because we don't know whether this colon is a label or a ternary
-  // expression at this point.
+  // The label will get unindented in AnnotatingParser. If there are no leading
+  // spaces, indent the rest here so that things inside the block will be
+  // indented relative to things outside. We don't use parseLabel because we
+  // don't know whether this colon is a label or a ternary expression at this
+  // point.
   auto OrigLevel = Line->Level;
   auto FirstLine = CurrentLines->size();
   if (Line->Level == 0 || (Line->InPPDirective && Line->Level <= 1))
@@ -4559,8 +4556,8 @@ void UnwrappedLineParser::parseVerilogCaseLabel() {
   else if (!Style.IndentCaseBlocks && Keywords.isVerilogBegin(*FormatTok))
     --Line->Level;
   parseStructuralElement();
-  // Restore the indentation in both the new line and the line that has
-  // the label.
+  // Restore the indentation in both the new line and the line that has the
+  // label.
   if (CurrentLines->size() > FirstLine)
     (*CurrentLines)[FirstLine].Level = OrigLevel;
   Line->Level = OrigLevel;
@@ -4605,24 +4602,24 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   });
 
   // If this line closes a block when in Whitesmiths mode, remember that
-  // information so that the level can be decreased after the line is
-  // added. This has to happen after the addition of the line since the
-  // line itself needs to be indented.
+  // information so that the level can be decreased after the line is added.
+  // This has to happen after the addition of the line since the line itself
+  // needs to be indented.
   bool ClosesWhitesmithsBlock =
       Line->MatchingOpeningBlockLineIndex != UnwrappedLine::kInvalidIndex &&
       Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
 
   // If the current line was expanded from a macro call, we use it to
-  // reconstruct an unwrapped line from the structure of the expanded
-  // unwrapped line and the unexpanded token stream.
+  // reconstruct an unwrapped line from the structure of the expanded unwrapped
+  // line and the unexpanded token stream.
   if (!parsingPPDirective() && !InExpansion && containsExpansion(*Line)) {
     if (!Reconstruct)
       Reconstruct.emplace(Line->Level, Unexpanded);
     Reconstruct->addLine(*Line);
 
     // While the reconstructed unexpanded lines are stored in the normal
-    // flow of lines, the expanded lines are stored on the side to be
-    // analyzed in an extra step.
+    // flow of lines, the expanded lines are stored on the side to be analyzed
+    // in an extra step.
     CurrentExpandedLines.push_back(std::move(*Line));
 
     if (Reconstruct->finished()) {
@@ -4640,9 +4637,8 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
       Reconstruct.reset();
     }
   } else {
-    // At the top level we only get here when no unexpansion is going on,
-    // or when conditional formatting led to unfinished macro
-    // reconstructions.
+    // At the top level we only get here when no unexpansion is going on, or
+    // when conditional formatting led to unfinished macro reconstructions.
     assert(!Reconstruct || (CurrentLines != &Lines) || !PPStack.empty());
     CurrentLines->push_back(std::move(*Line));
   }
@@ -4660,8 +4656,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
         std::make_move_iterator(PreprocessorDirectives.end()));
     PreprocessorDirectives.clear();
   }
-  // Disconnect the current token from the last token on the previous
-  // line.
+  // Disconnect the current token from the last token on the previous line.
   FormatTok->Previous = nullptr;
 }
 
@@ -4672,8 +4667,8 @@ bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
          FormatTok.NewlinesBefore > 0;
 }
 
-// Checks if \p FormatTok is a line comment that continues the line
-// comment section on \p Line.
+// Checks if \p FormatTok is a line comment that continues the line comment
+// section on \p Line.
 static bool
 continuesLineCommentSection(const FormatToken &FormatTok,
                             const UnwrappedLine &Line, const FormatStyle &Style,
@@ -4689,21 +4684,20 @@ continuesLineCommentSection(const FormatToken &FormatTok,
   if (CommentPragmasRegex.match(IndentContent))
     return false;
 
-  // If Line starts with a line comment, then FormatTok continues the
-  // comment section if its original column is greater or equal to the
-  // original start column of the line.
+  // If Line starts with a line comment, then FormatTok continues the comment
+  // section if its original column is greater or equal to the original start
+  // column of the line.
   //
-  // Define the min column token of a line as follows: if a line ends in
-  // '{' or contains a '{' followed by a line comment, then the min column
-  // token is that '{'. Otherwise, the min column token of the line is the
-  // first token of the line.
+  // Define the min column token of a line as follows: if a line ends in '{' or
+  // contains a '{' followed by a line comment, then the min column token is
+  // that '{'. Otherwise, the min column token of the line is the first token of
+  // the line.
   //
   // If Line starts with a token other than a line comment, then FormatTok
-  // continues the comment section if its original column is greater than
-  // the original start column of the min column token of the line.
+  // continues the comment section if its original column is greater than the
+  // original start column of the min column token of the line.
   //
-  // For example, the second line comment continues the first in these
-  // cases:
+  // For example, the second line comment continues the first in these cases:
   //
   // // first line
   // // second line
@@ -4758,8 +4752,8 @@ continuesLineCommentSection(const FormatToken &FormatTok,
   // };
   const FormatToken *MinColumnToken = Line.Tokens.front().Tok;
 
-  // Scan for '{//'. If found, use the column of '{' as a min column for
-  // line comment section continuation.
+  // Scan for '{//'. If found, use the column of '{' as a min column for line
+  // comment section continuation.
   const FormatToken *PreviousToken = nullptr;
   for (const UnwrappedLineNode &Node : Line.Tokens) {
     if (PreviousToken && PreviousToken->is(tok::l_brace) &&
@@ -4783,15 +4777,14 @@ continuesLineCommentSection(const FormatToken &FormatTok,
 void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
   bool JustComments = Line->Tokens.empty();
   for (FormatToken *Tok : CommentsBeforeNextToken) {
-    // Line comments that belong to the same line comment section are put
-    // on the same line since later we might want to reflow content
-    // between them. Additional fine-grained breaking of line comment
-    // sections is controlled by the class BreakableLineCommentSection in
-    // case it is desirable to keep several line comment sections in the
-    // same unwrapped line.
+    // Line comments that belong to the same line comment section are put on the
+    // same line since later we might want to reflow content between them.
+    // Additional fine-grained breaking of line comment sections is controlled
+    // by the class BreakableLineCommentSection in case it is desirable to keep
+    // several line comment sections in the same unwrapped line.
     //
-    // FIXME: Consider putting separate line comment sections as children
-    // to the unwrapped line instead.
+    // FIXME: Consider putting separate line comment sections as children to the
+    // unwrapped line instead.
     Tok->ContinuesLineCommentSection =
         continuesLineCommentSection(*Tok, *Line, Style, CommentPragmasRegex);
     if (isOnNewLine(*Tok) && JustComments && !Tok->ContinuesLineCommentSection)
@@ -4815,12 +4808,12 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
     readTokenWithJavaScriptASI();
   FormatTok->Previous = Previous;
   if (Style.isVerilog()) {
-    // Blocks in Verilog can have `begin` and `end` instead of braces. For
+    // Blocks in Verilog can have `begin` and `end` instead of braces.  For
     // keywords like `begin`, we can't treat them the same as left braces
     // because some contexts require one of them.  For example structs use
-    // braces and if blocks use keywords, and a left brace can occur in an
-    // if statement, but it is not a block.  For keywords like `end`, we
-    // simply treat them the same as right braces.
+    // braces and if blocks use keywords, and a left brace can occur in an if
+    // statement, but it is not a block.  For keywords like `end`, we simply
+    // treat them the same as right braces.
     if (Keywords.isVerilogEnd(*FormatTok))
       FormatTok->Tok.setKind(tok::r_brace);
   }
@@ -4831,11 +4824,10 @@ void UnwrappedLineParser::distributeComments(
   // Whether or not a line comment token continues a line is controlled by
   // the method continuesLineCommentSection, with the following caveat:
   //
-  // Define a trail of Comments to be a nonempty proper postfix of
-  // Comments such that each comment line from the trail is aligned with
-  // the next token, if the next token exists. If a trail exists, the
-  // beginning of the maximal trail is marked as a start of a new comment
-  // section.
+  // Define a trail of Comments to be a nonempty proper postfix of Comments such
+  // that each comment line from the trail is aligned with the next token, if
+  // the next token exists. If a trail exists, the beginning of the maximal
+  // trail is marked as a start of a new comment section.
   //
   // For example in this code:
   //
@@ -4844,9 +4836,9 @@ void UnwrappedLineParser::distributeComments(
   //   // line 2 about b
   //   int b;
   //
-  // the two lines about b form a maximal trail, so there are two
-  // sections, the first one consisting of the single comment "// line
-  // about a" and the second one consisting of the next two comments.
+  // the two lines about b form a maximal trail, so there are two sections, the
+  // first one consisting of the single comment "// line about a" and the
+  // second one consisting of the next two comments.
   if (Comments.empty())
     return;
   bool ShouldPushCommentsInCurrentLine = true;
@@ -4907,8 +4899,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         return Tok.HasUnescapedNewline || Tok.IsFirst;
       };
 
-      // Consider preprocessor directives preceded by block comments as
-      // first on line.
+      // Consider preprocessor directives preceded by block comments as first
+      // on line.
       if (PreviousWasComment)
         return FirstNonCommentOnLine || IsFirstOnLine(Tok);
       return IsFirstOnLine(Tok);
@@ -4920,8 +4912,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
 
     while (!Line->InPPDirective && FormatTok->is(tok::hash) &&
            FirstNonCommentOnLine) {
-      // In Verilog, the backtick is used for macro invocations. In
-      // TableGen, the single hash is used for the paste operator.
+      // In Verilog, the backtick is used for macro invocations. In TableGen,
+      // the single hash is used for the paste operator.
       const auto *Next = Tokens->peekNextToken();
       if ((Style.isVerilog() && !Keywords.isVerilogPPDirective(*Next)) ||
           (Style.isTableGen() &&
@@ -4931,19 +4923,17 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       }
       distributeComments(Comments, FormatTok);
       Comments.clear();
-      // If there is an unfinished unwrapped line, we flush the
-      // preprocessor directives only after that unwrapped line was
-      // finished later.
+      // If there is an unfinished unwrapped line, we flush the preprocessor
+      // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
       ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
       assert((LevelDifference >= 0 ||
               static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
              "LevelDifference makes Line->Level negative");
       Line->Level += LevelDifference;
-      // Comments stored before the preprocessor directive need to be
-      // output before the preprocessor directive, at the same level as
-      // the preprocessor directive, as we consider them to apply to the
-      // directive.
+      // Comments stored before the preprocessor directive need to be output
+      // before the preprocessor directive, at the same level as the
+      // preprocessor directive, as we consider them to apply to the directive.
       if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
           PPBranchLevel > 0) {
         Line->Level += PPBranchLevel;
@@ -4969,8 +4959,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       FormatToken *ID = FormatTok;
       unsigned Position = Tokens->getPosition();
 
-      // To correctly parse the code, we need to replace the tokens of the
-      // macro call with its expansion.
+      // To correctly parse the code, we need to replace the tokens of the macro
+      // call with its expansion.
       auto PreCall = std::move(Line);
       Line.reset(new UnwrappedLine);
       bool OldInExpansion = InExpansion;
@@ -4999,8 +4989,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           !Macros.hasArity(ID->TokenText, Args->size())) {
         // The macro is either
         // - object-like, but we got argumnets, or
-        // - overloaded to be both object-like and function-like, but none
-        // of
+        // - overloaded to be both object-like and function-like, but none of
         //   the function-like arities match the number of arguments.
         // Thus, expand as object-like macro.
         LLVM_DEBUG(llvm::dbgs()
