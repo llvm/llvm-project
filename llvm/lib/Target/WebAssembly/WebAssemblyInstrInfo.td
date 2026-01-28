@@ -458,6 +458,11 @@ def : Pat<(i32 (WebAssemblyWrapperREL texternalsym:$addr)),
 def : Pat<(i64 (WebAssemblyWrapperREL texternalsym:$addr)),
           (CONST_I64 texternalsym:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
+// Manually define the pattern because 'externref' is not included in the
+// standard RegTypes iteration of the generic loop above.
+def : Pat<(WebAssemblyglobal_set externref:$src, (WebAssemblyWrapper tglobaladdr:$addr)),
+          (GLOBAL_SET_EXTERNREF tglobaladdr:$addr, externref:$src)>,
+          Requires<[HasReferenceTypes]>;
 //===----------------------------------------------------------------------===//
 // Additional sets of instructions.
 //===----------------------------------------------------------------------===//

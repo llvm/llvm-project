@@ -4,6 +4,19 @@
 @i64_global = local_unnamed_addr addrspace(1) global i64 undef
 @f32_global = local_unnamed_addr addrspace(1) global float undef
 @f64_global = local_unnamed_addr addrspace(1) global double undef
+@a = global ptr addrspace(10) null
+
+declare ptr addrspace(10) @function_that_gives_me_a_js_object()
+define void @object_store_to_global_ptr() {
+; CHECK-LABEL: object_store_to_global_ptr:
+; CHECK:         .functype object_store_to_global_ptr () -> ()
+; CHECK-NEXT:    call function_that_gives_me_a_js_object
+; CHECK-NEXT:    global.set a
+; CHECK-NEXT:    end_function
+  %object = call ptr addrspace(10) @function_that_gives_me_a_js_object()
+  store ptr addrspace(10) %object, ptr @a
+  ret void
+}
 
 define void @set_i32_global(i32 %v) {
 ; CHECK-LABEL: set_i32_global:

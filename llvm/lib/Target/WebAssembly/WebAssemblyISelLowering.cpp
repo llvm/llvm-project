@@ -1824,6 +1824,23 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
         "Encountered an unlowerable store to the wasm_var address space",
         false);
 
+  if (Value.getValueType() == MVT::externref) {
+    SDValue Ptr =
+        Base.getOpcode() != WebAssemblyISD::Wrapper ? Base : Base.getOperand(0);
+    auto *GNode = dyn_cast<GlobalAddressSDNode>(Ptr);
+    if (!GNode)
+      report_fatal_error("Cannot store externref to non-global address");
+
+    const GlobalValue *GV = GNode->getGlobal();
+    SDValue TargetGlobal =
+        DAG.getTargetGlobalAddress(GV, DL, Ptr.getValueType());
+    SDValue WrappedPtr =
+        DAG.getNode(WebAssemblyISD::Wrapper, DL, MVT::i32, TargetGlobal);
+
+    return DAG.getNode(WebAssemblyISD::GLOBAL_SET, DL, MVT::Other,
+                       SN->getChain(), Value, WrappedPtr);
+  }
+
   return Op;
 }
 
