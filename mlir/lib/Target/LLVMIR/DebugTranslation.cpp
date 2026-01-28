@@ -203,7 +203,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
-      /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      translate(attr.getExtraData()));
 }
 
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
@@ -441,7 +442,7 @@ DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
     types.push_back(translate(type));
   return llvm::DISubroutineType::get(
       llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),
-      llvm::DITypeRefArray(llvm::MDNode::get(llvmCtx, types)));
+      llvm::DITypeArray(llvm::MDNode::get(llvmCtx, types)));
 }
 
 llvm::DIType *DebugTranslation::translateImpl(DITypeAttr attr) {
