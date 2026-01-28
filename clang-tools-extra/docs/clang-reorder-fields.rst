@@ -94,7 +94,7 @@ use either the simple class name or prefix it with `::`:
   clang-reorder-fields -record-name ::Foo -fields-order z,w,y,x example.cpp --
 
 C++ constructor initializer lists
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tool also reorders constructor initializer lists. Given:
 
