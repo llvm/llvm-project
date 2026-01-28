@@ -2658,13 +2658,13 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
                                 transform::TransformState &state) {
   int64_t numPayloads =
       llvm::TypeSwitch<Type, int64_t>(getHandle().getType())
-          .Case<TransformHandleTypeInterface>([&](auto x) {
+          .Case([&](TransformHandleTypeInterface x) {
             return llvm::range_size(state.getPayloadOps(getHandle()));
           })
-          .Case<TransformValueHandleTypeInterface>([&](auto x) {
+          .Case([&](TransformValueHandleTypeInterface x) {
             return llvm::range_size(state.getPayloadValues(getHandle()));
           })
-          .Case<TransformParamTypeInterface>([&](auto x) {
+          .Case([&](TransformParamTypeInterface x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
           .DefaultUnreachable("unknown transform dialect type interface");
@@ -2883,7 +2883,7 @@ static bool isValueUsePotentialConsumer(OpOperand &use) {
   return isHandleConsumed(use.get(), iface);
 }
 
-LogicalResult
+static LogicalResult
 checkDoubleConsume(Value value,
                    function_ref<InFlightDiagnostic()> reportError) {
   OpOperand *potentialConsumer = nullptr;

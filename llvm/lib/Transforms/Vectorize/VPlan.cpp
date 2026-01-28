@@ -912,6 +912,9 @@ bool VPlan::isExitBlock(VPBlockBase *VPBB) {
   return is_contained(ExitBlocks, VPBB);
 }
 
+/// To make RUN_VPLAN_PASS print final VPlan.
+static void printFinalVPlan(VPlan &) {}
+
 /// Generate the code inside the preheader and body of the vectorized loop.
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
@@ -933,7 +936,11 @@ void VPlan::execute(VPTransformState *State) {
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');
   setName("Final VPlan");
+  // TODO: RUN_VPLAN_PASS/VPlanTransforms::runPass should automatically dump
+  // VPlans after some specific stages when "-debug" is specified, but that
+  // hasn't been implemented yet. For now, just do both:
   LLVM_DEBUG(dump());
+  RUN_VPLAN_PASS(printFinalVPlan, *this);
 
   BasicBlock *ScalarPh = State->CFG.ExitBB;
   VPBasicBlock *ScalarPhVPBB = getScalarPreheader();
@@ -1761,7 +1768,7 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 
 InstructionCost VPCostContext::getScalarizationOverhead(
     Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
-    bool AlwaysIncludeReplicatingR) {
+    TTI::VectorInstrContext VIC, bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
 
@@ -1775,8 +1782,8 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
       ScalarizationCost += TTI.getScalarizationOverhead(
           cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/true,
-          /*Extract=*/false, CostKind);
+          /*Insert=*/true, /*Extract=*/false, CostKind,
+          /*ForPoisonSrc=*/true, {}, VIC);
     }
   }
   // Compute the cost of scalarizing the operands, skipping ones that do not
@@ -1794,5 +1801,5 @@ InstructionCost VPCostContext::getScalarizationOverhead(
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
   }
   return ScalarizationCost +
-         TTI.getOperandsScalarizationOverhead(Tys, CostKind);
+         TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
 }
