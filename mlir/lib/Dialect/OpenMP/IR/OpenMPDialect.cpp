@@ -2765,8 +2765,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars,
-      clauses.accessGroup, clauses.fallback,
-      clauses.dynGroupprivateSize);
+      clauses.accessGroup, clauses.fallback, clauses.dynGroupprivateSize);
 }
 
 // Verify num_teams clause

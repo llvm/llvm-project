@@ -1489,8 +1489,7 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
       targetOp.getAccessGroupAttr(), targetOp.getFallbackAttr(),
-      targetOp.getDynGroupprivateSize(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getDynGroupprivateSize(), targetOp.getPrivateMapsAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
@@ -1581,8 +1580,7 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
       targetOp.getAccessGroupAttr(), targetOp.getFallbackAttr(),
-      targetOp.getDynGroupprivateSize(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getDynGroupprivateSize(), targetOp.getPrivateMapsAttr());
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
                            isolatedTargetOp.getRegion().begin(), {}, {});
@@ -1663,8 +1661,7 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
       targetOp.getAccessGroupAttr(), targetOp.getFallbackAttr(),
-      targetOp.getDynGroupprivateSize(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getDynGroupprivateSize(), targetOp.getPrivateMapsAttr());
   // Create the block for postTargetOp
   auto *postTargetBlock = rewriter.createBlock(
       &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});
