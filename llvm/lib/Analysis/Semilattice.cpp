@@ -20,68 +20,64 @@ using NodeT = SemilatticeNode;
 
 static bool isSupportedValue(Value *V) {
   // Pointer types are useful for inferring alignment.
-  return V->getType()->isIntOrIntVectorTy() ||
-         V->getType()->isPtrOrPtrVectorTy();
+  return V->getType()->getScalarType()->isIntOrPtrTy();
 }
 
 SemilatticeNode::SemilatticeNode(Value *V, const DataLayout &DL)
-    : ValHasKnownBits(V, 0),
-      Known(DL.getTypeSizeInBits(V->getType()->getScalarType())) {
+    : ValHasKnownBits(V, 0), Known(DL.getTypeSizeInBits(V->getType())) {
   assert(V && "Attempting to create a node with an empty Value");
 }
 
-void Semilattice::initialize(ArrayRef<Value *> Roots, const DataLayout &DL) {
+void Semilattice::initialize(ArrayRef<Value *> Roots) {
   auto ToInsert = make_filter_range(
       Roots, [&](Value *V) { return !contains(V) && isSupportedValue(V); });
   for (Value *V : ToInsert)
-    recurseInsertChildren(insert(V, DL), DL);
+    recurseInsertChildren(insert(V));
 }
 
 void Semilattice::initialize(Function &F) {
   SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
-  initialize(Args, F.getDataLayout());
+  initialize(Args);
   for (BasicBlock &BB : F) {
     SmallVector<Value *> Args(llvm::make_pointer_range(BB));
-    initialize(Args, F.getDataLayout());
+    initialize(Args);
   }
 }
 
-Semilattice::Semilattice(Function &F) : RootNode(create()) { initialize(F); }
+Semilattice::Semilattice(Function &F)
+    : SentinelRoot(create()), DL(F.getDataLayout()) {
+  initialize(F);
+}
 
-NodeT *Semilattice::insert(Value *V, const DataLayout &DL, NodeT *Parent) {
+NodeT *Semilattice::insert(Value *V, NodeT *Parent) {
   assert(isSupportedValue(V) && "Cannot insert non-integral non-pointer types");
-  NodeT *Node = getOrCreate(V, DL);
+  NodeT *Node = getOrCreate(V);
   NodeMap.try_emplace(V, Node);
-  NodeT *ParentNode = Parent ? Parent : RootNode;
+  NodeT *ParentNode = Parent ? Parent : SentinelRoot;
   ParentNode->addChild(Node);
   return Node->addParent(ParentNode);
 }
 
 SmallVector<NodeT *, 4> Semilattice::insert_range(NodeT *Parent,
-                                                  ArrayRef<User *> R,
-                                                  const DataLayout &DL) {
+                                                  ArrayRef<User *> R) {
   SmallVector<NodeT *, 4> Ret;
   auto Users = make_filter_range(R, [&](User *U) {
     return (!contains(U) || !lookup(U)->hasParent(Parent)) &&
            isSupportedValue(U);
   });
   for (User *U : Users)
-    Ret.push_back(insert(U, DL, Parent));
+    Ret.push_back(insert(U, Parent));
   return Ret;
 }
 
-void Semilattice::recurseInsertChildren(ArrayRef<NodeT *> Parents,
-                                        const DataLayout &DL) {
+void Semilattice::recurseInsertChildren(ArrayRef<NodeT *> Parents) {
   for (NodeT *P : Parents)
-    recurseInsertChildren(
-        insert_range(P, to_vector(P->getValue()->users()), DL), DL);
+    recurseInsertChildren(insert_range(P, to_vector(P->getValue()->users())));
 }
 
-SmallVector<NodeT *> Semilattice::invalidateKnownBits(Value *V) {
-  if (!contains(V))
-    return {};
+SmallVector<NodeT *> Semilattice::invalidateKnownBits(NodeT *N) {
   SetVector<NodeT *> ToUpdate;
-  for (NodeT *N : breadth_first(lookup(V))) {
+  for (NodeT *N : breadth_first(N)) {
     N->resetKnownBits();
     N->setHasKnownBits();
     ToUpdate.insert(N);
@@ -90,17 +86,36 @@ SmallVector<NodeT *> Semilattice::invalidateKnownBits(Value *V) {
   return Ret;
 }
 
+SmallVector<NodeT *> Semilattice::invalidateKnownBits(Value *V) {
+  if (!contains(V))
+    return {};
+  return invalidateKnownBits(lookup(V));
+}
+
 SmallVector<NodeT *> Semilattice::rauw(Value *OldV, Value *NewV) {
   if (!contains(OldV))
     return {};
-  NodeMap.emplace_or_assign(NewV, lookup(OldV)->rauw(NewV));
+  assert(OldV->getType() == NewV->getType() &&
+         "Invalid replacement: types mismatch");
+  NodeT *NodeToReplace = lookup(OldV);
   NodeMap.erase(OldV);
-  return invalidateKnownBits(NewV);
+  SmallVector<NodeT *> InvalidatedNodes = invalidateKnownBits(NodeToReplace);
+  if (isa<Constant>(NewV)) {
+    for (NodeT *N : NodeToReplace->children())
+      N->eraseParent(NodeToReplace);
+
+    // Since the invalidated nodes are in reverse-BFS order, the last element
+    // corresponds to the Constant NewV.
+    InvalidatedNodes.pop_back();
+  } else {
+    NodeMap.emplace_or_assign(NewV, NodeToReplace->rauw(NewV));
+  }
+  return InvalidatedNodes;
 }
 
 void Semilattice::print(raw_ostream &OS) const {
-  for (NodeT *N : drop_begin(depth_first(RootNode))) {
-    if (N->hasParent(RootNode))
+  for (NodeT *N : drop_begin(depth_first(SentinelRoot))) {
+    if (N->hasParent(SentinelRoot))
       OS << "^ ";
     else if (N->isLeaf())
       OS << "$ ";

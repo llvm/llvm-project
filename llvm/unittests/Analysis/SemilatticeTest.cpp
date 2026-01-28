@@ -11,11 +11,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -33,11 +35,14 @@ protected:
   void parseAssembly(StringRef Assembly) {
     SMDiagnostic Error;
     M = parseAssemblyString(Assembly, Error, Context);
-    ASSERT_TRUE(M);
+    ASSERT_TRUE(M) << "Test has invalid IR";
+    if (!M)
+      return;
     F = M->getFunction("test");
-    ASSERT_TRUE(F) << "Test must have a function @test";
+    ASSERT_TRUE(F) << "Test must have a function named 'test'";
     if (!F)
       return;
+    DL = F->getDataLayout();
     Counter = findInstructionByName(F, "counter");
     NextCounter = findInstructionByName(F, "next_counter");
     Result = findInstructionByName(F, "result");
@@ -48,38 +53,32 @@ protected:
     MergeVal = findInstructionByName(F, "merge_val");
   }
   void SetUp() override { M = std::make_unique<Module>("test", Context); }
-  Function *createSimpleFunction(StringRef Name,
-                                 ArrayRef<Type *> ArgTypes = {}) {
-    std::vector<Type *> Types(ArgTypes.begin(), ArgTypes.end());
-    FunctionType *FTy =
-        FunctionType::get(Type::getVoidTy(Context), Types, false);
-    return Function::Create(FTy, Function::ExternalLinkage, Name, M.get());
-  }
   LLVMContext Context;
   std::unique_ptr<Module> M;
   Function *F = nullptr;
+  DataLayout DL;
   Instruction *Counter = nullptr, *NextCounter = nullptr, *Result = nullptr,
               *PhiCounter = nullptr, *PhiResult = nullptr, *Cond = nullptr,
               *BranchVal = nullptr, *MergeVal = nullptr;
 };
 
 TEST_F(SemilatticeTest, BasicConstruction) {
-  parseAssembly(
-      "define void @test(i32 %n) {\n"
-      "entry:\n"
-      "  br label %loop\n"
-      "loop:\n"
-      "  %phi_counter = phi i32 [ 0, %entry ], [ %next_counter, %loop ]\n"
-      "  %phi_result = phi i32 [ 1, %entry ], [ %result, %loop ]\n"
-      "  %counter = add i32 %phi_counter, 1\n"
-      "  %result = mul i32 %phi_result, 2\n"
-      "  %next_counter = add i32 %counter, 1\n"
-      "  %cond = icmp slt i32 %next_counter, %n\n"
-      "  br i1 %cond, label %loop, label %exit\n"
-      "exit:\n"
-      "  store i32 %result, ptr poison\n"
-      "  ret void\n"
-      "}\n");
+  parseAssembly(R"(
+define void @test(i32 %n) {
+entry:
+  br label %loop
+loop:
+  %phi_counter = phi i32 [ 0, %entry ], [ %next_counter, %loop ]
+  %phi_result = phi i32 [ 1, %entry ], [ %result, %loop ]
+  %counter = add i32 %phi_counter, 1
+  %result = mul i32 %phi_result, 2
+  %next_counter = add i32 %counter, 1
+  %cond = icmp slt i32 %next_counter, %n
+  br i1 %cond, label %loop, label %exit
+exit:
+  store i32 %result, ptr poison
+  ret void
+})");
   Semilattice Lat(*F);
   Argument *ArgN = &*F->arg_begin();
   EXPECT_TRUE(Lat.contains(ArgN));
@@ -99,33 +98,32 @@ TEST_F(SemilatticeTest, BasicConstruction) {
 }
 
 TEST_F(SemilatticeTest, ConstructionWithIntAndPtr) {
-  parseAssembly(
-      "define void @test(i32 %int_arg, float %float_arg, ptr %ptr_arg, <2 x "
-      "i32> %vec_int_arg, <2 x ptr> %vec_ptr_arg) {\n"
-      "entry:\n"
-      "  br i1 poison, label %then, label %else\n"
-      "then:\n"
-      "  %int_val = add i32 %int_arg, 1\n"
-      "  %float_val = fadd float %float_arg, 1.0\n"
-      "  %vec_val = add <2 x i32> %vec_int_arg, <i32 1, i32 2>\n"
-      "  br label %merge\n"
-      "else:\n"
-      "  %fpconv = fptoui float %float_arg to i32"
-      "  %int_val2 = mul i32 %int_arg, %fpconv\n"
-      "  %ptr_val = getelementptr i8, ptr %ptr_arg, i32 4\n"
-      "  %vec_val2 = mul <2 x i32> %vec_int_arg, <i32 3, i32 4>\n"
-      "  br label %merge\n"
-      "merge:\n"
-      "  %phi_int = phi i32 [ %int_val, %then ], [ %int_val2, %else ]\n"
-      "  %phi_float = phi float [ %float_val, %then ], [ %float_arg, %else ]\n"
-      "  %phi_ptr = phi ptr [ %ptr_arg, %then ], [ %ptr_val, %else ]\n"
-      "  %phi_vec = phi <2 x i32> [ %vec_val, %then ], [ %vec_val2, %else ]\n"
-      "  %final_int = add i32 %phi_int, 5\n"
-      "  %vec_ptr_conv = ptrtoint <2 x ptr> %vec_ptr_arg to <2 x i32>"
-      "  %final_vec = add <2 x i32> %phi_vec, %vec_ptr_conv\n"
-      "  store float %phi_float, ptr %phi_ptr\n"
-      "  ret void\n"
-      "}\n");
+  parseAssembly(R"(
+define void @test(i32 %int_arg, float %float_arg, ptr %ptr_arg, <2 x i32> %vec_int_arg, <2 x ptr> %vec_ptr_arg) {
+entry:
+  br i1 poison, label %then, label %else
+then:
+  %int_val = add i32 %int_arg, 1
+  %float_val = fadd float %float_arg, 1.0
+  %vec_val = add <2 x i32> %vec_int_arg, <i32 1, i32 2>
+  br label %merge
+else:
+  %fpconv = fptoui float %float_arg to i32
+  %int_val2 = mul i32 %int_arg, %fpconv
+  %ptr_val = getelementptr i8, ptr %ptr_arg, i32 4
+  %vec_val2 = mul <2 x i32> %vec_int_arg, <i32 3, i32 4>
+  br label %merge
+merge:
+  %phi_int = phi i32 [ %int_val, %then ], [ %int_val2, %else ]
+  %phi_float = phi float [ %float_val, %then ], [ %float_arg, %else ]
+  %phi_ptr = phi ptr [ %ptr_arg, %then ], [ %ptr_val, %else ]
+  %phi_vec = phi <2 x i32> [ %vec_val, %then ], [ %vec_val2, %else ]
+  %final_int = add i32 %phi_int, 5
+  %vec_ptr_conv = ptrtoint <2 x ptr> %vec_ptr_arg to <2 x i32>
+  %final_vec = add <2 x i32> %phi_vec, %vec_ptr_conv
+  store float %phi_float, ptr %phi_ptr
+  ret void
+})");
   Semilattice Lat(*F);
   auto *ArgIt = F->arg_begin();
   Argument *IntArg = &*ArgIt++;
@@ -172,15 +170,58 @@ TEST_F(SemilatticeTest, ConstructionWithIntAndPtr) {
   EXPECT_EQ(Lat.size(), 16u);
 }
 
+TEST_F(SemilatticeTest, ConstructionWithNestedLoop) {
+  parseAssembly(R"(
+define void @test(i32 %n, i32 %m) {
+entry:
+  br label %outer_loop
+outer_loop:
+  %outer_phi = phi i32 [ 0, %entry ], [ %outer_next, %outer_latch ]
+  br label %inner_loop
+inner_loop:
+  %inner_phi = phi i32 [ 0, %outer_loop ], [ %inner_next, %inner_loop ]
+  %inner_next = add i32 %inner_phi, 1
+  %inner_cond = icmp slt i32 %inner_next, %m
+  br i1 %inner_cond, label %inner_loop, label %outer_latch
+outer_latch:
+  %outer_next = add i32 %outer_phi, 1
+  %outer_cond = icmp slt i32 %outer_next, %n
+  br i1 %outer_cond, label %outer_loop, label %exit
+exit:
+  ret void
+})");
+  Semilattice Lat(*F);
+  auto *ArgIt = F->arg_begin();
+  Argument *ArgN = &*ArgIt++;
+  Argument *ArgM = &*ArgIt;
+  Instruction *OuterPHI = findInstructionByName(F, "outer_phi");
+  Instruction *InnerPHI = findInstructionByName(F, "inner_phi");
+  Instruction *InnerNext = findInstructionByName(F, "inner_next");
+  Instruction *OuterNext = findInstructionByName(F, "outer_next");
+  Instruction *InnerCond = findInstructionByName(F, "inner_cond");
+  Instruction *OuterCond = findInstructionByName(F, "outer_cond");
+
+  EXPECT_TRUE(Lat.contains(ArgN));
+  EXPECT_TRUE(Lat.contains(ArgM));
+  EXPECT_TRUE(Lat.contains(OuterPHI));
+  EXPECT_TRUE(Lat.contains(InnerPHI));
+  EXPECT_TRUE(Lat.contains(InnerNext));
+  EXPECT_TRUE(Lat.contains(OuterNext));
+  EXPECT_TRUE(Lat.contains(InnerCond));
+  EXPECT_TRUE(Lat.contains(OuterCond));
+  EXPECT_EQ(Lat.size(), 8u);
+}
+
 TEST_F(SemilatticeTest, Iteration) {
-  parseAssembly("define void @test(i32 %arg1, i32 %arg2) {\n"
-                "  %add1 = add i32 %arg1, 1\n"
-                "  %add2 = add i32 %arg2, 2\n"
-                "  %mul1 = mul i32 %add1, 3\n"
-                "  %mul2 = mul i32 %add2, 4\n"
-                "  %final = add i32 %mul1, %mul2\n"
-                "  ret void\n"
-                "}\n");
+  parseAssembly(R"(
+define void @test(i32 %arg1, i32 %arg2) {
+  %add1 = add i32 %arg1, 1
+  %add2 = add i32 %arg2, 2
+  %mul1 = mul i32 %add1, 3
+  %mul2 = mul i32 %add2, 4
+  %final = add i32 %mul1, %mul2
+  ret void
+})");
   Semilattice Lat(*F);
   auto *ArgIt = F->arg_begin();
   Argument *Arg1 = &*ArgIt++;
@@ -189,7 +230,7 @@ TEST_F(SemilatticeTest, Iteration) {
   Instruction *Mul1 = findInstructionByName(F, "mul1");
   Instruction *Final = findInstructionByName(F, "final");
 
-  SemilatticeNode *RootNode = Lat.getRootNode();
+  SemilatticeNode *RootNode = Lat.getSentinelRoot();
   EXPECT_FALSE(RootNode->isLeaf());
   SmallVector<SemilatticeNode *> RootChildren(RootNode->children());
   EXPECT_EQ(RootChildren.size(), 2u);
@@ -240,63 +281,24 @@ TEST_F(SemilatticeTest, Iteration) {
   EXPECT_LT(Mul1NodePos, FinalNodePos);
 }
 
-TEST_F(SemilatticeTest, NestedLoop) {
-  parseAssembly(
-      "define void @test(i32 %n, i32 %m) {\n"
-      "entry:\n"
-      "  br label %outer_loop\n"
-      "outer_loop:\n"
-      "  %outer_phi = phi i32 [ 0, %entry ], [ %outer_next, %outer_latch ]\n"
-      "  br label %inner_loop\n"
-      "inner_loop:\n"
-      "  %inner_phi = phi i32 [ 0, %outer_loop ], [ %inner_next, %inner_loop "
-      "]\n"
-      "  %inner_next = add i32 %inner_phi, 1\n"
-      "  %inner_cond = icmp slt i32 %inner_next, %m\n"
-      "  br i1 %inner_cond, label %inner_loop, label %outer_latch\n"
-      "outer_latch:\n"
-      "  %outer_next = add i32 %outer_phi, 1\n"
-      "  %outer_cond = icmp slt i32 %outer_next, %n\n"
-      "  br i1 %outer_cond, label %outer_loop, label %exit\n"
-      "exit:\n"
-      "  ret void\n"
-      "}\n");
-  Semilattice Lat(*F);
-  auto *ArgIt = F->arg_begin();
-  Argument *ArgN = &*ArgIt++;
-  Argument *ArgM = &*ArgIt;
-  Instruction *OuterPHI = findInstructionByName(F, "outer_phi");
-  Instruction *InnerPHI = findInstructionByName(F, "inner_phi");
-  Instruction *InnerNext = findInstructionByName(F, "inner_next");
-  Instruction *OuterNext = findInstructionByName(F, "outer_next");
-  Instruction *InnerCond = findInstructionByName(F, "inner_cond");
-  Instruction *OuterCond = findInstructionByName(F, "outer_cond");
-
-  EXPECT_TRUE(Lat.contains(ArgN));
-  EXPECT_TRUE(Lat.contains(ArgM));
-  EXPECT_TRUE(Lat.contains(OuterPHI));
-  EXPECT_TRUE(Lat.contains(InnerPHI));
-  EXPECT_TRUE(Lat.contains(InnerNext));
-  EXPECT_TRUE(Lat.contains(OuterNext));
-  EXPECT_TRUE(Lat.contains(InnerCond));
-  EXPECT_TRUE(Lat.contains(OuterCond));
-  EXPECT_EQ(Lat.size(), 8u);
-}
-
-TEST_F(SemilatticeTest, InvalidateKnownBitsSubgraph) {
-  parseAssembly("define void @test(i32 %arg) {\n"
-                "  %counter = add i32 %arg, 1\n"
-                "  %result = mul i32 %counter, 2\n"
-                "  %next_counter = add i32 %result, 3\n"
-                "  %branch_val = sub i32 %next_counter, 1\n"
-                "  %merge_val = add i32 %branch_val, 5\n"
-                "  store i32 %merge_val, ptr poison\n"
-                "  ret void\n"
-                "}\n");
+TEST_F(SemilatticeTest, InvalidateKnownBitsSingleBB) {
+  parseAssembly(R"(
+define void @test(i32 %arg, <2 x i32> %vec_arg) {
+  %counter = add i32 %arg, 1
+  %result = mul i32 %counter, 2
+  %next_counter = add i32 %result, 3
+  %branch_val = sub i32 %next_counter, 1
+  %merge_val = add i32 %branch_val, 5
+  store i32 %merge_val, ptr poison
+  ret void
+})");
   Semilattice Lat(*F);
   Argument *Arg = &*F->arg_begin();
+  Argument *VecArg = &*F->arg_begin();
   KnownBits Known32(32);
+  KnownBits KnownVec(DL.getTypeSizeInBits(VecArg->getType()));
   Known32.setAllOnes();
+  KnownVec.setAllOnes();
 
   Lat.updateKnownBits(Arg, Known32);
   Lat.updateKnownBits(Counter, Known32);
@@ -304,6 +306,7 @@ TEST_F(SemilatticeTest, InvalidateKnownBitsSubgraph) {
   Lat.updateKnownBits(NextCounter, Known32);
   Lat.updateKnownBits(BranchVal, Known32);
   Lat.updateKnownBits(MergeVal, Known32);
+  Lat.updateKnownBits(VecArg, KnownVec);
 
   EXPECT_TRUE(Lat.getKnownBits(Arg).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Counter).isAllOnes());
@@ -311,36 +314,42 @@ TEST_F(SemilatticeTest, InvalidateKnownBitsSubgraph) {
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(BranchVal).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(MergeVal).isAllOnes());
+  EXPECT_TRUE(Lat.getKnownBits(VecArg).isAllOnes());
 
   SmallVector<SemilatticeNode *> InvalidatedNodes =
       Lat.invalidateKnownBits(Counter);
+  EXPECT_THAT(InvalidatedNodes, ::testing::ElementsAre(
+                                    Lat.lookup(MergeVal), Lat.lookup(BranchVal),
+                                    Lat.lookup(NextCounter), Lat.lookup(Result),
+                                    Lat.lookup(Counter)));
+
   EXPECT_TRUE(Lat.getKnownBits(Arg).isAllOnes());
+  EXPECT_TRUE(Lat.getKnownBits(VecArg).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Counter).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(Result).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(BranchVal).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(MergeVal).isUnknown());
-  EXPECT_EQ(InvalidatedNodes.size(), 5u);
 }
 
-TEST_F(SemilatticeTest, InvalidateKnownBitsPhiSubgraph) {
-  parseAssembly(
-      "define void @test(i32 %n, i1 %cond) {\n"
-      "entry:\n"
-      "  %counter = add i32 %n, 1\n"
-      "  br i1 %cond, label %then, label %else\n"
-      "then:\n"
-      "  %branch_val = mul i32 %counter, 2\n"
-      "  br label %merge\n"
-      "else:\n"
-      "  %result = add i32 %counter, 3\n"
-      "  br label %merge\n"
-      "merge:\n"
-      "  %merge_val = phi i32 [ %branch_val, %then ], [ %result, %else ]\n"
-      "  %next_counter = add i32 %merge_val, 1\n"
-      "  store i32 %next_counter, ptr poison\n"
-      "  ret void\n"
-      "}\n");
+TEST_F(SemilatticeTest, InvalidateKnownBitsMultipleBBs) {
+  parseAssembly(R"(
+define void @test(i32 %n, i1 %cond) {
+entry:
+  %counter = add i32 %n, 1
+  br i1 %cond, label %then, label %else
+then:
+  %branch_val = mul i32 %counter, 2
+  br label %merge
+else:
+  %result = add i32 %counter, 3
+  br label %merge
+merge:
+  %merge_val = phi i32 [ %branch_val, %then ], [ %result, %else ]
+  %next_counter = add i32 %merge_val, 1
+  store i32 %next_counter, ptr poison
+  ret void
+})");
   Semilattice Lat(*F);
   auto *ArgIt = F->arg_begin();
   Argument *ArgN = &*ArgIt++;
@@ -365,29 +374,30 @@ TEST_F(SemilatticeTest, InvalidateKnownBitsPhiSubgraph) {
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isAllOnes());
 
   SmallVector<SemilatticeNode *> InvalidatedNodes =
-      Lat.invalidateKnownBits(Counter);
+      Lat.invalidateKnownBits(Result);
+  EXPECT_THAT(InvalidatedNodes,
+              ::testing::ElementsAre(Lat.lookup(NextCounter),
+                                     Lat.lookup(MergeVal), Lat.lookup(Result)));
+
   EXPECT_TRUE(Lat.getKnownBits(ArgN).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(ArgCond).isAllOnes());
-  EXPECT_TRUE(Lat.getKnownBits(Counter).isUnknown());
-  EXPECT_TRUE(Lat.getKnownBits(BranchVal).isUnknown());
+  EXPECT_TRUE(Lat.getKnownBits(Counter).isAllOnes());
+  EXPECT_TRUE(Lat.getKnownBits(BranchVal).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Result).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(MergeVal).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isUnknown());
-  EXPECT_EQ(InvalidatedNodes.size(), 5u);
 }
 
-TEST_F(SemilatticeTest, RauwSubgraphInvalidation) {
-  parseAssembly("define void @test(i32 %arg1, i32 %arg2) {\n"
-                "  %counter = add i32 %arg1, 1\n"
-                "  %result = mul i32 %counter, 2\n"
-                "  %next_counter = add i32 %result, %arg2\n"
-                "  store i32 %next_counter, ptr poison\n"
-                "  ret void\n"
-                "}\n");
+TEST_F(SemilatticeTest, RauwWithConstant) {
+  parseAssembly(R"(
+define void @test(i32 %arg1, i32 %arg2) {
+  %counter = add i32 %arg1, 1
+  %result = mul i32 %counter, 2
+  %next_counter = add i32 %result, %arg2
+  store i32 %next_counter, ptr poison
+  ret void
+})");
   Semilattice Lat(*F);
-  Function *F2 =
-      createSimpleFunction("other_func", {Type::getInt32Ty(Context)});
-  Argument *NewArg = &*F2->arg_begin();
   auto *ArgIt = F->arg_begin();
   Argument *Arg1 = &*ArgIt++;
   Argument *Arg2 = &*ArgIt;
@@ -401,44 +411,49 @@ TEST_F(SemilatticeTest, RauwSubgraphInvalidation) {
   Lat.updateKnownBits(NextCounter, Known32);
 
   EXPECT_TRUE(Lat.getKnownBits(Arg1).isAllOnes());
+  EXPECT_TRUE(Lat.getKnownBits(Arg2).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Counter).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Result).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isAllOnes());
-  EXPECT_TRUE(Lat.contains(Arg1));
-  EXPECT_FALSE(Lat.contains(NewArg));
 
-  SmallVector<SemilatticeNode *> InvalidatedNodes = Lat.rauw(Arg1, NewArg);
+  EXPECT_EQ(Lat.lookup(Counter)->getNumParents(), 1u);
+  EXPECT_EQ(Lat.lookup(Counter)->getNumChildren(), 1u);
+
+  SmallVector<SemilatticeNode *> InvalidatedNodes =
+      Lat.rauw(Arg1, ConstantInt::get(Context, APInt::getZero(32)));
+  EXPECT_THAT(InvalidatedNodes,
+              ::testing::ElementsAre(Lat.lookup(NextCounter),
+                                     Lat.lookup(Result), Lat.lookup(Counter)));
+
+  EXPECT_EQ(Lat.lookup(Counter)->getNumParents(), 0u);
+  EXPECT_EQ(Lat.lookup(Counter)->getNumChildren(), 1u);
+
   EXPECT_FALSE(Lat.contains(Arg1));
-  EXPECT_TRUE(Lat.contains(NewArg));
-  EXPECT_TRUE(Lat.getKnownBits(NewArg).isUnknown());
+  EXPECT_TRUE(Lat.getKnownBits(Arg2).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Counter).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(Result).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isUnknown());
-  EXPECT_EQ(InvalidatedNodes.size(), 4u);
 }
 
-TEST_F(SemilatticeTest, RauwPhiSubgraphInvalidation) {
-  parseAssembly(
-      "define void @test(i32 %n, i1 %cond) {\n"
-      "entry:\n"
-      "  br i1 %cond, label %then, label %else\n"
-      "then:\n"
-      "  %branch_val = add i32 %n, 5\n"
-      "  br label %merge\n"
-      "else:\n"
-      "  %result = mul i32 %n, 3\n"
-      "  br label %merge\n"
-      "merge:\n"
-      "  %merge_val = phi i32 [ %branch_val, %then ], [ %result, %else ]\n"
-      "  %counter = add i32 %merge_val, 1\n"
-      "  %next_counter = mul i32 %counter, 2\n"
-      "  store i32 %next_counter, ptr poison\n"
-      "  ret void\n"
-      "}\n");
+TEST_F(SemilatticeTest, RauwWithVariable) {
+  parseAssembly(R"(
+define void @test(i32 %n, i1 %cond) {
+entry:
+  br i1 %cond, label %then, label %else
+then:
+  %branch_val = add i32 %n, 5
+  br label %merge
+else:
+  %result = mul i32 %n, 3
+  br label %merge
+merge:
+  %merge_val = phi i32 [ %branch_val, %then ], [ %result, %else ]
+  %counter = add i32 %merge_val, 1
+  %next_counter = mul i32 %counter, 2
+  store i32 %next_counter, ptr poison
+  ret void
+})");
   Semilattice Lat(*F);
-  Function *F2 =
-      createSimpleFunction("other_func", {Type::getInt32Ty(Context)});
-  Argument *NewArg = &*F2->arg_begin();
   auto *ArgIt = F->arg_begin();
   Argument *ArgN = &*ArgIt++;
   Argument *ArgCond = &*ArgIt;
@@ -462,37 +477,45 @@ TEST_F(SemilatticeTest, RauwPhiSubgraphInvalidation) {
   EXPECT_TRUE(Lat.getKnownBits(MergeVal).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Counter).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isAllOnes());
-  EXPECT_TRUE(Lat.contains(ArgN));
-  EXPECT_FALSE(Lat.contains(NewArg));
 
-  SmallVector<SemilatticeNode *> InvalidatedNodes = Lat.rauw(ArgN, NewArg);
-  EXPECT_FALSE(Lat.contains(ArgN));
-  EXPECT_TRUE(Lat.contains(NewArg));
+  EXPECT_EQ(Lat.lookup(MergeVal)->getNumParents(), 2u);
+  EXPECT_EQ(Lat.lookup(MergeVal)->getNumChildren(), 1u);
+
+  SmallVector<SemilatticeNode *> InvalidatedNodes =
+      Lat.rauw(Result, Result->getOperand(0));
+  EXPECT_THAT(InvalidatedNodes,
+              ::testing::ElementsAre(Lat.lookup(NextCounter),
+                                     Lat.lookup(Counter), Lat.lookup(MergeVal),
+                                     Lat.lookup(ArgN)));
+
+  EXPECT_EQ(Lat.lookup(MergeVal)->getNumParents(), 2u);
+  EXPECT_EQ(Lat.lookup(MergeVal)->getNumChildren(), 1u);
+
+  EXPECT_FALSE(Lat.contains(Result));
+  EXPECT_TRUE(Lat.getKnownBits(ArgN).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(ArgCond).isAllOnes());
-  EXPECT_TRUE(Lat.getKnownBits(NewArg).isUnknown());
-  EXPECT_TRUE(Lat.getKnownBits(BranchVal).isUnknown());
+  EXPECT_TRUE(Lat.getKnownBits(BranchVal).isAllOnes());
   EXPECT_TRUE(Lat.getKnownBits(Result).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(MergeVal).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(Counter).isUnknown());
   EXPECT_TRUE(Lat.getKnownBits(NextCounter).isUnknown());
-  EXPECT_EQ(InvalidatedNodes.size(), 6u);
 }
 
 TEST_F(SemilatticeTest, Print) {
-  parseAssembly(
-      "define void @test(i32 %n) {\n"
-      "entry:\n"
-      "  br label %loop\n"
-      "loop:\n"
-      "  %phi_counter = phi i32 [ 0, %entry ], [ %next_counter, %loop ]\n"
-      "  %counter = add i32 %phi_counter, 1\n"
-      "  %result = mul i32 %counter, 2\n"
-      "  %next_counter = add i32 %result, 1\n"
-      "  %cond = icmp slt i32 %next_counter, %n\n"
-      "  br i1 %cond, label %loop, label %exit\n"
-      "exit:\n"
-      "  ret void\n"
-      "}\n");
+  parseAssembly(R"(
+define void @test(i32 %n) {
+entry:
+  br label %loop
+loop:
+  %phi_counter = phi i32 [ 0, %entry ], [ %next_counter, %loop ]
+  %counter = add i32 %phi_counter, 1
+  %result = mul i32 %counter, 2
+  %next_counter = add i32 %result, 1
+  %cond = icmp slt i32 %next_counter, %n
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret void
+})");
   Semilattice Lat(*F);
   KnownBits Known32(32);
   Known32.setAllZero();
@@ -502,12 +525,13 @@ TEST_F(SemilatticeTest, Print) {
   raw_string_ostream OS(ActualOutput);
   Lat.print(OS);
   std::string ExpectedOutput =
-      "^ i32 %n\n"
-      "$   %cond = icmp slt i32 %next_counter, %n\n"
-      "^   %phi_counter = phi i32 [ 0, %entry ], [ %next_counter, %loop ]\n"
-      "    %counter = add i32 %phi_counter, 1\n"
-      "    %result = mul i32 %counter, 2 | 00000000000000000000000000000000\n"
-      "    %next_counter = add i32 %result, 1\n";
+      R"(^ i32 %n
+$   %cond = icmp slt i32 %next_counter, %n
+^   %phi_counter = phi i32 [ 0, %entry ], [ %next_counter, %loop ]
+    %counter = add i32 %phi_counter, 1
+    %result = mul i32 %counter, 2 | 00000000000000000000000000000000
+    %next_counter = add i32 %result, 1
+)";
   EXPECT_EQ(ActualOutput, ExpectedOutput);
 }
 } // namespace

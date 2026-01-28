@@ -48,6 +48,8 @@ public:
   }
   LLVM_ABI_FOR_TEST bool isLeaf() const { return Children.empty(); }
   LLVM_ABI_FOR_TEST bool isRoot() const { return Parents.empty(); }
+  LLVM_ABI_FOR_TEST size_t getNumParents() const { return Parents.size(); }
+  LLVM_ABI_FOR_TEST size_t getNumChildren() const { return Children.size(); }
   LLVM_ABI_FOR_TEST Value *getValue() const {
     return ValHasKnownBits.getPointer();
   }
@@ -82,6 +84,11 @@ protected:
     return this;
   }
   bool hasParent(SemilatticeNode *N) const { return is_contained(Parents, N); }
+  void eraseParent(SemilatticeNode *P) {
+    auto *It = find(Parents, P);
+    if (It != Parents.end())
+      Parents.erase(It);
+  }
 };
 
 class Semilattice {
@@ -92,44 +99,39 @@ class Semilattice {
                        /*GrowthDelay=*/2>
       NodeAllocator;
 
-  // The RootNode is a sentinel value to allow for graph traverals to work
+  // The SentinelRoot is a sentinel value to allow for graph traverals to work
   // smoothly. Typically, to traverse the entire semilattice, a
-  // drop_begin(depth_first(Lat->getRootNode())) is used.
-  NodeT *RootNode;
+  // drop_begin(depth_first(Lat->getSentinelRoot())) is used.
+  NodeT *SentinelRoot;
   DenseMap<Value *, NodeT *> NodeMap;
+  const DataLayout &DL;
   NodeT *create() { return new (NodeAllocator) NodeT(); }
-  NodeT *create(Value *V, const DataLayout &DL) {
-    return new (NodeAllocator) NodeT(V, DL);
-  }
-  NodeT *getOrCreate(Value *V, const DataLayout &DL) {
-    return NodeMap.lookup_or(V, create(V, DL));
-  }
-  NodeT *insert(Value *V, const DataLayout &DL, NodeT *Parent = nullptr);
+  NodeT *create(Value *V) { return new (NodeAllocator) NodeT(V, DL); }
+  NodeT *getOrCreate(Value *V) { return NodeMap.lookup_or(V, create(V)); }
+  NodeT *insert(Value *V, NodeT *Parent = nullptr);
   SmallVector<NodeT *, 4> insert_range(NodeT *Parent, // NOLINT
-                                       ArrayRef<User *> R,
-                                       const DataLayout &DL);
-  void recurseInsertChildren(ArrayRef<NodeT *>, const DataLayout &DL);
+                                       ArrayRef<User *> R);
+  void recurseInsertChildren(ArrayRef<NodeT *>);
+  SmallVector<NodeT *> invalidateKnownBits(NodeT *N);
 
   // The roots (excluding the sentinel value) are the arguments of the function,
-  // and PHI nodes in each Basic Block, excluding values whose types are not
-  // either integer or vector of integers.
-  void initialize(ArrayRef<Value *> Roots, const DataLayout &DL);
+  // and PHI nodes and Instructions like fptosi in each Basic Block, excluding
+  // values whose types are not either integer or pointer, or a vector of those.
+  void initialize(ArrayRef<Value *> Roots);
   void initialize(Function &F);
 
 public:
   LLVM_ABI_FOR_TEST Semilattice(Function &F);
   LLVM_ABI_FOR_TEST Semilattice(const Semilattice &) = delete;
   LLVM_ABI_FOR_TEST Semilattice &operator=(const Semilattice &) = delete;
-  LLVM_ABI_FOR_TEST Semilattice(Semilattice &&) = default;
-  LLVM_ABI_FOR_TEST Semilattice &operator=(Semilattice &&) = default;
 
-  LLVM_ABI_FOR_TEST NodeT *getRootNode() const { return RootNode; }
-  LLVM_ABI_FOR_TEST bool empty() const { return RootNode->isLeaf(); }
+  LLVM_ABI_FOR_TEST NodeT *getSentinelRoot() const { return SentinelRoot; }
+  LLVM_ABI_FOR_TEST bool empty() const { return SentinelRoot->isLeaf(); }
   LLVM_ABI_FOR_TEST bool contains(const Value *V) const {
     return NodeMap.contains(V);
   }
   LLVM_ABI_FOR_TEST NodeT *lookup(const Value *V) const {
-    return NodeMap.lookup_or(V, RootNode);
+    return NodeMap.lookup_or(V, SentinelRoot);
   }
   LLVM_ABI_FOR_TEST size_t size() const { return NodeMap.size(); }
 
