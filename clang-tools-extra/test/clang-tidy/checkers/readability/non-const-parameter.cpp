@@ -360,6 +360,6 @@ public:
 };
 
 void gh176623() {
-    auto const _ = []<bool tc>(char* p) { auto _ = A<tc>(p); };
-    auto const _ = []<bool tc>(char* p) { auto _ = B(p); };
+    auto const V1 = []<bool tc>(char* p) { auto X = A<tc>(p); };
+    auto const V2 = []<bool tc>(char* p) { auto Y = B(p); };
 }
