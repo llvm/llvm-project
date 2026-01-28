@@ -9,7 +9,7 @@ define float @scalar_no_abs(float %a) {
 ; CHECK-LABEL: scalar_no_abs:
 ; CHECK: vorps
 ; CHECK-NEXT: retq
-  %fabs = tail call float @fabsf(float %a) #1
+  %fabs = tail call float @llvm.fabs.f32(float %a) #1
   %fsub = fsub float -0.0, %fabs
   ret float %fsub
 }
@@ -20,7 +20,7 @@ define float @scalar_uses_abs(float %a) {
 ; CHECK-DAG: vorps
 ; CHECK: vmulss
 ; CHECK-NEXT: retq
-  %fabs = tail call float @fabsf(float %a) #1
+  %fabs = tail call float @llvm.fabs.f32(float %a) #1
   %fsub = fsub float -0.0, %fabs
   %fmul = fmul float %fsub, %fabs
   ret float %fmul
@@ -71,7 +71,7 @@ define <8 x float> @vector256_uses_abs(<8 x float> %a) {
 declare <4 x float> @llvm.fabs.v4f32(<4 x float> %p)
 declare <8 x float> @llvm.fabs.v8f32(<8 x float> %p)
 
-declare float @fabsf(float)
+declare float @llvm.fabs.f32(float)
 
 attributes #1 = { readnone }
 
