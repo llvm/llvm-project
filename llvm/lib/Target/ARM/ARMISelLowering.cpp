@@ -1004,6 +1004,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
+  // CTLS (Count Leading Sign bits)
+  setOperationAction(ISD::CTLS, MVT::i32, Custom);
+  setOperationAction(ISD::CTLS, MVT::i64, Custom);
   // TODO: These two should be set to LibCall, but this currently breaks
   //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
@@ -3838,42 +3841,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_cls: {
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
-    SDValue SRA =
-        DAG.getNode(ISD::SRA, dl, VTy, Operand, DAG.getConstant(31, dl, VTy));
-    SDValue XOR = DAG.getNode(ISD::XOR, dl, VTy, SRA, Operand);
-    SDValue SHL =
-        DAG.getNode(ISD::SHL, dl, VTy, XOR, DAG.getConstant(1, dl, VTy));
-    SDValue OR =
-        DAG.getNode(ISD::OR, dl, VTy, SHL, DAG.getConstant(1, dl, VTy));
-    SDValue Result = DAG.getNode(ISD::CTLZ, dl, VTy, OR);
-    return Result;
+    return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
   }
   case Intrinsic::arm_cls64: {
-    // cls(x) = if cls(hi(x)) != 31 then cls(hi(x))
-    //          else 31 + clz(if hi(x) == 0 then lo(x) else not(lo(x)))
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitScalar(Operand, dl, VTy, VTy);
-    SDValue Constant0 = DAG.getConstant(0, dl, VTy);
-    SDValue Constant1 = DAG.getConstant(1, dl, VTy);
-    SDValue Constant31 = DAG.getConstant(31, dl, VTy);
-    SDValue SRAHi = DAG.getNode(ISD::SRA, dl, VTy, Hi, Constant31);
-    SDValue XORHi = DAG.getNode(ISD::XOR, dl, VTy, SRAHi, Hi);
-    SDValue SHLHi = DAG.getNode(ISD::SHL, dl, VTy, XORHi, Constant1);
-    SDValue ORHi = DAG.getNode(ISD::OR, dl, VTy, SHLHi, Constant1);
-    SDValue CLSHi = DAG.getNode(ISD::CTLZ, dl, VTy, ORHi);
-    SDValue CheckLo =
-        DAG.getSetCC(dl, MVT::i1, CLSHi, Constant31, ISD::CondCode::SETEQ);
-    SDValue HiIsZero =
-        DAG.getSetCC(dl, MVT::i1, Hi, Constant0, ISD::CondCode::SETEQ);
-    SDValue AdjustedLo =
-        DAG.getSelect(dl, VTy, HiIsZero, Lo, DAG.getNOT(dl, Lo, VTy));
-    SDValue CLZAdjustedLo = DAG.getNode(ISD::CTLZ, dl, VTy, AdjustedLo);
-    SDValue Result =
-        DAG.getSelect(dl, VTy, CheckLo,
-                      DAG.getNode(ISD::ADD, dl, VTy, CLZAdjustedLo, Constant31), CLSHi);
-    return Result;
+    return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
   }
   case Intrinsic::eh_sjlj_lsda: {
     MachineFunction &MF = DAG.getMachineFunction();
@@ -6307,6 +6280,63 @@ static SDValue LowerCTPOP(SDNode *N, SelectionDAG &DAG,
   }
 
   return Res;
+}
+
+static SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG,
+                         const ARMSubtarget *ST) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue Operand = N->getOperand(0);
+
+  if (VT == MVT::i32) {
+    // ARM32 scalar CLS: CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, 31)), 1), 1))
+    SDValue SRA =
+        DAG.getNode(ISD::SRA, dl, VT, Operand, DAG.getConstant(31, dl, VT));
+    SDValue XOR = DAG.getNode(ISD::XOR, dl, VT, SRA, Operand);
+    SDValue SHL =
+        DAG.getNode(ISD::SHL, dl, VT, XOR, DAG.getConstant(1, dl, VT));
+    SDValue OR =
+        DAG.getNode(ISD::OR, dl, VT, SHL, DAG.getConstant(1, dl, VT));
+    SDValue Result = DAG.getNode(ISD::CTLZ, dl, VT, OR);
+    return Result;
+  }
+
+  if (VT == MVT::i64) {
+    // For 64-bit on 32-bit ARM, we need to split into two 32-bit operations
+    EVT VT32 = MVT::i32;
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitScalar(Operand, dl, VT32, VT32);
+
+    SDValue Constant0 = DAG.getConstant(0, dl, VT32);
+    SDValue Constant1 = DAG.getConstant(1, dl, VT32);
+    SDValue Constant31 = DAG.getConstant(31, dl, VT32);
+
+    // Compute CTLS of high part
+    SDValue SRAHi = DAG.getNode(ISD::SRA, dl, VT32, Hi, Constant31);
+    SDValue XORHi = DAG.getNode(ISD::XOR, dl, VT32, SRAHi, Hi);
+    SDValue SHLHi = DAG.getNode(ISD::SHL, dl, VT32, XORHi, Constant1);
+    SDValue ORHi = DAG.getNode(ISD::OR, dl, VT32, SHLHi, Constant1);
+    SDValue CLSHi = DAG.getNode(ISD::CTLZ, dl, VT32, ORHi);
+
+    // Check if CLSHi == 31 (all high bits are sign bits)
+    SDValue IsAllSignBits =
+        DAG.getSetCC(dl, MVT::i1, CLSHi, Constant31, ISD::SETEQ);
+
+    // If all high bits are sign bits, compute for low part
+    SDValue HiIsZero =
+        DAG.getSetCC(dl, MVT::i1, Hi, Constant0, ISD::SETEQ);
+    SDValue AdjustedLo =
+        DAG.getSelect(dl, VT32, HiIsZero, Lo, DAG.getNOT(dl, Lo, VT32));
+    SDValue CLZAdjustedLo = DAG.getNode(ISD::CTLZ, dl, VT32, AdjustedLo);
+    SDValue Result =
+        DAG.getSelect(dl, VT32, IsAllSignBits,
+                      DAG.getNode(ISD::ADD, dl, VT32, CLZAdjustedLo, Constant31), CLSHi);
+
+    return Result;
+  }
+
+  // Vector types should be handled elsewhere
+  return SDValue();
 }
 
 /// Getvshiftimm - Check if this is a valid build_vector for the immediate
@@ -10352,6 +10382,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
+  case ISD::CTLS:           return LowerCTLS(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);

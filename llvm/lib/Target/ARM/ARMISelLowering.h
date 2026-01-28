@@ -608,6 +608,8 @@ class VectorType;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG,
+                      const ARMSubtarget *ST) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
