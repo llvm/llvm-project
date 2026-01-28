@@ -1433,7 +1433,7 @@ add_header_library(
   HDRS
     sqrt.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.FPUtil.sqrt
 )
 
 add_header_library(

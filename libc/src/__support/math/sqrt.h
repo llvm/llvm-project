@@ -1,4 +1,4 @@
-//===-- Implementation header for sqrt -------------------------*- C++ -*-===//
+//===-- Implementation header for sqrt --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SQRT_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SQRT_H
 
-#include "src/__support/FPUtil/generic/sqrt.h"
+#include "src/__support/FPUtil/sqrt.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
