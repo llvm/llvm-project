@@ -187,14 +187,13 @@ void SplitAnalysis::analyzeUses() {
   // instructions create uses that remain in the use-def chain until they are
   // later deleted, but the live interval no longer covers those blocks.
   if (!CurLI->empty()) {
-    UseSlots.erase(std::remove_if(UseSlots.begin(), UseSlots.end(),
-                                  [this](SlotIndex Idx) {
-                                    SlotIndex Start, Stop;
-                                    std::tie(Start, Stop) =
-                                        LIS.getSlotIndexes()->getMBBRange(
-                                            LIS.getMBBFromIndex(Idx));
-                                    return !CurLI->overlaps(Start, Stop);
-                                  }),
+    UseSlots.erase(remove_if(UseSlots,
+                             [this](SlotIndex Idx) {
+                               auto [Start, Stop] =
+                                   LIS.getSlotIndexes()->getMBBRange(
+                                       LIS.getMBBFromIndex(Idx));
+                               return !CurLI->overlaps(Start, Stop);
+                             }),
                    UseSlots.end());
   }
 
