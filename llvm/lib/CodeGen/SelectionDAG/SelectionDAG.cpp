@@ -14038,7 +14038,7 @@ BuildVectorSDNode::isConstantSequence() const {
     return std::nullopt;
 
   unsigned EltSize = getValueType(0).getScalarSizeInBits();
-  APInt Start, Stride;
+  APInt Start, Stride, SmallestStride, StrideInc;
   int FirstIdx = -1, SecondIdx = -1;
 
   // Find the first two non-undef constant elements to determine Start and
@@ -14071,16 +14071,30 @@ BuildVectorSDNode::isConstantSequence() const {
       ValDiff.lshrInPlace(CommonPow2Bits);
 
       // Step 2: IdxDiff is now odd, so its inverse mod 2^EltSize exists.
-      Stride = ValDiff * APInt(EltSize, IdxDiff).multiplicativeInverse();
-      if (Stride.isZero())
+      SmallestStride =
+          ValDiff * APInt(EltSize, IdxDiff).multiplicativeInverse();
+      if (SmallestStride.isZero())
         return std::nullopt;
+
+      // There are 2^CommonPow2Bits valid strides, evenly spaced by StrideInc.
+      // Valid strides: {SmallestStride + k*StrideInc | k = 0, 1, ...}
+      StrideInc = APInt(EltSize, 1) << (EltSize - CommonPow2Bits);
+      Stride = SmallestStride;
 
       // Step 3: Adjust Start based on the first defined element's index.
       Start -= Stride * FirstIdx;
     } else {
-      // Verify this element matches the sequence.
-      if (Val != Start + Stride * I)
-        return std::nullopt;
+      // Verify this element matches the sequence, trying alternative strides.
+      if (Val == Start + Stride * I)
+        continue;
+      do {
+        Stride += StrideInc;
+        if (Stride == SmallestStride) // Wrapped around (mod 2^EltSize).
+          return std::nullopt;
+        Start -= StrideInc * FirstIdx;
+      } while (Val != Start + Stride * I);
+      // All strides produce the same value at SecondIdx, so skip re-checking.
+      I = SecondIdx;
     }
   }
 
