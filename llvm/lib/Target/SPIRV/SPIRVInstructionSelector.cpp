@@ -3929,6 +3929,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
+  case Intrinsic::spv_packhalf2x16: {
+    return selectExtInst(ResVReg, ResType, I, GL::PackHalf2x16);
+  }
   case Intrinsic::spv_ddx:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdx);
   case Intrinsic::spv_ddy:

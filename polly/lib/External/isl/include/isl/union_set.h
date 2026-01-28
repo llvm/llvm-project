@@ -36,6 +36,7 @@ __isl_give isl_union_set *isl_union_set_reset_user(
 __isl_export
 __isl_give isl_union_set *isl_union_set_universe(
 	__isl_take isl_union_set *uset);
+__isl_export
 __isl_give isl_set *isl_union_set_params(__isl_take isl_union_set *uset);
 
 __isl_export
@@ -102,7 +103,11 @@ __isl_give isl_union_set *isl_union_set_preimage_union_pw_multi_aff(
 __isl_give isl_union_set *isl_union_set_project_out(
 	__isl_take isl_union_set *uset,
 	enum isl_dim_type type, unsigned first, unsigned n);
+__isl_export
 __isl_give isl_union_set *isl_union_set_project_out_all_params(
+	__isl_take isl_union_set *uset);
+__isl_export
+__isl_give isl_union_set *isl_union_set_drop_unused_params(
 	__isl_take isl_union_set *uset);
 __isl_give isl_union_set *isl_union_set_remove_divs(
 	__isl_take isl_union_set *bset);

@@ -27,6 +27,7 @@ Supported algorithms
 
 Calls to the following STL algorithms are checked:
 
+``std::accumulate``,
 ``std::adjacent_find``,
 ``std::all_of``,
 ``std::any_of``,
