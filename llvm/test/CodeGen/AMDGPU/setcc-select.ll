@@ -5,12 +5,25 @@ define i32 @select.hi32.sgpr.ult(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
 ; CHECK-LABEL: select.hi32.sgpr.ult:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_eq_u32 s17, 0
+; CHECK-NEXT:    s_cmp_lt_u32 s17, 0xaaaaaaaa
 ; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.z = icmp ult i64 %mask, 4294967296
+  %mask.hi.z = icmp ult i64 %mask, u0xaaaaaaaa00000000
   %ret = select i1 %mask.hi.z, i32 %a, i32 %b
+  ret i32 %ret
+}
+
+define i32 @select.hi32.sgpr.uge(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
+; CHECK-LABEL: select.hi32.sgpr.uge:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_gt_u32 s17, 0xaaaaaaa9
+; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %mask.hi.nz = icmp uge i64 %mask, u0xaaaaaaaa00000000
+  %ret = select i1 %mask.hi.nz, i32 %a, i32 %b
   ret i32 %ret
 }
 
@@ -18,11 +31,11 @@ define i32 @select.hi32.sgpr.ule(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
 ; CHECK-LABEL: select.hi32.sgpr.ule:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_eq_u32 s17, 0
+; CHECK-NEXT:    s_cmp_lt_u32 s17, 0xaaaaaaab
 ; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.z = icmp ule i64 %mask, 4294967295
+  %mask.hi.z = icmp ule i64 %mask, u0xaaaaaaaaffffffff
   %ret = select i1 %mask.hi.z, i32 %a, i32 %b
   ret i32 %ret
 }
@@ -31,24 +44,11 @@ define i32 @select.hi32.sgpr.ugt(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
 ; CHECK-LABEL: select.hi32.sgpr.ugt:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_lg_u32 s17, 0
+; CHECK-NEXT:    s_cmp_gt_u32 s17, 0xaaaaaaaa
 ; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.nz = icmp ugt i64 %mask, 4294967295
-  %ret = select i1 %mask.hi.nz, i32 %a, i32 %b
-  ret i32 %ret
-}
-
-define i32 @select.hi32.sgpr.uge(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
-; CHECK-LABEL: select.hi32.sgpr.uge:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_lg_u32 s17, 0
-; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.nz = icmp uge i64 %mask, 4294967296
+  %mask.hi.nz = icmp ugt i64 %mask, u0xaaaaaaaaffffffff
   %ret = select i1 %mask.hi.nz, i32 %a, i32 %b
   ret i32 %ret
 }
@@ -57,11 +57,25 @@ define i32 @select.hi32.vgpr.ult(i64 %mask, i32 %a, i32 %b) {
 ; CHECK-LABEL: select.hi32.vgpr.ult:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0xaaaaaaaa
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.z = icmp ult i64 %mask, 4294967296
+  %mask.hi.z = icmp ult i64 %mask, u0xaaaaaaaa00000000
   %ret = select i1 %mask.hi.z, i32 %a, i32 %b
+  ret i32 %ret
+}
+
+define i32 @select.hi32.vgpr.uge(i64 %mask, i32 %a, i32 %b) {
+; CHECK-LABEL: select.hi32.vgpr.uge:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s4, 0xaaaaaaa9
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %mask.hi.nz = icmp uge i64 %mask, u0xaaaaaaaa00000000
+  %ret = select i1 %mask.hi.nz, i32 %a, i32 %b
   ret i32 %ret
 }
 
@@ -69,10 +83,11 @@ define i32 @select.hi32.vgpr.ule(i64 %mask, i32 %a, i32 %b) {
 ; CHECK-LABEL: select.hi32.vgpr.ule:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0xaaaaaaab
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.z = icmp ule i64 %mask, 4294967295
+  %mask.hi.z = icmp ule i64 %mask, u0xaaaaaaaaffffffff
   %ret = select i1 %mask.hi.z, i32 %a, i32 %b
   ret i32 %ret
 }
@@ -81,22 +96,11 @@ define i32 @select.hi32.vgpr.ugt(i64 %mask, i32 %a, i32 %b) {
 ; CHECK-LABEL: select.hi32.vgpr.ugt:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0xaaaaaaaa
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.nz = icmp ugt i64 %mask, 4294967295
-  %ret = select i1 %mask.hi.nz, i32 %a, i32 %b
-  ret i32 %ret
-}
-
-define i32 @select.hi32.vgpr.uge(i64 %mask, i32 %a, i32 %b) {
-; CHECK-LABEL: select.hi32.vgpr.uge:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.nz = icmp uge i64 %mask, 4294967296
+  %mask.hi.nz = icmp ugt i64 %mask, u0xaaaaaaaaffffffff
   %ret = select i1 %mask.hi.nz, i32 %a, i32 %b
   ret i32 %ret
 }
@@ -105,13 +109,13 @@ define i32 @select.hi32.sgpr.multiuse(i64 inreg %mask, i32 inreg %a, i32 inreg %
 ; CHECK-LABEL: select.hi32.sgpr.multiuse:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_eq_u32 s17, 0
+; CHECK-NEXT:    s_cmp_lt_u32 s17, 0xaaaaaaaa
 ; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
 ; CHECK-NEXT:    s_cselect_b32 s5, s20, s21
 ; CHECK-NEXT:    s_add_i32 s4, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.nz = icmp ult i64 %mask, 4294967296
+  %mask.hi.nz = icmp ult i64 %mask, u0xaaaaaaaa00000000
   %ab = select i1 %mask.hi.nz, i32 %a, i32 %b
   %cd = select i1 %mask.hi.nz, i32 %c, i32 %d
   %ret = add i32 %ab, %cd
@@ -123,44 +127,76 @@ define i32 @select.hi32.vgpr.multiuse(i64 %mask, i32 %a, i32 %b, i32 %c, i32 %d)
 ; CHECK-LABEL: select.hi32.vgpr.multiuse:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0xaaaaaaaa
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mask.hi.nz = icmp ult i64 %mask, 4294967296
+  %mask.hi.nz = icmp ult i64 %mask, u0xaaaaaaaa00000000
   %ab = select i1 %mask.hi.nz, i32 %a, i32 %b
   %cd = select i1 %mask.hi.nz, i32 %c, i32 %d
   %ret = add i32 %ab, %cd
   ret i32 %ret
 }
 
-define i32 @select.bad.sgpr(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
-; CHECK-LABEL: select.bad.sgpr:
+define i32 @select.bad.sgpr.ule(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
+; CHECK-LABEL: select.bad.sgpr.ule:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0xaaaaaaaa
 ; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[16:17], v[0:1]
 ; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
 ; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %test = icmp ule i64 %mask, 4294967296
+  %test = icmp ule i64 %mask, u0xaaaaaaaa00000000
   %ret = select i1 %test, i32 %a, i32 %b
   ret i32 %ret
 }
 
-define i32 @select.bad.vgpr(i64 %mask, i32 %a, i32 %b) {
-; CHECK-LABEL: select.bad.vgpr:
+define i32 @select.bad.sgpr.ult(i64 inreg %mask, i32 inreg %a, i32 inreg %b) {
+; CHECK-LABEL: select.bad.sgpr.ult:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, -1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0xaaaaaaaa
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[16:17], v[0:1]
+; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
+; CHECK-NEXT:    s_cselect_b32 s4, s18, s19
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %test = icmp ult i64 %mask, u0xaaaaaaaaffffffff
+  %ret = select i1 %test, i32 %a, i32 %b
+  ret i32 %ret
+}
+
+
+define i32 @select.bad.vgpr.ule(i64 %mask, i32 %a, i32 %b) {
+; CHECK-LABEL: select.bad.vgpr.ule:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 1
-; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    s_mov_b32 s5, 0xaaaaaaaa
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %test = icmp ule i64 %mask, 4294967296
+  %test = icmp ule i64 %mask, u0xaaaaaaaa00000000
+  %ret = select i1 %test, i32 %a, i32 %b
+  ret i32 %ret
+}
+
+define i32 @select.bad.vgpr.ult(i64 %mask, i32 %a, i32 %b) {
+; CHECK-LABEL: select.bad.vgpr.ult:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s4, -1
+; CHECK-NEXT:    s_mov_b32 s5, 0xaaaaaaaa
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %test = icmp ult i64 %mask, u0xaaaaaaaaffffffff
   %ret = select i1 %test, i32 %a, i32 %b
   ret i32 %ret
 }
