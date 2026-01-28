@@ -31,23 +31,15 @@ multiclass VCLMUL_MV_V_X<string opcodestr, bits<6> funct6> {
 
 class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
                      string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+    : RVInstVBase<funct6, OPIVI, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
   bits<6> imm;
-  bits<5> vd;
-  bit vm;
 
-  let Inst{31-27} = funct6{5-1};
+  // This overwrites the lsb of funct6 in the RVInstVBase base class with imm{5}
+  assert !eq(funct6{0}, 0), "funct6 LSB should be zero";
   let Inst{26} = imm{5};
-  let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = imm{4-0};
-  let Inst{14-12} = OPIVI.Value;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
 multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
