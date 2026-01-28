@@ -397,8 +397,15 @@ bool ClauseProcessor::processInitializer(
         mlir::Value addr;
         mlir::Type ompOrigType = ompOrig.getType();
         // Check for unsupported dynamic-length character reductions
-        if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(ompOrigType)) {
+        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
           TODO(loc, "OpenMP reduction allocation for dynamic length character");
+        }
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+          if (!charTy.hasConstantLen()) {
+            TODO(loc,
+                 "OpenMP reduction allocation for dynamic length character");
+          }
         }
         // If ompOrig is already a reference, we can use it directly
         if (fir::isa_ref_type(ompOrigType)) {
