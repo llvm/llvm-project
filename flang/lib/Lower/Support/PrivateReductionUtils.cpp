@@ -89,21 +89,12 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
-    // Extract address from the box. For character types, use fir.box_addr
-    // directly to avoid creating an hlfir::Entity from a value that doesn't
-    // satisfy isFortranEntity (boxed characters may not be valid entities yet).
-    mlir::Type innerTy = fir::unwrapRefType(
-        mlir::cast<fir::BaseBoxType>(arg.getType()).getEleTy());
-    mlir::Value addr;
-    if (fir::isa_char(innerTy)) {
-      addr = fir::BoxAddrOp::create(builder, loc, arg);
-    } else {
-      // For non-character types, use genVariableRawAddress
-      // The FIR type system doesn't necessarily know that this is a mutable
-      // box if we allocated the thread local array on the heap to avoid looped
-      // stack allocations.
-      addr = hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
-    }
+    // Extract address from the box for deallocation.
+    // The FIR type system doesn't necessarily know that this is a mutable
+    // box if we allocated the thread local array on the heap to avoid looped
+    // stack allocations.
+    mlir::Value addr =
+        hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
 
     // Deallocate if allocated
     mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);

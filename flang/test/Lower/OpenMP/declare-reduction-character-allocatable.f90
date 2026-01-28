@@ -5,7 +5,7 @@
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-! Test basic character reduction with allocatable variable
+! Test basic character reduction with allocatable variable (constant length)
 program test_character_reduction
   character(len=1), allocatable :: k1
 
@@ -32,3 +32,21 @@ end program test_character_reduction
 ! CHECK: omp.parallel
 ! CHECK:   omp.sections reduction(byref @char_max
 
+! Test character reduction with dynamic length
+subroutine test_dynamic_length(n)
+  integer, intent(in) :: n
+  character(len=n) :: var
+
+  !$omp declare reduction (char_max_dyn:character(len=*):omp_out=max(omp_out,omp_in))
+
+  !$omp parallel reduction(char_max_dyn:var)
+    var = max(var, 'x')
+  !$omp end parallel
+
+end subroutine test_dynamic_length
+
+! Verify dynamic-length character reduction
+! CHECK-LABEL: func.func @_QPtest_dynamic_length
+! CHECK: omp.declare_reduction @char_max_dyn : !fir.boxchar<1>
+! CHECK: omp.parallel
+! CHECK:   reduction(@char_max_dyn
