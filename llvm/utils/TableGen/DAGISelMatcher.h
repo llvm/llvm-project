@@ -219,77 +219,49 @@ public:
     Size = 0;
   }
 
-  class iterator {
+  template <bool IsConst> class iterator_impl {
     friend class MatcherList;
+    using Base = std::conditional_t<IsConst, const MatcherBase, MatcherBase>;
 
-    MatcherBase *Pointer;
+    Base *Pointer;
 
-    explicit iterator(MatcherBase *P) { Pointer = P; }
+    explicit iterator_impl(Base *P) { Pointer = P; }
 
   public:
     using iterator_category = std::forward_iterator_tag;
-    using value_type = Matcher *;
+    using value_type = std::conditional_t<IsConst, const Matcher *, Matcher *>;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type *;
     using reference = value_type &;
 
-    iterator &operator++() {
+    iterator_impl &operator++() {
       Pointer = Pointer->Next;
       return *this;
     }
 
-    iterator operator++(int) {
+    iterator_impl operator++(int) {
       iterator Tmp(*this);
       Pointer = Pointer->Next;
       return Tmp;
     }
 
-    Matcher *operator*() const { return static_cast<Matcher *>(Pointer); }
+    value_type operator*() const { return static_cast<value_type>(Pointer); }
 
-    Matcher *operator->() const { return operator*(); }
+    value_type operator->() const { return operator*(); }
 
-    bool operator==(const iterator &X) const { return Pointer == X.Pointer; }
-    bool operator!=(const iterator &X) const { return !operator==(X); }
-  };
-
-  class const_iterator {
-    friend class MatcherList;
-
-    const MatcherBase *Pointer;
-
-    explicit const_iterator(const MatcherBase *P) { Pointer = P; }
-
-  public:
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = Matcher *;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type *;
-    using reference = value_type &;
-
-    const_iterator(iterator I) : Pointer(I.Pointer) {}
-
-    const_iterator &operator++() {
-      Pointer = Pointer->Next;
-      return *this;
-    }
-
-    const_iterator operator++(int) {
-      const_iterator Tmp(*this);
-      Pointer = Pointer->Next;
-      return Tmp;
-    }
-
-    const Matcher *operator*() const {
-      return static_cast<const Matcher *>(Pointer);
-    }
-
-    const Matcher *operator->() const { return operator*(); }
-
-    bool operator==(const const_iterator &X) const {
+    bool operator==(const iterator_impl &X) const {
       return Pointer == X.Pointer;
     }
-    bool operator!=(const const_iterator &X) const { return !operator==(X); }
+    bool operator!=(const iterator_impl &X) const { return !operator==(X); }
+
+    // Allow conversion to a const iterator.
+    operator iterator_impl<true>() const {
+      return iterator_impl<true>(Pointer);
+    }
   };
+
+  using iterator = iterator_impl<false>;
+  using const_iterator = iterator_impl<true>;
 
   /// Return an iterator before the first Matcher in the list. This iterator
   /// cannot be dereferenced. Incrementing returns the iterator to begin().
