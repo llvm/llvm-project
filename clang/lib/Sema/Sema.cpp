@@ -1620,6 +1620,38 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Context.hasAnyFunctionEffects())
     performFunctionEffectAnalysis(Context.getTranslationUnitDecl());
 
+  // diagnose unused-but-set static globals in a deterministic order
+  //
+  // not trackings shadowing info for static globals; there's nothing to shadow
+  struct LocAndDiag {
+    SourceLocation Loc;
+    PartialDiagnostic PD;
+  };
+  SmallVector<LocAndDiag, 16> DeclDiags;
+  auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
+    DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
+  };
+
+  // for -Wunused-but-set-variable we only care about variables that were
+  // referenced by the TU end
+  for (const auto &Ref : RefsMinusAssignments) {
+    const VarDecl *VD = Ref.first;
+    if (VD->isFileVarDecl() && VD->getStorageClass() == SC_Static) {
+      DiagnoseUnusedButSetDecl(VD, addDiag);
+      RefsMinusAssignments.erase(VD);
+    }
+  }
+
+  llvm::sort(DeclDiags,
+             [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+               // sorting purely for determinism; matches behavior in
+               // SemaDecl.cpp
+               return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
+             });
+  for (const LocAndDiag &D : DeclDiags) {
+    Diag(D.Loc, D.PD);
+  }
+
   // Check we've noticed that we're no longer parsing the initializer for every
   // variable. If we miss cases, then at best we have a performance issue and
   // at worst a rejects-valid bug.

@@ -20257,7 +20257,11 @@ static void DoMarkVarDeclReferenced(
   bool UsableInConstantExpr =
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
-  if (Var->isLocalVarDeclOrParm() && !Var->hasExternalStorage()) {
+  bool StaticGlobalReferenced = Var->isFileVarDecl() &&
+                                Var->getStorageClass() == SC_Static &&
+                                !Var->isStaticDataMember();
+  if ((Var->isLocalVarDeclOrParm() || StaticGlobalReferenced) &&
+      !Var->hasExternalStorage()) {
     RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
   }
 
