@@ -1099,6 +1099,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     Fn->removeFnAttr(llvm::Attribute::NoInline);
     Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -2270,6 +2271,7 @@ static llvm::Value *emitCopyprivateCopyFunction(
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
@@ -3144,6 +3146,7 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *TaskEntry = llvm::Function::Create(
       TaskEntryTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskEntry, TaskEntryFnInfo);
+  TaskEntry->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   TaskEntry->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, TaskEntry, TaskEntryFnInfo, Args,
@@ -3249,6 +3252,7 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                              Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), DestructorFn,
                                     DestructorFnInfo);
+  DestructorFn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   DestructorFn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, DestructorFn, DestructorFnInfo,
@@ -3352,6 +3356,8 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
+  TaskPrivatesMap->addFnAttr("sample-profile-suffix-elision-policy",
+                             "selected");
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -3556,6 +3562,7 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *TaskDup = llvm::Function::Create(
       TaskDupTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskDup, TaskDupFnInfo);
+  TaskDup->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   TaskDup->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, TaskDup, TaskDupFnInfo, Args, Loc,
@@ -4972,6 +4979,7 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
@@ -5685,6 +5693,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -5755,6 +5764,7 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -5823,6 +5833,7 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);

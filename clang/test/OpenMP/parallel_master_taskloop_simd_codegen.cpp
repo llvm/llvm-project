@@ -646,14 +646,14 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK1-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK1-SAME: () #[[ATTR8:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -666,7 +666,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR9]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -859,7 +859,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_parallel_master_taskloop_simd_codegen.cpp
-// CHECK1-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK1-SAME: () #[[ATTR8]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    call void @__cxx_global_var_init()
 // CHECK1-NEXT:    ret void
@@ -1458,14 +1458,14 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK2-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK2-SAME: () #[[ATTR8:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -1478,7 +1478,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR9]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -1671,7 +1671,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_parallel_master_taskloop_simd_codegen.cpp
-// CHECK2-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK2-SAME: () #[[ATTR8]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @__cxx_global_var_init()
 // CHECK2-NEXT:    ret void
@@ -2325,14 +2325,14 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK3-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK3-SAME: () #[[ATTR8:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2345,7 +2345,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR9]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2538,7 +2538,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_parallel_master_taskloop_simd_codegen.cpp
-// CHECK3-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK3-SAME: () #[[ATTR8]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    call void @__cxx_global_var_init()
 // CHECK3-NEXT:    ret void

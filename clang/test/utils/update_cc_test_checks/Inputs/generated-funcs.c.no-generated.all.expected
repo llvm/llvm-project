@@ -110,7 +110,7 @@ void foo(void) {
 }
 //.
 // OMP: attributes #[[ATTR0:[0-9]+]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// OMP: attributes #[[ATTR1:[0-9]+]] = { noinline norecurse nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// OMP: attributes #[[ATTR1:[0-9]+]] = { noinline norecurse nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "sample-profile-suffix-elision-policy"="selected" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // OMP: attributes #[[ATTR2:[0-9]+]] = { nounwind }
 //.
 // NOOMP: attributes #[[ATTR0:[0-9]+]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
