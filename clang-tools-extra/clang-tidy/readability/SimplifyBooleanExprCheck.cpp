@@ -163,7 +163,7 @@ static std::string replacementExpression(const ASTContext &Context,
     E = EC->getSubExpr();
 
   const bool NeedsStaticCast =
-      (Context.getLangOpts().CPlusPlus) ? needsStaticCast(E) : false;
+      Context.getLangOpts().CPlusPlus && needsStaticCast(E);
   if (Negated) {
     if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
       if (UnOp->getOpcode() == UO_LNot) {
