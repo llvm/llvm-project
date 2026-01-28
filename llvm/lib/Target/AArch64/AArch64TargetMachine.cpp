@@ -580,7 +580,7 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 
 private:
-  bool isOptNone() const;
+  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
@@ -617,7 +617,7 @@ std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
 // function. If the opt level is greater than the level we automatically enable
 // globalisel at, and it wasn't enabled via CLI, we know that it must be because
 // of an optnone function.
-bool AArch64PassConfig::isOptNone() const {
+bool AArch64PassConfig::isGlobalISelOptNone() const {
   const bool GlobalISelFlag =
       getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
 
@@ -762,7 +762,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (isOptNone()) {
+  if (isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -779,8 +779,8 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  if (!isOptNone()) {
-    addPass(createAArch64PostLegalizerCombiner(isOptNone()));
+  if (!isGlobalISelOptNone()) {
+    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -794,7 +794,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (!isOptNone())
+  if (!isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }
