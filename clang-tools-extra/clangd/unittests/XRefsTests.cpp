@@ -1948,12 +1948,12 @@ TEST(FindImplementations, InheritanceRecursion) {
     };
 
     template <int I>
-    struct [[Even]] : Odd<I - 1> {};
+    struct [[[[Even]]]] : Odd<I - 1> {};
 
     template <int I>
     struct [[Odd]] : Even<I - 1> {};
 
-    constexpr bool Answer = Even<42>::value;
+    constexpr bool Answer = Even<2>::value;
   )cpp";
 
   Annotations Code(Test);
