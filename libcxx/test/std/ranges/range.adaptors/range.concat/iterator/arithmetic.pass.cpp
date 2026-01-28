@@ -27,6 +27,7 @@
 #include <list>
 #include <ranges>
 #include <span>
+#include <vector>
 
 #include "../../range_adaptor_types.h"
 
