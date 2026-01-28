@@ -203,7 +203,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
-      /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      translate(attr.getExtraData()));
 }
 
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
@@ -283,7 +284,7 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
 
   llvm::DINode *result =
       TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DINode *>(attr)
-          .Case<DICompositeTypeAttr>([&](auto attr) {
+          .Case([&](DICompositeTypeAttr attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
@@ -292,7 +293,7 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
             temporary->replaceAllUsesWith(concrete);
             return concrete;
           })
-          .Case<DISubprogramAttr>([&](auto attr) {
+          .Case([&](DISubprogramAttr attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
