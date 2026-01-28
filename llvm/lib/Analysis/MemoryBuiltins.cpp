@@ -1045,7 +1045,8 @@ OffsetSpan ObjectSizeOffsetVisitor::visitGlobalAlias(GlobalAlias &GA) {
 OffsetSpan ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV) {
   if (!GV.getValueType()->isSized() || GV.hasExternalWeakLinkage() ||
       ((!GV.hasInitializer() || GV.isInterposable()) &&
-       Options.EvalMode != ObjectSizeOpts::Mode::Min))
+       Options.EvalMode != ObjectSizeOpts::Mode::Min) ||
+      !isUIntN(IntTyBits, GV.getGlobalSize(DL)))
     return ObjectSizeOffsetVisitor::unknown();
 
   APInt Size(IntTyBits, GV.getGlobalSize(DL));
