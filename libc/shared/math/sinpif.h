@@ -1,4 +1,4 @@
-//===-- Single-precision sinpif function ----------------------------------===//
+//===-- Shared sinpif function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sinpif.h"
+#ifndef LLVM_LIBC_SHARED_MATH_SINPIF_H
+#define LLVM_LIBC_SHARED_MATH_SINPIF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/sinpif.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, sinpif, (float x)) { return math::sinpif(x); }
+using math::sinpif;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_SINPIF_H
