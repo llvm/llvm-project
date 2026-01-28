@@ -6282,8 +6282,7 @@ static SDValue LowerCTPOP(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
-static SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG,
-                         const ARMSubtarget *ST) {
+static SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG, const ARMSubtarget *ST) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue Operand = N->getOperand(0);
@@ -6295,8 +6294,7 @@ static SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG,
     SDValue XOR = DAG.getNode(ISD::XOR, dl, VT, SRA, Operand);
     SDValue SHL =
         DAG.getNode(ISD::SHL, dl, VT, XOR, DAG.getConstant(1, dl, VT));
-    SDValue OR =
-        DAG.getNode(ISD::OR, dl, VT, SHL, DAG.getConstant(1, dl, VT));
+    SDValue OR = DAG.getNode(ISD::OR, dl, VT, SHL, DAG.getConstant(1, dl, VT));
     SDValue Result = DAG.getNode(ISD::CTLZ, dl, VT, OR);
     return Result;
   }
@@ -6323,14 +6321,13 @@ static SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG,
         DAG.getSetCC(dl, MVT::i1, CLSHi, Constant31, ISD::SETEQ);
 
     // If all high bits are sign bits, compute for low part
-    SDValue HiIsZero =
-        DAG.getSetCC(dl, MVT::i1, Hi, Constant0, ISD::SETEQ);
+    SDValue HiIsZero = DAG.getSetCC(dl, MVT::i1, Hi, Constant0, ISD::SETEQ);
     SDValue AdjustedLo =
         DAG.getSelect(dl, VT32, HiIsZero, Lo, DAG.getNOT(dl, Lo, VT32));
     SDValue CLZAdjustedLo = DAG.getNode(ISD::CTLZ, dl, VT32, AdjustedLo);
-    SDValue Result =
-        DAG.getSelect(dl, VT32, IsAllSignBits,
-                      DAG.getNode(ISD::ADD, dl, VT32, CLZAdjustedLo, Constant31), CLSHi);
+    SDValue Result = DAG.getSelect(
+        dl, VT32, IsAllSignBits,
+        DAG.getNode(ISD::ADD, dl, VT32, CLZAdjustedLo, Constant31), CLSHi);
 
     return Result;
   }
@@ -10382,7 +10379,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
-  case ISD::CTLS:           return LowerCTLS(Op.getNode(), DAG, Subtarget);
+  case ISD::CTLS:
+    return LowerCTLS(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
