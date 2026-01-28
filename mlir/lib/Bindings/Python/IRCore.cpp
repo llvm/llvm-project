@@ -4453,8 +4453,7 @@ void populateIRCore(nb::module_ &m) {
             if (!mlirTypeIDIsNull(mlirTypeID))
               return PyTypeID(mlirTypeID);
             auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(self)));
-            throw nb::value_error(
-                (origRepr + std::string(" has no typeid.")).c_str());
+            throw nb::value_error(join(origRepr, " has no typeid.").c_str());
           },
           "Returns the `TypeID` of the `Type`, or raises `ValueError` if "
           "`Type` has no "
