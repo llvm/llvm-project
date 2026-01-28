@@ -125,6 +125,18 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {noreturn} : () -> ()
   llvm.call @baz() {noreturn} : () -> ()
 
+// CHECK: llvm.call @baz() {returns_twice} : () -> ()
+  llvm.call @baz() {returns_twice} : () -> ()
+
+// CHECK: llvm.call @baz() {hot} : () -> ()
+  llvm.call @baz() {hot} : () -> ()
+
+// CHECK: llvm.call @baz() {cold} : () -> ()
+  llvm.call @baz() {cold} : () -> ()
+
+// CHECK: llvm.call @baz() {noduplicate} : () -> ()
+  llvm.call @baz() {noduplicate} : () -> ()
+
 // CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
   llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
 

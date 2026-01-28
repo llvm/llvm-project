@@ -1670,6 +1670,14 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getReturnsTwiceAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::ReturnsTwice);
+  if (func.getColdAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Cold);
+  if (func.getHotAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Hot);
+  if (func.getNoduplicateAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoDuplicate);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
   if (func.getNoUnwindAttr())

@@ -2653,11 +2653,13 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("alwaysinline"),
+    StringLiteral("cold"),
     StringLiteral("convergent"),
     StringLiteral("denormal-fp-math"),
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("hot"),
     StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
@@ -2665,10 +2667,12 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("noduplicate"),
     StringLiteral("noinline"),
     StringLiteral("noreturn"),
     StringLiteral("nounwind"),
     StringLiteral("optnone"),
+    StringLiteral("returns_twice"),
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
     StringLiteral("uwtable"),
@@ -2710,6 +2714,14 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setWillReturn(true);
   if (func->hasFnAttribute(llvm::Attribute::NoReturn))
     funcOp.setNoreturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
+    funcOp.setReturnsTwice(true);
+  if (func->hasFnAttribute(llvm::Attribute::Cold))
+    funcOp.setCold(true);
+  if (func->hasFnAttribute(llvm::Attribute::Hot))
+    funcOp.setHot(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoDuplicate))
+    funcOp.setNoduplicate(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -2931,6 +2943,12 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
   op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
   op.setNoreturn(callAttrs.getFnAttr(llvm::Attribute::NoReturn).isValid());
+  op.setReturnsTwice(
+      callAttrs.getFnAttr(llvm::Attribute::ReturnsTwice).isValid());
+  op.setHot(callAttrs.getFnAttr(llvm::Attribute::Hot).isValid());
+  op.setCold(callAttrs.getFnAttr(llvm::Attribute::Cold).isValid());
+  op.setNoduplicate(
+      callAttrs.getFnAttr(llvm::Attribute::NoDuplicate).isValid());
   op.setNoInline(callAttrs.getFnAttr(llvm::Attribute::NoInline).isValid());
   op.setAlwaysInline(
       callAttrs.getFnAttr(llvm::Attribute::AlwaysInline).isValid());

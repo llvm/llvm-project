@@ -423,6 +423,14 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::WillReturn);
     if (callOp.getNoreturnAttr())
       call->addFnAttr(llvm::Attribute::NoReturn);
+    if (callOp.getReturnsTwiceAttr())
+      call->addFnAttr(llvm::Attribute::ReturnsTwice);
+    if (callOp.getColdAttr())
+      call->addFnAttr(llvm::Attribute::Cold);
+    if (callOp.getHotAttr())
+      call->addFnAttr(llvm::Attribute::Hot);
+    if (callOp.getNoduplicateAttr())
+      call->addFnAttr(llvm::Attribute::NoDuplicate);
     if (callOp.getNoInlineAttr())
       call->addFnAttr(llvm::Attribute::NoInline);
     if (callOp.getAlwaysInlineAttr())

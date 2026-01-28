@@ -122,9 +122,13 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
   assert(!cir::MissingFeatures::opCallCallConv());
   sideEffect = cir::SideEffect::All;
 
+  auto addUnitAttr = [&](llvm::StringRef name) {
+    attrs.set(name, mlir::UnitAttr::get(&getMLIRContext()));
+  };
+
   if (info.isNoReturn())
-    attrs.set(cir::CIRDialect::getNoReturnAttrName(),
-              mlir::UnitAttr::get(&getMLIRContext()));
+    addUnitAttr(cir::CIRDialect::getNoReturnAttrName());
+
   // TODO(cir): Check/add cmse_nonsecure_call attribute here.
 
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
@@ -134,15 +138,23 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
 
   if (targetDecl) {
     if (targetDecl->hasAttr<NoThrowAttr>())
-      attrs.set(cir::CIRDialect::getNoThrowAttrName(),
-                mlir::UnitAttr::get(&getMLIRContext()));
+      addUnitAttr(cir::CIRDialect::getNoThrowAttrName());
     // TODO(cir): This is actually only possible if targetDecl isn't a
     // declarator, which ObjCMethodDecl seems to be the only way to get this to
     // happen.  We're including it here for completeness, but we should add a
     // test for this when we start generating ObjectiveC.
     if (targetDecl->hasAttr<NoReturnAttr>())
-      attrs.set(cir::CIRDialect::getNoReturnAttrName(),
-                mlir::UnitAttr::get(&getMLIRContext()));
+      addUnitAttr(cir::CIRDialect::getNoReturnAttrName());
+    if (targetDecl->hasAttr<ReturnsTwiceAttr>())
+      addUnitAttr(cir::CIRDialect::getReturnsTwiceAttrName());
+    if (targetDecl->hasAttr<ColdAttr>())
+      addUnitAttr(cir::CIRDialect::getColdAttrName());
+    if (targetDecl->hasAttr<HotAttr>())
+      addUnitAttr(cir::CIRDialect::getHotAttrName());
+    if (targetDecl->hasAttr<NoDuplicateAttr>())
+      addUnitAttr(cir::CIRDialect::getNoDuplicatesAttrName());
+    if (targetDecl->hasAttr<ConvergentAttr>())
+      addUnitAttr(cir::CIRDialect::getConvergentAttrName());
 
     if (const FunctionDecl *func = dyn_cast<FunctionDecl>(targetDecl)) {
       addAttributesFromFunctionProtoType(
