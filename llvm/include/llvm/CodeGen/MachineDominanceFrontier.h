@@ -102,7 +102,6 @@ class MachineDominanceFrontierAnalysis
     : public AnalysisInfoMixin<MachineDominanceFrontierAnalysis> {
   friend AnalysisInfoMixin<MachineDominanceFrontierAnalysis>;
   static AnalysisKey Key;
-  MachineDominanceFrontier MDF;
 
 public:
   using Result = MachineDominanceFrontier;

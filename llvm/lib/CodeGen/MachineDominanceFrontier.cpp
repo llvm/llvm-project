@@ -68,6 +68,7 @@ AnalysisKey MachineDominanceFrontierAnalysis::Key;
 MachineDominanceFrontierAnalysis::Result
 MachineDominanceFrontierAnalysis::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
+  MachineDominanceFrontier MDF;
   auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MDF.analyze(MDT);
   return MDF;
