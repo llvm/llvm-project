@@ -1255,7 +1255,7 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
                                                      IsQueueWorkCompleted))
       return Err;
   } else if (IsQueueWorkCompleted) {
-    // No underlying queue means there's no work to complete
+    // No underlying queue means there's no work to complete.
     *IsQueueWorkCompleted = true;
   }
   return Error::success();
