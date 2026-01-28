@@ -199,7 +199,6 @@ class Operation(ir.OpView):
             "Please use a subclass that defines the operation."
         )
 
-
     @classmethod
     def __init_subclass__(cls, *, name: str = None, **kwargs):
         """
@@ -434,7 +433,6 @@ class Dialect(ir.Dialect):
         res: Result[i32]
     ```
     """
-
 
     @classmethod
     def __init_subclass__(cls, name: str, **kwargs):
