@@ -18,6 +18,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
+  ; Both %x and %y need to go to the frame since they're escaped.
   %x = alloca i1, align 64
   %y = alloca i64, align 32
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)

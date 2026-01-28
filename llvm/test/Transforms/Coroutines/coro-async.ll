@@ -87,6 +87,7 @@ entry:
 
   ; store caller context into callee context
   store ptr %async.ctxt, ptr %callee_context
+  ; Make sure the spill is underaligned to the max context alignment (16).
   %vector_spill = load <4 x double>, ptr %vector, align 16
   %res = call {ptr, ptr, ptr} (i32, ptr, ptr, ...) @llvm.coro.suspend.async(i32 0,
   ptr %resume.func_ptr,
@@ -106,16 +107,12 @@ entry:
   unreachable
 }
 
+; Make sure we update the async function pointer
 define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
   call void @llvm.coro.async.size.replace(ptr @my_async_function_pa_fp, ptr @my_async_function_fp)
   call swiftcc void @my_async_function(ptr %ctxt, ptr %task, ptr %actor)
   ret void
 }
-
-; Make sure we update the async function pointer
-
-; Make sure the spill is underaligned to the max context alignment (16).
-
 
 @my_async_function2_fp = constant <{ i32, i32 }>
   <{ i32 trunc ( ; Relative pointer to async function

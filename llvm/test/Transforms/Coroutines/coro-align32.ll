@@ -18,6 +18,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
+  ; All allocas need to go to the frame since they're escaped.
   %x = alloca i64, align 16
   %y = alloca i32, align 32
   %z = alloca i32, align 16

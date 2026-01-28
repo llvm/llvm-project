@@ -32,12 +32,6 @@ suspend:
   ret ptr %hdl
 }
 
-; See if the padding was inserted before PackedStruct
-
-; See if we used correct index to access packed struct (padding is field 3)
-
-; See if we used correct index to access packed struct (padding is field 3)
-
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
