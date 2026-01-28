@@ -1,4 +1,4 @@
-! RUN: flang -fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: substring_main
 subroutine substring_main

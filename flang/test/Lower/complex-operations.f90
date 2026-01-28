@@ -1,6 +1,6 @@
 ! REQUIRES: flang-supports-f128-math
 ! REQUIRES: x86-registered-target
-! RUN: flang_fc1 -emit-hlfir -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 
 ! CHECK-LABEL: @_QPadd_test
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<complex<f32>> {{.*}}, %[[ARG1:.*]]: !fir.ref<complex<f32>> {{.*}}, %[[ARG2:.*]]: !fir.ref<complex<f32>> {{.*}})
