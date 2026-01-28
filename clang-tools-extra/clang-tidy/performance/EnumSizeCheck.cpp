@@ -26,7 +26,7 @@ namespace {
 AST_MATCHER(EnumDecl, hasEnumerators) { return !Node.enumerators().empty(); }
 
 AST_MATCHER(EnumDecl, isExternC) {
-  return Node.getLexicalDeclContext()->isExternCContext();
+  return Node.getDeclContext()->isExternCContext();
 }
 
 AST_MATCHER_P(EnumDecl, hasTypedefNameForAnonDecl,

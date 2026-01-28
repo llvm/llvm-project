@@ -117,4 +117,4 @@ typedef enum {
     tec1,
     tec2
 } IgnoredTypedefEnum;
-}
+} // extern "C"
