@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if __CLC_FPSIZE == 32
+#if __CLC_FPSIZE == 32 && __CLC_VECSIZE_OR_1 == 2
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atanpi(__CLC_GENTYPE x) {
   const __CLC_GENTYPE pi = __CLC_FP_LIT(3.1415926535897932);
@@ -30,7 +30,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atanpi(__CLC_GENTYPE x) {
   // Reduce arguments 2^-19 <= |x| < 2^26
 
   // 39/16 <= x < 2^26
-  x = -MATH_RECIP(v);
+  x = -__clc_recip(v);
   __CLC_GENTYPE c = 1.57079632679489655800f; // atan(infinity)
 
   // 19/16 <= x < 39/16

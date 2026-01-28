@@ -115,7 +115,7 @@ _CLC_DEF _CLC_OVERLOAD void __clc_tan_piby4(__CLC_DOUBLEN x, __CLC_DOUBLEN xx,
   __CLC_DOUBLEN z1 =
       __CLC_AS_GENTYPE(__CLC_AS_ULONGN(tp) & 0xffffffff00000000L);
   __CLC_DOUBLEN z2 = t2 - (z1 - t1);
-  __CLC_DOUBLEN trec = -MATH_RECIP(tp);
+  __CLC_DOUBLEN trec = -__clc_recip(tp);
   __CLC_DOUBLEN trec_top =
       __CLC_AS_GENTYPE(__CLC_AS_ULONGN(trec) & 0xffffffff00000000L);
 

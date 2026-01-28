@@ -16,6 +16,7 @@
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
 #include <clc/math/tables.h>
+#include <clc_recip.h>
 
 #define __CLC_BODY <clc_rootn.inc>
 #include <clc/math/gentype.inc>

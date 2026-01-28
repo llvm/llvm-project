@@ -21,6 +21,7 @@
 #include <clc/relational/clc_select.h>
 #include <clc/shared/clc_max.h>
 #include <clc/shared/clc_min.h>
+#include <clc_recip.h>
 
 #define __CLC_BODY <clc_atan2pi.inc>
 #include <clc/math/gentype.inc>

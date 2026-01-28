@@ -14,6 +14,7 @@
 #include <clc/math/clc_mad.h>
 #include <clc/math/math.h>
 #include <clc/relational/clc_isnan.h>
+#include <clc_recip.h>
 
 #define __CLC_BODY <clc_atan.inc>
 #include <clc/math/gentype.inc>

@@ -125,7 +125,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
       1.15588821434688393452299f);
 
   __CLC_FLOATN t = __clc_mad(x * r, __clc_native_divide(a, b), x);
-  __CLC_FLOATN tr = -MATH_RECIP(t);
+  __CLC_FLOATN tr = -__clc_recip(t);
 
   return (regn & 1) != 0 ? tr : t;
 }

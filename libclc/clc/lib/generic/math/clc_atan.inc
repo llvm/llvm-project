@@ -28,7 +28,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan(__CLC_GENTYPE x) {
   // Reduce arguments 2^-19 <= |x| < 2^26
 
   // 39/16 <= x < 2^26
-  x = -MATH_RECIP(v);
+  x = -__clc_recip(v);
   __CLC_GENTYPE c = 1.57079632679489655800f; // atan(infinity)
 
   // 19/16 <= x < 39/16

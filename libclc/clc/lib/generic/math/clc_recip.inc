@@ -6,16 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/float/definitions.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isnan.h>
-#include <clc_recip.h>
-
-#define __CLC_FLOAT_ONLY
-#define __CLC_BODY <clc_atanpi.inc>
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_recip(__CLC_GENTYPE x) {
+  _Pragma("clang fp reciprocal(on)");
+  return __CLC_FP_LIT(1.0) / x;
+}

@@ -37,7 +37,6 @@ bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
 #define HAVE_FAST_FMA32() (0)
 
 #define MATH_DIVIDE(X, Y) ((X) / (Y))
-#define MATH_RECIP(X) (1.0f / (X))
 #define MATH_SQRT(X) sqrt(X)
 
 #define SIGNBIT_SP32 0x80000000

@@ -15,6 +15,7 @@
 #include <clc/math/clc_native_divide.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
+#include <clc_recip.h>
 
 #define bitalign(hi, lo, shift) ((hi) << (32 - (shift))) | ((lo) >> (shift));
 

@@ -54,7 +54,7 @@
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
                                                  __CLC_INTN ny) {
-  __CLC_GENTYPE y = MATH_RECIP(__CLC_CONVERT_GENTYPE(ny));
+  __CLC_GENTYPE y = __clc_recip(__CLC_CONVERT_GENTYPE(ny));
 
   __CLC_INTN ix = __CLC_AS_INTN(x);
   __CLC_INTN ax = ix & EXSIGNBIT_SP32;

@@ -131,6 +131,7 @@ math/clc_nextafter.cl
 math/clc_pow.cl
 math/clc_pown.cl
 math/clc_powr.cl
+math/clc_recip.cl
 math/clc_remainder.cl
 math/clc_remquo.cl
 math/clc_rint.cl
