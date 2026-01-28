@@ -19,9 +19,9 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
+#include "src/stdio/baremetal/ungetc_internal.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
-#include "src/stdio/ungetc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -40,7 +40,7 @@ public:
       return '\0';
     return c;
   }
-  LIBC_INLINE void ungetc(int c) { (void)LIBC_NAMESPACE::ungetc(c, stream); }
+  LIBC_INLINE void ungetc(int c) { (void)internal::ungetc_internal(c, stream); }
 };
 
 } // namespace internal

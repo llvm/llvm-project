@@ -1,4 +1,4 @@
-//===-- Implementation of ungetc for baremetal -----------------*- C++ -*-===//
+//===-- Internal implementation of ungetc for baremetal --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/ungetc.h"
-
-#include "src/__support/common.h"
 #include "src/stdio/baremetal/ungetc_internal.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#include "src/stdio/baremetal/file_internal.h"
 
-LLVM_LIBC_FUNCTION(int, ungetc, (int c, ::FILE *stream)) {
-  return internal::ungetc_internal(c, stream);
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
+
+int ungetc_internal(int c, ::FILE *stream) {
+  return store_ungetc_value(stream, c);
 }
 
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
