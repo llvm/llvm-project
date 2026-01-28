@@ -30,7 +30,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
