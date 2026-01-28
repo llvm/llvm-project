@@ -5125,6 +5125,29 @@ static void handleOptimizeNoneAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(Optnone);
 }
 
+static void handlePtrAccessAttrs(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *PVD = cast<ParmVarDecl>(D);
+  if (const QualType T = PVD->getType();
+      !T->isPointerType() && !T->isReferenceType()) {
+    S.Diag(AL.getLoc(), diag::err_pointer_reference_attribute) << AL;
+    return;
+  }
+
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_ReadNone:
+    D->addAttr(ReadNoneAttr::Create(S.Context, AL));
+    break;
+  case ParsedAttr::AT_ReadOnly:
+    D->addAttr(ReadOnlyAttr::Create(S.Context, AL));
+    break;
+  case ParsedAttr::AT_WriteOnly:
+    D->addAttr(WriteOnlyAttr::Create(S.Context, AL));
+    break;
+  default:
+    llvm_unreachable("Unexpected attribute");
+  }
+}
+
 static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *VD = cast<VarDecl>(D);
   if (VD->hasLocalStorage()) {
@@ -7472,6 +7495,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_OptimizeNone:
     handleOptimizeNoneAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ReadOnly:
+  case ParsedAttr::AT_ReadNone:
+  case ParsedAttr::AT_WriteOnly:
+    handlePtrAccessAttrs(S, D, AL);
     break;
   case ParsedAttr::AT_EnumExtensibility:
     handleEnumExtensibilityAttr(S, D, AL);

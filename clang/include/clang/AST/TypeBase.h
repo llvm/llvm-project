@@ -4490,10 +4490,15 @@ public:
   /// not produce the latter.
   class ExtParameterInfo {
     enum {
-      ABIMask = 0x0F,
-      IsConsumed = 0x10,
-      HasPassObjSize = 0x20,
-      IsNoEscape = 0x40,
+      ABIMask = 0x07,
+      IsConsumed = 0x08,
+      HasPassObjSize = 0x10,
+      IsNoEscape = 0x20,
+      PtrAccessMask = 0xC0,
+
+      IsReadNone = 0x40,
+      IsReadOnly = 0x80,
+      IsWriteOnly = 0xC0,
     };
     unsigned char Data = 0;
 
@@ -4534,6 +4539,33 @@ public:
         Copy.Data |= IsNoEscape;
       else
         Copy.Data &= ~IsNoEscape;
+      return Copy;
+    }
+
+    bool isReadNone() const { return (Data & PtrAccessMask) == IsReadNone; }
+    ExtParameterInfo withIsReadNone() const {
+      assert((Data & PtrAccessMask) == 0 &&
+             "Trying to change ptr access that has already been set");
+      ExtParameterInfo Copy = *this;
+      Copy.Data |= IsReadNone;
+      return Copy;
+    }
+
+    bool isReadOnly() const { return (Data & PtrAccessMask) == IsReadOnly; }
+    ExtParameterInfo withIsReadOnly() const {
+      assert((Data & PtrAccessMask) == 0 &&
+             "Trying to change ptr access that has already been set");
+      ExtParameterInfo Copy = *this;
+      Copy.Data |= IsReadOnly;
+      return Copy;
+    }
+
+    bool isWriteOnly() const { return (Data & PtrAccessMask) == IsWriteOnly; }
+    ExtParameterInfo withIsWriteOnly() const {
+      assert((Data & PtrAccessMask) == 0 &&
+             "Trying to change ptr access that has already been set");
+      ExtParameterInfo Copy = *this;
+      Copy.Data |= IsWriteOnly;
       return Copy;
     }
 

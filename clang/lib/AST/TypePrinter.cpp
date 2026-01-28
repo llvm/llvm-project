@@ -1917,6 +1917,19 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
+  if (T->getAttrKind() == attr::ReadNone) {
+    OS <<" [[clang::readnone]]";
+    return;
+  }
+  if (T->getAttrKind() == attr::ReadOnly) {
+    OS <<" [[clang::readonly]]";
+    return;
+  }
+  if (T->getAttrKind() == attr::WriteOnly) {
+    OS <<" [[clang::writeonly]]";
+    return;
+  }
+
   // The printing of the address_space attribute is handled by the qualifier
   // since it is still stored in the qualifier. Return early to prevent printing
   // this twice.

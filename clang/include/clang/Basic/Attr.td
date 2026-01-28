@@ -3085,6 +3085,25 @@ def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
   let Documentation = [ArmSmeLocallyStreamingDocs];
 }
 
+def ReadNone : InheritableParamAttr {
+  let Spellings = [Clang<"readnone">];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def ReadOnly : InheritableParamAttr {
+  let Spellings = [Clang<"readonly">];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def WriteOnly : InheritableParamAttr {
+  let Spellings = [Clang<"writeonly">];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def : MutualExclusions<[ReadNone, ReadOnly, WriteOnly]>;
 
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];

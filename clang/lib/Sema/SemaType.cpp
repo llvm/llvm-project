@@ -5307,6 +5307,21 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             HasAnyInterestingExtParameterInfos = true;
           }
 
+          if (Param->hasAttr<ReadNoneAttr>()) {
+            ExtParameterInfos[i] = ExtParameterInfos[i].withIsReadNone();
+            HasAnyInterestingExtParameterInfos = true;
+          }
+
+          if (Param->hasAttr<ReadOnlyAttr>()) {
+            ExtParameterInfos[i] = ExtParameterInfos[i].withIsReadOnly();
+            HasAnyInterestingExtParameterInfos = true;
+          }
+
+          if (Param->hasAttr<WriteOnlyAttr>()) {
+            ExtParameterInfos[i] = ExtParameterInfos[i].withIsWriteOnly();
+            HasAnyInterestingExtParameterInfos = true;
+          }
+
           ParamTys.push_back(ParamTy);
         }
 
@@ -8818,6 +8833,31 @@ static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
   }
 }
 
+static void HandlePtrAccessAttrs(TypeProcessingState &State, QualType &CurType,
+                                 ParsedAttr &PA) {
+  if (!State.getDeclarator().isDeclarationOfFunction()) {
+    State.getSema().Diag(PA.getLoc(), diag::err_attribute_wrong_decl_type)
+        << PA << PA.isRegularKeywordAttribute()
+        << ExpectedParameterOrImplicitObjectParameter;
+    return;
+  }
+
+  auto *Attr = [&]() -> clang::Attr * {
+    switch (PA.getKind()) {
+    case ParsedAttr::AT_ReadNone:
+      return createSimpleAttr<ReadNoneAttr>(State.getSema().Context, PA);
+    case ParsedAttr::AT_ReadOnly:
+      return createSimpleAttr<ReadOnlyAttr>(State.getSema().Context, PA);
+    case ParsedAttr::AT_WriteOnly:
+      return createSimpleAttr<WriteOnlyAttr>(State.getSema().Context, PA);
+    default:
+      llvm_unreachable("Unexpected attribute");
+    }
+  }();
+
+  CurType = State.getAttributedType(Attr, CurType, CurType);
+}
+
 static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
                                         QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
@@ -8984,6 +9024,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_LifetimeCaptureBy:
       if (TAL == TAL_DeclChunk)
         HandleLifetimeCaptureByAttr(state, type, attr);
+      break;
+    case ParsedAttr::AT_ReadNone:
+    case ParsedAttr::AT_ReadOnly:
+    case ParsedAttr::AT_WriteOnly:
+      if (TAL == TAL_DeclChunk)
+        HandlePtrAccessAttrs(state, type, attr);
       break;
 
     case ParsedAttr::AT_NoDeref: {

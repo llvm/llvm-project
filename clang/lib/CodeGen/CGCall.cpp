@@ -2816,6 +2816,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(TargetDecl)) {
+    QualType T = MD->getType();
+    llvm::AttrBuilder Attrs(getLLVMContext());
+    if (T->hasAttr(attr::ReadNone))
+      Attrs.addAttribute(llvm::Attribute::ReadNone);
+    if (T->hasAttr(attr::ReadOnly))
+      Attrs.addAttribute(llvm::Attribute::ReadOnly);
+    if (T->hasAttr(attr::WriteOnly))
+      Attrs.addAttribute(llvm::Attribute::WriteOnly);
+    if (Attrs.hasAttributes())
+      ArgAttrs[0] = ArgAttrs[0].addAttributes(
+          getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), Attrs));
+  }
+
   unsigned ArgNo = 0;
   for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(), E = FI.arg_end();
        I != E; ++I, ++ArgNo) {
@@ -3013,6 +3027,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
       Attrs.addCapturesAttr(llvm::CaptureInfo::none());
+
+    if (FI.getExtParameterInfo(ArgNo).isReadNone())
+      Attrs.addAttribute(llvm::Attribute::ReadNone);
+
+    if (FI.getExtParameterInfo(ArgNo).isReadOnly())
+      Attrs.addAttribute(llvm::Attribute::ReadOnly);
+
+    if (FI.getExtParameterInfo(ArgNo).isWriteOnly())
+      Attrs.addAttribute(llvm::Attribute::WriteOnly);
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;
