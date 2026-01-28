@@ -98,7 +98,7 @@ private:
 
     // Detect a 50ms stall in a 2 second time window.
     constexpr llvm::StringRef trigger = "some 50000 2000000";
-    if (::write(pfds[pressure_idx].fd, trigger.data(), trigger.size()) < 0)
+    if (::write(pfds[pressure_idx].fd, trigger.data(), trigger.size() + 1) < 0)
       return {};
 
     while (true) {
