@@ -393,6 +393,15 @@ bool setLoopProbability(Loop *L, BranchProbability P);
 ///   second target label, or vice-versa if \p ForFirstTarget is false.
 BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
 
+/// Calculates the edge probability from Src to Dst.
+/// Dst has to be a successor to Src.
+/// This uses branch_weights metadata directly. If data are missing or
+/// probability cannot be computed, then unknown probability is returned.
+/// This does not use BranchProbabilityInfo and the values computed by this
+/// will vary from BPI because BPI has its own more advanced heuristics to
+/// determine probabilities even without branch_weights metadata.
+BranchProbability getBranchProbability(BasicBlock *Src, BasicBlock *Dst);
+
 /// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
 /// the probabilities of control flowing to its first and second target labels,
 /// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if

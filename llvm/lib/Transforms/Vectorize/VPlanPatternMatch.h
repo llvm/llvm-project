@@ -248,6 +248,9 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
 /// Match a VPValue, capturing it if we match.
 inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
+/// Match a VPIRValue.
+inline bind_ty<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
+
 /// Match a VPInstruction, capturing if we match.
 inline bind_ty<VPInstruction> m_VPInstruction(VPInstruction *&V) { return V; }
 
