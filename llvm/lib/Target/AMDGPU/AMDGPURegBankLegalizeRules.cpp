@@ -997,9 +997,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{B32}, {{}, {VgprB32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B64}, {{}, {VgprB64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B128}, {{}, {VgprB128, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{V2S32}, {{}, {VgprV2S32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{V3S32}, {{}, {VgprV3S32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{V4S32}, {{}, {VgprV4S32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+      .Any(
+          {{V2S32}, {{}, {VgprV2S32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any(
+          {{V3S32}, {{}, {VgprV3S32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{V4S32},
+            {{}, {VgprV4S32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
