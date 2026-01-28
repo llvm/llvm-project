@@ -86,6 +86,12 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
+OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
+  if (const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
+      MD && MD->isInstance())
+    ThisOrigins = buildListForType(MD->getThisType(), MD);
+}
+
 OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
   OriginID NewID = getNextOriginID();
   AllOrigins.emplace_back(NewID, D, QT.getTypePtrOrNull());
@@ -137,6 +143,12 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     return It->second;
 
   QualType Type = E->getType();
+  // Special handling for 'this' expressions to share origins with the method's
+  // implicit object parameter.
+  if (llvm::isa<CXXThisExpr>(E)) {
+    assert(ThisOrigins && "origins for 'this' should be set for a method decl");
+    return *ThisOrigins;
+  }
 
   // Special handling for DeclRefExpr to share origins with the underlying decl.
   if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {

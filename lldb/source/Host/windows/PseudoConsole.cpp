@@ -64,10 +64,16 @@ private:
 
 static Kernel32 kernel32;
 
+PseudoConsole::~PseudoConsole() { Close(); }
+
 llvm::Error PseudoConsole::OpenPseudoConsole() {
   if (!kernel32.IsConPTYAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
+
+  // close any previously opened handles
+  Close();
+
   HRESULT hr;
   HANDLE hInputRead = INVALID_HANDLE_VALUE;
   HANDLE hInputWrite = INVALID_HANDLE_VALUE;
@@ -118,8 +124,11 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 void PseudoConsole::Close() {
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
-  CloseHandle(m_conpty_input);
-  CloseHandle(m_conpty_output);
+  if (m_conpty_input != INVALID_HANDLE_VALUE)
+    CloseHandle(m_conpty_input);
+  if (m_conpty_output != INVALID_HANDLE_VALUE)
+    CloseHandle(m_conpty_output);
+
   m_conpty_handle = INVALID_HANDLE_VALUE;
   m_conpty_input = INVALID_HANDLE_VALUE;
   m_conpty_output = INVALID_HANDLE_VALUE;
