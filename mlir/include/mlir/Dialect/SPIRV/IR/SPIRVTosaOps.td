@@ -62,6 +62,19 @@ class SPIRV_TosaOpWithComplexResult<string mnemonic, int opcode, list<Trait> tra
   }];
 }
 
+class SPIRV_TosaElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, traits> {
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+    ::mlir::spirv::TensorArmType getInput2Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput2().getType());
+    }
+  }];
+}
+
 
 def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
   OutputRankIsInputRankMinusOne<"input", "output">,
@@ -859,6 +872,231 @@ def SPIRV_TosaTanhOp : SPIRV_TosaOpWithResult<"Tanh", 13, [Pure,
     ::mlir::spirv::TensorArmType getInputType() {
       return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
+  }];
+}
+
+
+def SPIRV_TosaAddOp : SPIRV_TosaElementwiseBinaryOp<"Add", 14, [Pure,
+  AllElementTypesMatch<["input1", "input2", "output"]>,
+  AllRanksMatch<["input1", "input2"]>]> {
+  let summary = "Addition operator.";
+
+  let description = [{
+    Elementwise Addition of input1 and input2. Axis of size 1 will be broadcast,
+    as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_add
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_add
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Add %arg0, %arg1 : !spirv.arm.tensor<4x7x3x10xi32>, !spirv.arm.tensor<4x7x3x1xi32> -> !spirv.arm.tensor<4x7x3x10xi32>
+    %0 = spirv.Tosa.Add %arg0, %arg1 : !spirv.arm.tensor<26x37x18xf16>, !spirv.arm.tensor<1x37x18xf16> -> !spirv.arm.tensor<26x37x18xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaArithmeticRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"ArithmeticRightShift", 15, [Pure,
+  AllElementTypesMatch<["input1", "input2", "output"]>,
+  AllRanksMatch<["input1", "input2"]>]> {
+  let summary = "Arithmetic Right Shift.";
+
+  let description = [{
+    Elementwise Arithmetic Right Shift of input1 by the amount specified in
+    input2. Axis of size 1 will be broadcast, as necessary. Rank of input tensors
+    must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_arithmetic_right_shift
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_arithmetic_right_shift
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.ArithmeticRightShift round = true, %arg0, %arg1 : !spirv.arm.tensor<1x47x22xi16>, !spirv.arm.tensor<49x47x22xi16> -> !spirv.arm.tensor<49x47x22xi16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_BoolConstAttr: $round,
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `round` `=` $round `,`
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaBitwiseAndOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseAnd", 16, [Pure,
+  AllElementTypesMatch<["input1", "input2", "output"]>,
+  AllRanksMatch<["input1", "input2"]>]> {
+  let summary = "Bitwise AND operator.";
+
+  let description = [{
+    Elementwise Bitwise AND of input1 and input2. Axis of size 1
+    will be broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_and
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_and
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseAnd %arg0, %arg1 : !spirv.arm.tensor<4x1x7x12xi16>, !spirv.arm.tensor<4x13x7x12xi16> -> !spirv.arm.tensor<4x13x7x12xi16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaBitwiseOrOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseOr", 17, [Pure,
+  AllElementTypesMatch<["input1", "input2", "output"]>,
+  AllRanksMatch<["input1", "input2"]>]> {
+  let summary = "Bitwise OR operator.";
+
+  let description = [{
+    Elementwise Bitwise OR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_or
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_or
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseOr %arg0, %arg1 : !spirv.arm.tensor<11x30x23xi32>, !spirv.arm.tensor<1x30x23xi32> -> !spirv.arm.tensor<11x30x23xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaBitwiseXorOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseXor", 18, [Pure,
+  AllElementTypesMatch<["input1", "input2", "output"]>,
+  AllRanksMatch<["input1", "input2"]>]> {
+  let summary = "Bitwise XOR operator.";
+
+  let description = [{
+    Elementwise Bitwise XOR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_xor
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_xor
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseXor %arg0, %arg1 : !spirv.arm.tensor<4x8x13x9xi16>, !spirv.arm.tensor<4x8x1x9xi16> -> !spirv.arm.tensor<4x8x13x9xi16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaIntDivOp : SPIRV_TosaElementwiseBinaryOp<"IntDiv", 19, [Pure,
+  AllElementTypesMatch<["input1", "input2", "output"]>,
+  AllRanksMatch<["input1", "input2"]>]> {
+  let summary = "Integer Divide operator.";
+
+  let description = [{
+    Elementwise Integer Divide of input1 by input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    The result of the divide is truncated towards zero. Expected use is for
+    operations on non-scaled integers. Floating point divide should use
+    `spirv.Tosa.Reciprocal` and `spirv.Tosa.Mul`. Quantized integer divide
+    should use `spirv.Tosa.Table`(for $ 1/x $) and `spirv.Tosa.Mul`.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_intdiv
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_intdiv
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.IntDiv %arg0, %arg1 : !spirv.arm.tensor<1x65533x1xi32>, !spirv.arm.tensor<2x65533x1xi32> -> !spirv.arm.tensor<2x65533x1xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Int32_TensorArm: $input1,
+    SPIRV_Int32_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Int32_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
   }];
 }
 
