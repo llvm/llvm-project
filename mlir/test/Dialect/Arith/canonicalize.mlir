@@ -3403,3 +3403,14 @@ func.func @unreachable() {
   cf.br ^unreachable
 }
 
+// -----
+
+// Verify that cmpi with dynamic-shaped tensors does not crash during folding.
+// The fold cannot create a DenseElementsAttr for dynamic shapes.
+// CHECK-LABEL: @cmpi_dynamic_shape_no_fold
+//       CHECK:   arith.cmpi eq
+func.func @cmpi_dynamic_shape_no_fold(%arg0: tensor<?xi32>) -> tensor<?xi1> {
+  %0 = arith.cmpi eq, %arg0, %arg0 : tensor<?xi32>
+  return %0 : tensor<?xi1>
+}
+

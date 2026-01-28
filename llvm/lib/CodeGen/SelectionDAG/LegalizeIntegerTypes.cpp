@@ -2044,6 +2044,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     report_fatal_error("Do not know how to promote this operator's operand!");
 
   case ISD::ANY_EXTEND:   Res = PromoteIntOp_ANY_EXTEND(N); break;
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+    Res = PromoteIntOp_ANY_EXTEND_VECTOR_INREG(N);
+    break;
   case ISD::ATOMIC_STORE:
     Res = PromoteIntOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
     break;
@@ -2282,6 +2285,16 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
 SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), N->getValueType(0), Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND_VECTOR_INREG(SDNode *N) {
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  EVT ResVT = N->getValueType(0);
+  EVT OpVT = Op.getValueType();
+  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), OpVT.getScalarType(),
+                               ResVT.getVectorNumElements());
+  Op = DAG.getExtractSubvector(SDLoc(Op), NewVT, Op, 0);
+  return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), ResVT, Op);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
