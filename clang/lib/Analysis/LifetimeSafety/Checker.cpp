@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
@@ -51,12 +52,13 @@ struct PendingWarning {
 
 using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+using EscapingTarget = llvm::PointerUnion<const Expr *, const FieldDecl *>;
 
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, const Expr *> AnnotationWarningsMap;
-  llvm::DenseMap<const ParmVarDecl *, const Expr *> NoescapeWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
@@ -92,22 +94,36 @@ public:
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    auto CheckParam = [&](const ParmVarDecl *PVD) {
+      // NoEscape param should not escape.
+      if (PVD->hasAttr<NoEscapeAttr>()) {
+        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
+        if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        return;
+      }
+      // Suggest lifetimebound for parameter escaping through return.
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+          AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
+      // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
+      // field!
+    };
+    auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
+      if (!implicitObjectParamIsLifetimeBound(MD))
+        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+          AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+    };
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
-        if (const auto *PVD = PL->getParmVarDecl()) {
-          if (PVD->hasAttr<NoEscapeAttr>()) {
-            NoescapeWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
-            continue;
-          }
-          if (PVD->hasAttr<LifetimeBoundAttr>())
-            continue;
-          AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
-        } else if (const auto *MD = PL->getMethodDecl()) {
-          if (!implicitObjectParamIsLifetimeBound(MD))
-            AnnotationWarningsMap.try_emplace(MD, OEF->getEscapeExpr());
-        }
-      }
+      const auto *PL = dyn_cast<PlaceholderLoan>(L);
+      if (!PL)
+        continue;
+      if (const auto *PVD = PL->getParmVarDecl())
+        CheckParam(PVD);
+      else if (const auto *MD = PL->getMethodDecl())
+        CheckImplicitThis(MD);
     }
   }
 
@@ -169,10 +185,16 @@ public:
         SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
                                        Confidence);
       else if (const auto *OEF =
-                   CausingFact.dyn_cast<const OriginEscapesFact *>())
-        SemaHelper->reportUseAfterReturn(IssueExpr, OEF->getEscapeExpr(),
-                                         ExpiryLoc, Confidence);
-      else
+                   CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+        if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
+          SemaHelper->reportUseAfterReturn(
+              IssueExpr, RetEscape->getReturnExpr(), ExpiryLoc, Confidence);
+        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
+          SemaHelper->reportDanglingField(
+              IssueExpr, FieldEscape->getFieldDecl(), ExpiryLoc);
+        else
+          llvm_unreachable("Unhandled OriginEscapesFact type");
+      } else
         llvm_unreachable("Unhandled CausingFact type");
     }
   }
@@ -237,8 +259,14 @@ public:
   }
 
   void reportNoescapeViolations() {
-    for (auto [PVD, EscapeExpr] : NoescapeWarningsMap)
-      SemaHelper->reportNoescapeViolation(PVD, EscapeExpr);
+    for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
+      if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
+        SemaHelper->reportNoescapeViolation(PVD, E);
+      else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
+        SemaHelper->reportNoescapeViolation(PVD, FD);
+      else
+        llvm_unreachable("Unhandled EscapingTarget type");
+    }
   }
 
   void inferAnnotations() {

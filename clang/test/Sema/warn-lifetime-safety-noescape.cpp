@@ -120,13 +120,12 @@ void escape_through_global_var(const MyObj& in [[clang::noescape]]) {
   global_view = in;
 }
 
-// FIXME: Escaping through a member variable is not detected.
 struct ObjConsumer {
-  void escape_through_member(const MyObj& in [[clang::noescape]]) {
+  void escape_through_member(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
     member_view = in;
   }
 
-  View member_view;
+  View member_view; // expected-note {{escapes to this field}}
 };
 
 // FIXME: Escaping through another param is not detected.

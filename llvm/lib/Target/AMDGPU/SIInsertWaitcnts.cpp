@@ -531,9 +531,10 @@ private:
   DenseSet<MachineInstr *> CallInsts;
   DenseSet<MachineInstr *> ReturnInsts;
 
-  // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
-  // message.
-  DenseSet<MachineInstr *> ReleaseVGPRInsts;
+  // Remember all S_ENDPGM instructions. The boolean flag is true if there might
+  // be outstanding stores but definitely no outstanding scratch stores, to help
+  // with insertion of DEALLOC_VGPRS messages.
+  DenseMap<MachineInstr *, bool> EndPgmInsts;
 
   AMDGPU::HardwareLimits Limits;
 
@@ -2253,12 +2254,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // completed, but it is only safe to do this if there are no outstanding
   // scratch stores.
   else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
-    if (!WCG->isOptNone() &&
-        (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
-         (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-          ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
-          !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
-      ReleaseVGPRInsts.insert(&MI);
+    EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+                       !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
   }
   // Resolve vm waits before gs-done.
   else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
@@ -3520,21 +3517,22 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // (i.e. whether we're in dynamic VGPR mode or not).
   // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
   // waveslot limited kernel runs slower with the deallocation.
-  if (MFI->isDynamicVGPREnabled()) {
-    for (MachineInstr *MI : ReleaseVGPRInsts) {
+  if (!WCG->isOptNone() && MFI->isDynamicVGPREnabled()) {
+    for (auto [MI, _] : EndPgmInsts) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
               TII->get(AMDGPU::S_ALLOC_VGPR))
           .addImm(0);
       Modified = true;
     }
-  } else {
-    if (!ReleaseVGPRInsts.empty() &&
-        (MF.getFrameInfo().hasCalls() ||
-         ST->getOccupancyWithNumVGPRs(
-             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
-             /*IsDynamicVGPR=*/false) <
-             AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
-      for (MachineInstr *MI : ReleaseVGPRInsts) {
+  } else if (!WCG->isOptNone() &&
+             ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+             (MF.getFrameInfo().hasCalls() ||
+              ST->getOccupancyWithNumVGPRs(
+                  TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+                  /*IsDynamicVGPR=*/false) <
+                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+    for (auto [MI, Flag] : EndPgmInsts) {
+      if (Flag) {
         if (ST->requiresNopBeforeDeallocVGPRs()) {
           BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                   TII->get(AMDGPU::S_NOP))
@@ -3550,7 +3548,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
   CallInsts.clear();
   ReturnInsts.clear();
-  ReleaseVGPRInsts.clear();
+  EndPgmInsts.clear();
   PreheadersToFlush.clear();
   SLoadAddresses.clear();
 
