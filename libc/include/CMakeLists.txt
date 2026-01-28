@@ -413,6 +413,10 @@ add_header_macro(
   pthread.h
   DEPENDS
     .llvm-libc-macros.pthread_macros
+    .llvm-libc-types.__atfork_callback_t
+    .llvm-libc-types.__pthread_once_func_t
+    .llvm-libc-types.__pthread_start_t
+    .llvm-libc-types.__pthread_tss_dtor_t
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_key_t
