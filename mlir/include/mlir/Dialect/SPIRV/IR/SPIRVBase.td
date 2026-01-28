@@ -4985,4 +4985,15 @@ def SPIRV_TosaExtNaNPropagationModeAttr : SPIRV_I32EnumAttr<
       I32EnumAttrCase<"Ignore", 2>,
   ]>;
 
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
+def SPIRV_TosaExtRoundingModeAttr : SPIRV_I32EnumAttr<
+  "TosaExtRoundingModeType", "Tosa Ext Rounding Mode Type",
+  "tosa_ext_rounding_mode_type",
+  [
+      I32EnumAttrCase<"SingleRound", 1>,
+      I32EnumAttrCase<"InexactRound", 2>,
+      I32EnumAttrCase<"DoubleRound", 3>,
+  ]>;
+
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

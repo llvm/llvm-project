@@ -2648,4 +2648,137 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
 }
 
 
+def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
+  AllShapesMatch<["input", "output"]>]> {
+  let summary = "Cast operation.";
+
+  let description = [{
+    Casts a tensor from one data type to another.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_cast
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_cast
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Cast %arg0 : !spirv.arm.tensor<1x65538x1x2xi8> -> !spirv.arm.tensor<1x65538x1x2xi32>
+    %0 = spirv.Tosa.Cast %arg0 : !spirv.arm.tensor<11x5x14x4xf32> -> !spirv.arm.tensor<11x5x14x4xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaAny_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaRescaleOp : SPIRV_TosaOpWithResult<"Rescale", 65, [NoMemoryEffect,
+  AllShapesMatch<["input", "output"]>,
+  AllElementTypesMatch<["input", "input_zp"]>,
+  AllElementTypesMatch<["output", "output_zp"]>,
+  ElementTypeMatchesScale32<"multiplier">,
+  TensorLengthMatchesPerChannel<"multiplier">,
+  TensorLengthMatchesPerChannel<"shift">,
+  TypeConstraintImplicationOn<"input", I8, "output", [I8, I16, I32]>,
+  TypeConstraintImplicationOn<"input", I16, "output", [I8, I16, I32]>,
+  TypeConstraintImplicationOn<"input", I32, "output", [I8, I16, I32]>,
+  TypeConstraintImplicationOn<"input", I64, "output", [I8, I16, I32]>,
+  BoolAttrTypeConstraintImplicationOn<"input_unsigned", "input", [I8, I16]>,
+  BoolAttrTypeConstraintImplicationOn<"output_unsigned", "input", [I8, I16]>,
+  BoolAttrTypeConstraintImplicationOn<"input_unsigned", "output", [I8, I16]>,
+  BoolAttrTypeConstraintImplicationOn<"output_unsigned", "output", [I8, I16]>]> {
+  let summary = "Rescale operator.";
+
+  let description = [{
+    Rescale is defined using an integer multiply, add, and shift.
+
+    Rescale supports two precisions of multiplier: 16-bit and 32-bit. The
+    32-bit multiplier version supports two rounding modes to enable simpler
+    lowering of existing frameworks that use two stage rounding. All arithmetic
+    is designed so that it does not overflow a 64-bit accumulator and that the
+    result fits in 32 bits. In particular, a 48-bit value (represented as a
+    64-bit value in SPIR-V) cannot be scaled with the 32-bit multiplier because
+    the accumulator would need to have 80 bits.
+
+    The shift and value range are limited to allow a variety of implementations.
+    The limit of 62 on shift allows the shift to be decomposed as two right
+    shifts of 31.
+
+    Unsigned 8- and 16-bit values are only allowed in the Rescale operation,
+    to allow for compatibility with networks which expect unsigned 8-bit or
+    16-bit tensors for input and output.
+
+    Undefined behaviour may occur if the calculated result underflows or overflows
+    their integer ranges.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_rescale
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_rescale
+
+    #### Example:
+    ```mlir
+    %9 = spirv.Tosa.Rescale scale32 = true, rounding_mode = <DoubleRound>, per_channel = false, input_unsigned = false, output_unsigned = true, %arg0, %multiplier, %shift, %input_zp, %output_zp : !spirv.arm.tensor<17x29x19xi16>, !spirv.arm.tensor<1xi32>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<17x29x19xi16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_BoolConstAttr: $scale32,
+    SPIRV_TosaExtRoundingModeAttr: $rounding_mode,
+    SPIRV_BoolConstAttr: $per_channel,
+    SPIRV_BoolConstAttr: $input_unsigned,
+    SPIRV_BoolConstAttr: $output_unsigned,
+    SPIRV_TosaInteger_TensorArm: $input,
+    SPIRV_Int16OrInt32_TensorArm1D: $multiplier,
+    SPIRV_Int8_TensorArm1D: $shift,
+    SPIRV_TosaInteger_1DTensorArmOfLength1: $input_zp,
+    SPIRV_TosaInteger_1DTensorArmOfLength1: $output_zp
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `scale32` `=` $scale32 `,`
+    `rounding_mode` `=` $rounding_mode `,`
+    `per_channel` `=` $per_channel `,`
+    `input_unsigned` `=` $input_unsigned `,`
+    `output_unsigned` `=` $output_unsigned `,`
+    $input `,`
+    $multiplier `,`
+    $shift `,`
+    $input_zp `,`
+    $output_zp
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+    ::mlir::spirv::TensorArmType getMultiplierType() {
+      return cast<::mlir::spirv::TensorArmType>(getMultiplier().getType());
+    }
+    ::mlir::spirv::TensorArmType getShiftType() {
+      return cast<::mlir::spirv::TensorArmType>(getShift().getType());
+    }
+  }];
+}
+
+
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_OPS
