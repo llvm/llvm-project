@@ -396,7 +396,8 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
       return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
-    // TODO(#178506): This may overflow for large trip counts. Should use uint64_t.
+    // TODO(#178506): This may overflow for large trip counts. Should use
+    // uint64_t.
     int64_t tripCountEvenMultiple =
         constTripCount->getZExtValue() -
         (constTripCount->getZExtValue() % unrollFactor);
@@ -1568,7 +1569,8 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
   if (!loBnds || !upBnds || !steps)
     return {};
-  // TODO(#178506): The result should be SmallVector<uint64_t> and use uint64_t for trip counts.
+  // TODO(#178506): The result should be SmallVector<uint64_t> and use uint64_t
+  // for trip counts.
   llvm::SmallVector<int64_t> tripCounts;
   for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
     // TODO(#178506): Signedness is not handled correctly here.
