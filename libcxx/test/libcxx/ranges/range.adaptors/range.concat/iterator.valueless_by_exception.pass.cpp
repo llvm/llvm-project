@@ -9,7 +9,6 @@
 // REQUIRES: has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
 // REQUIRES: std-at-least-c++26
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <iostream>
 #include <ranges>
@@ -219,7 +218,7 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([=] { *iter1; }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([=] { *iter1; }(), "Trying to dereference a valueless iterator of concat_view.");
     }
   }
 
@@ -238,7 +237,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([=] { (void)(iter1 == iter3); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [=] { (void)(iter1 == iter3); }(), "Trying to compare a valueless iterator of concat_view.");
     }
   }
 
@@ -255,7 +255,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([=] { (void)(iter1 == std::default_sentinel); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([=] { (void)(iter1 == std::default_sentinel); }(),
+                                 "Trying to compare a valueless iterator of concat_view with the default sentinel.");
     }
   }
 
@@ -272,7 +273,7 @@ int main() {
     try {
       iter1 = std::move(iter2);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { --iter1; }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([&] { --iter1; }(), "Trying to decrement a valueless iterator of concat_view.");
     }
   }
 
@@ -290,7 +291,7 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { ++iter1; }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([&] { ++iter1; }(), "Trying to increment a valueless iterator of concat_view.");
     }
   }
 
@@ -308,7 +309,7 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1 += 1; }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1 += 1; }(), "Trying to increment a valueless iterator of concat_view.");
     }
   }
 
@@ -326,7 +327,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 > iter2); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 > iter2); }(), "Trying to compare a valueless iterator of concat_view.");
     }
   }
 
@@ -344,7 +346,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 >= iter2); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 >= iter2); }(), "Trying to compare a valueless iterator of concat_view.");
     }
   }
 
@@ -362,7 +365,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 < iter2); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 < iter2); }(), "Trying to compare a valueless iterator of concat_view.");
     }
   }
 
@@ -380,7 +384,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 <= iter2); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 <= iter2); }(), "Trying to compare a valueless iterator of concat_view.");
     }
   }
 
@@ -398,7 +403,9 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 - iter2); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 - iter2); }(),
+          "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
     }
   }
 
@@ -415,7 +422,8 @@ int main() {
     try {
       iter1 = std::move(iter2);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 - 1); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 - 1); }(), "Trying to subtract a valuess iterators of concat_view.");
     }
   }
 
@@ -436,7 +444,8 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] CIter it3(iter1); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { [[maybe_unused]] CIter it3(iter1); }(), "Trying to convert from a valueless iterator of concat_view.");
     }
   }
 }
