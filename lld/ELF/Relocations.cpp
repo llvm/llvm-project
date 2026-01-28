@@ -1507,13 +1507,22 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // original section/value pairs. For non-GOT non-PLT relocation case below, we
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
-  auto *directSym = makeDefined(cast<Defined>(sym));
-  directSym->allocateAux(ctx);
+  Defined *directSym = nullptr;
+  Symbol *irelSym = &sym;
+  if (flags & HAS_DIRECT_RELOC) {
+    directSym = makeDefined(cast<Defined>(sym));
+    directSym->allocateAux(ctx);
+    irelSym = directSym;
+  } else {
+    sym.allocateAux(ctx);
+  }
   auto &dyn = getIRelativeSection(ctx);
   addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
-              *directSym);
-  sym.allocateAux(ctx);
-  ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
+              *irelSym);
+  if (directSym) {
+    sym.allocateAux(ctx);
+    ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
+  }
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
