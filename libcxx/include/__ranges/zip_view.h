@@ -30,7 +30,6 @@
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
-#include <__ranges/tuple_helpers.h>
 #include <__ranges/view_interface.h>
 #include <__tuple/tuple_transform.h>
 #include <__type_traits/is_nothrow_constructible.h>

@@ -750,7 +750,6 @@ set(files
   __ranges/take_while_view.h
   __ranges/to.h
   __ranges/transform_view.h
-  __ranges/tuple_helpers.h
   __ranges/view_interface.h
   __ranges/views.h
   __ranges/zip_transform_view.h
