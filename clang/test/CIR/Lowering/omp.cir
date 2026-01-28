@@ -1,0 +1,80 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=LLVM
+!s32i = !cir.int<s, 32>
+
+// MLIR-LABEL: llvm.func @main() -> i32
+// MLIR-SAME: attributes {dso_local, no_inline, no_proto}
+// MLIR: %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// MLIR: %[[ALLOCA1:.*]] = llvm.alloca %[[C1]] x i32 {alignment = 4 : i64}
+// MLIR: %[[ALLOCA2:.*]] = llvm.alloca %{{.*}} x i32 {alignment = 4 : i64}
+// MLIR: %[[ALLOCA3:.*]] = llvm.alloca %{{.*}} x i32 {alignment = 4 : i64}
+// MLIR: omp.parallel {
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[ZERO1:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR: llvm.store %[[ZERO1]], %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[LOAD1:.*]] = llvm.load %{{.*}} {alignment = 4 : i64}
+// MLIR: %[[C10000:.*]] = llvm.mlir.constant(10000 : i32) : i32
+// MLIR: %[[CMP:.*]] = llvm.icmp "slt" %[[LOAD1]], %[[C10000]] : i32
+// MLIR: llvm.cond_br %[[CMP]], ^bb{{[0-9]+}}, ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[ZERO2:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR: llvm.store %[[ZERO2]], %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[LOAD2:.*]] = llvm.load %{{.*}} {alignment = 4 : i64}
+// MLIR: %[[C1_I32:.*]] = llvm.mlir.constant(1 : i32) : i32
+// MLIR: %[[ADD:.*]] = llvm.add %[[LOAD2]], %[[C1_I32]] overflow<nsw> : i32
+// MLIR: llvm.store %[[ADD]], %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: omp.terminator
+// MLIR: %[[ZERO3:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR: llvm.store %[[ZERO3]], %{{.*}} {alignment = 4 : i64}
+// MLIR: %[[RETVAL:.*]] = llvm.load %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.return %[[RETVAL]] : i32
+
+// Test only key runtime calls for LLVM IR CodeGen
+// LLVM: call i32 @__kmpc_global_thread_num
+// LLVM: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @main..omp_par, ptr %structArg)
+// LLVM: define internal void @main..omp_par(ptr noalias %tid.addr, ptr noalias %zero.addr, ptr %{{.*}})
+
+module {
+  cir.func no_inline no_proto dso_local @main() -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["j"] {alignment = 4 : i64}
+    omp.parallel {
+      cir.scope {
+        %4 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+        %5 = cir.const #cir.int<0> : !s32i
+        cir.store align(4) %5, %4 : !s32i, !cir.ptr<!s32i>
+        cir.for : cond {
+          %6 = cir.load align(4) %4 : !cir.ptr<!s32i>, !s32i
+          %7 = cir.const #cir.int<10000> : !s32i
+          %8 = cir.cmp(lt, %6, %7) : !s32i, !cir.bool
+          cir.condition(%8)
+        } body {
+          %6 = cir.const #cir.int<0> : !s32i
+          cir.store align(4) %6, %1 : !s32i, !cir.ptr<!s32i>
+          cir.yield
+        } step {
+          %6 = cir.load align(4) %4 : !cir.ptr<!s32i>, !s32i
+          %7 = cir.const #cir.int<1> : !s32i
+          %8 = cir.binop(add, %6, %7) nsw : !s32i
+          cir.store align(4) %8, %4 : !s32i, !cir.ptr<!s32i>
+          cir.yield
+        }
+      }
+      omp.terminator
+    }
+    %2 = cir.const #cir.int<0> : !s32i
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
+  }
+}
+

@@ -149,9 +149,7 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
   // inline initializers as definitions.
   if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
     cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
-  // For OpenMP emit declare reduction functions, if required.
-  if (astContext->getLangOpts().OpenMP)
-    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
+  // TODO(OMP): For OpenMP emit declare reduction functions, if required.
 }
 
 void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
