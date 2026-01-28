@@ -205,5 +205,36 @@ exit2:
   ret void
 }
 
+define  void @multiple_start(i1 %cond) local_unnamed_addr sanitize_memtag {
+start:
+; CHECK-LABEL: start:
+; CHECK-NOT: call void @llvm.aarch64.settag
+  %a = alloca i8, i32 48, align 8
+  br i1 %cond, label %next0, label %next1
+
+next0:
+; CHECK-LABEL: next0:
+; CHECK: call void @llvm.aarch64.settag
+; CHECK: call void @llvm.aarch64.settag
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %a)
+  call void @use8(ptr %a)
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %a)
+  br label %exit1
+
+next1:
+; CHECK-LABEL: next1:
+; CHECK: call void @llvm.aarch64.settag
+; CHECK: call void @llvm.aarch64.settag
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %a)
+  call void @use8(ptr %a)
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %a)
+  br label %exit1
+
+exit1:
+; CHECK-LABEL: exit1:
+; CHECK-NOT: call void @llvm.aarch64.settag
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

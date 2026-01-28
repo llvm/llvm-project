@@ -7332,6 +7332,10 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
 }
 
 // Lower non-temporal stores that would otherwise be broken by legalization.
+//
+// Coordinated with STNP constraints in
+// `llvm/lib/Target/AArch64/AArch64InstrInfo.td` and
+// `AArch64TargetLowering::ReplaceNodeResults`
 static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
                             const SDLoc &DL, SelectionDAG &DAG) {
   assert(StoreNode && "Expected a store operation");
@@ -29598,6 +29602,12 @@ void AArch64TargetLowering::ReplaceNodeResults(
     EVT MemVT = LoadNode->getMemoryVT();
     // Handle lowering 256 bit non temporal loads into LDNP for little-endian
     // targets.
+    //
+    // Currently we only support NT loads lowering for little-endian targets.
+    //
+    // Coordinated with LDNP constraints in
+    // `llvm/lib/Target/AArch64/AArch64InstrInfo.td`
+    // and `AArch64TTIImpl::isLegalNTLoad`.
     if (LoadNode->isNonTemporal() && Subtarget->isLittleEndian() &&
         MemVT.getSizeInBits() == 256u &&
         (MemVT.getScalarSizeInBits() == 8u ||

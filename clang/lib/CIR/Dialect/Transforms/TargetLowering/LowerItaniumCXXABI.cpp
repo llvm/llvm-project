@@ -74,6 +74,13 @@ public:
                                      mlir::Value loweredSrc,
                                      mlir::OpBuilder &builder) const override;
 
+  mlir::Value lowerBaseMethod(cir::BaseMethodOp op, mlir::Value loweredSrc,
+                              mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDerivedMethod(cir::DerivedMethodOp op,
+                                 mlir::Value loweredSrc,
+                                 mlir::OpBuilder &builder) const override;
+
   mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                  mlir::Value loweredRhs,
                                  mlir::OpBuilder &builder) const override;
@@ -433,6 +440,44 @@ LowerItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
                                            mlir::OpBuilder &builder) const {
   return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
                              /*isDerivedToBase=*/false, builder);
+}
+
+static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
+                                   std::int64_t offset, bool isDerivedToBase,
+                                   LowerModule &lowerMod,
+                                   mlir::OpBuilder &builder) {
+  if (offset == 0)
+    return loweredSrc;
+
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lowerMod);
+  auto adjField = cir::ExtractMemberOp::create(builder, op->getLoc(),
+                                               ptrdiffCIRTy, loweredSrc, 1);
+
+  auto offsetValue = cir::ConstantOp::create(
+      builder, op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
+  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
+  auto adjustedAdjField = cir::BinOp::create(
+      builder, op->getLoc(), ptrdiffCIRTy, binOpKind, adjField, offsetValue);
+  adjustedAdjField.setNoSignedWrap(true);
+
+  return cir::InsertMemberOp::create(builder, op->getLoc(), loweredSrc, 1,
+                                     adjustedAdjField);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerBaseMethod(cir::BaseMethodOp op,
+                                    mlir::Value loweredSrc,
+                                    mlir::OpBuilder &builder) const {
+  return lowerMethodCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                         /*isDerivedToBase=*/true, lm, builder);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerDerivedMethod(cir::DerivedMethodOp op,
+                                       mlir::Value loweredSrc,
+                                       mlir::OpBuilder &builder) const {
+  return lowerMethodCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                         /*isDerivedToBase=*/false, lm, builder);
 }
 
 mlir::Value
