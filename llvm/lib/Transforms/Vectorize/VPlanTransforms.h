@@ -49,7 +49,11 @@ struct VPlanTransforms {
       // in case of failures:
       if (PrintAfterEachVPlanPass) {
         dbgs() << "VPlan after " << PassName << '\n';
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
         dbgs() << Plan << '\n';
+#else
+        dbgs() << "LLVM DUMP is disabled!\n";
+#endif
       }
       if (VerifyEachVPlan && EnableVerify)
         verifyVPlanIsValid(Plan);
