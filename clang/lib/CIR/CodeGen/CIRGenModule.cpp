@@ -2143,8 +2143,9 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   constructAttributeList(func.getName(), info, globalDecl, pal, callingConv,
                          sideEffect,
                          /*attrOnCallSite=*/false, isThunk);
-  // TODO(cir): we need to set Extra Attrs here when that gets implemented.
-  assert(!cir::MissingFeatures::opFuncExtraAttrs());
+
+  for (mlir::NamedAttribute attr : pal)
+    func->setAttr(attr.getName(), attr.getValue());
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
