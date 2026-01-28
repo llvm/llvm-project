@@ -608,7 +608,8 @@ private:
   /// \param[in] sym
   ///     The Symbol that corresponds to a function that needs to be
   ///     created with generic type (unitptr_t foo(...)).
-  void AddOneFunction(NameSearchContext &context, Function *fun, Symbol *sym);
+  void AddOneFunction(NameSearchContext &context, Function *fun,
+                      const Symbol *sym);
 
   /// Use the NameSearchContext to generate a Decl for the given register.
   ///

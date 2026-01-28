@@ -867,6 +867,11 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
     llvm::sys::path::append(p, Library);
     CmdArgs.push_back(Args.MakeArgString(p));
   }
+
+  // FIXME: The ROCm builds implicitly depends on this being present.
+  if (ActiveKinds & Action::OFK_HIP)
+    CmdArgs.push_back(
+        Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
