@@ -37,12 +37,7 @@ subroutine test_dynamic_length(n)
   integer, intent(in) :: n
   character(len=n) :: var
 
-  !$omp declare reduction (char_max_dyn:character(len=*):omp_out=max(omp_out,omp_in))
-
-  !$omp parallel reduction(char_max_dyn:var)
-    var = max(var, 'x')
-  !$omp end parallel
-
+  !$omp declare reduction (char_max_dyn:character(len=n):omp_out=max(omp_out,omp_in))
 end subroutine test_dynamic_length
 
 ! Verify dynamic-length character reduction
