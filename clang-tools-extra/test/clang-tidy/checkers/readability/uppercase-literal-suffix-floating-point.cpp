@@ -132,3 +132,8 @@ void macros() {
   static_assert(is_same<decltype(m0), const float>::value, "");
   static_assert(m0 == 1.0F, "");
 }
+
+long double operator""_f(long double);
+void user_defined_literals() {
+  1.0_f;
+}
