@@ -1400,3 +1400,33 @@ a void Bar(this int) { // expected-note {{candidate function}}
 }
 
 }
+
+namespace ConstexprBacktrace {
+  struct S {
+    constexpr int foo(this const S& self, int b) {
+      (void)(1/b); // expected-note {{division by zero}}
+      return 0;
+    }
+    constexpr int foo2(this const S& self) {
+      (void)(1/0); // expected-note {{division by zero}} \
+                   // expected-warning {{division by zero is undefined}}
+      return 0;
+    }
+  };
+
+  constexpr bool test() {
+    S s;
+    s.foo(0); // expected-note {{in call to 's.foo(0)'}}
+    return true;
+  }
+  static_assert(test()); // expected-error {{not an integral constant expression}} \
+                         // expected-note {{in call to}}
+
+  constexpr bool test2() {
+    S s;
+    s.foo2(); // expected-note {{in call to 's.foo2()'}}
+    return true;
+  }
+  static_assert(test2()); // expected-error {{not an integral constant expression}} \
+                          // expected-note {{in call to}}
+}
