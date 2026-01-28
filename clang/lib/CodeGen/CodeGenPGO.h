@@ -110,7 +110,7 @@ private:
   bool canEmitMCDCCoverage(const CGBuilderTy &Builder);
 
 public:
-  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+  bool hasSkipCounter(const Stmt *S) const;
 
   bool isMCDCDecisionExpr(const Expr *E) const {
     if (!RegionMCDCState)
