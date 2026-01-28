@@ -1,12 +1,16 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm  \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)"
+// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
+// RUN:   -Wdeprecated-declarations -Wconversion -o - | FileCheck %s --check-prefixes=CHECK \
+// RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)"
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s  \
+// RUN:   -verify -verify-ignore-unexpected=note
 
 // CHECK: define [[FNATTRS]] float @_Z16test_asin_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.asin.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_asin_double ( double p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x 64 bit API lowering for asin is deprecated. Explicitly cast parameters to 32 or 16 bit types.}}
   return asin ( p0 );
 }
 
@@ -15,6 +19,7 @@ float test_asin_double ( double p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.asin.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_asin_double2 ( double2 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x 64 bit API lowering for asin is deprecated. Explicitly cast parameters to 32 or 16 bit types.}}
   return asin ( p0 );
 }
 
@@ -23,6 +28,7 @@ float2 test_asin_double2 ( double2 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.asin.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_asin_double3 ( double3 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x 64 bit API lowering for asin is deprecated. Explicitly cast parameters to 32 or 16 bit types.}}
   return asin ( p0 );
 }
 
@@ -31,6 +37,7 @@ float3 test_asin_double3 ( double3 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.asin.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_asin_double4 ( double4 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x 64 bit API lowering for asin is deprecated. Explicitly cast parameters to 32 or 16 bit types.}}
   return asin ( p0 );
 }
 
@@ -39,6 +46,7 @@ float4 test_asin_double4 ( double4 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.asin.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_asin_int ( int p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -47,6 +55,7 @@ float test_asin_int ( int p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.asin.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_asin_int2 ( int2 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -55,6 +64,7 @@ float2 test_asin_int2 ( int2 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.asin.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_asin_int3 ( int3 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -63,6 +73,7 @@ float3 test_asin_int3 ( int3 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.asin.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_asin_int4 ( int4 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -71,6 +82,7 @@ float4 test_asin_int4 ( int4 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.asin.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_asin_uint ( uint p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -79,6 +91,7 @@ float test_asin_uint ( uint p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.asin.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_asin_uint2 ( uint2 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -87,6 +100,7 @@ float2 test_asin_uint2 ( uint2 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.asin.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_asin_uint3 ( uint3 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -95,6 +109,7 @@ float3 test_asin_uint3 ( uint3 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.asin.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_asin_uint4 ( uint4 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -103,6 +118,7 @@ float4 test_asin_uint4 ( uint4 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.asin.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_asin_int64_t ( int64_t p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -111,6 +127,7 @@ float test_asin_int64_t ( int64_t p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.asin.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_asin_int64_t2 ( int64_t2 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -119,6 +136,7 @@ float2 test_asin_int64_t2 ( int64_t2 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.asin.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_asin_int64_t3 ( int64_t3 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -127,6 +145,7 @@ float3 test_asin_int64_t3 ( int64_t3 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.asin.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_asin_int64_t4 ( int64_t4 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -135,6 +154,7 @@ float4 test_asin_int64_t4 ( int64_t4 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.asin.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_asin_uint64_t ( uint64_t p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -143,6 +163,7 @@ float test_asin_uint64_t ( uint64_t p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.asin.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_asin_uint64_t2 ( uint64_t2 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -151,6 +172,7 @@ float2 test_asin_uint64_t2 ( uint64_t2 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.asin.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_asin_uint64_t3 ( uint64_t3 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
 
@@ -159,5 +181,6 @@ float3 test_asin_uint64_t3 ( uint64_t3 p0 ) {
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.asin.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_asin_uint64_t4 ( uint64_t4 p0 ) {
+// expected-warning@+1 {{'asin' is deprecated: In 202x int lowering for asin is deprecated. Explicitly cast parameters to float types.}}
   return asin ( p0 );
 }
