@@ -71,8 +71,6 @@ FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
 /// according to the lane_layout. We simply divide each dimension of tensor
 /// descriptor shape by corresponding lane_layout dimension. If
 /// array_length > 1, that is appended to the front of the distributed shape.
-/// NOTE: This is the vector type that will be returned by the
-/// gpu.warp_execute_on_lane0 op.
 ///
 /// Examples:
 /// | original vector shape | lane_layout | distributed vector shape |

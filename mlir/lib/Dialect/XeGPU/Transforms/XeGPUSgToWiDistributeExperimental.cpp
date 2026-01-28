@@ -257,8 +257,8 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
 
 /// Distributes elementwise ops to workitem-level elementwise ops. This
 /// currently handles elementwise ops with single result only.
-struct WgToWiElementWise : public ConversionPattern {
-  WgToWiElementWise(TypeConverter &typeConverter, MLIRContext *ctx)
+struct SgToWiElementWise : public ConversionPattern {
+  SgToWiElementWise(TypeConverter &typeConverter, MLIRContext *ctx)
       : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
 
   LogicalResult
@@ -556,6 +556,6 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
-               WgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd>(
+               SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd>(
       typeConverter, patterns.getContext());
 }
