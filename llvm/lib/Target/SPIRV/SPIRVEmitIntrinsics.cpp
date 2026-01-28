@@ -92,6 +92,23 @@ class GlobalVariableReferences {
     }
   }
 
+  bool propagateGlobalToGlobalReferences(
+      OneToManyMapTy<GlobalVariable *, GlobalVariable *>
+          &GlobalIsReferencedByGlobal) {
+    bool Changed = false;
+    for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
+      SmallVector<GlobalVariable *> OldReferencedBy(ReferencedBy.begin(),
+                                                    ReferencedBy.end());
+      for (GlobalVariable *ReferencedGV : OldReferencedBy) {
+        auto It = GlobalIsReferencedByGlobal.find(ReferencedGV);
+        if (It == GlobalIsReferencedByGlobal.end())
+          continue;
+        Changed |= set_union(ReferencedBy, It->second);
+      }
+    }
+    return Changed;
+  }
+
 public:
   void init(Module &M) {
     // Collect which global variables are referenced by which global variables
@@ -104,20 +121,8 @@ public:
                               GlobalIsReferencedByFun);
 
     // Compute indirect references by iterating until a fixed point is found.
-    bool Changed;
-    do {
-      Changed = false;
-      for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
-        SmallVector<GlobalVariable *> OldReferencedBy(ReferencedBy.begin(),
-                                                      ReferencedBy.end());
-        for (GlobalVariable *ReferencedGV : OldReferencedBy) {
-          auto It = GlobalIsReferencedByGlobal.find(ReferencedGV);
-          if (It == GlobalIsReferencedByGlobal.end())
-            continue;
-          Changed |= set_union(ReferencedBy, It->second);
-        }
-      }
-    } while (Changed);
+    while (propagateGlobalToGlobalReferences(GlobalIsReferencedByGlobal))
+      (void)0;
 
     for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
       auto &ReferencedByF = GlobalIsReferencedByFun[GV];
