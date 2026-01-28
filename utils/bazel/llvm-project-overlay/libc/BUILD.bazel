@@ -2417,6 +2417,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtf16",
+    hdrs = ["src/__support/math/sqrtf16.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_asin_utils",
     hdrs = ["src/__support/math/asin_utils.h"],
     deps = [
@@ -3037,6 +3046,17 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogbf16",
+    hdrs = ["src/__support/math/llogbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -4794,7 +4814,10 @@ libc_math_function(name = "llogbl")
 
 libc_math_function(name = "llogbf128")
 
-libc_math_function(name = "llogbf16")
+libc_math_function(
+    name = "llogbf16",
+    additional_deps = [":__support_math_llogbf16"],
+)
 
 libc_math_function(name = "llrint")
 
@@ -5285,7 +5308,7 @@ libc_math_function(
 libc_math_function(
     name = "sqrtf16",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_sqrtf16",
     ],
 )
 

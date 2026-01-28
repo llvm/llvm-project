@@ -689,6 +689,16 @@ add_header_library(
 )
 
 add_header_library(
+  llogbf16
+  HDRS
+    llogbf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   ilogbf
   HDRS
     ilogbf.h
@@ -1089,6 +1099,15 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sqrtf16
+  HDRS
+    sqrtf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.include.llvm-libc-macros.float16_macros
 )
 
 add_header_library(

@@ -82,8 +82,10 @@ add_fp_unittest(
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
     libc.src.__support.math.llogbf
+    libc.src.__support.math.llogbf16
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
+    libc.src.__support.math.sqrtf16
     libc.src.__support.math.sin
     libc.src.__support.math.sinf
     libc.src.__support.math.sinf16

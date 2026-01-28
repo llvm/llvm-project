@@ -1816,8 +1816,7 @@ add_entrypoint_object(
   HDRS
     ../llogbf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.llogbf16
 )
 
 add_entrypoint_object(
@@ -3025,7 +3024,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf16.h
   DEPENDS
-    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.math.sqrtf16
 )
 
 add_entrypoint_object(
