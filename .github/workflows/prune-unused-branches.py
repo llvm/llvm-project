@@ -74,9 +74,14 @@ def get_user_branches_to_remove(
 
 def generate_patch_for_branch(branch_name: str) -> bytes:
     command_vector = ["git", "diff", f"main...origin/{branch_name}"]
-    result = subprocess.run(
-        command_vector, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-    )
+    try:
+        result = subprocess.run(
+            command_vector, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
+    except subprocess.CalledProcessError as process_error:
+        print(process_error.stderr)
+        print(process_error.stdout)
+        raise process_error
     return result.stdout
 
 
