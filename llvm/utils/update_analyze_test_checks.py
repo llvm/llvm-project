@@ -41,6 +41,27 @@ import re
 from UpdateTestChecks import common
 
 
+def extract_vplan(raw_output, vplan_name_prefix="VPlan '"):
+    """
+    Extract a VPlan block from loop-vectorize debug output using brace-depth
+    tracking.
+    TODO: Remove once only -vplan-print-after is supported.
+    """
+    result = []
+    brace_depth = 0
+    for line in raw_output.splitlines():
+        if not brace_depth and line.startswith(vplan_name_prefix):
+            brace_depth = 1
+            result.append(line)
+            continue
+        if brace_depth:
+            brace_depth += line.count("{") - line.count("}")
+            result.append(line)
+            if brace_depth == 0:
+                break
+    return "\n".join(result) if result else None
+
+
 def update_test(opt_basename: str, ti: common.TestInfo):
     triple_in_ir = None
     for l in ti.input_lines:
@@ -99,6 +120,14 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         raw_tool_outputs = common.invoke_tool(ti.args.opt_binary, opt_args, ti.path)
 
+        # Detect VPlan output for LV pass. Don't use VPlan mode if filters are
+        # active since the user is likely filtering to specific LV debug lines
+        # (e.g., cost model).
+        is_vplan_output = (
+            not ti.args.filters
+            and re.search(r"VPlan 'Initial VPlan", raw_tool_outputs) is not None
+        )
+
         regex_map = {
             r"Printing analysis ": common.ANALYZE_FUNCTION_RE,
             r"(LV|LDist|HashRecognize): Checking a loop in ": common.LOOP_PASS_DEBUG_RE,
@@ -108,9 +137,21 @@ def update_test(opt_basename: str, ti: common.TestInfo):
             if re.search(split_by, raw_tool_outputs) is None:
                 continue
             for raw_tool_output in re.split(split_by, raw_tool_outputs):
+                if is_vplan_output:
+                    vplan_output = extract_vplan(
+                        raw_tool_output, "VPlan 'Initial VPlan"
+                    )
+                    if not vplan_output:
+                        continue
+                    # Reconstruct minimal output: function header line + VPlan
+                    func_header = raw_tool_output.split("\n")[0]
+                    raw_tool_output = func_header + "\n" + vplan_output
+
+                # For VPlan mode, don't scrub whitespace - preserve exact alignment
+                scrubber = (lambda body: body) if is_vplan_output else common.scrub_body
                 builder.process_run_line(
                     regex,
-                    common.scrub_body,
+                    scrubber,
                     raw_tool_output,
                     prefixes,
                 )
