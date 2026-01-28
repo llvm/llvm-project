@@ -12,7 +12,14 @@
 using namespace llvm;
 
 namespace llvm {
-extern cl::opt<unsigned> AnnotateStringLiteralSectionPrefix;
+// FIXME: This option is added for incremental rollout purposes.
+// After the option, string literal partitioning should be implied by
+// AnnotateStaticDataSectionPrefix in MemProfUse.cpp and this option should be
+// cleaned up.
+cl::opt<bool> AnnotateStringLiteralSectionPrefix(
+    "memprof-annotate-string-literal-section-prefix", cl::init(false),
+    cl::Hidden,
+    cl::desc("If true, annotate the string literal data section prefix"));
 namespace memprof {
 // Returns true iff the global variable has custom section either by
 // __attribute__((section("name")))
