@@ -2108,6 +2108,72 @@ def overflow_combines: GICombineGroup<[
   match_subo_no_overflow
 ]>;
 
+// trunc(abs(sext(x) - sext(y))) -> abds(x, y)
+def trunc_abds : GICombineRule<
+  (defs root:$root),
+  (match (G_SEXT $lhs, $x),
+         (G_SEXT $rhs, $y),
+         (G_SUB $sub, $lhs, $rhs),
+         (G_ABS $abs, $sub),
+         (G_TRUNC $root, $abs):$trunc,
+         [{ return Helper.matchTruncAbds(*${trunc}); }]),
+  (apply (G_ABDS $root, $x, $y))>;
+
+// trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
+def trunc_abdu : GICombineRule<
+  (defs root:$root),
+  (match (G_ZEXT $lhs, $x),
+         (G_ZEXT $rhs, $y),
+         (G_SUB $sub, $lhs, $rhs),
+         (G_ABS $abs, $sub),
+         (G_TRUNC $root, $abs):$trunc,
+         [{ return Helper.matchTruncAbdu(*${trunc}); }]),
+  (apply (G_ABDU $root, $x, $y))>;
+
+def select_abds : GICombineRule<
+  (defs root:$root),
+  (match (G_SUB $lhs, $inputr, $inputl),
+         (G_SUB $rhs, $inputl, $inputr),
+         (G_ICMP $cond, $p, $inputl, $inputr),
+         (G_SELECT $root, $cond, $lhs, $rhs):$select,
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_SLT && Helper.matchSelectAbds(*${select}); }]),
+  (apply (G_ABDS $root, $inputl, $inputr))>;
+
+def select_abdu : GICombineRule<
+  (defs root:$root),
+  (match (G_SUB $lhs, $inputr, $inputl),
+         (G_SUB $rhs, $inputl, $inputr),
+         (G_ICMP $cond, $p, $inputl, $inputr),
+         (G_SELECT $root, $cond, $lhs, $rhs):$select,
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_ULT && Helper.matchSelectAbdu(*${select}); }]),
+  (apply (G_ABDU $root, $inputl, $inputr))>;
+
+def sub_abds : GICombineRule<
+  (defs root:$root),
+  (match (G_SMAX $smax, $inputl, $inputr),
+         (G_SMIN $smin, $inputl, $inputr),
+         (G_SUB $root, $smax, $smin):$sub,
+         [{ return Helper.matchSubAbds(*${sub}); }]),
+  (apply (G_ABDS $root, $inputl, $inputr))>;
+
+def sub_abdu : GICombineRule<
+  (defs root:$root),
+  (match (G_UMAX $umax, $inputl, $inputr),
+         (G_UMIN $umin, $inputl, $inputr),
+         (G_SUB $root, $umax, $umin):$sub,
+         [{ return Helper.matchSubAbdu(*${sub}); }]),
+  (apply (G_ABDU $root, $inputl, $inputr))>;
+
+def abd_su_combines: GICombineGroup<[
+  trunc_abds,
+  trunc_abdu,
+  select_abds,
+  select_abdu,
+  sub_abds,
+  sub_abdu
+]>;
+
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -2175,7 +2241,7 @@ def shuffle_combines : GICombineGroup<[combine_shuffle_concat,
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines, cast_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
-    combine_extracted_vector_load,
+    combine_extracted_vector_load, abd_su_combines,
     undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain, cmp_combines,

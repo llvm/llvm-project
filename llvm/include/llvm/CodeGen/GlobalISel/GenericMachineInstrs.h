@@ -853,6 +853,16 @@ public:
   }
 };
 
+/// Represents an abs.
+class GAbs : public GenericMachineInstr {
+public:
+  Register getSourceReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ABS;
+  }
+};
+
 /// Represents a cast operation.
 /// It models the llvm::CastInst concept.
 /// The exception is bitcast.
@@ -1025,6 +1035,25 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
+  };
+};
+
+/// Represents an integer max or min op.
+class GMaxMinOp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getReg(1); }
+  Register getRHSReg() const { return getReg(2); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SMAX:
+    case TargetOpcode::G_SMIN:
+    case TargetOpcode::G_UMAX:
+    case TargetOpcode::G_UMIN:
+      return true;
+    default:
+      return false;
+    }
   };
 };
 
