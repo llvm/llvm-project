@@ -30,14 +30,14 @@ namespace inner {
 // CHECK-HTML-NEXT:                    <li>
 // CHECK-HTML-NEXT:                        <details open>
 // CHECK-HTML-NEXT:                            <summary class="sidebar-section">
-// CHECK-HTML-NEXT:                                <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+// CHECK-HTML-NEXT:                                <a class="sidebar-item" href="#Index">Index</a>
 // CHECK-HTML-NEXT:                            </summary>
 // CHECK-HTML-NEXT:                            <ul>
 // CHECK-HTML-NEXT:                                <li class="sidebar-item-container">
-// CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#GlobalNamespace">GlobalNamespace</a>
+// CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">GlobalNamespace</a>
 // CHECK-HTML-NEXT:                                </li>
 // CHECK-HTML-NEXT:                                <li class="sidebar-item-container">
-// CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#inner">inner</a>
+// CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">inner</a>
 // CHECK-HTML-NEXT:                                </li>
 // CHECK-HTML-NEXT:                            </ul>
 // CHECK-HTML-NEXT:                        </details> 
@@ -50,12 +50,12 @@ namespace inner {
 // CHECK-HTML-NEXT:                    <h2>Index</h2>
 // CHECK-HTML-NEXT:                    <div>
 // CHECK-HTML-NEXT:                        <a href="GlobalNamespace/index.html">
-// CHECK-HTML-NEXT:                            <pre><code class="language-cpp code-clang-doc">namespace GlobalNamespace</code></pre>
+// CHECK-HTML-NEXT:                            <pre><code id="{{([0-9A-F]{40})}}" class="language-cpp code-clang-doc">namespace GlobalNamespace</code></pre>
 // CHECK-HTML-NEXT:                        </a>
 // CHECK-HTML-NEXT:                    </div>
 // CHECK-HTML-NEXT:                    <div>
 // CHECK-HTML-NEXT:                        <a href="inner/index.html">
-// CHECK-HTML-NEXT:                            <pre><code class="language-cpp code-clang-doc">namespace inner</code></pre>
+// CHECK-HTML-NEXT:                            <pre><code id="{{([0-9A-F]{40})}}" class="language-cpp code-clang-doc">namespace inner</code></pre>
 // CHECK-HTML-NEXT:                        </a>
 // CHECK-HTML-NEXT:                    </div>
 // CHECK-HTML-NEXT:                </section>

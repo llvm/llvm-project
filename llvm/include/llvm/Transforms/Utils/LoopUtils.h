@@ -13,8 +13,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
-#include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -37,6 +35,7 @@ class MemoryAccess;
 class MemorySSA;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
+struct PointerDiffInfo;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;

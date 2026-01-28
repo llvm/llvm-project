@@ -72,6 +72,7 @@ static Statistic RejectStatistics[] = {
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
               "Complicated access semantics (volatile or atomic)"),
+    SCOP_STAT(IncompatibleType, "Non-fixed size type (e.g. Scalable vector)"),
     SCOP_STAT(Alias, "Base address aliasing"),
     SCOP_STAT(Other, ""),
     SCOP_STAT(IntToPtr, "Integer to pointer conversions"),
@@ -841,4 +842,35 @@ const DebugLoc &ReportUnprofitable::getDebugLoc() const {
 bool ReportUnprofitable::classof(const RejectReason *RR) {
   return RR->getKind() == RejectReasonKind::Unprofitable;
 }
+
+//===----------------------------------------------------------------------===//
+// ReportIncompatibleType
+
+ReportIncompatibleType::ReportIncompatibleType(Instruction *Inst, Type *Ty)
+    : RejectReason(RejectReasonKind::IncompatibleType), Inst(Inst), Ty(Ty) {}
+
+std::string ReportIncompatibleType::getRemarkName() const {
+  return "IncompatibleType";
+}
+
+const BasicBlock *ReportIncompatibleType::getRemarkBB() const {
+  return Inst->getParent();
+}
+
+std::string ReportIncompatibleType::getMessage() const {
+  return "Incompatible type: " + *Inst;
+}
+
+const DebugLoc &ReportIncompatibleType::getDebugLoc() const {
+  return Inst->getDebugLoc();
+}
+
+std::string ReportIncompatibleType::getEndUserMessage() const {
+  return "Incompatible (non-fixed size) type: " + *Ty;
+}
+
+bool ReportIncompatibleType::classof(const RejectReason *RR) {
+  return RR->getKind() == RejectReasonKind::IncompatibleType;
+}
+
 } // namespace polly

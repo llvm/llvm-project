@@ -357,12 +357,14 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
 
   // X8 and X9 need to be restored to their values on function entry, which we
   // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
-  TII->loadRegFromStackSlot(
-      MBB, MBBI, RISCV::X9, RVFI->getInterruptCSRFrameIndex(1),
-      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
-  TII->loadRegFromStackSlot(
-      MBB, MBBI, RISCV::X8, RVFI->getInterruptCSRFrameIndex(0),
-      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X9,
+                            RVFI->getInterruptCSRFrameIndex(1),
+                            &RISCV::GPRRegClass, Register(),
+                            RISCV::NoSubRegister, MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X8,
+                            RVFI->getInterruptCSRFrameIndex(0),
+                            &RISCV::GPRRegClass, Register(),
+                            RISCV::NoSubRegister, MachineInstr::FrameSetup);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved
@@ -2257,6 +2259,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register(),
+                               RISCV::NoSubRegister,
                                MachineInstr::FrameDestroy);
       assert(MI != MBB.begin() &&
              "loadRegFromStackSlot didn't insert any code!");

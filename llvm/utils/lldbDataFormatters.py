@@ -63,6 +63,11 @@ def __lldb_init_module(debugger, internal_dict):
         '-x "^llvm::PointerIntPair<.+>$"'
     )
     debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.PointerUnionSynthProvider "
+        '-x "^llvm::PointerUnion<.+>$"'
+    )
+    debugger.HandleCommand(
         "type summary add -w llvm "
         f"-e -F {__name__}.DenseMapSummary "
         '-x "^llvm::DenseMap<.+>$"'
@@ -316,6 +321,56 @@ class PointerIntPairSynthProvider:
         )
         self.int_valobj = self._get_int(
             int_shift.GetValueAsUnsigned(), int_mask.GetValueAsUnsigned(), int_ty
+        )
+
+
+class PointerUnionSynthProvider:
+    def __init__(self, valobj, internal_dict):
+        self.valobj = valobj
+        self.update()
+
+    def num_children(self):
+        return 1
+
+    def get_child_index(self, name):
+        if name == "Pointer":
+            return 0
+        return None
+
+    def get_child_at_index(self, index):
+        if index != 0:
+            return None
+
+        return self.pointer_valobj
+
+    def update(self):
+        pointer_int_pair: SBValue = self.valobj.GetChildMemberWithName(
+            "Val"
+        ).GetSyntheticValue()
+
+        if not pointer_int_pair:
+            return
+
+        pointer: SBValue = pointer_int_pair.GetChildAtIndex(0)
+        if not pointer:
+            return
+
+        active_tag: SBValue = pointer_int_pair.GetChildAtIndex(1)
+        if not active_tag:
+            return
+
+        # Index into the parameter pack of llvm::PointerUnion to find the active type.
+        active_type: SBType = self.valobj.GetType().GetTemplateArgumentType(
+            active_tag.GetValueAsUnsigned()
+        )
+        if not active_type:
+            return
+
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([pointer.GetValueAsUnsigned()])
+
+        self.pointer_valobj = self.valobj.CreateValueFromData(
+            "Pointer", data, active_type
         )
 
 

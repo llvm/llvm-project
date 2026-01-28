@@ -701,6 +701,18 @@ define void @call_will_return() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_noreturn
+define void @call_noreturn() {
+; CHECK: llvm.call @f() {noreturn}
+  call void @f() noreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
