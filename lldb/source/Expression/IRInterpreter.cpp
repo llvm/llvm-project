@@ -70,13 +70,6 @@ static std::string PrintType(const Type *type, bool truncate = false) {
   return s;
 }
 
-static std::string PrintScalar(const lldb_private::Scalar &value) {
-  std::string s;
-  raw_string_ostream rso(s);
-  rso << value;
-  return s;
-}
-
 static bool CanIgnoreCall(const CallInst *call) {
   const llvm::Function *called_function = call->getCalledFunction();
 
@@ -1303,8 +1296,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       // Casting floating point values that are out of bounds of the target type
       // is undefined behaviour.
       if (status & llvm::APFloatBase::opInvalidOp) {
-        LLDB_LOGF(log, "Couldn't convert %s to %s", PrintScalar(S).c_str(),
-                  PrintType(inst->getType()).c_str());
+        LLDB_LOG(log, "Couldn't convert {0} to {1}", S, *inst->getType());
         error = lldb_private::Status::FromErrorString(bad_conversion_error);
         return false;
       }
