@@ -575,7 +575,7 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __swap_without_allocator(__split_buffer<value_type, allocator_type, _Layout>& __other) _NOEXCEPT {
-    __base_type::__swap_without_allocator(__other);
+    __base_type::__swap_without_allocator(static_cast<__base_type&>(__other));
   }
 
 private:
