@@ -12,6 +12,7 @@
 using namespace llvm;
 
 namespace llvm {
+extern cl::opt<unsigned> AnnotateStringLiteralSectionPrefix;
 namespace memprof {
 // Returns true iff the global variable has custom section either by
 // __attribute__((section("name")))
@@ -124,11 +125,12 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
 #endif
 
   if (EnableDataAccessProf) {
-    // Module flag `HasDataAccessProf` is 1 -> empty section prefix means
-    // unknown hotness except for string literals.
+    // Both data access profiles and PGO counters are available. Use the
+    //  hotter one.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
         GV && llvm::memprof::IsAnnotationOK(*GV) &&
-        !GV->getName().starts_with(".str")) {
+        (AnnotateStringLiteralSectionPrefix ||
+         !GV->getName().starts_with(".str"))) {
       auto HotnessFromDataAccessProf =
           getSectionHotnessUsingDataAccessProfile(GV->getSectionPrefix());
 
@@ -140,8 +142,6 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
         return Prefix;
       }
 
-      // Both data access profiles and PGO counters are available. Use the
-      // hotter one.
       auto HotnessFromPGO = getConstantHotnessUsingProfileCount(C, PSI, *Count);
       StaticDataHotness GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
       if (HotnessFromDataAccessProf == StaticDataHotness::Hot ||
