@@ -210,3 +210,71 @@ define i1 @icmp_shl_var_amount_nsw(i32 %x, i32 %y) {
   %cmp = icmp eq i32 %shlx, %add
   ret i1 %cmp
 }
+
+; Test: ult (Unsigned Less Than) with nuw
+define i1 @icmp_shl_nuw_ult(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_nuw_ult(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nuw i32 %x, 5
+  %shly = shl nuw i32 %y, 5
+  %add = add nuw i32 %shly, 32
+  %cmp = icmp ult i32 %shlx, %add
+  ret i1 %cmp
+}
+
+; Test: ugt (Unsigned Greater Than) with nuw
+define i1 @icmp_shl_nuw_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_nuw_ugt(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nuw i32 %x, 5
+  %shly = shl nuw i32 %y, 5
+  %add = add nuw i32 %shly, 32
+  %cmp = icmp ugt i32 %shlx, %add
+  ret i1 %cmp
+}
+
+; Test: slt (Signed Less Than) with nsw
+define i1 @icmp_shl_nsw_slt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_nsw_slt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nsw i32 %x, 5
+  %shly = shl nsw i32 %y, 5
+  %add = add nsw i32 %shly, 32
+  %cmp = icmp slt i32 %shlx, %add
+  ret i1 %cmp
+}
+
+; Test: sgt (Signed Greater Than) with nsw
+define i1 @icmp_shl_nsw_sgt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_nsw_sgt(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nsw i32 %x, 5
+  %shly = shl nsw i32 %y, 5
+  %add = add nsw i32 %shly, 32
+  %cmp = icmp sgt i32 %shlx, %add
+  ret i1 %cmp
+}
+
+; Test: sle (Signed Less or Equal) with nsw
+define i1 @icmp_shl_nsw_sle(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_shl_nsw_sle(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nsw i32 %x, 5
+  %shly = shl nsw i32 %y, 5
+  %add = add nsw i32 %shly, 32
+  %cmp = icmp sle i32 %shlx, %add
+  ret i1 %cmp
+}

@@ -7633,22 +7633,23 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
   //   -> icmp X, (add nsw/nuw Y, K >> L)
   // We use AShr for nsw and LShr for nuw to safely peel off the shift.
   Value *X;
-  const APInt *CShAmt;
-  unsigned ShAmt;
-  if (match(Op0, m_NSWShl(m_Value(X), m_APIntAllowPoison(CShAmt))) &&
-      !CxtI.isUnsigned()) {
-    ShAmt = CShAmt->getZExtValue();
-    if (canEvaluateShifted(Op1, ShAmt, Instruction::AShr, &CxtI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, Instruction::AShr);
+  uint64_t ShAmt;
+  if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+      !CxtI.isSigned()) {
+    if (ShAmt >= X->getType()->getScalarSizeInBits())
+      return nullptr;
+    if (canEvaluateShifted(Op1, ShAmt, Instruction::LShr, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, Instruction::LShr);
       return new ICmpInst(Pred, X, NewOp1);
     }
   }
 
-  if (match(Op0, m_NUWShl(m_Value(X), m_APIntAllowPoison(CShAmt))) &&
-      !CxtI.isSigned()) {
-    ShAmt = CShAmt->getZExtValue();
-    if (canEvaluateShifted(Op1, ShAmt, Instruction::LShr, &CxtI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, Instruction::LShr);
+  if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+      !CxtI.isUnsigned()) {
+    if (ShAmt >= X->getType()->getScalarSizeInBits())
+      return nullptr;
+    if (canEvaluateShifted(Op1, ShAmt, Instruction::AShr, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, Instruction::AShr);
       return new ICmpInst(Pred, X, NewOp1);
     }
   }

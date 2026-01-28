@@ -142,8 +142,8 @@ define i8 @lshr_cttz_zero_is_undef_vec(<2 x i8> %x) {
 define i8 @lshr_exact(i8 %x) {
 ; CHECK-LABEL: @lshr_exact(
 ; CHECK-NEXT:    [[LSHR:%.*]] = and i8 [[TMP1:%.*]], 63
-; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i8 [[LSHR]], 1
-; CHECK-NEXT:    ret i8 [[ADD1]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[LSHR]], 1
+; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %shl = shl i8 %x, 2
   %add = add i8 %shl, 4

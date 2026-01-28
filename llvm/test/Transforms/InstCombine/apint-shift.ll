@@ -539,7 +539,7 @@ define i37 @test25(i37 %AA, i37 %BB) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[D:%.*]] = and i37 [[AA:%.*]], -131072
 ; CHECK-NEXT:    [[F:%.*]] = and i37 [[C2:%.*]], -131072
-; CHECK-NEXT:    [[E1:%.*]] = add nuw nsw i37 [[F]], [[D]]
+; CHECK-NEXT:    [[E1:%.*]] = add i37 [[F]], [[D]]
 ; CHECK-NEXT:    ret i37 [[E1]]
 ;
   %C = lshr i37 %BB, 17

@@ -585,7 +585,8 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 /// where the client will ask if E can be computed shifted right by 64-bits. If
 /// this succeeds, getShiftedValue() will be called to produce the value.
 bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
-                                          unsigned ShiftOp, Instruction *CxtI) {
+                                          Instruction::BinaryOps ShiftOp,
+                                          Instruction *CxtI) {
   // We can always evaluate immediate constants shifted left. For right shifts,
   // the constant must be a multiple of 2^NumBits to avoid losing information.
   if (match(V, m_ImmConstant())) {
@@ -643,19 +644,8 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
            MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
   }
   case Instruction::Add: {
-    bool CanHandleAdd = false;
-    if (ShiftOp == Instruction::Shl)
-      CanHandleAdd = cast<BinaryOperator>(I)->hasNoSignedWrap();
-    else {
-      const APInt *C;
-      if (match(I->getOperand(1), m_APIntAllowPoison(C)))
-        CanHandleAdd = C->countr_zero() >= NumBits;
-    }
-    if (CanHandleAdd)
-      return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
-             canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
-
-    return false;
+    return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
+           canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
   }
   }
 }
@@ -663,9 +653,10 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
 /// Fold OuterShift (InnerShift X, C1), C2.
 /// See canEvaluateShiftedShift() for the constraints on these instructions.
 static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
-                               bool IsOuterShl,
+                               Instruction::BinaryOps OuterOpc,
                                InstCombiner::BuilderTy &Builder) {
   bool IsInnerShl = InnerShift->getOpcode() == Instruction::Shl;
+  bool IsOuterShl = OuterOpc == Instruction::Shl;
   Type *ShType = InnerShift->getType();
   unsigned TypeWidth = ShType->getScalarSizeInBits();
 
@@ -701,6 +692,10 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
   // lshr (shl X, C), C --> and X, C'
   // shl (lshr X, C), C --> and X, C'
   if (InnerShAmt == OuterShAmt) {
+    if (IsInnerShl &&
+        ((OuterOpc == Instruction::AShr && InnerShift->hasNoSignedWrap()) ||
+         (OuterOpc == Instruction::LShr && InnerShift->hasNoUnsignedWrap())))
+      return InnerShift->getOperand(0);
     APInt Mask = IsInnerShl
                      ? APInt::getLowBitsSet(TypeWidth, TypeWidth - OuterShAmt)
                      : APInt::getHighBitsSet(TypeWidth, TypeWidth - OuterShAmt);
@@ -726,14 +721,11 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
 /// When canEvaluateShifted() returns true for an expression, this function
 /// inserts the new computation that produces the shifted value.
 Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
-                                         unsigned ShiftOp) {
+                                         Instruction::BinaryOps ShiftOp) {
   // We can always evaluate constants shifted.
   if (Constant *C = dyn_cast<Constant>(V)) {
-    if (ShiftOp == Instruction::Shl)
-      return Builder.CreateShl(C, NumBits);
-    else
-      return Builder.CreateBinOp((Instruction::BinaryOps)ShiftOp, C,
-                                 ConstantInt::get(C->getType(), NumBits));
+    return Builder.CreateBinOp((Instruction::BinaryOps)ShiftOp, C,
+                               ConstantInt::get(C->getType(), NumBits));
   }
 
   Instruction *I = cast<Instruction>(V);
@@ -750,18 +742,8 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
     return I;
 
   case Instruction::Shl:
-  case Instruction::LShr: {
-    auto *OBO = dyn_cast<OverflowingBinaryOperator>(I);
-
-    if (OBO && match(I->getOperand(1), m_SpecificInt(NumBits))) {
-      if ((ShiftOp == Instruction::AShr && OBO->hasNoSignedWrap()) ||
-          (ShiftOp == Instruction::LShr && OBO->hasNoUnsignedWrap()))
-        return I->getOperand(0);
-    }
-
-    return foldShiftedShift(cast<BinaryOperator>(I), NumBits,
-                            ShiftOp == Instruction::Shl, Builder);
-  }
+  case Instruction::LShr:
+    return foldShiftedShift(cast<BinaryOperator>(I), NumBits, ShiftOp, Builder);
 
   case Instruction::Select:
     I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, ShiftOp));
@@ -789,6 +771,10 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
     return InsertNewInstWith(And, I->getIterator());
   }
   case Instruction::Add: {
+    if (ShiftOp == Instruction::Shl) {
+      I->setHasNoUnsignedWrap(false);
+      I->setHasNoSignedWrap(false);
+    }
     I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, ShiftOp));
     I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, ShiftOp));
     return I;
