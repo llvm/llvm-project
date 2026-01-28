@@ -2009,17 +2009,14 @@ void CallStackFrame::describe(raw_ostream &Out) const {
     }
     Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
                                  /*Qualified=*/false);
-    IsMemberCall = false;
   }
 
   Out << '(';
 
   llvm::ListSeparator Comma;
-  for (unsigned ArgIndex = ExplicitInstanceParam, N = Callee->getNumParams();
-       ArgIndex != N; ++ArgIndex) {
+  for (const ParmVarDecl *Param :
+       Callee->parameters().slice(ExplicitInstanceParam)) {
     Out << Comma;
-
-    const ParmVarDecl *Param = Callee->getParamDecl(ArgIndex);
     const APValue *V = Info.getParamSlot(Arguments, Param);
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
