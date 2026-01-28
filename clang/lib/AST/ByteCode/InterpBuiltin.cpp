@@ -850,7 +850,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
                      ResultType->isSignedIntegerOrEnumerationType();
     uint64_t LHSSize = LHS.getBitWidth();
     uint64_t RHSSize = RHS.getBitWidth();
-    uint64_t ResultSize = S.getASTContext().getTypeSize(ResultType);
+    uint64_t ResultSize = S.getASTContext().getIntWidth(ResultType);
     uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
 
     // Add an additional bit if the signedness isn't uniformly agreed to. We
@@ -909,8 +909,8 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
     // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
     // since it will give us the behavior of a TruncOrSelf in the case where
     // its parameter <= its size.  We previously set Result to be at least the
-    // type-size of the result, so getTypeSize(ResultType) <= Resu
-    APSInt Temp = Result.extOrTrunc(S.getASTContext().getTypeSize(ResultType));
+    // integer width of the result, so getIntWidth(ResultType) <= Result.BitWidth
+    APSInt Temp = Result.extOrTrunc(S.getASTContext().getIntWidth(ResultType));
     Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
 
     if (!APSInt::isSameValue(Temp, Result))
