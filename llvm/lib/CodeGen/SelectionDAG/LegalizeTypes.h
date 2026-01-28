@@ -389,6 +389,7 @@ private:
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_ANY_EXTEND(SDNode *N);
+  SDValue PromoteIntOp_ANY_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue PromoteIntOp_BITCAST(SDNode *N);
   SDValue PromoteIntOp_BUILD_PAIR(SDNode *N);
@@ -770,44 +771,7 @@ private:
   }
   void SetPromotedFloat(SDValue Op, SDValue Result);
 
-  void PromoteFloatResult(SDNode *N, unsigned ResNo);
-  SDValue PromoteFloatRes_BITCAST(SDNode *N);
-  SDValue PromoteFloatRes_FREEZE(SDNode *N);
-  SDValue PromoteFloatRes_BinOp(SDNode *N);
-  SDValue PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N);
-  SDValue PromoteFloatRes_ConstantFP(SDNode *N);
-  SDValue PromoteFloatRes_EXTRACT_VECTOR_ELT(SDNode *N);
-  SDValue PromoteFloatRes_FCOPYSIGN(SDNode *N);
-  SDValue PromoteFloatRes_FMAD(SDNode *N);
-  SDValue PromoteFloatRes_ExpOp(SDNode *N);
-  SDValue PromoteFloatRes_FFREXP(SDNode *N);
-  SDValue PromoteFloatRes_FP_ROUND(SDNode *N);
-  SDValue PromoteFloatRes_STRICT_FP_ROUND(SDNode *N);
-  SDValue PromoteFloatRes_LOAD(SDNode *N);
-  SDValue PromoteFloatRes_ATOMIC_LOAD(SDNode *N);
-  SDValue PromoteFloatRes_SELECT(SDNode *N);
-  SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
-  SDValue PromoteFloatRes_UnaryOp(SDNode *N);
-  SDValue PromoteFloatRes_AssertNoFPClass(SDNode *N);
-  SDValue PromoteFloatRes_UNDEF(SDNode *N);
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
-  SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
-  SDValue PromoteFloatRes_VECREDUCE(SDNode *N);
-  SDValue PromoteFloatRes_VECREDUCE_SEQ(SDNode *N);
-
-  bool PromoteFloatOperand(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FAKE_USE(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_AssertNoFPClass(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Half soft promotion support: LegalizeFloatTypes.cpp

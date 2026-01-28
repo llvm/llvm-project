@@ -26,7 +26,7 @@ void f11(int);
 template<auto func>
 struct S {
 
-#pragma export(func) // expected-error{{this pragma cannot appear in struct declaration}}
+#pragma export(func) // expected-error{{'#pragma export' can only appear at file scope}}
 };
 
 extern "C" void funcToExport();
