@@ -584,6 +584,8 @@ bool SPIRVEmitNonSemanticDI::runOnModule(llvm::Module &M) {
     const RegisterBankInfo *RBI = TM->getSubtargetImpl()->getRegBankInfo();
     SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
 
+    GR->setCurrentFunc(*MF);
+
     const SPIRVType *VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(M.getContext()), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
