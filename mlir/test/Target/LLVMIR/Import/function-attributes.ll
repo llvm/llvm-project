@@ -411,5 +411,11 @@ declare void @willreturn_attribute() willreturn
 
 // -----
 
+; CHECK-LABEL: @noreturn_attribute
+; CHECK-SAME: attributes {noreturn}
+declare void @noreturn_attribute() noreturn
+
+// -----
+
 ; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
 declare void @test() preallocated(i32)
