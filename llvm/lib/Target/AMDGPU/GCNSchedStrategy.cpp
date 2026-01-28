@@ -93,7 +93,7 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrie mfma rewrite scheduling stage"), cl::init(false));
+    cl::desc("Disable rewrie mfma rewrite scheduling stage"), cl::init(true));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
@@ -1898,9 +1898,16 @@ void GCNSchedStage::revertScheduling() {
       continue;
     }
 
-    if (MI->getIterator() != DAG.RegionEnd) {
+    MachineBasicBlock::iterator MII = MI->getIterator();
+    if (MII != DAG.RegionEnd) {
+      // Will subsequent splice move MI up past a non-debug instruction?
+      bool NonDebugReordered =
+          skipDebugInstructionsForward(DAG.RegionEnd, MII) != MII;
       DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
-      if (!MI->isDebugInstr())
+      // Only update LiveIntervals information if non-debug instructions are
+      // reordered. Otherwise debug instructions could cause code generation to
+      // change.
+      if (NonDebugReordered)
         DAG.LIS->handleMove(*MI, true);
     }
 

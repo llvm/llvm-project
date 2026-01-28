@@ -145,7 +145,7 @@ public:
   ///     The equivalent symbol list - any equivalent symbols found are appended
   ///     to this list.
   ///
-  virtual void FindEquivalentSymbols(Symbol *original_symbol,
+  virtual void FindEquivalentSymbols(const Symbol *original_symbol,
                                      ModuleList &module_list,
                                      SymbolContextList &equivalent_symbols) {}
 
