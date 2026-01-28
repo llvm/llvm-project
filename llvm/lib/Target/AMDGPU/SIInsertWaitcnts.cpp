@@ -349,7 +349,8 @@ protected:
   const AMDGPU::HardwareLimits *Limits = nullptr;
 
 public:
-  WaitcntGenerator() = default;
+  WaitcntGenerator() = delete;
+  WaitcntGenerator(const WaitcntGenerator &) = delete;
   WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter,
                    const AMDGPU::HardwareLimits *Limits)
       : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
@@ -414,10 +415,22 @@ public:
   }
 };
 
-class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
+class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
+  static constexpr const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] =
+      {eventMask({VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
+       eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
+       eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
+                  EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+       eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+       0,
+       0,
+       0,
+       0,
+       0,
+       0};
+
 public:
   using WaitcntGenerator::WaitcntGenerator;
-
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
@@ -430,33 +443,31 @@ public:
 
   const unsigned *getWaitEventMask() const override {
     assert(ST);
-
-    static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
-        eventMask(
-            {VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
-        eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
-        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
-                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
-        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
-        0,
-        0,
-        0,
-        0,
-        0,
-        0};
-
     return WaitEventMaskForInstPreGFX12;
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
-class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
+class WaitcntGeneratorGFX12Plus final : public WaitcntGenerator {
 protected:
   bool IsExpertMode;
+  static constexpr const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] =
+      {eventMask({VMEM_ACCESS, GLOBAL_INV_ACCESS}),
+       eventMask({LDS_ACCESS, GDS_ACCESS}),
+       eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
+                  EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+       eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+       eventMask({VMEM_SAMPLER_READ_ACCESS}),
+       eventMask({VMEM_BVH_READ_ACCESS}),
+       eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
+       eventMask({VMEM_GROUP, SMEM_GROUP}),
+       eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
+                  VGPR_XDL_WRITE}),
+       eventMask({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
 
 public:
-  WaitcntGeneratorGFX12Plus() = default;
+  WaitcntGeneratorGFX12Plus() = delete;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
                             InstCounterType MaxCounter,
                             const AMDGPU::HardwareLimits *Limits,
@@ -475,21 +486,6 @@ public:
 
   const unsigned *getWaitEventMask() const override {
     assert(ST);
-
-    static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS, GLOBAL_INV_ACCESS}),
-        eventMask({LDS_ACCESS, GDS_ACCESS}),
-        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
-                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
-        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
-        eventMask({VMEM_SAMPLER_READ_ACCESS}),
-        eventMask({VMEM_BVH_READ_ACCESS}),
-        eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
-        eventMask({VMEM_GROUP, SMEM_GROUP}),
-        eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
-                   VGPR_XDL_WRITE}),
-        eventMask({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
-
     return WaitEventMaskForInstGFX12Plus;
   }
 
@@ -529,21 +525,16 @@ private:
 
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
-  // In any given run of this pass, WCG will point to one of these two
-  // generator objects, which must have been re-initialised before use
-  // from a value made using a subtarget constructor.
-  WaitcntGeneratorPreGFX12 WCGPreGFX12;
-  WaitcntGeneratorGFX12Plus WCGGFX12Plus;
-
-  WaitcntGenerator *WCG = nullptr;
+  std::unique_ptr<WaitcntGenerator> WCG;
 
   // Remember call and return instructions in the function.
   DenseSet<MachineInstr *> CallInsts;
   DenseSet<MachineInstr *> ReturnInsts;
 
-  // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
-  // message.
-  DenseSet<MachineInstr *> ReleaseVGPRInsts;
+  // Remember all S_ENDPGM instructions. The boolean flag is true if there might
+  // be outstanding stores but definitely no outstanding scratch stores, to help
+  // with insertion of DEALLOC_VGPRS messages.
+  DenseMap<MachineInstr *, bool> EndPgmInsts;
 
   AMDGPU::HardwareLimits Limits;
 
@@ -2263,12 +2254,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // completed, but it is only safe to do this if there are no outstanding
   // scratch stores.
   else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
-    if (!WCG->isOptNone() &&
-        (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
-         (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-          ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
-          !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
-      ReleaseVGPRInsts.insert(&MI);
+    EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+                       !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
   }
   // Resolve vm waits before gs-done.
   else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
@@ -3325,13 +3312,14 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                               .getFnAttribute("amdgpu-expert-scheduling-mode")
                               .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
-    WCGGFX12Plus =
-        WaitcntGeneratorGFX12Plus(MF, MaxCounter, &Limits, IsExpertMode);
-    WCG = &WCGGFX12Plus;
+    if (!WCG)
+      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, &Limits,
+                                                        IsExpertMode);
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, NUM_NORMAL_INST_CNTS, &Limits);
-    WCG = &WCGPreGFX12;
+    if (!WCG)
+      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(MF, NUM_NORMAL_INST_CNTS,
+                                                       &Limits);
   }
 
   for (auto T : inst_counter_types())
@@ -3529,21 +3517,22 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // (i.e. whether we're in dynamic VGPR mode or not).
   // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
   // waveslot limited kernel runs slower with the deallocation.
-  if (MFI->isDynamicVGPREnabled()) {
-    for (MachineInstr *MI : ReleaseVGPRInsts) {
+  if (!WCG->isOptNone() && MFI->isDynamicVGPREnabled()) {
+    for (auto [MI, _] : EndPgmInsts) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
               TII->get(AMDGPU::S_ALLOC_VGPR))
           .addImm(0);
       Modified = true;
     }
-  } else {
-    if (!ReleaseVGPRInsts.empty() &&
-        (MF.getFrameInfo().hasCalls() ||
-         ST->getOccupancyWithNumVGPRs(
-             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
-             /*IsDynamicVGPR=*/false) <
-             AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
-      for (MachineInstr *MI : ReleaseVGPRInsts) {
+  } else if (!WCG->isOptNone() &&
+             ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+             (MF.getFrameInfo().hasCalls() ||
+              ST->getOccupancyWithNumVGPRs(
+                  TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+                  /*IsDynamicVGPR=*/false) <
+                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+    for (auto [MI, Flag] : EndPgmInsts) {
+      if (Flag) {
         if (ST->requiresNopBeforeDeallocVGPRs()) {
           BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                   TII->get(AMDGPU::S_NOP))
@@ -3559,7 +3548,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
   CallInsts.clear();
   ReturnInsts.clear();
-  ReleaseVGPRInsts.clear();
+  EndPgmInsts.clear();
   PreheadersToFlush.clear();
   SLoadAddresses.clear();
 

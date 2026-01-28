@@ -2337,7 +2337,7 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
     if (!Info.ExitForPath)
       Info.PathIsNoop = false;
 
-    Info.InstToDuplicate = InstToDuplicate;
+    Info.InstToDuplicate = std::move(InstToDuplicate);
     return Info;
   };
 

@@ -66,6 +66,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Removed TypePromoteFloat legalization from SelectionDAG
+
 Changes to building LLVM
 ------------------------
 
@@ -161,6 +163,8 @@ Changes to the LLVM tools
 -------------------------
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
 ---------------

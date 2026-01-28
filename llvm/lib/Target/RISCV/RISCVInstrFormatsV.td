@@ -83,102 +83,79 @@ class RVInstVSetVL<dag outs, dag ins, string opcodestr, string argstr>
   let Defs = [VL, VTYPE];
 }
 
-class RVInstVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
-               string opcodestr, string argstr>
+class RVInstVBase<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
+                  string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> vs2;
-  bits<5> vs1;
   bits<5> vd;
   bit vm;
 
   let Inst{31-26} = funct6;
   let Inst{25} = vm;
-  let Inst{24-20} = vs2;
-  let Inst{19-15} = vs1;
+  // Inst{24-15} provide by subclasses
   let Inst{14-12} = opv.Value;
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
+}
+
+class RVInstVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
+               string opcodestr, string argstr>
+    : RVInstVBase<funct6, opv, outs, ins, opcodestr, argstr> {
+  bits<5> vs2;
+  bits<5> vs1;
+
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = vs1;
 }
 
 class RVInstVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
                 string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+    : RVInstVBase<funct6, opv, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
   bits<5> rs1;
-  bits<5> vd;
-  bit vm;
 
-  let Inst{31-26} = funct6;
-  let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = opv.Value;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
-}
-
-class RVInstV2<bits<6> funct6, bits<5> vs2, RISCVVFormat opv, dag outs, dag ins,
-                string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs1;
-  bits<5> vd;
-  bit vm;
-
-  let Inst{31-26} = funct6;
-  let Inst{25} = vm;
-  let Inst{24-20} = vs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = opv.Value;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
 class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
                 string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+    : RVInstVBase<funct6, OPIVI, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
   bits<5> imm;
-  bits<5> vd;
-  bit vm;
 
-  let Inst{31-26} = funct6;
-  let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = imm;
-  let Inst{14-12} = OPIVI.Value;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
-class RVInstV<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
-              dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+class RVInstVUnary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
+                   dag ins, string opcodestr, string argstr>
+    : RVInstVBase<funct6, opv, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
-  bits<5> vd;
+
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = vs1;
+}
+
+class RVInstVUnaryRd<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
+                     dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+  bits<5> rd;
   bit vm;
+  bits<5> vs2;
 
   let Inst{31-26} = funct6;
   let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = vs1;
   let Inst{14-12} = opv.Value;
-  let Inst{11-7} = vd;
+  let Inst{11-7} = rd;
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let RVVConstraint = NoConstraint;
 }
 
 class RVInstVLU<bits<3> nf, bit mew, RISCVLSUMOP lumop,
