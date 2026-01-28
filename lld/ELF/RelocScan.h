@@ -121,6 +121,19 @@ void RelocScan::scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
 
   process(expr, type, offset, sym, addend);
 }
+
+// Dispatch to target-specific scanSectionImpl based on relocation format.
+template <class Target, class ELFT>
+void scanSection1(Target &target, InputSectionBase &sec) {
+  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+  if (rels.areRelocsCrel())
+    target.template scanSectionImpl<ELFT>(sec, rels.crels);
+  else if (rels.areRelocsRel())
+    target.template scanSectionImpl<ELFT>(sec, rels.rels);
+  else
+    target.template scanSectionImpl<ELFT>(sec, rels.relas);
+}
+
 } // namespace lld::elf
 
 #endif
