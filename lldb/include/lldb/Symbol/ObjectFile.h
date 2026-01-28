@@ -339,29 +339,6 @@ public:
   ///
   virtual void RelocateSection(lldb_private::Section *section);
 
-  /// Appends a Symbol for the specified so_addr to the symbol table.
-  ///
-  /// If verify_unique is false, the symbol table is not searched to determine
-  /// if a Symbol found at this address has already been added to the symbol
-  /// table.  When verify_unique is true, this method resolves the Symbol as
-  /// the first match in the SymbolTable and appends a Symbol only if
-  /// required/found.
-  ///
-  /// \return
-  ///     The resolved symbol or nullptr.  Returns nullptr if a
-  ///     a Symbol could not be found for the specified so_addr.
-  virtual Symbol *ResolveSymbolForAddress(const Address &so_addr,
-                                          bool verify_unique) {
-    // Typically overridden to lazily add stripped symbols recoverable from the
-    // exception handling unwind information (i.e. without parsing the entire
-    // eh_frame section.
-    //
-    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO to
-    // efficiently add stripped symbols when the symbol table is first
-    // constructed.  Poorer cousins are PECoff and ELF.
-    return nullptr;
-  }
-
   /// Detect if this object file has been stripped of local symbols.
   /// Detect if this object file has been stripped of local symbols.
   ///
