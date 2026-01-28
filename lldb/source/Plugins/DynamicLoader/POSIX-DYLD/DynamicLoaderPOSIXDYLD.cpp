@@ -711,6 +711,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
     ModuleSP module_sp = LoadModuleAtAddress(
         so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
     if (!module_sp && !m_process->IsLiveDebugSession()) {
+      // Create placeholder modules for any modules we couldn't load from disk
+      // or from memory.
       ModuleSpec module_spec(so_entry.file_spec, target.GetArchitecture());
       if (UUID uuid = m_process->FindModuleUUID(so_entry.file_spec.GetPath()))
         module_spec.GetUUID() = uuid;
