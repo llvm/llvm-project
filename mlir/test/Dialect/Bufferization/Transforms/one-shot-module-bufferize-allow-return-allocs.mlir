@@ -65,13 +65,13 @@ func.func @main(%t: tensor<?xf32>, %sz: index, %idx: index) -> (f32, f32) {
 
 // -----
 
-func.func @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
+func.func private @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
   func.return %A : tensor<?xf32>
 }
-// CHECK-LABEL: func @return_arg
+// CHECK-LABEL: func private @return_arg
 // CHECK-SAME:      %[[A:.*]]: memref<?xf32
 //  CHECK-NOT:    return %[[A]]
 
-// NO-DROP-LABEL: func @return_arg
+// NO-DROP-LABEL: func private @return_arg
 //  NO-DROP-SAME:     %[[A:.*]]: memref<?xf32
 //       NO-DROP:   return %[[A]]

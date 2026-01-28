@@ -50,7 +50,7 @@ int main() {
   return 0;
 }
 /*
-REQUIRES: system-linux,shell,fuser
+REQUIRES: system-linux,fuser
 
 RUN: %clang %cflags %s -o %t.exe -Wl,-q -pie -fpie
 
@@ -61,10 +61,14 @@ RUN: --instrumentation-wait-forks
 
 # Instrumented program needs to finish returning zero
 # Both output and profile must contain all 16 functions
-RUN: %t.instrumented_conservative > %t.output
-# Wait for profile and output to be fully written
-RUN: bash %S/wait_file.sh %t.output
-RUN: bash %S/wait_file.sh %t.fdata
+# We need to use bash to invoke this as otherwise we hang inside a
+# popen.communicate call in lit's internal shell. Eventually we should not
+# need this.
+# TODO(boomanaiden154): Remove once
+# https://github.com/llvm/llvm-project/issues/156484 is fixed.
+RUN: bash -c "%t.instrumented_conservative; wait" > %t.output
+# We can just read because we ensure the profile will be fully written by
+# calling wait inside the bash invocation.
 RUN: cat %t.output | FileCheck %s --check-prefix=CHECK-OUTPUT
 RUN: cat %t.fdata | FileCheck %s --check-prefix=CHECK-COMMON-PROF
 
@@ -112,14 +116,8 @@ RUN: bash %S/wait_file.sh %t.output
 # Make sure all functions were called
 RUN: cat %t.output | FileCheck %s --check-prefix=CHECK-OUTPUT
 
-RUN: child_pid=$(cat %t.output | grep funcA | awk '{print $2;}')
-RUN: par_pid=$(cat %t.output | grep funcB | awk '{print $2;}')
-
-RUN: bash %S/wait_file.sh %t.$child_pid.fdata
-RUN: bash %S/wait_file.sh %t.$par_pid.fdata
-
-RUN: mv %t.$child_pid.fdata %t.child.fdata
-RUN: mv %t.$par_pid.fdata %t.parent.fdata
+RUN: %python %S/copy_file.py %t funcA child
+RUN: %python %S/copy_file.py %t funcB parent
 
 # Instrumented binary must produce two profiles with only local calls
 # recorded. Functions called only in child should not appear in parent's

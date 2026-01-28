@@ -27,7 +27,7 @@ void test() {
   x = o;
 }
 
-// CIR: cir.func dso_local @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> !s32i
+// CIR: cir.func {{.*}} @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> !s32i
 // CIR:   %[[THIS_ALLOCA:.+]] = cir.alloca !cir.ptr<!rec_out_of_line_operator>, !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>, ["this", init]
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]] : !cir.ptr<!rec_out_of_line_operator>, !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
@@ -38,7 +38,7 @@ void test() {
 // CIR:   cir.return %[[RET_LOAD]] : !s32i
 // CIR: }
 
-// CIR: cir.func comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> !s32i
+// CIR: cir.func no_inline comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> !s32i
 // CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>, ["this", init]
 // CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[INLINE_THIS_ARG]], %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>
@@ -49,7 +49,7 @@ void test() {
 // CIR:   cir.return %[[INLINE_RET_LOAD]] : !s32i
 // CIR: }
 
-// CIR: cir.func dso_local @_Z4testv()
+// CIR: cir.func {{.*}} @_Z4testv()
 // CIR:   %[[X_ALLOCA:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 // CIR:   %[[I_ALLOCA:.+]] = cir.alloca {{.*}}, {{.*}}, ["i"]
 // CIR:   %[[O_ALLOCA:.+]] = cir.alloca {{.*}}, {{.*}}, ["o"]
@@ -82,7 +82,7 @@ void test() {
 // LLVM:   ret i32 %[[INLINE_RET_LOAD]]
 // LLVM: }
 
-// LLVM: define dso_local void @_Z4testv()
+// LLVM: define {{.*}} void @_Z4testv()
 // LLVM:   %[[X_ALLOCA:.+]] = alloca i32, i64 1
 // LLVM:   %[[I_ALLOCA:.+]] = alloca {{.*}}, i64 1
 // LLVM:   %[[O_ALLOCA:.+]] = alloca {{.*}}, i64 1
@@ -102,7 +102,7 @@ void test() {
 // OGCG:   ret i32 123
 // OGCG: }
 
-// OGCG: define dso_local void @_Z4testv()
+// OGCG: define {{.*}} void @_Z4testv()
 // OGCG: entry:
 // OGCG:   %[[X_VAR:.+]] = alloca i32
 // OGCG:   %[[I_VAR:.+]] = alloca {{.*}}

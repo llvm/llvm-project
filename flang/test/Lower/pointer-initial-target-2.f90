@@ -43,8 +43,8 @@ block data bdsnake
 ! CHECK-LABEL: fir.global @snake_ {alignment = 8 : i64} : tuple<!fir.box<!fir.ptr<i32>>, i32>
   ! CHECK: %[[tuple0:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<i32>>, i32>
   ! CHECK: %[[snakeAddr:.*]] = fir.address_of(@snake_) : !fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>
-  ! CHECK: %[[byteView:.*]] = fir.convert %[[snakeAddr:.*]] : (!fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>) -> !fir.ref<!fir.array<?xi8>>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[byteView]], %c24{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[byteView:.*]] = fir.convert %[[snakeAddr:.*]] : (!fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>) -> !fir.ref<!fir.array<28xi8>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[byteView]], %c24{{.*}} : (!fir.ref<!fir.array<28xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[bAddr:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ref<i32>
   ! CHECK: %[[box:.*]] = fir.embox %[[bAddr]] : (!fir.ref<i32>) -> !fir.box<i32>
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]] : (!fir.box<i32>) -> !fir.box<!fir.ptr<i32>>
@@ -73,8 +73,7 @@ module some_mod_2
   real, pointer :: p(:) => y
 ! CHECK-LABEL: fir.global @_QMsome_mod_2Ep : !fir.box<!fir.ptr<!fir.array<?xf32>>> {
   ! CHECK: %[[c:.*]] = fir.address_of(@com_) : !fir.ref<!fir.array<1200xi8>>
-  ! CHECK: %[[com:.*]] = fir.convert %[[c]] : (!fir.ref<!fir.array<1200xi8>>) -> !fir.ref<!fir.array<?xi8>>
-  ! CHECK: %[[yRaw:.*]] = fir.coordinate_of %[[com]], %c400{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[yRaw:.*]] = fir.coordinate_of %[[c]], %c400{{.*}} : (!fir.ref<!fir.array<1200xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[y:.*]] = fir.convert %[[yRaw]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<200xf32>>
   ! CHECK: %[[shape:.*]] = fir.shape_shift %c10{{.*}}, %c200{{.*}} : (index, index) -> !fir.shapeshift<1>
   ! CHECK: %[[box:.*]] = fir.embox %[[y]](%[[shape]]) : (!fir.ref<!fir.array<200xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<200xf32>>

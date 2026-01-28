@@ -5,6 +5,12 @@ from mlir.ir import *
 from mlir.dialects import amdgpu, func
 
 
+def run(f):
+    print("\nTEST:", f.__name__)
+    f()
+    return f
+
+
 def constructAndPrintInModule(f):
     print("\nTEST:", f.__name__)
     with Context(), Location.unknown():
@@ -43,3 +49,23 @@ def testFatRawBufferCastOpParams():
     # CHECK-NEXT:   amdgpu.fat_raw_buffer_cast %[[ARG0]] resetOffset : memref<?x?xf32> to memref<?x?xf32, #amdgpu.address_space<fat_raw_buffer>>
     # CHECK-NEXT:   amdgpu.fat_raw_buffer_cast %[[ARG0]] boundsCheck(false) : memref<?x?xf32> to memref<?x?xf32, #amdgpu.address_space<fat_raw_buffer>>
     # CHECK-NEXT:   amdgpu.fat_raw_buffer_cast %[[ARG0]] boundsCheck(false) resetOffset : memref<?x?xf32> to memref<?x?xf32, #amdgpu.address_space<fat_raw_buffer>>
+
+
+# CHECK-LABEL: testTDMTypes
+@run
+def testTDMTypes():
+    with Context():
+        f32 = F32Type.get()
+        i32 = IntegerType.get_signless(32)
+
+        # CHECK: !amdgpu.tdm_base<f32>
+        tdm_base = amdgpu.TDMBaseType.get(f32)
+        print(tdm_base)
+
+        # CHECK: !amdgpu.tdm_descriptor
+        tdm_descriptor = amdgpu.TDMDescriptorType.get()
+        print(tdm_descriptor)
+
+        # CHECK: !amdgpu.tdm_gather_base<f32, i32>
+        tdm_gather_base = amdgpu.TDMGatherBaseType.get(f32, i32)
+        print(tdm_gather_base)

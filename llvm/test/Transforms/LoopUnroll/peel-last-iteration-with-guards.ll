@@ -204,8 +204,81 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @test_peel_guard_sub_1_btc(i32 %n) {
+; CHECK-LABEL: define void @test_peel_guard_sub_1_btc(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i32 [[SUB]], 0
+; CHECK-NEXT:    br i1 [[PRE]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
+; CHECK:       [[LOOP_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_HEADER_PREHEADER_SPLIT:.*]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN:.*]]
+; CHECK:       [[LOOP_HEADER_PREHEADER_SPLIT]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER_SPLIT]] ]
+; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[CALL136:%.*]] = load volatile ptr, ptr null, align 4294967296
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT_PEEL_BEGIN]]
+; CHECK:       [[EXIT_LOOPEXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 1, %[[LOOP_HEADER_PREHEADER]] ], [ [[DOTPH]], %[[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_HEADER_PEEL:.*]]
+; CHECK:       [[LOOP_HEADER_PEEL]]:
+; CHECK-NEXT:    [[CMP115_PEEL:%.*]] = icmp eq i32 [[TMP3]], [[SUB]]
+; CHECK-NEXT:    br i1 [[CMP115_PEEL]], label %[[LOOP_LATCH_PEEL:.*]], label %[[THEN_PEEL:.*]]
+; CHECK:       [[THEN_PEEL]]:
+; CHECK-NEXT:    [[CALL136_PEEL:%.*]] = load volatile ptr, ptr null, align 4294967296
+; CHECK-NEXT:    br label %[[LOOP_LATCH_PEEL]]
+; CHECK:       [[LOOP_LATCH_PEEL]]:
+; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp eq i32 [[IV_NEXT_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_LOOPEXIT_PEEL_NEXT:.*]], label %[[EXIT_LOOPEXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_LOOPEXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_HEADER_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub = add i32 %n, -1
+  %pre = icmp eq i32 %sub, 0
+  br i1 %pre, label %exit, label %loop.header
+
+loop.header:                                        ; preds = %loop.latch, %entry
+  %iv = phi i32 [ %iv.next, %loop.latch ], [ 1, %entry ]
+  %cmp115 = icmp eq i32 %iv, %sub
+  br i1 %cmp115, label %loop.latch, label %then
+
+then:
+  %call136 = load volatile ptr, ptr null, align 4294967296
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
-// RUN: %clang_cc1 -pedantic -verify=ref,both %s
-// RUN: %clang_cc1 -pedantic -std=c++14 -verify=ref,both %s
-// RUN: %clang_cc1 -pedantic -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -pedantic -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++14 -pedantic -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++20 -pedantic -verify=ref,both      %s
 
 #define fold(x) (__builtin_constant_p(0) ? (x) : (x))
 
@@ -315,7 +315,7 @@ namespace ReturnLocalPtr {
   }
 
   static_assert(p2() == 12, ""); // both-error {{not an integral constant expression}} \
-                                 // both-note {{read of variable whose lifetime has ended}}
+                                 // both-note {{read of object outside its lifetime}}
 }
 
 namespace VoidReturn {
@@ -672,10 +672,8 @@ namespace FunctionCast {
   constexpr int test4 = fold(IntFn(DoubleFn(f)))();
   constexpr int test5 = IntFn(fold(DoubleFn(f)))(); // both-error {{constant expression}} \
                                                     // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
-  // FIXME: Interpreter is less strict here.
-  constexpr int test6 = fold(IntPtrFn(f2))() == nullptr; // ref-error {{constant expression}}
-  // FIXME: The following crashes interpreter
-  // constexpr int test6 = fold(IntFn(f3)());
+  constexpr int test6 = fold(IntPtrFn(f2))() == nullptr; // both-error {{constant expression}}
+  constexpr int test7 = fold(IntFn(f3)()); // both-error {{must be initialized by a constant expression}}
 }
 
 #if __cplusplus >= 202002L
@@ -736,4 +734,34 @@ namespace LocalVarForParmVarDecl {
 namespace PtrPtrCast {
   void foo() { ; }
   void bar(int *a) { a = (int *)(void *)(foo); }
+}
+namespace GH176536 {
+  constexpr void foo(int n) {
+    return n > 1 ? foo(n - 1) : 0; // both-error {{left operand to ? is void, but right operand is of type 'int'}}
+  }
+  static_assert((foo(2), true), ""); // both-error {{static assertion expression is not an integral constant expression}}
+}
+
+namespace NestedDiags {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    throw; // both-note {{not valid in a constant expression}} \
+           // both-error {{cannot use 'throw' with exceptions disabled}}
+    return 0;
+  }
+  constexpr int bar() {
+    foo();
+    return 0;
+  }
+
+
+  struct S {
+    constexpr S() { // both-error {{never produces a constant expression}}
+      throw; // both-note {{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  constexpr bool callS() {
+    S s;
+    return true;
+  }
 }

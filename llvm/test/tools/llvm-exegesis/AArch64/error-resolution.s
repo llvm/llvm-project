@@ -61,15 +61,9 @@
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency --benchmark-phase=prepare-and-assemble-snippet --opcode-name=UMOVvi16_idx0 2>&1 | FileCheck %s --check-prefix=UMOVvi16_idx0_latency
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=inverse_throughput --benchmark-phase=prepare-and-assemble-snippet --opcode-name=UMOVvi16_idx0 2>&1 | FileCheck %s --check-prefix=UMOVvi16_idx0_throughput
 
-# UMOVvi16_idx0_latency-NOT: Not all operands were initialized by the snippet generator for UMOVvi16_idx0 opcode
-# UMOVvi16_idx0_latency:      ---
-# UMOVvi16_idx0_latency-NEXT: mode: latency
-# UMOVvi16_idx0_latency-NEXT: key:
-# UMOVvi16_idx0_latency-NEXT:   instructions:
-# UMOVvi16_idx0_latency-NEXT:     UMOVvi16_idx0 [[REG1:W[0-9]+|LR]] [[REG2:Q[0-9]+|LR]] i_0x0
-# UMOVvi16_idx0_latency: ...
+# UMOVvi16_idx0_latency-NOT: UMOVvi16_idx0: Not all operands were initialized by the snippet generator for UMOVvi16_idx0 opcode.
 
-# UMOVvi16_idx0_throughput-NOT: Not all operands were initialized by the snippet generator for UMOVvi16_idx0 opcode
+# UMOVvi16_idx0_throughput-NOT: UMOVvi16_idx0: Not all operands were initialized by the snippet generator for UMOVvi16_idx0 opcode.
 # UMOVvi16_idx0_throughput:      ---
 # UMOVvi16_idx0_throughput-NEXT: mode: inverse_throughput
 # UMOVvi16_idx0_throughput-NEXT: key:

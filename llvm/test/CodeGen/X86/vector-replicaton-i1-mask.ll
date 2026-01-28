@@ -5890,17 +5890,16 @@ define void @mask_replication_factor6_vf4(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512DQ-SLOW:       # %bb.0:
 ; AVX512DQ-SLOW-NEXT:    kmovw (%rdi), %k0
 ; AVX512DQ-SLOW-NEXT:    vpmovm2d %k0, %zmm0
-; AVX512DQ-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; AVX512DQ-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,1,1]
-; AVX512DQ-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQ-SLOW-NEXT:    movw $255, %ax
-; AVX512DQ-SLOW-NEXT:    kmovw %eax, %k1
-; AVX512DQ-SLOW-NEXT:    vpcmpgtd %zmm1, %zmm2, %k1 {%k1}
 ; AVX512DQ-SLOW-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2]
-; AVX512DQ-SLOW-NEXT:    vpermd %zmm0, %zmm1, %zmm0
-; AVX512DQ-SLOW-NEXT:    vpmovd2m %zmm0, %k2
-; AVX512DQ-SLOW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
-; AVX512DQ-SLOW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k2} {z}
+; AVX512DQ-SLOW-NEXT:    vpermd %zmm0, %zmm1, %zmm1
+; AVX512DQ-SLOW-NEXT:    vpmovd2m %zmm1, %k1
+; AVX512DQ-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX512DQ-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,1,1]
+; AVX512DQ-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQ-SLOW-NEXT:    kxnorb %k0, %k0, %k2
+; AVX512DQ-SLOW-NEXT:    vpcmpgtd %zmm0, %zmm1, %k2 {%k2}
+; AVX512DQ-SLOW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k2} {z}
+; AVX512DQ-SLOW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512DQ-SLOW-NEXT:    vmovdqa64 %zmm1, (%rdx)
 ; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm0, 64(%rdx)
 ; AVX512DQ-SLOW-NEXT:    vzeroupper
@@ -5910,17 +5909,16 @@ define void @mask_replication_factor6_vf4(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512DQ-FAST:       # %bb.0:
 ; AVX512DQ-FAST-NEXT:    kmovw (%rdi), %k0
 ; AVX512DQ-FAST-NEXT:    vpmovm2d %k0, %zmm0
-; AVX512DQ-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,3,3,3,3,3,3]
-; AVX512DQ-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm1
-; AVX512DQ-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQ-FAST-NEXT:    movw $255, %ax
-; AVX512DQ-FAST-NEXT:    kmovw %eax, %k1
-; AVX512DQ-FAST-NEXT:    vpcmpgtd %zmm1, %zmm2, %k1 {%k1}
 ; AVX512DQ-FAST-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2]
-; AVX512DQ-FAST-NEXT:    vpermd %zmm0, %zmm1, %zmm0
-; AVX512DQ-FAST-NEXT:    vpmovd2m %zmm0, %k2
-; AVX512DQ-FAST-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
-; AVX512DQ-FAST-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k2} {z}
+; AVX512DQ-FAST-NEXT:    vpermd %zmm0, %zmm1, %zmm1
+; AVX512DQ-FAST-NEXT:    vpmovd2m %zmm1, %k1
+; AVX512DQ-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,3,3,3,3,3,3]
+; AVX512DQ-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512DQ-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQ-FAST-NEXT:    kxnorb %k0, %k0, %k2
+; AVX512DQ-FAST-NEXT:    vpcmpgtd %zmm0, %zmm1, %k2 {%k2}
+; AVX512DQ-FAST-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k2} {z}
+; AVX512DQ-FAST-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512DQ-FAST-NEXT:    vmovdqa64 %zmm1, (%rdx)
 ; AVX512DQ-FAST-NEXT:    vmovdqa %ymm0, 64(%rdx)
 ; AVX512DQ-FAST-NEXT:    vzeroupper

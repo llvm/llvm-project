@@ -1,4 +1,4 @@
-//===--- NewDeleteOverloadsCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,9 +51,9 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
     return true;
 
   const auto *FPT = Node.getType()->castAs<FunctionProtoType>();
-  ASTContext &Ctx = Node.getASTContext();
+  const ASTContext &Ctx = Node.getASTContext();
   if (Ctx.getLangOpts().SizedDeallocation &&
-      Ctx.hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
+      ASTContext::hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
     return false;
 
   return true;
@@ -114,17 +114,15 @@ hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
     RD = MD->getParent();
   }
 
-  for (const auto &BS : RD->bases()) {
+  return llvm::any_of(RD->bases(), [&](const CXXBaseSpecifier &BS) {
     // We can't say much about a dependent base class, but to avoid false
     // positives assume it can have a corresponding overload.
     if (BS.getType()->isDependentType())
       return true;
-    if (const auto *BaseRD = BS.getType()->getAsCXXRecordDecl())
-      if (hasCorrespondingOverloadInBaseClass(MD, BaseRD))
-        return true;
-  }
-
-  return false;
+    if (const CXXRecordDecl *BaseRD = BS.getType()->getAsCXXRecordDecl())
+      return hasCorrespondingOverloadInBaseClass(MD, BaseRD);
+    return false;
+  });
 }
 
 void NewDeleteOverloadsCheck::registerMatchers(MatchFinder *Finder) {

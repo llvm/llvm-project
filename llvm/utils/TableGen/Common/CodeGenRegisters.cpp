@@ -734,8 +734,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   if (const Record *RV = R->getValueAsOptionalDef("RegInfos"))
     RSI = RegSizeInfoByHwMode(RV, RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
-  assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
-         "Impossible to determine register size");
+  if (!RSI.hasDefault() && Size == 0 && !VTs[0].isSimple())
+    PrintFatalError(R->getLoc(), "Impossible to determine register size");
   if (!RSI.hasDefault()) {
     RegSizeInfo RI;
     RI.RegSize = RI.SpillSize =
@@ -744,7 +744,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     RSI.insertRegSizeForMode(DefaultMode, RI);
   }
 
-  CopyCost = R->getValueAsInt("CopyCost");
+  int CopyCostParsed = R->getValueAsInt("CopyCost");
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
   int AllocationPriority = R->getValueAsInt("AllocationPriority");
@@ -757,6 +757,14 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (auto [Idx, Bit] : enumerate(TSF->getBits()))
     TSFlags |= uint8_t(cast<BitInit>(Bit)->getValue()) << Idx;
+
+  // Saturate negative costs to the maximum
+  if (CopyCostParsed < 0)
+    CopyCost = std::numeric_limits<uint8_t>::max();
+  else if (!isUInt<8>(CopyCostParsed))
+    PrintFatalError(R->getLoc(), "'CopyCost' must be an 8-bit value");
+
+  CopyCost = CopyCostParsed;
 }
 
 // Create an inferred register class that was missing from the .td files.
@@ -848,17 +856,6 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
 
   return (*Members.begin())->getWeight(RegBank);
 }
-
-namespace llvm {
-
-raw_ostream &operator<<(raw_ostream &OS, const CodeGenRegisterClass::Key &K) {
-  OS << "{ " << K.RSI;
-  for (const auto R : *K.Members)
-    OS << ", " << R->getName();
-  return OS << " }";
-}
-
-} // end namespace llvm
 
 // This is a simple lexicographical order that can be used to search for sets.
 // It is not the same as the topological order provided by TopoOrderRC.
@@ -989,8 +986,11 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     // register class.
     if (A == B)
       return false;
-    if (A->getMembers().size() == B->getMembers().size())
+    if (A->getMembers().size() == B->getMembers().size()) {
+      if (A->getBaseClassOrder() != B->getBaseClassOrder())
+        return A->getBaseClassOrder() > B->getBaseClassOrder();
       return A == this;
+    }
     return A->getMembers().size() > B->getMembers().size();
   };
 
@@ -1008,7 +1008,9 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
       SuperRegRCs.emplace_back(&RC);
   llvm::stable_sort(SuperRegRCs, WeakSizeOrder);
 
-  assert(SuperRegRCs.front() == BiggestSuperRegRC &&
+  assert((SuperRegRCs.front() == BiggestSuperRegRC ||
+          SuperRegRCs.front()->getBaseClassOrder() >
+              BiggestSuperRegRC->getBaseClassOrder()) &&
          "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
@@ -1128,8 +1130,10 @@ CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
 //===----------------------------------------------------------------------===//
 
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
-                               const CodeGenHwModes &Modes)
-    : Records(Records), CGH(Modes) {
+                               const CodeGenHwModes &Modes,
+                               const bool RegistersAreIntervals)
+    : Records(Records), CGH(Modes),
+      RegistersAreIntervals(RegistersAreIntervals) {
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
@@ -1319,11 +1323,19 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
   return {&RegClasses.back(), true};
 }
 
-CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def) const {
+CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def,
+                                                  ArrayRef<SMLoc> Loc) const {
+  assert(Def->isSubClassOf("RegisterClassLike"));
   if (CodeGenRegisterClass *RC = Def2RC.lookup(Def))
     return RC;
 
-  PrintFatalError(Def->getLoc(), "Not a known RegisterClass!");
+  ArrayRef<SMLoc> DiagLoc = Loc.empty() ? Def->getLoc() : Loc;
+  // TODO: Ideally we should update the API to allow resolving HwMode.
+  if (Def->isSubClassOf("RegClassByHwMode"))
+    PrintError(DiagLoc, "cannot resolve HwMode for " + Def->getName());
+  else
+    PrintError(DiagLoc, Def->getName() + " is not a known RegisterClass!");
+  PrintFatalNote(Def->getLoc(), Def->getName() + " defined here");
 }
 
 CodeGenSubRegIndex *
@@ -1654,8 +1666,7 @@ template <> struct llvm::GraphTraits<SubRegIndexCompositionGraph> {
   struct ChildIteratorType
       : public iterator_adaptor_base<
             ChildIteratorType, CompMapIt,
-            typename std::iterator_traits<CompMapIt>::iterator_category,
-            NodeRef> {
+            std::iterator_traits<CompMapIt>::iterator_category, NodeRef> {
     ChildIteratorType(CompMapIt I)
         : ChildIteratorType::iterator_adaptor_base(I) {}
 
@@ -1925,6 +1936,97 @@ void CodeGenRegBank::computeRegUnitWeights() {
   }
 }
 
+// isContiguous is a enforceRegUnitIntervals helper that returns true if all
+// units in Units form a contiguous interval.
+static bool isContiguous(const CodeGenRegister::RegUnitList &Units) {
+  unsigned LastUnit = Units.find_first();
+  for (auto ThisUnit : llvm::make_range(++Units.begin(), Units.end())) {
+    if (ThisUnit != LastUnit + 1)
+      return false;
+    LastUnit = ThisUnit;
+  }
+  return true;
+}
+
+// Enforce that all registers are intervals of regunits if the target
+// requests this property. This will renumber regunits to ensure the
+// interval property holds, or error out if it cannot be satisfied.
+void CodeGenRegBank::enforceRegUnitIntervals() {
+  if (!RegistersAreIntervals)
+    return;
+
+  LLVM_DEBUG(dbgs() << "Enforcing regunit intervals for target\n");
+  std::vector<unsigned> RegUnitRenumbering(RegUnits.size(), ~0u);
+
+  // RegUnits that have been renumbered from X -> Y. Y is what is marked so that
+  // it doesn't create a chain of swaps.
+  SparseBitVector<> DontRenumberUnits;
+
+  auto GetRenumberedUnit = [&](unsigned RegUnit) -> unsigned {
+    if (unsigned RenumberedUnit = RegUnitRenumbering[RegUnit];
+        RenumberedUnit != ~0u)
+      return RenumberedUnit;
+    return RegUnit;
+  };
+
+  // Process registers in definition order
+  for (CodeGenRegister &Reg : Registers) {
+    LLVM_DEBUG(dbgs() << "Processing register " << Reg.getName() << "\n");
+    const auto &Units = Reg.getNativeRegUnits();
+    if (Units.empty())
+      continue;
+    SparseBitVector<> RenumberedUnits;
+    // First renumber all the units for this register according to previous
+    // renumbering.
+    LLVM_DEBUG(dbgs() << "  Original (Renumbered) units:");
+    for (unsigned U : Units) {
+      LLVM_DEBUG(dbgs() << " " << U << "(" << GetRenumberedUnit(U) << "), ");
+      RenumberedUnits.set(GetRenumberedUnit(U));
+    }
+    LLVM_DEBUG(dbgs() << "\n");
+
+    unsigned LastUnit = RenumberedUnits.find_first();
+    for (auto ThisUnit :
+         llvm::make_range(++RenumberedUnits.begin(), RenumberedUnits.end())) {
+      if (ThisUnit != LastUnit + 1) {
+        if (DontRenumberUnits.test(LastUnit + 1)) {
+          PrintFatalError(
+              "cannot enforce regunit intervals for register " + Reg.getName() +
+              ": unit " + Twine(LastUnit + 1) +
+              " (root: " + RegUnits[LastUnit + 1].Roots[0]->getName() +
+              ") has already been renumbered and cannot be swapped");
+        }
+        LLVM_DEBUG(dbgs() << "  Renumbering unit " << ThisUnit << " to "
+                          << (LastUnit + 1) << "\n");
+        RegUnitRenumbering[LastUnit + 1] = ThisUnit;
+        RegUnitRenumbering[ThisUnit] = LastUnit + 1;
+        DontRenumberUnits.set(LastUnit + 1);
+        ThisUnit = LastUnit + 1;
+      }
+      LastUnit = ThisUnit;
+    }
+  }
+
+  // Apply the renumbering to all registers
+  for (CodeGenRegister &Reg : Registers) {
+    CodeGenRegister::RegUnitList NewRegUnits;
+    for (unsigned OldUnit : Reg.getRegUnits())
+      NewRegUnits.set(GetRenumberedUnit(OldUnit));
+    Reg.setNewRegUnits(NewRegUnits);
+
+    CodeGenRegister::RegUnitList NewNativeUnits;
+    for (unsigned OldUnit : Reg.getNativeRegUnits())
+      NewNativeUnits.set(GetRenumberedUnit(OldUnit));
+    if (!isContiguous(NewNativeUnits)) {
+      PrintFatalError("cannot enforce regunit intervals, final "
+                      "renumbering did not produce contiguous units "
+                      "for register " +
+                      Reg.getName() + "\n");
+    }
+    Reg.NativeRegUnits = NewNativeUnits;
+  }
+}
+
 // Find a set in UniqueSets with the same elements as Set.
 // Return an iterator into UniqueSets.
 static std::vector<RegUnitSet>::const_iterator
@@ -2167,7 +2269,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
         RegUnits.count(), LaneBitmask::getAll());
     // Iterate through SubRegisters.
-    typedef CodeGenRegister::SubRegMap SubRegMap;
+    using SubRegMap = CodeGenRegister::SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
     for (auto [SubRegIndex, SubReg] : SubRegs) {
       // Ignore non-leaf subregisters, their lane masks are fully covered by
@@ -2203,6 +2305,11 @@ void CodeGenRegBank::computeDerivedInfo() {
   // This may create adopted register units (with unit # >= NumNativeRegUnits).
   Records.getTimer().startTimer("Compute reg unit weights");
   computeRegUnitWeights();
+  Records.getTimer().stopTimer();
+
+  // Enforce regunit intervals if requested by the target.
+  Records.getTimer().startTimer("Enforce regunit intervals");
+  enforceRegUnitIntervals();
   Records.getTimer().stopTimer();
 
   // Compute a unique set of RegUnitSets. One for each RegClass and inferred
@@ -2286,9 +2393,8 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
 //
 void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Map SubRegIndex to set of registers in RC supporting that SubRegIndex.
-  typedef std::map<const CodeGenSubRegIndex *, CodeGenRegister::Vec,
-                   deref<std::less<>>>
-      SubReg2SetMap;
+  using SubReg2SetMap = std::map<const CodeGenSubRegIndex *,
+                                 CodeGenRegister::Vec, deref<std::less<>>>;
 
   // Compute the set of registers supporting each SubRegIndex.
   SubReg2SetMap SRSets;

@@ -28,6 +28,7 @@ add_llvm_unittest(IRTests
   DominatorTreeBatchUpdatesTest.cpp
   DroppedVariableStatsIRTest.cpp
   FunctionTest.cpp
+  GlobalObjectTest.cpp
   PassBuilderCallbacksTest.cpp
   IRBuilderTest.cpp
   InstructionsTest.cpp

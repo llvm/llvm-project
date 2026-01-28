@@ -252,7 +252,7 @@ namespace {
   template <class T> good implements_children(children_t T::*) {
     return good();
   }
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   static bad implements_children(children_t Stmt::*) {
     return bad();
   }
@@ -261,15 +261,19 @@ namespace {
   template <class T> good implements_getBeginLoc(getBeginLoc_t T::*) {
     return good();
   }
-  LLVM_ATTRIBUTE_UNUSED
-  static bad implements_getBeginLoc(getBeginLoc_t Stmt::*) { return bad(); }
+  [[maybe_unused]]
+  static bad implements_getBeginLoc(getBeginLoc_t Stmt::*) {
+    return bad();
+  }
 
   typedef SourceLocation getLocEnd_t() const;
   template <class T> good implements_getEndLoc(getLocEnd_t T::*) {
     return good();
   }
-  LLVM_ATTRIBUTE_UNUSED
-  static bad implements_getEndLoc(getLocEnd_t Stmt::*) { return bad(); }
+  [[maybe_unused]]
+  static bad implements_getEndLoc(getLocEnd_t Stmt::*) {
+    return bad();
+  }
 
 #define ASSERT_IMPLEMENTS_children(type) \
   (void) is_good(implements_children(&type::children))
@@ -282,7 +286,7 @@ namespace {
 
 /// Check whether the various Stmt classes implement their member
 /// functions.
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static inline void check_implementations() {
 #define ABSTRACT_STMT(type)
 #define STMT(type, base)                                                       \
@@ -444,6 +448,39 @@ AttributedStmt *AttributedStmt::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(totalSizeToAlloc<const Attr *>(NumAttrs),
                          alignof(AttributedStmt));
   return new (Mem) AttributedStmt(EmptyShell(), NumAttrs);
+}
+
+std::string
+AsmStmt::addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
+                                const TargetInfo &Target, bool EarlyClobber,
+                                UnsupportedConstraintCallbackTy UnsupportedCB,
+                                std::string *GCCReg) const {
+  const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
+  if (!AsmDeclRef)
+    return Constraint.str();
+  const ValueDecl &Value = *AsmDeclRef->getDecl();
+  const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
+  if (!Variable)
+    return Constraint.str();
+  if (Variable->getStorageClass() != SC_Register)
+    return Constraint.str();
+  AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
+  if (!Attr)
+    return Constraint.str();
+  StringRef Register = Attr->getLabel();
+  assert(Target.isValidGCCRegisterName(Register));
+  // We're using validateOutputConstraint here because we only care if
+  // this is a register constraint.
+  TargetInfo::ConstraintInfo Info(Constraint, "");
+  if (Target.validateOutputConstraint(Info) && !Info.allowsRegister()) {
+    UnsupportedCB(this, "__asm__");
+    return Constraint.str();
+  }
+  // Canonicalize the register here before returning it.
+  Register = Target.getNormalizedGCCRegisterName(Register);
+  if (GCCReg != nullptr)
+    *GCCReg = Register.str();
+  return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
 }
 
 std::string AsmStmt::generateAsmString(const ASTContext &C) const {
@@ -1481,4 +1518,33 @@ bool CapturedStmt::capturesVariable(const VarDecl *Var) const {
   }
 
   return false;
+}
+
+const Stmt *LabelStmt::getInnermostLabeledStmt() const {
+  const Stmt *S = getSubStmt();
+  while (isa_and_present<LabelStmt>(S))
+    S = cast<LabelStmt>(S)->getSubStmt();
+  return S;
+}
+
+const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
+  if (!hasLabelTarget())
+    return nullptr;
+  return getLabelDecl()->getStmt()->getInnermostLabeledStmt();
+}
+
+DeferStmt::DeferStmt(EmptyShell Empty) : Stmt(DeferStmtClass, Empty) {}
+DeferStmt::DeferStmt(SourceLocation DeferLoc, Stmt *Body)
+    : Stmt(DeferStmtClass) {
+  setDeferLoc(DeferLoc);
+  setBody(Body);
+}
+
+DeferStmt *DeferStmt::CreateEmpty(ASTContext &Context, EmptyShell Empty) {
+  return new (Context) DeferStmt(Empty);
+}
+
+DeferStmt *DeferStmt::Create(ASTContext &Context, SourceLocation DeferLoc,
+                             Stmt *Body) {
+  return new (Context) DeferStmt(DeferLoc, Body);
 }

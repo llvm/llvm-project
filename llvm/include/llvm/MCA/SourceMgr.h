@@ -50,7 +50,7 @@ struct SourceMgr {
   /// Advance to the next \a SourceRef.
   virtual void updateNext() = 0;
 
-  virtual ~SourceMgr() {}
+  virtual ~SourceMgr() = default;
 };
 
 /// The default implementation of \a SourceMgr. It always takes a fixed number

@@ -12,7 +12,16 @@
 
 // This predicate is true when the rs2 operand of vlse or vsse is x0, false
 // otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+// Note: in our pseudo RVV MachinInstr, rs2 is the fourth operand. However,
+// it's the third operand of its MCInst form, so this predicate will not
+// be triggered by llvm-mca, which checks against MCInst.
+def VLDSX0Pred
+    : AllOfSchedPreds<[FeatureSchedPredicate<TuneOptimizedZeroStrideLoad>,
+                       MCSchedPredicate<CheckRegOperand<3, X0>>]>;
+
+// This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
+// is enabled.
+def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
@@ -49,6 +58,7 @@ def isSelectPseudo
                    MCReturnStatement<
                      CheckOpcode<[
                        Select_GPR_Using_CC_GPR,
+                       Select_GPR_Using_CC_Imm5_Zibi,
                        Select_GPR_Using_CC_SImm5_CV,
                        Select_GPRNoX0_Using_CC_SImm5NonZero_QC,
                        Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
@@ -73,7 +83,41 @@ def isVectorConfigInstr
                        PseudoVSETVLI,
                        PseudoVSETVLIX0,
                        PseudoVSETVLIX0X0,
-                       PseudoVSETIVLI
+                       PseudoVSETIVLI,
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
+                     ]>>>;
+
+// Returns true if this is a PseudoSF_VSETTNT* instructions.
+def isXSfmmVectorConfigTNInstr
+    : TIIPredicate<"isXSfmmVectorConfigTNInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
+                     ]>>>;
+
+// Returns true if this is PseudoSF_VSETTM or PseudoSF_VSETTK.
+def isXSfmmVectorConfigTMTKInstr
+    : TIIPredicate<"isXSfmmVectorConfigTMTKInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTM,
+                       PseudoSF_VSETTK
+                     ]>>>;
+
+// Returns true if this is a XSfmm vector configuration instruction.
+def isXSfmmVectorConfigInstr
+    : TIIPredicate<"isXSfmmVectorConfigInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0,
+                       PseudoSF_VSETTM,
+                       PseudoSF_VSETTK
                      ]>>>;
 
 // Return true if this is 'vsetvli x0, x0, vtype' which preserves
@@ -146,6 +190,14 @@ def isNonZeroLoadImmediate
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
+                   ]>>>;
+
+def isLPAD
+    : TIIPredicate<"isLPAD",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[AUIPC]>,
+                     CheckIsRegOperand<0>,
+                     CheckRegOperand<0, X0>,
                    ]>>>;
 
 def ignoresVXRM

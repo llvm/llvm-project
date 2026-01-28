@@ -219,7 +219,7 @@ constexpr bool test() {
     }
 
     // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
-    // See https://github.com/llvm/llvm-project/issues/122528
+    // See https://llvm.org/PR122528
     {
       using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
       std::vector<bool, Alloc> in(100, false, Alloc(1));
@@ -272,57 +272,100 @@ public:
   friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
 };
 
-void test_deque() {
-  { // empty deque
-    std::deque<int> data;
-    assert(std::ranges::find(data, 4) == data.end());
-    assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
-  }
-
-  { // single element - match
-    std::deque<int> data = {4};
-    assert(std::ranges::find(data, 4) == data.begin());
-    assert(std::ranges::find(data.begin(), data.end(), 4) == data.begin());
-  }
-
-  { // single element - no match
-    std::deque<int> data = {3};
-    assert(std::ranges::find(data, 4) == data.end());
-    assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
-  }
-
-  // many elements
-  for (auto size : {2, 3, 1023, 1024, 1025, 2047, 2048, 2049}) {
-    { // last element match
+void test_segmented_iterator_types() {
+  // Test the optimized find algorithm for types that implement the segment iterator trait
+  // deque
+  {
+    { // empty deque
       std::deque<int> data;
-      data.resize(size);
-      std::fill(data.begin(), data.end(), 3);
-      data[size - 1] = 4;
-      assert(std::ranges::find(data, 4) == data.end() - 1);
-      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 1);
-    }
-
-    { // second-last element match
-      std::deque<int> data;
-      data.resize(size);
-      std::fill(data.begin(), data.end(), 3);
-      data[size - 2] = 4;
-      assert(std::ranges::find(data, 4) == data.end() - 2);
-      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 2);
-    }
-
-    { // no match
-      std::deque<int> data;
-      data.resize(size);
-      std::fill(data.begin(), data.end(), 3);
       assert(std::ranges::find(data, 4) == data.end());
       assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+    }
+
+    { // single element - match
+      std::deque<int> data = {4};
+      assert(std::ranges::find(data, 4) == data.begin());
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.begin());
+    }
+
+    { // single element - no match
+      std::deque<int> data = {3};
+      assert(std::ranges::find(data, 4) == data.end());
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+    }
+
+    // many elements
+    for (auto size : {2, 3, 1023, 1024, 1025, 2047, 2048, 2049}) {
+      { // last element match
+        std::deque<int> data;
+        data.resize(size);
+        std::fill(data.begin(), data.end(), 3);
+        data[size - 1] = 4;
+        assert(std::ranges::find(data, 4) == data.end() - 1);
+        assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 1);
+      }
+
+      { // second-last element match
+        std::deque<int> data;
+        data.resize(size);
+        std::fill(data.begin(), data.end(), 3);
+        data[size - 2] = 4;
+        assert(std::ranges::find(data, 4) == data.end() - 2);
+        assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 2);
+      }
+
+      { // no match
+        std::deque<int> data;
+        data.resize(size);
+        std::fill(data.begin(), data.end(), 3);
+        assert(std::ranges::find(data, 4) == data.end());
+        assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+      }
+    }
+  }
+  // join_view ranges adaptor
+  {
+    { // single element - match
+      int data[1][1] = {{4}};
+      auto joined    = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::ranges::begin(joined));
+    }
+    { // single element - no match
+      // (reproducer for https://llvm.org/PR158279, where the iterator would never reach the end sentinel)
+      int data[1][1] = {{3}};
+      auto joined    = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::ranges::end(joined));
+    }
+    { // several sub-arrays of size 1 - match
+      int data[3][1] = {{0}, {4}, {0}};
+      auto joined    = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::next(std::ranges::begin(joined)));
+    }
+    { // several sub-arrays of size 2 - match in second element of an array
+      int data[3][2] = {{0, 0}, {0, 4}, {0, 0}};
+      auto joined    = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::ranges::next(std::ranges::begin(joined), 3));
+    }
+    { // vector of empty vectors
+      std::vector<std::vector<int>> data = {{}, {}};
+      auto joined                        = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::ranges::end(joined));
+    }
+    { // vector of variably sized vectors - match
+      std::vector<std::vector<int>> data = {{}, {}, {3, 4}, {}, {}};
+      auto joined                        = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::ranges::next(std::ranges::begin(joined)));
+    }
+    { // vector of variably sized vectors - no match
+      std::vector<std::vector<int>> data = {{}, {}, {3, 5}, {}, {}};
+      auto joined                        = std::views::join(data);
+      assert(std::ranges::find(joined, 4) == std::ranges::end(joined));
     }
   }
 }
 
 int main(int, char**) {
-  test_deque();
+  test_segmented_iterator_types();
   test();
   static_assert(test());
 

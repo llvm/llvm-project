@@ -1,6 +1,9 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compile-run-and-check-generic
 
 // REQUIRES: libc
+//
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// XFAIL: gpu
 
 #include <omp.h>
 #include <stdio.h>
@@ -53,8 +56,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", ps->x, ps_mappedptr == &ps, s0_mappedptr == &ps->x,
            s0_hostaddr == &ps->x);
-    // EXPECTED: 111 1 1 0
-    // CHECK:    111 0 1 0
+    // CHECK:    111 1 1 0
     ps++;
   }
 
@@ -63,8 +65,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", ps->x, ps_mappedptr == &ps,
            s0_mappedptr == &ps[-1].x, s0_hostaddr == &ps[-1].x);
-    // EXPECTED: 222 1 1 0
-    // CHECK:    111 0 0 0
+    // CHECK:    222 1 1 0
     ps++;
   }
 
@@ -74,7 +75,7 @@ void f1() {
     printf("%d %d %d %d\n", ps->x, ps_mappedptr == &ps,
            s0_mappedptr == &ps[-2].x, s0_hostaddr == &ps[-2].x);
     // EXPECTED: 333 1 1 0
-    // CHECK:    111 1 0 0
+    // CHECK:    333 1 1 0
   }
 
   // The following map(from:ps) should not bring back ps, because ps is an
@@ -82,7 +83,7 @@ void f1() {
   // location, &s[0], on host.
 #pragma omp target exit data map(always, from : ps)
   printf("%d %d\n", ps->x, ps == &s[0]);
-  // CHECK: 111 1
+  // CHECK:      111 1
 
 #pragma omp target exit data map(delete : ps, s)
 }

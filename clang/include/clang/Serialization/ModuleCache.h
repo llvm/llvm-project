@@ -10,7 +10,6 @@
 #define LLVM_CLANG_SERIALIZATION_MODULECACHE_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 #include <ctime>
 
@@ -23,7 +22,7 @@ class InMemoryModuleCache;
 
 /// The module cache used for compiling modules implicitly. This centralizes the
 /// operations the compiler might want to perform on the cache.
-class ModuleCache : public RefCountedBase<ModuleCache> {
+class ModuleCache {
 public:
   /// May perform any work that only needs to be performed once for multiple
   /// calls \c getLock() with the same module filename.
@@ -45,11 +44,15 @@ public:
   /// were validated.
   virtual void updateModuleTimestamp(StringRef ModuleFilename) = 0;
 
+  /// Prune module files that haven't been accessed in a long time.
+  virtual void maybePrune(StringRef Path, time_t PruneInterval,
+                          time_t PruneAfter) = 0;
+
   /// Returns this process's view of the module cache.
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  // TODO: Virtualize writing/reading PCM files, pruning, etc.
+  // TODO: Virtualize writing/reading PCM files, etc.
 
   virtual ~ModuleCache() = default;
 };
@@ -58,7 +61,10 @@ public:
 /// operated on by multiple processes. This instance must be used across all
 /// \c CompilerInstance instances participating in building modules for single
 /// translation unit in order to share the same \c InMemoryModuleCache.
-IntrusiveRefCntPtr<ModuleCache> createCrossProcessModuleCache();
+std::shared_ptr<ModuleCache> createCrossProcessModuleCache();
+
+/// Shared implementation of `ModuleCache::maybePrune()`.
+void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
 } // namespace clang
 
 #endif

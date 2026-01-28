@@ -378,6 +378,8 @@ struct ScalarEnumerationTraits<TargetStackID::Value> {
     IO.enumCase(ID, "default", TargetStackID::Default);
     IO.enumCase(ID, "sgpr-spill", TargetStackID::SGPRSpill);
     IO.enumCase(ID, "scalable-vector", TargetStackID::ScalableVector);
+    IO.enumCase(ID, "scalable-predicate-vector",
+                TargetStackID::ScalablePredicateVector);
     IO.enumCase(ID, "wasm-local", TargetStackID::WasmLocal);
     IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
   }
@@ -634,19 +636,36 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CalledGlobal)
 namespace llvm {
 namespace yaml {
 
-// Struct representing one save/restore point in the 'savePoint'/'restorePoint'
-// list
+// Struct representing one save/restore point in the 'savePoint' /
+// 'restorePoint' list. One point consists of machine basic block name and list
+// of registers saved/restored in this basic block. In MIR it looks like:
+//  savePoint:
+//    - point:           '%bb.1'
+//      registers:
+//        - '$rbx'
+//        - '$r12'
+//        ...
+//  restorePoint:
+//    - point:           '%bb.1'
+//      registers:
+//        - '$rbx'
+//        - '$r12'
+// If no register is saved/restored in the selected BB,
+// field 'registers' is not specified.
 struct SaveRestorePointEntry {
   StringValue Point;
+  std::vector<StringValue> Registers;
 
   bool operator==(const SaveRestorePointEntry &Other) const {
-    return Point == Other.Point;
+    return Point == Other.Point && Registers == Other.Registers;
   }
 };
 
 template <> struct MappingTraits<SaveRestorePointEntry> {
   static void mapping(IO &YamlIO, SaveRestorePointEntry &Entry) {
     YamlIO.mapRequired("point", Entry.Point);
+    YamlIO.mapOptional("registers", Entry.Registers,
+                       std::vector<StringValue>());
   }
 };
 

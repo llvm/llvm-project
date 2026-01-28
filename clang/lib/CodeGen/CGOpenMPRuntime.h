@@ -605,6 +605,9 @@ protected:
                           LValue PosLVal, const OMPTaskDataTy::DependData &Data,
                           Address DependenciesArray);
 
+  /// Keep track of VTable Declarations so we don't register duplicate VTable.
+  llvm::SmallDenseMap<CXXRecordDecl *, const VarDecl *> VTableDeclMap;
+
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);
   virtual ~CGOpenMPRuntime() {}
@@ -1049,13 +1052,11 @@ public:
                                    Address UB, Address ST);
 
   virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
-                                         const Expr *Message);
-  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
-                                         const OMPMessageClause *MessageClause);
+                                         const Expr *Message,
+                                         SourceLocation Loc);
 
-  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity);
-  virtual llvm::Value *
-  emitSeverityClause(const OMPSeverityClause *SeverityClause);
+  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                          SourceLocation Loc);
 
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
@@ -1069,7 +1070,9 @@ public:
       CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
       OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
       OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-      const Expr *Message = nullptr);
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation());
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -1110,6 +1113,23 @@ public:
   /// \param PerformInit true if initialization expression is not constant.
   virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
                                          llvm::GlobalValue *GV);
+
+  /// Register VTable to OpenMP offload entry.
+  /// \param VTable VTable of the C++ class.
+  /// \param RD C++ class decl.
+  virtual void registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                          const VarDecl *VD);
+  /// Emit code for registering vtable by scanning through map clause
+  /// in OpenMP target region.
+  /// \param D OpenMP target directive.
+  virtual void registerVTable(const OMPExecutableDirective &D);
+
+  /// Emit and register VTable for the C++ class in OpenMP offload entry.
+  /// \param CXXRecord C++ class decl.
+  /// \param VD Variable decl which holds VTable.
+  virtual void emitAndRegisterVTable(CodeGenModule &CGM,
+                                     CXXRecordDecl *CXXRecord,
+                                     const VarDecl *VD);
 
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
@@ -1956,7 +1976,9 @@ public:
       CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
       OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
       OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-      const Expr *Message = nullptr) override;
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation()) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.

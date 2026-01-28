@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_local_size.h>
+#include <clc/opencl/opencl-base.h>
 
 #if __clang_major__ >= 8
 #define CONST_AS __constant

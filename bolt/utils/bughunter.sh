@@ -28,7 +28,7 @@
 #
 #   TIMEOUT_OR_CMD    - optional timeout or command on optimized binary command
 #                       if the value is a number with an optional trailing letter
-#                       [smhd] it is considered a paramter to "timeout",
+#                       [smhd] it is considered a parameter to "timeout",
 #                       otherwise it's a shell command that wraps the optimized
 #                       binary command.
 #

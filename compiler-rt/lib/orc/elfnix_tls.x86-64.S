@@ -13,6 +13,7 @@
 
 // The content of this file is x86_64-only
 #if defined(__x86_64__)
+.att_syntax
 
 #define REGISTER_SAVE_SPACE_SIZE        512
 

@@ -13,6 +13,7 @@
 #include "llvm/TargetParser/XtensaTargetParser.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <vector>
 
 namespace llvm {
 

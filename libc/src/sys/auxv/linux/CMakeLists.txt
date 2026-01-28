@@ -5,15 +5,6 @@ add_entrypoint_object(
   HDRS
     ../getauxval.h
   DEPENDS
-    libc.src.sys.prctl.prctl
-    libc.src.sys.mman.mmap
-    libc.src.sys.mman.munmap
-    libc.src.__support.threads.callonce
-    libc.src.__support.common
-    libc.src.errno.errno
-    libc.config.app_h
-    libc.src.fcntl.open
-    libc.src.unistd.read
-    libc.src.unistd.close
-    libc.include.sys_auxv
+    libc.src.__support.OSUtil.linux.auxv
+    libc.src.__support.libc_errno
 )

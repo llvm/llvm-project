@@ -289,7 +289,6 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
   fir::factory::genDimInfoFromBox(builder, loc, box, &lbounds, &extents,
                                   /*strides=*/nullptr);
   // Get the type parameters from the box, if needed.
-  llvm::SmallVector<mlir::Value> assumedTypeParams;
   if (numTypeParams != 0) {
     if (auto charType =
             mlir::dyn_cast<fir::CharacterType>(boxType.unwrapInnerType()))

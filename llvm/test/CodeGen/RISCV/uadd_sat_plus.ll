@@ -4,12 +4,6 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zbb | FileCheck %s --check-prefix=RV32IZbb
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zbb | FileCheck %s --check-prefix=RV64IZbb
 
-declare i4 @llvm.uadd.sat.i4(i4, i4)
-declare i8 @llvm.uadd.sat.i8(i8, i8)
-declare i16 @llvm.uadd.sat.i16(i16, i16)
-declare i32 @llvm.uadd.sat.i32(i32, i32)
-declare i64 @llvm.uadd.sat.i64(i64, i64)
-
 define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32I-LABEL: func32:
 ; RV32I:       # %bb.0:

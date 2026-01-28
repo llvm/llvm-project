@@ -27,16 +27,16 @@ program num_images_with_team_type
 
   !___ non-conforming statements ___
 
-  ! non-scalar integer argument 
+  ! non-scalar integer argument
   !ERROR: unknown keyword argument to intrinsic 'num_images'
   n = num_images(team_number=array)
 
-  ! non-scalar team_type argument 
+  ! non-scalar team_type argument
   !ERROR: unknown keyword argument to intrinsic 'num_images'
   n = num_images(team=league)
 
   ! incorrectly typed argument
-  !ERROR: too many actual arguments for intrinsic 'num_images'
+  !ERROR: Actual argument for 'team=' has bad type 'REAL(4)'
   n = num_images(3.4)
 
   !ERROR: too many actual arguments for intrinsic 'num_images'

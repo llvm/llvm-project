@@ -16,6 +16,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
@@ -41,12 +42,12 @@
 // to cleanly export and alias the C++ symbol `LIBC_NAMESPACE::func` with the C
 // symbol `func`.  So for public packaging on MacOS, we will only export the C
 // symbol.  Moreover, a C symbol `func` in macOS is mangled as `_func`.
-#if defined(LIBC_COPT_PUBLIC_PACKAGING)
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_COMPILER_IS_MSVC)
 #ifndef __APPLE__
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
-      __##name##_impl__ __asm__(#name);                                        \
+      __##name##_impl__ asm(#name);                                            \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
   type __##name##_impl__ arglist
 #else // __APPLE__

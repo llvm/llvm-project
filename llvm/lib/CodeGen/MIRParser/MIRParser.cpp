@@ -127,7 +127,7 @@ public:
   bool initializeSaveRestorePoints(
       PerFunctionMIParsingState &PFS,
       const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
-      SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints);
+      llvm::SaveRestorePoints &SaveRestorePoints);
 
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
@@ -872,11 +872,11 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  llvm::SaveRestorePoints SavePoints;
   if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints, SavePoints))
     return true;
   MFI.setSavePoints(SavePoints);
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  llvm::SaveRestorePoints RestorePoints;
   if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints, RestorePoints))
     return true;
   MFI.setRestorePoints(RestorePoints);
@@ -1098,14 +1098,22 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
 bool MIRParserImpl::initializeSaveRestorePoints(
     PerFunctionMIParsingState &PFS,
     const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
-    SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
+    llvm::SaveRestorePoints &SaveRestorePoints) {
+  SMDiagnostic Error;
   MachineBasicBlock *MBB = nullptr;
   for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
     if (parseMBBReference(PFS, MBB, Entry.Point.Value))
       return true;
-    SaveRestorePoints.push_back(MBB);
-  }
 
+    std::vector<CalleeSavedInfo> Registers;
+    for (auto &RegStr : Entry.Registers) {
+      Register Reg;
+      if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
+        return error(Error, RegStr.SourceRange);
+      Registers.push_back(CalleeSavedInfo(Reg));
+    }
+    SaveRestorePoints.try_emplace(MBB, std::move(Registers));
+  }
   return false;
 }
 

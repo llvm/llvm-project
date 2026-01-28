@@ -35,9 +35,9 @@ static std::optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
   if (!attr)
     return std::nullopt;
 
-  if (auto boolAttr = llvm::dyn_cast<BoolAttr>(attr))
+  if (auto boolAttr = dyn_cast<BoolAttr>(attr))
     return boolAttr.getValue();
-  if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr))
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(attr))
     if (splatAttr.getElementType().isInteger(1))
       return splatAttr.getSplatValue<bool>();
   return std::nullopt;
@@ -54,12 +54,12 @@ static Attribute extractCompositeElement(Attribute composite,
   if (indices.empty())
     return composite;
 
-  if (auto vector = llvm::dyn_cast<ElementsAttr>(composite)) {
+  if (auto vector = dyn_cast<ElementsAttr>(composite)) {
     assert(indices.size() == 1 && "must have exactly one index for a vector");
     return vector.getValues<Attribute>()[indices[0]];
   }
 
-  if (auto array = llvm::dyn_cast<ArrayAttr>(composite)) {
+  if (auto array = dyn_cast<ArrayAttr>(composite)) {
     assert(!indices.empty() && "must have at least one index for an array");
     return extractCompositeElement(array.getValue()[indices[0]],
                                    indices.drop_front());
@@ -93,7 +93,7 @@ namespace {
 /// `spirv::AccessChainOp` operation.
 struct CombineChainedAccessChain final
     : OpRewritePattern<spirv::AccessChainOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
@@ -128,7 +128,7 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 // We are required to use CompositeConstructOp to create a constant struct as
 // they are not yet implemented as constant, hence we can not do so in a fold.
 struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
                                 PatternRewriter &rewriter) const override {
@@ -284,7 +284,7 @@ void spirv::SMulExtendedOp::getCanonicalizationPatterns(
 }
 
 struct UMulExtendedOpXOne final : OpRewritePattern<spirv::UMulExtendedOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::UMulExtendedOp op,
                                 PatternRewriter &rewriter) const override {
@@ -326,7 +326,7 @@ void spirv::UMulExtendedOp::getCanonicalizationPatterns(
 // The transformation is only applied if one divisor is a multiple of the other.
 
 struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::UModOp umodOp,
                                 PatternRewriter &rewriter) const override {
@@ -370,7 +370,7 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
 
 void spirv::UModOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.insert<UModSimplification>(context);
+  patterns.add<UModSimplification>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -412,10 +412,10 @@ OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
 
   if (auto constructOp =
           compositeOp.getDefiningOp<spirv::CompositeConstructOp>()) {
-    auto type = llvm::cast<spirv::CompositeType>(constructOp.getType());
+    auto type = cast<spirv::CompositeType>(constructOp.getType());
     if (getIndices().size() == 1 &&
         constructOp.getConstituents().size() == type.getNumElements()) {
-      auto i = llvm::cast<IntegerAttr>(*getIndices().begin());
+      auto i = cast<IntegerAttr>(*getIndices().begin());
       if (i.getValue().getSExtValue() <
           static_cast<int64_t>(constructOp.getConstituents().size()))
         return constructOp.getConstituents()[i.getValue().getSExtValue()];
@@ -423,7 +423,7 @@ OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
   }
 
   auto indexVector = llvm::map_to_vector(getIndices(), [](Attribute attr) {
-    return static_cast<unsigned>(llvm::cast<IntegerAttr>(attr).getInt());
+    return static_cast<unsigned>(cast<IntegerAttr>(attr).getInt());
   });
   return extractCompositeElement(adaptor.getComposite(), indexVector);
 }
@@ -1271,7 +1271,7 @@ namespace {
 //                       +-------------+
 //
 struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::SelectionOp selectionOp,
                                 PatternRewriter &rewriter) const override {
@@ -1379,7 +1379,7 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
   // Starting with version 1.4, Result Type can additionally be a composite type
   // other than a vector."
   bool isScalarOrVector =
-      llvm::cast<spirv::SPIRVType>(trueBrStoreOp.getValue().getType())
+      cast<spirv::SPIRVType>(trueBrStoreOp.getValue().getType())
           .isScalarOrVector();
 
   // Check that each `spirv.Store` uses the same pointer, memory access

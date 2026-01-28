@@ -567,10 +567,10 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
   return getCachedOrDownloadDebuginfo(ID);
 }
 
-Error DebuginfodServer::init(DebuginfodLog &Log,
-                             DebuginfodCollection &Collection) {
-
-  Error Err =
+DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
+                                   DebuginfodCollection &Collection)
+    : Log(Log), Collection(Collection) {
+  cantFail(
       Server.get(R"(/buildid/(.*)/debuginfo)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -587,11 +587,8 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
           return;
         }
         streamFile(Request, *PathOrErr);
-      });
-  if (Err)
-    return Err;
-
-  Err =
+      }));
+  cantFail(
       Server.get(R"(/buildid/(.*)/executable)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -608,18 +605,7 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
           return;
         }
         streamFile(Request, *PathOrErr);
-      });
-  if (Err)
-    return Err;
-  return Error::success();
-}
-
-Expected<DebuginfodServer>
-DebuginfodServer::create(DebuginfodLog &Log, DebuginfodCollection &Collection) {
-  DebuginfodServer Serverd;
-  if (llvm::Error Err = Serverd.init(Log, Collection))
-    return std::move(Err);
-  return std::move(Serverd);
+      }));
 }
 
 } // namespace llvm

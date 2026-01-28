@@ -213,6 +213,7 @@ def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
+def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -396,6 +397,16 @@ def commute_shift : GICombineRule<
          [{ return Helper.matchCommuteShift(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
+// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (lshr x, (C1 + C2))
+def lshr_of_trunc_of_lshr_matchdata : GIDefMatchData<"LshrOfTruncOfLshr">;
+def lshr_of_trunc_of_lshr : GICombineRule<
+  (defs root:$root, lshr_of_trunc_of_lshr_matchdata:$matchinfo),
+  (match (G_LSHR $d1, $x, $y):$Shift,
+         (G_TRUNC $d2, $d1),
+         (G_LSHR $dst, $d2, $z):$root,
+         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}, *${Shift}); }]),
+  (apply [{ Helper.applyLshrOfTruncOfLshr(*${root}, ${matchinfo}); }])>;
+
 def narrow_binop_feeding_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
@@ -472,13 +483,6 @@ def propagate_undef_shuffle_mask: GICombineRule<
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return Helper.matchUndefShuffleVectorMask(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
-
-// Replace a G_SHUFFLE_VECTOR with a G_EXTRACT_VECTOR_ELT.
-def shuffle_to_extract: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
-         [{ return Helper.matchShuffleToExtract(*${root}); }]),
-  (apply [{ Helper.applyShuffleToExtract(*${root}); }])>;
 
   // Replace an insert/extract element of an out of bounds index with undef.
   def insert_extract_vec_elt_out_of_bounds : GICombineRule<
@@ -684,6 +688,14 @@ def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
 def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
+def constant_fold_fceil : constant_fold_unary_fp_op_rule<G_FCEIL>;
+def constant_fold_ffloor : constant_fold_unary_fp_op_rule<G_FFLOOR>;
+def constant_fold_intrinsic_trunc : constant_fold_unary_fp_op_rule<G_INTRINSIC_TRUNC>;
+def constant_fold_intrinsic_round : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUND>;
+def constant_fold_intrinsic_roundeven : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUNDEVEN>;
+def constant_fold_frint : constant_fold_unary_fp_op_rule<G_FRINT>;
+def constant_fold_fnearbyint : constant_fold_unary_fp_op_rule<G_FNEARBYINT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -702,6 +714,14 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fsqrt,
   constant_fold_flog2,
   constant_fold_fptrunc,
+  constant_fold_fpext,
+  constant_fold_fceil,
+  constant_fold_ffloor,
+  constant_fold_intrinsic_trunc,
+  constant_fold_intrinsic_round,
+  constant_fold_intrinsic_roundeven,
+  constant_fold_frint,
+  constant_fold_fnearbyint,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
@@ -915,6 +935,15 @@ def merge_of_x_and_zero : GICombineRule <
          [{ return Helper.matchMergeXAndZero(*${MI}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
 
+// Transform build_vector(unmerge(src, 0), ... unmerge(src, n), undef, ..., undef)
+// => concat_vectors(src, undef)
+def combine_build_unmerge : GICombineRule<
+  (defs root:$root, register_matchinfo:$unmergeSrc),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchCombineBuildUnmerge(*${root}, MRI, ${unmergeSrc}); }]),
+  (apply [{ Helper.applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
+>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -924,7 +953,8 @@ def merge_combines: GICombineGroup<[
   unmerge_dead_to_trunc,
   unmerge_zext_to_zext,
   merge_of_x_and_undef,
-  merge_of_x_and_zero
+  merge_of_x_and_zero,
+  combine_build_unmerge
 ]>;
 
 // Under certain conditions, transform:
@@ -1007,9 +1037,17 @@ def extract_vec_elt_combines : GICombineGroup<[
 def funnel_shift_from_or_shift : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
-    [{ return Helper.matchOrShiftToFunnelShift(*${root}, ${info}); }]),
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, false, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
 >;
+
+def funnel_shift_from_or_shift_constants_are_legal : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_OR):$root,
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, true, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 
 def funnel_shift_to_rotate : GICombineRule<
   (defs root:$root),
@@ -1406,6 +1444,14 @@ def combine_minmax_nan: GICombineRule<
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
 
+// Combine multiple FDIVs with the same divisor into multiple FMULs by the
+// reciprocal.
+def fdiv_repeated_divison: GICombineRule<
+  (defs root:$root, mi_vector_matchinfo:$matchinfo),
+  (match (G_FDIV $dst, $src1, $src2):$root,
+         [{ return Helper.matchRepeatedFPDivisor(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyRepeatedFPDivisor(${matchinfo}); }])>;
+
 // Transform (add x, (sub y, x)) -> y
 // Transform (add (sub y, x), x) -> y
 def add_sub_reg_frags : GICombinePatFrag<
@@ -1653,8 +1699,7 @@ def combine_shuffle_concat : GICombineRule<
 // Combines shuffles of vector into build_vector
 def combine_shuffle_vector_to_build_vector : GICombineRule<
   (defs root:$root),
-  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
-    [{ return Helper.matchCombineShuffleToBuildVector(*${root}); }]),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
 
 def insert_vector_element_idx_undef : GICombineRule<
@@ -1973,6 +2018,22 @@ class narrow_binop_opcode<Instruction binopOpcode> : GICombineRule <
          [{ return Helper.matchNarrowBinop(*${Trunc}, *${Binop}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${Trunc}, ${matchinfo}); }])>;
 
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+class ctlz_to_ctls_op<Instruction ctlzOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (ctlzOpcode $dst, $src):$root,
+         [{ return Helper.matchCtls(*${root}, ${matchinfo}); }]),
+  (apply [{Helper.applyBuildFn(*${root}, ${matchinfo});}])>;
+
+def ctlz_to_ctls : ctlz_to_ctls_op<G_CTLZ>;
+def ctlz_zero_undef_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_UNDEF>;
+
+def ctls_combines : GICombineGroup<[
+  ctlz_to_ctls,
+  ctlz_zero_undef_to_ctls,
+]>;
+
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
 def narrow_binop_sub : narrow_binop_opcode<G_SUB>;
 def narrow_binop_mul : narrow_binop_opcode<G_MUL>;
@@ -2129,11 +2190,13 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     constant_fold_cast_op, fabs_fneg_fold,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    intrem_combines, intdiv_combines, sub_add_reg, select_to_minmax,
+    intrem_combines, intdiv_combines, fdiv_repeated_divison,
+    sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, 
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

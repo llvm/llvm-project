@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #include <stdlib.h>
@@ -95,14 +96,67 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 #elif defined(_MSC_VER) && !defined(_DEBUG)
     return _byteswap_uint64(UV);
 #else
-    uint64_t Hi = llvm::byteswap<uint32_t>(UV);
-    uint32_t Lo = llvm::byteswap<uint32_t>(UV >> 32);
+    uint64_t Hi = byteswap<uint32_t>(UV);
+    uint32_t Lo = byteswap<uint32_t>(UV >> 32);
     return (Hi << 32) | Lo;
 #endif
   } else {
     static_assert(!sizeof(T *), "Don't know how to handle the given type.");
     return 0;
   }
+}
+
+/// Calculates the number of leading zeros.
+template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr int countl_zero(T Val) noexcept {
+  if (!Val)
+    return std::numeric_limits<T>::digits;
+
+  unsigned ZeroBits = 0;
+  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
+    T Tmp = Val >> Shift;
+    if (Tmp)
+      Val = Tmp;
+    else
+      ZeroBits |= Shift;
+  }
+  return ZeroBits;
+}
+
+template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr int bit_width(T x) noexcept {
+  return std::numeric_limits<T>::digits - countl_zero(x);
+}
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr inline bool has_single_bit(T Value) noexcept {
+  return (Value != 0) && ((Value & (Value - 1)) == 0);
+}
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotl(T V, int R) {
+  constexpr unsigned N = std::numeric_limits<T>::digits;
+
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
+    return V;
+
+  return (V << R) | (V >> (N - R));
+}
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotr(T V, int R) {
+  constexpr unsigned N = std::numeric_limits<T>::digits;
+
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
+    return V;
+
+  return (V >> R) | (V << (N - R));
 }
 
 } // namespace orc_rt

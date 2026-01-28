@@ -7,7 +7,7 @@
 ;   clang -target bpf -O2 -emit-llvm -S test.c
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @test(i64 %x, i64 %y) local_unnamed_addr #0 {
+define dso_local i32 @test(i64 %x, i64 %y) local_unnamed_addr {
 entry:
   %and = and i64 %y, %x
   %conv = trunc i64 %and to i32
@@ -16,8 +16,6 @@ entry:
 
 ; CHECK: r[[REG1:[0-9]+]] = r{{[0-9]+}}
 ; CHECK: w[[REG1]] &= w{{[0-9]+}}
-
-attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

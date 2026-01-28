@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-library -finclude-default-header -O3 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -O3 -emit-llvm -o - %s | FileCheck %s
 // CHECK: [[Buf:@.*]] = private unnamed_addr constant [4 x i8] c"Buf\00"
 // CHECK: [[Buf2:@.*]] = private unnamed_addr constant [5 x i8] c"Buf2\00"
 // CHECK: [[Buf3:@.*]] = private unnamed_addr constant [5 x i8] c"Buf3\00"

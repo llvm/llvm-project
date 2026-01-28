@@ -1,10 +1,10 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32  < %s \
-# RUN:     --mattr=+experimental-xqcili,+experimental-xqcilb,+experimental-xqcibi \
+# RUN:     --mattr=+xqcili,+xqcilb,+xqcibi \
 # RUN:     -riscv-add-build-attributes \
 # RUN:     | llvm-objdump --no-print-imm-hex -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INSTR %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
-# RUN:     --mattr=+experimental-xqcili,+experimental-xqcilb,+experimental-xqcibi \
+# RUN:     --mattr=+xqcili,+xqcilb,+xqcibi \
 # RUN:     | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 ## This checks that, if the assembler can resolve the qc fixup, that the fixup

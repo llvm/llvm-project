@@ -1047,9 +1047,6 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   Prefix.setL(TSFlags & X86II::VEX_L);
   Prefix.setL2(TSFlags & X86II::EVEX_L2);
-  if ((TSFlags & X86II::EVEX_L2) && STI.hasFeature(X86::FeatureAVX512) &&
-      !STI.hasFeature(X86::FeatureEVEX512))
-    report_fatal_error("ZMM registers are not supported without EVEX512");
   switch (TSFlags & X86II::OpPrefixMask) {
   case X86II::PD:
     Prefix.setPP(0x1); // 66

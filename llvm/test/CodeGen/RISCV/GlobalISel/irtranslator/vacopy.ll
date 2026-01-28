@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -stop-after=irtranslator -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-declare void @llvm.va_copy(ptr, ptr)
 define void @test_va_copy(ptr %dest_list, ptr %src_list) {
   ; RV32I-LABEL: name: test_va_copy
   ; RV32I: bb.1 (%ir-block.0):

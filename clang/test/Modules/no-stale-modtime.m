@@ -3,33 +3,45 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
-// This could be replaced by diamond_*, except we want to modify the top header
-// RUN: echo '@import l; @import r;' > %t/b.h
-// RUN: echo '@import t; // fromt l' > %t/l.h
-// RUN: echo '@import t; // fromt r' > %t/r.h
+// RUN: split-file %s %t
 
-// RUN: echo '// top' > %t/t.h-1
 // RUN: cat %t/t.h-1 > %t/t.h
 
-// RUN: echo 'module b { header "b.h" } module l { header "l.h" }' > %t/module.modulemap-1
-// RUN: echo 'module r { header "r.h" } module t { header "t.h" }' > %t/module.modulemap-2
-// RUN: cat %t/module.modulemap-1 %t/module.modulemap-2 > %t/module.modulemap
-
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Rmodule-build 2>&1 \
-// RUN: | FileCheck -check-prefix=REBUILD-ALL %s
+// RUN:     -I %t -fsyntax-only %t/main.m -Rmodule-build 2>&1 \
+// RUN: | FileCheck -check-prefix=REBUILD-ALL %t/main.m
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Rmodule-build -verify
+// RUN:     -I %t -fsyntax-only %t/main.m -Rmodule-build -verify
 
 // Add an identifier to ensure everything depending on t is out of date
-// RUN: echo 'extern int a;' > %t/t.h-2
 // RUN: cat %t/t.h-1 %t/t.h-2 > %t/t.h
 
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Rmodule-build 2>&1 \
-// RUN: | FileCheck -check-prefix=REBUILD-ALL %s
+// RUN:     -I %t -fsyntax-only %t/main.m -Rmodule-build 2>&1 \
+// RUN: | FileCheck -check-prefix=REBUILD-ALL %t/main.m
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Rmodule-build -verify
+// RUN:     -I %t -fsyntax-only %t/main.m -Rmodule-build -verify
+
+//--- b.h
+@import l; @import r;
+
+//--- l.h
+@import t; // fromt l
+
+//--- r.h
+@import t; // fromt r
+
+//--- t.h-1
+// top
+
+//--- t.h-2
+extern int a;
+
+//--- module.modulemap
+module b { header "b.h" } module l { header "l.h" }
+module r { header "r.h" } module t { header "t.h" }
+
+//--- main.m
 
 // REBUILD-ALL: building module 'b'
 // REBUILD-ALL: building module 'l'
@@ -38,5 +50,4 @@
 
 // Use -verify when expecting no modules to be rebuilt.
 // expected-no-diagnostics
-
 @import b;

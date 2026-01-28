@@ -27,6 +27,7 @@
 #include "PPCTargetMachine.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -305,6 +306,8 @@ public:
   void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
 
   void emitModuleCommandLines(Module &M) override;
+
+  void emitRefMetadata(const GlobalObject *);
 };
 
 } // end anonymous namespace
@@ -578,20 +581,24 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
                                       .addReg(ScratchReg)
                                       .addImm((CallTarget >> 32) & 0xFFFF));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::RLDIC)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm(32).addImm(16));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ORIS8)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm((CallTarget >> 16) & 0xFFFF));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ORI8)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm(CallTarget & 0xFFFF));
+      ++EncodedBytes;
 
       // Save the current TOC pointer before the remote call.
       int TOCSaveOffset = Subtarget->getFrameLowering()->getTOCSaveOffset();
@@ -612,6 +619,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
                                         .addImm(8)
                                         .addReg(ScratchReg));
         ++EncodedBytes;
+
         EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LD)
                                         .addReg(ScratchReg)
                                         .addImm(0)
@@ -622,6 +630,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTCTR8)
                                       .addReg(ScratchReg));
       ++EncodedBytes;
+
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BCTRL8));
       ++EncodedBytes;
 
@@ -647,8 +656,10 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
 
   // Emit padding.
   unsigned NumBytes = Opers.getNumPatchBytes();
-  assert(NumBytes >= EncodedBytes &&
-         "Patchpoint can't request size less than the length of a call.");
+  if (NumBytes < EncodedBytes)
+    reportFatalUsageError(
+        "Patchpoint can't request size less than the length of a call.");
+
   assert((NumBytes - EncodedBytes) % 4 == 0 &&
          "Invalid number of NOP bytes requested!");
   for (unsigned i = EncodedBytes; i < NumBytes; i += 4)
@@ -914,16 +925,37 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return PPC::S_None;
   };
 
+#ifndef NDEBUG
+  // Instruction sizes must be correct for PPCBranchSelector to pick the
+  // right branch kind. Verify that the reported sizes and the actually
+  // emitted sizes match.
+  unsigned ExpectedSize = Subtarget->getInstrInfo()->getInstSizeInBytes(*MI);
+  MCFragment *OldFragment = OutStreamer->getCurrentFragment();
+  size_t OldFragSize = OldFragment->getFixedSize();
+  scope_exit VerifyInstSize([&]() {
+    if (!OutStreamer->isObj())
+      return; // Can only verify size when streaming to object.
+    MCFragment *NewFragment = OutStreamer->getCurrentFragment();
+    if (NewFragment != OldFragment)
+      return; // Don't try to handle fragment splitting cases.
+    unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
+    // FIXME: InstrInfo currently over-estimates the size of STACKMAP.
+    if (ActualSize != ExpectedSize &&
+        MI->getOpcode() != TargetOpcode::STACKMAP) {
+      dbgs() << "Size mismatch for: " << *MI << "\n";
+      dbgs() << "Expected size: " << ExpectedSize << "\n";
+      dbgs() << "Actual size: " << ActualSize << "\n";
+      abort();
+    }
+  });
+#endif
+
   // Lower multi-instruction pseudo operations.
   switch (MI->getOpcode()) {
   default: break;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
-    // PATCHABLE_FUNCTION_ENTER on little endian is for XRAY support which is
-    // handled in PPCLinuxAsmPrinter.
-    if (MAI->isLittleEndian())
-      return;
     const Function &F = MF->getFunction();
     unsigned Num = 0;
     (void)F.getFnAttribute("patchable-function-entry")
@@ -1789,7 +1821,13 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
-    if (!MAI->isLittleEndian())
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+
+    if (!MAI->isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -2402,7 +2440,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
             << static_cast<unsigned>(((V) & (TracebackTable::Field##Mask)) >>  \
                                      (TracebackTable::Field##Shift))
 
-  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobaLinkage);
+  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobalLinkage);
   GENBOOLCOMMENT(", ", FirstHalfOfMandatoryField, IsOutOfLineEpilogOrPrologue);
   EmitComment();
 
@@ -2700,7 +2738,7 @@ static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
 
 static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
   return StringSwitch<bool>(GV->getName())
-      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Cases({"llvm.global_ctors", "llvm.global_dtors"}, true)
       .Default(false);
 }
 
@@ -2746,6 +2784,10 @@ static void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) {
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Special LLVM global arrays have been handled at the initialization.
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
+    return;
+
+  // Ignore non-emitted data.
+  if (GV->getSection() == "llvm.metadata")
     return;
 
   // If the Global Variable has the toc-data attribute, it needs to be emitted
@@ -2795,13 +2837,17 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Switch to the containing csect.
   OutStreamer->switchSection(Csect);
 
+  if (GV->hasMetadata(LLVMContext::MD_implicit_ref)) {
+    emitRefMetadata(GV);
+  }
+
   const DataLayout &DL = GV->getDataLayout();
 
   // Handle common and zero-initialized local symbols.
   if (GV->hasCommonLinkage() || GVKind.isBSSLocal() ||
       GVKind.isThreadBSSLocal()) {
     Align Alignment = GV->getAlign().value_or(DL.getPreferredAlign(GV));
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     GVSym->setStorageClass(
         TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
@@ -2887,10 +2933,16 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
   if (!TM.getFunctionSections() || MF->getFunction().hasSection())
     PPCAsmPrinter::emitFunctionEntryLabel();
 
+  const Function *F = &MF->getFunction();
+
   // Emit aliasing label for function entry point label.
-  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+  for (const GlobalAlias *Alias : GOAliasMap[F])
     OutStreamer->emitLabel(
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
+
+  if (F->hasMetadata(LLVMContext::MD_implicit_ref)) {
+    emitRefMetadata(F);
+  }
 }
 
 void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
@@ -2909,7 +2961,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
     if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
-        DL.getTypeAllocSize(GV.getValueType()) > 0) {
+        GV.getGlobalSize(DL) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;
     }
@@ -3072,7 +3124,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (G.isThreadLocal() && !G.isDeclaration()) {
       TLSVarAddress = alignTo(TLSVarAddress, getGVAlignment(&G, DL));
       TLSVarsToAddressMapping[&G] = TLSVarAddress;
-      TLSVarAddress += DL.getTypeAllocSize(G.getValueType());
+      TLSVarAddress += G.getGlobalSize(DL);
     }
   }
 
@@ -3328,6 +3380,19 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
     OutStreamer->emitValue(Exp, GetSizeOfEncodedValue(Encoding));
   } else
     OutStreamer->emitIntValue(0, GetSizeOfEncodedValue(Encoding));
+}
+
+void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
+  SmallVector<MDNode *> MDs;
+  GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  assert(MDs.size() && "Expected asscoiated metadata nodes");
+
+  for (const MDNode *MD : MDs) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalValue *GV = cast<GlobalValue>(VAM->getValue());
+    MCSymbol *Referenced = TM.getSymbol(GV);
+    OutStreamer->emitXCOFFRefDirective(Referenced);
+  }
 }
 
 // Return a pass that prints the PPC assembly code for a MachineFunction to the

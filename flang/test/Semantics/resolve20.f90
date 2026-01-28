@@ -89,4 +89,12 @@ contains
     !ERROR: Abstract procedure interface 'f' may not be referenced
     x = f()
   end subroutine
+  subroutine baz(foo)
+    external foo
+    interface
+      !WARNING: Dummy argument 'foo' was declared earlier as EXTERNAL [-Wredundant-attribute]
+      subroutine foo(x)
+      end
+    end interface
+  end
 end module

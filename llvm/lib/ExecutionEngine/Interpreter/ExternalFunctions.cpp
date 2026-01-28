@@ -41,7 +41,6 @@
 #include <map>
 #include <mutex>
 #include <string>
-#include <utility>
 #include <vector>
 
 #ifdef HAVE_FFI_CALL

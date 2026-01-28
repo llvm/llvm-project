@@ -1,3 +1,4 @@
+HeaderFilterRegex: ''
 Checks: >
   -*,
   clang-diagnostic-*,

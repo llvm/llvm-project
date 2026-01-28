@@ -115,7 +115,7 @@ def main():
             "ts",  # TypeScript
             "cs",  # C Sharp
             "json",
-            "ipynb",  # Json
+            "ipynb",  # JSON
             "sv",
             "svh",
             "v",

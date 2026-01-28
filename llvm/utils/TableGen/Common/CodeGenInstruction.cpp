@@ -118,7 +118,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         VariadicOuts = true;
       isVariadic = true;
       continue;
-    } else if (Rec->isSubClassOf("RegisterClass")) {
+    } else if (Rec->isSubClassOf("RegisterClassLike")) {
       OperandType = "OPERAND_REGISTER";
     } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
                !Rec->isSubClassOf("unknown_class")) {
@@ -143,12 +143,20 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
-      if (SubArgDag->getNumArgs() != NumOps) {
+      if (!MIOpInfo) {
         PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                          "', operand #" + Twine(i) + " has " +
                                          Twine(SubArgDag->getNumArgs()) +
-                                         " sub-arg names, expected " +
-                                         Twine(NumOps) + ".");
+                                         " sub-arg names, but no sub-operands");
+      }
+
+      unsigned NumSubArgs = SubArgDag->getNumArgs();
+      unsigned NumSubOps = MIOpInfo->getNumArgs();
+      if (NumSubArgs != NumSubOps) {
+        PrintFatalError(R->getLoc(),
+                        "In instruction '" + R->getName() + "', operand #" +
+                            Twine(i) + " has " + Twine(NumSubArgs) +
+                            " sub-arg names, expected " + Twine(NumSubOps));
       }
 
       for (unsigned j = 0; j < NumOps; ++j) {
@@ -491,7 +499,7 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
 /// HasOneImplicitDefWithKnownVT - If the instruction has at least one
 /// implicit def and it has a known VT, return the VT, otherwise return
 /// MVT::Other.
-MVT::SimpleValueType CodeGenInstruction::HasOneImplicitDefWithKnownVT(
+MVT CodeGenInstruction::HasOneImplicitDefWithKnownVT(
     const CodeGenTarget &TargetInfo) const {
   if (ImplicitDefs.empty())
     return MVT::Other;
@@ -502,7 +510,7 @@ MVT::SimpleValueType CodeGenInstruction::HasOneImplicitDefWithKnownVT(
   const std::vector<ValueTypeByHwMode> &RegVTs =
       TargetInfo.getRegisterVTs(FirstImplicitDef);
   if (RegVTs.size() == 1 && RegVTs[0].isSimple())
-    return RegVTs[0].getSimple().SimpleTy;
+    return RegVTs[0].getSimple();
   return MVT::Other;
 }
 

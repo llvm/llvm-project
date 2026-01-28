@@ -38,37 +38,6 @@ static cl::opt<bool>
     BranchRelaxation("sparc-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
-static std::string computeDataLayout(const Triple &T, bool is64Bit) {
-  // Sparc is typically big endian, but some are little.
-  std::string Ret = T.getArch() == Triple::sparcel ? "e" : "E";
-  Ret += "-m:e";
-
-  // Some ABIs have 32bit pointers.
-  if (!is64Bit)
-    Ret += "-p:32:32";
-
-  // Alignments for 64 bit integers.
-  Ret += "-i64:64";
-
-  // Alignments for 128 bit integers.
-  // This is not specified in the ABI document but is the de facto standard.
-  Ret += "-i128:128";
-
-  // On SparcV9 128 floats are aligned to 128 bits, on others only to 64.
-  // On SparcV9 registers can hold 64 or 32 bits, on others only 32.
-  if (is64Bit)
-    Ret += "-n32:64";
-  else
-    Ret += "-f128:64-n32";
-
-  if (is64Bit)
-    Ret += "-S128";
-  else
-    Ret += "-S64";
-
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
@@ -107,15 +76,14 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOptLevel OL, bool JIT,
-                                       bool is64bit)
+                                       CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+          T, TT.computeDataLayout(), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
-          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM), is64bit,
-                                     JIT),
+          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
+                                     TT.isSPARC64(), JIT),
           OL),
-      TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
+      TLOF(std::make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
 }
 
@@ -148,8 +116,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this,
-                                         this->is64Bit);
+    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
   }
   return I.get();
 }
@@ -212,7 +179,7 @@ SparcV8TargetMachine::SparcV8TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
+    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT) {}
 
 void SparcV9TargetMachine::anchor() { }
 
@@ -222,7 +189,7 @@ SparcV9TargetMachine::SparcV9TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
+    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT) {}
 
 void SparcelTargetMachine::anchor() {}
 
@@ -232,4 +199,4 @@ SparcelTargetMachine::SparcelTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
+    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT) {}

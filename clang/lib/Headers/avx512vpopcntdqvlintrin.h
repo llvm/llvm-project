@@ -20,20 +20,20 @@
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
+                 __target__("avx512vpopcntdq,avx512vl"),                       \
                  __min_vector_width__(128))) constexpr
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
+                 __target__("avx512vpopcntdq,avx512vl"),                       \
                  __min_vector_width__(256))) constexpr
 #else
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
+                 __target__("avx512vpopcntdq,avx512vl"),                       \
                  __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
+                 __target__("avx512vpopcntdq,avx512vl"),                       \
                  __min_vector_width__(256)))
 #endif
 

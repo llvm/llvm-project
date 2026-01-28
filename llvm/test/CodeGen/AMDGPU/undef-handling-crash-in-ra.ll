@@ -10,18 +10,18 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    v_pk_mov_b32 v[44:45], 0, 0
 ; CHECK-NEXT:    flat_load_dword v42, v[44:45]
-; CHECK-NEXT:    s_load_dwordx4 s[64:67], s[8:9], 0x8
-; CHECK-NEXT:    s_load_dword s68, s[8:9], 0x0
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
+; CHECK-NEXT:    s_load_dwordx4 s[64:67], s[34:35], 0x8
+; CHECK-NEXT:    s_load_dword s68, s[34:35], 0x0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    s_mov_b64 s[8:9], src_private_base
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s68, -1
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s5, s5, 0
+; CHECK-NEXT:    s_cselect_b32 s5, s9, 0
 ; CHECK-NEXT:    s_cselect_b32 s6, s68, 0
 ; CHECK-NEXT:    s_add_u32 s50, s34, 48
 ; CHECK-NEXT:    v_mov_b32_e32 v47, s5
@@ -53,9 +53,9 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
-; CHECK-NEXT:    flat_load_dwordx2 v[58:59], v[56:57]
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0x3ff00000
+; CHECK-NEXT:    flat_load_dwordx2 a[32:33], v[56:57]
+; CHECK-NEXT:    v_mov_b32_e32 v58, 0
+; CHECK-NEXT:    v_mov_b32_e32 v59, 0x3ff00000
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[50:51]
@@ -64,7 +64,7 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_mov_b32 s13, s52
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[0:1]
+; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[58:59]
 ; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
@@ -73,13 +73,12 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s67
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s68
-; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[58:59]
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v42
+; CHECK-NEXT:    flat_store_dwordx2 v[56:57], a[32:33]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[60:61]
 ; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v42
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_dword v58, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]

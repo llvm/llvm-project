@@ -66,4 +66,18 @@
 #undef LIBC_OLD_USE_EXTERN_INLINES
 #endif
 
+// undefine symbolic macros for Apple platforms in overlay mode
+#ifdef __APPLE__
+#undef getc_unlocked
+#undef putc_unlocked
+#undef getchar_unlocked
+#undef putchar_unlocked
+#undef fropen
+#undef fwopen
+#undef feof_unlocked
+#undef ferror_unlocked
+#undef clearerr_unlocked
+#undef fileno_unlocked
+#endif
+
 #endif // LLVM_LIBC_HDR_STDIO_OVERLAY_H

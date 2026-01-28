@@ -37,9 +37,6 @@
 #undef _Alignof
 #define _Alignof alignof
 
-#undef _Thread_local
-#define _Thread_local thread_local
-
 #undef __NOEXCEPT
 #if __cplusplus >= 201103L
 #define __NOEXCEPT noexcept

@@ -63,16 +63,13 @@ template <typename T> class missing_format_adapter;
 template <class T> class has_FormatProvider {
 public:
   using Decayed = std::decay_t<T>;
-  typedef void (*Signature_format)(const Decayed &, llvm::raw_ostream &,
-                                   StringRef);
+  using Signature_format = void (*)(const Decayed &, llvm::raw_ostream &,
+                                    StringRef);
 
-  template <typename U>
-  static char test(SameType<Signature_format, &U::format> *);
+  template <typename U> using check = SameType<Signature_format, &U::format>;
 
-  template <typename U> static double test(...);
-
-  static bool const value =
-      (sizeof(test<llvm::format_provider<Decayed>>(nullptr)) == 1);
+  static constexpr bool value =
+      llvm::is_detected<check, llvm::format_provider<Decayed>>::value;
 };
 
 // Test if raw_ostream& << T -> raw_ostream& is findable via ADL.
@@ -81,41 +78,37 @@ public:
   using ConstRefT = const std::decay_t<T> &;
 
   template <typename U>
-  static char test(std::enable_if_t<
-                   std::is_same_v<decltype(std::declval<llvm::raw_ostream &>()
-                                           << std::declval<U>()),
-                                  llvm::raw_ostream &>,
-                   int *>);
+  static auto test(int)
+      -> std::is_same<decltype(std::declval<llvm::raw_ostream &>()
+                               << std::declval<U>()),
+                      llvm::raw_ostream &>;
 
-  template <typename U> static double test(...);
+  template <typename U> static auto test(...) -> std::false_type;
 
-  static bool const value = (sizeof(test<ConstRefT>(nullptr)) == 1);
+  static constexpr bool value = decltype(test<ConstRefT>(0))::value;
 };
 
 // Simple template that decides whether a type T should use the member-function
 // based format() invocation.
 template <typename T>
 struct uses_format_member
-    : public std::integral_constant<
-          bool, std::is_base_of_v<format_adapter, std::remove_reference_t<T>>> {
-};
+    : public std::is_base_of<format_adapter, std::remove_reference_t<T>> {};
 
 // Simple template that decides whether a type T should use the format_provider
 // based format() invocation.  The member function takes priority, so this test
 // will only be true if there is not ALSO a format member.
 template <typename T>
 struct uses_format_provider
-    : public std::integral_constant<
-          bool, !uses_format_member<T>::value && has_FormatProvider<T>::value> {
-};
+    : public std::bool_constant<!uses_format_member<T>::value &&
+                                has_FormatProvider<T>::value> {};
 
 // Simple template that decides whether a type T should use the operator<<
 // based format() invocation.  This takes last priority.
 template <typename T>
 struct uses_stream_operator
-    : public std::integral_constant<bool, !uses_format_member<T>::value &&
-                                              !uses_format_provider<T>::value &&
-                                              has_StreamOperator<T>::value> {};
+    : public std::bool_constant<!uses_format_member<T>::value &&
+                                !uses_format_provider<T>::value &&
+                                has_StreamOperator<T>::value> {};
 
 // Simple template that decides whether a type T has neither a member-function
 // nor format_provider based implementation that it can use.  Mostly used so
@@ -123,10 +116,9 @@ struct uses_stream_operator
 // implementation can be located.
 template <typename T>
 struct uses_missing_provider
-    : public std::integral_constant<bool, !uses_format_member<T>::value &&
-                                              !uses_format_provider<T>::value &&
-                                              !uses_stream_operator<T>::value> {
-};
+    : public std::bool_constant<!uses_format_member<T>::value &&
+                                !uses_format_provider<T>::value &&
+                                !uses_stream_operator<T>::value> {};
 
 template <typename T>
 std::enable_if_t<uses_format_member<T>::value, T>

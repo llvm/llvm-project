@@ -143,3 +143,25 @@ func.func @test_signature_conversion_no_converter() {
   return
 }
 
+// -----
+
+// CHECK-LABEL: func @test_unstructured_cf_conversion(
+//  CHECK-SAME:     %[[arg0:.*]]: f64, %[[c:.*]]: i1)
+//       CHECK:   %[[cast1:.*]] = "test.cast"(%[[arg0]]) : (f64) -> f32
+//       CHECK:   "test.foo"(%[[cast1]])
+//       CHECK:   cf.br ^[[bb1:.*]](%[[arg0]] : f64)
+//       CHECK: ^[[bb1]](%[[arg1:.*]]: f64):
+//       CHECK:   cf.cond_br %[[c]], ^[[bb1]](%[[arg1]] : f64), ^[[bb2:.*]](%[[arg1]] : f64)
+//       CHECK: ^[[bb2]](%[[arg2:.*]]: f64):
+//       CHECK:   %[[cast2:.*]] = "test.cast"(%[[arg2]]) : (f64) -> f32
+//       CHECK:   "test.bar"(%[[cast2]])
+//       CHECK: return
+func.func @test_unstructured_cf_conversion(%arg0: f32, %c: i1) {
+  "test.foo"(%arg0) : (f32) -> ()
+  cf.br ^bb1(%arg0: f32)
+^bb1(%arg1: f32):
+  cf.cond_br %c, ^bb1(%arg1 : f32), ^bb2(%arg1 : f32)
+^bb2(%arg2: f32):
+  "test.bar"(%arg2) : (f32) -> ()
+  return
+}

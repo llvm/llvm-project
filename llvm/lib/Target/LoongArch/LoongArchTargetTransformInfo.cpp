@@ -100,8 +100,36 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   default:
     return true;
   case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_xor:
     return false;
   }
 }
 
-// TODO: Implement more hooks to provide TTI machinery for LoongArch.
+LoongArchTTIImpl::TTI::MemCmpExpansionOptions
+LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+
+  if (!ST->hasUAL())
+    return Options;
+
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.AllowOverlappingLoads = true;
+
+  // TODO: Support for vectors.
+  if (ST->is64Bit()) {
+    Options.LoadSizes = {8, 4, 2, 1};
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
+    Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
+
+  return Options;
+}

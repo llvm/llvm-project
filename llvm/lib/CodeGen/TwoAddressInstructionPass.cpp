@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -97,7 +98,6 @@ class TwoAddressInstructionImpl {
   MachineRegisterInfo *MRI = nullptr;
   LiveVariables *LV = nullptr;
   LiveIntervals *LIS = nullptr;
-  AliasAnalysis *AA = nullptr;
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
 
   // The current basic block being processed.
@@ -191,7 +191,8 @@ class TwoAddressInstructionImpl {
 public:
   TwoAddressInstructionImpl(MachineFunction &MF, MachineFunctionPass *P);
   TwoAddressInstructionImpl(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM);
+                            MachineFunctionAnalysisManager &MFAM,
+                            LiveIntervals *LIS);
   void setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
   bool run();
 };
@@ -200,10 +201,7 @@ class TwoAddressInstructionLegacyPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {
-    initializeTwoAddressInstructionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {}
 
   /// Pass entry point.
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -217,7 +215,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
@@ -235,7 +232,9 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   // Disable optimizations if requested. We cannot skip the whole pass as some
   // fixups are necessary for correctness.
-  TwoAddressInstructionImpl Impl(MF, MFAM);
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+
+  TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
   if (MF.getFunction().hasOptNone())
     Impl.setOptLevel(CodeGenOptLevel::None);
 
@@ -244,11 +243,16 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<LiveIntervalsAnalysis>();
+
+  // SlotIndexes are only maintained when LiveIntervals is available. Only
+  // preserve SlotIndexes if we had LiveIntervals available and updated them.
+  if (LIS)
+    PA.preserve<SlotIndexesAnalysis>();
+
   PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -257,25 +261,18 @@ char TwoAddressInstructionLegacyPass::ID = 0;
 
 char &llvm::TwoAddressInstructionPassID = TwoAddressInstructionLegacyPass::ID;
 
-INITIALIZE_PASS_BEGIN(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
-                      "Two-Address instruction pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
-                    "Two-Address instruction pass", false, false)
+INITIALIZE_PASS(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
+                "Two-Address instruction pass", false, false)
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(
-    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM)
+    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM,
+    LiveIntervals *LIS)
     : MF(&Func), TII(Func.getSubtarget().getInstrInfo()),
       TRI(Func.getSubtarget().getRegisterInfo()),
       InstrItins(Func.getSubtarget().getInstrItineraryData()),
       MRI(&Func.getRegInfo()),
-      LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)),
-      LIS(MFAM.getCachedResult<LiveIntervalsAnalysis>(Func)),
-      OptLevel(Func.getTarget().getOptLevel()) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = FAM.getCachedResult<AAManager>(Func.getFunction());
-}
+      LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)), LIS(LIS),
+      OptLevel(Func.getTarget().getOptLevel()) {}
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
                                                      MachineFunctionPass *P)
@@ -287,10 +284,6 @@ TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
   LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  if (auto *AAPass = P->getAnalysisIfAvailable<AAResultsWrapperPass>())
-    AA = &AAPass->getAAResults();
-  else
-    AA = nullptr;
 }
 
 /// Return the MachineInstr* if it is the single def of the Reg in current BB.
@@ -794,29 +787,36 @@ bool TwoAddressInstructionImpl::convertInstTo3Addr(
   if (!NewMI)
     return false;
 
-  LLVM_DEBUG(dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi);
-  LLVM_DEBUG(dbgs() << "2addr:         TO 3-ADDR: " << *NewMI);
-
-  // If the old instruction is debug value tracked, an update is required.
-  if (auto OldInstrNum = mi->peekDebugInstrNum()) {
-    assert(mi->getNumExplicitDefs() == 1);
-    assert(NewMI->getNumExplicitDefs() == 1);
-
-    // Find the old and new def location.
-    unsigned OldIdx = mi->defs().begin()->getOperandNo();
-    unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
-
-    // Record that one def has been replaced by the other.
-    unsigned NewInstrNum = NewMI->getDebugInstrNum();
-    MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
-                                   std::make_pair(NewInstrNum, NewIdx));
-  }
-
-  MBB->erase(mi); // Nuke the old inst.
-
   for (MachineInstr &MI : MIS)
     DistanceMap.insert(std::make_pair(&MI, Dist++));
-  Dist--;
+
+  if (&*mi == NewMI) {
+    LLVM_DEBUG(dbgs() << "2addr: CONVERTED IN-PLACE TO 3-ADDR: " << *mi);
+  } else {
+    LLVM_DEBUG({
+      dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi;
+      dbgs() << "2addr:         TO 3-ADDR: " << *NewMI;
+    });
+
+    // If the old instruction is debug value tracked, an update is required.
+    if (auto OldInstrNum = mi->peekDebugInstrNum()) {
+      assert(mi->getNumExplicitDefs() == 1);
+      assert(NewMI->getNumExplicitDefs() == 1);
+
+      // Find the old and new def location.
+      unsigned OldIdx = mi->defs().begin()->getOperandNo();
+      unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
+
+      // Record that one def has been replaced by the other.
+      unsigned NewInstrNum = NewMI->getDebugInstrNum();
+      MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
+                                     std::make_pair(NewInstrNum, NewIdx));
+    }
+
+    MBB->erase(mi); // Nuke the old inst.
+    Dist--;
+  }
+
   mi = NewMI;
   nmi = std::next(mi);
 
@@ -1329,6 +1329,9 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
 
   bool Commuted = tryInstructionCommute(&MI, DstIdx, SrcIdx, regBKilled, Dist);
 
+  // Give targets a chance to convert bundled instructions.
+  bool ConvertibleTo3Addr = MI.isConvertibleTo3Addr(MachineInstr::AnyInBundle);
+
   // If the instruction is convertible to 3 Addr, instead
   // of returning try 3 Addr transformation aggressively and
   // use this variable to check later. Because it might be better.
@@ -1337,7 +1340,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
   //   addl     %esi, %edi
   //   movl     %edi, %eax
   //   ret
-  if (Commuted && !MI.isConvertibleTo3Addr())
+  if (Commuted && !ConvertibleTo3Addr)
     return false;
 
   if (shouldOnlyCommute)
@@ -1357,7 +1360,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
     regBKilled = isKilled(MI, regB, true);
   }
 
-  if (MI.isConvertibleTo3Addr()) {
+  if (ConvertibleTo3Addr) {
     // This instruction is potentially convertible to a true
     // three-address instruction.  Check if it is profitable.
     if (!regBKilled || isProfitableToConv3Addr(regA, regB)) {
@@ -1401,9 +1404,8 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
       if (UnfoldMCID.getNumDefs() == 1) {
         // Unfold the load.
         LLVM_DEBUG(dbgs() << "2addr:   UNFOLDING: " << MI);
-        const TargetRegisterClass *RC =
-          TRI->getAllocatableClass(
-            TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF));
+        const TargetRegisterClass *RC = TRI->getAllocatableClass(
+            TII->getRegClass(UnfoldMCID, LoadRegIndex));
         Register Reg = MRI->createVirtualRegister(RC);
         SmallVector<MachineInstr *, 2> NewMIs;
         if (!TII->unfoldMemoryOperand(*MF, MI, Reg,
@@ -1603,7 +1605,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
                                       TII->get(TargetOpcode::COPY), RegA);
     // If this operand is folding a truncation, the truncation now moves to the
     // copy so that the register classes remain valid for the operands.
-    MIB.addReg(RegB, 0, SubRegB);
+    MIB.addReg(RegB, {}, SubRegB);
     const TargetRegisterClass *RC = MRI->getRegClass(RegB);
     if (SubRegB) {
       if (RegA.isVirtual()) {
@@ -1666,6 +1668,17 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
     // by SubRegB is compatible with RegA with no subregister. So regardless of
     // whether the dest oper writes a subreg, the source oper should not.
     MO.setSubReg(0);
+
+    // Update uses of RegB to uses of RegA inside the bundle.
+    if (MI->isBundle()) {
+      for (MachineOperand &MO : mi_bundle_ops(*MI)) {
+        if (MO.isReg() && MO.getReg() == RegB) {
+          assert(MO.getSubReg() == 0 && SubRegB == 0 &&
+                 "tied subregister uses in bundled instructions not supported");
+          MO.setReg(RegA);
+        }
+      }
+    }
   }
 
   if (AllUsesCopied) {
@@ -1858,8 +1871,10 @@ bool TwoAddressInstructionImpl::run() {
 
       // Expand REG_SEQUENCE instructions. This will position mi at the first
       // expanded instruction.
-      if (mi->isRegSequence())
+      if (mi->isRegSequence()) {
         eliminateRegSequence(mi);
+        MadeChange = true;
+      }
 
       DistanceMap.insert(std::make_pair(&*mi, ++Dist));
 

@@ -118,10 +118,10 @@ Here is an example:
     it->second.callFunction();
   }
 
-In conclusion, empty catch statements are a bad practice that can lead to hidden
-bugs, security issues, poor code quality, and unreliable code. By handling
-exceptions properly, developers can ensure that their code is robust, secure,
-and maintainable.
+In conclusion, empty catch statements are a bad practice that can lead to
+hidden bugs, security issues, poor code quality, and unreliable code. By
+handling exceptions properly, developers can ensure that their code is
+robust, secure, and maintainable.
 
 Options
 -------

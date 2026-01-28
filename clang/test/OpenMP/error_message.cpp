@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ferror-limit 100 %s -Wuninitialized
 
+// Test outside of an executable context.
+#pragma omp error severity(warning) message("msg") at(compilation) // expected-warning {{msg}}
+
 template <class T>
 T tmain(T argc) {
   if (argc)

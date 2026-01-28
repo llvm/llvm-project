@@ -9,7 +9,7 @@ define <1 x i8> @vector_compress_v1i8(<1 x i8> %v, <1 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <1 x i8> @llvm.experimental.vector.compress.v1i8(<1 x i8> %v, <1 x i1> %mask, <1 x i8> undef)
+  %ret = call <1 x i8> @llvm.experimental.vector.compress.v1i8(<1 x i8> %v, <1 x i1> %mask, <1 x i8> poison)
   ret <1 x i8> %ret
 }
 
@@ -30,7 +30,7 @@ define <2 x i8> @vector_compress_v2i8(<2 x i8> %v, <2 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <2 x i8> @llvm.experimental.vector.compress.v2i8(<2 x i8> %v, <2 x i1> %mask, <2 x i8> undef)
+  %ret = call <2 x i8> @llvm.experimental.vector.compress.v2i8(<2 x i8> %v, <2 x i1> %mask, <2 x i8> poison)
   ret <2 x i8> %ret
 }
 
@@ -51,7 +51,7 @@ define <4 x i8> @vector_compress_v4i8(<4 x i8> %v, <4 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <4 x i8> @llvm.experimental.vector.compress.v4i8(<4 x i8> %v, <4 x i1> %mask, <4 x i8> undef)
+  %ret = call <4 x i8> @llvm.experimental.vector.compress.v4i8(<4 x i8> %v, <4 x i1> %mask, <4 x i8> poison)
   ret <4 x i8> %ret
 }
 
@@ -72,7 +72,7 @@ define <8 x i8> @vector_compress_v8i8(<8 x i8> %v, <8 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <8 x i8> @llvm.experimental.vector.compress.v8i8(<8 x i8> %v, <8 x i1> %mask, <8 x i8> undef)
+  %ret = call <8 x i8> @llvm.experimental.vector.compress.v8i8(<8 x i8> %v, <8 x i1> %mask, <8 x i8> poison)
   ret <8 x i8> %ret
 }
 
@@ -93,7 +93,7 @@ define <1 x i16> @vector_compress_v1i16(<1 x i16> %v, <1 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <1 x i16> @llvm.experimental.vector.compress.v1i16(<1 x i16> %v, <1 x i1> %mask, <1 x i16> undef)
+  %ret = call <1 x i16> @llvm.experimental.vector.compress.v1i16(<1 x i16> %v, <1 x i1> %mask, <1 x i16> poison)
   ret <1 x i16> %ret
 }
 
@@ -114,7 +114,7 @@ define <2 x i16> @vector_compress_v2i16(<2 x i16> %v, <2 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <2 x i16> @llvm.experimental.vector.compress.v2i16(<2 x i16> %v, <2 x i1> %mask, <2 x i16> undef)
+  %ret = call <2 x i16> @llvm.experimental.vector.compress.v2i16(<2 x i16> %v, <2 x i1> %mask, <2 x i16> poison)
   ret <2 x i16> %ret
 }
 
@@ -135,7 +135,7 @@ define <4 x i16> @vector_compress_v4i16(<4 x i16> %v, <4 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <4 x i16> @llvm.experimental.vector.compress.v4i16(<4 x i16> %v, <4 x i1> %mask, <4 x i16> undef)
+  %ret = call <4 x i16> @llvm.experimental.vector.compress.v4i16(<4 x i16> %v, <4 x i1> %mask, <4 x i16> poison)
   ret <4 x i16> %ret
 }
 
@@ -156,7 +156,7 @@ define <8 x i16> @vector_compress_v8i16(<8 x i16> %v, <8 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <8 x i16> @llvm.experimental.vector.compress.v8i16(<8 x i16> %v, <8 x i1> %mask, <8 x i16> undef)
+  %ret = call <8 x i16> @llvm.experimental.vector.compress.v8i16(<8 x i16> %v, <8 x i1> %mask, <8 x i16> poison)
   ret <8 x i16> %ret
 }
 
@@ -177,7 +177,7 @@ define <1 x i32> @vector_compress_v1i32(<1 x i32> %v, <1 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <1 x i32> @llvm.experimental.vector.compress.v1i32(<1 x i32> %v, <1 x i1> %mask, <1 x i32> undef)
+  %ret = call <1 x i32> @llvm.experimental.vector.compress.v1i32(<1 x i32> %v, <1 x i1> %mask, <1 x i32> poison)
   ret <1 x i32> %ret
 }
 
@@ -198,7 +198,7 @@ define <2 x i32> @vector_compress_v2i32(<2 x i32> %v, <2 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <2 x i32> @llvm.experimental.vector.compress.v2i32(<2 x i32> %v, <2 x i1> %mask, <2 x i32> undef)
+  %ret = call <2 x i32> @llvm.experimental.vector.compress.v2i32(<2 x i32> %v, <2 x i1> %mask, <2 x i32> poison)
   ret <2 x i32> %ret
 }
 
@@ -219,7 +219,7 @@ define <4 x i32> @vector_compress_v4i32(<4 x i32> %v, <4 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> %v, <4 x i1> %mask, <4 x i32> undef)
+  %ret = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> %v, <4 x i1> %mask, <4 x i32> poison)
   ret <4 x i32> %ret
 }
 
@@ -240,7 +240,7 @@ define <8 x i32> @vector_compress_v8i32(<8 x i32> %v, <8 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v10, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %ret = call <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> %v, <8 x i1> %mask, <8 x i32> undef)
+  %ret = call <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> %v, <8 x i1> %mask, <8 x i32> poison)
   ret <8 x i32> %ret
 }
 
@@ -261,7 +261,7 @@ define <1 x i64> @vector_compress_v1i64(<1 x i64> %v, <1 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <1 x i64> @llvm.experimental.vector.compress.v1i64(<1 x i64> %v, <1 x i1> %mask, <1 x i64> undef)
+  %ret = call <1 x i64> @llvm.experimental.vector.compress.v1i64(<1 x i64> %v, <1 x i1> %mask, <1 x i64> poison)
   ret <1 x i64> %ret
 }
 
@@ -282,7 +282,7 @@ define <2 x i64> @vector_compress_v2i64(<2 x i64> %v, <2 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %ret = call <2 x i64> @llvm.experimental.vector.compress.v2i64(<2 x i64> %v, <2 x i1> %mask, <2 x i64> undef)
+  %ret = call <2 x i64> @llvm.experimental.vector.compress.v2i64(<2 x i64> %v, <2 x i1> %mask, <2 x i64> poison)
   ret <2 x i64> %ret
 }
 
@@ -303,7 +303,7 @@ define <4 x i64> @vector_compress_v4i64(<4 x i64> %v, <4 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v10, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %ret = call <4 x i64> @llvm.experimental.vector.compress.v4i64(<4 x i64> %v, <4 x i1> %mask, <4 x i64> undef)
+  %ret = call <4 x i64> @llvm.experimental.vector.compress.v4i64(<4 x i64> %v, <4 x i1> %mask, <4 x i64> poison)
   ret <4 x i64> %ret
 }
 
@@ -324,7 +324,7 @@ define <8 x i64> @vector_compress_v8i64(<8 x i64> %v, <8 x i1> %mask) {
 ; CHECK-NEXT:    vcompress.vm v12, v8, v0
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %ret = call <8 x i64> @llvm.experimental.vector.compress.v8i64(<8 x i64> %v, <8 x i1> %mask, <8 x i64> undef)
+  %ret = call <8 x i64> @llvm.experimental.vector.compress.v8i64(<8 x i64> %v, <8 x i1> %mask, <8 x i64> poison)
   ret <8 x i64> %ret
 }
 

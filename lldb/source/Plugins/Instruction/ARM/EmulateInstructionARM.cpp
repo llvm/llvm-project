@@ -14135,7 +14135,13 @@ EmulateInstructionARM::AddWithCarry(uint32_t x, uint32_t y, uint8_t carry_in) {
   uint8_t overflow;
 
   uint64_t unsigned_sum = x + y + carry_in;
-  int64_t signed_sum = (int32_t)x + (int32_t)y + (int32_t)carry_in;
+  int64_t signed_sum = 0;
+  int32_t signed_sum32;
+  if (llvm::AddOverflow((int32_t)x, (int32_t)y, signed_sum32))
+    signed_sum++;
+  signed_sum += signed_sum32;
+
+  signed_sum += (int32_t)carry_in;
 
   result = UnsignedBits(unsigned_sum, 31, 0);
   //    carry_out = (result == unsigned_sum ? 0 : 1);

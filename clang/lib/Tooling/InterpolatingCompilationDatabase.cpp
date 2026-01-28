@@ -44,8 +44,8 @@
 
 #include "clang/Basic/LangStandard.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Types.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -123,6 +123,24 @@ static types::ID foldType(types::ID Lang) {
   }
 }
 
+// Return the language standard that's activated by the /std:clatest
+// flag in clang-CL mode.
+static LangStandard::Kind latestLangStandardC() {
+  // FIXME: Have a single source of truth for the mapping from
+  // clatest --> c23 that's shared by the driver code
+  // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
+  return LangStandard::lang_c23;
+}
+
+// Return the language standard that's activated by the /std:c++latest
+// flag in clang-CL mode.
+static LangStandard::Kind latestLangStandardCXX() {
+  // FIXME: Have a single source of truth for the mapping from
+  // c++latest --> c++26 that's shared by the driver code
+  // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
+  return LangStandard::lang_cxx26;
+}
+
 // A CompileCommand that can be applied to another file.
 struct TransferableCommand {
   // Flags that should not apply to all files are stripped from CommandLine.
@@ -155,11 +173,11 @@ struct TransferableCommand {
     // We parse each argument individually so that we can retain the exact
     // spelling of each argument; re-rendering is lossy for aliased flags.
     // E.g. in CL mode, /W4 maps to -Wall.
-    auto &OptTable = clang::driver::getDriverOptTable();
+    auto &OptTable = getDriverOptTable();
     if (!OldArgs.empty())
       Cmd.CommandLine.emplace_back(OldArgs.front());
     for (unsigned Pos = 1; Pos < OldArgs.size();) {
-      using namespace driver::options;
+      using namespace options;
 
       const unsigned OldPos = Pos;
       std::unique_ptr<llvm::opt::Arg> Arg(OptTable.ParseOneArg(
@@ -234,13 +252,29 @@ struct TransferableCommand {
         Result.CommandLine.push_back(types::getTypeName(TargetType));
       }
     }
+
     // --std flag may only be transferred if the language is the same.
     // We may consider "translating" these, e.g. c++11 -> c11.
     if (Std != LangStandard::lang_unspecified && foldType(TargetType) == Type) {
-      Result.CommandLine.emplace_back((
-          llvm::Twine(ClangCLMode ? "/std:" : "-std=") +
-          LangStandard::getLangStandardForKind(Std).getName()).str());
+      const char *Spelling =
+          LangStandard::getLangStandardForKind(Std).getName();
+
+      // In clang-cl mode, some standards have different spellings, so emit
+      // the spelling that the driver does accept.
+      // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
+      if (ClangCLMode) {
+        if (Std == LangStandard::lang_cxx23)
+          Spelling = "c++23preview";
+        else if (Std == latestLangStandardC())
+          Spelling = "clatest";
+        else if (Std == latestLangStandardCXX())
+          Spelling = "c++latest";
+      }
+
+      Result.CommandLine.emplace_back(
+          (llvm::Twine(ClangCLMode ? "/std:" : "-std=") + Spelling).str());
     }
+
     Result.CommandLine.push_back("--");
     Result.CommandLine.push_back(std::string(Filename));
     return Result;
@@ -280,14 +314,14 @@ private:
   // Try to interpret the argument as a type specifier, e.g. '-x'.
   std::optional<types::ID> tryParseTypeArg(const llvm::opt::Arg &Arg) {
     const llvm::opt::Option &Opt = Arg.getOption();
-    using namespace driver::options;
+    using namespace options;
     if (ClangCLMode) {
       if (Opt.matches(OPT__SLASH_TC) || Opt.matches(OPT__SLASH_Tc))
         return types::TY_C;
       if (Opt.matches(OPT__SLASH_TP) || Opt.matches(OPT__SLASH_Tp))
         return types::TY_CXX;
     } else {
-      if (Opt.matches(driver::options::OPT_x))
+      if (Opt.matches(options::OPT_x))
         return types::lookupTypeForTypeSpecifier(Arg.getValue());
     }
     return std::nullopt;
@@ -295,9 +329,20 @@ private:
 
   // Try to interpret the argument as '-std='.
   std::optional<LangStandard::Kind> tryParseStdArg(const llvm::opt::Arg &Arg) {
-    using namespace driver::options;
-    if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ))
+    using namespace options;
+    if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ)) {
+      if (ClangCLMode) {
+        // Handle clang-cl spellings not in LangStandards.def.
+        // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
+        if (StringRef(Arg.getValue()) == "c++23preview")
+          return LangStandard::lang_cxx23;
+        if (StringRef(Arg.getValue()) == "clatest")
+          return latestLangStandardC();
+        if (StringRef(Arg.getValue()) == "c++latest")
+          return latestLangStandardCXX();
+      }
       return LangStandard::getLangKind(Arg.getValue());
+    }
     return std::nullopt;
   }
 };

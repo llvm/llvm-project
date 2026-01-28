@@ -15,9 +15,9 @@
 
 # CHECK: (lldb) thread backtrace
 # CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
-# CHECK-NEXT:   * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
-# CHECK-NEXT:     frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
-# CHECK-NEXT:     frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
+# CHECK-NEXT:   * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [synthetic]
+# CHECK-NEXT:     frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [synthetic]
+# CHECK-NEXT:     frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [synthetic]
 
 # CHECK: (lldb) thread list
 # CHECK-NEXT: Process 22511 stopped
@@ -27,20 +27,20 @@
 
 # CHECK: (lldb) bt all
 # CHECK:  thread #1, queue = 'com.apple.main-thread'
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5b3b multithread-test`main{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5b3b multithread-test`main{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7{{.*}} [synthetic]
 # CHECK-NEXT:  thread #2
-# CHECK-NEXT:    frame #0: 0x000000019cc42c9c{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5957 multithread-test`call_and_wait{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]
+# CHECK-NEXT:    frame #0: 0x000000019cc42c9c{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5957 multithread-test`call_and_wait{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [synthetic]
 # CHECK-NEXT:* thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
-# CHECK-NEXT:  * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
-# CHECK-NEXT:    frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
-# CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]
+# CHECK-NEXT:  * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [synthetic]
+# CHECK-NEXT:    frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [synthetic]
+# CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [synthetic]
 
 # CHECK: (lldb) register read
 # CHECK: General Purpose Registers:

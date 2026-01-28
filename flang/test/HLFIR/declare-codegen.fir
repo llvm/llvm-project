@@ -124,6 +124,15 @@ func.func @array_declare_box_2(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 // CHECK:         %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:         %[[VAL_2:.*]] = fir.rebox %[[VAL_1]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 
+func.func @array_declare_box_3(%arg0: !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {
+  %0:2 = hlfir.declare %arg0 skip_rebox {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  return %0#0 : !fir.box<!fir.array<?x?xf32>>
+}
+// CHECK-LABEL:   func.func @array_declare_box_3(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {
+// CHECK:         %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:         return %[[VAL_1]]
+
 func.func @array_declare_char_box(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
   return

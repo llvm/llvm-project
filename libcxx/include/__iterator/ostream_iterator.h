@@ -24,15 +24,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, class _CharT = char, class _Traits = char_traits<_CharT> >
 class ostream_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<output_iterator_tag, void, void, void, void>
-#endif
-{
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
+    : public __iterator_base<ostream_iterator<_Tp, _CharT, _Traits>, output_iterator_tag, void, void, void, void> {
 public:
   typedef output_iterator_tag iterator_category;
   typedef void value_type;

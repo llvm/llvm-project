@@ -53,7 +53,7 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
 ///   ValueBoundsOpInterface, no bound can be computed.
 FailureOr<OpFoldResult> reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
+    const ValueBoundsConstraintSet::StopConditionFn &stopCondition = nullptr,
     bool closedUB = false);
 
 /// Reify a bound for the specified dimension of the given shaped value in terms
@@ -65,7 +65,7 @@ FailureOr<OpFoldResult> reifyIndexValueBound(
 FailureOr<OpFoldResult> reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
+    const ValueBoundsConstraintSet::StopConditionFn &stopCondition = nullptr,
     bool closedUB = false);
 
 } // namespace arith

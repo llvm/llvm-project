@@ -5,7 +5,7 @@
 # CHECK: Ltmp0:
 # CHECK: .loc 1 0 0
 # CHECK-NOT: .loc 1 0 0
-# CHECK: .loc 1 37 1 prologue_end
+# CHECK: .loc 1 37 1
 
 --- |
   ; ModuleID = '<stdin>'

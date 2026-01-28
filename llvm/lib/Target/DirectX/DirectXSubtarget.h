@@ -28,9 +28,9 @@ namespace llvm {
 class DirectXTargetMachine;
 
 class DirectXSubtarget : public DirectXGenSubtargetInfo {
+  DirectXInstrInfo InstrInfo;
   DirectXFrameLowering FL;
   DirectXTargetLowering TL;
-  DirectXInstrInfo InstrInfo;
 
   virtual void anchor(); // virtual anchor method
 

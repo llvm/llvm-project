@@ -10,18 +10,20 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits/bool_constant.h"
-#include "src/__support/CPP/type_traits/is_arithmetic.h"
+#include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 #ifndef LIBC_COMPILER_HAS_FIXED_POINT
 template <typename T>
-struct is_unsigned : bool_constant<(is_arithmetic_v<T> && (T(-1) > T(0)))> {
+struct is_unsigned : bool_constant<(is_integral_v<T> && (T(-1) > T(0)))> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
@@ -35,7 +37,7 @@ private:
 
 public:
   LIBC_INLINE_VAR static constexpr bool value =
-      (is_arithmetic_v<T> && (T(-1) > T(0))) ||
+      (is_integral_v<T> && (T(-1) > T(0))) ||
       __is_unqualified_any_of<T, unsigned short fract, unsigned fract,
                               unsigned long fract, unsigned short accum,
                               unsigned accum, unsigned long accum,
@@ -46,6 +48,10 @@ public:
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
+#if LIBC_HAS_VECTOR_TYPE
+template <typename T, size_t N>
+struct is_unsigned<T [[clang::ext_vector_type(N)]]> : bool_constant<false> {};
+#endif
 
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_unsigned_v = is_unsigned<T>::value;

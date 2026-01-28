@@ -23,7 +23,6 @@
 #include <fcntl.h>
 #include <io.h>
 #include <malloc.h>
-#include <numeric>
 #include <psapi.h>
 
 //===----------------------------------------------------------------------===//
@@ -220,6 +219,9 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       llvm::append_range(EnvBlock, EnvString);
       EnvBlock.push_back(0);
     }
+    // Empty environments need to be terminated with two nulls.
+    if (Env->size() == 0)
+      EnvBlock.push_back(0);
     EnvBlock.push_back(0);
   }
 

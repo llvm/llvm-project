@@ -268,7 +268,7 @@ class LLVM_ABI FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
                             public RTTIExtends<FileSystem, RTTIRoot> {
 public:
   static const char ID;
-  virtual ~FileSystem();
+  ~FileSystem() override;
 
   /// Get the status of the entry at \p Path, if one exists.
   virtual llvm::ErrorOr<Status> status(const Twine &Path) = 0;
@@ -372,12 +372,14 @@ protected:
 /// the operating system.
 /// The working directory is linked to the process's working directory.
 /// (This is usually thread-hostile).
+/// This may only be called outside the IO sandbox.
 LLVM_ABI IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
 
 /// Create an \p vfs::FileSystem for the 'real' file system, as seen by
 /// the operating system.
 /// It has its own working directory, independent of (but initially equal to)
 /// that of the process.
+/// This may only be called outside the IO sandbox.
 LLVM_ABI std::unique_ptr<FileSystem> createPhysicalFileSystem();
 
 /// A file system that allows overlaying one \p AbstractFileSystem on top
@@ -495,7 +497,7 @@ protected:
 private:
   IntrusiveRefCntPtr<FileSystem> FS;
 
-  virtual void anchor() override;
+  void anchor() override;
 };
 
 namespace detail {
@@ -1114,14 +1116,11 @@ protected:
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the
-/// \p YAMLFilePath. This is used by the module dependency collector to forward
+/// \p VFS. This is used by the module dependency collector to forward
 /// the entries into the reproducer output VFS YAML file.
-LLVM_ABI void collectVFSFromYAML(
-    std::unique_ptr<llvm::MemoryBuffer> Buffer,
-    llvm::SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
-    SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-    void *DiagContext = nullptr,
-    IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
+LLVM_ABI void
+collectVFSEntries(RedirectingFileSystem &VFS,
+                  SmallVectorImpl<YAMLVFSEntry> &CollectedEntries);
 
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;

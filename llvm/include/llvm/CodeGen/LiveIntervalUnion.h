@@ -93,6 +93,11 @@ public:
   // Remove a live virtual register's segments from this union.
   void extract(const LiveInterval &VirtReg, const LiveRange &Range);
 
+  // Remove all segments referencing VirtRegLI. This may be used if the register
+  // isn't used anymore. The interval should have valid register number but
+  // can have empty live ranges.
+  void clearAllSegmentsReferencing(const LiveInterval &VirtRegLI);
+
   // Remove all inserted virtual registers.
   void clear() { Segments.clear(); ++Tag; }
 
@@ -191,14 +196,14 @@ public:
 
     void clear();
 
-    LiveIntervalUnion& operator[](unsigned idx) {
-      assert(idx <  Size && "idx out of bounds");
-      return LIUs[idx];
+    LiveIntervalUnion &operator[](MCRegUnit Unit) {
+      assert(static_cast<unsigned>(Unit) < Size && "Unit out of bounds");
+      return LIUs[static_cast<unsigned>(Unit)];
     }
 
-    const LiveIntervalUnion& operator[](unsigned Idx) const {
-      assert(Idx < Size && "Idx out of bounds");
-      return LIUs[Idx];
+    const LiveIntervalUnion &operator[](MCRegUnit Unit) const {
+      assert(static_cast<unsigned>(Unit) < Size && "Unit out of bounds");
+      return LIUs[static_cast<unsigned>(Unit)];
     }
   };
 };

@@ -112,6 +112,7 @@ struct A {
 
 SomeObj* make_obj();
 CFMutableArrayRef make_cf();
+dispatch_queue_t make_os();
 
 void someFunction();
 template <typename Callback> void call(Callback callback) {
@@ -125,8 +126,6 @@ void raw_ptr() {
   auto foo1 = [obj](){
     [obj doWork];
   };
-  call(foo1);
-
   auto foo2 = [&obj](){
     [obj doWork];
   };
@@ -157,6 +156,21 @@ void raw_ptr() {
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
 
+  auto os = make_os();
+  auto baz1 = [os](){
+    dispatch_queue_get_label(os);
+  };
+  auto baz2 = [&os](){
+    dispatch_queue_get_label(os);
+  };
+  auto baz3 = [&](){
+    dispatch_queue_get_label(os);
+    os = nullptr;
+  };
+  auto baz4 = [=](){
+    dispatch_queue_get_label(os);
+  };
+
   call(foo1);
   call(foo2);
   call(foo3);
@@ -166,6 +180,11 @@ void raw_ptr() {
   call(bar2);
   call(bar3);
   call(bar4);
+
+  call(baz1);
+  call(baz2);
+  call(baz3);
+  call(baz4);
 }
 
 void quiet() {
@@ -208,6 +227,14 @@ void get_count_cf(CFArrayRef array, [[clang::noescape]] Callback1&& callback1, C
   callback2(count);
 }
 
+template <typename Callback1, typename Callback2>
+void get_count_os(dispatch_queue_t queue, [[clang::noescape]] Callback1&& callback1, Callback2&& callback2)
+{
+  auto* label = dispatch_queue_get_label(queue);
+  callback1(label);
+  callback2(label);
+}
+
 void noescape_lambda() {
   SomeObj* someObj = make_obj();
   SomeObj* otherObj = make_obj();
@@ -230,6 +257,13 @@ void noescape_lambda() {
     CFArrayAppendValue(someCF, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'someCF' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
+
+  dispatch_queue_t someOS = make_os();
+  get_count_os(make_os(), [&](const char* label) {
+    dispatch_queue_get_label(someOS);
+  }, [&](const char* label) {
+    dispatch_queue_get_label(someOS);
+  });
 }
 
 void callFunctionOpaque(WTF::Function<void()>&&);
@@ -238,22 +272,25 @@ void callFunction(WTF::Function<void()>&& function) {
   function();
 }
 
-void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
+void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf, dispatch_queue_t os)
 {
   callFunction([&]() {
     [obj doWork];
     CFArrayAppendValue(cf, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    dispatch_queue_get_label(os);
   });
   callFunctionOpaque([&]() {
     [obj doWork];
     CFArrayAppendValue(cf, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    dispatch_queue_get_label(os);
   });
 }
 
 @interface ObjWithSelf : NSObject {
   RetainPtr<id> delegate;
+  OSObjectPtr<dispatch_queue_t> queue;
 }
 -(void)doWork;
 -(void)doMoreWork;
@@ -274,9 +311,15 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
     someFunction();
     [delegate doWork];
   };
+  auto* queuePtr = queue.get();
+  auto doAdditionalWork = [&] {
+    someFunction();
+    dispatch_queue_get_label(queuePtr);
+  };
   callFunctionOpaque(doWork);
   callFunctionOpaque(doMoreWork);
   callFunctionOpaque(doExtraWork);
+  callFunctionOpaque(doAdditionalWork);
 }
 
 -(void)doMoreWork {

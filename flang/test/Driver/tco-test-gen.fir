@@ -1,8 +1,8 @@
-// RUN: tco -emit-final-mlir --force-no-alias=false %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
-// RUN: tco -emit-final-mlir --force-no-alias=false -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
-// RUN: tco -emit-final-mlir --force-no-alias=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
-// RUN: tco -emit-final-mlir --force-no-alias=false -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
-// RUN: tco -test-gen --force-no-alias=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
+// RUN: tco -emit-final-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
+// RUN: tco -emit-final-mlir -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
+// RUN: tco -emit-final-mlir -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
+// RUN: tco -emit-final-mlir -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
+// RUN: tco -test-gen %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
 
 // Just a dummy function that exhibits all of the things we want to turn on and off
 func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.ref<i32> {fir.bindc_name = "lb"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ub"}, %arg3: !fir.ref<i32> {fir.bindc_name = "step"}) {
@@ -37,10 +37,10 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 }
 
 // CHECK-LABEL:   llvm.func @_QPtest(
-// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.nocapture},
-// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.nocapture},
-// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.nocapture},
-// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.nocapture}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.noalias, llvm.nocapture}) {
 
 // CMPLX:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CMPLX:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
@@ -77,13 +77,13 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 // CHECK:           llvm.cond_br %[[VAL_17]], ^bb2, ^bb3
 // CHECK:         ^bb2:
 
-// AA:              llvm.store %[[VAL_15]], %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : i32, !llvm.ptr
+// AA:              llvm.store %[[VAL_15]], %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : i32, !llvm.ptr
 // NOAA:            llvm.store %[[VAL_15]], %{{.*}} : i32, !llvm.ptr
 
 // AA:              %[[VAL_18:.*]] = llvm.load %[[ARG0]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "dummy arg data/_QFtestEnum", members = {<#llvm.tbaa_type_desc<id = "dummy arg data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "dummy arg data/_QFtestEnum", members = {<#llvm.tbaa_type_desc<id = "dummy arg data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : !llvm.ptr -> i32
 // NOAA:            %[[VAL_18:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> i32
 
-// AA:              %[[VAL_19:.*]] = llvm.load %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : !llvm.ptr -> i32
+// AA:              %[[VAL_19:.*]] = llvm.load %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : !llvm.ptr -> i32
 // NOAA:            %[[VAL_19:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 
 // CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_18]], %[[VAL_19]] : i32
@@ -92,7 +92,7 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 
 // CHECK:           %[[VAL_21:.*]] = llvm.trunc %[[VAL_10]] : i64 to i32
 
-// AA:              %[[VAL_22:.*]] = llvm.load %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : !llvm.ptr -> i32
+// AA:              %[[VAL_22:.*]] = llvm.load %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : !llvm.ptr -> i32
 // NOAA:            %[[VAL_22:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 
 // CHECK:           %[[VAL_23:.*]] = llvm.add %[[VAL_22]], %[[VAL_21]] overflow<nsw> : i32
@@ -100,7 +100,7 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 // CHECK:           llvm.br ^bb1(%[[VAL_23]], %[[VAL_24]] : i32, i64)
 // CHECK:         ^bb3:
 
-// AA:              llvm.store %[[VAL_15]], %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "target data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : i32, !llvm.ptr
+// AA:              llvm.store %[[VAL_15]], %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : i32, !llvm.ptr
 // NOAA:            llvm.store %[[VAL_15]], %{{.*}} : i32, !llvm.ptr
 
 // CHECK:           llvm.return

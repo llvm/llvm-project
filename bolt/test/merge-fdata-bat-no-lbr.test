@@ -8,13 +8,13 @@
 
 # CHECK: boltedcollection
 # CHECK: no_lbr
-# CHECK: main 2
+# CHECK: 1 main 2
 
 #--- a.fdata
 boltedcollection
 no_lbr
-main 1
+1 main 1
 #--- b.fdata
 boltedcollection
 no_lbr
-main 1
+1 main 1

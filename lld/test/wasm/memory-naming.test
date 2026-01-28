@@ -57,13 +57,28 @@
 # CHECK-IMPORT-NEXT:        Field:           bar
 # CHECK-IMPORT-NEXT:        Kind:            MEMORY
 # CHECK-IMPORT-NEXT:        Memory:
-# CHECK-IMPORT-NEXT:          Minimum:         0x2
+# CHECK-IMPORT-NEXT:          Minimum:         0x1
 # CHECK-IMPORT:      - Type:            EXPORT
 # CHECK-IMPORT-NEXT:    Exports:
 # CHECK-IMPORT-NEXT:      - Name:            _start
 # CHECK-IMPORT-NEXT:        Kind:            FUNCTION
 # CHECK-IMPORT-NEXT:        Index:           0
 # CHECK-IMPORT-NEXT:  - Type:
+
+# RUN:wasm-ld --import-memory=foo -o %t.import.wasm %t.start.o
+# RUN: obj2yaml %t.import.wasm | FileCheck -check-prefix=CHECK-IMPORT-DEFAULT %s
+
+# Verify that memory import module defaults to `env`, which is the default
+# module for all imports.
+
+# CHECK-IMPORT-DEFAULT:       - Type:            IMPORT
+# CHECK-IMPORT-DEFAULT-NEXT:    Imports:
+# CHECK-IMPORT-DEFAULT-NEXT:      - Module:          env
+# CHECK-IMPORT-DEFAULT-NEXT:        Field:           foo
+# CHECK-IMPORT-DEFAULT-NEXT:        Kind:            MEMORY
+# CHECK-IMPORT-DEFAULT-NEXT:        Memory:
+# CHECK-IMPORT-DEFAULT-NEXT:          Minimum:         0x1
+# CHECK-IMPORT-DEFAULT-NEXT:  - Type:
 
 # RUN:wasm-ld --import-memory=foo,bar --export-memory=qux -o %t.both.wasm %t.start.o
 # RUN: obj2yaml %t.both.wasm | FileCheck -check-prefix=CHECK-BOTH %s
@@ -76,7 +91,7 @@
 # CHECK-BOTH-NEXT:        Field:           bar
 # CHECK-BOTH-NEXT:        Kind:            MEMORY
 # CHECK-BOTH-NEXT:        Memory:
-# CHECK-BOTH-NEXT:          Minimum:         0x2
+# CHECK-BOTH-NEXT:          Minimum:         0x1
 # CHECK-BOTH:       - Type:            EXPORT
 # CHECK-BOTH-NEXT:    Exports:
 # CHECK-BOTH-NEXT:      - Name:            qux

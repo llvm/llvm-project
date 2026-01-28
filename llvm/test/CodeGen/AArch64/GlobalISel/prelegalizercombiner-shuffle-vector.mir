@@ -386,7 +386,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x p0>)
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %6:_(<4 x p0>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0,1,0,1)
+    %6:_(<4 x p0>) = G_BUILD_VECTOR %0, %1, %0, %1
     RET_ReallyLR implicit %6
 ...
 
@@ -408,104 +408,6 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<2 x p0>)
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %6:_(<2 x p0>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1,0)
-    RET_ReallyLR implicit %6
-...
-
-# Check that we properly use undef values when shuffle_vector
-# on scalars gets lowered to build_vector.
----
-name: shuffle_vector_on_scalars_to_build_vector_with_undef
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $x0, $x1
-
-    ; CHECK-LABEL: name: shuffle_vector_on_scalars_to_build_vector_with_undef
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[DEF]](s64), [[DEF]](s64), [[COPY1]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = COPY $x1
-    %6:_(<4 x s64>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0,-1,-1,1)
-    RET_ReallyLR implicit %6
-...
-
-# Check that shuffle_vector on scalars gets combined into a plain
-# copy when the resulting type is a scalar as well and the sizes
-# are compatible.
----
-name: shuffle_vector_on_scalars_to_copy_ptr
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $x0
-
-    ; CHECK-LABEL: name: shuffle_vector_on_scalars_to_copy_ptr
-    ; CHECK: liveins: $x0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: RET_ReallyLR implicit [[COPY]](p0)
-    %0:_(p0) = COPY $x0
-    %6:_(p0) = G_SHUFFLE_VECTOR %0, %0, shufflemask(0)
-    RET_ReallyLR implicit %6
-...
----
-name: shuffle_vector_to_copy_lhs
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $x0, $x1
-
-    ; CHECK-LABEL: name: shuffle_vector_to_copy_lhs
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s32>), [[C]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[EVEC]](s32)
-    %0:_(<2 x s32>) = COPY $x0
-    %1:_(<2 x s32>) = COPY $x1
-    %6:_(s32) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1)
-    RET_ReallyLR implicit %6
-...
----
-name: shuffle_vector_to_copy_rhs
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $x0, $x1
-
-    ; CHECK-LABEL: name: shuffle_vector_to_copy_rhs
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s32>), [[C]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[EVEC]](s32)
-    %0:_(<2 x s32>) = COPY $x0
-    %1:_(<2 x s32>) = COPY $x1
-    %6:_(s32) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2)
-    RET_ReallyLR implicit %6
-...
----
-name: shuffle_vector_to_copy_undef
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $x0, $x1
-
-    ; CHECK-LABEL: name: shuffle_vector_to_copy_undef
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: RET_ReallyLR implicit [[DEF]](s32)
-    %0:_(<2 x s32>) = COPY $x0
-    %1:_(<2 x s32>) = COPY $x1
-    %6:_(s32) = G_SHUFFLE_VECTOR %0, %1, shufflemask(-1)
+    %6:_(<2 x p0>) = G_BUILD_VECTOR %1, %0
     RET_ReallyLR implicit %6
 ...

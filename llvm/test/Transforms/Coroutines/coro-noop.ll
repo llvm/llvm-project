@@ -1,5 +1,5 @@
-; Tests that CoroEarly pass correctly lowers coro.noop
-; RUN: opt < %s -S -passes=coro-early | FileCheck %s
+; Tests that CoroCleanup pass correctly lowers coro.noop
+; RUN: opt < %s -S -passes=coro-cleanup | FileCheck %s
 
 ; CHECK: %NoopCoro.Frame = type { ptr, ptr }
 ; CHECK: @NoopCoro.Frame.Const = private constant %NoopCoro.Frame { ptr @__NoopCoro_ResumeDestroy, ptr @__NoopCoro_ResumeDestroy }
@@ -26,7 +26,7 @@ declare ptr @llvm.coro.noop()
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 
 
-; CHECK: define private fastcc void @__NoopCoro_ResumeDestroy(ptr %0) !dbg ![[RESUME:[0-9]+]] {
+; CHECK: define internal fastcc void @__NoopCoro_ResumeDestroy(ptr %0) !dbg ![[RESUME:[0-9]+]] {
 ; CHECK-NEXT: entry
 ; CHECK-NEXT:    ret void
 

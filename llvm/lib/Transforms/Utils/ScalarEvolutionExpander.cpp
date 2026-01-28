@@ -26,6 +26,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -173,6 +174,26 @@ SCEVExpander::findInsertPointAfter(Instruction *I,
     ++IP;
 
   return IP;
+}
+
+void SCEVExpander::eraseDeadInstructions(Value *Root) {
+  SmallVector<Value *> WorkList;
+  SmallPtrSet<Value *, 8> DeletedValues;
+  append_range(WorkList, getAllInsertedInstructions());
+  while (!WorkList.empty()) {
+    Value *V = WorkList.pop_back_val();
+    if (DeletedValues.contains(V))
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || I == Root || !isInsertedInstruction(I) ||
+        !isInstructionTriviallyDead(I))
+      continue;
+    append_range(WorkList, I->operands());
+    InsertedValues.erase(I);
+    InsertedPostIncValues.erase(I);
+    DeletedValues.insert(I);
+    I->eraseFromParent();
+  }
 }
 
 BasicBlock::iterator
@@ -436,6 +457,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
+  case scPtrToAddr:
   case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
@@ -505,7 +527,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
   // Recognize the canonical representation of an unsimplifed urem.
   const SCEV *URemLHS = nullptr;
   const SCEV *URemRHS = nullptr;
-  if (SE.matchURem(S, URemLHS, URemRHS)) {
+  if (match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), SE))) {
     Value *LHS = expand(URemLHS);
     Value *RHS = expand(URemRHS);
     return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
@@ -1412,6 +1434,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   return expand(T);
 }
 
+Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
+  Value *V = expand(S->getOperand());
+  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToAddr,
+                           GetOptimalInsertionPointForCastOf(V));
+}
+
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
   Value *V = expand(S->getOperand());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
@@ -1936,6 +1964,9 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scConstant:
   case scVScale:
     return 0;
+  case scPtrToAddr:
+    Cost = CastCost(Instruction::PtrToAddr);
+    break;
   case scPtrToInt:
     Cost = CastCost(Instruction::PtrToInt);
     break;
@@ -2059,6 +2090,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return Cost > Budget;
   }
   case scTruncate:
+  case scPtrToAddr:
   case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
@@ -2187,27 +2219,14 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Checking <u 0 is always false.
-    if (!Signed && Start->isZero() && SE.isKnownPositive(Step))
-      return ConstantInt::getFalse(Loc->getContext());
-
     // Get the backedge taken count and truncate or extended to the AR type.
     Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 
-    Value *MulV, *OfMul;
-    if (Step->isOne()) {
-      // Special-case Step of one. Potentially-costly `umul_with_overflow` isn't
-      // needed, there is never an overflow, so to avoid artificially inflating
-      // the cost of the check, directly emit the optimized IR.
-      MulV = TruncTripCount;
-      OfMul = ConstantInt::getFalse(MulV->getContext());
-    } else {
-      CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
-                                              {AbsStep, TruncTripCount},
-                                              /*FMFSource=*/nullptr, "mul");
-      MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
-      OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
-    }
+    CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
+                                            {AbsStep, TruncTripCount},
+                                            /*FMFSource=*/nullptr, "mul");
+    Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+    Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
 
     Value *Add = nullptr, *Sub = nullptr;
     bool NeedPosCheck = !SE.isKnownNegative(Step);
@@ -2324,8 +2343,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
     ToTy = Type::getInt32Ty(DefI->getContext());
   Instruction *User =
       CastInst::CreateBitOrPointerCast(DefI, ToTy, "tmp.lcssa.user", InsertPt);
-  auto RemoveUserOnExit =
-      make_scope_exit([User]() { User->eraseFromParent(); });
+  llvm::scope_exit RemoveUserOnExit([User]() { User->eraseFromParent(); });
 
   SmallVector<Instruction *, 1> ToUpdate;
   ToUpdate.push_back(DefI);

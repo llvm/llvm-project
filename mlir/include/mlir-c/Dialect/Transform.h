@@ -29,6 +29,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirTransformAnyOpTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirTransformAnyOpTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirTransformAnyOpTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // AnyParamType
 //===---------------------------------------------------------------------===//
@@ -38,6 +40,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsATransformAnyParamType(MlirType type);
 MLIR_CAPI_EXPORTED MlirTypeID mlirTransformAnyParamTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirTransformAnyParamTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirTransformAnyParamTypeGetName(void);
 
 //===---------------------------------------------------------------------===//
 // AnyValueType
@@ -49,6 +53,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirTransformAnyValueTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirTransformAnyValueTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirTransformAnyValueTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // OperationType
 //===---------------------------------------------------------------------===//
@@ -59,6 +65,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirTransformOperationTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType
 mlirTransformOperationTypeGet(MlirContext ctx, MlirStringRef operationName);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirTransformOperationTypeGetName(void);
 
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirTransformOperationTypeGetOperationName(MlirType type);
@@ -74,10 +82,14 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirTransformParamTypeGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGet(MlirContext ctx,
                                                       MlirType type);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirTransformParamTypeGetName(void);
+
 MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGetType(MlirType type);
 
 #ifdef __cplusplus
 }
 #endif
+
+#include "mlir/Dialect/Transform/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_TRANSFORM_H

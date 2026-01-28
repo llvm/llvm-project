@@ -133,7 +133,8 @@ Expected<Tweak::Effect> ExpandDeducedType::apply(const Selection &Inputs) {
   auto &SrcMgr = Inputs.AST->getSourceManager();
 
   std::optional<clang::QualType> DeducedType =
-      getDeducedType(Inputs.AST->getASTContext(), Range.getBegin());
+      getDeducedType(Inputs.AST->getASTContext(),
+                     Inputs.AST->getHeuristicResolver(), Range.getBegin());
 
   // if we can't resolve the type, return an error message
   if (DeducedType == std::nullopt || (*DeducedType)->isUndeducedAutoType())

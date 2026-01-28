@@ -159,7 +159,7 @@ func.func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
 // -----
 
 func.func @memref_reinterpret_cast_incompatible_element_types(%in: memref<*xf32>) {
-  // expected-error @+1 {{different element types specified}}
+  // expected-error @+1 {{source element type ('f32') does not match result element type ('i32')}}
   %out = memref.reinterpret_cast %in to
            offset: [0], sizes: [10], strides: [1]
          : memref<*xf32> to memref<10xi32, strided<[1], offset: 0>>
@@ -380,7 +380,7 @@ func.func @mismatched_types() {
 
 // -----
 
-// expected-error @+1 {{alignment attribute value 63 is not a power of 2}}
+// expected-error @+1 {{'memref.global' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
 memref.global "private" @gv : memref<4xf32> = dense<1.0> { alignment = 63 }
 
 // -----
@@ -624,7 +624,7 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect number of size operands for type}}
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
   %1 = memref.view %0[%arg2][%arg0]
     : memref<2048xi8> to memref<?x?xf32>
   return
@@ -927,7 +927,7 @@ func.func @bad_alloc_wrong_dynamic_dim_count() {
 ^bb0:
   %0 = arith.constant 7 : index
   // Test alloc with wrong number of dynamic dimensions.
-  // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 0}}
   %1 = memref.alloc(%0)[%0] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
   return
 }
@@ -987,6 +987,22 @@ func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
   %c0 = arith.constant 0 : index
   // expected-error @below {{'memref.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   memref.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_alloc_alignment() {
+  // expected-error @below {{'memref.alloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = memref.alloc() {alignment = 3} : memref<4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_realloc_alignment(%src: memref<4xf32>) {
+  // expected-error @below {{'memref.realloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = memref.realloc %src {alignment = 7} : memref<4xf32> to memref<8xf32>
   return
 }
 
@@ -1128,7 +1144,7 @@ func.func @memref_realloc_sizes_2(%src : memref<?xf32>, %d : index)
 // -----
 
 func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
-  // expected-error@+1 {{different element types}}
+  // expected-error@+1 {{source element type ('f32') does not match result element type ('i32')}}
   %0 = memref.realloc %src : memref<256xf32> to memref<?xi32>
   return %0 : memref<?xi32>
 }
@@ -1167,5 +1183,21 @@ func.func @expand_shape_invalid_output_shape(
   %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 15, 21] :
       memref<30x20xf32, strided<[4000, 2], offset: 100>>
       into memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>
+  return
+}
+
+// -----
+
+func.func @distinct_objects_types_mismatch(%arg0: memref<?xf32>, %arg1: memref<?xi32>) -> (memref<?xi32>, memref<?xf32>) {
+  // expected-error @+1 {{operand types and result types must match}}
+  %0, %1 = "memref.distinct_objects"(%arg0, %arg1) : (memref<?xf32>, memref<?xi32>) -> (memref<?xi32>, memref<?xf32>)
+  return %0, %1 : memref<?xi32>, memref<?xf32>
+}
+
+// -----
+
+func.func @distinct_objects_0_operands() {
+  // expected-error @+1 {{expected at least one operand}}
+  "memref.distinct_objects"() : () -> ()
   return
 }

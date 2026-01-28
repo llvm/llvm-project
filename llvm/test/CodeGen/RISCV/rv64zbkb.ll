@@ -441,7 +441,7 @@ define void @pack_lo_packh_hi_packh_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_2:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packh a1, a2, a3
 ; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a4)
 ; RV64ZBKB-NEXT:    ret
@@ -477,7 +477,7 @@ define void @pack_lo_packh_hi_packh_3(i8 %0, i8 %1, i8 %2, i8 %3, ptr %p) nounwi
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_3:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packh a1, a2, a3
 ; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a4)
 ; RV64ZBKB-NEXT:    ret
@@ -509,7 +509,7 @@ define i32 @pack_lo_packh_hi_packh_4(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_4:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packh a1, a2, a3
 ; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %a = zext i8 %0 to i32
@@ -635,4 +635,85 @@ define i64 @pack_i64_lo_noext_hi_packh_nozeroext(i64 %a, i8 %1, i8 %2, ptr %p) n
   %f = shl i64 %e, 16
   %g = or i64 %f, %a
   ret i64 %g
+}
+
+define i32 @packh_zero_i32(i32 %a) nounwind {
+; RV64I-LABEL: packh_zero_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_zero_i32:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, zero, a0
+; RV64ZBKB-NEXT:    ret
+  %shl = shl i32 %a, 8
+  %and = and i32 %shl, 65280
+  ret i32 %and
+}
+
+define i32 @packh_zero_i32_2(i32 %a) nounwind {
+; RV64I-LABEL: packh_zero_i32_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_zero_i32_2:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, zero, a0
+; RV64ZBKB-NEXT:    ret
+  %and = and i32 %a, 255
+  %shl = shl i32 %and, 8
+  ret i32 %shl
+}
+
+define i64 @packh_zero_i64(i64 %a) nounwind {
+; RV64I-LABEL: packh_zero_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_zero_i64:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, zero, a0
+; RV64ZBKB-NEXT:    ret
+  %shl = shl i64 %a, 8
+  %and = and i64 %shl, 65280
+  ret i64 %and
+}
+
+define i64 @packh_zero_i64_2(i64 %a) nounwind {
+; RV64I-LABEL: packh_zero_i64_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_zero_i64_2:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, zero, a0
+; RV64ZBKB-NEXT:    ret
+  %and = and i64 %a, 255
+  %shl = shl i64 %and, 8
+  ret i64 %shl
+}
+
+define i32 @packh_zero_i8(i8 %a) nounwind {
+; RV64I-LABEL: packh_zero_i8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_zero_i8:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, zero, a0
+; RV64ZBKB-NEXT:    ret
+  %zext = zext i8 %a to i32
+  %shl = shl i32 %zext, 8
+  %and = and i32 %shl, 65280
+  ret i32 %and
 }

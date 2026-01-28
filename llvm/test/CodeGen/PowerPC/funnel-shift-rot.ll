@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=ppc32-- | FileCheck %s --check-prefixes=CHECK,CHECK32,CHECK32_32
 ; RUN: llc < %s -mtriple=ppc32-- -mcpu=ppc64 | FileCheck %s --check-prefixes=CHECK,CHECK32,CHECK32_64
 ; RUN: llc < %s -mtriple=powerpc64le-- | FileCheck %s --check-prefixes=CHECK,CHECK64
+; RUN: llc < %s -mcpu=future -mtriple=powerpc64le-- | FileCheck %s --check-prefix=FUTURE
 
 declare i8 @llvm.fshl.i8(i8, i8, i8)
 declare i16 @llvm.fshl.i16(i16, i16, i16)
@@ -24,6 +25,13 @@ define i8 @rotl_i8_const_shift(i8 %x) {
 ; CHECK-NEXT:    rlwimi 4, 3, 3, 0, 28
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_i8_const_shift:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    rotlwi 4, 3, 27
+; FUTURE-NEXT:    rlwimi 4, 3, 3, 0, 28
+; FUTURE-NEXT:    mr 3, 4
+; FUTURE-NEXT:    blr
   %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
   ret i8 %f
 }
@@ -43,6 +51,11 @@ define i64 @rotl_i64_const_shift(i64 %x) {
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    rotldi 3, 3, 3
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_i64_const_shift:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    rotldi 3, 3, 3
+; FUTURE-NEXT:    blr
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 3)
   ret i64 %f
 }
@@ -60,6 +73,17 @@ define i16 @rotl_i16(i16 %x, i16 %z) {
 ; CHECK-NEXT:    srw 4, 5, 4
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_i16:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    clrlwi 6, 4, 28
+; FUTURE-NEXT:    neg 4, 4
+; FUTURE-NEXT:    clrlwi 5, 3, 16
+; FUTURE-NEXT:    clrlwi 4, 4, 28
+; FUTURE-NEXT:    slw 3, 3, 6
+; FUTURE-NEXT:    srw 4, 5, 4
+; FUTURE-NEXT:    or 3, 3, 4
+; FUTURE-NEXT:    blr
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }
@@ -69,6 +93,11 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rotlw 3, 3, 4
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_i32:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    rotlw 3, 3, 4
+; FUTURE-NEXT:    blr
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
   ret i32 %f
 }
@@ -100,6 +129,11 @@ define i64 @rotl_i64(i64 %x, i64 %z) {
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    rotld 3, 3, 4
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_i64:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    rotld 3, 3, 4
+; FUTURE-NEXT:    blr
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f
 }
@@ -124,6 +158,11 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    vrlw 2, 2, 3
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_v4i32:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    xvrlw 34, 34, 35
+; FUTURE-NEXT:    blr
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
   ret <4 x i32> %f
 }
@@ -150,6 +189,12 @@ define <4 x i32> @rotl_v4i32_const_shift(<4 x i32> %x) {
 ; CHECK64-NEXT:    vspltisw 3, 3
 ; CHECK64-NEXT:    vrlw 2, 2, 3
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_v4i32_const_shift:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    vspltisw 3, 3
+; FUTURE-NEXT:    xvrlw 34, 34, 35
+; FUTURE-NEXT:    blr
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f
 }
@@ -163,6 +208,13 @@ define i8 @rotr_i8_const_shift(i8 %x) {
 ; CHECK-NEXT:    rlwimi 4, 3, 5, 0, 26
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_i8_const_shift:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    rotlwi 4, 3, 29
+; FUTURE-NEXT:    rlwimi 4, 3, 5, 0, 26
+; FUTURE-NEXT:    mr 3, 4
+; FUTURE-NEXT:    blr
   %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 3)
   ret i8 %f
 }
@@ -172,6 +224,11 @@ define i32 @rotr_i32_const_shift(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rotlwi 3, 3, 29
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_i32_const_shift:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    rotlwi 3, 3, 29
+; FUTURE-NEXT:    blr
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 3)
   ret i32 %f
 }
@@ -189,6 +246,17 @@ define i16 @rotr_i16(i16 %x, i16 %z) {
 ; CHECK-NEXT:    slw 3, 3, 4
 ; CHECK-NEXT:    or 3, 5, 3
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_i16:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    clrlwi 6, 4, 28
+; FUTURE-NEXT:    neg 4, 4
+; FUTURE-NEXT:    clrlwi 5, 3, 16
+; FUTURE-NEXT:    clrlwi 4, 4, 28
+; FUTURE-NEXT:    srw 5, 5, 6
+; FUTURE-NEXT:    slw 3, 3, 4
+; FUTURE-NEXT:    or 3, 5, 3
+; FUTURE-NEXT:    blr
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }
@@ -199,6 +267,12 @@ define i32 @rotr_i32(i32 %x, i32 %z) {
 ; CHECK-NEXT:    neg 4, 4
 ; CHECK-NEXT:    rotlw 3, 3, 4
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_i32:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    neg 4, 4
+; FUTURE-NEXT:    rotlw 3, 3, 4
+; FUTURE-NEXT:    blr
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %z)
   ret i32 %f
 }
@@ -231,6 +305,12 @@ define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK64-NEXT:    neg 4, 4
 ; CHECK64-NEXT:    rotld 3, 3, 4
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_i64:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    neg 4, 4
+; FUTURE-NEXT:    rotld 3, 3, 4
+; FUTURE-NEXT:    blr
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f
 }
@@ -263,6 +343,12 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK64-NEXT:    vsubuwm 3, 4, 3
 ; CHECK64-NEXT:    vrlw 2, 2, 3
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_v4i32:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    vnegw 3, 3
+; FUTURE-NEXT:    xvrlw 34, 34, 35
+; FUTURE-NEXT:    blr
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
   ret <4 x i32> %f
 }
@@ -293,6 +379,12 @@ define <4 x i32> @rotr_v4i32_const_shift(<4 x i32> %x) {
 ; CHECK64-NEXT:    vsubuwm 3, 4, 3
 ; CHECK64-NEXT:    vrlw 2, 2, 3
 ; CHECK64-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_v4i32_const_shift:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    xxspltiw 0, 29
+; FUTURE-NEXT:    xvrlw 34, 34, 0
+; FUTURE-NEXT:    blr
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f
 }
@@ -301,6 +393,10 @@ define i32 @rotl_i32_shift_by_bitwidth(i32 %x) {
 ; CHECK-LABEL: rotl_i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_i32_shift_by_bitwidth:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    blr
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 32)
   ret i32 %f
 }
@@ -309,6 +405,10 @@ define i32 @rotr_i32_shift_by_bitwidth(i32 %x) {
 ; CHECK-LABEL: rotr_i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_i32_shift_by_bitwidth:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    blr
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 32)
   ret i32 %f
 }
@@ -317,6 +417,10 @@ define <4 x i32> @rotl_v4i32_shift_by_bitwidth(<4 x i32> %x) {
 ; CHECK-LABEL: rotl_v4i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotl_v4i32_shift_by_bitwidth:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    blr
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 32, i32 32, i32 32, i32 32>)
   ret <4 x i32> %f
 }
@@ -325,6 +429,10 @@ define <4 x i32> @rotr_v4i32_shift_by_bitwidth(<4 x i32> %x) {
 ; CHECK-LABEL: rotr_v4i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blr
+;
+; FUTURE-LABEL: rotr_v4i32_shift_by_bitwidth:
+; FUTURE:       # %bb.0:
+; FUTURE-NEXT:    blr
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 32, i32 32, i32 32, i32 32>)
   ret <4 x i32> %f
 }
