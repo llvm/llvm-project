@@ -7167,9 +7167,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         // Recipes with underlying instructions being moved out of the loop
         // region by LICM may cause discrepancies between the legacy cost model
         // and the VPlan-based cost model.
-        if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-          if (Def->isDefinedOutsideLoopRegions())
-            return true;
+        if (!VPBB->getEnclosingLoopRegion())
+          return true;
 
         SeenInstrs.insert(UI);
       }
