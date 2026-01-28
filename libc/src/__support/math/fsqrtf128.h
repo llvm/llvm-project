@@ -13,7 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
-#include "src/__support/FPUtil/generic/sqrt.h"
+#include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float fsqrtf128(float128 x) {
+LIBC_INLINE static float fsqrtf128(float128 x) {
   return fputil::sqrt<float>(x);
 }
 

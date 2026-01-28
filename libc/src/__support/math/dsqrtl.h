@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_DSQRTL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_DSQRTL_H
 
-#include "src/__support/FPUtil/generic/sqrt.h"
+#include "src/__support/FPUtil/sqrt.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr double dsqrtl(long double x) {
+LIBC_INLINE static double dsqrtl(long double x) {
   return fputil::sqrt<double>(x);
 }
 

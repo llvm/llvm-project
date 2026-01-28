@@ -471,7 +471,7 @@ add_header_library(
   HDRS
     dsqrtl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.FPUtil.sqrt
 )
 
 add_header_library(
@@ -598,7 +598,7 @@ add_header_library(
   HDRS
     f16sqrtl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.properties.types
 )
 
@@ -616,7 +616,7 @@ add_header_library(
   HDRS
     fsqrt.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.FPUtil.sqrt
 )
 
 add_header_library(
@@ -624,7 +624,7 @@ add_header_library(
   HDRS
     fsqrtl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.FPUtil.sqrt
 )
 
 add_header_library(
@@ -1065,7 +1065,7 @@ add_header_library(
   HDRS
     fsqrtf128.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.properties.types
 )
 
