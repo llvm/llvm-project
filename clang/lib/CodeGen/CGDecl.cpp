@@ -31,6 +31,7 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Sema/Sema.h"
@@ -1955,10 +1956,29 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   // If this local has an initializer, emit it now.
   const Expr *Init = D.getInit();
 
+  auto wouldAutoInitApply = [&]() {
+    if (D.isConstexpr() || D.getAttr<UninitializedAttr>())
+      return false;
+    if (type->getAsTagDecl() &&
+        type->getAsTagDecl()->hasAttr<NoTrivialAutoVarInitAttr>())
+      return false;
+    if (CurFuncDecl && CurFuncDecl->hasAttr<NoTrivialAutoVarInitAttr>())
+      return false;
+    return getContext().getLangOpts().getTrivialAutoVarInit() !=
+           LangOptions::TrivialAutoVarInitKind::Uninitialized;
+  };
+
   // If we are at an unreachable point, we don't need to emit the initializer
   // unless it contains a label.
   if (!HaveInsertPoint()) {
     if (!Init || !ContainsLabel(Init)) {
+      // Warn when -ftrivial-auto-var-init would initialize but can't.
+      if (D.getDeclName() && isTrivialInitializer(Init) &&
+          wouldAutoInitApply()) {
+        CGM.getDiags().Report(D.getLocation(),
+                              diag::warn_trivial_auto_var_init_unreachable)
+            << &D;
+      }
       PGO->markStmtMaybeUsed(Init);
       return;
     }

@@ -436,6 +436,10 @@ def warn_trivial_auto_var_limit
               "the number of times ftrivial-auto-var-init=%1 gets applied">,
       InGroup<TrivialAutoVarInit>;
 
+def warn_trivial_auto_var_init_unreachable
+    : Warning<"%0 cannot be initialized with '-ftrivial-auto-var-init'">,
+      InGroup<TrivialAutoVarInit>, DefaultIgnore;
+
 def warn_simdlen_1_no_effect
     : Warning<"the clause simdlen(1) has no effect when targeting aarch64">,
       InGroup<SIMDLen>;
