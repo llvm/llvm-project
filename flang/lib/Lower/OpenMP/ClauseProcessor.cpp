@@ -396,6 +396,10 @@ bool ClauseProcessor::processInitializer(
            std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr;
         mlir::Type ompOrigType = ompOrig.getType();
+        // Check for unsupported dynamic-length character reductions
+        if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(ompOrigType)) {
+          TODO(loc, "OpenMP reduction allocation for dynamic length character");
+        }
         // If ompOrig is already a reference, we can use it directly
         if (fir::isa_ref_type(ompOrigType)) {
           addr = ompOrig;

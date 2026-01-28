@@ -3769,13 +3769,9 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                                                     *object.sym(), extraFlags);
       // For character types, we need to provide the length parameter
       llvm::SmallVector<mlir::Value> typeParams;
-      mlir::Type unwrappedType = fir::unwrapRefType(type);
-      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
-        if (charTy.hasConstantLen()) {
-          mlir::Value lenValue = builder.createIntegerConstant(
-              loc, builder.getIndexType(), charTy.getLen());
-          typeParams.push_back(lenValue);
-        }
+      if (hlfir::isFortranEntity(addr)) {
+        hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                   typeParams);
       }
       auto declareOp =
           hlfir::DeclareOp::create(builder, loc, addr, name, nullptr,
