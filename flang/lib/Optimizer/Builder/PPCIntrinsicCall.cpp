@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"

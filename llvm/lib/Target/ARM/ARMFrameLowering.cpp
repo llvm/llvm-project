@@ -2335,6 +2335,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
       FnSize += Table.MBBs.size() * 4;
   FnSize += MF.getConstantPool()->getConstants().size() * 4;
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
+                    << FnSize << " bytes\n");
   return FnSize;
 }
 
