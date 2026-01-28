@@ -8415,35 +8415,35 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
 
   switch (Opcode) {
-      case ISD::CLMUL: {
-        SDValue Res = DAG.getConstant(0, DL, VT);
-        // For targets with a fast bit test instruction (e.g., x86 BT), use a
-        // shift-based expansion to avoid expensive MUL instructions.
-        // Pattern: Res ^= (Y & (1<<I)) ? (X<<I) : 0
-        if (hasBitTest(X, Y)) {
-          SDValue Zero = DAG.getConstant(0, DL, VT);
-          SDValue One = DAG.getConstant(1, DL, VT);
-          for (unsigned I = 0; I < BW; ++I) {
-            SDValue ShiftAmt = DAG.getShiftAmountConstant(I, VT, DL);
-            SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
-            SDValue BitShift = DAG.getNode(ISD::SRL, DL, VT, Y, ShiftAmt);
-            SDValue BitTest = DAG.getNode(ISD::AND, DL, VT, BitShift, One);
-            EVT SetCCVT =
-                getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-            SDValue Cond = DAG.getSetCC(DL, SetCCVT, BitTest, Zero, ISD::SETNE);
-            SDValue Selected = DAG.getSelect(DL, VT, Cond, Shifted, Zero);
-            Res = DAG.getNode(ISD::XOR, DL, VT, Res, Selected);
-          }
-        } else {
-          for (unsigned I = 0; I < BW; ++I) {
-            SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
-            SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
-            SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
-            Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
-          }
-        }
-        return Res;
+  case ISD::CLMUL: {
+    SDValue Res = DAG.getConstant(0, DL, VT);
+    // For targets with a fast bit test instruction (e.g., x86 BT), use a
+    // shift-based expansion to avoid expensive MUL instructions.
+    // Pattern: Res ^= (Y & (1<<I)) ? (X<<I) : 0
+    if (hasBitTest(X, Y)) {
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      SDValue One = DAG.getConstant(1, DL, VT);
+      for (unsigned I = 0; I < BW; ++I) {
+        SDValue ShiftAmt = DAG.getShiftAmountConstant(I, VT, DL);
+        SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
+        SDValue BitShift = DAG.getNode(ISD::SRL, DL, VT, Y, ShiftAmt);
+        SDValue BitTest = DAG.getNode(ISD::AND, DL, VT, BitShift, One);
+        EVT SetCCVT =
+            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+        SDValue Cond = DAG.getSetCC(DL, SetCCVT, BitTest, Zero, ISD::SETNE);
+        SDValue Selected = DAG.getSelect(DL, VT, Cond, Shifted, Zero);
+        Res = DAG.getNode(ISD::XOR, DL, VT, Res, Selected);
       }
+    } else {
+      for (unsigned I = 0; I < BW; ++I) {
+        SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
+        SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
+        SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
+        Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
+      }
+    }
+    return Res;
+  }
   case ISD::CLMULR:
     // If we have CLMUL/CLMULH, merge the shifted results to form CLMULR.
     if (isOperationLegalOrCustom(ISD::CLMUL, VT) &&
