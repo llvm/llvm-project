@@ -1,4 +1,4 @@
-//===-- Single-precision tanh function ------------------------------------===//
+//===-- Shared tanfh function ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/tanhf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_TANHF_H
+#define LLVM_LIBC_SHARED_MATH_TANHF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/tanhf.h"
 
 namespace LIBC_NAMESPACE_DECL {
-  LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
-    return math::tanhf(x);
-  }
+namespace shared {
 
+using math::tanhf;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_TANHF_H

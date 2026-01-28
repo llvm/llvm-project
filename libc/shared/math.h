@@ -105,5 +105,6 @@
 #include "math/sqrtf16.h"
 #include "math/tan.h"
 #include "math/tanf.h"
+#include "math/tanhf.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
