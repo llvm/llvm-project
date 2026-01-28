@@ -241,7 +241,7 @@ static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
                     << Reason << ".\n");
 }
 
-// Computes the LLVM version of MD5 hash for the string content of a string
+// Computes the LLVM version of MD5 hash for the content of a string
 // literal.
 static std::optional<uint64_t>
 getStringContentHash(const GlobalVariable &GVar) {
@@ -250,6 +250,7 @@ getStringContentHash(const GlobalVariable &GVar) {
     return std::nullopt;
   if (auto *C = dyn_cast<ConstantDataSequential>(Initializer))
     if (C->isString()) {
+      // Note the hash computed for the literal would include the null byte.
       return llvm::MD5Hash(C->getAsString());
     }
   return std::nullopt;
@@ -954,49 +955,27 @@ bool MemProfUsePass::annotateGlobalVariables(
     }
 
     StringRef Name = GVar.getName();
+    SymbolHandleRef Handle = SymbolHandleRef(Name);
     // Skip string literals as their mangled names don't stay stable across
     // binary releases.
-    // TODO: Track string content hash in the profiles and compute it inside the
-    // compiler to categeorize the hotness string literals.
-    if (Name.starts_with(".str")) {
-      if (!AnnotateStringLiteralSectionPrefix) {
-        LLVM_DEBUG(
-            dbgs() << "String literal annotation is off. Skip annotating "
-                   << Name << "\n");
+    if (!AnnotateStringLiteralSectionPrefix)
+      if (Name.starts_with(".str"))
         continue;
-      }
+
+    if (Name.starts_with(".str")) {
       std::optional<uint64_t> Hash = getStringContentHash(GVar);
       if (!Hash) {
         LLVM_DEBUG(dbgs() << "Cannot compute content hash for string literal "
                           << Name << "\n");
         continue;
       }
-      const uint64_t HashValue = Hash.value();
-      std::optional<memprof::DataAccessProfRecord> Record =
-          DataAccessProf->getProfileRecord(HashValue);
-      if (Record && Record->AccessCount > 0) {
-        ++NumOfMemProfHotGlobalVars;
-        Changed |= GVar.setSectionPrefix("hot");
-        LLVM_DEBUG(dbgs() << "Global variable " << Name
-                          << " is annotated as hot\n");
-      } else if (DataAccessProf->isKnownColdSymbol(HashValue)) {
-        ++NumOfMemProfColdGlobalVars;
-        Changed |= GVar.setSectionPrefix("unlikely");
-        LLVM_DEBUG(dbgs() << "Global variable " << Name
-                          << " is annotated as unlikely\n");
-      } else {
-        ++NumOfMemProfUnknownGlobalVars;
-        LLVM_DEBUG(dbgs() << "Global variable " << Name
-                          << " is not annotated\n");
-      }
-
-      continue;
+      Handle = SymbolHandleRef(Hash.value());
     }
 
     // DataAccessProfRecord's get* methods will canonicalize the name under the
     // hood before looking it up, so optimizer doesn't need to do it.
     std::optional<DataAccessProfRecord> Record =
-        DataAccessProf->getProfileRecord(Name);
+        DataAccessProf->getProfileRecord(Handle);
     // Annotate a global variable as hot if it has non-zero sampled count, and
     // annotate it as cold if it's seen in the profiled binary
     // file but doesn't have any access sample.
@@ -1008,7 +987,7 @@ bool MemProfUsePass::annotateGlobalVariables(
       Changed |= GVar.setSectionPrefix("hot");
       LLVM_DEBUG(dbgs() << "Global variable " << Name
                         << " is annotated as hot\n");
-    } else if (DataAccessProf->isKnownColdSymbol(Name)) {
+    } else if (DataAccessProf->isKnownColdSymbol(Handle)) {
       ++NumOfMemProfColdGlobalVars;
       Changed |= GVar.setSectionPrefix("unlikely");
       Changed = true;
