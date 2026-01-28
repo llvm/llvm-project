@@ -571,6 +571,7 @@ Bug Fixes in This Version
 - Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
   by diagnosing invalid comma-separated argument lists. (#GH166325)
 - Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
+- Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
