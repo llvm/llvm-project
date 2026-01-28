@@ -461,8 +461,7 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, funcOp);
-  setCIRFunctionAttributesForDefinition(funcDecl, funcOp,
-                                        cgf.hasEmittedBuiltinCall);
+  setCIRFunctionAttributesForDefinition(funcDecl, funcOp);
 
   auto getPriority = [this](const auto *attr) -> int {
     Expr *e = attr->getPriority();
@@ -2155,7 +2154,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
-    const clang::FunctionDecl *decl, cir::FuncOp f, bool hasBuiltinCall) {
+    const clang::FunctionDecl *decl, cir::FuncOp f) {
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
 
@@ -2197,10 +2196,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If inlining is disabled, force everything that isn't always_inline
     // to carry an explicit noinline attribute.
-    // However, don't mark functions as noinline if they only contain
-    // builtin calls that will become intrinsics - these simple wrappers
-    // should be allowed to inline so the intrinsics can be optimized.
-    if (!isAlwaysInline && !hasBuiltinCall)
+    if (!isAlwaysInline)
       f.setInlineKind(cir::InlineKind::NoInline);
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its

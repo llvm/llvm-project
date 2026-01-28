@@ -459,11 +459,8 @@ public:
                              bool isIncompleteFunction, bool isThunk);
 
   /// Set extra attributes (inline, etc.) for a function.
-  /// \param hasBuiltinCall - If true, the function contains a builtin call that
-  /// may become an intrinsic. Used to avoid marking such functions as noinline.
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
-                                             cir::FuncOp f,
-                                             bool hasBuiltinCall = false);
+                                             cir::FuncOp f);
 
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);

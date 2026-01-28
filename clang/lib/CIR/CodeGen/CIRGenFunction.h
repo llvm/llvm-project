@@ -157,11 +157,6 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
-  /// Set to true when the current function emits a builtin call that will
-  /// become an LLVM intrinsic. Used to avoid marking such functions as noinline
-  /// so the intrinsics can be optimized.
-  bool hasEmittedBuiltinCall = false;
-
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
 

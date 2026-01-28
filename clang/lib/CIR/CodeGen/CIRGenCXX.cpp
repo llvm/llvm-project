@@ -213,7 +213,7 @@ cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl gd) {
 
   setNonAliasAttributes(gd, fn);
   setCIRFunctionAttributesForDefinition(mlir::cast<FunctionDecl>(gd.getDecl()),
-                                        fn, cgf.hasEmittedBuiltinCall);
+                                        fn);
   return fn;
 }
 

@@ -679,11 +679,6 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
-  // Track that this function contains a builtin call. This is used to avoid
-  // marking functions as noinline when they only contain simple builtin calls
-  // that will become intrinsics.
-  hasEmittedBuiltinCall = true;
-
   mlir::Location loc = getLoc(e->getSourceRange());
 
   // See if we can constant fold this builtin.  If so, don't emit it at all.
