@@ -266,9 +266,11 @@ let Definition = "target" in {
   def SwiftAutoImportFrameworks : Property<"swift-auto-import-frameworks", "Boolean">,
      DefaultFalse,
      Desc<"Automatically import all frameworks and dynamic libraries that are autolinked by Swift modules in the target.">;
-  def UseAllCompilerFlags: Property<"use-all-compiler-flags", "Boolean">,
-    DefaultTrue,
-    Desc<"Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable.">;
+  def UseAllCompilerFlags
+      : Property<"use-all-compiler-flags", "Boolean">,
+        DefaultFalse,
+        Desc<"Try to use compiler flags for all modules when setting up the "
+             "Swift expression parser, not just the main executable.">;
   def SDKPath: Property<"sdk-path", "FileSpec">,
     DefaultStringValue<"">,
     Desc<"The path to the SDK used to build the current target.">;

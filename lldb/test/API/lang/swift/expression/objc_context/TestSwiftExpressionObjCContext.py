@@ -35,3 +35,7 @@ class TestSwiftExpressionObjCContext(TestBase):
                     "context-less swift expression works",
                     substrs=["(Int, Int, Int)"])
 
+        self.expect("po foo",
+                    "po of Swift object in Objective-C works",
+                    substrs=["Foo from Swift"])
+

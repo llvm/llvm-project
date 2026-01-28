@@ -131,6 +131,11 @@ public:
         "Swift values do not have an object description");
   }
 
+private:
+  llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
+                                    Process &process) const;
+
+public:
   lldb::LanguageType GetLanguageType() const override {
     return lldb::eLanguageTypeSwift;
   }
@@ -706,7 +711,7 @@ protected:
 
   bool GetTargetOfPartialApply(SymbolContext &curr_sc, ConstString &apply_name,
                                SymbolContext &sc);
-  AppleObjCRuntimeV2 *GetObjCRuntime();
+  AppleObjCRuntimeV2 *GetObjCRuntime() const;
 
   /// Creates an UnwindPlan for following the AsyncContext chain up the stack,
   /// from a current AsyncContext frame.

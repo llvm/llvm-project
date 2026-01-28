@@ -7,6 +7,6 @@
 
 int main(int argc, char **argv) {
   [[Bar alloc] init];
-  [[Foo alloc] init];
+  id foo = [[Foo alloc] init];
   return 0; // break here
 }
