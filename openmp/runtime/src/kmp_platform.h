@@ -134,7 +134,7 @@
 #define KMP_ARCH_SPARC 0
 
 #if KMP_OS_WINDOWS
-#if defined(_M_ARM64EC)
+#if defined(_M_ARM64EC) || defined(__arm64ec__)
 #undef KMP_ARCH_ARM64EC
 #define KMP_ARCH_ARM64EC 1
 #elif defined(_M_AMD64) || defined(__x86_64)
