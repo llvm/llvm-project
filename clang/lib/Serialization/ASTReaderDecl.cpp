@@ -3645,19 +3645,6 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
   auto *PrevVD = cast<VarDecl>(Previous);
   D->RedeclLink.setPrevious(PrevVD);
   D->First = PrevVD->First;
-
-  // Update the visibility for previous definition if any.
-  // FIXME: Cache the definition once we've found it. Building a chain with
-  // N definitions currently takes O(N^2) time here.
-  if (auto *VD = static_cast<VarDecl *>(D);
-      VD && VD->isThisDeclarationADefinition() == VarDecl::Definition) {
-    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
-      if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
-        Reader.mergeDefinitionVisibility(CurD, VD);
-        break;
-      }
-    }
-  }
 }
 
 static bool isUndeducedReturnType(QualType T) {
