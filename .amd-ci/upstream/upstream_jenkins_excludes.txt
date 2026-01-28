@@ -20,3 +20,4 @@
 ^\.github/workflows/amd-.*\.yml
 ^\.github/workflows/amd-.*\.yaml
 ^CODEOWNERS
+^.*/.vscode/
