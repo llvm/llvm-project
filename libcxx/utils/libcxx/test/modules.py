@@ -119,6 +119,10 @@ class module_test_generator:
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// These tests check that we provide all declarations, so they currently don't work when
+// carve-outs are enabled.
+// XFAIL: no-filesystem, no-tzdb, no-localization, no-threads, no-wide-characters
+
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
