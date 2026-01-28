@@ -1,3 +1,8 @@
+if(NOT LLVM_ENABLE_PIC)
+  message(FATAL_ERROR "Python bindings require LLVM_ENABLE_PIC=ON. "
+                      "Please reconfigure LLVM with -DLLVM_ENABLE_PIC=ON")
+endif()
+
 set(BINDINGS_MINIMUM_PYTHON_VERSION 3.10)
 find_package(Python ${BINDINGS_MINIMUM_PYTHON_VERSION} EXACT COMPONENTS Interpreter Development.Module REQUIRED)
 
@@ -14,8 +19,6 @@ if(NOT STATUS EQUAL "0")
 endif()
 
 find_package(nanobind CONFIG REQUIRED)
-
-set_target_properties(LLVMEmbUtils PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 target_link_libraries(ir2vec PRIVATE LLVMEmbUtils)
