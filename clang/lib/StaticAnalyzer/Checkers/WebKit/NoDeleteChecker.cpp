@@ -82,6 +82,9 @@ public:
                 return false;
 
               const CXXRecordDecl *R = T->getAsCXXRecordDecl();
+              if (!R)
+                return false;
+
               for (const CXXMethodDecl *BaseMD : R->methods()) {
                 if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
                   if (isNoDeleteFunction(FD)) {
