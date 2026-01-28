@@ -232,7 +232,6 @@ Transforms/InstCombine/binop-select-cast-of-select-cond.ll
 Transforms/InstCombine/binop-select.ll
 Transforms/InstCombine/bit-checks.ll
 Transforms/InstCombine/bitreverse.ll
-Transforms/InstCombine/branch.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive-threshold.ll
