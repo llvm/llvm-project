@@ -1226,7 +1226,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
       Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
   if (llvm::EnableSingleByteCoverage) {
-    assert(!StepV && "StepV is impossible in SingleByte");
+    assert(!StepV && "StepV is not supported in single byte counter mode");
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
   } else if (!StepV)
