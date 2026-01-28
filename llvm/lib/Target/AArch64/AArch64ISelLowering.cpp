@@ -13134,7 +13134,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // however the mov+fmov sequence is always better because of the reduced
     // cache pressure. The timings are still the same if you consider
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
-    // movw+movk is fused). So we limit up to 2 instrdduction at most.
+    // movw+movk is fused). So we limit up to 4 instructions at most.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&

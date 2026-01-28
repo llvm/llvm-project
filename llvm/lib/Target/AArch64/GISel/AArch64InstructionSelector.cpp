@@ -2349,7 +2349,8 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
-    auto ValAndVReg = getAnyConstantVRegValWithLookThrough(Src, MRI);
+    auto ValAndVReg =
+        getAnyConstantVRegValWithLookThrough(Src, MRI, true, true);
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
@@ -5813,18 +5814,25 @@ bool AArch64InstructionSelector::tryOptConstantBuildVec(
   // generate a constant pool load instead of a vector insert sequence.
   SmallVector<Constant *, 16> Csts;
   for (unsigned Idx = 1; Idx < I.getNumOperands(); ++Idx) {
-    // Try to find G_CONSTANT or G_FCONSTANT
-    auto *OpMI =
-        getOpcodeDef(TargetOpcode::G_CONSTANT, I.getOperand(Idx).getReg(), MRI);
-    if (OpMI)
-      Csts.emplace_back(
-          const_cast<ConstantInt *>(OpMI->getOperand(1).getCImm()));
-    else if ((OpMI = getOpcodeDef(TargetOpcode::G_FCONSTANT,
-                                  I.getOperand(Idx).getReg(), MRI)))
-      Csts.emplace_back(
-          const_cast<ConstantFP *>(OpMI->getOperand(1).getFPImm()));
-    else
-      return false;
+    Register OpReg = I.getOperand(Idx).getReg();
+    if (auto AnyConst =
+            getAnyConstantVRegValWithLookThrough(OpReg, MRI, true, true)) {
+      MachineInstr *DefMI = MRI.getVRegDef(AnyConst->VReg);
+
+      if (DefMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+        Csts.emplace_back(
+            ConstantInt::get(MIB.getMF().getFunction().getContext(),
+                             std::move(AnyConst->Value)));
+        continue;
+      }
+
+      if (DefMI->getOpcode() == TargetOpcode::G_FCONSTANT) {
+        Csts.emplace_back(
+            const_cast<ConstantFP *>(DefMI->getOperand(1).getFPImm()));
+        continue;
+      }
+    }
+    return false;
   }
   Constant *CV = ConstantVector::get(Csts);
   if (!emitConstantVector(I.getOperand(0).getReg(), CV, MIB, MRI))

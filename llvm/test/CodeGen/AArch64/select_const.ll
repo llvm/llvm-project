@@ -769,14 +769,16 @@ define double @sel_constants_fadd_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_fadd_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    adrp x8, .LCPI42_0
-; CHECK-GI-NEXT:    movk x9, #16444, lsl #48
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI42_0]
-; CHECK-GI-NEXT:    and w8, w0, #0x1
+; CHECK-GI-NEXT:    mov x9, #-7378697629483820647 // =0x9999999999999999
+; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
+; CHECK-GI-NEXT:    and w10, w0, #0x1
+; CHECK-GI-NEXT:    movk x9, #39320
+; CHECK-GI-NEXT:    movk x8, #16444, lsl #48
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    movk x9, #16369, lsl #48
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
+; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fadd double %sel, 5.1
@@ -797,14 +799,16 @@ define double @sel_constants_fsub_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_fsub_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI43_0]
 ; CHECK-GI-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #49186, lsl #48
+; CHECK-GI-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-GI-NEXT:    and w10, w0, #0x1
+; CHECK-GI-NEXT:    movk x8, #13108
+; CHECK-GI-NEXT:    movk x9, #49186, lsl #48
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    movk x8, #16434, lsl #48
+; CHECK-GI-NEXT:    fmov d0, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fsub double %sel, 5.1
@@ -825,14 +829,16 @@ define double @fsub_constant_sel_constants(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: fsub_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI44_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI44_0]
 ; CHECK-GI-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #16418, lsl #48
+; CHECK-GI-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-GI-NEXT:    and w10, w0, #0x1
+; CHECK-GI-NEXT:    movk x8, #13108
+; CHECK-GI-NEXT:    movk x9, #16418, lsl #48
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    movk x8, #49202, lsl #48
+; CHECK-GI-NEXT:    fmov d0, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fsub double 5.1, %sel
@@ -853,14 +859,17 @@ define double @sel_constants_fmul_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_fmul_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI45_0]
-; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #49204, lsl #48
+; CHECK-GI-NEXT:    mov x8, #60293 // =0xeb85
+; CHECK-GI-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
+; CHECK-GI-NEXT:    and w10, w0, #0x1
+; CHECK-GI-NEXT:    movk x8, #47185, lsl #16
+; CHECK-GI-NEXT:    movk x9, #49204, lsl #48
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    movk x8, #46366, lsl #32
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    movk x8, #16477, lsl #48
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fmul double %sel, 5.1
@@ -880,13 +889,18 @@ define double @sel_constants_fdiv_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_fdiv_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI46_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI46_0
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI46_1]
-; CHECK-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI46_0]
+; CHECK-GI-NEXT:    mov x9, #17991 // =0x4647
+; CHECK-GI-NEXT:    mov x10, #6426 // =0x191a
 ; CHECK-GI-NEXT:    and w8, w0, #0x1
+; CHECK-GI-NEXT:    movk x9, #17990, lsl #16
+; CHECK-GI-NEXT:    movk x10, #6425, lsl #16
 ; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-GI-NEXT:    movk x9, #17990, lsl #32
+; CHECK-GI-NEXT:    movk x10, #6425, lsl #32
+; CHECK-GI-NEXT:    movk x9, #16402, lsl #48
+; CHECK-GI-NEXT:    movk x10, #49129, lsl #48
+; CHECK-GI-NEXT:    csel x8, x10, x9, ne
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fdiv double %sel, 5.1
@@ -907,14 +921,17 @@ define double @fdiv_constant_sel_constants(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: fdiv_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #49140, lsl #48
+; CHECK-GI-NEXT:    mov x8, #9000 // =0x2328
+; CHECK-GI-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
+; CHECK-GI-NEXT:    and w10, w0, #0x1
+; CHECK-GI-NEXT:    movk x8, #5344, lsl #16
+; CHECK-GI-NEXT:    movk x9, #49140, lsl #48
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    movk x8, #1125, lsl #32
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    movk x8, #16332, lsl #48
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fdiv double 5.1, %sel
@@ -933,11 +950,13 @@ define double @sel_constants_frem_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_frem_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI48_0
+; CHECK-GI-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
 ; CHECK-GI-NEXT:    fmov d0, #-4.00000000
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI48_0]
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    and w9, w0, #0x1
+; CHECK-GI-NEXT:    movk x8, #13112
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    movk x8, #16391, lsl #48
+; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -959,14 +978,16 @@ define double @frem_constant_sel_constants(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: frem_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI49_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI49_0]
-; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #16404, lsl #48
+; CHECK-GI-NEXT:    mov x8, #-7378697629483820647 // =0x9999999999999999
+; CHECK-GI-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
+; CHECK-GI-NEXT:    and w10, w0, #0x1
+; CHECK-GI-NEXT:    movk x8, #39320
+; CHECK-GI-NEXT:    movk x9, #16404, lsl #48
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    movk x8, #16369, lsl #48
+; CHECK-GI-NEXT:    fmov d0, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
+; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double 5.1, %sel

@@ -1437,7 +1437,7 @@ define <2 x i16> @rhadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    fmov s0, w8
@@ -1472,7 +1472,7 @@ define <2 x i16> @rhadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
@@ -1510,7 +1510,7 @@ define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    fmov s0, w8
@@ -1545,7 +1545,7 @@ define <2 x i16> @rhadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2

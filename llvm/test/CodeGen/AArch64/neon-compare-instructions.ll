@@ -2503,8 +2503,7 @@ define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmal4xfloat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    dup v0.2s, w8
+; CHECK-GI-NEXT:    movi v0.2s, #1
 ; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
