@@ -229,7 +229,6 @@ Transforms/InstCombine/apint-div2.ll
 Transforms/InstCombine/atomic.ll
 Transforms/InstCombine/binop-cast.ll
 Transforms/InstCombine/binop-select-cast-of-select-cond.ll
-Transforms/InstCombine/binop-select.ll
 Transforms/InstCombine/bit-checks.ll
 Transforms/InstCombine/bitreverse.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
