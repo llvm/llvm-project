@@ -2552,31 +2552,30 @@ static bool interp__builtin_elementwise_fp_binop(
 
 static bool interp__builtin_scalar_fp_round_mask_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<APFloat(const APFloat &, const APFloat &)> Fn) {
+    llvm::function_ref<std::optional<APFloat>(const APFloat &, const APFloat &,
+                                              std::optional<APSInt>)>
+        Fn) {
   assert(Call->getNumArgs() == 5);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned NumElems = VT->getNumElements();
 
-  APSInt Rounding = popToAPSInt(S, Call->getArg(4));
-  APSInt MaskVal = popToAPSInt(S, Call->getArg(3));
+  uint64_t Rounding = popToUInt64(S, Call->getArg(4));
+  uint64_t MaskVal = popToUInt64(S, Call->getArg(3));
   const Pointer &SrcPtr = S.Stk.pop<Pointer>();
   const Pointer &BPtr = S.Stk.pop<Pointer>();
   const Pointer &APtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  // Only _MM_FROUND_CUR_DIRECTION (4) is supported.
-  if (Rounding != 4)
-    return false;
-
   using T = PrimConv<PT_Float>::T;
 
-  if (MaskVal.getZExtValue() & 1) {
+  if (MaskVal & 1) {
     APFloat ElemA = APtr.elem<T>(0).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(0).getAPFloat();
-    if (ElemA.isNaN() || ElemA.isInfinity() || ElemA.isDenormal() ||
-        ElemB.isNaN() || ElemB.isInfinity() || ElemB.isDenormal())
+    APSInt RoundingMode(APInt(32, Rounding), /*isUnsigned=*/true);
+    std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
+    if (!Result)
       return false;
-    Dst.elem<T>(0) = static_cast<T>(Fn(ElemA, ElemB));
+    Dst.elem<T>(0) = static_cast<T>(*Result);
   } else {
     Dst.elem<T>(0) = SrcPtr.elem<T>(0);
   }
@@ -5907,7 +5906,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_minsh:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -5916,7 +5919,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_minsh_round_mask:
     return interp__builtin_scalar_fp_round_mask_binop(
-        S, OpPC, Call, [](const APFloat &A, const APFloat &B) {
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          if (!RoundingMode || *RoundingMode != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -5948,7 +5958,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_maxsh:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);
@@ -5957,7 +5971,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_maxsh_round_mask:
     return interp__builtin_scalar_fp_round_mask_binop(
-        S, OpPC, Call, [](const APFloat &A, const APFloat &B) {
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          if (!RoundingMode || *RoundingMode != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);
