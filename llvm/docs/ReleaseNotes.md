@@ -122,7 +122,7 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
-* Change P extension version to match the 019 draft specificatio$n. Encoded in `-march` as `0p19`.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
 
 Changes to the WebAssembly Backend
 ----------------------------------
