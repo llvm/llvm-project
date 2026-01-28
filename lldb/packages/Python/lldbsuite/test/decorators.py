@@ -814,13 +814,6 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsWithoutConPTY(func: Callable):
-    """Decorator to skip tests on Windows without ConPTY support.
-    see https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/
-    """
-    return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
-
-
 def skipIfWindowsAndNonEnglish(func):
     """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
 
