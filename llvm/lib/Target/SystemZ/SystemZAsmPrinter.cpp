@@ -900,6 +900,27 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
 void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
     const MachineInstr &MI, SystemZMCInstLower &Lower) {
+
+  const MachineFunction &MF = *(MI.getParent()->getParent());
+  const Function &F = MF.getFunction();
+
+  // If patchable-function-entry is set, emit in-function nops here.
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    // get M-N from function attribute (CodeGenFunction subtracts N
+    // from M to yield the correct patchable-function-entry).
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    // Emit M-N 2-byte nops. Use getNop() here instead of emitNops()
+    // to keep it aligned with the common code implementation emitting
+    // the prefix nops.
+    for (unsigned I = 0; I < Num; ++I)
+      EmitToStreamer(*OutStreamer, MF.getSubtarget().getInstrInfo()->getNop());
+    return;
+  }
+  // Otherwise, emit xray sled.
   // .begin:
   //   j .end    # -> stmg    %r2, %r15, 16(%r15)
   //   nop
@@ -909,44 +930,26 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   //
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
-  const MachineFunction &MF = *(MI.getParent()->getParent());
-  const Function &F = MF.getFunction();
-  if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
-    // Emit M-N 2-byte nops (CodeGenFunction subtracts N from M to yield the
-    // correct patchable-function-entry).
-    // Use getNop() here instead of emitNops() to keep it aligned with the
-    // common code implementation emitting the prefix nops
-    for (unsigned I = 0; I < Num; ++I)
-      EmitToStreamer(*OutStreamer, MF.getSubtarget().getInstrInfo()->getNop());
-  } else {
-    bool HasVectorFeature =
-        TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-        !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
-    MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
-        HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
-    MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
-    MCSymbol *EndOfSled = OutContext.createTempSymbol();
-    OutStreamer->emitLabel(BeginOfSled);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::J)
-                                     .addExpr(MCSymbolRefExpr::create(
-                                         EndOfSled, OutContext)));
-    EmitNop(OutContext, *OutStreamer, 2, getSubtargetInfo());
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRASL)
-                       .addReg(SystemZ::R14D)
-                       .addExpr(MCSymbolRefExpr::create(
-                           FuncEntry, SystemZ::S_PLT, OutContext)));
-    OutStreamer->emitLabel(EndOfSled);
-    recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
-  }
+  bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+  MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
+      HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
+  MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
+  MCSymbol *EndOfSled = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(BeginOfSled);
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::J)
+                     .addExpr(MCSymbolRefExpr::create(EndOfSled, OutContext)));
+  EmitNop(OutContext, *OutStreamer, 2, getSubtargetInfo());
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                   .addReg(SystemZ::R14D)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncEntry, SystemZ::S_PLT, OutContext)));
+  OutStreamer->emitLabel(EndOfSled);
+  recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
 }
 
 void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
