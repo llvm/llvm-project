@@ -3961,7 +3961,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleVectorDotProductIntrinsic(IntrinsicInst &I,
                                        unsigned ReductionFactor,
                                        bool ZeroPurifies,
-                                       unsigned EltSizeInBits = 0) {
+                                       unsigned EltSizeInBits = 0,
+                                       bool UseEvenLanes = true,
+                                       bool UseOddLanes = true) {
     IRBuilder<> IRB(&I);
 
     [[maybe_unused]] FixedVectorType *ReturnType =
@@ -3974,6 +3976,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Sa = nullptr;
     Value *Sb = nullptr;
 
+    assert(UseEvenLanes || UseOddLanes);
+
     assert(I.arg_size() == 2 || I.arg_size() == 3);
     if (I.arg_size() == 2) {
       Va = I.getOperand(0);
@@ -3981,6 +3985,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       Sa = getShadow(&I, 0);
       Sb = getShadow(&I, 1);
+
+      assert(UseEvenLanes && UseOddLanes);
     } else if (I.arg_size() == 3) {
       // Operand 0 is the accumulator. We will deal with that below.
       Va = I.getOperand(1);
@@ -3988,6 +3994,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       Sa = getShadow(&I, 1);
       Sb = getShadow(&I, 2);
+
+      if (UseEvenLanes && UseOddLanes) {
+        // Default
+      } else if (UseEvenLanes || UseOddLanes) {
+        // Convert < S0, S1, S2, S3, S4, S5, S6, S7 >
+        //      to < S0, S0, S2, S2, S4, S4, S6, S6 > (if even)
+        //      to < S1, S1, S3, S3, S5, S5, S7, S7 > (if odd)
+        //
+        // Note: for aarch64.neon.bfmlalb/t, the odd/even-indexed values are
+        //       zeroed, not duplicated. However, for shadow propagation, this
+        //       distinction is unimportant because Step 1 below will squeeze
+        //       each pair of elements (e.g., [S0, S0]) into a single bit, and
+        //       we only care if it is fully initialized.
+
+        FixedVectorType* InputShadowType = cast<FixedVectorType>(Sa->getType());
+        unsigned Width = InputShadowType->getNumElements();
+
+        Sa = IRB.CreateShuffleVector(Sa, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
+        Sb = IRB.CreateShuffleVector(Sb, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
+      }
     }
 
     FixedVectorType *ParamType = cast<FixedVectorType>(Va->getType());
@@ -5940,6 +5966,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/true,
                                       /*EltSizeInBits=*/16);
+      break;
+
+    // BFloat16 multiply-add to single-precision
+    // <4 x float> llvm.aarch64.neon.bfmlalt
+    //                 (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    case Intrinsic::aarch64_neon_bfmlalt:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*UseEvenLanes=*/false,
+                                      /*UseOddLanes=*/true);
+      break;
+
+    // <4 x float> llvm.aarch64.neon.bfmlalb
+    //                 (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    case Intrinsic::aarch64_neon_bfmlalb:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*UseEvenLanes=*/true,
+                                      /*UseOddLanes=*/false);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
