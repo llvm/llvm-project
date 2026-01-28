@@ -248,7 +248,7 @@ jobs:
     - name: Debug
       shell: bash
       run: |
-        find /c/hostedtoolcahce/windows -iname python3.lib
+        find /c/hostedtoolcache/windows -iname python3.lib
 
     # Install Windows dependncies
     - name: Windows Depenencies
