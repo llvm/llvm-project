@@ -82,6 +82,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -117,6 +118,7 @@ enum Direction {
 
 LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
 LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
 extern cl::opt<bool> PrintDAGs;
@@ -147,6 +149,7 @@ struct LLVM_ABI MachineSchedContext {
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
   RegisterClassInfo *RegClassInfo;
 
@@ -309,6 +312,7 @@ class LLVM_ABI ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
   AAResults *AA;
   LiveIntervals *LIS;
+  MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
   /// Ordered list of DAG postprocessing steps.
@@ -330,7 +334,7 @@ public:
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags)
       : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-        LIS(C->LIS), SchedImpl(std::move(S)) {}
+        LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)) {}
 
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;

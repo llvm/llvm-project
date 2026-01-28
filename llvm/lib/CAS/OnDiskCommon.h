@@ -63,6 +63,13 @@ std::error_code tryLockFileThreadSafe(
 Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize,
                                      size_t NewSize);
 
+/// Get boot time for the OS. This can be used to check if the CAS has been
+/// validated since boot.
+///
+/// \returns the boot time in seconds (0 if operation not supported), or an \c
+/// Error.
+Expected<uint64_t> getBootTime();
+
 } // namespace llvm::cas::ondisk
 
 #endif // LLVM_LIB_CAS_ONDISKCOMMON_H

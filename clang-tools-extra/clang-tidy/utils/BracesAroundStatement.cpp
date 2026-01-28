@@ -70,9 +70,8 @@ static SourceLocation findEndLocation(const Stmt &S, const SourceManager &SM,
 
   for (;;) {
     assert(Loc.isValid());
-    while (isHorizontalWhitespace(*SM.getCharacterData(Loc))) {
+    while (isHorizontalWhitespace(*SM.getCharacterData(Loc)))
       Loc = Loc.getLocWithOffset(1);
-    }
 
     if (isVerticalWhitespace(*SM.getCharacterData(Loc))) {
       // EOL, insert brace before.

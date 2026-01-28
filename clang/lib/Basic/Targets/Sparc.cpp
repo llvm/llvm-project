@@ -165,6 +165,7 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   }
+  Builder.defineMacro("__LONG_DOUBLE_128__");
 }
 
 void SparcV9TargetInfo::getTargetDefines(const LangOptions &Opts,

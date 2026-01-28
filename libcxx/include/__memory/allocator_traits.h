@@ -314,23 +314,25 @@ struct allocator_traits {
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_max_size_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type& __a) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
+  max_size(const allocator_type& __a) _NOEXCEPT {
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     return __a.max_size();
     _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_max_size_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type&) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
+  max_size(const allocator_type&) _NOEXCEPT {
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a.select_on_container_copy_construction();
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a;
   }

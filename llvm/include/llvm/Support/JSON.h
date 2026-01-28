@@ -205,6 +205,7 @@ public:
   iterator insert(const_iterator P, Value &&E);
   template <typename It> iterator insert(const_iterator P, It A, It Z);
   template <typename... Args> iterator emplace(const_iterator P, Args &&...A);
+  iterator erase(const_iterator P);
 
   friend bool operator==(const Array &L, const Array &R);
 };
@@ -476,10 +477,7 @@ public:
 
   LLVM_ABI void print(llvm::raw_ostream &OS) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const {
-    print(llvm::dbgs());
-    llvm::dbgs() << '\n';
-  }
+  LLVM_DUMP_METHOD void dump() const;
 #endif // !NDEBUG || LLVM_ENABLE_DUMP
 
 private:
@@ -579,6 +577,7 @@ template <typename... Args>
 inline Array::iterator Array::emplace(const_iterator P, Args &&...A) {
   return V.emplace(P, std::forward<Args>(A)...);
 }
+inline Array::iterator Array::erase(const_iterator P) { return V.erase(P); }
 inline bool operator==(const Array &L, const Array &R) { return L.V == R.V; }
 
 /// ObjectKey is a used to capture keys in Object. Like Value but:

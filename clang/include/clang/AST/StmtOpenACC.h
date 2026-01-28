@@ -829,8 +829,13 @@ public:
     // Listed as 'expr' in the standard, this is typically a generic expression
     // as a component.
     const Expr *RefExpr;
+    // If this is an 'update', records whether this is a post-fix
+    // increment/decrement.  In the case where we have a single-line variant of
+    // 'capture' we have to form the IR differently if this is the case to make
+    // sure the old value is 'read' in the 2nd step.
+    bool IsPostfixIncDec = false;
     static SingleStmtInfo Empty() {
-      return {nullptr, nullptr, nullptr, nullptr};
+      return {nullptr, nullptr, nullptr, nullptr, false};
     }
 
     static SingleStmtInfo createRead(const Expr *WholeExpr, const Expr *V,
@@ -841,8 +846,9 @@ public:
                                       const Expr *RefExpr) {
       return {WholeExpr, /*V=*/nullptr, X, RefExpr};
     }
-    static SingleStmtInfo createUpdate(const Expr *WholeExpr, const Expr *X) {
-      return {WholeExpr, /*V=*/nullptr, X, /*RefExpr=*/nullptr};
+    static SingleStmtInfo createUpdate(const Expr *WholeExpr, const Expr *X,
+                                       bool PostfixIncDec) {
+      return {WholeExpr, /*V=*/nullptr, X, /*RefExpr=*/nullptr, PostfixIncDec};
     }
   };
 

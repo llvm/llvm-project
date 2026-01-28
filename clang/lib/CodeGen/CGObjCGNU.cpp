@@ -600,6 +600,9 @@ public:
   // Map to unify direct method definitions.
   llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
       DirectMethodDefinitions;
+  void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override;
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
@@ -1826,10 +1829,12 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // Instance size is negative for classes that have not yet had their ivar
     // layout calculated.
     classFields.addInt(
-        LongTy, 0 - (Context.getASTObjCInterfaceLayout(OID->getClassInterface())
-                         .getSize()
-                         .getQuantity() -
-                     superInstanceSize));
+        LongTy,
+        0 - (Context.getASTObjCInterfaceLayout(OID->getClassInterface())
+                 .getSize()
+                 .getQuantity() -
+             superInstanceSize),
+        /*isSigned=*/true);
 
     if (classDecl->all_declared_ivar_begin() == nullptr)
       classFields.addNullPointer(PtrTy);
@@ -3883,7 +3888,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   // Generate the class structure
   llvm::Constant *ClassStruct = GenerateClassStructure(
       MetaClassStruct, SuperClass, 0x11L, ClassName.c_str(), nullptr,
-      llvm::ConstantInt::get(LongTy, instanceSize), IvarList, MethodList,
+      llvm::ConstantInt::getSigned(LongTy, instanceSize), IvarList, MethodList,
       GenerateProtocolList(Protocols), IvarOffsetArray, Properties,
       StrongIvarBitmap, WeakIvarBitmap);
   CGM.setGVProperties(cast<llvm::GlobalValue>(ClassStruct),
@@ -4196,11 +4201,19 @@ llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
   return Fn;
 }
 
+void CGObjCGNU::GenerateDirectMethodsPreconditionCheck(
+    CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+    const ObjCContainerDecl *CD) {
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
+}
+
 void CGObjCGNU::GenerateDirectMethodPrologue(CodeGenFunction &CGF,
                                              llvm::Function *Fn,
                                              const ObjCMethodDecl *OMD,
                                              const ObjCContainerDecl *CD) {
-  // GNU runtime doesn't support direct calls at this time
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
 }
 
 llvm::FunctionCallee CGObjCGNU::GetPropertyGetFunction() {

@@ -125,6 +125,11 @@ public:
       unsigned SubIdx, const TargetRegisterClass *SubRC) const;
 
 private:
+  bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                   bool NeedInversion) const;
+
+  bool invertSCCUse(MachineInstr *SCCDef) const;
+
   void swapOperands(MachineInstr &Inst) const;
 
   std::pair<bool, MachineBasicBlock *>
@@ -298,6 +303,8 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
+  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
+
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
@@ -315,6 +322,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
@@ -585,6 +593,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
   }
 
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
+  }
+
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
   }
@@ -604,11 +616,13 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+           (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   bool isLDSDMA(uint16_t Opcode) {
-    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+           (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   static bool isGWS(const MachineInstr &MI) {
@@ -690,11 +704,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
-  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
-  /// SCRATCH_ memory operands.
+  /// \returns true for SCRATCH_ instructions, or FLAT/BUF instructions unless
+  /// the MMOs do not include scratch.
   /// Conservatively correct; will return true if \p MI cannot be proven
   /// to not hit scratch.
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessScratch(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access VMEM.
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
@@ -716,7 +730,7 @@ public:
     }
   }
 
-  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+  static bool setsSCCIfResultIsNonZero(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::S_ABSDIFF_I32:
     case AMDGPU::S_ABS_I32:
@@ -805,7 +819,11 @@ public:
   }
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+    unsigned Opc = MI.getOpcode();
+    // Exclude instructions that read FROM LDS (not write to it)
+    return isLDSDMA(MI) && Opc != AMDGPU::BUFFER_STORE_LDS_DWORD &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_D2;
   }
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
@@ -1001,6 +1019,14 @@ public:
 
   static bool usesLGKM_CNT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LGKM_CNT;
+  }
+
+  static bool usesASYNC_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::ASYNC_CNT;
+  }
+
+  bool usesASYNC_CNT(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::ASYNC_CNT;
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some
@@ -1563,6 +1589,8 @@ public:
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
 
+  bool canAddToBBProlog(const MachineInstr &MI) const;
+
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,
                                          const DebugLoc &DL, Register Src,
@@ -1637,6 +1665,8 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const final;
 
@@ -1653,6 +1683,7 @@ public:
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
+  // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.

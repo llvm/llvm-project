@@ -8,7 +8,7 @@
 
 #include "BuiltinCAS.h"
 #include "llvm/CAS/BuiltinCASContext.h"
-#include "llvm/CAS/BuiltinObjectHasher.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Compiler.h"
@@ -90,14 +90,7 @@ private:
 
 void OnDiskCAS::print(raw_ostream &OS) const { DB->print(OS); }
 Error OnDiskCAS::validate(bool CheckHash) const {
-  auto Hasher = [](ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
-                   SmallVectorImpl<uint8_t> &Result) {
-    auto Hash = BuiltinObjectHasher<llvm::cas::builtin::HasherT>::hashObject(
-        Refs, Data);
-    Result.assign(Hash.begin(), Hash.end());
-  };
-
-  if (auto E = DB->validate(CheckHash, Hasher))
+  if (auto E = DB->validate(CheckHash, builtin::hashingFunc))
     return E;
 
   return Error::success();
@@ -174,9 +167,17 @@ Expected<std::optional<uint64_t>> OnDiskCAS::getStorageSize() const {
 Error OnDiskCAS::pruneStorageData() { return UnifiedDB->collectGarbage(); }
 
 Expected<std::unique_ptr<OnDiskCAS>> OnDiskCAS::open(StringRef AbsPath) {
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
+  if (Error E =
+          ondisk::OnDiskCASLogger::openIfEnabled(AbsPath).moveInto(Logger))
+    return std::move(E);
+#endif
+
   Expected<std::unique_ptr<ondisk::OnDiskGraphDB>> DB =
       ondisk::OnDiskGraphDB::open(AbsPath, BuiltinCASContext::getHashName(),
-                                  sizeof(HashType));
+                                  sizeof(HashType), /*UpstreamDB=*/nullptr,
+                                  std::move(Logger));
   if (!DB)
     return DB.takeError();
   return std::unique_ptr<OnDiskCAS>(new OnDiskCAS(std::move(*DB)));

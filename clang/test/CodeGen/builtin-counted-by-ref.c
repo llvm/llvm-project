@@ -175,3 +175,61 @@ struct c *test3(int size) {
 
   return p;
 }
+
+// Test for pointer member with counted_by attribute
+struct d {
+  int x;
+  short count;
+  int *ptr __attribute__((counted_by(count)));
+};
+
+// X86_64-LABEL: define dso_local ptr @test4(
+// X86_64-SAME: i32 noundef [[SIZE:%.*]], ptr noundef [[DATA:%.*]]) #[[ATTR0]] {
+// X86_64-NEXT:  [[ENTRY:.*:]]
+// X86_64-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
+// X86_64-NEXT:    [[DATA_ADDR:%.*]] = alloca ptr, align 8
+// X86_64-NEXT:    [[P:%.*]] = alloca ptr, align 8
+// X86_64-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
+// X86_64-NEXT:    store ptr [[DATA]], ptr [[DATA_ADDR]], align 8
+// X86_64-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef 16) #[[ATTR2]]
+// X86_64-NEXT:    store ptr [[CALL]], ptr [[P]], align 8
+// X86_64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA_ADDR]], align 8
+// X86_64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P]], align 8
+// X86_64-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_D:%.*]], ptr [[TMP1]], i32 0, i32 2
+// X86_64-NEXT:    store ptr [[TMP0]], ptr [[PTR]], align 8
+// X86_64-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
+// X86_64-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP2]] to i16
+// X86_64-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 8
+// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_D]], ptr [[TMP3]], i32 0, i32 1
+// X86_64-NEXT:    store i16 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 2
+// X86_64-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P]], align 8
+// X86_64-NEXT:    ret ptr [[TMP4]]
+//
+// I386-LABEL: define dso_local ptr @test4(
+// I386-SAME: i32 noundef [[SIZE:%.*]], ptr noundef [[DATA:%.*]]) #[[ATTR0]] {
+// I386-NEXT:  [[ENTRY:.*:]]
+// I386-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
+// I386-NEXT:    [[DATA_ADDR:%.*]] = alloca ptr, align 4
+// I386-NEXT:    [[P:%.*]] = alloca ptr, align 4
+// I386-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
+// I386-NEXT:    store ptr [[DATA]], ptr [[DATA_ADDR]], align 4
+// I386-NEXT:    [[CALL:%.*]] = call ptr @malloc(i32 noundef 12) #[[ATTR2]]
+// I386-NEXT:    store ptr [[CALL]], ptr [[P]], align 4
+// I386-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA_ADDR]], align 4
+// I386-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P]], align 4
+// I386-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_D:%.*]], ptr [[TMP1]], i32 0, i32 2
+// I386-NEXT:    store ptr [[TMP0]], ptr [[PTR]], align 4
+// I386-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
+// I386-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP2]] to i16
+// I386-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 4
+// I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_D]], ptr [[TMP3]], i32 0, i32 1
+// I386-NEXT:    store i16 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 2
+// I386-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P]], align 4
+// I386-NEXT:    ret ptr [[TMP4]]
+//
+struct d *test4(int size, int *data) {
+  struct d *p = __builtin_malloc(sizeof(struct d));
+  p->ptr = data;
+  *__builtin_counted_by_ref(p->ptr) = size;
+  return p;
+}

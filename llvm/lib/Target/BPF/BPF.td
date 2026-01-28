@@ -13,6 +13,9 @@ include "BPFCallingConv.td"
 include "BPFInstrInfo.td"
 include "GISel/BPFRegisterBanks.td"
 
+
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
+
 def BPFInstrInfo : InstrInfo;
 
 class Proc<string Name, list<SubtargetFeature> Features>

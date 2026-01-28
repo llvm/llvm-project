@@ -38,6 +38,12 @@ llvm::Constant *CodeGenModule::GetAddrOfThunk(StringRef Name, llvm::Type *FnTy,
                                  /*DontDefer=*/true, /*IsThunk=*/true);
 }
 
+llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTable(const CXXRecordDecl *RD) {
+  llvm::GlobalVariable *VTable =
+      CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
+  return VTable;
+}
+
 static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
                                llvm::Function *ThunkFn, bool ForVTable,
                                GlobalDecl GD) {
@@ -732,14 +738,14 @@ static void AddPointerLayoutOffset(const CodeGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
   builder.add(llvm::ConstantExpr::getIntToPtr(
-      llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
+      llvm::ConstantInt::getSigned(CGM.PtrDiffTy, offset.getQuantity()),
       CGM.GlobalsInt8PtrTy));
 }
 
 static void AddRelativeLayoutOffset(const CodeGenModule &CGM,
                                     ConstantArrayBuilder &builder,
                                     CharUnits offset) {
-  builder.add(llvm::ConstantInt::get(CGM.Int32Ty, offset.getQuantity()));
+  builder.add(llvm::ConstantInt::getSigned(CGM.Int32Ty, offset.getQuantity()));
 }
 
 void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
@@ -1365,10 +1371,12 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
 void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                            llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // Emit type metadata on vtables with LTO or IR instrumentation or
+  // speculative devirtualization.
   // In IR instrumentation, the type metadata is used to find out vtable
   // definitions (for type profiling) among all global variables.
-  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr() &&
+      !getCodeGenOpts().DevirtualizeSpeculatively)
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());

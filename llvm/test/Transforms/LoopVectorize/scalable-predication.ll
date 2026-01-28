@@ -5,6 +5,7 @@
 ; deliberately doesn't correspond to an in-tree backend since those
 ; *do* have vscale as power-of-two) exercises the code required for the
 ; minimum iteration check in the non-power-of-two case.
+
 define void @foo(i32 %val, ptr dereferenceable(1024) %ptr) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
@@ -14,7 +15,7 @@ define void @foo(i32 %val, ptr dereferenceable(1024) %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 256, [[TMP2]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
@@ -48,6 +49,58 @@ while.body:                                       ; preds = %while.body, %entry
   %ld1 = load i32, ptr %gep, align 4
   %index.next = add nsw i64 %index, 1
   %cmp10 = icmp ult i64 %index.next, 256
+  br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
+
+while.end.loopexit:                               ; preds = %while.body
+  ret void
+}
+
+; Same as @foo, but with variable trip count.
+define void @foo2(i32 %val, ptr dereferenceable(1024) %ptr, i64 %n) {
+; CHECK-LABEL: @foo2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP6]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %entry
+  %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
+  %gep = getelementptr i32, ptr %ptr, i64 %index
+  %ld1 = load i32, ptr %gep, align 4
+  %index.next = add nsw i64 %index, 1
+  %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
 while.end.loopexit:                               ; preds = %while.body

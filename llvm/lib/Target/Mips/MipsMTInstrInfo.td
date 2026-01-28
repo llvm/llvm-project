@@ -140,7 +140,7 @@ def MFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32Opnd:$ft),
 def MFTHC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32Opnd:$ft),
                                "mfthc1 $rt, $ft">, ASE_MT;
 
-def CFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGRCCOpnd:$ft),
+def CFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32CCOpnd:$ft),
                               "cftc1 $rt, $ft">, ASE_MT;
 
 
@@ -169,7 +169,7 @@ def MTTC1 : MipsAsmPseudoInst<(outs FGR32Opnd:$ft), (ins GPR32Opnd:$rt),
 def MTTHC1 : MipsAsmPseudoInst<(outs FGR32Opnd:$ft), (ins GPR32Opnd:$rt),
                                "mtthc1 $rt, $ft">, ASE_MT;
 
-def CTTC1 : MipsAsmPseudoInst<(outs FGRCCOpnd:$ft), (ins GPR32Opnd:$rt),
+def CTTC1 : MipsAsmPseudoInst<(outs FGR32CCOpnd:$ft), (ins GPR32Opnd:$rt),
                               "cttc1 $rt, $ft">, ASE_MT;
 
 //===----------------------------------------------------------------------===//

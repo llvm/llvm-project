@@ -493,9 +493,8 @@ void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
   Failure.Info = std::move(*MaybeFailure);
 
   // Don't overwrite the failure status if it was already set.
-  if (!Failure.shouldFix()) {
+  if (!Failure.shouldFix())
     return;
-  }
   const IdentifierTable &Idents = FailureDecl->getASTContext().Idents;
   auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
   if (CheckNewIdentifier != Idents.end()) {

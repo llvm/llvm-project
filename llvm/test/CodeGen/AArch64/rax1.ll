@@ -20,17 +20,15 @@ define <2 x i64> @rax1(<2 x i64> %x, <2 x i64> %y) {
 ; SHA3-GI-LABEL: rax1:
 ; SHA3-GI:       // %bb.0:
 ; SHA3-GI-NEXT:    shl v2.2d, v1.2d, #1
-; SHA3-GI-NEXT:    ushr v1.2d, v1.2d, #63
-; SHA3-GI-NEXT:    orr v1.16b, v2.16b, v1.16b
-; SHA3-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
+; SHA3-GI-NEXT:    usra v2.2d, v1.2d, #63
+; SHA3-GI-NEXT:    eor v0.16b, v0.16b, v2.16b
 ; SHA3-GI-NEXT:    ret
 ;
 ; NOSHA3-GI-LABEL: rax1:
 ; NOSHA3-GI:       // %bb.0:
 ; NOSHA3-GI-NEXT:    shl v2.2d, v1.2d, #1
-; NOSHA3-GI-NEXT:    ushr v1.2d, v1.2d, #63
-; NOSHA3-GI-NEXT:    orr v1.16b, v2.16b, v1.16b
-; NOSHA3-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
+; NOSHA3-GI-NEXT:    usra v2.2d, v1.2d, #63
+; NOSHA3-GI-NEXT:    eor v0.16b, v0.16b, v2.16b
 ; NOSHA3-GI-NEXT:    ret
     %a = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %y, <2 x i64> %y, <2 x i64> <i64 1, i64 1>)
     %b = xor <2 x i64> %x, %a

@@ -48,6 +48,8 @@ def InstD : InstBase {
   let UseNamedOperandTable = 0;
 }
 
+defm : RemapAllTargetPseudoPointerOperands<RegClass>;
+
 // CHECK-LABEL: #ifdef GET_INSTRINFO_OPERAND_ENUM
 // CHECK-NEXT:  #undef GET_INSTRINFO_OPERAND_ENUM
 // CHECK-EMPTY:

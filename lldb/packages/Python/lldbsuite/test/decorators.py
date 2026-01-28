@@ -3,8 +3,10 @@
 # allow the use of the `list[str]` type hint in Python 3.8
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import wraps
 from packaging import version
+import contextlib
 import ctypes
 import locale
 import os
@@ -99,11 +101,13 @@ def _match_decorator_property(expected, actual):
     return expected == actual
 
 
-def _compiler_supports(
-    compiler, flag, source="int main() {}", output_file=temp_file.OnDiskTempFile()
-):
+def _compiler_supports(compiler, flag, source="int main() {}", output_file=None):
     """Test whether the compiler supports the given flag."""
-    with output_file:
+    if output_file:
+        context = contextlib.nullcontext(output_file)
+    else:
+        context = temp_file.OnDiskTempFile()
+    with context as ctx:
         if platform.system() == "Darwin":
             compiler = "xcrun " + compiler
         try:
@@ -111,7 +115,7 @@ def _compiler_supports(
                 source,
                 compiler,
                 flag,
-                output_file.path,
+                ctx.path,
             )
             subprocess.check_call(cmd, shell=True)
         except subprocess.CalledProcessError:
@@ -781,9 +785,40 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
-def skipIfWindows(func):
+def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfPlatform(["windows"])(func)
+
+    def decorator(func):
+        if windows_version is None:
+            return skipIfPlatform(["windows"])(func)
+        else:
+            actual_win_version = lldbplatformutil.getWindowsVersion()
+
+            def version_check():
+                if actual_win_version == "unknown":
+                    return False
+                operator, required_windows_version = windows_version
+                return lldbplatformutil.isExpectedVersion(
+                    actual_version=actual_win_version,
+                    required_version=required_windows_version,
+                    operator=operator,
+                )
+
+            return unittest.skipIf(
+                version_check(),
+                f"Test is skipped on Windows '{actual_win_version}'",
+            )(func)
+
+    if func is not None:
+        return decorator(func)
+    return decorator
+
+
+def skipIfWindowsWithoutConPTY(func: Callable):
+    """Decorator to skip tests on Windows without ConPTY support.
+    see https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/
+    """
+    return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
 
 
 def skipIfWindowsAndNonEnglish(func):
@@ -953,6 +988,19 @@ def skipUnlessHasCallSiteInfo(func):
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
 
 
+def skipUnlessCompilerIsClang(func):
+    """Decorate the item to skip test unless the compiler is clang."""
+
+    def is_compiler_clang():
+        compiler_path = lldbplatformutil.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+        return None
+
+    return skipTestIfFn(is_compiler_clang)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -989,22 +1037,21 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
             )
 
         # We need to write out the object into a named temp file for inspection.
-        outputf = temp_file.OnDiskTempFile()
+        with temp_file.OnDiskTempFile() as outputf:
+            # Try to compile with ubsan turned on.
+            if not _compiler_supports(
+                lldbplatformutil.getCompiler(),
+                "-fsanitize=undefined",
+                "int main() { int x = 0; return x / x; }",
+                outputf,
+            ):
+                return "Compiler cannot compile with -fsanitize=undefined"
 
-        # Try to compile with ubsan turned on.
-        if not _compiler_supports(
-            lldbplatformutil.getCompiler(),
-            "-fsanitize=undefined",
-            "int main() { int x = 0; return x / x; }",
-            outputf,
-        ):
-            return "Compiler cannot compile with -fsanitize=undefined"
-
-        # Check that we actually see ubsan instrumentation in the binary.
-        cmd = "nm %s" % outputf.path
-        with os.popen(cmd) as nm_output:
-            if "___ubsan_handle_divrem_overflow" not in nm_output.read():
-                return "Division by zero instrumentation is missing"
+            # Check that we actually see ubsan instrumentation in the binary.
+            cmd = "nm %s" % outputf.path
+            with os.popen(cmd) as nm_output:
+                if "___ubsan_handle_divrem_overflow" not in nm_output.read():
+                    return "Division by zero instrumentation is missing"
 
         # Find the ubsan dylib.
         # FIXME: This check should go away once compiler-rt gains support for __ubsan_on_report.
@@ -1057,6 +1104,17 @@ def skipUnlessAddressSanitizer(func):
         return None
 
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
+
+
+def skipUnlessBoundsSafety(func):
+    """Decorate the item to skip test unless Clang -fbounds-safety is supported."""
+
+    def is_compiler_with_bounds_safety():
+        if not _compiler_supports(lldbplatformutil.getCompiler(), "-fbounds-safety"):
+            return "Compiler cannot compile with -fbounds-safety"
+        return None
+
+    return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
 
 def skipIfAsan(func):
@@ -1143,6 +1201,10 @@ def skipIfEditlineWideCharSupportMissing(func):
 
 def skipIfFBSDVMCoreSupportMissing(func):
     return _get_bool_config_skip_if_decorator("fbsdvmcore")(func)
+
+
+def skipIfZLIBSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("zlib")(func)
 
 
 def skipIfLLVMTargetMissing(target):

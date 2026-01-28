@@ -43,7 +43,7 @@ using namespace llvm;
 
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   auto MVTPtr = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
 
   // Set the load count for memcmp expand optimization
@@ -137,9 +137,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                     ISD::SETULT, ISD::SETULE, ISD::SETUGT, ISD::SETUGE})
       setCondCodeAction(CC, T, Expand);
     // Expand floating-point library function operators.
-    for (auto Op :
-         {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FMA})
+    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA})
       setOperationAction(Op, T, Expand);
+    // Expand vector FREM, but use a libcall rather than an expansion for scalar
+    if (MVT(T).isVector())
+      setOperationAction(ISD::FREM, T, Expand);
+    else
+      setOperationAction(ISD::FREM, T, LibCall);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
@@ -186,7 +190,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   if (Subtarget->hasRelaxedSIMD()) {
     setOperationAction(
         {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
-        {MVT::v4f32, MVT::v2f64}, Legal);
+        {MVT::v4f32, MVT::v2f64}, Custom);
   }
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
@@ -319,6 +323,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
     }
@@ -437,7 +442,8 @@ MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
 }
 
 TargetLowering::AtomicExpansionKind
-WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(
+    const AtomicRMWInst *AI) const {
   // We have wasm instructions for these
   switch (AI->getOperation()) {
   case AtomicRMWInst::Add:
@@ -474,8 +480,9 @@ bool WebAssemblyTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(
-    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo) const {
-  return WebAssembly::createFastISel(FuncInfo, LibInfo);
+    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo,
+    const LibcallLoweringInfo *LibcallLowering) const {
+  return WebAssembly::createFastISel(FuncInfo, LibInfo, LibcallLowering);
 }
 
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
@@ -1059,7 +1066,7 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
 }
 
 bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                   const CallInst &I,
+                                                   const CallBase &I,
                                                    MachineFunction &MF,
                                                    unsigned Intrinsic) const {
   switch (Intrinsic) {
@@ -1136,7 +1143,27 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
     }
     break;
   }
-
+  case WebAssemblyISD::EXTEND_LOW_U:
+  case WebAssemblyISD::EXTEND_HIGH_U: {
+    // We know the high half, of each destination vector element, will be zero.
+    SDValue SrcOp = Op.getOperand(0);
+    EVT VT = SrcOp.getSimpleValueType();
+    unsigned BitWidth = Known.getBitWidth();
+    if (VT == MVT::v8i8 || VT == MVT::v16i8) {
+      assert(BitWidth >= 8 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 8);
+      Known.Zero |= Mask;
+    } else if (VT == MVT::v4i16 || VT == MVT::v8i16) {
+      assert(BitWidth >= 16 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
+      Known.Zero |= Mask;
+    } else if (VT == MVT::v2i32 || VT == MVT::v4i32) {
+      assert(BitWidth >= 32 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 32);
+      Known.Zero |= Mask;
+    }
+    break;
+  }
   // For 128-bit addition if the upper bits are all zero then it's known that
   // the upper bits of the result will have all bits guaranteed zero except the
   // first.
@@ -1644,6 +1671,7 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // SIGN_EXTEND_INREG, but for non-vector sign extends the result might be an
     // illegal type.
     break;
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     // Do not add any results, signifying that N should not be custom lowered.
@@ -1705,6 +1733,7 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ANY_EXTEND_VECTOR_INREG:
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
@@ -1719,6 +1748,12 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FMINNUM:
+  case ISD::FMINIMUMNUM:
+    return LowerFMIN(Op, DAG);
+  case ISD::FMAXNUM:
+  case ISD::FMAXIMUMNUM:
+    return LowerFMAX(Op, DAG);
   case ISD::LOAD:
     return LowerLoad(Op, DAG);
   case ISD::STORE:
@@ -2299,6 +2334,9 @@ WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
 
   unsigned Ext;
   switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected opcode");
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     Ext = WebAssemblyISD::EXTEND_LOW_U;
     break;
@@ -2827,6 +2865,33 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
   return SDValue();
 }
 
+static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
+  return (Op->getFlags().hasNoNaNs() ||
+          (DAG.isKnownNeverNaN(Op->getOperand(0)) &&
+           DAG.isKnownNeverNaN(Op->getOperand(1)))) &&
+         (Op->getFlags().hasNoSignedZeros() ||
+          DAG.isKnownNeverZeroFloat(Op->getOperand(0)) ||
+          DAG.isKnownNeverZeroFloat(Op->getOperand(1)));
+}
+
+SDValue WebAssemblyTargetLowering::LowerFMIN(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  if (Subtarget->hasRelaxedSIMD() && HasNoSignedZerosOrNaNs(Op, DAG)) {
+    return DAG.getNode(WebAssemblyISD::RELAXED_FMIN, SDLoc(Op),
+                       Op.getValueType(), Op.getOperand(0), Op.getOperand(1));
+  }
+  return SDValue();
+}
+
+SDValue WebAssemblyTargetLowering::LowerFMAX(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  if (Subtarget->hasRelaxedSIMD() && HasNoSignedZerosOrNaNs(Op, DAG)) {
+    return DAG.getNode(WebAssemblyISD::RELAXED_FMAX, SDLoc(Op),
+                       Op.getValueType(), Op.getOperand(0), Op.getOperand(1));
+  }
+  return SDValue();
+}
+
 //===----------------------------------------------------------------------===//
 //   Custom DAG combine hooks
 //===----------------------------------------------------------------------===//
@@ -3199,13 +3264,14 @@ static SDValue performBitcastCombine(SDNode *N,
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                     {DAG.getConstant(Intrinsic::wasm_bitmask, DL, MVT::i32),
                      DAG.getSExtOrTrunc(N->getOperand(0), DL,
-                                        SrcVT.changeVectorElementType(Width))}),
+                                        SrcVT.changeVectorElementType(
+                                            *DAG.getContext(), Width))}),
         DL, VT);
   }
 
   // bitcast <N x i1>(setcc ...) to concat iN, where N = 32 and 64 (illegal)
   if (NumElts == 32 || NumElts == 64) {
-    // Strategy: We will setcc them seperately in v16i8 -> v16i1
+    // Strategy: We will setcc them separately in v16i8 -> v16i1
     // Bitcast them to i16, extend them to either i32 or i64.
     // Add them together, shifting left 1 by 1.
     SDValue Concat, SetCCVector;
@@ -3401,8 +3467,9 @@ static SDValue performSETCCCombine(SDNode *N,
   if (!cast<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
 
-  EVT VecVT = FromVT.changeVectorElementType(MVT::getIntegerVT(128 / NumElts));
   auto &DAG = DCI.DAG;
+  EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
+                                             MVT::getIntegerVT(128 / NumElts));
   // setcc (iN (bitcast (vNi1 X))), 0, ne
   //   ==> any_true (vNi1 X)
   if (auto Match = TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
@@ -3527,9 +3594,8 @@ static SDValue performMulCombine(SDNode *N,
     return Res;
 
   // We don't natively support v16i8 or v8i8 mul, but we do support v8i16. So,
-  // extend them to v8i16. Only do this before legalization in case a narrow
-  // vector is widened and may be simplified later.
-  if (!DCI.isBeforeLegalize() || (VT != MVT::v8i8 && VT != MVT::v16i8))
+  // extend them to v8i16.
+  if (VT != MVT::v8i8 && VT != MVT::v16i8)
     return SDValue();
 
   SDLoc DL(N);
