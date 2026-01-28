@@ -378,3 +378,121 @@ define <16 x i16> @shuffle_shuffle_poison2(<16 x i16> %op0, <16 x i16> %op1) {
   %merge = shufflevector <16 x i16> %shuff0, <16 x i16> %shuff1, <16 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   ret <16 x i16> %merge
 }
+
+; Can't be optimized since first shuffle uses from two different operands
+define <16 x i16> @shuffle_shuffle_first_multi_shuffle(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI8_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI8_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: shuffle_shuffle_first_multi_shuffle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI8_0)
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vle16.v v14, (a0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI8_1)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI8_1)
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vrgather.vv v12, v8, v14
+; CHECK-NEXT:    vrgather.vi v12, v10, 0, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v16
+; CHECK-NEXT:    vslideup.vi v12, v8, 8
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> %op1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %merge = shufflevector <16 x i16> %shuff0, <16 x i16> %shuff1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  ret <16 x i16> %merge
+}
+
+; Can optimize, the first two shuffles use the same lanes, but only a disjoint
+; set of lanes is used for the final shuffle
+define <16 x i16> @shuffle_shuffle_duplicates_not_used(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI9_0
+; CHECK-NEXT: 	.byte	0                               # 0x0
+; CHECK-NEXT: 	.byte	4                               # 0x4
+; CHECK-NEXT: 	.byte	8                               # 0x8
+; CHECK-NEXT: 	.byte	12                              # 0xc
+; CHECK-NEXT: 	.byte	1                               # 0x1
+; CHECK-NEXT: 	.byte	5                               # 0x5
+; CHECK-NEXT: 	.byte	9                               # 0x9
+; CHECK-NEXT: 	.byte	13                              # 0xd
+; CHECK-NEXT: 	.byte	3                               # 0x3
+; CHECK-NEXT: 	.byte	7                               # 0x7
+; CHECK-NEXT: 	.byte	11                              # 0xb
+; CHECK-NEXT: 	.byte	15                              # 0xf
+; CHECK-NEXT: 	.byte	2                               # 0x2
+; CHECK-NEXT: 	.byte	6                               # 0x6
+; CHECK-NEXT: 	.byte	10                              # 0xa
+; CHECK-NEXT: 	.byte	14                              # 0xe
+; CHECK-LABEL: LCPI9_1
+; CHECK-NEXT: 	.byte	3                               # 0x3
+; CHECK-NEXT: 	.byte	7                               # 0x7
+; CHECK-NEXT: 	.byte	11                              # 0xb
+; CHECK-NEXT: 	.byte	15                              # 0xf
+; CHECK-NEXT: 	.byte	2                               # 0x2
+; CHECK-NEXT: 	.byte	6                               # 0x6
+; CHECK-NEXT: 	.byte	10                              # 0xa
+; CHECK-NEXT: 	.byte	14                              # 0xe
+; CHECK-NEXT: 	.byte	0                               # 0x0
+; CHECK-NEXT: 	.byte	4                               # 0x4
+; CHECK-NEXT: 	.byte	8                               # 0x8
+; CHECK-NEXT: 	.byte	12                              # 0xc
+; CHECK-NEXT: 	.byte	1                               # 0x1
+; CHECK-NEXT: 	.byte	5                               # 0x5
+; CHECK-NEXT: 	.byte	9                               # 0x9
+; CHECK-NEXT: 	.byte	13                              # 0xd
+; CHECK-LABEL: shuffle_shuffle_duplicates_not_used:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI9_0)
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI9_1)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI9_1)
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vsext.vf2 v14, v12
+; CHECK-NEXT:    vrgather.vv v12, v8, v14
+; CHECK-NEXT:    vsext.vf2 v8, v16
+; CHECK-NEXT:    vrgather.vv v14, v10, v8
+; CHECK-NEXT:    vslideup.vi v12, v14, 8
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14>
+  %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13>
+  %merge = shufflevector <16 x i16> %shuff0, <16 x i16> %shuff1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  ret <16 x i16> %merge
+}
