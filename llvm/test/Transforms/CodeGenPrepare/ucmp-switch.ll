@@ -225,3 +225,66 @@ greater:
   tail call void @func_greater()
   ret void
 }
+
+; --- PHI NODE HANDLING TEST ---
+
+define i32 @test_phi_nodes(i8 %x, i8 %y, i32 %a, i32 %b, i1 %cond) {
+; CHECK-LABEL: @test_phi_nodes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[PRE_SWITCH:%.*]], label [[FALLTHROUGH:%.*]]
+;
+; CHECK:       pre.switch:
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[VAL]] to i32
+; CHECK-NEXT:    [[CMP_LESS:%.*]] = icmp ult i8 [[X]], [[Y]]
+;                ;; Verify 'less' branch still comes from pre.switch
+; CHECK-NEXT:    br i1 [[CMP_LESS]], label [[LESS:%.*]], label [[CHECK_EQ:%.*]]
+;
+; CHECK:       check.eq:
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i8 [[X]], [[Y]]
+;                ;; Verify equal/greater come from check.eq
+; CHECK-NEXT:    br i1 [[CMP_EQ]], label [[EQUAL:%.*]], label [[GREATER:%.*]]
+;
+; CHECK:       less:
+;                ;; CRITICAL: Verify predecessor is still [[PRE_SWITCH]]
+; CHECK-NEXT:    [[PHI_LESS:%.*]] = phi i32 [ [[A:%.*]], [[PRE_SWITCH]] ], [ [[B:%.*]], %entry ]
+; CHECK-NEXT:    ret i32 [[PHI_LESS]]
+;
+; CHECK:       equal:
+;                ;; CRITICAL: Verify predecessor updated to [[CHECK_EQ]]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+; CHECK:       greater:
+;                ;; CRITICAL: Verify predecessor updated to [[CHECK_EQ]]
+; CHECK-NEXT:    ret i32 [[B]]
+;
+entry:
+  br i1 %cond, label %pre.switch, label %fallthrough
+
+pre.switch:
+  %val = call i8 @llvm.ucmp.i8.i8(i8 %x, i8 %y)
+  %ext = zext i8 %val to i32
+  switch i32 %ext, label %unreachable_block [
+    i32 255, label %less
+    i32 0, label %equal
+    i32 1, label %greater
+  ]
+
+fallthrough:
+  br label %less
+
+unreachable_block:
+  unreachable
+
+less:
+  %phi.less = phi i32 [ %a, %pre.switch ], [ %b, %fallthrough ]
+  ret i32 %phi.less
+
+equal:
+  %phi.equal = phi i32 [ %a, %pre.switch ]
+  ret i32 %phi.equal
+
+greater:
+  %phi.greater = phi i32 [ %b, %pre.switch ]
+  ret i32 %phi.greater
+}

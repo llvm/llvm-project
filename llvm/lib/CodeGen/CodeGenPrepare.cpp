@@ -8131,11 +8131,14 @@ static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
                                     const TargetTransformInfo &TTI,
                                     ModifyDT &ModifiedDT) {
   Value *Cond = SI->getCondition();
+  Instruction::CastOps CastOp = Instruction::CastOps::CastOpsEnd;
 
   if (auto *Cast = dyn_cast<CastInst>(Cond)) {
-    if (Cast->getOpcode() == Instruction::ZExt ||
-        Cast->getOpcode() == Instruction::SExt) {
+    CastOp = Cast->getOpcode();
+    if (CastOp == Instruction::ZExt || CastOp == Instruction::SExt) {
       Cond = Cast->getOperand(0);
+    } else {
+      CastOp = Instruction::CastOps::CastOpsEnd;
     }
   }
 
@@ -8155,6 +8158,16 @@ static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
 
   for (auto Case : SI->cases()) {
     APInt Val = Case.getCaseValue()->getValue();
+
+    if (CastOp == Instruction::ZExt) {
+      if (Val.getActiveBits() > IntrinsicWidth)
+        continue; // Unreachable case
+    }
+    else if (CastOp == Instruction::SExt) {
+      unsigned MinSignedBits = Val.getBitWidth() - Val.getNumSignBits() + 1;
+      if (MinSignedBits > IntrinsicWidth)
+        continue; // Unreachable case
+    }
 
     if (Val.getBitWidth() > IntrinsicWidth)
       Val = Val.trunc(IntrinsicWidth);
@@ -8198,7 +8211,7 @@ static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
   for (BasicBlock *Dest : {DestEqual, DestGreater})
     Dest->replacePhiUsesWith(HeadBB, CheckEqBB);
 
-  ModifiedDT = ModifyDT::ModifyInstDT;
+  ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
 }
 
