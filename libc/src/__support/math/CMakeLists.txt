@@ -668,6 +668,16 @@ add_header_library(
 )
 
 add_header_library(
+  ilogb
+  HDRS
+    ilogb.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
   ilogbf16
   HDRS
     ilogbf16.h
