@@ -51,14 +51,14 @@ public:
 private:
   const MCSubtargetInfo &STI;
   /// Prints the string to represent s_wait_alu immediate value.
-  void printSWaitAluImm(uint64_t Imm, llvm::raw_ostream &OS) const;
+  void printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const;
   /// Print the string to represent s_delay_alu immediate value
   void printSDelayAluImm(int64_t Imm, llvm::raw_ostream &OS) const;
 
   /// Parse the immediate pseudo literal for s_wait_alu
   bool parseSWaitAluImmMnemonic(
-      const unsigned int OpIdx, int64_t &Imm, llvm::StringRef &Src,
-      llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const;
+      const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+      MIRFormatter::ErrorCallbackType &ErrorCallback) const;
 
   /// Parse the immediate pseudo literal for s_delay_alu
   bool parseSDelayAluImmMnemonic(

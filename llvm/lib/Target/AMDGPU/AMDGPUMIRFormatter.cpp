@@ -30,8 +30,7 @@ StringLiteral SaSdstName = "SaSdst";
 
 StringLiteral AllOff = "AllOff";
 
-void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm,
-                                          llvm::raw_ostream &OS) const {
+void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
   ListSeparator Delim(SWaitAluDelim);
   auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
@@ -142,8 +141,8 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
 }
 
 bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
-    const unsigned int OpIdx, int64_t &Imm, llvm::StringRef &Src,
-    llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
   // TODO: For now accept integer masks for compatibility with old MIR.
   if (!Src.consumeInteger(10, Imm))
     return false;
@@ -174,9 +173,10 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     StringRef Name = Src.substr(0, DelimIdx);
     // Save the position of the name for accurate error reporting.
     StringRef::iterator NamePos = Src.begin();
-    bool ConsumeName = Src.consume_front(Name);
-    assert(ConsumeName && "Expected name");
-    bool ConsumeDelim = Src.consume_front(SWaitAluDelim);
+    [[maybe_unused]] bool ConsumeName = Src.consume_front(Name);
+    // assert(ConsumeName && "Expected name");
+    assert(ConsumeName);
+    [[maybe_unused]] bool ConsumeDelim = Src.consume_front(SWaitAluDelim);
     assert(ConsumeDelim && "Expected delimiter");
     // Src:       Num1_Name2_Num2
     //                ^
@@ -191,27 +191,27 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
                            "expected non-negative integer counter number");
     unsigned Max;
     if (Name == VaVdstName) {
-      Max = llvm::AMDGPU::DepCtr::getVaVdstBitMask();
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaVdst(Imm, Num);
+      Max = AMDGPU::DepCtr::getVaVdstBitMask();
+      Imm = AMDGPU::DepCtr::encodeFieldVaVdst(Imm, Num);
     } else if (Name == VmVsrcName) {
-      Max = llvm::AMDGPU::DepCtr::getVmVsrcBitMask();
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldVmVsrc(Imm, Num);
+      Max = AMDGPU::DepCtr::getVmVsrcBitMask();
+      Imm = AMDGPU::DepCtr::encodeFieldVmVsrc(Imm, Num);
     } else if (Name == VaSdstName) {
-      Max = llvm::AMDGPU::DepCtr::getVaSdstBitMask();
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaSdst(Imm, Num);
+      Max = AMDGPU::DepCtr::getVaSdstBitMask();
+      Imm = AMDGPU::DepCtr::encodeFieldVaSdst(Imm, Num);
     } else if (Name == VaSsrcName) {
-      Max = llvm::AMDGPU::DepCtr::getVaSsrcBitMask();
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaSsrc(Imm, Num);
+      Max = AMDGPU::DepCtr::getVaSsrcBitMask();
+      Imm = AMDGPU::DepCtr::encodeFieldVaSsrc(Imm, Num);
     } else if (Name == HoldCntName) {
       const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
-      Max = llvm::AMDGPU::DepCtr::getHoldCntBitMask(Version);
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num, Version);
+      Max = AMDGPU::DepCtr::getHoldCntBitMask(Version);
+      Imm = AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num, Version);
     } else if (Name == VaVccName) {
-      Max = llvm::AMDGPU::DepCtr::getVaVccBitMask();
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaVcc(Imm, Num);
+      Max = AMDGPU::DepCtr::getVaVccBitMask();
+      Imm = AMDGPU::DepCtr::encodeFieldVaVcc(Imm, Num);
     } else if (Name == SaSdstName) {
-      Max = llvm::AMDGPU::DepCtr::getSaSdstBitMask();
-      Imm = llvm::AMDGPU::DepCtr::encodeFieldSaSdst(Imm, Num);
+      Max = AMDGPU::DepCtr::getSaSdstBitMask();
+      Imm = AMDGPU::DepCtr::encodeFieldSaSdst(Imm, Num);
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
