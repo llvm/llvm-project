@@ -303,7 +303,7 @@ if "%local-libxml2%" NEQ "true" (
 ) else (
   set cmake_flags=%cmake_flags% ^
   -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
-}
+)
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
     -DCOMPILER_RT_BUILD_SANITIZERS=OFF
