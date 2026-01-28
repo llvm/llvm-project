@@ -127,6 +127,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
   case VPWidenStoreEVLSC:
@@ -162,6 +163,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;

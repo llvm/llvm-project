@@ -113,9 +113,9 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   for (unsigned I = 0; I != Worklist.size(); ++I) {
     VPValue *Cur = Worklist[I];
     auto *R = Cur->getDefiningRecipe();
-    // TODO: Skip live-ins once no degenerate reductions (ones with constant
-    // backedge values) are generated.
-    if (R && Pred(R))
+    if (!R)
+      continue;
+    if (Pred(R))
       return R;
     for (VPUser *U : Cur->users()) {
       for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())

@@ -1510,6 +1510,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  VPIRValue *IRV;
+  if (Def->getNumOperands() == 1 &&
+      match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))))
+    return Def->replaceAllUsesWith(IRV);
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
