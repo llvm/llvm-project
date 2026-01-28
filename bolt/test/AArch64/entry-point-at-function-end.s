@@ -17,8 +17,8 @@
 ## The FDE-only function should get an entry point for the inlined code
 # CHECK: BOLT-WARNING: FDE {{.*}} has no corresponding symbol table entry
 # CHECK: Binary Function "{{.*}}__BOLT_FDE_FUNC{{.*}}" after disassembly
-# CHECK: Size        : 0x1c
-# CHECK: MaxSize     : 0x30
+# CHECK: Size        : 0x14
+# CHECK: MaxSize     : 0x1c
 # CHECK: IsMultiEntry: 1
 
 ## _init function in .init section
@@ -60,9 +60,7 @@ big_func:
 	.cfi_startproc
 	stp	x29, x30, [sp, #-16]!
 	mov	x29, sp
-	adrp	x0, .Lsome_data
-	add	x0, x0, :lo12:.Lsome_data
-	ldr	x0, [x0]
+	mov	w0, #42
 	ldp	x29, x30, [sp], #16
 	ret
 	.cfi_endproc
@@ -71,11 +69,7 @@ big_func:
 ## Inlined code at exactly FDE end (offset == FDE size)
 ## _init branches here - this is what triggers the bug without the fix
 .Linlined_code:
-	adrp	x0, .Lsome_data
-	ldr	x0, [x0, :lo12:.Lsome_data]
-	cbz	x0, .Linlined_ret
-	mov	w0, #1
-.Linlined_ret:
+	nop
 	ret
 
 	.globl	_start
@@ -91,7 +85,3 @@ _start:
 	ret
 	.cfi_endproc
 	.size	_start, .-_start
-
-	.data
-.Lsome_data:
-	.xword	0
