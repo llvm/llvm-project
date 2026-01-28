@@ -378,7 +378,7 @@ You should review these warnings and adjust your code accordingly.
 
 .. option:: -p <string>
 
-  Build path. Specifies the directory containing compile_commands.json for
+  Build path. Specifies the directory containing `compile_commands.json` for
   compilation database support.
 
 Use Cases
