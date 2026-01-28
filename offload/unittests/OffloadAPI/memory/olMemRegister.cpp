@@ -57,7 +57,8 @@ TEST_P(olMemRegisterTest, InvalidPtrUnRegister) {
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olMemUnregister(Device, nullptr, Flags));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olMemUnregister(Device, nullptr, Flags));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr, Flags));
 }
 
@@ -131,4 +132,3 @@ TEST_P(olMemRegisterTest, InvalidPtrMappedUnRegister) {
                olMemUnregister(Device, nullptr, Flags));
   ASSERT_SUCCESS(olMemUnregister(Device, Arr, Flags));
 }
-
