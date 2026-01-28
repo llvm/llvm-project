@@ -4093,20 +4093,16 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        auto IsTypeSpecifier = [&]() {
-          if (DS.hasTypeSpecifier() &&
-              DS.getTypeSpecType() != DeclSpec::TST_auto)
+        auto MayBeTypeSpecifier = [&]() {
+          if (getLangOpts().C23 && DS.hasTypeSpecifier() &&
+              DS.getTypeSpecType() != DeclSpec::TST_auto &&
+              DS.getConstexprSpecifier() == ConstexprSpecKind::Unspecified)
             return true;
 
           unsigned I = 1;
           while (true) {
             const Token &T = GetLookAheadToken(I);
             if (isKnownToBeTypeSpecifier(T))
-              return true;
-
-            if (T.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual,
-                          tok::kw__Atomic) &&
-                GetLookAheadToken(I + 1).is(tok::l_paren))
               return true;
 
             if (isTypeSpecifierQualifier(T))
@@ -4116,7 +4112,7 @@ void Parser::ParseDeclarationSpecifiers(
           }
         };
 
-        if (IsTypeSpecifier()) {
+        if (MayBeTypeSpecifier()) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
           if (!isInvalid && !getLangOpts().C23)
@@ -5573,6 +5569,12 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw_union:
     // enum-specifier
   case tok::kw_enum:
+
+  case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
+
+  // C11 _Atomic
+  case tok::kw__Atomic:
 
     // typedef-name
   case tok::annot_typename:

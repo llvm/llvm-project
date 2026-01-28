@@ -39,9 +39,7 @@ constexpr auto Ulong = 1L;
 constexpr auto CompoundLiteral = (int){13};
 constexpr auto DoubleCast = (double)(1 / 3);
 constexpr auto String = "this is a string"; // both-error {{constexpr pointer initializer is not null}}
-// both-error@+2 {{cannot combine with previous 'auto' declaration specifier}}
-// both-error@+1 {{illegal storage class on file-scoped variable}}
-constexpr signed auto Long = 1L;
+constexpr signed auto Long = 1L; // both-error {{'auto' cannot be signed or unsigned}}
 _Static_assert(_Generic(Ulong, long : 1));
 _Static_assert(_Generic(CompoundLiteral, int : 1));
 _Static_assert(_Generic(DoubleCast, double : 1));

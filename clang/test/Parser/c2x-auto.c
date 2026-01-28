@@ -137,8 +137,7 @@ constexpr auto int a1 = 0; // c23-error {{illegal storage class on file-scoped v
                               c17-error {{illegal storage class on file-scoped variable}} \
                               c17-error {{unknown type name 'constexpr'}}
 
-constexpr int auto a2 = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
-                              c23-error {{illegal storage class on file-scoped variable}} \
+constexpr int auto a2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
                               c17-error {{illegal storage class on file-scoped variable}} \
                               c17-error {{unknown type name 'constexpr'}}
 
@@ -148,14 +147,20 @@ auto int b1 = 0; // c23-error {{illegal storage class on file-scoped variable}} 
 int auto b2 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
                     c17-error {{illegal storage class on file-scoped variable}}
 
-long auto long i = 0; // c23-error {{illegal storage class on file-scoped variable}} \
-                         c17-error {{illegal storage class on file-scoped variable}}
+long auto long b3 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
+                          c17-error {{illegal storage class on file-scoped variable}}
+
+const long auto long unsigned volatile _Atomic int b4 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
+                                                              c17-error {{illegal storage class on file-scoped variable}}
+
+signed int _Atomic auto b5 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
+                                   c17-error {{illegal storage class on file-scoped variable}}
 
 void t1() {
   constexpr auto int c1 = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
                                 c17-error {{use of undeclared identifier 'constexpr'}}
 
-  constexpr int auto c2 = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
+  constexpr int auto c2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
                                 c17-error {{use of undeclared identifier 'constexpr'}}
 
   auto int d1 = 0;
@@ -181,7 +186,7 @@ void t3() {
   auto volatile const int a5 = 0;
   auto const volatile int a6 = 0;
 
-   auto restrict int a7 = 0; // expected-error {{restrict requires a pointer or reference ('int' is invalid)}}
+  auto restrict int a7 = 0; // expected-error {{restrict requires a pointer or reference ('int' is invalid)}}
 }
 
 void t4() {
@@ -196,15 +201,19 @@ void t5(void) {
 }
 
 void t6(void) {
-  auto typeof(0) t1 = 0;  // c17-error {{expected parameter declarator}} \
+  auto typeof(0) a1 = 0;  // c17-error {{expected parameter declarator}} \
                              c17-error {{expected ')'}} \
                              c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} \
                              c17-error {{expected ';' at end of declaration}} \
                              c17-error {{illegal storage class on function}} \
                              c17-note {{to match this '('}}
-  typeof(0) auto t2 = 0;  // c17-error {{expected ';' after expression}} \
+  typeof(0) auto a2 = 0;  // c17-error {{expected ';' after expression}} \
                              c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
 
-  auto _Atomic(int) t3 = 0;
-  _Atomic(int) auto t4 = 0;
+  auto _Atomic(int) a3 = 0;
+  _Atomic(int) auto a4 = 0;
+}
+
+void t7(void) {
+  signed int _Atomic auto a1 = 0;
 }
