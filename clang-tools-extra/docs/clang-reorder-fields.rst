@@ -196,10 +196,10 @@ Use the `-i` flag to modify files in-place:
   clang-reorder-fields -record-name Foo -fields-order z,w,y,x -i example.c --
 
 Limitations and Caveats
-=======================
+-----------------------
 
 Different access specifiers
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tool cannot reorder fields with different access specifiers
 (public/private/protected). All fields being reordered must have the same
@@ -215,7 +215,7 @@ access level.
   };
 
 Multiple field declarations
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Declarations with multiple fields in one statement are not supported:
 
@@ -226,7 +226,7 @@ Declarations with multiple fields in one statement are not supported:
   };
 
 Macro-expanded fields
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Macros that expand to multiple field declarations are not supported. However,
 macros that expand to a single field declaration work correctly:
@@ -251,7 +251,7 @@ The tool can reorder fields declared via macros as long as each macro invocation
 expands to exactly one field declaration.
 
 Preprocessor directives
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Structs with preprocessor directives between fields cannot be reordered:
 
@@ -266,7 +266,7 @@ Structs with preprocessor directives between fields cannot be reordered:
   };
 
 Flexible array members
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 In C, a flexible array member is an incomplete array type that must be the last
 member of a struct (as specified by C99 and later standards). This allows the
@@ -282,10 +282,22 @@ position:
   };
 
 Attempting to reorder fields such that the flexible array member is no longer
-last will result in an error. This ensures the generated code remains valid C.
+last will result in an error:
+
+.. code-block:: console
+
+  clang-reorder-fields -record-name Example -fields-order data,count example.c --
+
+Will produce:
+
+.. code-block:: text
+
+  Flexible array member must remain the last field in the struct
+
+This ensures the generated code remains valid C.
 
 Field dependencies in initializers
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tool will issue a warning if reordering causes a field to be used in an
 initializer before it's initialized. Consider this example:
@@ -328,7 +340,7 @@ The tool will still perform the reordering but warns about the potential issue.
 You should review these warnings and adjust your code accordingly.
 
 :program:`clang-reorder-fields` Command Line Options
-====================================================
+----------------------------------------------------
 
 .. option:: --record-name=<string>
 
@@ -370,10 +382,10 @@ You should review these warnings and adjust your code accordingly.
   compilation database support.
 
 Use Cases
-=========
+---------
 
 Memory layout optimization
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Reorder fields to minimize padding and improve cache locality:
 
@@ -400,12 +412,12 @@ Reorder fields to minimize padding and improve cache locality:
   };
 
 Coding standard compliance
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Ensure fields are ordered according to project conventions (e.g., alphabetically,
 by type, or by access pattern).
 
 Field grouping
---------------
+~~~~~~~~~~~~~~
 
 Group related fields together for better code organization and readability.
