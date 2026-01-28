@@ -106,20 +106,22 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
 
   auto CapturedInLambda = hasDeclContext(cxxRecordDecl(
-      isLambda(),
-      hasParent(lambdaExpr(forCallable(equalsBoundNode("func")),
-                           anyOf(CapturedInCaptureList, CapturedInBody)))));
+      isLambda(), hasParent(lambdaExpr(
+                      anyOf(CapturedInCaptureList, CapturedInBody),
+                      hasAncestor(functionDecl(equalsBoundNode("func")))))));
 
   auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
   auto ForwardCallMatcher = callExpr(
       callExpr().bind("call"), argumentCountIs(1),
-      hasArgument(0, declRefExpr(to(varDecl().bind("var")))),
-      forCallable(
-          anyOf(allOf(equalsBoundNode("func"),
-                      functionDecl(hasAnyParameter(parmVarDecl(allOf(
-                          equalsBoundNode("param"), equalsBoundNode("var")))))),
-                CapturedInLambda)),
+      hasArgument(
+          0, declRefExpr(to(
+                 varDecl(anyOf(equalsBoundNode("param"),
+                               hasSameNameAsBoundNode("param"),
+                               hasInitializer(ignoringParenImpCasts(
+                                   declRefExpr(to(equalsBoundNode("param")))))))
+                     .bind("var")))),
+      forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
       callee(unresolvedLookupExpr(hasAnyDeclaration(
           namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
 

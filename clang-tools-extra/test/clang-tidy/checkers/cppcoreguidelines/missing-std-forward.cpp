@@ -105,6 +105,26 @@ void foo(X &&x, Y &&y) {
     use(y);
 }
 
+template <typename T>
+void nested_but_no_forward(T &&arg) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: forwarding reference parameter 'arg' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+	[&]()
+	{
+		[&]()
+		{ consumes_all(arg); }();
+	}();
+}
+
+template <typename T, typename U>
+void nested_forward_only_one(T &&arg1, U &&arg2) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: forwarding reference parameter 'arg2' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+	[&]()
+	{
+		[&]()
+		{ consumes_all(std::forward<T>(arg1)); }();
+	}();
+}
+
 } // namespace positive_cases
 
 namespace negative_cases {
@@ -180,6 +200,32 @@ void lambda_value_reference_capture_list(T&& t) {
 template <class T>
 void lambda_value_reference_auxiliary_var(T&& t) {
   [&x = t]() { T other = std::forward<T>(x); };
+}
+
+template <typename T>
+void nested_forward(T &&arg) {
+	[&]()
+	{
+		[&]()
+		{ consumes_all(std::forward<T>(arg)); }();
+	}();
+}
+
+template <typename T>
+void triple_nested_forward(T &&arg) {
+	[&]()
+	{
+		[&]()
+		{
+			[&]()
+			{ consumes_all(std::forward<T>(arg)); }();
+		}();
+	}();
+}
+
+template <class T>
+void lambda_renamed_capture(T&& t) {
+  [&a = t]() { consumes_all(std::forward<T>(a)); };
 }
 
 } // namespace negative_cases
