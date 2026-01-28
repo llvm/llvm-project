@@ -297,7 +297,7 @@ Will produce:
 This ensures the generated code remains valid C.
 
 Field dependencies in initializers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tool will issue a warning if reordering causes a field to be used in an
 initializer before it's initialized. Consider this example:
