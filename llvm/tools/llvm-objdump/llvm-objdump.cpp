@@ -2695,15 +2695,13 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
     // "avr0". Report "<unknown>" for unsupported AVR instructions to avoid
     // silent failures.
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
-      unsigned AVRVersion = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
       if (Expected<std::string> VersionOrErr =
-              AVR::getFeatureSetFromEFlag(AVRVersion)) {
+              AVR::getFeatureSetFromEFlag(Elf)) {
         Features.AddFeature('+' + *VersionOrErr);
       } else {
-        reportWarning("unknown AVR EFlags value: 0x" +
-                          Twine::utohexstr(AVRVersion) + ", defaulting to avr0",
+        reportWarning(toString(VersionOrErr.takeError()) +
+                          ", defaulting to avr0",
                       Obj->getFileName());
-        consumeError(VersionOrErr.takeError());
         Features.AddFeature("+avr0");
       }
     }

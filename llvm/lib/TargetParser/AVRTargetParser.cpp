@@ -16,7 +16,8 @@
 
 using namespace llvm;
 
-Expected<std::string> AVR::getFeatureSetFromEFlag(unsigned EFlag) {
+Expected<std::string>
+AVR::getFeatureSetFromEFlag(const object::ELFObjectFileBase *Elf) {
   static const std::map<unsigned, StringRef> EFlagToFeatureSet = {
       {ELF::EF_AVR_ARCH_AVR1, "avr1"},
       {ELF::EF_AVR_ARCH_AVR2, "avr2"},
@@ -37,10 +38,12 @@ Expected<std::string> AVR::getFeatureSetFromEFlag(unsigned EFlag) {
       {ELF::EF_AVR_ARCH_XMEGA6, "xmega"},
       {ELF::EF_AVR_ARCH_XMEGA7, "xmega"},
   };
-
+  unsigned EFlag = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
   auto It = EFlagToFeatureSet.find(EFlag);
   if (It != EFlagToFeatureSet.end())
     return It->second.str();
 
-  return make_error<StringError>("Not valid e_flags", errc::invalid_argument);
+  return createStringError(errc::invalid_argument,
+                           "unrecognised AVR version: 0x" +
+                               Twine::utohexstr(EFlag));
 }

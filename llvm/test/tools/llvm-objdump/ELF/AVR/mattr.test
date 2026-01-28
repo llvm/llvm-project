@@ -33,7 +33,7 @@
 # ALL-NEXT:   lpm
 # ALL-NEXT:   rjmp    .-2
 
-# INVALIDARCHINFO: warning: '[[FILE]]': unknown AVR EFlags value: [[VERSION]], defaulting to avr0
+# INVALIDARCHINFO: warning: '[[FILE]]': unrecognised AVR version: [[VERSION]], defaulting to avr0
 # AVR0:         <_start>:
 # AVR0-COUNT-3:   <unknown>
 

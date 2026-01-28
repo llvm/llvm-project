@@ -14,13 +14,15 @@
 #define LLVM_TARGETPARSER_AVRTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Error.h"
 #include <string>
 
 namespace llvm {
 namespace AVR {
 
-LLVM_ABI Expected<std::string> getFeatureSetFromEFlag(unsigned EFlag);
+LLVM_ABI Expected<std::string>
+getFeatureSetFromEFlag(const object::ELFObjectFileBase *Elf);
 
 } // namespace AVR
 } // namespace llvm
