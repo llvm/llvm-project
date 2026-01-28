@@ -912,9 +912,10 @@ class VPatBinaryVL_XI<SDPatternOperator vop,
 
 multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
                               list<VTypeInfo> vtilist = AllIntegerVectors,
-                              bit isSEWAware = 0> {
+                              bit isSEWAware = 0,
+                              list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
       def : VPatBinaryVL_V<vop, instruction_name, "VV",
                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
