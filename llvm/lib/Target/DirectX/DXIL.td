@@ -1124,7 +1124,7 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
-def WavePrefixCountBits : DXILOp<136, wavePrefixOp> {
+def WavePrefixBitCount : DXILOp<136, wavePrefixOp> {
   let Doc = "returns the count of bits of Expr set to 1 on prior lanes";
   let intrinsics = [IntrinSelect<int_dx_wave_prefix_bit_count>];
   let arguments = [Int1Ty];
