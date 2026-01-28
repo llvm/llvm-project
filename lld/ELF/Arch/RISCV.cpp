@@ -1549,20 +1549,17 @@ void RISCV::scanSection(InputSectionBase &sec) {
   invokeELFT(scanSection1, sec);
 }
 
-namespace lld::elf {
-uint32_t getRISCVVendorRelMarker(StringRef rvVendor) {
+uint32_t elf::getRISCVVendorRelMarker(StringRef rvVendor) {
   return StringSwitch<uint32_t>(rvVendor)
       .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
       .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
       .Default(0);
 }
 
-std::optional<StringRef> getRISCVVendorString(RelType ty) {
+std::optional<StringRef> elf::getRISCVVendorString(RelType ty) {
   if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
     return "QUALCOMM";
   if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
     return "ANDES";
   return std::nullopt;
 }
-
-} // namespace lld::elf
