@@ -1,8 +1,8 @@
-## Tests that --call-graph-info produces useful warnings
-## if SHT_LLVM_CALL_GRAPH type section processing idenitifies
-## malformed content.
+## Tests that --call-graph-info produces useful warnings if SHT_LLVM_CALL_GRAPH
+## type section processing identifies malformed content.
 
-## Tests that --call-graph-info warns if there is no section of type SHT_LLVM_CALL_GRAPH.
+## Tests that --call-graph-info warns if there is no section of type
+## SHT_LLVM_CALL_GRAPH.
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
@@ -204,15 +204,15 @@ Sections:
 # RUN: yaml2obj --docnum=6 %s -o %t11
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-NO-RELOC,WARN-MISSING-TYPE-ID
+# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-NO-RELOC,WARN-MISSING-TYPE-ID
+# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
 
-# WARN-MISSING-TYPE-ID: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
-# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 2
-# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 19
-# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 29
-# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 56
+# WARN-MISSING-INFO: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
+# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 2
+# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 19
+# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 29
+# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 56
 
 --- !ELF
 FileHeader:

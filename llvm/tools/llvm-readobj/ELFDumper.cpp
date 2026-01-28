@@ -37,6 +37,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/SFrameParser.h"
@@ -5350,8 +5351,7 @@ enum Flags : uint8_t {
 
 template <class ELFT>
 bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
-  ArrayRef<uint8_t> Contents =
-      unwrapOrError(FileName, Obj.getSectionContents(*CGSection));
+  ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
@@ -5359,9 +5359,6 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     uint8_t FormatVersionNumber = Data.getU8(C);
     assert(C && "always expect the one byte read to succeed when C.tell() < "
                 "CGSection->sh_size is true.");
-    if (!C)
-      consumeError(
-          C.takeError()); // To satisfy builds with assertion disabled mode
     if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
