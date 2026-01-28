@@ -391,6 +391,8 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
+
+  MCInst getNop() const override;
 };
 
 } // end namespace llvm
