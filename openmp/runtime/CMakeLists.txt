@@ -93,6 +93,11 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
+# Include support file for arm64x builds
+if(LIBOMP_ENABLE_ARM64X)
+  include(arm64x)
+endif()
+
 libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx arm64ec mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
@@ -458,3 +463,9 @@ set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
 # make these variables available for tools/libompd:
 set(LIBOMP_SRC_DIR ${LIBOMP_SRC_DIR} PARENT_SCOPE)
 set(LIBOMP_OMPD_SUPPORT ${LIBOMP_OMPD_SUPPORT} PARENT_SCOPE)
+
+# Set up the targets we want to build arm64x libs for
+if(LIBOMP_ENABLE_ARM64X)
+  set(ARM64X_TARGETS omp ompimp)
+  handle_arm64x()
+endif()
