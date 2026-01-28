@@ -1911,6 +1911,7 @@ void LoopInterchangeTransform::reduction2Memory() {
                          InnerLoop->getLoopPreheader());
   FirstIter->addIncoming(ConstantInt::get(Type::getInt1Ty(Context), 0),
                          InnerLoop->getLoopLatch());
+  FirstIter->dropDbgRecords();
   assert(FirstIter->isComplete() && "The FirstIter PHI node is not complete.");
 
   // When the reduction is initialized from a constant value, we need to add
@@ -1919,7 +1920,7 @@ void LoopInterchangeTransform::reduction2Memory() {
   Instruction *LoadMem = Builder.CreateLoad(SR.ElemTy, SR.MemRef);
 
   // Init new_var to MEM_REF or CONST depending on if it is the first iteration.
-  Value *NewVar = Builder.CreateSelect(FirstIter, LoadMem, SR.Init, "new.var");
+  Value *NewVar = Builder.CreateSelect(FirstIter, SR.Init, LoadMem, "new.var");
 
   // Replace all uses of the reduction variable with a new variable.
   SR.Reduction->replaceAllUsesWith(NewVar);
