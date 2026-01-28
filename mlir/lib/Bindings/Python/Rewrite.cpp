@@ -817,9 +817,8 @@ void populateRewriteSubmodule(nb::module_ &m) {
           [](PyOperationBase &op, PyConversionTarget &target,
              PyFrozenRewritePatternSet &set,
              std::optional<PyConversionConfig> config) {
-            if (!config) {
+            if (!config)
               config.emplace(PyConversionConfig());
-            }
             MlirLogicalResult status = mlirApplyPartialConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
