@@ -495,6 +495,8 @@ mlirConversionConfigGetFoldingMode(MlirConversionConfig config) {
     return MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS;
   case mlir::DialectConversionFoldingMode::AfterPatterns:
     return MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS;
+  default:
+    llvm::report_fatal_error("unhandled DialectConversionFoldingMode");
   }
 }
 
