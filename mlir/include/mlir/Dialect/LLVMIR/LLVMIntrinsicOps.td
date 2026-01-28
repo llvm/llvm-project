@@ -655,6 +655,14 @@ def LLVM_AssumeOp
                    "Value":$ptr1, "Value":$ptr2)>
   ];
 
+  let extraClassDeclaration = [{
+    /// Name of the discardable attribute marking an `llvm.assume` as an array
+    /// bounds assumption. It is translated to the `llvm.array.bounds` metadata
+    /// on the corresponding LLVM IR intrinsic call, which passes such as
+    /// DropUnnecessaryAssumes use to selectively drop these assumptions.
+    static StringRef getArrayBoundsAttrName() { return "llvm.array_bounds"; }
+  }];
+
   let hasVerifier = 1;
 }
 

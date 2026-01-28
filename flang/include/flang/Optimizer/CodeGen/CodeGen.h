@@ -65,6 +65,12 @@ struct FIRToLLVMPassOptions {
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
+
+  // Emit llvm.assume intrinsics describing array bounds constraints for
+  // non-boxed array accesses. These provide extra information to loop
+  // optimizations but also increase IR size, so they are only emitted at
+  // higher optimization levels (see getFIRToLLVMPassOptions).
+  bool emitArrayBoundsAssumes = false;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

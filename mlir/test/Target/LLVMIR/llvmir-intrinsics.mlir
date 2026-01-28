@@ -1415,6 +1415,15 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
   llvm.return %0 : vector<4 x i32>
 }
 
+// The `llvm.array_bounds` unit attribute on `llvm.intr.assume` is translated to
+// the `llvm.array.bounds` metadata (an empty node) on the LLVM IR call.
+// CHECK-LABEL: @assume_array_bounds
+llvm.func @assume_array_bounds(%cond: i1) {
+  // CHECK: call void @llvm.assume(i1 %{{.+}}){{.*}}!llvm.array.bounds ![[BOUNDS:[0-9]+]]
+  llvm.intr.assume %cond : i1 {llvm.array_bounds}
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -1622,3 +1631,6 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare range(i2 -1, -2) i2 @llvm.scmp.i2.i32(i32, i32)
 // CHECK-DAG: declare range(i32 -1, 2) <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 // CHECK-DAG: declare void @llvm.fake.use(...)
+
+// The array bounds metadata node is empty.
+// CHECK-DAG: ![[BOUNDS]] = !{}

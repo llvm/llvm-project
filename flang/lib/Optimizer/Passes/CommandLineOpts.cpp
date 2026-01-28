@@ -45,6 +45,12 @@ cl::opt<bool> skipExternalRttiDefinition(
                    "other compilation units"),
     cl::Hidden);
 
+cl::opt<bool> enableArrayBoundsAssumes(
+    "enable-array-bounds-assumes",
+    cl::desc("emit llvm.assume intrinsics for array bounds constraints of "
+             "non-boxed array accesses (only at -O2 and above)"),
+    cl::init(true), cl::Hidden);
+
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
 codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};

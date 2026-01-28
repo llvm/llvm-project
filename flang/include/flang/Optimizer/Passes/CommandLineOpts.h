@@ -45,6 +45,11 @@ extern llvm::cl::opt<bool> ignoreMissingTypeDescriptors;
 /// differs from most compilers).
 extern llvm::cl::opt<bool> skipExternalRttiDefinition;
 
+/// Shared option in tools to control the emission of llvm.assume intrinsics
+/// describing array bounds constraints for non-boxed array accesses. Even when
+/// enabled, these assumes are only emitted at higher optimization levels.
+extern llvm::cl::opt<bool> enableArrayBoundsAssumes;
+
 /// Default optimization level used to create Flang pass pipeline is O0.
 extern llvm::OptimizationLevel defaultOptLevel;
 
