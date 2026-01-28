@@ -10,10 +10,10 @@ define float @test_select_frexp_basic(float %x, i1 %cond) {
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_0:%.*]] = extractvalue { float, i32 } [[FREXP]], 0
-; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[FREXP_0]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[FREXP_0]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[SELECT_FREXP]]
 ;
-  %sel = select i1 %cond, float 1.000000e+00, float %x
+  %sel = select i1 %cond, float 1.000000e+00, float %x, !prof !0
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
   %frexp.0 = extractvalue { float, i32 } %frexp, 0
   ret float %frexp.0
@@ -117,10 +117,10 @@ define i32 @test_select_frexp_extract_exp(float %x, i1 %cond) {
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_1:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
-; CHECK-NEXT:    [[FREXP_2:%.*]] = select i1 [[COND]], i32 1, i32 [[FREXP_1]]
+; CHECK-NEXT:    [[FREXP_2:%.*]] = select i1 [[COND]], i32 1, i32 [[FREXP_1]], !prof [[PROF0]]
 ; CHECK-NEXT:    ret i32 [[FREXP_2]]
 ;
-  %sel = select i1 %cond, float 1.000000e+00, float %x
+  %sel = select i1 %cond, float 1.000000e+00, float %x, !prof !0
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
   %frexp.1 = extractvalue { float, i32 } %frexp, 1
   ret i32 %frexp.1
@@ -187,5 +187,11 @@ define <vscale x 2 x float> @test_select_frexp_scalable_vec1(<vscale x 2 x float
   ret <vscale x 2 x float> %frexp.0
 }
 
+
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>)
 declare { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float>)
+
+!0 = !{!"branch_weights", i32 10, i32 20}
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 10, i32 20}
+;.
