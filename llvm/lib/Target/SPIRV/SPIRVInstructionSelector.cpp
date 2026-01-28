@@ -2723,9 +2723,9 @@ bool SPIRVInstructionSelector::selectWaveBitOr(Register ResVReg,
                                                MachineInstr &I) const {
 
   assert(I.getNumOperands() == 3);
-  assert(I.getOperand(1).isReg());
+  assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
-  Register InputRegister = I.getOperand(1).getReg();
+  Register InputRegister = I.getOperand(2).getReg();
   SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
   if (!InputType)
