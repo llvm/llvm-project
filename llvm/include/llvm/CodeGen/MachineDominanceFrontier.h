@@ -20,7 +20,7 @@
 namespace llvm {
 
 class MachineDominanceFrontier
-    : public ForwardDominanceFrontierBase<MachineBasicBlock> {
+    : public DominanceFrontierBase<MachineBasicBlock, false> {
 public:
  using DomTreeT = DomTreeBase<MachineBasicBlock>;
  using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;

@@ -42,9 +42,12 @@ public:
   // deterministic.
   using DomSetType = SetVector<BlockT *>;
   using DomSetMapType = DenseMap<BlockT *, DomSetType>; // Dom set map
+  using DomTreeT = DominatorTreeBase<BlockT, IsPostDom>;
+  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
 
 protected:
-  using BlockTraits = GraphTraits<BlockT *>;
+  using GraphTy = std::conditional_t<IsPostDom, Inverse<BlockT *>, BlockT *>;
+  using BlockTraits = GraphTraits<GraphTy>;
 
   DomSetMapType Frontiers;
   // Postdominators can have multiple roots.
@@ -92,34 +95,18 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
 #endif
-};
-
-//===-------------------------------------
-/// DominanceFrontier Class - Concrete subclass of DominanceFrontierBase that is
-/// used to compute a forward dominator frontiers.
-///
-template <class BlockT>
-class ForwardDominanceFrontierBase
-    : public DominanceFrontierBase<BlockT, false> {
-private:
-  using BlockTraits = GraphTraits<BlockT *>;
-
-public:
-  using DomTreeT = DomTreeBase<BlockT>;
-  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
-  using DomSetType = typename DominanceFrontierBase<BlockT, false>::DomSetType;
 
   void analyze(DomTreeT &DT) {
-    assert(DT.root_size() == 1 &&
-           "Only one entry block for forward domfronts!");
-    this->Roots = {DT.getRoot()};
-    calculate(DT, DT[this->Roots[0]]);
+    for (auto *R : DT.roots()) {
+      Roots.push_back(R);
+    }
+    calculate(DT);
   }
 
-  void calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
+  void calculate(const DomTreeT &DT);
 };
 
-class DominanceFrontier : public ForwardDominanceFrontierBase<BasicBlock> {
+class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
 public:
   using DomTreeT = DomTreeBase<BasicBlock>;
   using DomTreeNodeT = DomTreeNodeBase<BasicBlock>;
@@ -157,7 +144,6 @@ public:
 
 extern template class DominanceFrontierBase<BasicBlock, false>;
 extern template class DominanceFrontierBase<BasicBlock, true>;
-extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis
