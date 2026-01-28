@@ -482,6 +482,8 @@ void mlirConversionConfigSetFoldingMode(MlirConversionConfig config,
   case MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS:
     cppMode = mlir::DialectConversionFoldingMode::AfterPatterns;
     break;
+  default:
+    llvm::report_fatal_error("unhandled DialectConversionFoldingMode");
   }
   unwrap(config)->foldingMode = cppMode;
 }
