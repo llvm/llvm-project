@@ -775,16 +775,9 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
       if (auto *defOp = op.getVar().getDefiningOp())
         addDeclareAttr(builder, defOp, dataClause);
 
-    // TODO: no_create remapping could currently cause segfaults because of the
-    // fir.box_addr that may be inserted in the remapping in the region.
-    // This is an issue if the variable is not mapped (which is OK if its
-    // accesses are not reached inside the construct).
-    bool isNoCreateWithBounds =
-        std::is_same_v<Op, mlir::acc::NoCreateOp> && !bounds.empty();
-
     // Track the symbol and its corresponding mlir::Value if requested so that
     // accesses inside regions can be remapped.
-    if (dataMap && !isNoCreateWithBounds) {
+    if (dataMap) {
       if (componentRef)
         dataMap->emplaceComponent(op.getAccVar(), std::move(*componentRef),
                                   baseAddr);
