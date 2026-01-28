@@ -3373,22 +3373,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckResourceHandle(
             &SemaRef, TheCall, 0,
             [](const HLSLAttributedResourceType *ResType) {
-              if (ResType->getAttrs().ResourceDimension ==
-                  llvm::dxil::ResourceDimension::DimensionUnknown) {
-                return true;
-              }
-              return false;
+              return  ResType->getAttrs().ResourceDimension ==
+                  llvm::dxil::ResourceDimension::DimensionUnknown;
             }))
       return true;
 
     if (CheckResourceHandle(
             &SemaRef, TheCall, 1,
             [](const HLSLAttributedResourceType *ResType) {
-              if (ResType->getAttrs().ResourceClass !=
-                  llvm::hlsl::ResourceClass::Sampler)
-                return true;
-              llvm::dbgs() << "The sampler has the wrong resource class.\n";
-              return false;
+              return ResType->getAttrs().ResourceClass !=
+                  llvm::hlsl::ResourceClass::Sampler;
             }))
       return true;
 
