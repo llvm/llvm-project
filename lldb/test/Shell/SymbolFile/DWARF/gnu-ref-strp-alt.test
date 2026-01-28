@@ -8,5 +8,5 @@
 # RUN: %lldb %t -b -o 'b bar' | FileCheck %s
 
 # CHECK:      (lldb) b bar
-# CHECK-NOT:  warning: (x86_64) /tmp/b.out unsupported DW_FORM values: 0x1f20 0x1f21
+# CHECK-NOT:  unsupported DW_FORM values:
 # CHECK:      Breakpoint 1: address = 0x0000000000001000
