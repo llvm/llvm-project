@@ -19,6 +19,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include <functional>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -4099,7 +4100,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "__hash__",
           [](PyBlock &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+            return static_cast<size_t>(
+                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
           },
           "Returns the hash value of the block.")
       .def(
@@ -4287,7 +4289,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "__hash__",
           [](PyAttribute &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+            return static_cast<size_t>(
+                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
           },
           "Returns the hash value of the attribute.")
       .def(
@@ -4412,7 +4415,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "__hash__",
           [](PyType &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+            return static_cast<size_t>(
+                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
           },
           "Returns the hash value of the `Type`.")
       .def(
@@ -4554,7 +4558,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "__hash__",
           [](PyValue &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+            return static_cast<size_t>(
+                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
           },
           "Returns the hash value of the value.")
       .def(
