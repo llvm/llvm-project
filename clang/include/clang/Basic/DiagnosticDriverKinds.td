@@ -491,7 +491,7 @@ def warn_drv_deprecated_arg_ofast : Warning<
   " or '-O3' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_arg_ofast_for_flang : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
   " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<

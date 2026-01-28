@@ -57,9 +57,10 @@ public:
   matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
-    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::ConstantOp,
-                  cir::CmpOp, cir::DerivedDataMemberOp, cir::FuncOp,
-                  cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
+    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
+                  cir::CastOp, cir::CmpOp, cir::ConstantOp,
+                  cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
+                  cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
 
     const mlir::TypeConverter *typeConverter = getTypeConverter();
@@ -130,6 +131,44 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
+    cir::CastOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type srcTy = op.getSrc().getType();
+  assert((mlir::isa<cir::DataMemberType, cir::MethodType>(srcTy)) &&
+         "input to bitcast in ABI lowering must be a data member or method");
+
+  switch (op.getKind()) {
+  case cir::CastKind::bitcast: {
+    mlir::Type destTy = getTypeConverter()->convertType(op.getType());
+    mlir::Value loweredResult;
+    if (mlir::isa<cir::DataMemberType>(srcTy))
+      loweredResult = lowerModule->getCXXABI().lowerDataMemberBitcast(
+          op, destTy, adaptor.getSrc(), rewriter);
+    else
+      loweredResult = lowerModule->getCXXABI().lowerMethodBitcast(
+          op, destTy, adaptor.getSrc(), rewriter);
+    rewriter.replaceOp(op, loweredResult);
+    return mlir::success();
+  }
+  case cir::CastKind::member_ptr_to_bool: {
+    mlir::Value loweredResult;
+    if (mlir::isa<cir::MethodType>(srcTy))
+      loweredResult = lowerModule->getCXXABI().lowerMethodToBoolCast(
+          op, adaptor.getSrc(), rewriter);
+    else
+      loweredResult = lowerModule->getCXXABI().lowerDataMemberToBoolCast(
+          op, adaptor.getSrc(), rewriter);
+    rewriter.replaceOp(op, loweredResult);
+    return mlir::success();
+  }
+  default:
+    break;
+  }
+
+  return mlir::failure();
+}
+
 mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -143,6 +182,15 @@ mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
     return mlir::success();
   }
 
+  if (mlir::isa<cir::MethodType>(op.getType())) {
+    auto method = mlir::cast<cir::MethodAttr>(op.getValue());
+    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+    mlir::TypedAttr abiValue = lowerModule->getCXXABI().lowerMethodConstant(
+        method, layout, *getTypeConverter());
+    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
+    return mlir::success();
+  }
+
   llvm_unreachable("constant operand is not an CXXABI-dependent type");
 }
 
@@ -150,12 +198,16 @@ mlir::LogicalResult CIRCmpOpABILowering::matchAndRewrite(
     cir::CmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type type = op.getLhs().getType();
-  assert((mlir::isa<cir::DataMemberType>(type)) &&
-         "input to cmp in ABI lowering must be a data member");
+  assert((mlir::isa<cir::DataMemberType, cir::MethodType>(type)) &&
+         "input to cmp in ABI lowering must be a data member or method");
 
-  assert(!cir::MissingFeatures::methodType());
-  mlir::Value loweredResult = lowerModule->getCXXABI().lowerDataMemberCmp(
-      op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+  mlir::Value loweredResult;
+  if (mlir::isa<cir::DataMemberType>(type))
+    loweredResult = lowerModule->getCXXABI().lowerDataMemberCmp(
+        op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+  else
+    loweredResult = lowerModule->getCXXABI().lowerMethodCmp(
+        op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
 
   rewriter.replaceOp(op, loweredResult);
   return mlir::success();
@@ -213,6 +265,11 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
         mlir::cast_if_present<cir::DataMemberAttr>(op.getInitialValueAttr());
     loweredInit = lowerModule->getCXXABI().lowerDataMemberConstant(
         init, layout, *getTypeConverter());
+  } else if (mlir::isa<cir::MethodType>(ty)) {
+    cir::MethodAttr init =
+        mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
+    loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
+        init, layout, *getTypeConverter());
   } else {
     llvm_unreachable(
         "inputs to cir.global in ABI lowering must be data member or method");
@@ -234,12 +291,50 @@ mlir::LogicalResult CIRBaseDataMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRBaseMethodOpABILowering::matchAndRewrite(
+    cir::BaseMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerBaseMethod(op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
     cir::DerivedDataMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Value loweredResult = lowerModule->getCXXABI().lowerDerivedDataMember(
       op, adaptor.getSrc(), rewriter);
   rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRDerivedMethodOpABILowering::matchAndRewrite(
+    cir::DerivedMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult = lowerModule->getCXXABI().lowerDerivedMethod(
+      op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRDynamicCastOpABILowering::matchAndRewrite(
+    cir::DynamicCastOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerDynamicCast(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGetMethodOpABILowering::matchAndRewrite(
+    cir::GetMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value callee;
+  mlir::Value thisArg;
+  lowerModule->getCXXABI().lowerGetMethod(
+      op, callee, thisArg, adaptor.getMethod(), adaptor.getObject(), rewriter);
+  rewriter.replaceOp(op, {callee, thisArg});
   return mlir::success();
 }
 
@@ -322,6 +417,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  target.addIllegalOp<cir::DynamicCastOp>();
 }
 
 //===----------------------------------------------------------------------===//

@@ -14,11 +14,12 @@ define void @test_la_pcrel(i32 signext %n) {
 ; LA32-LABEL: test_la_pcrel:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    pcalau12i $a2, %pc_hi20(l)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a2, %pcadd_hi20(l)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB0_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    ld.w $zero, $a2, %pc_lo12(l)
+; LA32-NEXT:    ld.w $zero, $a2, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    addi.w $a1, $a1, 1
 ; LA32-NEXT:    blt $a1, $a0, .LBB0_1
 ; LA32-NEXT:  # %bb.2: # %ret
@@ -71,8 +72,9 @@ ret:
 define void @test_la_got(i32 signext %n) {
 ; LA32-LABEL: test_la_got:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a1, %got_pc_hi20(g)
-; LA32-NEXT:    ld.w $a1, $a1, %got_pc_lo12(g)
+; LA32-NEXT:  .Lpcadd_hi1:
+; LA32-NEXT:    pcaddu12i $a1, %got_pcadd_hi20(g)
+; LA32-NEXT:    ld.w $a1, $a1, %got_pcadd_lo12(.Lpcadd_hi1)
 ; LA32-NEXT:    move $a2, $zero
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB1_1: # %loop
@@ -132,8 +134,9 @@ ret:
 define void @test_la_tls_ie(i32 signext %n) {
 ; LA32-LABEL: test_la_tls_ie:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a1, %ie_pc_hi20(ie)
-; LA32-NEXT:    ld.w $a2, $a1, %ie_pc_lo12(ie)
+; LA32-NEXT:  .Lpcadd_hi2:
+; LA32-NEXT:    pcaddu12i $a1, %ie_pcadd_hi20(ie)
+; LA32-NEXT:    ld.w $a2, $a1, %ie_pcadd_lo12(.Lpcadd_hi2)
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    add.w $a2, $a2, $tp
 ; LA32-NEXT:    .p2align 4, , 16
@@ -206,8 +209,9 @@ define void @test_la_tls_ld(i32 signext %n) {
 ; LA32-NEXT:    .cfi_offset 24, -16
 ; LA32-NEXT:    move $fp, $a0
 ; LA32-NEXT:    move $s1, $zero
-; LA32-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
-; LA32-NEXT:    addi.w $s0, $a0, %got_pc_lo12(ld)
+; LA32-NEXT:  .Lpcadd_hi3:
+; LA32-NEXT:    pcaddu12i $a0, %ld_pcadd_hi20(ld)
+; LA32-NEXT:    addi.w $s0, $a0, %ld_pcadd_lo12(.Lpcadd_hi3)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB3_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -382,8 +386,9 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; LA32-NEXT:    st.w $s1, $sp, 0 # 4-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
 ; LA32-NEXT:    move $s1, $zero
-; LA32-NEXT:    pcalau12i $a0, %gd_pc_hi20(gd)
-; LA32-NEXT:    addi.w $s0, $a0, %got_pc_lo12(gd)
+; LA32-NEXT:  .Lpcadd_hi4:
+; LA32-NEXT:    pcaddu12i $a0, %gd_pcadd_hi20(gd)
+; LA32-NEXT:    addi.w $s0, $a0, %gd_pcadd_lo12(.Lpcadd_hi4)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB5_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -1065,7 +1065,7 @@ llvm::Error DAP::Loop() {
     m_disconnecting = false;
   }
 
-  auto thread = std::thread(std::bind(&DAP::TransportHandler, this));
+  auto thread = std::thread([this] { TransportHandler(); });
 
   llvm::scope_exit cleanup([this]() {
     // FIXME: Merge these into the MainLoop handler.
@@ -1310,23 +1310,25 @@ void DAP::StartEventThreads() {
   StartEventThread();
 }
 
-llvm::Error DAP::InitializeDebugger(int debugger_id,
-                                    lldb::user_id_t target_id) {
+llvm::Error DAP::InitializeDebugger(const DAPSession &session) {
   // Find the existing debugger by ID
-  debugger = lldb::SBDebugger::FindDebuggerWithID(debugger_id);
-  if (!debugger.IsValid()) {
+  lldb::SBDebugger found_debugger =
+      lldb::SBDebugger::FindDebuggerWithID(session.debuggerId);
+  if (!found_debugger.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing debugger for debugger ID");
   }
 
   // Find the target within the debugger by its globally unique ID
-  lldb::SBTarget target = debugger.FindTargetByGloballyUniqueID(target_id);
+  lldb::SBTarget target =
+      found_debugger.FindTargetByGloballyUniqueID(session.targetId);
   if (!target.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing target for target ID");
   }
 
-  // Set the target for this DAP session.
+  // Set the target and debugger for this DAP session.
+  debugger = found_debugger;
   SetTarget(target);
   StartEventThreads();
   return llvm::Error::success();

@@ -1237,9 +1237,9 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PM2WADDASU_H : RVPWideningTernary_rrr<0b1101, 0b11, "pm2waddasu.h">;
 
   def PMQWACC_H    : RVPWideningTernary_rrr<0b1111, 0b00, "pmqwacc.h">;
-  def PMQWACC      : RVPWideningTernary_rrr<0b1111, 0b01, "pmqwacc">;
+  def MQWACC       : RVPWideningTernary_rrr<0b1111, 0b01, "mqwacc">;
   def PMQRWACC_H   : RVPWideningTernary_rrr<0b1111, 0b10, "pmqrwacc.h">;
-  def PMQRWACC     : RVPWideningTernary_rrr<0b1111, 0b11, "pmqrwacc">;
+  def MQRWACC      : RVPWideningTernary_rrr<0b1111, 0b11, "mqrwacc">;
 
   def PREDSUM_DHS  : RVPNarrowingBinary_rr<0b001, 0b00, "predsum.dhs">;
   def PREDSUM_DBS  : RVPNarrowingBinary_rr<0b001, 0b10, "predsum.dbs">;
@@ -1645,6 +1645,12 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI8VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_B GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_H GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_H GPR:$rs1, GPR:$rs2)>;
+
+  // 8/16-bit vselect patterns
+  def: Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
+           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def: Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
+           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -1772,6 +1778,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // 32-bit signed saturation shift left patterns
   def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
            (PSSLAI_W GPR:$rs1, uimm5:$shamt)>;
+
+  // 32-bit vselect patterns
+  def: Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
+           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;

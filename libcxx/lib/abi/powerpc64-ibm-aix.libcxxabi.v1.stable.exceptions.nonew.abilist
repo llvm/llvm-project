@@ -571,6 +571,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__atomic_notify_one_global_tableEPKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__139__atomic_wait_global_table_with_timeoutEPKvlm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13cinE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -1713,6 +1714,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__126__atomic_notify_one_nativeILm8EEEvPKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__133__atomic_wait_native_with_timeoutILm8EEEvPKvS2_m', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem4path19preferred_separatorE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

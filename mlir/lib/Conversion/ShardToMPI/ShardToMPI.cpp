@@ -11,15 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ShardToMPI/ShardToMPI.h"
+#include "mlir/Dialect/Shard/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shard/IR/ShardDialect.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
@@ -71,9 +74,9 @@ static SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
 }
 
 /// Create operations converting a linear index to a multi-dimensional index.
-static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
-                                             Value linearIndex,
-                                             ValueRange dimensions) {
+[[maybe_unused]] static SmallVector<Value>
+linearToMultiIndex(Location loc, OpBuilder b, Value linearIndex,
+                   ValueRange dimensions) {
   int n = dimensions.size();
   SmallVector<Value> multiIndex(n);
 
@@ -246,46 +249,6 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
         op, TupleType::get(op.getContext(), resTypes),
         ValueRange{resSplitAxes, resHaloSizes, resOffsets});
 
-    return success();
-  }
-};
-
-struct ConvertProcessMultiIndexOp
-    : public OpConversionPattern<ProcessMultiIndexOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ProcessMultiIndexOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    // Currently converts its linear index to a multi-dimensional index.
-
-    SymbolTableCollection symbolTableCollection;
-    Location loc = op.getLoc();
-    auto gridOp = getGrid(op, symbolTableCollection);
-    // For now we only support static grid shapes
-    if (ShapedType::isDynamicShape(gridOp.getShape()))
-      return failure();
-
-    SmallVector<Value> dims;
-    llvm::transform(
-        gridOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
-          return arith::ConstantIndexOp::create(rewriter, loc, i).getResult();
-        });
-    Value rank = ProcessLinearIndexOp::create(rewriter, op.getLoc(), gridOp);
-    auto mIdx = linearToMultiIndex(loc, rewriter, rank, dims);
-
-    // optionally extract subset of grid axes
-    auto axes = adaptor.getAxes();
-    if (!axes.empty()) {
-      SmallVector<Value> subIndex;
-      for (auto axis : axes) {
-        subIndex.emplace_back(mIdx[axis]);
-      }
-      mIdx = std::move(subIndex);
-    }
-
-    rewriter.replaceOp(op, mIdx);
     return success();
   }
 };
@@ -545,99 +508,148 @@ static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
   }
 }
 
-struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
-  using OpConversionPattern::OpConversionPattern;
+template <typename CommOp>
+struct CommOpPattern : public OpConversionPattern<CommOp> {
+  using OpConversionPattern<CommOp>::OpConversionPattern;
+
+  MemRefType getMemrefType(ShapedType tensorType) const {
+    return MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+  }
+
+  Value getAsMemref(Value input, ImplicitLocOpBuilder &iBuilder) const {
+    auto itype = input.getType();
+    // If the source is a memref, cast it to a tensor.
+    if (isa<RankedTensorType>(itype)) {
+      auto memrefType = getMemrefType(cast<ShapedType>(itype));
+      input = bufferization::ToBufferOp::create(iBuilder, memrefType, input);
+    } else {
+      assert(isa<MemRefType>(itype) &&
+             "expected input to be of MemRefType or TensorType");
+    }
+    return input;
+  }
+
+  FailureOr<GridOp> checkGrid(CommOp op,
+                              SymbolTableCollection &symbolTableCollection,
+                              bool allowDynamic = false) const {
+    GridOp gridOp = getGrid(op, symbolTableCollection);
+    if (!gridOp)
+      return op->emitError() << "Missing grid symbol.";
+    if (!allowDynamic && ShapedType::isDynamicShape(gridOp.getShape()))
+      return op->emitError() << "Dynamic grid shape not supported.";
+    return gridOp;
+  }
+
+  // Get an MPI_Comm_split for a given grid and axes.
+  // The color is the linear index of the process in the grid along the
+  // non-'grid-axes'. The key is the linear index of the process in the grid
+  // along the grid-axes.
+  Value getComm(GridOp &gridOp, ::llvm::ArrayRef<int16_t> gridAxes,
+                ImplicitLocOpBuilder &iBuilder) const {
+    size_t gridDims = gridOp.getShape().size();
+    auto commType = mpi::CommType::get(gridOp->getContext());
+    Value commWorld = mpi::CommWorldOp::create(iBuilder, commType);
+
+    if (gridAxes.empty() || gridAxes.size() >= gridDims) {
+      return commWorld;
+    }
+
+    SmallVector<GridAxis> otherAxes;
+    for (GridAxis i = 0; i < static_cast<GridAxis>(gridDims); ++i) {
+      if (!llvm::is_contained(gridAxes, i))
+        otherAxes.emplace_back(i);
+    }
+
+    SmallVector<Type> indexResultTypes(otherAxes.size(),
+                                       iBuilder.getIndexType());
+
+    Value color =
+        createProcessLinearIndex(iBuilder, gridOp.getSymName(), otherAxes);
+    color = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), color);
+
+    Value key =
+        createProcessLinearIndex(iBuilder, gridOp.getSymName(), gridAxes);
+    key = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), key);
+
+    // Finally split the communicator
+    return mpi::CommSplitOp::create(iBuilder, commType, commWorld, color, key)
+        .getNewcomm();
+  }
+};
+
+struct ConvertAllReduceOp : public CommOpPattern<AllReduceOp> {
+  using CommOpPattern::CommOpPattern;
 
   LogicalResult
   matchAndRewrite(AllReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SymbolTableCollection symbolTableCollection;
-    auto grid = adaptor.getGrid();
-    mlir::shard::GridOp gridOp = getGrid(op, symbolTableCollection);
-    if (!gridOp)
-      return op->emitError() << "No grid found for AllReduceOp";
-    if (ShapedType::isDynamicShape(gridOp.getShape()))
-      return op->emitError()
-             << "Dynamic grid shape not supported in AllReduceOp";
-
+    FailureOr<GridOp> gridOp = checkGrid(op, symbolTableCollection);
+    if (failed(gridOp))
+      return failure();
     ImplicitLocOpBuilder iBuilder(op.getLoc(), rewriter);
-    Value input = adaptor.getInput();
-    auto inputShape = cast<ShapedType>(input.getType()).getShape();
-
-    // If the source is a memref, cast it to a tensor.
-    if (isa<RankedTensorType>(input.getType())) {
-      auto memrefType = MemRefType::get(
-          inputShape, cast<ShapedType>(input.getType()).getElementType());
-      input = bufferization::ToBufferOp::create(iBuilder, memrefType, input);
-    }
+    Value input = getAsMemref(adaptor.getInput(), iBuilder);
     MemRefType inType = cast<MemRefType>(input.getType());
-
-    // Get the actual shape to allocate the buffer.
-    SmallVector<OpFoldResult> shape(inType.getRank());
-    for (auto i = 0; i < inType.getRank(); ++i) {
-      auto s = inputShape[i];
-      if (ShapedType::isDynamic(s))
-        shape[i] = memref::DimOp::create(iBuilder, input, s).getResult();
-      else
-        shape[i] = iBuilder.getIndexAttr(s);
-    }
+    if (!memref::isStaticShapeAndContiguousRowMajor(inType))
+      return op.emitError(
+          "Expected static shaped memref in contiguous row-major layout.");
+    MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    if (!memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError(
+          "Expected static shaped memref in contiguous row-major layout.");
 
     // Allocate buffer and copy input to buffer.
-    Value buffer = memref::AllocOp::create(
-        iBuilder, shape, cast<ShapedType>(op.getType()).getElementType());
+    Value buffer = memref::AllocOp::create(iBuilder, outType);
     linalg::CopyOp::create(iBuilder, input, buffer);
-
-    // Get an MPI_Comm_split for the AllReduce operation.
-    // The color is the linear index of the process in the grid along the
-    // non-reduced axes. The key is the linear index of the process in the grid
-    // along the reduced axes.
-    SmallVector<Type> indexResultTypes(gridOp.getShape().size(),
-                                       iBuilder.getIndexType());
-    SmallVector<Value> myMultiIndex =
-        ProcessMultiIndexOp::create(iBuilder, indexResultTypes, grid)
-            .getResult();
-    Value zero = arith::ConstantIndexOp::create(iBuilder, 0);
-    SmallVector<Value> multiKey(myMultiIndex.size(), zero);
-
-    auto redAxes = adaptor.getGridAxes();
-    for (auto axis : redAxes) {
-      multiKey[axis] = myMultiIndex[axis];
-      myMultiIndex[axis] = zero;
-    }
-
-    Value color =
-        createProcessLinearIndex(grid, myMultiIndex, redAxes, iBuilder);
-    color = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), color);
-    Value key = createProcessLinearIndex(grid, multiKey, redAxes, iBuilder);
-    key = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), key);
-
-    // Finally split the communicator
-    auto commType = mpi::CommType::get(op->getContext());
-    Value commWorld = mpi::CommWorldOp::create(iBuilder, commType);
-    auto comm =
-        mpi::CommSplitOp::create(iBuilder, commType, commWorld, color, key)
-            .getNewcomm();
-
-    Value buffer1d = buffer;
-    // Collapse shape to 1d if needed
-    if (inType.getRank() > 1) {
-      ReassociationIndices reassociation(inType.getRank());
-      std::iota(reassociation.begin(), reassociation.end(), 0);
-      buffer1d = memref::CollapseShapeOp::create(
-          iBuilder, buffer, ArrayRef<ReassociationIndices>(reassociation));
-    }
-
+    // Get the right communicator
+    Value comm = getComm(*gridOp, adaptor.getGridAxes(), iBuilder);
     // Create the MPI AllReduce operation.
-    mpi::AllReduceOp::create(iBuilder, TypeRange(), buffer1d, buffer1d,
+    mpi::AllReduceOp::create(iBuilder, TypeRange(), buffer, buffer,
                              getMPIReductionOp(adaptor.getReductionAttr()),
                              comm);
 
-    // If the destination is a memref, cast it to a tensor
+    // If the destination is a tensor, cast it to a tensor
     if (isa<RankedTensorType>(op.getType()))
       buffer = bufferization::ToTensorOp::create(iBuilder, op.getType(), buffer,
                                                  true);
-
     rewriter.replaceOp(op, buffer);
+    return success();
+  }
+};
+
+struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
+  using CommOpPattern::CommOpPattern;
+
+  LogicalResult
+  matchAndRewrite(AllGatherOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SymbolTableCollection symbolTableCollection;
+    FailureOr<GridOp> gridOp = checkGrid(op, symbolTableCollection);
+    if (failed(gridOp))
+      return failure();
+    ImplicitLocOpBuilder iBuilder(op.getLoc(), rewriter);
+    Value input = getAsMemref(adaptor.getInput(), iBuilder);
+    MemRefType inType = cast<MemRefType>(input.getType());
+    if (!memref::isStaticShapeAndContiguousRowMajor(inType))
+      return op.emitError(
+          "Expected static shaped memref in contiguous row-major layout.");
+    MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    if (!memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError(
+          "Expected static shaped memref in contiguous row-major layout.");
+
+    // Get the right communicator
+    Value comm = getComm(*gridOp, adaptor.getGridAxes(), iBuilder);
+    // Allocate output buffer
+    Value output = memref::AllocOp::create(iBuilder, outType);
+    // Create the MPI AllGather operation.
+    mpi::AllGatherOp::create(iBuilder, TypeRange(), input, output, comm);
+
+    // If the destination is a tensor, cast it to a tensor
+    if (isa<RankedTensorType>(op.getType()))
+      output = bufferization::ToTensorOp::create(iBuilder, op.getType(), output,
+                                                 true);
+    rewriter.replaceOp(op, output);
     return success();
   }
 };
@@ -919,10 +931,11 @@ struct ConvertShardToMPIPass
     // ...except the global GridOp. GridShapeOp which will get folded later.
     target.addLegalOp<shard::GridOp, shard::GridShapeOp>();
     // Allow all the stuff that our patterns will convert to
-    target.addLegalDialect<
-        BuiltinDialect, mpi::MPIDialect, scf::SCFDialect, arith::ArithDialect,
-        tensor::TensorDialect, bufferization::BufferizationDialect,
-        linalg::LinalgDialect, memref::MemRefDialect, affine::AffineDialect>();
+    target.addLegalDialect<BuiltinDialect, mpi::MPIDialect, scf::SCFDialect,
+                           arith::ArithDialect, tensor::TensorDialect,
+                           bufferization::BufferizationDialect,
+                           linalg::LinalgDialect, memref::MemRefDialect,
+                           affine::AffineDialect, cf::ControlFlowDialect>();
     // Make sure the function signature, calls etc. are legal
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return typeConverter.isSignatureLegal(op.getFunctionType());
@@ -931,9 +944,12 @@ struct ConvertShardToMPIPass
         [&](Operation *op) { return typeConverter.isLegal(op); });
 
     patterns.add<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp,
-                 ConvertProcessMultiIndexOp, ConvertGetShardingOp,
-                 ConvertShardingOp, ConvertShardShapeOp, ConvertAllReduceOp,
+                 ConvertGetShardingOp, ConvertShardingOp, ConvertShardShapeOp,
+                 ConvertAllGatherOp, ConvertAllReduceOp,
                  ConvertProcessLinearIndexOp>(typeConverter, ctxt);
+    SymbolTableCollection stc;
+    populateProcessMultiIndexOpLoweringPatterns(patterns, stc);
+    populateAllSliceOpLoweringPatterns(patterns, stc);
 
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);

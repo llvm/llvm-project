@@ -30,7 +30,7 @@ def Test0 : GICombineRule<
 // CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
 // CHECK-NEXT:       // Combiner Rule #0: Test0
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
-// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
+// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/254, /*Imm*/GIMT_Encode8(42),
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // dst
