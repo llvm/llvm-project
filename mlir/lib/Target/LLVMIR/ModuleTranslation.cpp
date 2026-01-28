@@ -1686,7 +1686,7 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
-  if(func.getNoCallerSavedRegistersAttr())
+  if (func.getNoCallerSavedRegistersAttr())
     llvmFunc->addFnAttr("no_caller_saved_registers");
   if (func.getNocallbackAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoCallback);

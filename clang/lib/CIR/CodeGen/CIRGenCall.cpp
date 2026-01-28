@@ -227,11 +227,11 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
           modularFormat->getImplName()};
       llvm::append_range(args, modularFormat->aspects());
       attrs.set(cir::CIRDialect::getModularFormatAttrName(),
-          builder.getStringAttr(llvm::join(args, ",")));
+                builder.getStringAttr(llvm::join(args, ",")));
     }
 
     // TODO(cir): We should set nobuiltin and default function attrs here.
-  
+
     // TODO(cir): There is another region of `if (targetDecl)` that handles
     // removing some attributes that are necessary modifications of the
     // default-function attrs.  We should do that here.
