@@ -340,14 +340,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return Base::VisitBinaryOperator(S);
   }
 
-  bool VisitConditionalOperator(ConditionalOperator *S) {
-    if (llvm::EnableSingleByteCoverage && S->getTrueExpr())
-      CounterMap[S->getTrueExpr()] = NextCounter++;
-    if (llvm::EnableSingleByteCoverage && S->getFalseExpr())
-      CounterMap[S->getFalseExpr()] = NextCounter++;
-    return Base::VisitConditionalOperator(S);
-  }
-
   /// Include \p S in the function hash.
   bool VisitStmt(Stmt *S) {
     auto Type = updateCounterMappings(S);
@@ -1233,10 +1225,11 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
       NormalizedFuncNameVarPtr, Builder.getInt64(FunctionHash),
       Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
-  if (llvm::EnableSingleByteCoverage)
+  if (llvm::EnableSingleByteCoverage) {
+    assert(!StepV && "StepV is not supported in single byte counter mode");
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
-  else if (!StepV)
+  } else if (!StepV)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
                        ArrayRef(Args, 4));
   else
