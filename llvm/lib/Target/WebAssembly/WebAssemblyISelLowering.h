@@ -37,8 +37,10 @@ private:
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
-  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo) const override;
+  FastISel *
+  createFastISel(FunctionLoweringInfo &FuncInfo,
+                 const TargetLibraryInfo *LibInfo,
+                 const LibcallLoweringInfo *LibcallLowering) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -131,7 +133,8 @@ private:
 
 namespace WebAssembly {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 } // end namespace WebAssembly
 
 } // end namespace llvm

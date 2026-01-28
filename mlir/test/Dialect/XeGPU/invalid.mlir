@@ -64,6 +64,12 @@ func.func @create_nd_tdesc_9(%src: ui64) {
   return
 }
 
+// -----
+func.func @create_nd_tdesc_10(%src: memref<24xindex>) {
+  // expected-error @+1 {{unsupported element type 'index': expected integer or float}}
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24xindex> -> !xegpu.tensor_desc<24xindex>
+  return
+}
 
 // -----
 func.func @prefetch_nd_vc_1(%src: memref<24x32xf16>) {

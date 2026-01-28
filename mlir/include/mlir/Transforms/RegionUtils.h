@@ -75,6 +75,8 @@ SmallVector<Value> makeRegionIsolatedFromAbove(
 /// so that the operation itself (or its replacement) can be moved to
 /// the insertion point. Current support is only for movement of
 /// dependencies of `op` before `insertionPoint` in the same basic block.
+/// Any side-effecting operations in the dependency chain pessimistically
+/// blocks movement.
 LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
                                         Operation *insertionPoint,
                                         DominanceInfo &dominance);
