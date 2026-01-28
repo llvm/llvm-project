@@ -17,9 +17,9 @@ float test_expr_bool_type_check(float p0) {
   // expected-error@-1 {{invalid operand of type 'float'}}
 }
 
-float2 test_expr_bool_vec_type_check(float2 p0) {
+bool2 test_expr_bool_vec_type_check(bool2 p0) {
   return __builtin_hlsl_wave_prefix_count_bits(p0);
-  // expected-error@-1 {{invalid operand of type 'float2' (aka 'vector<float, 2>')}}
+  // expected-error@-1 {{invalid operand of type 'bool2' (aka 'vector<bool, 2>')}}
 }
 
 struct S { float f; };
