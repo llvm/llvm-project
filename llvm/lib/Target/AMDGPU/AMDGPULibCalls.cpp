@@ -743,6 +743,38 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
+static Constant *
+_Z4coshdgetConstantFloatVectorForArgType(LLVMContext &Ctx,
+                                         AMDGPULibFunc::EType ArgType,
+                                         ArrayRef<double> Values, Type *Ty) {
+  switch (ArgType) {
+  case AMDGPULibFunc::F16: {
+    SmallVector<uint16_t, 0> HalfIntValues;
+    for (double D : Values) {
+      APFloat APF16 = APFloat(D);
+      [[maybe_unused]] bool Unused;
+      APF16.convert(llvm::APFloat::IEEEhalf(),
+                    llvm::RoundingMode::NearestTiesToEven, &Unused);
+      uint16_t APF16Int = APF16.bitcastToAPInt().getZExtValue();
+      HalfIntValues.push_back(APF16Int);
+    }
+    ArrayRef<uint16_t> Tmp(HalfIntValues);
+    return ConstantDataVector::getFP(Ty->getScalarType(), Tmp);
+  }
+  case AMDGPULibFunc::F32: {
+    SmallVector<float, 0> FValues;
+    for (double D : Values)
+      FValues.push_back((float)D);
+    ArrayRef<float> Tmp(FValues);
+    return ConstantDataVector::get(Ty->getContext(), Tmp);
+  }
+  case AMDGPULibFunc::F64:
+    return ConstantDataVector::get(Ty->getContext(), Values);
+  default:
+    llvm_unreachable("Unsupported argument type");
+  }
+}
+
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   // Table-Driven optimization
   const TableRef tr = getOptTable(FInfo.getId());
@@ -753,39 +785,26 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   Value *opr0 = CI->getArgOperand(0);
 
   if (getVecSize(FInfo) > 1) {
-    if (ConstantDataVector *CV = dyn_cast<ConstantDataVector>(opr0)) {
-      SmallVector<double, 0> DVal;
+    // Vector version
+    Constant *CV = dyn_cast<Constant>(opr0);
+    if (CV && CV->getType()->isVectorTy()) {
+      SmallVector<double, 0> DValues;
       for (int eltNo = 0; eltNo < getVecSize(FInfo); ++eltNo) {
-        ConstantFP *eltval = dyn_cast<ConstantFP>(
-                               CV->getElementAsConstant((unsigned)eltNo));
+        ConstantFP *eltval =
+            dyn_cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
         assert(eltval && "Non-FP arguments in math function!");
-        bool found = false;
-        for (int i=0; i < sz; ++i) {
-          if (eltval->isExactlyValue(tr[i].input)) {
-            DVal.push_back(tr[i].result);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          // This vector constants not handled yet.
+        auto MatchingRow = std::find_if(
+            tr.begin(), tr.end(), [eltval](const TableEntry &entry) {
+              return eltval->isExactlyValue(entry.input);
+            });
+        if (MatchingRow == tr.end())
           return false;
-        }
+        DValues.push_back(MatchingRow->result);
       }
-      LLVMContext &context = CI->getContext();
-      Constant *nval;
-      if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-        SmallVector<float, 0> FVal;
-        for (double D : DVal)
-          FVal.push_back((float)D);
-        ArrayRef<float> tmp(FVal);
-        nval = ConstantDataVector::get(context, tmp);
-      } else { // F64
-        ArrayRef<double> tmp(DVal);
-        nval = ConstantDataVector::get(context, tmp);
-      }
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-      replaceCall(CI, nval);
+      Constant *NewValues = _Z4coshdgetConstantFloatVectorForArgType(
+          CI->getContext(), getArgType(FInfo), DValues, CI->getType());
+      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
+      replaceCall(CI, NewValues);
       return true;
     }
   } else {
@@ -1592,26 +1611,11 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     if (hasTwoResults)
       nval1 = ConstantFP::get(aCI->getType(), DVal1[0]);
   } else {
-    if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-      SmallVector <float, 0> FVal0, FVal1;
-      for (int i = 0; i < FuncVecSize; ++i)
-        FVal0.push_back((float)DVal0[i]);
-      ArrayRef<float> tmp0(FVal0);
-      nval0 = ConstantDataVector::get(context, tmp0);
-      if (hasTwoResults) {
-        for (int i = 0; i < FuncVecSize; ++i)
-          FVal1.push_back((float)DVal1[i]);
-        ArrayRef<float> tmp1(FVal1);
-        nval1 = ConstantDataVector::get(context, tmp1);
-      }
-    } else {
-      ArrayRef<double> tmp0(DVal0);
-      nval0 = ConstantDataVector::get(context, tmp0);
-      if (hasTwoResults) {
-        ArrayRef<double> tmp1(DVal1);
-        nval1 = ConstantDataVector::get(context, tmp1);
-      }
-    }
+    nval0 = _Z4coshdgetConstantFloatVectorForArgType(context, getArgType(FInfo),
+                                                     DVal0, aCI->getType());
+    if (hasTwoResults)
+      nval1 = _Z4coshdgetConstantFloatVectorForArgType(
+          context, getArgType(FInfo), DVal1, aCI->getType());
   }
 
   if (hasTwoResults) {
