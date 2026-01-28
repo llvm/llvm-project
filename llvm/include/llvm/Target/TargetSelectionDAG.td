@@ -371,10 +371,31 @@ class SDNode<string opcode, SDTypeProfile typeprof,
   bits<32> TSFlags = 0;
 }
 
-// Special TableGen-recognized dag nodes
+/// Special TableGen-recognized dag nodes
+
+// `set` is used to name outputs of a match pattern. For instance, in:
+//   `(set GPR:$out, (add GPR:$in1, GPR:$in2))`.
+//
+// `set` has to be used for patterns defined directly on Instructions, where the
+// `(outs)` have names which need to match something in the pattern.
+//
+// `set` can also be used for Nodes which create multiple values (though chain
+// and glue do not need to be handled with this, and are handled with node
+// properties). A pattern with multiple outputs might look like:
+//   `(set GPR:$RdLo, GPR:$RdHi, (smullohi GPR:$Rn, GPR:$Rm))`
 def set;
+
+// `node` is used when defining pattern fragments, to represent "holes" in the
+// fragment that should be instantated with dags when the fragment is used. For
+// instance in the `def fmul_contract` below.
 def node;
+
+// `srcvalue` is used in patterns when an argument of the pattern is not needed
+// in the result. A named value `ty:$name` could not be used in these cases
+// because all names in the pattern must appear in pattern output dag.
 def srcvalue;
+
+/// dag nodes for specific SDNodes
 
 def imm        : SDNode<"ISD::Constant"  , SDTIntLeaf , [], "ConstantSDNode">;
 def timm       : SDNode<"ISD::TargetConstant",SDTIntLeaf, [], "ConstantSDNode">;
@@ -956,10 +977,30 @@ def SETNE : CondCode<"", "ICMP_NE">;
 // values.
 //
 class SDNodeXForm<SDNode opc, code xformFunction> {
+  // The underlying node type to match and transform.
   SDNode Opcode = opc;
+
+  // This C++ snippet will transform the associated node into a new node.
+  //
+  // The following variables are in scope:
+  // - `<opc.SDClass>* N` representing the node producing the value being
+  //   transformed (already cast to the type of `opc.SDClass`, which is usually
+  //   `SDNode`).
+  // - `SelectionDAG *CurDAG` representing the current DAG (really a member of
+  //   the current DAGToDAGISel instance, documented here because this is how
+  //   new nodes are made).
+  // - `SDValue V` representing the value being transformed (usually accessed
+  //    with `N` instead).
+  // - `GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel instance.
+  //
+  // It should `return` an `SDValue` for the transformation result.
   code XFormFunction = xformFunction;
+
+  // The GlobalISel equivalent is defined using a `GICustomOperandRenderer` and
+  // a `GISDNodeXFormEquiv`.
 }
 
+// The default transform does not change the matched node.
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 
 //===----------------------------------------------------------------------===//
@@ -979,11 +1020,65 @@ def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 ///
 class PatFrags<dag ops, list<dag> frags, code pred = [{}],
                SDNodeXForm xform = NOOP_SDNodeXForm> : SDPatternOperator {
+
+  // Named nested patterns
   dag Operands = ops;
+
+  // The fragment matches *any* pattern in this list that matches. The patterns
+  // in this list should contain references to the named nested patterns in
+  // `ops`.
   list<dag> Fragments = frags;
+
+  // This C++ snippet will be run against a matched node to ensure that it was
+  // intended to match. Some Predicates don't use this snippet and instead use
+  // the `bit`s below to generate the right C++.
+  //
+  // The following variables are in scope:
+  // - `SDNode *N` representing the node being checked. This might actually be
+  //   of a more specific SDNode type - derived from the head nodes of the
+  //   fragments.
+  // - `ArrayRef<SDValue> Operands` representing the operands, only if
+  //   `PredicateCodeUsesOperands` (below) is true.
+  // - `SDValue Op` representing the value being checked (usually accessed with
+  //   `N` instead).
+  // - `const GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel
+  //   instance.
+  //
+  // This should `return` a `bool` for whether the predicate matches or not.
   code PredicateCode = pred;
+
+  // The equivalent of `PredicateCode` for GlobalISel.
+  //
+  // The following variables are in scope:
+  // - `const MachineInstr &MI` representing the MI being checked.
+  // - `std::array<const MachineOperand *, _>` representing the operands of the
+  //   current fragment.
+  // - `const MachineFunction &MF` the current function.
+  // - `const MachineRegisterInfo &MRI` for the current function.
+  // - `const <target>InstructionSelector *this` representing the target's
+  //   `InstructionSelector` instance.
+  // - `const MatcherState &State`
+  //
+  // This should `return` a `bool` for whether the predicate matches or not.
   code GISelPredicateCode = [{}];
+
+  // Specific C++ Checks for Immediate Values. This code is shared between
+  // SDISel and GlobalISel. See `ImmLeaf` below.
+  //
+  // The following variables are in scope:
+  // - `int64_t Imm` representing the value of the immediate.
+  //
+  // This should return a `bool` for whether the predicate matches or not.
   code ImmediateCode = [{}];
+
+  // After this node is matched as `NAME:$val`, `$val` is stored so it can be
+  // used later in the pattern result. This implicit transform means that `$val`
+  // will store the result of transforming the node, instead of the original
+  // node.
+  //
+  // PatFrags with OperandTransforms are most useful when defining a pattern
+  // directly on an instruction, where the transform cannot be written on the
+  // output of the pattern (which is implicit).
   SDNodeXForm OperandTransform = xform;
 
   // When this is set, the PredicateCode may refer to a constant Operands
@@ -1106,7 +1201,18 @@ class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
 class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
               SDNode ImmNode = imm>
   : PatFrag<(ops), (vt ImmNode), [{}], xform> {
+
+  // Specific C++ Checks for Immediate Values. This code is shared between
+  // SDISel and GlobalISel.
+  //
+  // The following variables are in scope:
+  // - `Imm` representing the sign-extended value of the immediate. This might
+  //   be an APInt, an APFloat, or a sign-extended int64_t, depending on the
+  //   `IsAPInt` and `IsAPFloat` fields below.
+  //
+  // This should return a `bool` for whether the predicate matches or not.
   let ImmediateCode = pred;
+
   bit FastIselShouldIgnore = false;
 
   // Is the data type of the immediate an APInt?
