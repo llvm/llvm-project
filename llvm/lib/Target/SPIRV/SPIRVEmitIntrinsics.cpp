@@ -109,6 +109,20 @@ class GlobalVariableReferences {
     return Changed;
   }
 
+  void propagateGlobalToFunctionReferences(
+      OneToManyMapTy<GlobalVariable *, GlobalVariable *>
+          &GlobalIsReferencedByGlobal) {
+    for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
+      auto &ReferencedByF = GlobalIsReferencedByFun[GV];
+      for (GlobalVariable *ReferencedGV : ReferencedBy) {
+        auto It = GlobalIsReferencedByFun.find(ReferencedGV);
+        if (It == GlobalIsReferencedByFun.end())
+          continue;
+        set_union(ReferencedByF, It->second);
+      }
+    }
+  }
+
 public:
   void init(Module &M) {
     // Collect which global variables are referenced by which global variables
@@ -124,15 +138,7 @@ public:
     while (propagateGlobalToGlobalReferences(GlobalIsReferencedByGlobal))
       (void)0;
 
-    for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
-      auto &ReferencedByF = GlobalIsReferencedByFun[GV];
-      for (GlobalVariable *ReferencedGV : ReferencedBy) {
-        auto It = GlobalIsReferencedByFun.find(ReferencedGV);
-        if (It == GlobalIsReferencedByFun.end())
-          continue;
-        set_union(ReferencedByF, It->second);
-      }
-    }
+    propagateGlobalToFunctionReferences(GlobalIsReferencedByGlobal);
   }
 
   const auto &getReferencedBy(GlobalVariable &GV) const {
