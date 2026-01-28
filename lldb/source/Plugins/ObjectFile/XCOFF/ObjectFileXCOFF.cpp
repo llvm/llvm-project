@@ -128,12 +128,13 @@ ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
 }
 
 size_t ObjectFileXCOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
 
-  if (ObjectFileXCOFF::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
+                                       extractor_sp->GetByteSize())) {
     ArchSpec arch_spec =
         ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);

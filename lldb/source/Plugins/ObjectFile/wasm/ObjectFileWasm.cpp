@@ -275,9 +275,9 @@ bool ObjectFileWasm::DecodeSections() {
 }
 
 size_t ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!ValidateModuleHeader(data_sp)) {
+  if (!ValidateModuleHeader(extractor_sp->GetSharedDataBuffer())) {
     return 0;
   }
 

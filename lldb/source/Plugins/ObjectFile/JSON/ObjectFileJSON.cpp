@@ -109,23 +109,26 @@ ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
 }
 
 size_t ObjectFileJSON::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!MagicBytesMatch(data_sp, data_offset, data_sp->GetByteSize()))
+  if (!MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), data_offset,
+                       extractor_sp->GetByteSize()))
     return 0;
 
   // Update the data to contain the entire file if it doesn't already.
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(file, length, file_offset);
-    if (!data_sp)
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP file_data_sp = MapFileData(file, length, file_offset);
+    if (file_data_sp)
+      extractor_sp->SetData(file_data_sp);
+    if (!extractor_sp->HasData())
       return 0;
     data_offset = 0;
   }
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text =
-      llvm::StringRef(reinterpret_cast<const char *>(data_sp->GetBytes()));
+  auto text = llvm::StringRef(reinterpret_cast<const char *>(
+      extractor_sp->GetSharedDataBuffer()->GetBytes()));
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {

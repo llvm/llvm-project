@@ -586,20 +586,21 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
 }
 
 size_t ObjectFileELF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   Log *log = GetLog(LLDBLog::Modules);
 
   const size_t initial_count = specs.GetSize();
 
-  if (ObjectFileELF::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  if (ObjectFileELF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
+                                     extractor_sp->GetByteSize())) {
     DataExtractor data;
-    data.SetData(data_sp);
+    data.SetData(extractor_sp->GetSharedDataBuffer());
     elf::ELFHeader header;
     lldb::offset_t header_offset = data_offset;
     if (header.Parse(data, &header_offset)) {
-      if (data_sp) {
+      if (extractor_sp) {
         ModuleSpec spec(file);
         // In Android API level 23 and above, bionic dynamic linker is able to
         // load .so file directly from zip file. In that case, .so file is
@@ -640,10 +641,11 @@ size_t ObjectFileELF::GetModuleSpecifications(
                       __FUNCTION__, file.GetPath().c_str());
           }
 
+          DataBufferSP data_sp = extractor_sp->GetSharedDataBuffer();
           // When ELF file does not contain GNU build ID, the later code will
-          // calculate CRC32 with this data_sp file_offset and length. It is
-          // important for Android zip .so file, which is a slice of a file,
-          // to not access the outside of the file slice range.
+          // calculate CRC32 with this extractor_sp file_offset and
+          // length. It is important for Android zip .so file, which is a slice
+          // of a file, to not access the outside of the file slice range.
           if (data_sp->GetByteSize() < length)
             data_sp = MapFileData(file, length, file_offset);
           if (data_sp)
@@ -3017,10 +3019,14 @@ unsigned ObjectFileELF::RelocateDebugSections(const ELFSectionHeader *rel_hdr,
   DataExtractor rel_data;
   DataExtractor symtab_data;
   DataExtractor debug_data;
+  DataExtractorSP rel_data_sp, symtab_data_sp, debug_data_sp;
 
-  if (GetData(rel->GetFileOffset(), rel->GetFileSize(), rel_data) &&
-      GetData(symtab->GetFileOffset(), symtab->GetFileSize(), symtab_data) &&
-      GetData(debug->GetFileOffset(), debug->GetFileSize(), debug_data)) {
+  if (GetData(rel->GetFileOffset(), rel->GetFileSize(), rel_data_sp) &&
+      GetData(symtab->GetFileOffset(), symtab->GetFileSize(), symtab_data_sp) &&
+      GetData(debug->GetFileOffset(), debug->GetFileSize(), debug_data_sp)) {
+    rel_data = *rel_data_sp;
+    symtab_data = *symtab_data_sp;
+    debug_data = *debug_data_sp;
     ApplyRelocations(thetab, &m_header, rel_hdr, symtab_hdr, debug_hdr,
                      rel_data, symtab_data, debug_data, debug);
   }

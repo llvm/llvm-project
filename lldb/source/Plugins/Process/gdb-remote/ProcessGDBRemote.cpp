@@ -4335,7 +4335,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
 }
 
 StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
-  StructuredData::ObjectSP object_sp;
+  static StructuredData::ObjectSP object_sp;
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
   if (m_gdb_comm.GetSharedCacheInfoSupported()) {
@@ -4357,9 +4357,22 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
-        if (!response.Empty()) {
-          object_sp = StructuredData::ParseJSON(response.GetStringRef());
-        }
+        if (response.Empty())
+          return {};
+        StructuredData::ObjectSP response_sp =
+            StructuredData::ParseJSON(response.GetStringRef());
+        if (!response_sp)
+          return {};
+        StructuredData::Dictionary *dict = response_sp->GetAsDictionary();
+        if (!dict)
+          return {};
+        if (!dict->HasKey("shared_cache_uuid"))
+          return {};
+        llvm::StringRef uuid_str;
+        if (!dict->GetValueForKeyAsString("shared_cache_uuid", uuid_str, "") ||
+            uuid_str == "00000000-0000-0000-0000-000000000000")
+          return {};
+        object_sp = response_sp;
       }
     }
   }

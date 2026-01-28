@@ -251,20 +251,22 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
 }
 
 size_t ObjectFilePECOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!extractor_sp || !extractor_sp->HasData() ||
+      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer()))
     return initial_count;
 
   Log *log = GetLog(LLDBLog::Object);
 
-  if (data_sp->GetByteSize() < length)
+  if (extractor_sp->GetByteSize() < length)
     if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
-      data_sp = std::move(full_sp);
+      extractor_sp->SetData(std::move(full_sp));
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
+      toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
+      file.GetFilename().GetStringRef()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),

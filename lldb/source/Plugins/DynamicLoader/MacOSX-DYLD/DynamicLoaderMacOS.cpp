@@ -691,7 +691,7 @@ Status DynamicLoaderMacOS::CanLoadImage() {
 
 bool DynamicLoaderMacOS::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_path) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
@@ -726,7 +726,12 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         private_shared_cache = eLazyBoolYes;
       else
         private_shared_cache = eLazyBoolNo;
-
+      if (info_dict->HasKey("shared_cache_path")) {
+        std::string filepath = info_dict->GetValueForKey("shared_cache_path")
+                                   ->GetStringValue()
+                                   .str();
+        shared_cache_path.SetPath(filepath);
+      }
       return true;
     }
   }
