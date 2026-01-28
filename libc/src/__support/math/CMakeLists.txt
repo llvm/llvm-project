@@ -620,6 +620,14 @@ add_header_library(
 )
 
 add_header_library(
+  fsqrtl
+  HDRS
+    fsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
   inv_trigf_utils
   HDRS
     inv_trigf_utils.h
