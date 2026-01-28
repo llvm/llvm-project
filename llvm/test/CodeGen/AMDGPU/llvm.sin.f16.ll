@@ -101,6 +101,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0

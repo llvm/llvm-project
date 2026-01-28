@@ -266,6 +266,7 @@ define void @vst3lanei8(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vorr d17, d16, d16
 ; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    @ implicit-def: $d19
 ; CHECK-NEXT:    vst3.8 {d16[1], d17[1], d18[1]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %B
@@ -280,6 +281,7 @@ define void @vst3lanei16(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vorr d17, d16, d16
 ; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    @ implicit-def: $d19
 ; CHECK-NEXT:    vst3.16 {d16[1], d17[1], d18[1]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, ptr %B
@@ -293,6 +295,7 @@ define void @vst3lanei32(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vorr d17, d16, d16
 ; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    @ implicit-def: $d19
 ; CHECK-NEXT:    vst3.32 {d16[1], d17[1], d18[1]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i32>, ptr %B
@@ -306,6 +309,7 @@ define void @vst3lanef(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vorr d17, d16, d16
 ; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    @ implicit-def: $d19
 ; CHECK-NEXT:    vst3.32 {d16[1], d17[1], d18[1]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x float>, ptr %B
@@ -319,6 +323,7 @@ define void @vst3laneQi16(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vorr q9, q8, q8
 ; CHECK-NEXT:    vorr q10, q8, q8
+; CHECK-NEXT:    @ implicit-def: $q11
 ; CHECK-NEXT:    vst3.16 {d17[2], d19[2], d21[2]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 ;Check the (default) alignment value.  VST3 does not support alignment.
@@ -333,6 +338,7 @@ define void @vst3laneQi32(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vorr q9, q8, q8
 ; CHECK-NEXT:    vorr q10, q8, q8
+; CHECK-NEXT:    @ implicit-def: $q11
 ; CHECK-NEXT:    vst3.32 {d16[0], d18[0], d20[0]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i32>, ptr %B
@@ -348,6 +354,7 @@ define void @vst3laneQi32_update(ptr %ptr, ptr %B) nounwind {
 ; CHECK-NEXT:    vorr q9, q8, q8
 ; CHECK-NEXT:    ldr r2, [r0]
 ; CHECK-NEXT:    vorr q10, q8, q8
+; CHECK-NEXT:    @ implicit-def: $q11
 ; CHECK-NEXT:    vst3.32 {d16[0], d18[0], d20[0]}, [r2]!
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    mov pc, lr
@@ -365,6 +372,7 @@ define void @vst3laneQf(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vorr q9, q8, q8
 ; CHECK-NEXT:    vorr q10, q8, q8
+; CHECK-NEXT:    @ implicit-def: $q11
 ; CHECK-NEXT:    vst3.32 {d16[1], d18[1], d20[1]}, [r0]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x float>, ptr %B

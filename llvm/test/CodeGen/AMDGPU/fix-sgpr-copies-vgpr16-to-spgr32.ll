@@ -11,6 +11,7 @@ define amdgpu_gs i32 @vgpr16_copyto_sgpr() {
 ; CHECK-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr0_hi16
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_and_b32 s0, 0xffff, s0

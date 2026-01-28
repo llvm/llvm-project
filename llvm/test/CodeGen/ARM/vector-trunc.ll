@@ -13,7 +13,9 @@ define i32 @test(i64 %arg1) {
 ; LE-NEXT:    cmp r2, #0
 ; LE-NEXT:    mvnne r2, #0
 ; LE-NEXT:    vmov s1, r2
+; LE-NEXT:    @ implicit-def: $d1
 ; LE-NEXT:    vmovn.i32 d16, q0
+; LE-NEXT:    @ implicit-def: $d17
 ; LE-NEXT:    vmovn.i16 d16, q8
 ; LE-NEXT:    vmov.u8 r0, d16[0]
 ; LE-NEXT:    and r0, r0, #1
@@ -33,7 +35,9 @@ define i32 @test(i64 %arg1) {
 ; BE-NEXT:    cmp r2, #0
 ; BE-NEXT:    mvnne r2, #0
 ; BE-NEXT:    vmov s1, r2
+; BE-NEXT:    @ implicit-def: $d1
 ; BE-NEXT:    vmovn.i32 d16, q0
+; BE-NEXT:    @ implicit-def: $d17
 ; BE-NEXT:    vmovn.i16 d16, q8
 ; BE-NEXT:    vmov.u8 r0, d16[0]
 ; BE-NEXT:    and r0, r0, #1

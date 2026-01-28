@@ -2415,6 +2415,7 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi(ptr inreg %sbase,
 ; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3]
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -2457,6 +2458,7 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi_immneg128(ptr inr
 ; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -2498,13 +2500,22 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_reg_hi(ptr inreg %sbase, 
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16hi_reg_hi:
-; GFX1250-NOECC:       ; %bb.0:
-; GFX1250-NOECC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NOECC-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3]
-; GFX1250-NOECC-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NOECC-NEXT:    v_mov_b32_e32 v0, v1
-; GFX1250-NOECC-NEXT:    ; return to shader part epilog
+; GFX1250-NOECC-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16hi_reg_hi:
+; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3]
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-NOECC-SDAG-FAKE16-LABEL: flat_load_saddr_i16_d16hi_reg_hi:
+; GFX1250-NOECC-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3]
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %load = load i16, ptr %gep0
@@ -2532,13 +2543,22 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_reg_hi_immneg128(ptr inre
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16hi_reg_hi_immneg128:
-; GFX1250-NOECC:       ; %bb.0:
-; GFX1250-NOECC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NOECC-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
-; GFX1250-NOECC-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NOECC-NEXT:    v_mov_b32_e32 v0, v1
-; GFX1250-NOECC-NEXT:    ; return to shader part epilog
+; GFX1250-NOECC-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16hi_reg_hi_immneg128:
+; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-NOECC-SDAG-FAKE16-LABEL: flat_load_saddr_i16_d16hi_reg_hi_immneg128:
+; GFX1250-NOECC-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 -128
@@ -2567,13 +2587,22 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zexti8_reg_hi(ptr inreg %
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16hi_zexti8_reg_hi:
-; GFX1250-NOECC:       ; %bb.0:
-; GFX1250-NOECC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NOECC-NEXT:    flat_load_d16_hi_u8 v1, v0, s[2:3]
-; GFX1250-NOECC-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NOECC-NEXT:    v_mov_b32_e32 v0, v1
-; GFX1250-NOECC-NEXT:    ; return to shader part epilog
+; GFX1250-NOECC-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16hi_zexti8_reg_hi:
+; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_u8 v1, v0, s[2:3]
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-NOECC-SDAG-FAKE16-LABEL: flat_load_saddr_i16_d16hi_zexti8_reg_hi:
+; GFX1250-NOECC-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    flat_load_d16_hi_u8 v1, v0, s[2:3]
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %load = load i8, ptr %gep0
@@ -2602,13 +2631,22 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128(p
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
-; GFX1250-NOECC:       ; %bb.0:
-; GFX1250-NOECC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NOECC-NEXT:    flat_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
-; GFX1250-NOECC-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NOECC-NEXT:    v_mov_b32_e32 v0, v1
-; GFX1250-NOECC-NEXT:    ; return to shader part epilog
+; GFX1250-NOECC-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
+; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-NOECC-SDAG-FAKE16-LABEL: flat_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
+; GFX1250-NOECC-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    flat_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 -128
@@ -2639,13 +2677,22 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_sexti8_reg_hi(ptr inreg %
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16hi_sexti8_reg_hi:
-; GFX1250-NOECC:       ; %bb.0:
-; GFX1250-NOECC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NOECC-NEXT:    flat_load_d16_hi_i8 v1, v0, s[2:3]
-; GFX1250-NOECC-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NOECC-NEXT:    v_mov_b32_e32 v0, v1
-; GFX1250-NOECC-NEXT:    ; return to shader part epilog
+; GFX1250-NOECC-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16hi_sexti8_reg_hi:
+; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_i8 v1, v0, s[2:3]
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-NOECC-SDAG-FAKE16-LABEL: flat_load_saddr_i16_d16hi_sexti8_reg_hi:
+; GFX1250-NOECC-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    flat_load_d16_hi_i8 v1, v0, s[2:3]
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %load = load i8, ptr %gep0
@@ -2675,13 +2722,22 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128(p
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
-; GFX1250-NOECC:       ; %bb.0:
-; GFX1250-NOECC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NOECC-NEXT:    flat_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
-; GFX1250-NOECC-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NOECC-NEXT:    v_mov_b32_e32 v0, v1
-; GFX1250-NOECC-NEXT:    ; return to shader part epilog
+; GFX1250-NOECC-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
+; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-NOECC-SDAG-FAKE16-LABEL: flat_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
+; GFX1250-NOECC-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    flat_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NOECC-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 -128

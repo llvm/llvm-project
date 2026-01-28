@@ -365,6 +365,7 @@ define <8 x i8> @vld3lanei8(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vldr d16, [r1]
 ; DEFAULT-NEXT:    vorr d17, d16, d16
 ; DEFAULT-NEXT:    vorr d18, d16, d16
+; DEFAULT-NEXT:    @ implicit-def: $d19
 ; DEFAULT-NEXT:    vld3.8 {d16[1], d17[1], d18[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i8 d20, d16, d17
 ; DEFAULT-NEXT:    vadd.i8 d16, d18, d20
@@ -376,6 +377,7 @@ define <8 x i8> @vld3lanei8(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vldr d18, [r1]
 ; BASIC-NEXT:    vorr d19, d18, d18
 ; BASIC-NEXT:    vorr d20, d18, d18
+; BASIC-NEXT:    @ implicit-def: $d21
 ; BASIC-NEXT:    vld3.8 {d18[1], d19[1], d20[1]}, [r0]
 ; BASIC-NEXT:    vadd.i8 d16, d18, d19
 ; BASIC-NEXT:    vadd.i8 d16, d20, d16
@@ -398,6 +400,7 @@ define <4 x i16> @vld3lanei16(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vldr d16, [r1]
 ; DEFAULT-NEXT:    vorr d17, d16, d16
 ; DEFAULT-NEXT:    vorr d18, d16, d16
+; DEFAULT-NEXT:    @ implicit-def: $d19
 ; DEFAULT-NEXT:    vld3.16 {d16[1], d17[1], d18[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i16 d20, d16, d17
 ; DEFAULT-NEXT:    vadd.i16 d16, d18, d20
@@ -409,6 +412,7 @@ define <4 x i16> @vld3lanei16(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vldr d18, [r1]
 ; BASIC-NEXT:    vorr d19, d18, d18
 ; BASIC-NEXT:    vorr d20, d18, d18
+; BASIC-NEXT:    @ implicit-def: $d21
 ; BASIC-NEXT:    vld3.16 {d18[1], d19[1], d20[1]}, [r0]
 ; BASIC-NEXT:    vadd.i16 d16, d18, d19
 ; BASIC-NEXT:    vadd.i16 d16, d20, d16
@@ -430,6 +434,7 @@ define <2 x i32> @vld3lanei32(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vldr d16, [r1]
 ; DEFAULT-NEXT:    vorr d17, d16, d16
 ; DEFAULT-NEXT:    vorr d18, d16, d16
+; DEFAULT-NEXT:    @ implicit-def: $d19
 ; DEFAULT-NEXT:    vld3.32 {d16[1], d17[1], d18[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i32 d20, d16, d17
 ; DEFAULT-NEXT:    vadd.i32 d16, d18, d20
@@ -441,6 +446,7 @@ define <2 x i32> @vld3lanei32(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vldr d18, [r1]
 ; BASIC-NEXT:    vorr d19, d18, d18
 ; BASIC-NEXT:    vorr d20, d18, d18
+; BASIC-NEXT:    @ implicit-def: $d21
 ; BASIC-NEXT:    vld3.32 {d18[1], d19[1], d20[1]}, [r0]
 ; BASIC-NEXT:    vadd.i32 d16, d18, d19
 ; BASIC-NEXT:    vadd.i32 d16, d20, d16
@@ -462,6 +468,7 @@ define <2 x float> @vld3lanef(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vldr d16, [r1]
 ; DEFAULT-NEXT:    vorr d17, d16, d16
 ; DEFAULT-NEXT:    vorr d18, d16, d16
+; DEFAULT-NEXT:    @ implicit-def: $d19
 ; DEFAULT-NEXT:    vld3.32 {d16[1], d17[1], d18[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.f32 d20, d16, d17
 ; DEFAULT-NEXT:    vadd.f32 d16, d18, d20
@@ -473,6 +480,7 @@ define <2 x float> @vld3lanef(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vldr d18, [r1]
 ; BASIC-NEXT:    vorr d19, d18, d18
 ; BASIC-NEXT:    vorr d20, d18, d18
+; BASIC-NEXT:    @ implicit-def: $d21
 ; BASIC-NEXT:    vld3.32 {d18[1], d19[1], d20[1]}, [r0]
 ; BASIC-NEXT:    vadd.f32 d16, d18, d19
 ; BASIC-NEXT:    vadd.f32 d16, d20, d16
@@ -495,6 +503,7 @@ define <8 x i16> @vld3laneQi16(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vld1.64 {d16, d17}, [r1]
 ; DEFAULT-NEXT:    vorr q9, q8, q8
 ; DEFAULT-NEXT:    vorr q10, q8, q8
+; DEFAULT-NEXT:    @ implicit-def: $q11
 ; DEFAULT-NEXT:    vld3.16 {d16[1], d18[1], d20[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i16 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.i16 q8, q10, q12
@@ -507,6 +516,7 @@ define <8 x i16> @vld3laneQi16(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vld1.64 {d18, d19}, [r1]
 ; BASIC-NEXT:    vorr q10, q9, q9
 ; BASIC-NEXT:    vorr q11, q9, q9
+; BASIC-NEXT:    @ implicit-def: $q12
 ; BASIC-NEXT:    vld3.16 {d18[1], d20[1], d22[1]}, [r0]
 ; BASIC-NEXT:    vadd.i16 q8, q9, q10
 ; BASIC-NEXT:    vadd.i16 q8, q11, q8
@@ -534,6 +544,7 @@ define <8 x i16> @vld3laneQi16_update(ptr %ptr, ptr %B, i32 %inc) nounwind {
 ; DEFAULT-NEXT:    vorr q9, q8, q8
 ; DEFAULT-NEXT:    ldr lr, [r0]
 ; DEFAULT-NEXT:    vorr q10, q8, q8
+; DEFAULT-NEXT:    @ implicit-def: $q11
 ; DEFAULT-NEXT:    vld3.16 {d16[1], d18[1], d20[1]}, [lr], r1
 ; DEFAULT-NEXT:    vadd.i16 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.i16 q8, q10, q12
@@ -549,20 +560,20 @@ define <8 x i16> @vld3laneQi16_update(ptr %ptr, ptr %B, i32 %inc) nounwind {
 ; BASIC-NEXT:    .save {r11, lr}
 ; BASIC-NEXT:    push {r11, lr}
 ; BASIC-NEXT:    vld1.64 {d18, d19}, [r1]
-; BASIC-NEXT:    mov r3, r0
+; BASIC-NEXT:    mov lr, r0
 ; BASIC-NEXT:    vorr q10, q9, q9
 ; BASIC-NEXT:    lsl r1, r2, #1
 ; BASIC-NEXT:    ldr r0, [r0]
 ; BASIC-NEXT:    vorr q11, q9, q9
+; BASIC-NEXT:    @ implicit-def: $q12
 ; BASIC-NEXT:    vld3.16 {d18[1], d20[1], d22[1]}, [r0], r1
 ; BASIC-NEXT:    vadd.i16 q8, q9, q10
 ; BASIC-NEXT:    vadd.i16 q8, q11, q8
-; BASIC-NEXT:    str r0, [r3]
-; BASIC-NEXT:    vmov r1, lr, d16
-; BASIC-NEXT:    vmov r2, r12, d17
+; BASIC-NEXT:    str r0, [lr]
+; BASIC-NEXT:    vmov r1, r12, d16
+; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov r0, r1
-; BASIC-NEXT:    mov r1, lr
-; BASIC-NEXT:    mov r3, r12
+; BASIC-NEXT:    mov r1, r12
 ; BASIC-NEXT:    pop {r11, lr}
 ; BASIC-NEXT:    mov pc, lr
   %A = load ptr, ptr %ptr
@@ -584,6 +595,7 @@ define <4 x i32> @vld3laneQi32(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vld1.64 {d16, d17}, [r1]
 ; DEFAULT-NEXT:    vorr q9, q8, q8
 ; DEFAULT-NEXT:    vorr q10, q8, q8
+; DEFAULT-NEXT:    @ implicit-def: $q11
 ; DEFAULT-NEXT:    vld3.32 {d17[1], d19[1], d21[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i32 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.i32 q8, q10, q12
@@ -596,6 +608,7 @@ define <4 x i32> @vld3laneQi32(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vld1.64 {d18, d19}, [r1]
 ; BASIC-NEXT:    vorr q10, q9, q9
 ; BASIC-NEXT:    vorr q11, q9, q9
+; BASIC-NEXT:    @ implicit-def: $q12
 ; BASIC-NEXT:    vld3.32 {d19[1], d21[1], d23[1]}, [r0]
 ; BASIC-NEXT:    vadd.i32 q8, q9, q10
 ; BASIC-NEXT:    vadd.i32 q8, q11, q8
@@ -618,6 +631,7 @@ define <4 x float> @vld3laneQf(ptr %A, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vld1.64 {d16, d17}, [r1]
 ; DEFAULT-NEXT:    vorr q9, q8, q8
 ; DEFAULT-NEXT:    vorr q10, q8, q8
+; DEFAULT-NEXT:    @ implicit-def: $q11
 ; DEFAULT-NEXT:    vld3.32 {d16[1], d18[1], d20[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.f32 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.f32 q8, q10, q12
@@ -630,6 +644,7 @@ define <4 x float> @vld3laneQf(ptr %A, ptr %B) nounwind {
 ; BASIC-NEXT:    vld1.64 {d18, d19}, [r1]
 ; BASIC-NEXT:    vorr q10, q9, q9
 ; BASIC-NEXT:    vorr q11, q9, q9
+; BASIC-NEXT:    @ implicit-def: $q12
 ; BASIC-NEXT:    vld3.32 {d18[1], d20[1], d22[1]}, [r0]
 ; BASIC-NEXT:    vadd.f32 q8, q9, q10
 ; BASIC-NEXT:    vadd.f32 q8, q11, q8
@@ -920,6 +935,7 @@ define <8 x i16> @test_qqqq_regsequence_subreg([6 x i64] %b) nounwind {
 ; DEFAULT-NEXT:    add r0, sp, #28
 ; DEFAULT-NEXT:    vmov.i32 d20, #0x0
 ; DEFAULT-NEXT:    vld1.32 {d21[1]}, [r0:32]
+; DEFAULT-NEXT:    @ implicit-def: $q11
 ; DEFAULT-NEXT:    vld3.16 {d16[1], d18[1], d20[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i16 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.i16 q8, q10, q12
@@ -934,6 +950,7 @@ define <8 x i16> @test_qqqq_regsequence_subreg([6 x i64] %b) nounwind {
 ; BASIC-NEXT:    add r0, sp, #28
 ; BASIC-NEXT:    vmov.i32 d22, #0x0
 ; BASIC-NEXT:    vld1.32 {d23[1]}, [r0:32]
+; BASIC-NEXT:    @ implicit-def: $q12
 ; BASIC-NEXT:    vld3.16 {d18[1], d20[1], d22[1]}, [r0]
 ; BASIC-NEXT:    vadd.i16 q8, q9, q10
 ; BASIC-NEXT:    vadd.i16 q8, q11, q8

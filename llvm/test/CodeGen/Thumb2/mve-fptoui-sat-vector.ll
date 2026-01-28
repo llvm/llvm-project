@@ -170,9 +170,12 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f32_v6i32(<6 x float> %f) {
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v6f32_v6i32:
 ; CHECK-MVEFP:       @ %bb.0:
-; CHECK-MVEFP-NEXT:    vcvt.u32.f32 q1, q1
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s6
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s7
 ; CHECK-MVEFP-NEXT:    vcvt.u32.f32 q0, q0
+; CHECK-MVEFP-NEXT:    vcvt.u32.f32 q1, q1
 ; CHECK-MVEFP-NEXT:    vmov.f32 s6, s5
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s7
 ; CHECK-MVEFP-NEXT:    vmov r2, s4
 ; CHECK-MVEFP-NEXT:    vmov r1, s6
 ; CHECK-MVEFP-NEXT:    strd r2, r1, [r0, #16]
@@ -206,9 +209,12 @@ define arm_aapcs_vfpcc <7 x i32> @test_unsigned_v7f32_v7i32(<7 x float> %f) {
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v7f32_v7i32:
 ; CHECK-MVEFP:       @ %bb.0:
-; CHECK-MVEFP-NEXT:    vcvt.u32.f32 q1, q1
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s7
 ; CHECK-MVEFP-NEXT:    vcvt.u32.f32 q0, q0
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s9
+; CHECK-MVEFP-NEXT:    vcvt.u32.f32 q1, q1
 ; CHECK-MVEFP-NEXT:    vmov.f32 s10, s5
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s7
 ; CHECK-MVEFP-NEXT:    vmov r2, s4
 ; CHECK-MVEFP-NEXT:    vmov r3, s6
 ; CHECK-MVEFP-NEXT:    vmov r1, s10

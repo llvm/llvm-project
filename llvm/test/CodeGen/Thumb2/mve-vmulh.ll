@@ -1052,9 +1052,12 @@ define arm_aapcs_vfpcc <4 x i32> @vmulhs_kb_v4i32(<4 x i32> %s0, <4 x i64> %s1) 
 ; CHECK-LABEL: vmulhs_kb_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    @ implicit-def: $s13
 ; CHECK-NEXT:    vmov r1, s9
 ; CHECK-NEXT:    vmov r2, s5
 ; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    smmul r0, r0, r1
@@ -1082,9 +1085,12 @@ define arm_aapcs_vfpcc <4 x i32> @vmulhu_kb_v4i32(<4 x i32> %s0, <4 x i64> %s1) 
 ; CHECK-LABEL: vmulhu_kb_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    @ implicit-def: $s13
 ; CHECK-NEXT:    vmov r1, s9
 ; CHECK-NEXT:    vmov r2, s5
 ; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    umull r0, r1, r0, r1
@@ -1112,9 +1118,12 @@ define arm_aapcs_vfpcc <4 x i32> @vmulhs_kbc_v4i32(<4 x i32> %s0, <4 x i64> %s1)
 ; CHECK-LABEL: vmulhs_kbc_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    @ implicit-def: $s13
 ; CHECK-NEXT:    vmov r1, s9
 ; CHECK-NEXT:    vmov r2, s5
 ; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    smmul r0, r1, r0
@@ -1142,9 +1151,12 @@ define arm_aapcs_vfpcc <4 x i32> @vmulhu_kbc_v4i32(<4 x i32> %s0, <4 x i64> %s1)
 ; CHECK-LABEL: vmulhu_kbc_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    @ implicit-def: $s13
 ; CHECK-NEXT:    vmov r1, s9
 ; CHECK-NEXT:    vmov r2, s5
 ; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    umull r0, r1, r1, r0

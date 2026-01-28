@@ -369,6 +369,7 @@ define i32 @gep_in_const_as_cast_to_const32_as(ptr addrspace(4) %src, i64 %offse
 ; GFX942-NEXT:    s_mov_b32 s1, 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX942-NEXT:    ; implicit-def: $vgpr1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

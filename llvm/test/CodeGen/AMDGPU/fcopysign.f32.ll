@@ -999,6 +999,7 @@ define amdgpu_kernel void @s_test_copysign_f32_fpext_f16(ptr addrspace(1) %out, 
 ; GFX11-LABEL: s_test_copysign_f32_fpext_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b16_e32 v0.h, s3
@@ -1094,6 +1095,7 @@ define amdgpu_kernel void @s_test_copysign_f32_fpext_bf16(ptr addrspace(1) %out,
 ; GFX11-LABEL: s_test_copysign_f32_fpext_bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b16_e32 v0.h, s3

@@ -13,6 +13,21 @@ define void @no_introduce_vreg_1024() #0 {
 ; CHECK-NEXT:    ; def v[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr4
+; CHECK-NEXT:    ; implicit-def: $vgpr5
+; CHECK-NEXT:    ; implicit-def: $vgpr6
+; CHECK-NEXT:    ; implicit-def: $vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr11
+; CHECK-NEXT:    ; implicit-def: $vgpr12
+; CHECK-NEXT:    ; implicit-def: $vgpr13
+; CHECK-NEXT:    ; implicit-def: $vgpr14
+; CHECK-NEXT:    ; implicit-def: $vgpr15
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v[0:15]
 ; CHECK-NEXT:    ;;#ASMEND

@@ -241,6 +241,7 @@ define amdgpu_kernel void @trunc_v2f16(
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-TRUE16-NEXT:    v_trunc_f16_e32 v0.l, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_trunc_f16_e32 v1.l, v1.l

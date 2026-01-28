@@ -406,6 +406,7 @@ define <4 x i32> @test_sabd_knownbits_vec4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI31_0]
 ; CHECK-GI-NEXT:    movi v3.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
@@ -437,6 +438,7 @@ define <4 x i32> @knownbits_sabd_and_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI32_0]
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -464,6 +466,7 @@ define <4 x i32> @knownbits_sabd_and_or_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    uabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -501,6 +504,7 @@ define <4 x i32> @knownbits_sabd_and_xor_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -529,6 +533,7 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
@@ -565,6 +570,7 @@ define <4 x i32> @knownbits_sabd_and_mul_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    mul v1.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>

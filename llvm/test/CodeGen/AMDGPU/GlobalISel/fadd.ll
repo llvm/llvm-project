@@ -13,6 +13,7 @@ define amdgpu_ps half @fadd_s16_uniform(half inreg %a, half inreg %b) {
 ; GFX11-TRUE16-LABEL: fadd_s16_uniform:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_add_f16_e64 v0.l, s0, s1
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fadd_s16_uniform:
@@ -34,6 +35,7 @@ define amdgpu_ps half @fadd_s16_div(half %a, half %b) {
 ; GFX11-TRUE16-LABEL: fadd_s16_div:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: fadd_s16_div:
@@ -44,6 +46,7 @@ define amdgpu_ps half @fadd_s16_div(half %a, half %b) {
 ; GFX12-TRUE16-LABEL: fadd_s16_div:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
   %fadd = fadd half %a, %b
   ret half %fadd
