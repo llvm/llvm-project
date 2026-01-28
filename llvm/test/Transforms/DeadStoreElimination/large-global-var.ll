@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:32:32-i8:8-i32:32-i64:64"
 
 ; The data-layout only allows 32-bit indexing, but the array is too large to be
 ; fully accessible through that index-space.
-@G = internal global [39969271929 x i32] undef, align 4
+@G = internal global [39969271929 x i32] zeroinitializer, align 4
 
 define void @func() {
 ; CHECK-LABEL: define void @func() {
