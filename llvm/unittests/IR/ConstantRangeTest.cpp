@@ -10,6 +10,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/KnownBits.h"
@@ -1728,15 +1729,55 @@ TEST(ConstantRange, MakeAllowedICmpRegionEdgeCases) {
                   .isSingleElement());
   EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_UGE, UMin)
                   .isFullSet());
+}
 
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/true), UMin),
-            ConstantRange::getNonEmpty(APInt::getMinValue(8),
-                                       APInt::getSignedMinValue(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), UMin),
-            ConstantRange::getNonEmpty(APInt::getMinValue(8) + 1,
-                                       APInt::getSignedMinValue(8)));
+TEST(ConstantRange, MakeAllowedICmpRegionSameSign) {
+  APInt Positive(8, 10);
+  APInt Negative(8, -10, true);
+  ConstantRange AllPositive(Positive);
+  ConstantRange AllNegative(Negative);
+  ConstantRange BothPosAndNeg(Negative, Positive + 1);
+  ConstantRange Wrapped(Positive, Negative + 1);
+
+  CmpPredicate UGE(ICmpInst::ICMP_UGE, true);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, AllPositive),
+            ConstantRange(Positive, APInt::getSignedMinValue(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, AllNegative),
+            ConstantRange(Negative, APInt::getZero(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, BothPosAndNeg),
+            ConstantRange(Negative, APInt::getSignedMinValue(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, Wrapped),
+            ConstantRange(Positive, APInt::getMinValue(8)));
+
+  CmpPredicate UGT(ICmpInst::ICMP_UGT, true);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, AllPositive),
+            ConstantRange(Positive + 1, APInt::getSignedMinValue(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, AllNegative),
+            ConstantRange(Negative + 1, APInt::getZero(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, BothPosAndNeg),
+            ConstantRange(Negative + 1, APInt::getSignedMinValue(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, Wrapped),
+            ConstantRange(Positive + 1, APInt::getMinValue(8)));
+
+  CmpPredicate ULE(ICmpInst::ICMP_ULE, true);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, AllPositive),
+            ConstantRange(APInt::getZero(8), Positive + 1));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, AllNegative),
+            ConstantRange(APInt::getSignedMinValue(8), Negative + 1));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, BothPosAndNeg),
+            ConstantRange(APInt::getSignedMinValue(8), Positive + 1));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, Wrapped),
+            ConstantRange(APInt::getZero(8), Negative + 1));
+
+  CmpPredicate ULT(ICmpInst::ICMP_ULT, true);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, AllPositive),
+            ConstantRange(APInt::getZero(8), Positive));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, AllNegative),
+            ConstantRange(APInt::getSignedMinValue(8), Negative));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, BothPosAndNeg),
+            ConstantRange(APInt::getSignedMinValue(8), Positive));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, Wrapped),
+            ConstantRange(APInt::getZero(8), Negative));
 }
 
 TEST(ConstantRange, MakeAllowedICmpRegionBoolean) {
@@ -1767,6 +1808,32 @@ TEST(ConstantRange, MakeAllowedICmpRegionBoolean) {
                   .isEmptySet());
   EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
                   CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), One)
+                  .isEmptySet());
+
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/false), Zero),
+            Zero);
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/false), One)
+                  .isFullSet());
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/true), Zero),
+            Zero);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/true), One),
+            One);
+
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/false), Zero)
+                  .isEmptySet());
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/false), One),
+            Zero);
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/true), Zero)
+                  .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/true), One)
                   .isEmptySet());
 }
 
