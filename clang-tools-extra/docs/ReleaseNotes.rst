@@ -164,6 +164,10 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
+  fix suggestions for C23 and later by not using ``static_cast``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
