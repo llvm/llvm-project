@@ -7,8 +7,20 @@ define <32 x half> @test_max_v32f16(ptr %a_ptr, <32 x half> %b)  {
 ; CHECK-NEXT:    vmaxph (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %a = load <32 x half>, ptr %a_ptr
-  %tmp = fcmp fast ogt <32 x half> %a, %b
+  %tmp = fcmp ogt <32 x half> %a, %b
   %tmp4 = select nsz <32 x i1> %tmp, <32 x half> %a, <32 x half> %b
+  ret <32 x half> %tmp4
+}
+
+define <32 x half> @test_max_v32f16_safe(ptr %a_ptr, <32 x half> %b)  {
+; CHECK-LABEL: test_max_v32f16_safe:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
+; CHECK-NEXT:    vmaxph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %a = load <32 x half>, ptr %a_ptr
+  %tmp = fcmp ogt <32 x half> %a, %b
+  %tmp4 = select <32 x i1> %tmp, <32 x half> %a, <32 x half> %b
   ret <32 x half> %tmp4
 }
 
@@ -18,8 +30,20 @@ define <32 x half> @test_min_v32f16(ptr %a_ptr, <32 x half> %b)  {
 ; CHECK-NEXT:    vminph (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %a = load <32 x half>, ptr %a_ptr
-  %tmp = fcmp fast olt <32 x half> %a, %b
+  %tmp = fcmp olt <32 x half> %a, %b
   %tmp4 = select nsz <32 x i1> %tmp, <32 x half> %a, <32 x half> %b
+  ret <32 x half> %tmp4
+}
+
+define <32 x half> @test_min_v32f16_safe(ptr %a_ptr, <32 x half> %b)  {
+; CHECK-LABEL: test_min_v32f16_safe:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
+; CHECK-NEXT:    vminph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %a = load <32 x half>, ptr %a_ptr
+  %tmp = fcmp olt <32 x half> %a, %b
+  %tmp4 = select <32 x i1> %tmp, <32 x half> %a, <32 x half> %b
   ret <32 x half> %tmp4
 }
 
@@ -29,13 +53,36 @@ define <16 x half> @test_max_v16f16(ptr %a_ptr, <16 x half> %b)  {
 ; CHECK-NEXT:    vmaxph (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <16 x half>, ptr %a_ptr
-  %tmp = fcmp fast ogt <16 x half> %a, %b
+  %tmp = fcmp ogt <16 x half> %a, %b
   %tmp4 = select nsz <16 x i1> %tmp, <16 x half> %a, <16 x half> %b
+  ret <16 x half> %tmp4
+}
+
+define <16 x half> @test_max_v16f16_safe(ptr %a_ptr, <16 x half> %b)  {
+; CHECK-LABEL: test_max_v16f16_safe:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %ymm1
+; CHECK-NEXT:    vmaxph %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %a = load <16 x half>, ptr %a_ptr
+  %tmp = fcmp ogt <16 x half> %a, %b
+  %tmp4 = select <16 x i1> %tmp, <16 x half> %a, <16 x half> %b
   ret <16 x half> %tmp4
 }
 
 define <16 x half> @test_min_v16f16(ptr %a_ptr, <16 x half> %b)  {
 ; CHECK-LABEL: test_min_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vminph (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %a = load <16 x half>, ptr %a_ptr
+  %tmp = fcmp olt <16 x half> %a, %b
+  %tmp4 = select nsz <16 x i1> %tmp, <16 x half> %a, <16 x half> %b
+  ret <16 x half> %tmp4
+}
+
+define <16 x half> @test_min_v16f16_safe(ptr %a_ptr, <16 x half> %b)  {
+; CHECK-LABEL: test_min_v16f16_safe:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm1
 ; CHECK-NEXT:    vminph %ymm0, %ymm1, %ymm0
@@ -52,8 +99,20 @@ define <8 x half> @test_max_v8f16(ptr %a_ptr, <8 x half> %b)  {
 ; CHECK-NEXT:    vmaxph (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a = load <8 x half>, ptr %a_ptr
-  %tmp = fcmp fast ogt <8 x half> %a, %b
+  %tmp = fcmp ogt <8 x half> %a, %b
   %tmp4 = select nsz <8 x i1> %tmp, <8 x half> %a, <8 x half> %b
+  ret <8 x half> %tmp4
+}
+
+define <8 x half> @test_max_v8f16_safe(ptr %a_ptr, <8 x half> %b)  {
+; CHECK-LABEL: test_max_v8f16_safe:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %xmm1
+; CHECK-NEXT:    vmaxph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = load <8 x half>, ptr %a_ptr
+  %tmp = fcmp ogt <8 x half> %a, %b
+  %tmp4 = select <8 x i1> %tmp, <8 x half> %a, <8 x half> %b
   ret <8 x half> %tmp4
 }
 
@@ -63,8 +122,20 @@ define <8 x half> @test_min_v8f16(ptr %a_ptr, <8 x half> %b)  {
 ; CHECK-NEXT:    vminph (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a = load <8 x half>, ptr %a_ptr
-  %tmp = fcmp fast olt <8 x half> %a, %b
+  %tmp = fcmp olt <8 x half> %a, %b
   %tmp4 = select nsz <8 x i1> %tmp, <8 x half> %a, <8 x half> %b
+  ret <8 x half> %tmp4
+}
+
+define <8 x half> @test_min_v8f16_safe(ptr %a_ptr, <8 x half> %b)  {
+; CHECK-LABEL: test_min_v8f16_safe:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %xmm1
+; CHECK-NEXT:    vminph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = load <8 x half>, ptr %a_ptr
+  %tmp = fcmp olt <8 x half> %a, %b
+  %tmp4 = select <8 x i1> %tmp, <8 x half> %a, <8 x half> %b
   ret <8 x half> %tmp4
 }
 
@@ -75,8 +146,21 @@ define half @test_max_f16(half %a, ptr %ptr) {
 ; CHECK-NEXT:    retq
 entry:
   %0 = load half, ptr %ptr
-  %1 = fcmp fast ogt half %0, %a
+  %1 = fcmp ogt half %0, %a
   %2 = select nsz i1 %1, half %0, half %a
+  ret half %2
+}
+
+define half @test_max_f16_safe(half %a, ptr %ptr) {
+; CHECK-LABEL: test_max_f16_safe:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmaxsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = load half, ptr %ptr
+  %1 = fcmp ogt half %0, %a
+  %2 = select i1 %1, half %0, half %a
   ret half %2
 }
 
@@ -87,7 +171,20 @@ define half @test_min_f16(half %a, ptr %ptr) {
 ; CHECK-NEXT:    retq
 entry:
   %0 = load half, ptr %ptr
-  %1 = fcmp fast olt half %0, %a
+  %1 = fcmp olt half %0, %a
   %2 = select nsz i1 %1, half %0, half %a
+  ret half %2
+}
+
+define half @test_min_f16_safe(half %a, ptr %ptr) {
+; CHECK-LABEL: test_min_f16_safe:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vminsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = load half, ptr %ptr
+  %1 = fcmp olt half %0, %a
+  %2 = select i1 %1, half %0, half %a
   ret half %2
 }
