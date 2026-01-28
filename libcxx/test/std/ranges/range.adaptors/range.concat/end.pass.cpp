@@ -56,6 +56,8 @@ constexpr bool test() {
 
   {
     // all the ranges but the last one are input ranges, the last range is common => end() returns sentinel
+    // https://cplusplus.github.io/LWG/issue4166
+
     using Iter      = cpp20_input_iterator<const int*>;
     using Sentinel  = sentinel_wrapper<Iter>;
     using InputView = minimal_view<Iter, Sentinel>;
