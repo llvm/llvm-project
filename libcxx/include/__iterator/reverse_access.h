@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 14
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Np>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator<_Tp*> rbegin(_Tp (&__array)[_Np]) {
@@ -72,8 +72,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto crend(const _Cp& __c) -
   return std::rend(__c);
 }
 
-#endif // _LIBCPP_STD_VER >= 14
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 14
 
 #endif // _LIBCPP___ITERATOR_REVERSE_ACCESS_H

@@ -25,10 +25,11 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-#  if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
+#  if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 _LIBCPP_AVAILABILITY_NEW_SYNC
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __atomic_monitor_global(void const* __address) _NOEXCEPT;
@@ -108,7 +109,7 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
   return __poll_result == __poll_with_backoff_results::__poll_success;
 }
 
-#  elif _LIBCPP_HAS_THREADS // _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
+#  else // _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 template <class _AtomicWaitable, class _Poll, class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
@@ -127,10 +128,10 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
   return __res == __poll_with_backoff_results::__poll_success;
 }
 
-#  endif // _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
-
-#endif // C++20
+#  endif // _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_SYNC_TIMED_H

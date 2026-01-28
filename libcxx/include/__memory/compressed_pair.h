@@ -20,8 +20,6 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 // ================================================================================================================== //
 // The utilites here are for staying ABI compatible with the legacy `__compressed_pair`. They should not be used      //
 // for new data structures. Use `_LIBCPP_NO_UNIQUE_ADDRESS` for new data structures instead (but make sure you        //
@@ -58,6 +56,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // correctly.
 
 #ifndef _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 inline const size_t __compressed_pair_alignment = _LIBCPP_ALIGNOF(_Tp);
@@ -124,6 +124,8 @@ class __compressed_pair_padding<_ToPad, true> {};
       }
 #  endif
 
+_LIBCPP_END_NAMESPACE_STD
+
 #else
 #  define _LIBCPP_COMPRESSED_ELEMENT(T1, Initializer1) _LIBCPP_NO_UNIQUE_ADDRESS T1 Initializer1
 
@@ -136,7 +138,5 @@ class __compressed_pair_padding<_ToPad, true> {};
     _LIBCPP_NO_UNIQUE_ADDRESS T2 Name2;                                                                                \
     _LIBCPP_NO_UNIQUE_ADDRESS T3 Name3
 #endif // _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___MEMORY_COMPRESSED_PAIR_H

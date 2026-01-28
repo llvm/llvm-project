@@ -20,9 +20,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __compose_op {
   template <class _Fn1, class _Fn2, class... _Args>
@@ -46,8 +46,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __compose(_Fn1&& __f1, _Fn2&& __f2) noexcep
   return __compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2));
 }
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___FUNCTIONAL_COMPOSE_H

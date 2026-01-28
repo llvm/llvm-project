@@ -72,9 +72,9 @@ public:
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // Specialized in __tree & __hash_table for their _NodeType.
 template <class _NodeType, class _Alloc>
@@ -201,9 +201,9 @@ struct __insert_return_type {
   _NodeType node;
 };
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

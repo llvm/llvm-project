@@ -20,9 +20,9 @@
 #include <__ranges/concepts.h>
 #include <__type_traits/remove_cvref.h>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wshadow")
@@ -64,8 +64,8 @@ inline constexpr range_format format_kind<_Rp> = [] {
     return range_format::sequence;
 }();
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif

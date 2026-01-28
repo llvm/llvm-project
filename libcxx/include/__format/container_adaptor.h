@@ -24,9 +24,9 @@
 #include <__type_traits/is_const.h>
 #include <__type_traits/maybe_const.h>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [container.adaptors.format] only specifies the library should provide the
 // formatter specializations, not which header should provide them.
@@ -66,8 +66,8 @@ template <class _CharT, class _Tp, formattable<_CharT> _Container>
 struct formatter<stack<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_CONTAINER_ADAPTOR_H

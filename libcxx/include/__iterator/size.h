@@ -20,9 +20,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Cont>
 _LIBCPP_HIDE_FROM_ABI constexpr auto size(const _Cont& __c) noexcept(noexcept(__c.size())) -> decltype(__c.size()) {
@@ -53,8 +53,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t ssize(const _Tp (&)[_Sz]) noexcept {
 _LIBCPP_DIAGNOSTIC_POP
 #  endif
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ITERATOR_SIZE_H

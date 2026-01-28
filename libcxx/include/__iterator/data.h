@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Cont>
 constexpr _LIBCPP_HIDE_FROM_ABI auto data(_Cont& __c) noexcept(noexcept(__c.data())) -> decltype(__c.data()) {
@@ -41,8 +41,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Ep* data(initializer_list<_Ep> __il) noex
   return __il.begin();
 }
 
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ITERATOR_DATA_H

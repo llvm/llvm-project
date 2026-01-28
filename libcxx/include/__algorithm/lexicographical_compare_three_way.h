@@ -27,9 +27,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // Fast path for random access iterators which computes the number of loop iterations up-front and
 // then skips the iterator comparisons inside the loop.
@@ -116,9 +116,9 @@ template <class _InputIterator1, class _InputIterator2>
       std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::compare_three_way());
 }
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

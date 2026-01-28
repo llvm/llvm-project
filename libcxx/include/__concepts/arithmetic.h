@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concepts.arithmetic], arithmetic concepts
 
@@ -36,8 +36,8 @@ concept unsigned_integral = integral<_Tp> && !signed_integral<_Tp>;
 template <class _Tp>
 concept floating_point = is_floating_point_v<_Tp>;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CONCEPTS_ARITHMETIC_H

@@ -293,9 +293,9 @@ public:
 
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // Light N-dimensional array of function pointers. Used in place of std::array to avoid
 // adding a dependency.
@@ -1635,9 +1635,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto&& __unchecked_get(variant<_Types...>& __v) 
   return std::__unchecked_get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

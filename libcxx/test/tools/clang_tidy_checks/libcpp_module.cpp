@@ -10,6 +10,7 @@
 #include "clang-tidy/ClangTidyModuleRegistry.h"
 
 #include "abi_tag_on_virtual.hpp"
+#include "empty_namespaces.hpp"
 #include "header_exportable_declarations.hpp"
 #include "hide_from_abi.hpp"
 #include "internal_ftm_use.hpp"
@@ -24,6 +25,7 @@ class LibcxxTestModule : public clang::tidy::ClangTidyModule {
 public:
   void addCheckFactories(clang::tidy::ClangTidyCheckFactories& check_factories) override {
     check_factories.registerCheck<libcpp::abi_tag_on_virtual>("libcpp-avoid-abi-tag-on-virtual");
+    check_factories.registerCheck<libcpp::empty_namespaces>("libcpp-avoid-empty-namespaces");
     check_factories.registerCheck<libcpp::header_exportable_declarations>("libcpp-header-exportable-declarations");
     check_factories.registerCheck<libcpp::hide_from_abi>("libcpp-hide-from-abi");
     check_factories.registerCheck<libcpp::internal_ftm_use>("libcpp-internal-ftms");

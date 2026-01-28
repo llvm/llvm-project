@@ -22,7 +22,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-namespace views {}
+namespace views { // NOLINT(libcpp-avoid-empty-namespaces) // This is needed to declare the alias below.
+} // namespace views
 
 } // namespace ranges
 

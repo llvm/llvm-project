@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 struct in_place_t {
   explicit in_place_t() = default;
@@ -57,8 +57,8 @@ struct __is_inplace_index_imp<in_place_index_t<_Idx>> : true_type {};
 template <class _Tp>
 using __is_inplace_index _LIBCPP_NODEBUG = __is_inplace_index_imp<__remove_cvref_t<_Tp>>;
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___UTILITY_IN_PLACE_H

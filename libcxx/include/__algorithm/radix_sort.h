@@ -67,9 +67,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 14
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator>
 _LIBCPP_HIDE_FROM_ABI constexpr pair<_OutputIterator, __iterator_value_type<_InputIterator>>
@@ -422,9 +422,9 @@ __radix_sort(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _Ran
   std::__radix_sort(__first, __last, __buffer, __identity{}, __low_byte_fn{});
 }
 
-#endif // _LIBCPP_STD_VER >= 14
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_POP_MACROS
 
