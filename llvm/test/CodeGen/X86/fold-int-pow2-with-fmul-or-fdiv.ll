@@ -1280,8 +1280,9 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    movl $8, %eax
 ; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-SSE-NEXT:    shlq %cl, %rax
-; CHECK-SSE-NEXT:    testq %rax, %rax
-; CHECK-SSE-NEXT:    js .LBB24_1
+; CHECK-SSE-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; CHECK-SSE-NEXT:    testq %rcx, %rax
+; CHECK-SSE-NEXT:    jne .LBB24_1
 ; CHECK-SSE-NEXT:  # %bb.2:
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
 ; CHECK-SSE-NEXT:    jmp .LBB24_3
@@ -1300,8 +1301,9 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    movl $8, %eax
 ; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-AVX2-NEXT:    shlq %cl, %rax
-; CHECK-AVX2-NEXT:    testq %rax, %rax
-; CHECK-AVX2-NEXT:    js .LBB24_1
+; CHECK-AVX2-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; CHECK-AVX2-NEXT:    testq %rcx, %rax
+; CHECK-AVX2-NEXT:    jne .LBB24_1
 ; CHECK-AVX2-NEXT:  # %bb.2:
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; CHECK-AVX2-NEXT:    jmp .LBB24_3
