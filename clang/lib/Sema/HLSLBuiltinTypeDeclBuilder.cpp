@@ -511,7 +511,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
   if (IsCtor)
     Method = CXXConstructorDecl::Create(
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo,
-        ExplicitSpecifier(), false, /*IsInline=*/ true, false,
+        ExplicitSpecifier(), false, /*IsInline=*/true, false,
         ConstexprSpecKind::Unspecified);
   else
     Method = CXXMethodDecl::Create(
