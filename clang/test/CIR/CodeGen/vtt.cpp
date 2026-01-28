@@ -540,9 +540,9 @@ D::D() {}
 // OGCG-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // OGCG-COMMON:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
 // OGCG-COMMON:   call void @_ZN1AC2Ev(ptr {{.*}} %[[A_ADDR]])
-// OGCG-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i64 0, i64 1))
+// OGCG-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds (ptr, ptr @_ZTT1D, i64 1))
 // OGCG-COMMON:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
-// OGCG-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i64 0, i64 3))
+// OGCG-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds (ptr, ptr @_ZTT1D, i64 3))
 // OGCG-COMMON:   store ptr getelementptr inbounds inrange(-24, 16) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 3), ptr %[[THIS]]
 // OGCG-COMMON:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
 // OGCG-COMMON:   store ptr getelementptr inbounds inrange(-24, 8) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 2, i32 3), ptr %[[A_ADDR]]

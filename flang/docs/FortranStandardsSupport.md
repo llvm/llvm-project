@@ -67,25 +67,24 @@ the multi-image execution. The table entries are based on the document [The new 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Asynchronous communication                                 | P      | Syntax is accepted |
-| Teams                                                      | N      | Multi-image/Coarray feature |
-| Image failure                                              | P      | Multi-image/Coarray feature. stat_failed_image is added |
-| Form team statement                                        | N      | Multi-image/Coarray feature |
-| Change team construct                                      | N      | Multi-image/Coarray feature |
+| Collective subroutines                                     | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md), missing co_reduce |
+| Teams                                                      | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Form team statement                                        | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Change team construct                                      | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Sync team construct                                        | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Intrinsic functions get_team and team_number               | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Intrinsic function image_index                             | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Intrinsic function num_images                              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Intrinsic function this_image                              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Image failure and stat= specifiers                         | P      | Multi-image/Coarray feature. stat_failed_image is added |
 | Coarrays allocated in teams                                | N      | Multi-image/Coarray feature |
 | Critical construct                                         | N      | Multi-image/Coarray feature |
 | Lock and unlock statements                                 | N      | Multi-image/Coarray feature |
 | Events                                                     | N      | Multi-image/Coarray feature |
-| Sync team construct                                        | N      | Multi-image/Coarray feature |
 | Image selectors                                            | N      | Multi-image/Coarray feature |
-| Intrinsic functions get_team 	and team_number              | N      | Multi-image/Coarray feature |
-| Intrinsic function image_index                             | N      | Multi-image/Coarray feature |
-| Intrinsic function num_images                              | N      | Multi-image/Coarray feature |
-| Intrinsic function this_image                              | N      | Multi-image/Coarray feature |
 | Intrinsic move_alloc extensions                            | P      | Multi-image/Coarray feature |
 | Detecting failed and stopped images                        | N      | Multi-image/Coarray feature |
-| Collective subroutines                                     | N      | Multi-image/Coarray feature |
 | New and enhanced atomic subroutines                        | N      | Multi-image/Coarray feature |
-| Failed images and stat= specifiers                         | N      | Multi-image/Coarray feature |
 | Intrinsic function coshape                                 | N      | Multi-image/Coarray feature |
 
 ## Fortran 2008

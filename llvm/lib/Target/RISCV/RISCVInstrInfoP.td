@@ -1237,9 +1237,9 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PM2WADDASU_H : RVPWideningTernary_rrr<0b1101, 0b11, "pm2waddasu.h">;
 
   def PMQWACC_H    : RVPWideningTernary_rrr<0b1111, 0b00, "pmqwacc.h">;
-  def PMQWACC      : RVPWideningTernary_rrr<0b1111, 0b01, "pmqwacc">;
+  def MQWACC       : RVPWideningTernary_rrr<0b1111, 0b01, "mqwacc">;
   def PMQRWACC_H   : RVPWideningTernary_rrr<0b1111, 0b10, "pmqrwacc.h">;
-  def PMQRWACC     : RVPWideningTernary_rrr<0b1111, 0b11, "pmqrwacc">;
+  def MQRWACC      : RVPWideningTernary_rrr<0b1111, 0b11, "mqrwacc">;
 
   def PREDSUM_DHS  : RVPNarrowingBinary_rr<0b001, 0b00, "predsum.dhs">;
   def PREDSUM_DBS  : RVPNarrowingBinary_rr<0b001, 0b10, "predsum.dbs">;

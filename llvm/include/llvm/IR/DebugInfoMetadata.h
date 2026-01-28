@@ -3010,6 +3010,12 @@ unsigned DILocation::getCopyIdentifier() const {
 
 std::optional<const DILocation *>
 DILocation::cloneWithBaseDiscriminator(unsigned D) const {
+  // Do not interfere with pseudo probes. Pseudo probe at a callsite uses
+  // the dwarf discriminator to store pseudo probe related information,
+  // such as the probe id.
+  if (isPseudoProbeDiscriminator(getDiscriminator()))
+    return this;
+
   unsigned BD, DF, CI;
 
   if (EnableFSDiscriminator) {
