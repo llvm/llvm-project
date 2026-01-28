@@ -321,7 +321,7 @@ bool ObjectFile::SetModulesArchitecture(const ArchSpec &new_arch) {
 AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
   Symtab *symtab = GetSymtab();
   if (symtab) {
-    Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
+    const Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
     if (symbol) {
       if (symbol->ValueIsAddress()) {
         const SectionSP section_sp(symbol->GetAddressRef().GetSection());
