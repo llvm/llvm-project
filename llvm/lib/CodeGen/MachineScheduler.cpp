@@ -268,6 +268,12 @@ static cl::opt<unsigned>
                          cl::desc("The threshold for fast cluster"),
                          cl::init(1000));
 
+static cl::opt<unsigned> LargeRegionSkipThreshold(
+    "misched-large-region-skip-threshold", cl::Hidden,
+    cl::desc("Skip scheduling regions with instruction count exceeding this "
+             "threshold when register pressure is critical. 0 disables."),
+    cl::init(0));
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> MISchedDumpScheduleTrace(
     "misched-dump-schedule-trace", cl::Hidden, cl::init(false),
@@ -1693,6 +1699,18 @@ void ScheduleDAGMILive::schedule() {
   LLVM_DEBUG(dbgs() << "ScheduleDAGMILive::schedule starting\n");
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
+
+  // Skip scheduling for large regions with critical register pressure that
+  // exceed the large region skip threshold.
+  unsigned SkipThreshold = SchedImpl->getPolicy().LargeRegionSkipThreshold;
+  if (SkipThreshold && NumRegionInstrs > SkipThreshold &&
+      !RegionCriticalPSets.empty()) {
+    LLVM_DEBUG(dbgs() << "Skipping scheduling for region with "
+                      << NumRegionInstrs << " instructions and "
+                      << RegionCriticalPSets.size()
+                      << " critical pressure sets\n");
+    return;
+  }
 
   postProcessDAG();
 
@@ -3715,6 +3733,10 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
+
+  // Apply command-line override for large region skip threshold.
+  if (LargeRegionSkipThreshold.getNumOccurrences())
+    RegionPolicy.LargeRegionSkipThreshold = LargeRegionSkipThreshold;
 
   BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;

@@ -218,6 +218,11 @@ struct MachineSchedPolicy {
   // Compute DFSResult for use in scheduling heuristics.
   bool ComputeDFSResult = false;
 
+  // Skip scheduling for large regions with critical register pressure.
+  // When a region has more instructions than this threshold and register
+  // pressure exceeds limits, scheduling is skipped. 0 disables this feature.
+  unsigned LargeRegionSkipThreshold = 0;
+
   MachineSchedPolicy() = default;
 };
 
