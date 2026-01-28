@@ -89,8 +89,8 @@ def HasMips3D        : Predicate<"Subtarget->has3D()">,
 // They are mutually exclusive.
 //===----------------------------------------------------------------------===//
 
-class FGR_32 { list<Predicate> FGRPredicates = [NotFP64bit]; }
-class FGR_64 { list<Predicate> FGRPredicates = [IsFP64bit]; }
+class FGR_32 { list<Predicate> FGRPredicates = [NotFP64bit, IsNotSingleFloat]; }
+class FGR_64 { list<Predicate> FGRPredicates = [IsFP64bit, IsNotSingleFloat]; }
 class HARDFLOAT { list<Predicate> HardFloatPredicate = [IsNotSoftFloat]; }
 
 //===----------------------------------------------------------------------===//
@@ -541,10 +541,12 @@ let DecoderNamespace = "MipsFP64", mayRaiseFPException = 1, Uses = [FCR31] in {
 
 let isPseudo = 1, isCodeGenOnly = 1 in {
   def PseudoCVT_S_W : ABSS_FT<"", FGR32Opnd, GPR32Opnd, II_CVT>;
-  def PseudoCVT_D32_W : ABSS_FT<"", AFGR64Opnd, GPR32Opnd, II_CVT>;
-  def PseudoCVT_S_L : ABSS_FT<"", FGR64Opnd, GPR64Opnd, II_CVT>;
-  def PseudoCVT_D64_W : ABSS_FT<"", FGR64Opnd, GPR32Opnd, II_CVT>;
-  def PseudoCVT_D64_L : ABSS_FT<"", FGR64Opnd, GPR64Opnd, II_CVT>;
+  let Predicates = [IsNotSingleFloat] in {
+    def PseudoCVT_D32_W : ABSS_FT<"", AFGR64Opnd, GPR32Opnd, II_CVT>;
+    def PseudoCVT_S_L : ABSS_FT<"", FGR64Opnd, GPR64Opnd, II_CVT>;
+    def PseudoCVT_D64_W : ABSS_FT<"", FGR64Opnd, GPR32Opnd, II_CVT>;
+    def PseudoCVT_D64_L : ABSS_FT<"", FGR64Opnd, GPR64Opnd, II_CVT>;
+  }
 }
 
 let AdditionalPredicates = [NotInMicroMips, UseAbs] in {
@@ -605,10 +607,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
     let DecoderNamespace = "MipsFP64";
   }
 
-  def DMTC1 : MTC1_FT<"dmtc1", FGR64Opnd, GPR64Opnd, II_DMTC1,
-              bitconvert>, MFC1_FM<5>, ISA_MIPS3;
-  def DMFC1 : MFC1_FT<"dmfc1", GPR64Opnd, FGR64Opnd, II_DMFC1,
-                      bitconvert>, MFC1_FM<1>, ISA_MIPS3;
+  let AdditionalPredicates = [IsNotSingleFloat] in {
+    def DMTC1 : MTC1_FT<"dmtc1", FGR64Opnd, GPR64Opnd, II_DMTC1, bitconvert>,
+                MFC1_FM<5>,
+                ISA_MIPS3;
+    def DMFC1 : MFC1_FT<"dmfc1", GPR64Opnd, FGR64Opnd, II_DMFC1, bitconvert>,
+                MFC1_FM<1>,
+                ISA_MIPS3;
+  }
   let isMoveReg = 1 in {
     def FMOV_S   : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
                    ABSS_FM<0x6, 16>, ISA_MIPS1;

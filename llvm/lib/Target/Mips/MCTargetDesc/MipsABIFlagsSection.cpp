@@ -29,6 +29,8 @@ uint8_t MipsABIFlagsSection::getFpABIValue() {
       return OddSPReg ? Mips::Val_GNU_MIPS_ABI_FP_64
                       : Mips::Val_GNU_MIPS_ABI_FP_64A;
     return Mips::Val_GNU_MIPS_ABI_FP_DOUBLE;
+  case FpABIKind::SINGLE:
+    return Mips::Val_GNU_MIPS_ABI_FP_SINGLE;
   }
 
   llvm_unreachable("unexpected fp abi value");
