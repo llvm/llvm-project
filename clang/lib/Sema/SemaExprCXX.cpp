@@ -2692,8 +2692,9 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (AllocType.getAddressSpace() != LangAS::Default &&
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
-      << AllocType.getUnqualifiedType()
-      << formatAddressSpaceForDiag(AllocType.getAddressSpace(), getLangOpts());
+           << AllocType.getUnqualifiedType()
+           << formatAddressSpaceForDiag(AllocType.getAddressSpace(),
+                                        getLangOpts());
 
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
@@ -4086,7 +4087,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << formatAddressSpaceForDiag(Pointee.getAddressSpace(), getLangOpts());
+             << formatAddressSpaceForDiag(Pointee.getAddressSpace(),
+                                          getLangOpts());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
