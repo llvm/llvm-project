@@ -166,7 +166,7 @@ static Value *handleHlslWaveActiveBallot(CodeGenFunction &CGF,
   llvm::Type *I32 = CGF.Int32Ty;
 
   llvm::Type *Vec4I32 = llvm::FixedVectorType::get(I32, 4);
-  llvm::StructType *Struct4I32 =
+  [[maybe_unused]] llvm::StructType *Struct4I32 =
       llvm::StructType::get(CGF.getLLVMContext(), {I32, I32, I32, I32});
 
   if (CGF.CGM.getTarget().getTriple().isDXIL()) {
@@ -866,7 +866,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
-    Value *Op = EmitScalarExpr(E->getArg(0));
+    [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType()->isIntegerTy(1) &&
            "Intrinsic WaveActiveBallot operand must be a bool");
 

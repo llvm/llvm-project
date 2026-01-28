@@ -113,6 +113,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Concepts
+~~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Lambdas
 ~~~~~~~
 | Corentin Jabot
@@ -261,8 +267,8 @@ compiler.
 
 Attributes
 ~~~~~~~~~~
-| Erich Keane
-| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Plugins
@@ -279,9 +285,6 @@ Inline assembly
 
 Text encodings
 ~~~~~~~~~~~~~~
-| Tom Honermann
-| tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)
-
 | Corentin Jabot
 | corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
@@ -400,3 +403,4 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings

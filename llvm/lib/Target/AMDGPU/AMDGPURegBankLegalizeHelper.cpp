@@ -907,6 +907,25 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerS_BFE(MI);
   case UniMAD64:
     return lowerUniMAD64(MI);
+  case UniMul64: {
+    B.buildMul(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2));
+    MI.eraseFromParent();
+    return true;
+  }
+  case DivSMulToMAD: {
+    auto Op1 = B.buildTrunc(VgprRB_S32, MI.getOperand(1));
+    auto Op2 = B.buildTrunc(VgprRB_S32, MI.getOperand(2));
+    auto Zero = B.buildConstant({VgprRB, S64}, 0);
+
+    unsigned NewOpc = MI.getOpcode() == AMDGPU::G_AMDGPU_S_MUL_U64_U32
+                          ? AMDGPU::G_AMDGPU_MAD_U64_U32
+                          : AMDGPU::G_AMDGPU_MAD_I64_I32;
+
+    B.buildInstr(NewOpc, {MI.getOperand(0).getReg(), {SgprRB, S32}},
+                 {Op1, Op2, Zero});
+    MI.eraseFromParent();
+    return true;
+  }
   case SplitTo32:
     return lowerSplitTo32(MI);
   case SplitTo32Select:

@@ -408,7 +408,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  DITypeRefArray Elements = STy->getTypeArray();
+  DITypeArray Elements = STy->getTypeArray();
   auto RetType = tryRemoveAtomicType(Elements[0]);
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
@@ -626,7 +626,7 @@ void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
     const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
     uint32_t &TypeId) {
-  DITypeRefArray Elements = STy->getTypeArray();
+  DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
     return;

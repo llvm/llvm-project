@@ -607,20 +607,20 @@ struct WgToSgConvertLayoutOp
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // TODO: currently, we only support LayoutAttr
-    auto input = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
-    auto target = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
+
+    auto input = op.getInputLayout();
+    auto target = op.getTargetLayout();
 
     if (!input || !target || !input.isForWorkgroup() ||
         !target.isForWorkgroup())
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
-    DenseI32ArrayAttr inputSgLayout = input.getSgLayout();
-    DenseI32ArrayAttr inputSgData = input.getSgData();
+    SmallVector<int64_t> inputSgLayout = input.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> inputSgData = input.getEffectiveSgDataAsInt();
     DenseI32ArrayAttr inputOrder = input.getOrder();
-    DenseI32ArrayAttr targetSgLayout = target.getSgLayout();
-    DenseI32ArrayAttr targetSgData = target.getSgData();
+    SmallVector<int64_t> targetSgLayout = target.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> targetSgData = target.getEffectiveSgDataAsInt();
     DenseI32ArrayAttr targetOrder = target.getOrder();
 
     // TODO: currently we only support for optimal case, where input and
@@ -1131,12 +1131,11 @@ struct WgToSgVectorShapeCastOp
           return false;
       return srcIdx == src.size();
     };
-
     xegpu::DistributeLayoutAttr layoutToDistribute = layout;
 
     if (checkOnlyExpandUnitDims(srcShape, wgShape)) {
       xegpu::DistributeLayoutAttr sourceLayout =
-          xegpu::getDistributeLayoutAttr(op.getSource());
+          xegpu::getTemporaryLayout(op->getOpOperand(0));
 
       auto usedByBroadcastOp = [](vector::ShapeCastOp op) {
         return llvm::all_of(op.getResult().getUsers(), [](Operation *user) {

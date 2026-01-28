@@ -42,9 +42,9 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x130
 ; CHECK-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[68:69], 0x2f0
 ; CHECK-NEXT:    s_mov_b32 s70, s68
 ; CHECK-NEXT:    v_writelane_b32 v7, s8, 0

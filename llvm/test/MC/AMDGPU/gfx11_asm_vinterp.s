@@ -25,50 +25,50 @@ v_interp_p2_f32 v0, v1, -v2, v3
 v_interp_p2_f32 v0, v1, v2, -v3
 // GFX11: v_interp_p2_f32 v0, v1, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x01,0xcd,0x01,0x05,0x0e,0x84]
 
-v_interp_p10_f16_f32 v0, v1, v2, v3 wait_exp:5
-// GFX11: v_interp_p10_f16_f32 v0, v1, v2, v3 wait_exp:5 ; encoding: [0x00,0x05,0x02,0xcd,0x01,0x05,0x0e,0x04]
+v_interp_p10_f16_f32 v0, v1.l, v2, v3.l wait_exp:5
+// GFX11: v_interp_p10_f16_f32 v0, v1.l, v2, v3.l wait_exp:5 ; encoding: [0x00,0x05,0x02,0xcd,0x01,0x05,0x0e,0x04]
 
-v_interp_p10_f16_f32 v0, -v1, v2, v3
-// GFX11: v_interp_p10_f16_f32 v0, -v1, v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x02,0xcd,0x01,0x05,0x0e,0x24]
+v_interp_p10_f16_f32 v0, -v1.l, v2, v3.l
+// GFX11: v_interp_p10_f16_f32 v0, -v1.l, v2, v3.l wait_exp:0 ; encoding: [0x00,0x00,0x02,0xcd,0x01,0x05,0x0e,0x24]
 
-v_interp_p10_f16_f32 v0, v1, -v2, v3
-// GFX11: v_interp_p10_f16_f32 v0, v1, -v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x02,0xcd,0x01,0x05,0x0e,0x44]
+v_interp_p10_f16_f32 v0, v1.l, -v2, v3.l
+// GFX11: v_interp_p10_f16_f32 v0, v1.l, -v2, v3.l wait_exp:0 ; encoding: [0x00,0x00,0x02,0xcd,0x01,0x05,0x0e,0x44]
 
-v_interp_p10_f16_f32 v0, v1, v2, -v3
-// GFX11: v_interp_p10_f16_f32 v0, v1, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x02,0xcd,0x01,0x05,0x0e,0x84]
+v_interp_p10_f16_f32 v0, v1.l, v2, -v3.l
+// GFX11: v_interp_p10_f16_f32 v0, v1.l, v2, -v3.l wait_exp:0 ; encoding: [0x00,0x00,0x02,0xcd,0x01,0x05,0x0e,0x84]
 
-v_interp_p2_f16_f32 v0, v1, v2, v3 wait_exp:5
-// GFX11: v_interp_p2_f16_f32 v0, v1, v2, v3 wait_exp:5 ; encoding: [0x00,0x05,0x03,0xcd,0x01,0x05,0x0e,0x04]
+v_interp_p2_f16_f32 v0.l, v1.l, v2, v3 wait_exp:5
+// GFX11: v_interp_p2_f16_f32 v0.l, v1.l, v2, v3 wait_exp:5 ; encoding: [0x00,0x05,0x03,0xcd,0x01,0x05,0x0e,0x04]
 
-v_interp_p2_f16_f32 v0, -v1, v2, v3
-// GFX11: v_interp_p2_f16_f32 v0, -v1, v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x03,0xcd,0x01,0x05,0x0e,0x24]
+v_interp_p2_f16_f32 v0.l, -v1.l, v2, v3
+// GFX11: v_interp_p2_f16_f32 v0.l, -v1.l, v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x03,0xcd,0x01,0x05,0x0e,0x24]
 
-v_interp_p2_f16_f32 v0, v1, -v2, v3
-// GFX11: v_interp_p2_f16_f32 v0, v1, -v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x03,0xcd,0x01,0x05,0x0e,0x44]
+v_interp_p2_f16_f32 v0.l, v1.l, -v2, v3
+// GFX11: v_interp_p2_f16_f32 v0.l, v1.l, -v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x03,0xcd,0x01,0x05,0x0e,0x44]
 
-v_interp_p2_f16_f32 v0, v1, v2, -v3
-// GFX11: v_interp_p2_f16_f32 v0, v1, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x03,0xcd,0x01,0x05,0x0e,0x84]
+v_interp_p2_f16_f32 v0.l, v1.l, v2, -v3
+// GFX11: v_interp_p2_f16_f32 v0.l, v1.l, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x03,0xcd,0x01,0x05,0x0e,0x84]
 
-v_interp_p10_rtz_f16_f32 v0, v1, v2, v3 wait_exp:5
-// GFX11: v_interp_p10_rtz_f16_f32 v0, v1, v2, v3 wait_exp:5 ; encoding: [0x00,0x05,0x04,0xcd,0x01,0x05,0x0e,0x04]
+v_interp_p10_rtz_f16_f32 v0, v1.l, v2, v3.l wait_exp:5
+// GFX11: v_interp_p10_rtz_f16_f32 v0, v1.l, v2, v3.l wait_exp:5 ; encoding: [0x00,0x05,0x04,0xcd,0x01,0x05,0x0e,0x04]
 
-v_interp_p10_rtz_f16_f32 v0, -v1, v2, v3
-// GFX11: v_interp_p10_rtz_f16_f32 v0, -v1, v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x04,0xcd,0x01,0x05,0x0e,0x24]
+v_interp_p10_rtz_f16_f32 v0, -v1.l, v2, v3.l
+// GFX11: v_interp_p10_rtz_f16_f32 v0, -v1.l, v2, v3.l wait_exp:0 ; encoding: [0x00,0x00,0x04,0xcd,0x01,0x05,0x0e,0x24]
 
-v_interp_p10_rtz_f16_f32 v0, v1, -v2, v3
-// GFX11: v_interp_p10_rtz_f16_f32 v0, v1, -v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x04,0xcd,0x01,0x05,0x0e,0x44]
+v_interp_p10_rtz_f16_f32 v0, v1.l, -v2, v3.l
+// GFX11: v_interp_p10_rtz_f16_f32 v0, v1.l, -v2, v3.l wait_exp:0 ; encoding: [0x00,0x00,0x04,0xcd,0x01,0x05,0x0e,0x44]
 
-v_interp_p10_rtz_f16_f32 v0, v1, v2, -v3
-// GFX11: v_interp_p10_rtz_f16_f32 v0, v1, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x04,0xcd,0x01,0x05,0x0e,0x84]
+v_interp_p10_rtz_f16_f32 v0, v1.l, v2, -v3.l
+// GFX11: v_interp_p10_rtz_f16_f32 v0, v1.l, v2, -v3.l wait_exp:0 ; encoding: [0x00,0x00,0x04,0xcd,0x01,0x05,0x0e,0x84]
 
-v_interp_p2_rtz_f16_f32 v0, v1, v2, v3 wait_exp:5
-// GFX11: v_interp_p2_rtz_f16_f32 v0, v1, v2, v3 wait_exp:5 ; encoding: [0x00,0x05,0x05,0xcd,0x01,0x05,0x0e,0x04]
+v_interp_p2_rtz_f16_f32 v0.l, v1.l, v2, v3 wait_exp:5
+// GFX11: v_interp_p2_rtz_f16_f32 v0.l, v1.l, v2, v3 wait_exp:5 ; encoding: [0x00,0x05,0x05,0xcd,0x01,0x05,0x0e,0x04]
 
-v_interp_p2_rtz_f16_f32 v0, -v1, v2, v3
-// GFX11: v_interp_p2_rtz_f16_f32 v0, -v1, v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x05,0xcd,0x01,0x05,0x0e,0x24]
+v_interp_p2_rtz_f16_f32 v0.l, -v1.l, v2, v3
+// GFX11: v_interp_p2_rtz_f16_f32 v0.l, -v1.l, v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x05,0xcd,0x01,0x05,0x0e,0x24]
 
-v_interp_p2_rtz_f16_f32 v0, v1, -v2, v3
-// GFX11: v_interp_p2_rtz_f16_f32 v0, v1, -v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x05,0xcd,0x01,0x05,0x0e,0x44]
+v_interp_p2_rtz_f16_f32 v0.l, v1.l, -v2, v3
+// GFX11: v_interp_p2_rtz_f16_f32 v0.l, v1.l, -v2, v3 wait_exp:0 ; encoding: [0x00,0x00,0x05,0xcd,0x01,0x05,0x0e,0x44]
 
-v_interp_p2_rtz_f16_f32 v0, v1, v2, -v3
-// GFX11: v_interp_p2_rtz_f16_f32 v0, v1, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x05,0xcd,0x01,0x05,0x0e,0x84]
+v_interp_p2_rtz_f16_f32 v0.l, v1.l, v2, -v3
+// GFX11: v_interp_p2_rtz_f16_f32 v0.l, v1.l, v2, -v3 wait_exp:0 ; encoding: [0x00,0x00,0x05,0xcd,0x01,0x05,0x0e,0x84]

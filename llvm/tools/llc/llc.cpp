@@ -385,17 +385,13 @@ int main(int argc, char **argv) {
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
   initializeLoopStrengthReducePass(*Registry);
-  initializeLowerIntrinsicsPass(*Registry);
   initializePostInlineEntryExitInstrumenterPass(*Registry);
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
   initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
-  initializeExpandReductionsPass(*Registry);
-  initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
-  initializeReplaceWithVeclibLegacyPass(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);

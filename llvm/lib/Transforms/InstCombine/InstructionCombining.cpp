@@ -3033,7 +3033,9 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
         if (auto *II = dyn_cast<IntrinsicInst>(V))
           return Builder->CreateBinaryIntrinsic(
               getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
-        return Builder->CreateSelect(Cond, NotA, NotB);
+        return Builder->CreateSelect(
+            Cond, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(V));
       }
       return NonNull;
     }

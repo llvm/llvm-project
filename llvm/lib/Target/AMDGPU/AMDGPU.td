@@ -2447,9 +2447,7 @@ def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts
   AssemblerPredicate<(not (all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts))>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-  // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
-  // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
 def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
                                                 "!Subtarget->d16PreservesUnusedBits()">;

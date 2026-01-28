@@ -396,7 +396,8 @@ bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
-DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) {
+DistributeLayoutAttr
+LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
   auto sgDataOpt = getSgData();
   auto instDataOpt = getInstData();
   auto laneDataOpt = getLaneData();
@@ -437,7 +438,8 @@ DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) {
 }
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-DistributeLayoutAttr LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
+DistributeLayoutAttr
+LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
   auto sgLayoutOpt = getSgLayout();
   auto laneLayoutOpt = getLaneLayout();
 
@@ -616,56 +618,70 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
           (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
-// Helper function to adjust unit dimensions from sliced space to parent space
+// Helper function to adjust dimensions from sliced space to parent space
+// say we have a parent shape of rank 4, and slice dims [1,3], so the sliced
+// shape is of rank 2, if we want to set unit dim [0] in sliced space, it maps
+// to dim [0] in parent space; if we want to set unit dim [1] in sliced space,
+// it maps to dim [2] in parent space.
 static SetVector<int64_t>
-adjustUnitDimsWithSliceDims(const SetVector<int64_t> &unitDims,
-                            ArrayRef<int64_t> sliceDims) {
-  // Reconstruct parent's non-sliced dimensions
+mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
+                           ArrayRef<int64_t> sliceDims) {
+  // Rather than recovering the exact parent rank, we compute a safe upper bound
+  // so that dimsToMap can be adjusted safely. This upper bound is defined as
+  // max(dimsToMap, sliceDims) + 1 + sliceDims.size().
+  int64_t maxDim = -1;
+  maxDim =
+      std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
+  maxDim =
+      std::max(maxDim, *std::max_element(dimsToMap.begin(), dimsToMap.end()));
+  int64_t parentSpaceRank = maxDim + sliceDims.size() + 1;
 
-  int64_t parentRank = sliceDims.size() + unitDims.size();
+  // get remaining dims in parent space after applying slicing with parent's
+  // slice Dims
   llvm::SmallDenseSet<int64_t> slicedDimsSet(sliceDims.begin(),
                                              sliceDims.end());
-  SmallVector<int64_t> nonSlicedDims;
-  for (int64_t i = 0; i < parentRank; ++i) {
+  SmallVector<int64_t> remainingDims;
+  for (int64_t i = 0; i < parentSpaceRank; ++i) {
     if (!slicedDimsSet.contains(i))
-      nonSlicedDims.push_back(i);
+      remainingDims.push_back(i);
   }
 
   // Map unit dims from sliced space to parent space
   SetVector<int64_t> adjustUnitDims;
-  for (auto dim : unitDims) {
-    if (dim < static_cast<int64_t>(nonSlicedDims.size())) {
-      adjustUnitDims.insert(nonSlicedDims[dim]);
-    }
+  for (auto dim : dimsToMap) {
+    int64_t mappedDim = remainingDims[dim];
+    adjustUnitDims.insert(mappedDim);
   }
 
   return adjustUnitDims;
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
-DistributeLayoutAttr SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) {
-  SliceAttr attr = flatten();
-  ArrayRef<int64_t> sliceDims = attr.getDims().asArrayRef();
-  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+DistributeLayoutAttr
+SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
+  DistributeLayoutAttr parentLayout = getParent();
+
+  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
   SetVector<int64_t> adjustUnitDims =
-      adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+      mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
-  return SliceAttr::get(getContext(), parent.setUnitDimData(adjustUnitDims),
-                        attr.getDims());
+  return SliceAttr::get(getContext(),
+                        parentLayout.setUnitDimData(adjustUnitDims), getDims());
 }
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-DistributeLayoutAttr SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
-  SliceAttr attr = flatten();
-  ArrayRef<int64_t> sliceDims = attr.getDims().asArrayRef();
-  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+DistributeLayoutAttr
+SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
+  DistributeLayoutAttr parentLayout = getParent();
+
+  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
   SetVector<int64_t> adjustUnitDims =
-      adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+      mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
-  return SliceAttr::get(getContext(), parent.setUnitDimLayout(adjustUnitDims),
-                        attr.getDims());
+  return SliceAttr::get(
+      getContext(), parentLayout.setUnitDimLayout(adjustUnitDims), getDims());
 }
 
 //===----------------------------------------------------------------------===//
@@ -798,6 +814,10 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
         memorySpaceAttr.getValue() == MemorySpace::SLM)
       return emitError() << "SLM is only supported for 1D block tensor";
   }
+
+  if (!elementType.isIntOrFloat())
+    return emitError() << "unsupported element type " << elementType
+                       << ": expected integer or float";
 
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();

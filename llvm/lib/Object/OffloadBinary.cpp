@@ -197,7 +197,9 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
 
   if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-      TheEntry->StringOffset > Buf.getBufferSize())
+      TheEntry->StringOffset > Buf.getBufferSize() ||
+      TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
+          Buf.getBufferSize())
     return errorCodeToError(object_error::unexpected_eof);
 
   return std::unique_ptr<OffloadBinary>(

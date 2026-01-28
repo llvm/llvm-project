@@ -790,3 +790,46 @@
 // CHECK-SMEF8F16: __ARM_FEATURE_FP8 1
 // CHECK-SMEF8F16: __ARM_FEATURE_SME2 1
 // CHECK-SMEF8F16: __ARM_FEATURE_SME_F8F16 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+fprcvt -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FPRCVT %s
+// CHECK-FPRCVT: __ARM_FEATURE_FPRCVT 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+f8f16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F8F16MM %s
+//  CHECK-F8F16MM: __ARM_FEATURE_F8F16MM 1
+//  CHECK-F8F16MM: __ARM_FEATURE_FP8 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+f8f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F8F32MM %s
+//  CHECK-F8F32MM: __ARM_FEATURE_F8F32MM 1
+//  CHECK-F8F32MM: __ARM_FEATURE_FP8 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+sve-f16f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F16F32MM %s
+//  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE 1
+//  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE_F16F32MM 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+sve-bfscale -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BFSCALE %s
+//  CHECK-SVE-BFSCALE: __ARM_FEATURE_SVE_BFSCALE 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+sve-aes2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-AES2 %s
+//  CHECK-SVE-AES2: __ARM_FEATURE_SVE_AES2 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+ssve-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SSVE-AES %s
+//  CHECK-SSVE-AES: __ARM_FEATURE_SME2 1
+//  CHECK-SSVE-AES: __ARM_FEATURE_SSVE_AES 1
+//  CHECK-SSVE-AES: __ARM_FEATURE_SVE2_AES 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p2 %s
+// CHECK-SVE2p2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-SVE2p2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-SVE2p2: __ARM_FEATURE_SVE2 1
+// CHECK-SVE2p2: __ARM_FEATURE_SVE2p1 1
+// CHECK-SVE2p2: __ARM_FEATURE_SVE2p2 1
+// CHECK-SVE2p2: __ARM_NEON 1
+// CHECK-SVE2p2: __ARM_NEON_FP 0xE
+// CHECK-SVE2p2: __ARM_NEON_SVE_BRIDGE 1
+//
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2p2 %s
+// CHECK-SME2p2: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2p2: __ARM_FEATURE_SME 1
+// CHECK-SME2p2: __ARM_FEATURE_SME2 1
+// CHECK-SME2p2: __ARM_FEATURE_SME2p1 1
+// CHECK-SME2p2: __ARM_FEATURE_SME2p2 1

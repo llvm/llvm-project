@@ -17,6 +17,7 @@
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
+#include "startup/linux/gnu_property_section.h"
 
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -107,6 +108,7 @@ static TLSDescriptor tls;
   ptrdiff_t base = 0;
   app.tls.size = 0;
   ElfW(Phdr) *tls_phdr = nullptr;
+  [[maybe_unused]] ElfW(Phdr) *gnu_property_phdr = nullptr;
 
   for (uintptr_t i = 0; i < program_hdr_count; ++i) {
     ElfW(Phdr) &phdr = program_hdr_table[i];
@@ -116,6 +118,8 @@ static TLSDescriptor tls;
       base = reinterpret_cast<ptrdiff_t>(_DYNAMIC) - phdr.p_vaddr;
     if (phdr.p_type == PT_TLS)
       tls_phdr = &phdr;
+    if (phdr.p_type == PT_GNU_PROPERTY)
+      gnu_property_phdr = &phdr;
     // TODO: adjust PT_GNU_STACK
   }
 

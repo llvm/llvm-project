@@ -1013,10 +1013,12 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether llvm intrinsics such as llvm.convert.to.fp16 should be used
-  /// to convert to and from __fp16.
-  /// FIXME: This function should be removed once all targets stop using the
-  /// conversion intrinsics.
+  /// Check whether conversions to and from __fp16 should go through an integer
+  /// bitcast with i16.
+  ///
+  /// FIXME: This function should be removed. The intrinsics / no longer exist,
+  /// and are emulated with bitcast + fp cast. This only exists because of
+  /// misuse in ABI determining contexts.
   virtual bool useFP16ConversionIntrinsics() const {
     return true;
   }

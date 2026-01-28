@@ -2883,10 +2883,10 @@ public:
            C == Confidence::Definite
                ? diag::warn_lifetime_safety_loan_expires_permissive
                : diag::warn_lifetime_safety_loan_expires_strict)
-        << IssueExpr->getEndLoc();
+        << IssueExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getEndLoc();
+        << UseExpr->getSourceRange();
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
@@ -2895,10 +2895,10 @@ public:
            C == Confidence::Definite
                ? diag::warn_lifetime_safety_return_stack_addr_permissive
                : diag::warn_lifetime_safety_return_stack_addr_strict)
-        << IssueExpr->getEndLoc();
+        << IssueExpr->getSourceRange();
 
     S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
-        << EscapeExpr->getEndLoc();
+        << EscapeExpr->getSourceRange();
   }
 
   void suggestAnnotation(SuggestionScope Scope,

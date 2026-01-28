@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -1395,6 +1396,8 @@ void BitcodeFile::parse() {
     // FIXME: Check nodeduplicate
     comdat[i] =
         symtab.addComdat(this, saver.save(obj->getComdatTable()[i].first));
+  Triple tt(obj->getTargetTriple());
+  RTLIB::RuntimeLibcallsInfo libcalls(tt);
   for (const lto::InputFile::Symbol &objSym : obj->symbols()) {
     StringRef symName = saver.save(objSym.getName());
     int comdatIndex = objSym.getComdatIndex();
@@ -1444,7 +1447,7 @@ void BitcodeFile::parse() {
           symtab.addRegular(this, symName, nullptr, fakeSC, 0, objSym.isWeak());
     }
     symbols.push_back(sym);
-    if (objSym.isUsed())
+    if (objSym.isUsed() || objSym.isLibcall(libcalls))
       symtab.ctx.config.gcroot.push_back(sym);
   }
   directives = saver.save(obj->getCOFFLinkerOpts());

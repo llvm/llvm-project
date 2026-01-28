@@ -1804,6 +1804,48 @@ public:
   CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
 };
 
+class StructuredGEPInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_gep;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Type *getBaseType() const {
+    return getParamAttr(0, Attribute::ElementType).getValueAsType();
+  }
+
+  unsigned getNumIndices() const { return arg_size() - 1; }
+
+  Value *getIndexOperand(size_t Index) const {
+    assert(Index < getNumIndices());
+    return getOperand(Index + 1);
+  }
+
+  Type *getResultElementType() const {
+    Type *CurrentType = getBaseType();
+    for (unsigned I = 0; I < getNumIndices(); I++) {
+      if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
+        CurrentType = AT->getElementType();
+      } else if (VectorType *VT = dyn_cast<VectorType>(CurrentType)) {
+        CurrentType = VT->getElementType();
+      } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
+        ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
+        CurrentType = ST->getElementType(CI->getZExtValue());
+      } else {
+        // FIXME(Keenuts): add testing reaching those places once initial
+        // implementation has landed.
+        llvm_unreachable("unimplemented");
+      }
+    }
+
+    return CurrentType;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H
