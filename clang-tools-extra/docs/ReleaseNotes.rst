@@ -155,6 +155,13 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
 
+- Improved :doc:`performance-enum-size
+  <clang-tidy/checks/performance/enum-size>` check:
+
+  - Exclude ``enum`` in ``extern "C"`` blocks.
+
+  - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
