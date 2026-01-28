@@ -222,10 +222,6 @@ public:
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
 
   template <typename T>
-  BuiltinTypeMethodBuilder &accessFieldOnResource(T ResourceRecord,
-                                                  FieldDecl *Field);
-
-  template <typename T>
   BuiltinTypeMethodBuilder &accessHandleFieldOnResource(T ResourceRecord);
   template <typename ResourceT, typename ValueT>
   BuiltinTypeMethodBuilder &setHandleFieldOnResource(ResourceT ResourceRecord,
@@ -652,32 +648,26 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
 
 template <typename T>
 BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::accessFieldOnResource(T ResourceRecord,
-                                                FieldDecl *Field) {
-  ensureCompleteDecl();
-
-  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
-
-  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-
-  MemberExpr *FieldExpr =
-      MemberExpr::CreateImplicit(AST, ResourceExpr, false, Field,
-                                 Field->getType(), VK_LValue, OK_Ordinary);
-  StmtsList.push_back(FieldExpr);
-  return *this;
-}
-
-template <typename T>
-BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::accessHandleFieldOnResource(T ResourceRecord) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
-  assert(ResourceExpr->getType()->getAsCXXRecordDecl() == DeclBuilder.Record &&
-         "Getting the field from the wrong resource type.");
+  auto *ResourceTypeDecl = ResourceExpr->getType()->getAsCXXRecordDecl();
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  FieldDecl *HandleField = nullptr;
+
+  if (ResourceTypeDecl == DeclBuilder.Record)
+    HandleField = DeclBuilder.getResourceHandleField();
+  else {
+    IdentifierInfo &II = AST.Idents.get("__handle");
+    for (auto *Decl : ResourceTypeDecl->lookup(&II)) {
+      if ((HandleField = dyn_cast<FieldDecl>(Decl)))
+        break;
+    }
+    assert(HandleField && "Resource handle field not found");
+  }
+
   MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
       AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
       OK_Ordinary);
@@ -1241,18 +1231,13 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
 
-  auto *RT = SamplerStateType->getAsCXXRecordDecl();
-  assert(RT);
-  assert(!RT->field_empty());
-  FieldDecl *SamplerHandleField = *RT->field_begin();
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T Sample(SamplerState s, float2 location)
   BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", Float2Ty)
-      .accessFieldOnResource(PH::_0, SamplerHandleField)
+      .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
                    PH::LastStmt, PH::_1)
       .returnValue(PH::LastStmt)
@@ -1263,7 +1248,7 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", Float2Ty)
       .addParam("Offset", Int2Ty)
-      .accessFieldOnResource(PH::_0, SamplerHandleField)
+      .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
                    PH::LastStmt, PH::_1, PH::_2)
       .returnValue(PH::LastStmt)
@@ -1275,7 +1260,7 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
       .addParam("Location", Float2Ty)
       .addParam("Offset", Int2Ty)
       .addParam("Clamp", FloatTy)
-      .accessFieldOnResource(PH::_0, SamplerHandleField)
+      .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
                    PH::LastStmt, PH::_1, PH::_2, PH::_3)
       .returnValue(PH::LastStmt)
