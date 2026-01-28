@@ -92,13 +92,13 @@ public:
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  QualType ElemTy, bool IsConst,
-                                                  bool IsRef);
-  BuiltinTypeDeclBuilder &addLoadWithStatusFunction(DeclarationName &Name,
-                                                    QualType ReturnTy,
-                                                    bool IsConst);
-  BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name,
-                                           QualType ValueType, bool IsConst);
+                                                  bool IsConst, bool IsRef,
+                                                  QualType ElemTy = QualType());
+  BuiltinTypeDeclBuilder &
+  addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
+                            QualType ReturnTy = QualType());
+  BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
+                                           QualType ValueType);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
