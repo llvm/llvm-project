@@ -1686,6 +1686,8 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -7647,7 +7649,6 @@ cc_library(
         "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Tensor/IR/ShardingInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/IR/Tensor.h",
         "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
     ],
@@ -9755,6 +9756,7 @@ cc_library(
         ":ArithToLLVM",
         ":ArmNeonTransformOps",
         ":ArmSVEVectorTransformOps",
+        ":BufferizationExtensions",
         ":BufferizationTransformOps",
         ":BuiltinToLLVMIRTranslation",
         ":ComplexToLLVM",
@@ -10372,6 +10374,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
+        "include/mlir/Dialect/OpenACC/OpenACCCGOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
@@ -14050,6 +14053,18 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "BufferizationExtensions",
+    srcs = glob(["lib/Dialect/Bufferization/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Bufferization/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BufferizationDialect",
+        ":IR",
+        ":ShardingInterface",
     ],
 )
 

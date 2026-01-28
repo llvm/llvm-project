@@ -396,6 +396,7 @@ MlirGreedyRewriteStrictness mlirGreedyRewriteDriverConfigGetStrictness(
   case mlir::GreedyRewriteStrictness::ExistingOps:
     return MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS;
   }
+  llvm_unreachable("Unknown GreedyRewriteStrictness");
 }
 
 MlirGreedySimplifyRegionLevel
@@ -411,6 +412,7 @@ mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(
   case mlir::GreedySimplifyRegionLevel::Aggressive:
     return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE;
   }
+  llvm_unreachable("Unknown GreedySimplifyRegionLevel");
 }
 
 bool mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(

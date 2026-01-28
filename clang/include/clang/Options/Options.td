@@ -2929,10 +2929,10 @@ defm strict_float_cast_overflow : BoolFOption<"strict-float-cast-overflow",
 
 defm protect_parens : BoolFOption<"protect-parens",
   LangOpts<"ProtectParens">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CLOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CLOption, CC1Option, FlangOption, FC1Option],
           "Determines whether the optimizer honors parentheses when "
           "floating-point expressions are evaluated">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>>;
 
 defm daz_ftz : SimpleMFlag<"daz-ftz",
   "Globally set", "Do not globally set",
@@ -4797,7 +4797,7 @@ def ffile_prefix_map_EQ
              "macros and __builtin_FILE(). Implies -ffile-reproducible.">;
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"remap file source paths in predefined preprocessor macros and "
              "__builtin_FILE(). Implies -ffile-reproducible.">;
 defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
@@ -5936,6 +5936,12 @@ def mcheck_zero_division : Flag<["-"], "mcheck-zero-division">,
 def mno_check_zero_division : Flag<["-"], "mno-check-zero-division">,
                               Group<m_mips_Features_Group>;
 def mfix4300 : Flag<["-"], "mfix4300">, Group<m_mips_Features_Group>;
+def mfix_r5900 : Flag<["-"], "mfix-r5900">,
+                 Group<m_mips_Features_Group>,
+                 HelpText<"Enable R5900 short loop erratum fix">;
+def mno_fix_r5900 : Flag<["-"], "mno-fix-r5900">,
+                    Group<m_mips_Features_Group>,
+                    HelpText<"Disable R5900 short loop erratum fix">;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
 } // let Flags = [TargetSpecific]
@@ -7478,6 +7484,7 @@ defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], [ClangOption], "Allocate array temporaries on the heap (default)">>;
+
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
