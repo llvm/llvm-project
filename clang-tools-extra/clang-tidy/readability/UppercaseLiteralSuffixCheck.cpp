@@ -199,6 +199,15 @@ void UppercaseLiteralSuffixCheck::registerMatchers(MatchFinder *Finder) {
 void UppercaseLiteralSuffixCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *const Literal = Result.Nodes.getNodeAs<Expr>("expr");
+
+  // We don't want to warn on user-defined literals, which appear in
+  // the AST like so:
+  //    UserDefinedLiteral
+  //    \- IntegerLiteral/FLoatLiteral
+  // The obvious way to exclude them is to add
+  //    unless(hasParent(userDefinedLiteral()))
+  // to our matchers. However, profiling shows that doing so is over 3x slower
+  // than the (rather ugly) approach below based on source locations.
   if (isa<UserDefinedLiteral>(Literal)) {
     LatestUserDefinedLiteralLoc = Literal->getBeginLoc();
     return;
