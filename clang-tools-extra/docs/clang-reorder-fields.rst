@@ -22,7 +22,7 @@ Example usage
 -------------
 
 Basic struct reordering
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Consider this simple struct in `example.c`:
 
