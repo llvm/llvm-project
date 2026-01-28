@@ -1,0 +1,130 @@
+# RUN: llc -mtriple=arm64-apple-ios -run-pass=machine-scheduler \
+# RUN:     -misched-large-region-skip-threshold=10 \
+# RUN:     -debug-only=machine-scheduler -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s
+
+# REQUIRES: asserts
+
+# Test that large regions with critical register pressure are skipped when
+# -misched-large-region-skip-threshold is set.
+
+# High pressure function should be skipped.
+# CHECK: Skipping scheduling for region
+
+# Low pressure function should NOT be skipped.
+# CHECK-NOT: Skipping scheduling for region
+
+---
+name:            high_pressure
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    %0:gpr64sp = COPY $x0
+    %1:gpr64 = LDRXui %0, 0
+    %2:gpr64 = LDRXui %0, 1
+    %3:gpr64 = LDRXui %0, 2
+    %4:gpr64 = LDRXui %0, 3
+    %5:gpr64 = LDRXui %0, 4
+    %6:gpr64 = LDRXui %0, 5
+    %7:gpr64 = LDRXui %0, 6
+    %8:gpr64 = LDRXui %0, 7
+    %9:gpr64 = LDRXui %0, 8
+    %10:gpr64 = LDRXui %0, 9
+    %11:gpr64 = LDRXui %0, 10
+    %12:gpr64 = LDRXui %0, 11
+    %13:gpr64 = LDRXui %0, 12
+    %14:gpr64 = LDRXui %0, 13
+    %15:gpr64 = LDRXui %0, 14
+    %16:gpr64 = LDRXui %0, 15
+    %17:gpr64 = LDRXui %0, 16
+    %18:gpr64 = LDRXui %0, 17
+    %19:gpr64 = LDRXui %0, 18
+    %20:gpr64 = LDRXui %0, 19
+    %21:gpr64 = LDRXui %0, 20
+    %22:gpr64 = LDRXui %0, 21
+    %23:gpr64 = LDRXui %0, 22
+    %24:gpr64 = LDRXui %0, 23
+    %25:gpr64 = LDRXui %0, 24
+    %26:gpr64 = LDRXui %0, 25
+    %27:gpr64 = LDRXui %0, 26
+    %28:gpr64 = LDRXui %0, 27
+    %29:gpr64 = LDRXui %0, 28
+    %30:gpr64 = LDRXui %0, 29
+    %31:gpr64 = LDRXui %0, 30
+    %32:gpr64 = LDRXui %0, 31
+    %33:gpr64 = LDRXui %0, 32
+    %34:gpr64 = LDRXui %0, 33
+    %35:gpr64 = LDRXui %0, 34
+    %100:gpr64 = ADDXrr %1, %2
+    %101:gpr64 = ADDXrr %100, %3
+    %102:gpr64 = ADDXrr %101, %4
+    %103:gpr64 = ADDXrr %102, %5
+    %104:gpr64 = ADDXrr %103, %6
+    %105:gpr64 = ADDXrr %104, %7
+    %106:gpr64 = ADDXrr %105, %8
+    %107:gpr64 = ADDXrr %106, %9
+    %108:gpr64 = ADDXrr %107, %10
+    %109:gpr64 = ADDXrr %108, %11
+    %110:gpr64 = ADDXrr %109, %12
+    %111:gpr64 = ADDXrr %110, %13
+    %112:gpr64 = ADDXrr %111, %14
+    %113:gpr64 = ADDXrr %112, %15
+    %114:gpr64 = ADDXrr %113, %16
+    %115:gpr64 = ADDXrr %114, %17
+    %116:gpr64 = ADDXrr %115, %18
+    %117:gpr64 = ADDXrr %116, %19
+    %118:gpr64 = ADDXrr %117, %20
+    %119:gpr64 = ADDXrr %118, %21
+    %120:gpr64 = ADDXrr %119, %22
+    %121:gpr64 = ADDXrr %120, %23
+    %122:gpr64 = ADDXrr %121, %24
+    %123:gpr64 = ADDXrr %122, %25
+    %124:gpr64 = ADDXrr %123, %26
+    %125:gpr64 = ADDXrr %124, %27
+    %126:gpr64 = ADDXrr %125, %28
+    %127:gpr64 = ADDXrr %126, %29
+    %128:gpr64 = ADDXrr %127, %30
+    %129:gpr64 = ADDXrr %128, %31
+    %130:gpr64 = ADDXrr %129, %32
+    %131:gpr64 = ADDXrr %130, %33
+    %132:gpr64 = ADDXrr %131, %34
+    %133:gpr64 = ADDXrr %132, %35
+    $x0 = COPY %133
+    RET_ReallyLR implicit $x0
+...
+---
+name:            low_pressure
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    %0:gpr64sp = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:gpr64 = LDRXui %0, 0
+    %3:gpr64 = ADDXrr %1, %2
+    %4:gpr64 = LDRXui %0, 1
+    %5:gpr64 = ADDXrr %3, %4
+    %6:gpr64 = LDRXui %0, 2
+    %7:gpr64 = ADDXrr %5, %6
+    %8:gpr64 = LDRXui %0, 3
+    %9:gpr64 = ADDXrr %7, %8
+    %10:gpr64 = LDRXui %0, 4
+    %11:gpr64 = ADDXrr %9, %10
+    %12:gpr64 = LDRXui %0, 5
+    %13:gpr64 = ADDXrr %11, %12
+    %14:gpr64 = LDRXui %0, 6
+    %15:gpr64 = ADDXrr %13, %14
+    %16:gpr64 = LDRXui %0, 7
+    %17:gpr64 = ADDXrr %15, %16
+    %18:gpr64 = LDRXui %0, 8
+    %19:gpr64 = ADDXrr %17, %18
+    %20:gpr64 = LDRXui %0, 9
+    %21:gpr64 = ADDXrr %19, %20
+    %22:gpr64 = LDRXui %0, 10
+    %23:gpr64 = ADDXrr %21, %22
+    %24:gpr64 = LDRXui %0, 11
+    %25:gpr64 = ADDXrr %23, %24
+    $x0 = COPY %25
+    RET_ReallyLR implicit $x0
+...
