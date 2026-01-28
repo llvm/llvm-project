@@ -898,6 +898,10 @@ def merge_unmerge : GICombineRule<
            if (SrcTy == DstTy) {
              Helper.replaceRegWith(MRI, ${dst}.getReg(), ${src});
            } else {
+             LegalityQuery Query(TargetOpcode::G_BITCAST, {DstTy, SrcTy});
+             if (!Helper.isLegalOrBeforeLegalizer(Query))
+               return;
+
              Helper.getBuilder().buildBitcast(${dst}.getReg(), ${src});
            }
 
