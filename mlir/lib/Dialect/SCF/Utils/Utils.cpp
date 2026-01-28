@@ -396,9 +396,11 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
       return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
+    // TODO(#178506): This may overflow for large trip counts. Should use uint64_t.
     int64_t tripCountEvenMultiple =
         constTripCount->getZExtValue() -
         (constTripCount->getZExtValue() % unrollFactor);
+    // TODO(#178506): This may overflow when computing upperBoundUnrolledCst.
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -553,7 +555,7 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
               "trip "
               "count";
     unrollJamFactor = tripCount->getZExtValue();
-  } else if (tripCount->getSExtValue() % unrollJamFactor != 0) {
+  } else if (tripCount->getZExtValue() % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -1566,8 +1568,10 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
   if (!loBnds || !upBnds || !steps)
     return {};
+  // TODO(#178506): The result should be SmallVector<uint64_t> and use uint64_t for trip counts.
   llvm::SmallVector<int64_t> tripCounts;
   for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    // TODO(#178506): Signedness is not handled correctly here.
     std::optional<llvm::APInt> numIter = constantTripCount(
         lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
     if (!numIter)
