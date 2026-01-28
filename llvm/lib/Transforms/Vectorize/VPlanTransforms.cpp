@@ -1112,7 +1112,7 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+      .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
@@ -2422,7 +2422,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // All VPInstructions that lower to GEPs must have the i8 source element
     // type (as they are PtrAdds), so we omit it.
     return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
-        .Case<VPReplicateRecipe>([](auto *I) -> Type * {
+        .Case([](const VPReplicateRecipe *I) -> Type * {
           if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
             return GEP->getSourceElementType();
           return nullptr;

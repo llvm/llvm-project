@@ -359,7 +359,19 @@ getLoopEstimatedTripCount(Loop *L,
 /// - Set the branch weight metadata of \p L to reflect that \p L has an
 ///   estimated \p EstimatedTripCount iterations and has
 ///   \c *EstimatedLoopInvocationWeight exit weight through the loop's latch.
-/// - If \p EstimatedTripCount is zero, zero the branch weights.
+/// - If \p EstimatedTripCount is zero, set the backedge weight to 0 and exit
+///   edge to 1. The \p EstimatedTripCount is relative to the original loop
+///   entry, but the branch weights are encoding the probabilities of the
+///   true/false edges. The latter cannot validly be 0-0, because *if* the
+///   control flow arrived here, one of the branches *must* be taken. Moreover,
+///   BranchProbabilityInfo treats 0-0 branch weights as if they were 1-1.
+///   Assuming accurate profile information, a 0 \p EstimatedTripCount should
+///   correspond to a very low, or 0, BFI for the loop body. This should mean
+///   that the BPI info leading to the loop also gives a very low, or 0,
+///   probability to arriving there. If that probability is not exactly 0, 0-0
+///   branch weights would raise the BFI of the loop (as it would really be
+///   treated as 1-1). With the 0-1 (i.e. 100% exit) encoding, the BFI stays as
+///   low as the rest of the CFG's BPI dictates.
 ///
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the

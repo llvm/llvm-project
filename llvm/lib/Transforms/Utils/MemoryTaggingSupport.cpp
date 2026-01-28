@@ -263,6 +263,25 @@ Value *getFP(IRBuilder<> &IRB) {
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 
+Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  // FIXME: This should use the thread_pointer intrinsic. However, the
+  // intrinsic is not currently implemented on Darwin correctly. The
+  // TPIDRRO_EL0 register became part of the ABI to access TSD on recent
+  // versions of OS and so it is safe to use here
+  // Darwin provides a fixed slot for sanitizers at offset 231.
+  MDNode *MD = MDNode::get(M->getContext(),
+                           {MDString::get(M->getContext(), "TPIDRRO_EL0")});
+  Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
+  return IRB.CreateConstGEP1_32(
+      IRB.getInt8Ty(),
+      IRB.CreateIntToPtr(
+          IRB.CreateIntrinsic(Intrinsic::read_register,
+                              {IRB.getIntPtrTy(M->getDataLayout())}, Args),
+          IRB.getPtrTy()),
+      8 * Slot);
+}
+
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
@@ -299,7 +318,7 @@ void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
 }
 
 Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc) {
+                           unsigned int Inc, bool IsMemtagDarwin) {
   // Update the ring buffer. Top byte of ThreadLong defines the size of the
   // buffer in pages, it must be a power of two, and the start of the buffer
   // must be aligned by twice that much. Therefore wrap around of the ring
@@ -323,9 +342,16 @@ Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
   //            0x01AAAAAAAAAAA000
   //
   // Then the WrapMask will be a no-op until the next wrap case.
+  //
+  // Darwin relies on bit 60-62 to store the size of the buffer in pages. This
+  // limits N to [0,2] while the rest of the proof remains unchanged. Bits
+  // 56-59 are avoided in order to prevent MTE Canonical Tag Faults while
+  // accessing the ring buffer. Bit 63 is avoided to prevent unintentional
+  // signed extension by AShr.
   assert((4096 % Inc) == 0);
   Value *WrapMask = IRB.CreateXor(
-      IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+      IRB.CreateShl(IRB.CreateAShr(ThreadLong, IsMemtagDarwin ? 60 : 56), 12,
+                    "", true, true),
       ConstantInt::get(ThreadLong->getType(), (uint64_t)-1));
   return IRB.CreateAnd(
       IRB.CreateAdd(ThreadLong, ConstantInt::get(ThreadLong->getType(), Inc)),
