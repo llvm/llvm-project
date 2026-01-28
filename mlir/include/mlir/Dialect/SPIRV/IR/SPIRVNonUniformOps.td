@@ -1672,7 +1672,7 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
     AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
-    SPIRV_SignlessOrUnsignedInt:$direction
+    SPIRV_QuadSwapDirectionAttr:$direction
   );
 
   let results = (outs
@@ -1682,7 +1682,7 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
   let hasVerifier = 0;
 
   let assemblyFormat = [{
-    $execution_scope $value $direction attr-dict `:` type($value) `,` type($direction)
+    $execution_scope $direction $value attr-dict `:` type($value)
   }];
 }
 
