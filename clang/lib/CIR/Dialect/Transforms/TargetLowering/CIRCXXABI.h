@@ -111,6 +111,9 @@ public:
   virtual mlir::Value lowerMethodToBoolCast(cir::CastOp op,
                                             mlir::Value loweredSrc,
                                             mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerDynamicCast(cir::DynamicCastOp op,
+                                       mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.

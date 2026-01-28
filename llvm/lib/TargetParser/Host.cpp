@@ -2393,7 +2393,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
       IsProcessorFeaturePresent(PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE);
   Features["i8mm"] =
       IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE);
-  Features["fp16"] =
+  Features["fullfp16"] =
       IsProcessorFeaturePresent(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE);
   Features["bf16"] =
       IsProcessorFeaturePresent(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE);

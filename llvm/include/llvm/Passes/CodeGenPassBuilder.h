@@ -702,13 +702,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
+    // These passes do not use MSSA.
     LoopPassManager LPM;
     LPM.addPass(CanonicalizeFreezeInLoopsPass());
     LPM.addPass(LoopStrengthReducePass());
     if (Opt.EnableLoopTermFold)
       LPM.addPass(LoopTermFoldPass());
     addFunctionPass(createFunctionToLoopPassAdaptor(std::move(LPM),
-                                                    /*UseMemorySSA=*/true),
+                                                    /*UseMemorySSA=*/false),
                     PMW);
   }
 
@@ -968,7 +969,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableIPRA) {
     flushFPMsToMPM(PMW);
     addModulePass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>(),
-                  PMW);
+                  PMW, /*Force=*/true);
     addMachineFunctionPass(RegUsageInfoPropagationPass(), PMW);
   }
   // Run pre-ra passes.
@@ -1039,9 +1040,6 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableIPRA) {
     // Collect register usage information and produce a register mask of
     // clobbered registers, to be used to optimize call sites.
-    flushFPMsToMPM(PMW);
-    addModulePass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>(),
-                  PMW);
     addMachineFunctionPass(RegUsageInfoCollectorPass(), PMW);
     // If -print-regusage is specified, print the collected register usage info.
     if (Opt.PrintRegUsage) {

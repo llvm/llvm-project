@@ -2528,7 +2528,9 @@ def EnforceIEIO : XForm_24_eieio<31, 854, (outs), (ins),
                                  "eieio", IIC_LdStLoad, []>;
 
 def PseudoEIEIO : PPCEmitTimePseudo<(outs), (ins), "#PPCEIEIO",
-                  [(int_ppc_eieio)]>;
+                  [(int_ppc_eieio)]> {
+  let Size = 12;
+}
 
 def : Pat<(int_ppc_sync),   (SYNC 0)>, Requires<[HasSYNC]>;
 def : Pat<(int_ppc_iospace_sync),   (SYNC 0)>, Requires<[HasSYNC]>;
@@ -3487,14 +3489,18 @@ def : Pat<(add i32:$in, (PPChi tblockaddress:$g, 0)),
 
 // Support for thread-local storage.
 def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
-                [(set i32:$rD, (PPCppc32GOT))]>;
+                [(set i32:$rD, (PPCppc32GOT))]> {
+  let Size = 8;
+}
 
 // Get the _GLOBAL_OFFSET_TABLE_ in PIC mode.
 // This uses two output registers, the first as the real output, the second as a
 // temporary register, used internally in code generation. A "bl" also clobbers LR.
 let Defs = [LR] in
 def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT",
-                []>;
+                []> {
+  let Size = 20;
+}
 
 def LDgotTprelL32: PPCEmitTimePseudo<(outs gprc_nor0:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
                            "#LDgotTprelL32",
@@ -3620,7 +3626,9 @@ def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry3
 
 // Get Global (GOT) Base Register offset, from the word immediately preceding
 // the function label.
-def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []>;
+def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []> {
+  let Size = 8;
+}
 
 // Pseudo-instruction marked for deletion. When deleting the instruction would
 // cause iterator invalidation in MIR transformation passes, this pseudo can be

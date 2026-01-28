@@ -427,7 +427,7 @@ class AddBarFrameProvider(ScriptedFrameProvider):
     def get_frame_at_index(self, index):
         if index == 0:
             # Return synthetic "bar" frame
-            return CustomScriptedFrame(self.thread, 0, 0xBAB, "bar")
+            return CustomScriptedFrame(self.thread, 0, 0xBAA, "bar")
         elif index - 1 < len(self.input_frames):
             # Pass through input frames (shifted by 1)
             return index - 1
@@ -453,7 +453,7 @@ class AddBazFrameProvider(ScriptedFrameProvider):
     def get_frame_at_index(self, index):
         if index == 0:
             # Return synthetic "baz" frame
-            return CustomScriptedFrame(self.thread, 0, 0xBAD, "baz")
+            return CustomScriptedFrame(self.thread, 0, 0xBAC, "baz")
         elif index - 1 < len(self.input_frames):
             # Pass through input frames (shifted by 1)
             return index - 1

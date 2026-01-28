@@ -6670,7 +6670,8 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     // In-loop AnyOf and FindIV reductions are not yet supported.
     RecurKind Kind = RdxDesc.getRecurrenceKind();
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) ||
-        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) ||
+        RecurrenceDescriptor::isFindLastRecurrenceKind(Kind))
       continue;
 
     // If the target would prefer this reduction to happen "in-loop", then we
@@ -7322,13 +7323,15 @@ static VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   return nullptr;
 }
 
-static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
+/// Match FindIV result: select(icmp ne ReducedIV, Sentinel), ReducedIV, Start.
+template <typename Op0_t, typename Op1_t>
+static bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV,
+                              Op1_t Start) {
   using namespace VPlanPatternMatch;
-  assert(RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult &&
-         "RdxResult must be ComputeFindIVResult");
-  VPValue *StartVPV = RdxResult->getOperand(0);
-  match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
-  return StartVPV->getLiveInIRValue();
+  return match(VPI, m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                            m_ComputeReductionResult(ReducedIV),
+                                            m_VPValue()),
+                             m_ComputeReductionResult(ReducedIV), Start));
 }
 
 // If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
@@ -7336,6 +7339,7 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
 // from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
     VPPhi *EpiResumePhiR, PHINode &EpiResumePhi, BasicBlock *BypassBlock) {
+  using namespace VPlanPatternMatch;
   // Get the VPInstruction computing the reduction result in the middle block.
   // The first operand may not be from the middle block if it is not connected
   // to the scalar preheader. In that case, there's nothing to fix.
@@ -7343,15 +7347,17 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   match(Incoming, VPlanPatternMatch::m_ZExtOrSExt(
                       VPlanPatternMatch::m_VPValue(Incoming)));
   auto *EpiRedResult = dyn_cast<VPInstruction>(Incoming);
-  if (!EpiRedResult ||
-      (EpiRedResult->getOpcode() != VPInstruction::ComputeAnyOfResult &&
-       EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
-       EpiRedResult->getOpcode() != VPInstruction::ComputeFindIVResult))
+  if (!EpiRedResult)
     return;
 
-  // Find the reduction phi by searching users of the backedge value.
-  VPValue *BackedgeVal =
-      EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
+  VPValue *BackedgeVal;
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+      EpiRedResult->getOpcode() == VPInstruction::ComputeReductionResult)
+    BackedgeVal = EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
+  else if (!matchFindIVResult(EpiRedResult, m_VPValue(BackedgeVal),
+                              m_VPValue()))
+    return;
+
   auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
       findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
   if (!EpiRedHeaderPhi) {
@@ -7383,19 +7389,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "start value");
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
-    Value *StartV = getStartValueFromReductionResult(EpiRedResult);
-    Value *SentinelV = EpiRedResult->getOperand(1)->getLiveInIRValue();
-    using namespace llvm::PatternMatch;
-    Value *Cmp, *OrigResumeV, *CmpOp;
-    [[maybe_unused]] bool IsExpectedPattern =
-        match(MainResumeValue,
-              m_Select(m_OneUse(m_Value(Cmp)), m_Specific(SentinelV),
-                       m_Value(OrigResumeV))) &&
-        (match(Cmp, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
-                                   m_Value(CmpOp))) &&
-         ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
-    assert(IsExpectedPattern && "Unexpected reduction resume pattern");
-    MainResumeValue = OrigResumeV;
+    MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
@@ -8746,13 +8740,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       NewExitingVPV =
           Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", FMFs);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
-        return isa<VPInstruction>(&U) &&
-               (cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeAnyOfResult ||
-                cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeReductionResult ||
-                cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeFindIVResult);
+        using namespace VPlanPatternMatch;
+        return match(
+            &U, m_CombineOr(
+                    m_VPInstruction<VPInstruction::ComputeAnyOfResult>(),
+                    m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       });
       if (CM.usePredicatedReductionSelect())
         PhiR->setOperand(1, NewExitingVPV);
@@ -8795,9 +8787,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
       VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
                       FastMathFlags());
-      FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
-                               {Start, Sentinel, NewExitingVPV}, Flags, ExitDL);
+      auto *ReducedIV =
+          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
+                               {NewExitingVPV}, Flags, ExitDL);
+      auto *Cmp =
+          Builder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
+      FinalReductionResult = cast<VPInstruction>(
+          Builder.createSelect(Cmp, ReducedIV, Start, ExitDL));
     } else if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
       // NewVal is the non-phi operand of the select.
@@ -8855,6 +8851,12 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
+        continue;
+      // Skip FindIV reduction chain recipes (ComputeReductionResult, icmp).
+      if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
+          match(U, m_CombineOr(
+                       m_VPInstruction<VPInstruction::ComputeReductionResult>(),
+                       m_VPInstruction<Instruction::ICmp>())))
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
@@ -9176,21 +9178,15 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VPCostContext &CostCtx, VPlan &Plan,
                                         ScalarEpilogueLowering SEL,
                                         std::optional<unsigned> VScale) {
-  InstructionCost TotalCost = Checks.getCost();
-  if (!TotalCost.isValid())
+  InstructionCost RtC = Checks.getCost();
+  if (!RtC.isValid())
     return false;
-
-  // Add on the cost of any work required in the vector early exit block, if
-  // one exists.
-  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
-
-  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (TotalCost > VectorizeMemoryCheckThreshold) {
+    if (RtC > VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
@@ -9205,6 +9201,12 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   if (ScalarC == 0)
     return true;
 
+  InstructionCost TotalCost = RtC;
+  // Add on the cost of any work required in the vector early exit block, if
+  // one exists.
+  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+
   // First, compute the minimum iteration count required so that the vector
   // loop outperforms the scalar loop.
   //  The total cost of the scalar loop is
@@ -9214,10 +9216,10 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //  * ScalarC is the cost of a single scalar iteration.
   //
   //  The total cost of the vector loop is
-  //    RtC + VecC * (TC / VF) + EpiC
+  //    TotalCost + VecC * (TC / VF) + EpiC
   //  where
-  //  * RtC is the sum of the costs cost of
-  //    - the generated runtime checks
+  //  * TotalCost is the sum of the costs cost of
+  //    - the generated runtime checks, i.e. RtC
   //    - performing any additional work in the vector.early.exit block for
   //      loops with uncountable early exits.
   //    - the middle block, if ExpectedTC <=  VF.Width.
@@ -9229,18 +9231,18 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //
   // Vectorization is profitable once the total vector cost is less than the
   // total scalar cost:
-  //   RtC + VecC * (TC / VF) + EpiC <  ScalarC * TC
+  //   TotalCost + VecC * (TC / VF) + EpiC <  ScalarC * TC
   //
   // Now we can compute the minimum required trip count TC as
-  //   VF * (RtC + EpiC) / (ScalarC * VF - VecC) < TC
+  //   VF * (TotalCost + EpiC) / (ScalarC * VF - VecC) < TC
   //
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = estimateElementCount(VF.Width, VScale);
-  uint64_t RtC = TotalCost.getValue();
   uint64_t Div = ScalarC * IntVF - VF.Cost.getValue();
-  uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
+  uint64_t MinTC1 =
+      Div == 0 ? 0 : divideCeil(TotalCost.getValue() * IntVF, Div);
 
   // Second, compute a minimum iteration count so that the cost of the
   // runtime checks is only a fraction of the total scalar loop cost. This
@@ -9249,7 +9251,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // * TC. To bound the runtime check to be a fraction 1/X of the scalar
   // cost, compute
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
-  uint64_t MinTC2 = divideCeil(RtC * 10, ScalarC);
+  uint64_t MinTC2 = divideCeil(RtC.getValue() * 10, ScalarC);
 
   // Now pick the larger minimum. If it is not a multiple of VF and a scalar
   // epilogue is allowed, choose the next closest multiple of VF. This should
@@ -9326,14 +9328,16 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPBuilder Builder(Plan.getEntry());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
+      if (!VPI)
         continue;
-      VPValue *OrigStart = VPI->getOperand(0);
+      VPValue *OrigStart;
+      if (!matchFindIVResult(VPI, m_VPValue(), m_VPValue(OrigStart)))
+        continue;
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
       VPInstruction *Freeze =
           Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
-      VPI->setOperand(0, Freeze);
+      VPI->setOperand(2, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {
           return Freeze != &U && isa<VPPhi>(&U);
@@ -9440,30 +9444,22 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      RecurKind RK = ReductionPhi->getRecurrenceKind();
       // Find the reduction result by searching users of the phi or its backedge
       // value.
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI &&
-               (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-                VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
-                VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
+        if (!VPI)
+          return false;
+        return VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+               VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
       auto *RdxResult = cast<VPInstruction>(
           findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
-      assert(
-          (is_contained(RdxResult->operands(),
-                        ReductionPhi->getBackedgeValue()) ||
-           (isa<VPWidenCastRecipe>(ReductionPhi->getBackedgeValue()) &&
-            is_contained(RdxResult->operands(), ReductionPhi->getBackedgeValue()
-                                                    ->getDefiningRecipe()
-                                                    ->getOperand(0))) ||
-           RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult) &&
-          "expected to find reduction result via backedge");
+      assert(RdxResult && "expected to find reduction result");
 
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
         Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
@@ -9475,23 +9471,33 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
       } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
-        Value *StartV = getStartValueFromReductionResult(RdxResult);
-        ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
-            EPI.MainLoopIterationCountCheck);
+        using namespace VPlanPatternMatch;
+        // Find the icmp user of RdxResult to get the sentinel value.
+        // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
+        VPValue *SentinelVPV = nullptr;
+        [[maybe_unused]] bool Found =
+            any_of(RdxResult->users(), [&](VPUser *U) {
+              return match(U, VPlanPatternMatch::m_SpecificICmp(
+                                  ICmpInst::ICMP_NE, m_Specific(RdxResult),
+                                  m_VPValue(SentinelVPV)));
+            });
+        assert(Found && "expected to find icmp using RdxResult");
 
-        // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions requires
-        // an adjustment to the resume value. The resume value is adjusted to
-        // the sentinel value when the final value from the main vector loop
-        // equals the start value. This ensures correctness when the start value
-        // might not be less than the minimum value of a monotonically
-        // increasing induction variable.
+        // Get the frozen start value from the main loop.
+        Value *FrozenStartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+            EPI.MainLoopIterationCountCheck);
+        if (auto *FreezeI = dyn_cast<FreezeInst>(FrozenStartV))
+          ToFrozen[FreezeI->getOperand(0)] = FrozenStartV;
+
+        // Adjust resume: select(icmp eq ResumeV, FrozenStartV), Sentinel,
+        // ResumeV
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
-        Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
+        Value *Cmp = Builder.CreateICmpEQ(ResumeV, FrozenStartV);
         if (auto *I = dyn_cast<Instruction>(Cmp))
           InstsToMove.push_back(I);
-        Value *Sentinel = RdxResult->getOperand(1)->getLiveInIRValue();
-        ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
+        ResumeV =
+            Builder.CreateSelect(Cmp, SentinelVPV->getLiveInIRValue(), ResumeV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
       } else {
@@ -10041,10 +10047,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   IC = UserIC > 0 ? UserIC : IC;
 
   // FIXME: Enable interleaving for FindLast reductions.
-  if (any_of(LVL.getReductionVars().values(), [](auto &RdxDesc) {
-        return RecurrenceDescriptor::isFindLastRecurrenceKind(
-            RdxDesc.getRecurrenceKind());
-      })) {
+  if (InterleaveLoop && hasFindLastReductionPhi(LVP.getPlanFor(VF.Width))) {
     LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
     IntDiagMsg = {"FindLastPreventsScalarInterleaving",
                   "Unable to interleave due to FindLast reduction."};

@@ -215,6 +215,28 @@ protected:
   const unsigned packedFormatBitSizeB;
 };
 
+struct StoreScatterInstruction : public Instruction {
+  StoreScatterInstruction()
+      : Instruction(InstructionKind::StoreScatter, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreScatter;
+  }
+
+  // SPIRV restricts vector size
+  int32_t getMaxLaneLoadStoreSize() const { return 16; }
+};
+
+struct LoadGatherInstruction : public Instruction {
+  LoadGatherInstruction()
+      : Instruction(InstructionKind::LoadGather, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadGather;
+  }
+
+  // SPIRV restricts vector size
+  int32_t getMaxLaneLoadStoreSize() const { return 16; }
+};
+
 //===----------------------------------------------------------------------===//
 // uArch instances
 //===----------------------------------------------------------------------===//
@@ -225,8 +247,11 @@ struct PVCuArch final : public Xe2Plus {
     static const Subgroup2DBlockLoadInstruction loadNdInst;
     static const Subgroup2DBlockStoreInstruction storeNdInst;
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
-    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
-                                       &prefetchNdInst};
+    static const StoreScatterInstruction storeScatterInst;
+    static const LoadGatherInstruction loadGatherInst;
+    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
+                                       &storeNdInst,      &prefetchNdInst,
+                                       &storeScatterInst, &loadGatherInst};
     return arr;
   }
 
@@ -248,8 +273,11 @@ struct BMGuArch : public Xe2Plus {
     static const Subgroup2DBlockLoadInstruction loadNdInst;
     static const Subgroup2DBlockStoreInstruction storeNdInst;
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
-    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
-                                       &prefetchNdInst};
+    static const StoreScatterInstruction storeScatterInst;
+    static const LoadGatherInstruction loadGatherInst;
+    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
+                                       &storeNdInst,      &prefetchNdInst,
+                                       &storeScatterInst, &loadGatherInst};
     return arr;
   }
 

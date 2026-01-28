@@ -10,6 +10,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/AnnexKDetection.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include <cassert>
@@ -113,26 +114,7 @@ static bool isAnnexKAvailable(std::optional<bool> &CacheVar, Preprocessor *PP,
   if (CacheVar.has_value())
     return *CacheVar;
 
-  if (!LO.C11)
-    // TODO: How is "Annex K" available in C++ mode?
-    return (CacheVar = false).value();
-
-  assert(PP && "No Preprocessor registered.");
-
-  if (!PP->isMacroDefined("__STDC_LIB_EXT1__") ||
-      !PP->isMacroDefined("__STDC_WANT_LIB_EXT1__"))
-    return (CacheVar = false).value();
-
-  const auto *MI =
-      PP->getMacroInfo(PP->getIdentifierInfo("__STDC_WANT_LIB_EXT1__"));
-  if (!MI || MI->tokens_empty())
-    return (CacheVar = false).value();
-
-  const Token &T = MI->tokens().back();
-  if (!T.isLiteral() || !T.getLiteralData())
-    return (CacheVar = false).value();
-
-  CacheVar = StringRef(T.getLiteralData(), T.getLength()) == "1";
+  CacheVar = analysis::isAnnexKAvailable(PP, LO);
   return CacheVar.value();
 }
 

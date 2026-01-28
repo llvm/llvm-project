@@ -27,6 +27,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
@@ -883,7 +887,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
       if (!GV->hasDefinitiveInitializer() || !GV->isConstant())
         return false;
 
-      uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+      uint64_t InitSize = GV->getGlobalSize(DL);
       if (InitSize > MaxSize)
         return false;
       continue;
@@ -1164,7 +1168,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        return SelectInst::Create(SI->getCondition(), V1, V2);
+        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
+                                  ProfcheckDisableMetadataFixes ? nullptr : SI);
       }
     }
   }

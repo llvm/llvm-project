@@ -564,6 +564,7 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
+  bit IsAltFmt = !eq(AltFmtType.Value, IS_ALTFMT.Value);
   bit IncludeInInversePseudoTable = 1;
 }
 
@@ -571,7 +572,7 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
 def RISCVVPseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let CppTypeName = "PseudoInfo";
-  let Fields = [ "Pseudo", "BaseInstr" ];
+  let Fields = ["Pseudo", "BaseInstr", "VLMul", "SEW", "IsAltFmt"];
   let PrimaryKey = [ "Pseudo" ];
   let PrimaryKeyName = "getPseudoInfo";
   let PrimaryKeyEarlyOut = true;
@@ -581,9 +582,9 @@ def RISCVVInversePseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let FilterClassField = "IncludeInInversePseudoTable";
   let CppTypeName = "PseudoInfo";
-  let Fields = [ "Pseudo", "BaseInstr", "VLMul", "SEW"];
-  let PrimaryKey = [ "BaseInstr", "VLMul", "SEW"];
-  let PrimaryKeyName = "getBaseInfo";
+  let Fields = ["Pseudo", "BaseInstr", "VLMul", "SEW", "IsAltFmt"];
+  let PrimaryKey = ["BaseInstr", "VLMul", "SEW", "IsAltFmt"];
+  let PrimaryKeyName = "getBaseInfoImpl";
   let PrimaryKeyEarlyOut = true;
 }
 

@@ -162,6 +162,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
     Option<"cmdOptions", "ptxas-cmd-options", "std::string",
            /*default=*/ [{""}],
            "Command line options passed to downstream compiler">,
+    Option<"verifyTarget", "verify-target-arch", "bool",
+           /*default=*/"true",
+           "Enable verification of the target architecture">,
   ];
 }
 

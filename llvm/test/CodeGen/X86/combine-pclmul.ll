@@ -302,3 +302,14 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_17(<8 x i64> %a0, <8 x i64> %
   %res = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> %7, <8 x i64> %8, i8 17)
   ret <8 x i64> %res
 }
+
+; Ensure that target shuffle extraction can handle SM_SentinelZero.
+define <2 x i64> @pclmul_sentinel_zero(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: pclmul_sentinel_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %and = and <2 x i64> %a0, <i64 -1, i64 0>
+  %res = tail call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %and, <2 x i64> %a1, i8 0)
+  ret <2 x i64> %res
+}

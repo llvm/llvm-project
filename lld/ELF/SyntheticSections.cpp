@@ -943,7 +943,7 @@ void MipsGotSection::build() {
   // using 32-bit value at the end of 16-bit entries.
   for (FileGot &got : gots) {
     got.relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-      return got.global.count(p.first);
+      return got.global.contains(p.first);
     });
     set_union(got.local16, got.local32);
     got.local32.clear();
@@ -1005,7 +1005,7 @@ void MipsGotSection::build() {
   // by subtracting "global" entries in the primary GOT.
   primGot = &gots.front();
   primGot->relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-    return primGot->global.count(p.first);
+    return primGot->global.contains(p.first);
   });
 
   // Calculate indexes for each GOT entry.
@@ -1575,7 +1575,7 @@ DynamicSection<ELFT>::computeContents() {
     addInSec(DT_VERNEED, *part.verNeed);
     unsigned needNum = 0;
     for (SharedFile *f : ctx.sharedFiles)
-      if (!f->vernauxs.empty())
+      if (!f->verneedInfo.empty())
         ++needNum;
     addInt(DT_VERNEEDNUM, needNum);
   }
@@ -3791,17 +3791,18 @@ void elf::addVerneed(Ctx &ctx, Symbol &ss) {
   if (ss.versionId == VER_NDX_GLOBAL)
     return;
 
-  if (file.vernauxs.empty())
-    file.vernauxs.resize(file.verdefs.size());
+  if (file.verneedInfo.empty())
+    file.verneedInfo.resize(file.verdefs.size());
 
   // Select a version identifier for the vernaux data structure, if we haven't
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum(ctx)]; this causes the vernaux identifiers to start from
   // getVerDefNum(ctx)+1.
-  if (file.vernauxs[ss.versionId] == 0)
-    file.vernauxs[ss.versionId] = ++ctx.vernauxNum + getVerDefNum(ctx);
+  if (file.verneedInfo[ss.versionId].id == 0)
+    file.verneedInfo[ss.versionId].id = ++ctx.vernauxNum + getVerDefNum(ctx);
+  file.verneedInfo[ss.versionId].weak &= ss.isWeak();
 
-  ss.versionId = file.vernauxs[ss.versionId];
+  ss.versionId = file.verneedInfo[ss.versionId].id;
 }
 
 template <class ELFT>
@@ -3811,29 +3812,34 @@ VersionNeedSection<ELFT>::VersionNeedSection(Ctx &ctx)
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
   for (SharedFile *f : ctx.sharedFiles) {
-    if (f->vernauxs.empty())
+    if (f->verneedInfo.empty())
       continue;
     verneeds.emplace_back();
     Verneed &vn = verneeds.back();
     vn.nameStrTab = getPartition(ctx).dynStrTab->addString(f->soName);
     bool isLibc = ctx.arg.relrGlibc && f->soName.starts_with("libc.so.");
     bool isGlibc2 = false;
-    for (unsigned i = 0; i != f->vernauxs.size(); ++i) {
-      if (f->vernauxs[i] == 0)
+    for (unsigned i = 0; i != f->verneedInfo.size(); ++i) {
+      if (f->verneedInfo[i].id == 0)
         continue;
+      // Each Verdef has one or more Verdaux entries. The first Verdaux gives
+      // the version name; subsequent entries (if any) are parent versions
+      // (e.g., v2 {} v1;). We only use the first one, as parent versions have
+      // no rtld behavior difference in practice.
       auto *verdef =
           reinterpret_cast<const typename ELFT::Verdef *>(f->verdefs[i]);
       StringRef ver(f->getStringTable().data() + verdef->getAux()->vda_name);
       if (isLibc && ver.starts_with("GLIBC_2."))
         isGlibc2 = true;
-      vn.vernauxs.push_back({verdef->vd_hash, f->vernauxs[i],
+      vn.vernauxs.push_back({verdef->vd_hash, f->verneedInfo[i],
                              getPartition(ctx).dynStrTab->addString(ver)});
     }
     if (isGlibc2) {
       const char *ver = "GLIBC_ABI_DT_RELR";
-      vn.vernauxs.push_back({hashSysV(ver),
-                             ++ctx.vernauxNum + getVerDefNum(ctx),
-                             getPartition(ctx).dynStrTab->addString(ver)});
+      vn.vernauxs.push_back(
+          {hashSysV(ver),
+           {uint16_t(++ctx.vernauxNum + getVerDefNum(ctx)), false},
+           getPartition(ctx).dynStrTab->addString(ver)});
     }
   }
 
@@ -3860,8 +3866,8 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *buf) {
     // Create the Elf_Vernauxs for this Elf_Verneed.
     for (auto &vna : vn.vernauxs) {
       vernaux->vna_hash = vna.hash;
-      vernaux->vna_flags = 0;
-      vernaux->vna_other = vna.verneedIndex;
+      vernaux->vna_flags = vna.verneedInfo.weak ? VER_FLG_WEAK : 0;
+      vernaux->vna_other = vna.verneedInfo.id;
       vernaux->vna_name = vna.nameStrTab;
       vernaux->vna_next = sizeof(Elf_Vernaux);
       ++vernaux;

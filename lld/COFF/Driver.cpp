@@ -23,6 +23,7 @@
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
@@ -715,7 +716,7 @@ std::optional<StringRef> LinkerDriver::findLibIfNew(StringRef filename) {
     return std::nullopt;
 
   StringRef path = findLib(filename);
-  if (ctx.config.noDefaultLibs.count(path.lower()))
+  if (ctx.config.noDefaultLibs.contains(path.lower()))
     return std::nullopt;
 
   if (std::optional<sys::fs::UniqueID> id = getUniqueID(path))
@@ -864,9 +865,9 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
 
   // Libraries specified by `/nodefaultlib:` may not be found in incomplete
   // search paths before lld infers a machine type from input files.
-  std::set<std::string> noDefaultLibs;
-  for (const std::string &path : ctx.config.noDefaultLibs)
-    noDefaultLibs.insert(findLib(path).lower());
+  llvm::StringSet<> noDefaultLibs;
+  for (auto &iter : ctx.config.noDefaultLibs)
+    noDefaultLibs.insert(findLib(iter.first()).lower());
   ctx.config.noDefaultLibs = noDefaultLibs;
 }
 
@@ -1153,7 +1154,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
     if (ctx.config.machine == I386 && !isDecorated(s))
       s = "_" + s;
 
-    if (set.count(s) == 0) {
+    if (!set.contains(s)) {
       if (ctx.config.warnMissingOrderSymbol)
         Warn(ctx) << "/order:" << arg << ": missing symbol: " << s
                   << " [LNK4037]";
@@ -2284,7 +2285,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errCount(ctx))
     return;
 
-  std::set<sys::fs::UniqueID> wholeArchives;
+  SmallSet<sys::fs::UniqueID, 0> wholeArchives;
   for (auto *arg : args.filtered(OPT_wholearchive_file))
     if (std::optional<StringRef> path = findFile(arg->getValue()))
       if (std::optional<sys::fs::UniqueID> id = getUniqueID(*path))
@@ -2298,7 +2299,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (args.hasArg(OPT_wholearchive_flag))
       return true;
     if (std::optional<sys::fs::UniqueID> id = getUniqueID(path))
-      return wholeArchives.count(*id);
+      return wholeArchives.contains(*id);
     return false;
   };
 

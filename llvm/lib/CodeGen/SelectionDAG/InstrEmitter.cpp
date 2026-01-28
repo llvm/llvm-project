@@ -568,7 +568,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
           BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
                   TII->get(TargetOpcode::COPY), VRBase);
       if (Reg.isVirtual())
-        CopyMI.addReg(Reg, 0, SubIdx);
+        CopyMI.addReg(Reg, {}, SubIdx);
       else
         CopyMI.addReg(TRI->getSubReg(Reg, SubIdx));
     }

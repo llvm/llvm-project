@@ -66,6 +66,6 @@ protected:
   HANDLE m_conpty_output = ((HANDLE)(long long)-1);
   HANDLE m_conpty_input = ((HANDLE)(long long)-1);
 };
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif // LIBLLDB_HOST_WINDOWS_PSEUDOCONSOLE_H_

@@ -184,6 +184,10 @@ public:
     return cir::MethodAttr::get(ty, methodFuncSymbolRef);
   }
 
+  cir::MethodAttr getNullMethodAttr(cir::MethodType ty) {
+    return cir::MethodAttr::get(ty);
+  }
+
   cir::BoolAttr getCIRBoolAttr(bool state) {
     return cir::BoolAttr::get(getContext(), state);
   }

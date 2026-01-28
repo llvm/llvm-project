@@ -294,6 +294,15 @@ mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRDynamicCastOpABILowering::matchAndRewrite(
+    cir::DynamicCastOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerDynamicCast(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGetMethodOpABILowering::matchAndRewrite(
     cir::GetMethodOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -384,6 +393,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  target.addIllegalOp<cir::DynamicCastOp>();
 }
 
 //===----------------------------------------------------------------------===//

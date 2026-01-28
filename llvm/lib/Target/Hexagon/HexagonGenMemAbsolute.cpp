@@ -191,7 +191,7 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
       if (IsLoad)
         MIB->getOperand(0).setSubReg(MO0.getSubReg());
       else
-        MIB.addReg(LoadStoreReg, 0, MO0.getSubReg());
+        MIB.addReg(LoadStoreReg, {}, MO0.getSubReg());
 
       LLVM_DEBUG(dbgs() << "Replaced with " << *MIB << "\n");
       // Erase the instructions that got replaced.

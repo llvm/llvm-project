@@ -294,9 +294,9 @@ public:
     return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
                                         : hasArchAccelFeatures();
   }
-  // If the user did not provide a target we default to the `sm_30` target.
+  // If the user did not provide a target we default to the `sm_75` target.
   std::string getTargetName() const {
-    return TargetName.empty() ? "sm_30" : TargetName;
+    return TargetName.empty() ? "sm_75" : TargetName;
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 

@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
 
 View definition_before_header(View a);
 

@@ -179,11 +179,10 @@ entry:
 define amdgpu_ps half @minnum_f16_no_ieee(half %a, half %b) #0 {
 ; SI-LABEL: minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_min_f32_e32 v0, v0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: minnum_f16_no_ieee:
@@ -577,16 +576,18 @@ entry:
 define amdgpu_ps <2 x half> @minnum_v2f16_no_ieee(<2 x half> %a, <2 x half> %b) #0 {
 ; SI-LABEL: minnum_v2f16_no_ieee:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_min_f32_e32 v0, v0, v2
-; SI-NEXT:    v_min_f32_e32 v1, v1, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_min_f32_e32 v2, v3, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SI-NEXT:    v_min_f32_e32 v0, v0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: minnum_v2f16_no_ieee:

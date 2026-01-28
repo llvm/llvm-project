@@ -378,8 +378,14 @@ bool CheckOpcodeMatcher::isContradictoryImpl(const Matcher *M) const {
 }
 
 bool CheckTypeMatcher::isContradictoryImpl(const Matcher *M) const {
-  if (const CheckTypeMatcher *CT = dyn_cast<CheckTypeMatcher>(M))
+  if (const CheckTypeMatcher *CT = dyn_cast<CheckTypeMatcher>(M)) {
+    // If the two checks are about different results, we don't know if they
+    // conflict!
+    if (getResNo() != CT->getResNo())
+      return false;
+
     return TypesAreContradictory(getType(), CT->getType());
+  }
   return false;
 }
 

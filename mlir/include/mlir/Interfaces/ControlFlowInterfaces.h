@@ -320,6 +320,45 @@ Region *getEnclosingRepetitiveRegion(Value value);
 void populateRegionBranchOpInterfaceCanonicalizationPatterns(
     RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit = 1);
 
+/// Helper function for the region branch op inlining pattern that builds
+/// replacement values for non-successor-input values.
+using NonSuccessorInputReplacementBuilderFn =
+    std::function<Value(OpBuilder &, Location, Value)>;
+/// Helper function for the region branch op inlining pattern that checks if the
+/// pattern is applicable to the given operation.
+using PatternMatcherFn = std::function<LogicalResult(Operation *)>;
+
+namespace detail {
+/// Default implementation of the non-successor-input replacement builder
+/// function. This default implemention assumes that all block arguments and
+/// op results are successor inputs.
+static inline Value defaultReplBuilderFn(OpBuilder &builder, Location loc,
+                                         Value value) {
+  llvm_unreachable("defaultReplBuilderFn not implemented");
+}
+
+/// Default implementation of the pattern matcher function.
+static inline LogicalResult defaultMatcherFn(Operation *op) {
+  return success();
+}
+} // namespace detail
+
+/// Populate a pattern that inlines the body of region branch ops when there is
+/// a single acyclic path through the region branch op, starting from "parent"
+/// and ending at "parent". For details, refer to the documentation of the
+/// pattern.
+///
+/// `replBuilderFn` is a function that builds replacement values for
+/// non-successor-input values of the region branch op. `matcherFn` is a
+/// function that checks if the pattern is applicable to the given operation.
+/// Both functions are optional.
+void populateRegionBranchOpInterfaceInliningPattern(
+    RewritePatternSet &patterns, StringRef opName,
+    NonSuccessorInputReplacementBuilderFn replBuilderFn =
+        detail::defaultReplBuilderFn,
+    PatternMatcherFn matcherFn = detail::defaultMatcherFn,
+    PatternBenefit benefit = 1);
+
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//

@@ -13,6 +13,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -23,6 +24,10 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 // MD_prof nodes have the following layout
 //
@@ -390,4 +395,13 @@ void llvm::scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
           Type::getInt64Ty(C), Val.udiv(APT).getLimitedValue())));
     }
   I.setMetadata(LLVMContext::MD_prof, MDNode::get(C, Vals));
+}
+
+void llvm::applyProfMetadataIfEnabled(
+    Value *V, llvm::function_ref<void(Instruction *)> setMetadataCallback) {
+  if (!ProfcheckDisableMetadataFixes) {
+    if (Instruction *Inst = dyn_cast<Instruction>(V)) {
+      setMetadataCallback(Inst);
+    }
+  }
 }

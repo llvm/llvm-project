@@ -41,6 +41,7 @@ func.func @_QPtest1() attributes {noinline} {
   fir.store %c2_i32 to %2 : !fir.ref<i32>
   return
 }
+fir.global @_QMmEglob : i32
 }
 // CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest1">
 // CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_0]], 0>}>
@@ -86,6 +87,7 @@ func.func @_QPtest2() attributes {noinline} {
   fir.store %c2_i32 to %2 : !fir.ref<i32>
   return
 }
+fir.global @_QMmEglob : i32
 }
 // CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest2">
 // CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest2 - Scope 1">

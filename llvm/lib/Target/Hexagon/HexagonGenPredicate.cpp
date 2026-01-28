@@ -248,7 +248,7 @@ RegSubRegPair HexagonGenPredicate::getPredRegFor(const RegSubRegPair &Reg) {
   if (isConvertibleToPredForm(DefI)) {
     MachineBasicBlock::iterator DefIt = DefI;
     BuildMI(B, std::next(DefIt), DL, TII->get(TargetOpcode::COPY), NewPR)
-        .addReg(Reg.Reg, 0, Reg.SubReg);
+        .addReg(Reg.Reg, {}, Reg.SubReg);
     G2P.insert(std::make_pair(Reg, RegSubRegPair(NewPR)));
     LLVM_DEBUG(dbgs() << " -> !" << PrintRegister(RegSubRegPair(NewPR), *TRI)
                       << '\n');
@@ -401,7 +401,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
   for (unsigned i = 1; i < NumOps; ++i) {
     RegSubRegPair GPR = getRegSubRegPair(MI->getOperand(i));
     RegSubRegPair Pred = getPredRegFor(GPR);
-    MIB.addReg(Pred.Reg, 0, Pred.SubReg);
+    MIB.addReg(Pred.Reg, {}, Pred.SubReg);
   }
   LLVM_DEBUG(dbgs() << "generated: " << *MIB);
 
@@ -410,7 +410,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
   const TargetRegisterClass *RC = MRI->getRegClass(OutR.Reg);
   Register NewOutR = MRI->createVirtualRegister(RC);
   BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), NewOutR)
-      .addReg(NewPR.Reg, 0, NewPR.SubReg);
+      .addReg(NewPR.Reg, {}, NewPR.SubReg);
   MRI->replaceRegWith(OutR.Reg, NewOutR);
   MI->eraseFromParent();
 

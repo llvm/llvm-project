@@ -1990,7 +1990,7 @@ multiclass MUBUFScratchLoadPat_D16 <string Instr,
   defm : MUBUFScratchLoadPat_D16_Common<Instr # "_VBUFFER", vt, ld_frag>;
 }
 
-let OtherPredicates = [DisableFlatScratch] in {
+let OtherPredicates = [NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_SBYTE", i32, sextloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i32, extloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i32, zextloadi8_private>;
@@ -2009,7 +2009,7 @@ defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX2", v2i32, load_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX3", v3i32, load_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX4", v4i32, load_private>;
 
-let OtherPredicates = [D16PreservesUnusedBits, DisableFlatScratch] in {
+let OtherPredicates = [D16PreservesUnusedBits, NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SHORT_D16_HI", v2i16, load_d16_hi_private>;
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_UBYTE_D16_HI", v2i16, az_extloadi8_d16_hi_private>;
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SBYTE_D16_HI", v2i16, sextloadi8_d16_hi_private>;
@@ -2025,7 +2025,7 @@ defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_UBYTE_D16", v2f16, az_extloadi8_d16_
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SBYTE_D16", v2f16, sextloadi8_d16_lo_private>;
 }
 
-} // End OtherPredicates = [DisableFlatScratch]
+} // End OtherPredicates = [NotHasFlatScratchEnabled]
 
 multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Instr_OFFSET,
                                       ValueType vt, PatFrag atomic_st> {
@@ -2094,7 +2094,7 @@ multiclass MUBUFScratchStorePat <string Instr,
   defm : MUBUFScratchStorePat_Common<Instr # "_VBUFFER", vt, st, rc>;
 }
 
-let OtherPredicates = [DisableFlatScratch] in {
+let OtherPredicates = [NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE", i32, truncstorei8_private>;
 defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT", i32, truncstorei16_private>;
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE", i16, truncstorei8_private>;
@@ -2109,7 +2109,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORDX3", v3i32, store_private, VReg_
 defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORDX4", v4i32, store_private, VReg_128>;
 
 
-let OtherPredicates = [HasD16LoadStore, DisableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, NotHasFlatScratchEnabled] in {
  // Hiding the extract high pattern in the PatFrag seems to not
  // automatically increase the complexity.
 let AddedComplexity = 1 in {
@@ -2117,7 +2117,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT_D16_HI", i32, store_hi16_privat
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE_D16_HI", i32, truncstorei8_hi16_private>;
 }
 }
-} // End OtherPredicates = [DisableFlatScratch]
+} // End OtherPredicates = [NotHasFlatScratchEnabled]
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns

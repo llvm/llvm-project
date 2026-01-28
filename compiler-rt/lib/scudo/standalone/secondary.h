@@ -100,6 +100,12 @@ struct CachedBlock {
   u16 Next = 0;
   u16 Prev = 0;
 
+  enum CacheFlags : u16 {
+    None = 0,
+    NoAccess = 0x1,
+  };
+  CacheFlags Flags = CachedBlock::None;
+
   bool isValid() { return CommitBase != 0; }
 
   void invalidate() { CommitBase = 0; }
@@ -284,6 +290,7 @@ public:
     Entry.BlockBegin = BlockBegin;
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
+    Entry.Flags = CachedBlock::None;
 
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
@@ -299,6 +306,7 @@ public:
         Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                          MAP_NOACCESS);
       }
+      Entry.Flags = CachedBlock::NoAccess;
     }
 
     // Usually only one entry will be evicted from the cache.
@@ -522,20 +530,18 @@ public:
   }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
-    if (!Config::getQuarantineDisabled()) {
-      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-        if (Quarantine[I].isValid()) {
-          MemMapT &MemMap = Quarantine[I].MemMap;
-          unmapCallBack(MemMap);
-          Quarantine[I].invalidate();
-        }
-      }
-      QuarantinePos = -1U;
-    }
+    if (Config::getQuarantineDisabled())
+      return;
 
-    for (CachedBlock &Entry : LRUEntries)
-      Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
+    ScopedLock L(Mutex);
+    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+      if (Quarantine[I].isValid()) {
+        MemMapT &MemMap = Quarantine[I].MemMap;
+        unmapCallBack(MemMap);
+        Quarantine[I].invalidate();
+      }
+    }
+    QuarantinePos = -1U;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -754,9 +760,15 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(EntryHeaderPos));
   bool Zeroed = Entry.Time == 0;
+
+  if (UNLIKELY(Entry.Flags & CachedBlock::NoAccess)) {
+    // NOTE: Flags set to 0 actually restores read-write.
+    Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
+                                     /*Flags=*/0);
+  }
+
   if (useMemoryTagging<Config>(Options)) {
     uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
-    Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
     if (Zeroed) {
       storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
                 NewBlockBegin);

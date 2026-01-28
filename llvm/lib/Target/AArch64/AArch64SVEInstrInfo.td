@@ -601,7 +601,6 @@ def AArch64smulh : PatFrag<(ops node:$op1, node:$op2),
 def AArch64umulh : PatFrag<(ops node:$op1, node:$op2),
                            (AArch64umulh_p (SVEAnyPredicate), node:$op1, node:$op2)>;
 
-
 def AArch64bsl  : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
                            [(AArch64bsp node:$Op3, node:$Op1, node:$Op2),
                             (or (and node:$Op1, node:$Op3), (and node:$Op2, (vnot node:$Op3)))]>;
@@ -3786,7 +3785,7 @@ let Predicates = [HasSVE2_or_SME] in {
   defm MUL_ZZZ    : sve2_int_mul<0b000,  "mul",   AArch64mul>;
   defm SMULH_ZZZ  : sve2_int_mul<0b010,  "smulh", AArch64smulh>;
   defm UMULH_ZZZ  : sve2_int_mul<0b011,  "umulh", AArch64umulh>;
-  defm PMUL_ZZZ   : sve2_int_mul_single<0b001, "pmul", int_aarch64_sve_pmul>;
+  defm PMUL_ZZZ   : sve2_int_mul_single<0b001, "pmul", clmul>;
 
   // SVE2 complex integer dot product (indexed)
   defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot", int_aarch64_sve_cdot_lane>;

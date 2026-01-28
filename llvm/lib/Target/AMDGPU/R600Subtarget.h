@@ -30,12 +30,12 @@ class R600Subtarget final : public R600GenSubtargetInfo,
 private:
   R600InstrInfo InstrInfo;
   R600FrameLowering FrameLowering;
-  bool FMA = false;
+  bool HasFMA = false;
   bool CaymanISA = false;
   bool CFALUBug = false;
   bool HasVertexCache = false;
   bool R600ALUInst = false;
-  bool FP64 = false;
+  bool HasFP64 = false;
   short TexVTXClauseSize = 0;
   Generation Gen = R600;
   R600TargetLowering TLInfo;
@@ -114,7 +114,7 @@ public:
     return (getGeneration() >= EVERGREEN);
   }
 
-  bool hasFMA() const { return FMA; }
+  bool hasFMA() const { return HasFMA; }
 
   bool hasCFAluBug() const { return CFALUBug; }
 

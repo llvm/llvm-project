@@ -233,9 +233,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
-                                DenormalMode Mode) {
+// Handle known sign bit and nan cases for fadd.
+static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
+                              const KnownFPClass &KnownRHS, DenormalMode Mode) {
   KnownFPClass Known;
 
   // Adding positive and negative infinity produces NaN.
@@ -245,12 +245,32 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
     Known.knownNot(fcNan);
 
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
-      KnownRHS.cannotBeOrderedLessThanZero())
-    Known.knownNot(OrderedLessThanZeroMask);
+      KnownRHS.cannotBeOrderedLessThanZero()) {
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+
+    // This can't underflow if one of the operands is known normal.
+    if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
+        KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
+      Known.knownNot(fcZero);
+  }
 
   if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
-      KnownRHS.cannotBeOrderedGreaterThanZero())
-    Known.knownNot(OrderedGreaterThanZeroMask);
+      KnownRHS.cannotBeOrderedGreaterThanZero()) {
+    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
+    // This can't underflow if one of the operands is known normal.
+    if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
+        KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
+      Known.knownNot(fcZero);
+  }
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, Mode);
 
   // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
   if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
@@ -277,6 +297,12 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
     Known.knownNot(fcPosZero);
 
   return Known;
+}
+
+KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  return fadd(KnownLHS, fneg(KnownRHS), Mode);
 }
 
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
@@ -327,6 +353,100 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
        KnownLHS.isKnownNeverLogicalZero(Mode)) &&
       (KnownLHS.isKnownNeverInfinity() ||
        KnownRHS.isKnownNeverLogicalZero(Mode)))
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  // Only 0/0, Inf/Inf produce NaN.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
+      (KnownLHS.isKnownNeverLogicalZero(Mode) ||
+       KnownRHS.isKnownNeverLogicalZero(Mode))) {
+    Known.knownNot(fcNan);
+  }
+
+  // xor sign bit.
+  // X / -0.0 is -Inf (or NaN).
+  // +X / +X is +X
+  if ((KnownLHS.isKnownNever(fcNegative) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcNegative);
+
+  if ((KnownLHS.isKnownNever(fcPositive) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcPositive);
+
+  // 0 / x => 0 or nan
+  if (KnownLHS.isKnownAlways(fcZero))
+    Known.knownNot(fcSubnormal | fcNormal | fcInf);
+
+  // x / 0 => nan or inf
+  if (KnownRHS.isKnownAlways(fcZero))
+    Known.knownNot(fcFinite);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  // X / X is always exactly 1.0 or a NaN.
+  KnownFPClass Known(fcNan | fcPosNormal);
+
+  if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+  else if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
+}
+KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  // X % X is always exactly [+-]0.0 or a NaN.
+  KnownFPClass Known(fcNan | fcZero);
+
+  if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+  else if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
+                               const KnownFPClass &KnownRHS,
+                               const KnownFPClass &KnownAddend,
+                               DenormalMode Mode) {
+  KnownFPClass Mul = fmul(KnownLHS, KnownRHS, Mode);
+
+  // FMA differs from the base fmul + fadd handling only in the treatment of -0
+  // results.
+  //
+  // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
+  // unlike for a separate fadd.
+  return fadd_impl(Mul, KnownAddend, Mode);
+}
+
+KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
+                                      const KnownFPClass &KnownAddend,
+                                      DenormalMode Mode) {
+  KnownFPClass Squared = square(KnownSquared, Mode);
+  KnownFPClass Known = fadd_impl(Squared, KnownAddend, Mode);
+
+  // Since we know the squared input must be positive, the add of opposite sign
+  // infinities nan hazard only applies for negative inf.
+  //
+  // TODO: Alternatively to proving addend is not -inf, we could know Squared is
+  // not pinf. Other than the degenerate always-subnormal input case, we can't
+  // prove that without a known range.
+  if (KnownAddend.isKnownNever(fcNegInf | fcNan) && Squared.isKnownNever(fcNan))
     Known.knownNot(fcNan);
 
   return Known;
@@ -423,6 +543,20 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // Sign should be preserved
+  // TODO: Handle cannot be ordered greater than zero
+  if (KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+
+  Known.propagateNaN(KnownSrc, true);
+
+  // Infinity needs a range check.
+  return Known;
+}
+
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
                                            bool IsTrunc,
                                            bool IsMultiUnitFPType) {
@@ -448,5 +582,32 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
   if (KnownSrc.isKnownNever(fcNegFinite))
     Known.knownNot(fcNegFinite);
 
+  return Known;
+}
+
+KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc,
+                                      DenormalMode Mode) {
+  KnownFPClass Known;
+  Known.knownNot(fcSubnormal);
+
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+  else {
+    if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+      Known.knownNot(fcNegZero);
+    if (KnownSrc.isKnownNever(fcNegInf))
+      Known.knownNot(fcNegInf);
+  }
+
+  if (KnownSrc.isKnownNever(fcPositive))
+    Known.knownNot(fcPositive);
+  else {
+    if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+      Known.knownNot(fcPosZero);
+    if (KnownSrc.isKnownNever(fcPosInf))
+      Known.knownNot(fcPosInf);
+  }
+
+  Known.propagateNaN(KnownSrc);
   return Known;
 }

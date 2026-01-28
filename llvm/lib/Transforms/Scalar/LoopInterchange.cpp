@@ -31,6 +31,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -119,6 +120,11 @@ static cl::list<RuleTy> Profitabilities(
                clEnumValN(RuleTy::Ignore, "ignore",
                           "Ignore profitability, force interchange (does not "
                           "work with other options)")));
+
+// Support for the inner-loop reduction pattern.
+static cl::opt<bool> EnableReduction2Memory(
+    "loop-interchange-reduction-to-mem", cl::init(false), cl::Hidden,
+    cl::desc("Support for the inner-loop reduction pattern."));
 
 #ifndef NDEBUG
 static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
@@ -446,8 +452,8 @@ namespace {
 class LoopInterchangeLegality {
 public:
   LoopInterchangeLegality(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
-                          OptimizationRemarkEmitter *ORE)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE) {}
+                          OptimizationRemarkEmitter *ORE, DominatorTree *DT)
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), DT(DT), ORE(ORE) {}
 
   /// Check if the loops can be interchanged.
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
@@ -475,9 +481,31 @@ public:
     return HasNoWrapReductions;
   }
 
+  /// Record reductions in the inner loop. Currently supported reductions:
+  /// - initialized from a constant.
+  /// - reduction PHI node has only one user.
+  /// - located in the innermost loop.
+  struct InnerReduction {
+    /// The reduction itself.
+    PHINode *Reduction;
+    Value *Init;
+    Value *Next;
+    /// The Lcssa PHI.
+    PHINode *LcssaPhi;
+    /// Store reduction result into memory object.
+    StoreInst *LcssaStore;
+    /// The memory Location.
+    Value *MemRef;
+    Type *ElemTy;
+  };
+
+  ArrayRef<InnerReduction> getInnerReductions() const {
+    return InnerReductions;
+  }
+
 private:
   bool tightlyNested(Loop *Outer, Loop *Inner);
-  bool containsUnsafeInstructions(BasicBlock *BB);
+  bool containsUnsafeInstructions(BasicBlock *BB, Instruction *Skip);
 
   /// Discover induction and reduction PHIs in the header of \p L. Induction
   /// PHIs are added to \p Inductions, reductions are added to
@@ -487,10 +515,24 @@ private:
                                   SmallVector<PHINode *, 8> &Inductions,
                                   Loop *InnerLoop);
 
+  /// Detect and record the reduction of the inner loop. Add them to
+  /// InnerReductions.
+  ///
+  ///    innerloop:
+  ///        Re = phi<0.0, Next>
+  ///        Next = Re op ...
+  ///    OuterLoopLatch:
+  ///        Lcssa = phi<Next>    ; lcssa phi
+  ///        store Lcssa, MemRef  ; LcssaStore
+  ///
+  bool isInnerReduction(Loop *L, PHINode *Phi,
+                        SmallVectorImpl<Instruction *> &HasNoWrapInsts);
+
   Loop *OuterLoop;
   Loop *InnerLoop;
 
   ScalarEvolution *SE;
+  DominatorTree *DT;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
@@ -506,6 +548,9 @@ private:
   /// like integer addition/multiplication. Those flags must be dropped when
   /// interchanging the loops.
   SmallVector<Instruction *, 4> HasNoWrapReductions;
+
+  /// Vector of reductions in the inner loop.
+  SmallVector<InnerReduction, 8> InnerReductions;
 };
 
 /// Manages information utilized by the profitability check for cache. The main
@@ -575,6 +620,7 @@ public:
 
   /// Interchange OuterLoop and InnerLoop.
   bool transform(ArrayRef<Instruction *> DropNoWrapInsts);
+  void reduction2Memory();
   void restructureLoops(Loop *NewInner, Loop *NewOuter,
                         BasicBlock *OrigInnerPreHeader,
                         BasicBlock *OrigOuterPreHeader);
@@ -700,7 +746,7 @@ struct LoopInterchange {
     Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
-    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
+    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE, DT);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Cannot prove legality, not interchanging loops '"
                         << OuterLoop->getName() << "' and '"
@@ -749,8 +795,11 @@ struct LoopInterchange {
 
 } // end anonymous namespace
 
-bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB) {
-  return any_of(*BB, [](const Instruction &I) {
+bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB,
+                                                         Instruction *Skip) {
+  return any_of(*BB, [Skip](const Instruction &I) {
+    if (&I == Skip)
+      return false;
     return I.mayHaveSideEffects() || I.mayReadFromMemory();
   });
 }
@@ -778,17 +827,27 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
       return false;
 
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
+
+  // The inner loop reduction pattern requires storing the LCSSA PHI in
+  // the OuterLoop Latch. Therefore, when reduction2Memory is enabled, skip
+  // that store during checks.
+  Instruction *Skip = nullptr;
+  assert(InnerReductions.size() <= 1 &&
+         "So far we only support at most one reduction.");
+  if (InnerReductions.size() == 1)
+    Skip = InnerReductions[0].LcssaStore;
+
   // We do not have any basic block in between now make sure the outer header
   // and outer loop latch doesn't contain any unsafe instructions.
-  if (containsUnsafeInstructions(OuterLoopHeader) ||
-      containsUnsafeInstructions(OuterLoopLatch))
+  if (containsUnsafeInstructions(OuterLoopHeader, Skip) ||
+      containsUnsafeInstructions(OuterLoopLatch, Skip))
     return false;
 
   // Also make sure the inner loop preheader does not contain any unsafe
   // instructions. Note that all instructions in the preheader will be moved to
   // the outer loop header when interchanging.
   if (InnerLoopPreHeader != OuterLoopHeader &&
-      containsUnsafeInstructions(InnerLoopPreHeader))
+      containsUnsafeInstructions(InnerLoopPreHeader, Skip))
     return false;
 
   BasicBlock *InnerLoopExit = InnerLoop->getExitBlock();
@@ -804,7 +863,7 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   // The inner loop exit block does flow to the outer loop latch and not some
   // other BBs, now make sure it contains safe instructions, since it will be
   // moved into the (new) inner loop after interchange.
-  if (containsUnsafeInstructions(InnerLoopExit))
+  if (containsUnsafeInstructions(InnerLoopExit, Skip))
     return false;
 
   LLVM_DEBUG(dbgs() << "Loops are perfectly nested\n");
@@ -915,6 +974,77 @@ static Value *followLCSSA(Value *SV) {
   return followLCSSA(PHI->getIncomingValue(0));
 }
 
+static bool checkReductionKind(Loop *L, PHINode *PHI,
+                               SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
+  RecurrenceDescriptor RD;
+  if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
+    // Detect floating point reduction only when it can be reordered.
+    if (RD.getExactFPMathInst() != nullptr)
+      return false;
+
+    RecurKind RK = RD.getRecurrenceKind();
+    switch (RK) {
+    case RecurKind::Or:
+    case RecurKind::And:
+    case RecurKind::Xor:
+    case RecurKind::SMin:
+    case RecurKind::SMax:
+    case RecurKind::UMin:
+    case RecurKind::UMax:
+    case RecurKind::FAdd:
+    case RecurKind::FMul:
+    case RecurKind::FMin:
+    case RecurKind::FMax:
+    case RecurKind::FMinimum:
+    case RecurKind::FMaximum:
+    case RecurKind::FMinimumNum:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FMulAdd:
+    case RecurKind::AnyOf:
+      return true;
+
+    // Change the order of integer addition/multiplication may change the
+    // semantics. Consider the following case:
+    //
+    //  int A[2][2] = {{ INT_MAX, INT_MAX }, { INT_MIN, INT_MIN }};
+    //  int sum = 0;
+    //  for (int i = 0; i < 2; i++)
+    //    for (int j = 0; j < 2; j++)
+    //      sum += A[j][i];
+    //
+    // If the above loops are exchanged, the addition will cause an
+    // overflow. To prevent this, we must drop the nuw/nsw flags from the
+    // addition/multiplication instructions when we actually exchanges the
+    // loops.
+    case RecurKind::Add:
+    case RecurKind::Mul: {
+      unsigned OpCode = RecurrenceDescriptor::getOpcode(RK);
+      SmallVector<Instruction *, 4> Ops = RD.getReductionOpChain(PHI, L);
+
+      // Bail out when we fail to collect reduction instructions chain.
+      if (Ops.empty())
+        return false;
+
+      for (Instruction *I : Ops) {
+        assert(I->getOpcode() == OpCode &&
+               "Expected the instruction to be the reduction operation");
+        (void)OpCode;
+
+        // If the instruction has nuw/nsw flags, we must drop them when the
+        // transformation is actually performed.
+        if (I->hasNoSignedWrap() || I->hasNoUnsignedWrap())
+          HasNoWrapInsts.push_back(I);
+      }
+      return true;
+    }
+
+    default:
+      return false;
+    }
+  } else
+    return false;
+}
+
 // Check V's users to see if it is involved in a reduction in L.
 static PHINode *
 findInnerReductionPhi(Loop *L, Value *V,
@@ -927,77 +1057,139 @@ findInnerReductionPhi(Loop *L, Value *V,
     if (PHINode *PHI = dyn_cast<PHINode>(User)) {
       if (PHI->getNumIncomingValues() == 1)
         continue;
-      RecurrenceDescriptor RD;
-      if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
-        // Detect floating point reduction only when it can be reordered.
-        if (RD.getExactFPMathInst() != nullptr)
-          return nullptr;
 
-        RecurKind RK = RD.getRecurrenceKind();
-        switch (RK) {
-        case RecurKind::Or:
-        case RecurKind::And:
-        case RecurKind::Xor:
-        case RecurKind::SMin:
-        case RecurKind::SMax:
-        case RecurKind::UMin:
-        case RecurKind::UMax:
-        case RecurKind::FAdd:
-        case RecurKind::FMul:
-        case RecurKind::FMin:
-        case RecurKind::FMax:
-        case RecurKind::FMinimum:
-        case RecurKind::FMaximum:
-        case RecurKind::FMinimumNum:
-        case RecurKind::FMaximumNum:
-        case RecurKind::FMulAdd:
-        case RecurKind::AnyOf:
-          return PHI;
-
-        // Change the order of integer addition/multiplication may change the
-        // semantics. Consider the following case:
-        //
-        //  int A[2][2] = {{ INT_MAX, INT_MAX }, { INT_MIN, INT_MIN }};
-        //  int sum = 0;
-        //  for (int i = 0; i < 2; i++)
-        //    for (int j = 0; j < 2; j++)
-        //      sum += A[j][i];
-        //
-        // If the above loops are exchanged, the addition will cause an
-        // overflow. To prevent this, we must drop the nuw/nsw flags from the
-        // addition/multiplication instructions when we actually exchanges the
-        // loops.
-        case RecurKind::Add:
-        case RecurKind::Mul: {
-          unsigned OpCode = RecurrenceDescriptor::getOpcode(RK);
-          SmallVector<Instruction *, 4> Ops = RD.getReductionOpChain(PHI, L);
-
-          // Bail out when we fail to collect reduction instructions chain.
-          if (Ops.empty())
-            return nullptr;
-
-          for (Instruction *I : Ops) {
-            assert(I->getOpcode() == OpCode &&
-                   "Expected the instruction to be the reduction operation");
-            (void)OpCode;
-
-            // If the instruction has nuw/nsw flags, we must drop them when the
-            // transformation is actually performed.
-            if (I->hasNoSignedWrap() || I->hasNoUnsignedWrap())
-              HasNoWrapInsts.push_back(I);
-          }
-          return PHI;
-        }
-
-        default:
-          return nullptr;
-        }
-      }
-      return nullptr;
+      if (checkReductionKind(L, PHI, HasNoWrapInsts))
+        return PHI;
+      else
+        return nullptr;
     }
   }
 
   return nullptr;
+}
+
+bool LoopInterchangeLegality::isInnerReduction(
+    Loop *L, PHINode *Phi, SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
+
+  // Only support reduction2Mem when the loop nest to be interchanged is
+  // the innermost two loops.
+  if (!L->isInnermost()) {
+    LLVM_DEBUG(dbgs() << "Only supported when the loop is the innermost.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Only supported when the loop is the innermost.";
+    });
+    return false;
+  }
+
+  if (Phi->getNumIncomingValues() != 2)
+    return false;
+
+  Value *Init = Phi->getIncomingValueForBlock(L->getLoopPreheader());
+  Value *Next = Phi->getIncomingValueForBlock(L->getLoopLatch());
+
+  // So far only supports constant initial value.
+  if (!isa<Constant>(Init)) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Only supported for the reduction with a constant initial value.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Only supported for the reduction with a constant initial "
+                "value.";
+    });
+    return false;
+  }
+
+  // The reduction result must live in the inner loop.
+  if (Instruction *I = dyn_cast<Instruction>(Next)) {
+    BasicBlock *BB = I->getParent();
+    if (!L->contains(BB))
+      return false;
+  }
+
+  // The reduction should have only one user.
+  if (!Phi->hasOneUser())
+    return false;
+
+  // Check the reduction kind.
+  if (!checkReductionKind(L, Phi, HasNoWrapInsts))
+    return false;
+
+  // Find lcssa_phi in OuterLoop's Latch
+  BasicBlock *ExitBlock = L->getExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  PHINode *Lcssa = NULL;
+  for (auto *U : Next->users()) {
+    if (auto *P = dyn_cast<PHINode>(U)) {
+      if (P == Phi)
+        continue;
+
+      if (Lcssa == NULL && P->getParent() == ExitBlock &&
+          P->getIncomingValueForBlock(L->getLoopLatch()) == Next)
+        Lcssa = P;
+      else
+        return false;
+    } else
+      return false;
+  }
+  if (!Lcssa)
+    return false;
+
+  if (!Lcssa->hasOneUser()) {
+    LLVM_DEBUG(dbgs() << "Only supported when the reduction is used once in "
+                         "the outer loop.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Only supported when the reduction is used once in the outer "
+                "loop.";
+    });
+    return false;
+  }
+
+  StoreInst *LcssaStore =
+      dyn_cast<StoreInst>(Lcssa->getUniqueUndroppableUser());
+  if (!LcssaStore || LcssaStore->getParent() != ExitBlock)
+    return false;
+
+  Value *MemRef = LcssaStore->getOperand(1);
+  Type *ElemTy = LcssaStore->getOperand(0)->getType();
+
+  // LcssaStore stores the reduction result in BB.
+  // When the reduction is initialized from a constant value, we need to load
+  // from the memory object into the target basic block of the inner loop. This
+  // means the memory reference was used prematurely. So we must ensure that the
+  // memory reference does not dominate the target basic block.
+  // TODO: Move the memory reference definition into the loop header.
+  if (!DT->dominates(dyn_cast<Instruction>(MemRef), L->getHeader())) {
+    LLVM_DEBUG(dbgs() << "Only supported when memory reference dominate "
+                         "the inner loop.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Only supported when memory reference dominate the inner "
+                "loop.";
+    });
+    return false;
+  }
+
+  // Found a reduction in the inner loop.
+  InnerReduction SR;
+  SR.Reduction = Phi;
+  SR.Init = Init;
+  SR.Next = Next;
+  SR.LcssaPhi = Lcssa;
+  SR.LcssaStore = LcssaStore;
+  SR.MemRef = MemRef;
+  SR.ElemTy = ElemTy;
+
+  InnerReductions.push_back(SR);
+  return true;
 }
 
 bool LoopInterchangeLegality::findInductionAndReductions(
@@ -1012,11 +1204,14 @@ bool LoopInterchangeLegality::findInductionAndReductions(
       // PHIs in inner loops need to be part of a reduction in the outer loop,
       // discovered when checking the PHIs of the outer loop earlier.
       if (!InnerLoop) {
-        if (!OuterInnerReductions.count(&PHI)) {
-          LLVM_DEBUG(dbgs() << "Inner loop PHI is not part of reductions "
-                               "across the outer loop.\n");
+        if (OuterInnerReductions.count(&PHI)) {
+          LLVM_DEBUG(dbgs() << "Found a reduction across the outer loop.\n");
+        } else if (EnableReduction2Memory &&
+                   isInnerReduction(L, &PHI, HasNoWrapReductions)) {
+          LLVM_DEBUG(dbgs() << "Found a reduction in the inner loop: \n"
+                            << PHI << '\n');
+        } else
           return false;
-        }
       } else {
         assert(PHI.getNumIncomingValues() == 2 &&
                "Phis in loop header should have exactly 2 incoming values");
@@ -1037,6 +1232,18 @@ bool LoopInterchangeLegality::findInductionAndReductions(
       }
     }
   }
+
+  // For now we only support at most one reduction.
+  if (InnerReductions.size() > 1) {
+    LLVM_DEBUG(dbgs() << "Only supports at most one reduction.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Only supports at most one reduction.";
+    });
+    return false;
+  }
+
   return true;
 }
 
@@ -1132,12 +1339,16 @@ bool LoopInterchangeLegality::findInductions(
 // the we are only interested in the final value after the loop).
 static bool
 areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
-                              SmallPtrSetImpl<PHINode *> &Reductions) {
+                              SmallPtrSetImpl<PHINode *> &Reductions,
+                              PHINode *LcssaReduction) {
   BasicBlock *InnerExit = OuterL->getUniqueExitBlock();
   for (PHINode &PHI : InnerExit->phis()) {
-    // Reduction lcssa phi will have only 1 incoming block that from loop latch.
+    // The reduction LCSSA PHI will have only one incoming block, which comes
+    // from the loop latch.
     if (PHI.getNumIncomingValues() > 1)
       return false;
+    if (&PHI == LcssaReduction)
+      return true;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
           return !PN ||
@@ -1287,8 +1498,16 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  if (!areInnerLoopExitPHIsSupported(OuterLoop, InnerLoop,
-                                     OuterInnerReductions)) {
+  // The LCSSA PHI for the reduction has passed checks before; its user
+  // is a store instruction.
+  PHINode *LcssaReduction = nullptr;
+  assert(InnerReductions.size() <= 1 &&
+         "So far we only support at most one reduction.");
+  if (InnerReductions.size() == 1)
+    LcssaReduction = InnerReductions[0].LcssaPhi;
+
+  if (!areInnerLoopExitPHIsSupported(OuterLoop, InnerLoop, OuterInnerReductions,
+                                     LcssaReduction)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop exit.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
@@ -1650,9 +1869,75 @@ void LoopInterchangeTransform::restructureLoops(
   SE->forgetLoop(NewOuter);
 }
 
+///  User can write, or optimizers can generate the reduction for inner loop.
+///  To make the interchange valid, apply Reduction2Mem by moving the
+///  initializer and store instructions into the inner loop. So far we only
+///  handle cases where the reduction variable is initialized to a constant.
+///  For example, below code:
+///
+///  loop:
+///    re = phi<0.0, next>
+///    next = re op ...
+///  endloop
+///  reduc_sum = phi<next>       // lcssa phi
+///  MEM_REF[idx] = reduc_sum    // LcssaStore
+///
+///  is transformed into:
+///
+///  loop:
+///    tmp = MEM_REF[idx];
+///    new_var = !first_iteration ? tmp : 0.0;
+///    next = new_var op ...
+///    MEM_REF[idx] = next;		// after moving
+///  endloop
+///
+///  In this way the initial const is used in the first iteration of loop.
+void LoopInterchangeTransform::reduction2Memory() {
+  ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
+      LIL.getInnerReductions();
+
+  assert(InnerReductions.size() == 1 &&
+         "So far we only support at most one reduction.");
+
+  LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
+  BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
+  IRBuilder<> Builder(&*(InnerLoopHeader->getFirstNonPHIIt()));
+
+  // Check if it's the first iteration.
+  LLVMContext &Context = InnerLoopHeader->getContext();
+  PHINode *FirstIter =
+      Builder.CreatePHI(Type::getInt1Ty(Context), 2, "first.iter");
+  FirstIter->addIncoming(ConstantInt::get(Type::getInt1Ty(Context), 1),
+                         InnerLoop->getLoopPreheader());
+  FirstIter->addIncoming(ConstantInt::get(Type::getInt1Ty(Context), 0),
+                         InnerLoop->getLoopLatch());
+  assert(FirstIter->isComplete() && "The FirstIter PHI node is not complete.");
+
+  // When the reduction is initialized from a constant value, we need to add
+  // a stmt loading from the memory object to target basic block in inner
+  // loop.
+  Instruction *LoadMem = Builder.CreateLoad(SR.ElemTy, SR.MemRef);
+
+  // Init new_var to MEM_REF or CONST depending on if it is the first iteration.
+  Value *NewVar = Builder.CreateSelect(FirstIter, LoadMem, SR.Init, "new.var");
+
+  // Replace all uses of the reduction variable with a new variable.
+  SR.Reduction->replaceAllUsesWith(NewVar);
+
+  // Move store instruction into inner loop, just after reduction next's
+  // definition.
+  SR.LcssaStore->setOperand(0, SR.Next);
+  SR.LcssaStore->moveAfter(dyn_cast<Instruction>(SR.Next));
+}
+
 bool LoopInterchangeTransform::transform(
     ArrayRef<Instruction *> DropNoWrapInsts) {
   bool Transformed = false;
+
+  ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
+      LIL.getInnerReductions();
+  if (InnerReductions.size() == 1)
+    reduction2Memory();
 
   if (InnerLoop->getSubLoops().empty()) {
     BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();

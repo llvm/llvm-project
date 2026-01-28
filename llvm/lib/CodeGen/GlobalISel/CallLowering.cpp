@@ -568,6 +568,13 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   const TypeSize PartSize = PartTy.getSizeInBits();
 
+  if (PartSize == SrcTy.getSizeInBits() && DstRegs.size() == 1) {
+    // TODO: Handle int<->ptr casts. It just happens the ABI lowering
+    // assignments are not pointer aware.
+    B.buildBitcast(DstRegs[0], SrcReg);
+    return;
+  }
+
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
@@ -576,7 +583,8 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   }
 
   if (SrcTy.isVector() && !PartTy.isVector() &&
-      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
+      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits()) &&
+      SrcTy.getElementCount() == ElementCount::getFixed(DstRegs.size())) {
     // Vector was scalarized, and the elements extended.
     auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
     for (int i = 0, e = DstRegs.size(); i != e; ++i)
@@ -614,9 +622,21 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   MachineRegisterInfo &MRI = *B.getMRI();
   LLT DstTy = MRI.getType(DstRegs[0]);
-  LLT LCMTy = getCoverTy(SrcTy, PartTy);
+  LLT CoverTy = getCoverTy(SrcTy, PartTy);
+  if (SrcTy.isVector() && DstRegs.size() > 1) {
+    TypeSize FullCoverSize =
+        DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
 
-  if (PartTy.isVector() && LCMTy == PartTy) {
+    LLT EltTy = SrcTy.getElementType();
+    TypeSize EltSize = EltTy.getSizeInBits();
+    if (FullCoverSize.isKnownMultipleOf(EltSize)) {
+      TypeSize VecSize = FullCoverSize.divideCoefficientBy(EltSize);
+      CoverTy =
+          LLT::vector(ElementCount::get(VecSize, VecSize.isScalable()), EltTy);
+    }
+  }
+
+  if (PartTy.isVector() && CoverTy == PartTy) {
     assert(DstRegs.size() == 1);
     B.buildPadVectorWithUndefElements(DstRegs[0], SrcReg);
     return;
@@ -624,11 +644,11 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   const unsigned DstSize = DstTy.getSizeInBits();
   const unsigned SrcSize = SrcTy.getSizeInBits();
-  unsigned CoveringSize = LCMTy.getSizeInBits();
+  unsigned CoveringSize = CoverTy.getSizeInBits();
 
   Register UnmergeSrc = SrcReg;
 
-  if (!LCMTy.isVector() && CoveringSize != SrcSize) {
+  if (!CoverTy.isVector() && CoveringSize != SrcSize) {
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
@@ -641,12 +661,12 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       SmallVector<Register, 8> MergeParts(1, SrcReg);
       for (unsigned Size = SrcSize; Size != CoveringSize; Size += SrcSize)
         MergeParts.push_back(Undef);
-      UnmergeSrc = B.buildMergeLikeInstr(LCMTy, MergeParts).getReg(0);
+      UnmergeSrc = B.buildMergeLikeInstr(CoverTy, MergeParts).getReg(0);
     }
   }
 
-  if (LCMTy.isVector() && CoveringSize != SrcSize)
-    UnmergeSrc = B.buildPadVectorWithUndefElements(LCMTy, SrcReg).getReg(0);
+  if (CoverTy.isVector() && CoveringSize != SrcSize)
+    UnmergeSrc = B.buildPadVectorWithUndefElements(CoverTy, SrcReg).getReg(0);
 
   B.buildUnmerge(DstRegs, UnmergeSrc);
 }

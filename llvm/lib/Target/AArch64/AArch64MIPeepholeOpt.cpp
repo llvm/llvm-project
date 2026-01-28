@@ -804,7 +804,7 @@ bool AArch64MIPeepholeOpt::visitUBFMXri(MachineInstr &MI) {
 
   BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY),
           SrcReg32)
-      .addReg(SrcReg64, 0, AArch64::sub_32);
+      .addReg(SrcReg64, {}, AArch64::sub_32);
   BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::UBFMWri),
           DstReg32)
       .addReg(SrcReg32)

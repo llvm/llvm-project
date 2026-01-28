@@ -95,7 +95,6 @@ ModuleListProperties::ModuleListProperties() {
     llvm::sys::path::append(path, "IndexCache");
     lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
   }
-
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -186,7 +185,7 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
   return m_symlink_paths;
 }
 
-bool ModuleListProperties::GetLoadSymbolOnDemand() {
+bool ModuleListProperties::GetLoadSymbolOnDemand() const {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);

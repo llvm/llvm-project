@@ -783,6 +783,36 @@ define <8 x bfloat> @fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
   ret <8 x bfloat> %res
 }
 
+; Note: Unlike fmul_v8bf16 this case can use +0.0 (not -0.0) for the
+; accumulator (NOB16B16), since fabs does not preserve the zero sign.
+define <8 x bfloat> @abs_fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
+; NOB16B16-LABEL: abs_fmul_v8bf16:
+; NOB16B16:       // %bb.0:
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NEXT:    movi v3.2d, #0000000000000000
+; NOB16B16-NEXT:    ptrue p0.s, vl4
+; NOB16B16-NEXT:    bfmlalb v2.4s, v0.8h, v1.8h
+; NOB16B16-NEXT:    bfmlalt v3.4s, v0.8h, v1.8h
+; NOB16B16-NEXT:    bfcvt z2.h, p0/m, z2.s
+; NOB16B16-NEXT:    bfcvtnt z2.h, p0/m, z3.s
+; NOB16B16-NEXT:    bic v2.8h, #128, lsl #8
+; NOB16B16-NEXT:    mov v0.16b, v2.16b
+; NOB16B16-NEXT:    ret
+;
+; B16B16-LABEL: abs_fmul_v8bf16:
+; B16B16:       // %bb.0:
+; B16B16-NEXT:    ptrue p0.h, vl8
+; B16B16-NEXT:    // kill: def $q0 killed $q0 def $z0
+; B16B16-NEXT:    // kill: def $q1 killed $q1 def $z1
+; B16B16-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
+; B16B16-NEXT:    bic v0.8h, #128, lsl #8
+; B16B16-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; B16B16-NEXT:    ret
+  %mul = fmul <8 x bfloat> %a, %b
+  %res = call <8 x bfloat> @llvm.fabs.v8f16(<8 x bfloat> %mul)
+  ret <8 x bfloat> %res
+}
+
 ;
 ; FNEG
 ;

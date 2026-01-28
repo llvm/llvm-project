@@ -260,6 +260,21 @@ struct TargetAllocMemOpConversion
     return mlir::success();
   }
 };
+
+struct DeclareMapperOpConversion
+    : public OpenMPFIROpConversion<mlir::omp::DeclareMapperOp> {
+  using OpenMPFIROpConversion::OpenMPFIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(mlir::omp::DeclareMapperOp curOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.startOpModification(curOp);
+    curOp.setType(convertObjectType(lowerTy(), curOp.getType()));
+    rewriter.finalizeOpModification(curOp);
+    return mlir::success();
+  }
+};
+
 } // namespace
 
 void fir::populateOpenMPFIRToLLVMConversionPatterns(
@@ -267,4 +282,5 @@ void fir::populateOpenMPFIRToLLVMConversionPatterns(
   patterns.add<MapInfoOpConversion>(converter);
   patterns.add<PrivateClauseOpConversion>(converter);
   patterns.add<TargetAllocMemOpConversion>(converter);
+  patterns.add<DeclareMapperOpConversion>(converter);
 }

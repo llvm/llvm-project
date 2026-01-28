@@ -397,8 +397,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
     DataBufferSP buffer_sp = MapFileDataWritable(*file, length, file_offset);
     if (!buffer_sp)
       return nullptr;
-    extractor_sp = std::make_shared<DataExtractor>();
-    extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
+    extractor_sp = std::make_shared<DataExtractor>(buffer_sp);
     data_offset = 0;
     mapped_writable = true;
   }
@@ -854,7 +853,7 @@ size_t ObjectFileELF::SectionIndex(const SectionHeaderCollConstIter &I) const {
 
 bool ObjectFileELF::ParseHeader() {
   lldb::offset_t offset = 0;
-  return m_header.Parse(*m_data_nsp.get(), &offset);
+  return m_header.Parse(*m_data_nsp, &offset);
 }
 
 UUID ObjectFileELF::GetUUID() {
@@ -890,7 +889,7 @@ UUID ObjectFileELF::GetUUID() {
         return UUID();
 
       core_notes_crc =
-          CalculateELFNotesSegmentsCRC32(m_program_headers, *m_data_nsp.get());
+          CalculateELFNotesSegmentsCRC32(m_program_headers, *m_data_nsp);
 
       if (core_notes_crc) {
         // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it
@@ -901,7 +900,7 @@ UUID ObjectFileELF::GetUUID() {
       }
     } else {
       if (!m_gnu_debuglink_crc)
-        m_gnu_debuglink_crc = calc_crc32(0, *m_data_nsp.get());
+        m_gnu_debuglink_crc = calc_crc32(0, *m_data_nsp);
       if (m_gnu_debuglink_crc) {
         // Use 4 bytes of crc from the .gnu_debuglink section.
         u32le data(m_gnu_debuglink_crc);
@@ -1087,8 +1086,7 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
 
 // ParseProgramHeaders
 bool ObjectFileELF::ParseProgramHeaders() {
-  return GetProgramHeaderInfo(m_program_headers, *m_data_nsp.get(), m_header) !=
-         0;
+  return GetProgramHeaderInfo(m_program_headers, *m_data_nsp, m_header) != 0;
 }
 
 lldb_private::Status
@@ -1678,8 +1676,8 @@ ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
 
 // ParseSectionHeaders
 size_t ObjectFileELF::ParseSectionHeaders() {
-  return GetSectionHeaderInfo(m_section_headers, *m_data_nsp.get(), m_header,
-                              m_uuid, m_gnu_debuglink_file, m_gnu_debuglink_crc,
+  return GetSectionHeaderInfo(m_section_headers, *m_data_nsp, m_header, m_uuid,
+                              m_gnu_debuglink_file, m_gnu_debuglink_crc,
                               m_arch_spec);
 }
 
@@ -3689,8 +3687,7 @@ ArchSpec ObjectFileELF::GetArchitecture() {
       if (H.p_type != PT_NOTE || H.p_offset == 0 || H.p_filesz == 0)
         continue;
       DataExtractor data;
-      if (data.SetData(*m_data_nsp.get(), H.p_offset, H.p_filesz) ==
-          H.p_filesz) {
+      if (data.SetData(*m_data_nsp, H.p_offset, H.p_filesz) == H.p_filesz) {
         UUID uuid;
         RefineModuleDetailsFromNote(data, m_arch_spec, uuid);
       }
@@ -3848,7 +3845,7 @@ DataExtractor ObjectFileELF::GetSegmentData(const ELFProgramHeader &H) {
   // Try and read the program header from our cached m_data_nsp which can come
   // from the file on disk being mmap'ed or from the initial part of the ELF
   // file we read from memory and cached.
-  DataExtractor data = DataExtractor(*m_data_nsp.get(), H.p_offset, H.p_filesz);
+  DataExtractor data = DataExtractor(*m_data_nsp, H.p_offset, H.p_filesz);
   if (data.GetByteSize() == H.p_filesz)
     return data;
   if (IsInMemory()) {

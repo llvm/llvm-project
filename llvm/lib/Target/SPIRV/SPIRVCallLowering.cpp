@@ -43,12 +43,6 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
           .isValid())
     return true;
 
-  // Maybe run postponed production of types for function pointers
-  if (IndirectCalls.size() > 0) {
-    produceIndirectPtrTypes(MIRBuilder);
-    IndirectCalls.clear();
-  }
-
   // Currently all return types should use a single register.
   // TODO: handle the case of multiple registers.
   if (VRegs.size() > 1)
@@ -468,8 +462,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-// Used to postpone producing of indirect function pointer types after all
-// indirect calls info is collected
 // TODO:
 // - add a topological sort of IndirectCalls to ensure the best types knowledge
 // - we may need to fix function formal parameter types if they are opaque
@@ -478,22 +470,22 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 //   SPV_INTEL_function_pointers extension seems wrong, as that might not be
 //   able to hold a full width pointer to function, and it also does not model
 //   the semantics of a pointer to function in a generic fashion.
-void SPIRVCallLowering::produceIndirectPtrTypes(
-    MachineIRBuilder &MIRBuilder) const {
-  // Create indirect call data types if any
+void SPIRVCallLowering::produceIndirectPtrType(
+    MachineIRBuilder &MIRBuilder,
+    const SPIRVCallLowering::SPIRVIndirectCall &IC) const {
+  // Create indirect call data type if any
   MachineFunction &MF = MIRBuilder.getMF();
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
-  for (auto const &IC : IndirectCalls) {
-    SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(
-        IC.RetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-    SmallVector<SPIRVType *, 4> SpirvArgTypes;
-    for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
-      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(
-          IC.ArgTys[i], MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-      SpirvArgTypes.push_back(SPIRVTy);
-      if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
-        GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
-    }
+  SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(
+      IC.RetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+  SmallVector<SPIRVType *, 4> SpirvArgTypes;
+  for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
+    SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(
+        IC.ArgTys[i], MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+    SpirvArgTypes.push_back(SPIRVTy);
+    if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
+      GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
+  }
     // SPIR-V function type:
     FunctionType *FTy =
         FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
@@ -507,7 +499,6 @@ void SPIRVCallLowering::produceIndirectPtrTypes(
         GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
     // Correct the Callee type
     GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
-  }
 }
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
@@ -653,8 +644,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                          false);
     // Set instruction operation according to SPV_INTEL_function_pointers
     CallOp = SPIRV::OpFunctionPointerCallINTEL;
-    // Collect information about the indirect call to support possible
-    // specification of opaque ptr types of parent function's parameters
+    // Collect information about the indirect call to create correct types.
     Register CalleeReg = Info.Callee.getReg();
     if (CalleeReg.isValid()) {
       SPIRVCallLowering::SPIRVIndirectCall IndirectCall;
@@ -669,7 +659,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         IndirectCall.ArgTys.push_back(FTy->getParamType(I));
         IndirectCall.ArgRegs.push_back(Info.OrigArgs[I].Regs[0]);
       }
-      IndirectCalls.push_back(IndirectCall);
+      produceIndirectPtrType(MIRBuilder, IndirectCall);
     }
   } else {
     // Emit a regular OpFunctionCall

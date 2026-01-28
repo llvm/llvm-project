@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify=expected,function %s
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -1553,4 +1553,25 @@ void uaf_anonymous_union() {
   } // expected-note {{destroyed here}}
   (void)ip;  // expected-note {{later used here}}
 }
+
+struct RefMember {
+  std::string& str_ref;
+  std::string* str_ptr;
+  std::string str;
+  std::string_view view;
+  std::string_view& view_ref;
+  RefMember();
+  ~RefMember();
+};
+
+std::string_view refMemberReturnView1(RefMember a) { return a.str_ref; }
+std::string_view refMemberReturnView2(RefMember a) { return *a.str_ptr; }
+std::string_view refMemberReturnView3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string& refMemberReturnRef1(RefMember a) { return a.str_ref; }
+std::string& refMemberReturnRef2(RefMember a) { return *a.str_ptr; }
+std::string& refMemberReturnRef3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnView1(RefMember a) { return a.view; }
+std::string_view& refViewMemberReturnView2(RefMember a) { return a.view; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
+std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access

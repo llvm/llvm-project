@@ -802,8 +802,8 @@ void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
     GetDSubRegs(MO.getReg(), RegSpc, TRI, D0, D1, D2, D3);
 
   // Add the subregs as sources of the new instruction.
-  unsigned SrcFlags = (getUndefRegState(MO.isUndef()) |
-                       getKillRegState(MO.isKill()));
+  RegState SrcFlags =
+      (getUndefRegState(MO.isUndef()) | getKillRegState(MO.isKill()));
   MIB.addReg(D0, SrcFlags);
   if (NumRegs > 1)
     MIB.addReg(D1, SrcFlags);
@@ -881,7 +881,7 @@ void ARMExpandPseudo::ExpandMQQPRLoadStore(MachineBasicBlock::iterator &MBBI) {
   MachineInstrBuilder MIB =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc));
 
-  unsigned Flags = getKillRegState(MI.getOperand(0).isKill()) |
+  RegState Flags = getKillRegState(MI.getOperand(0).isKill()) |
                    getDefRegState(MI.getOperand(0).isDef());
   Register SrcReg = MI.getOperand(0).getReg();
 
@@ -1962,7 +1962,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
 /// single GPRPair register), Thumb's take two separate registers so we need to
 /// extract the subregs from the pair.
 static void addExclusiveRegPair(MachineInstrBuilder &MIB, MachineOperand &Reg,
-                                unsigned Flags, bool IsThumb,
+                                RegState Flags, bool IsThumb,
                                 const TargetRegisterInfo *TRI) {
   if (IsThumb) {
     Register RegLo = TRI->getSubReg(Reg.getReg(), ARM::gsub_0);
@@ -2044,7 +2044,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   //     bne .Lloadcmp
   unsigned STREXD = IsThumb ? ARM::t2STREXD : ARM::STREXD;
   MIB = BuildMI(StoreBB, DL, TII->get(STREXD), TempReg);
-  unsigned Flags = getKillRegState(New.isDead());
+  RegState Flags = getKillRegState(New.isDead());
   addExclusiveRegPair(MIB, New, Flags, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
@@ -2218,7 +2218,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         } else {
           // Use move to satisfy constraints
           unsigned MoveOpc = Opcode == ARM::VBSPd ? ARM::VORRd : ARM::VORRq;
-          unsigned MO1Flags = getRegState(MI.getOperand(1)) & ~RegState::Kill;
+          RegState MO1Flags = getRegState(MI.getOperand(1)) & ~RegState::Kill;
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MoveOpc))
               .addReg(DstReg,
                       RegState::Define |

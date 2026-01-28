@@ -2024,13 +2024,10 @@ define <16 x i16> @uabd16b_i16_const_select(<16 x i8> %a) {
 ; CHECK-SD-LABEL: uabd16b_i16_const_select:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    adrp x8, .LCPI106_0
-; CHECK-SD-NEXT:    ushll.8h v2, v0, #0
-; CHECK-SD-NEXT:    ushll2.8h v0, v0, #0
-; CHECK-SD-NEXT:    adrp x9, .LCPI106_1
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI106_0]
-; CHECK-SD-NEXT:    ldr q1, [x9, :lo12:.LCPI106_1]
-; CHECK-SD-NEXT:    uabd.8h v1, v0, v1
-; CHECK-SD-NEXT:    uabd.8h v0, v2, v3
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI106_0]
+; CHECK-SD-NEXT:    uabd.16b v0, v0, v1
+; CHECK-SD-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uabd16b_i16_const_select:
@@ -2069,13 +2066,10 @@ define <16 x i16> @sabd16b_i16_const_select(<16 x i8> %a) {
 ; CHECK-SD-LABEL: sabd16b_i16_const_select:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    adrp x8, .LCPI107_0
-; CHECK-SD-NEXT:    sshll.8h v2, v0, #0
-; CHECK-SD-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-SD-NEXT:    adrp x9, .LCPI107_1
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI107_0]
-; CHECK-SD-NEXT:    ldr q1, [x9, :lo12:.LCPI107_1]
-; CHECK-SD-NEXT:    sabd.8h v1, v0, v1
-; CHECK-SD-NEXT:    sabd.8h v0, v2, v3
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI107_0]
+; CHECK-SD-NEXT:    sabd.16b v0, v0, v1
+; CHECK-SD-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sabd16b_i16_const_select:

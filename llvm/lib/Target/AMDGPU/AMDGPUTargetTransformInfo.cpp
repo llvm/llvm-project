@@ -284,7 +284,7 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
     AMDGPU::FeatureUnalignedAccessMode,
 
@@ -299,7 +299,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureSRAMECC,
 
     // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
+    AMDGPU::FeatureFastFMAF32, AMDGPU::FeatureHalfRate64Ops};
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),

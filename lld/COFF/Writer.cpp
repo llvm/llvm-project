@@ -1330,7 +1330,7 @@ void Writer::createImportTables() {
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
-    if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
+    if (ctx.config.delayLoads.contains(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
                    << " due to import of data: "

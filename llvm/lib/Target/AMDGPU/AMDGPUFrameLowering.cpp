@@ -95,7 +95,7 @@ DIExpression *AMDGPUFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
           ConstantInt::get(IntTy, ST.getWavefrontSizeLog2(), false));
       ConstantData *C = ConstantInt::get(IntTy, Offset.getFixed(), true);
       SmallVector<DIOp::Variant> FL = {DIOp::Reinterpret(IntTy)};
-      if (!ST.enableFlatScratch())
+      if (!ST.hasFlatScratchEnabled())
         FL.append({DIOp::Constant(WavefrontSizeLog2), DIOp::LShr()});
       FL.append(
           {DIOp::Constant(C), DIOp::Add(), DIOp::Reinterpret(ResultType)});
