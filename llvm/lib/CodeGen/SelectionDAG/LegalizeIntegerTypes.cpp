@@ -2293,8 +2293,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND_VECTOR_INREG(SDNode *N) {
   EVT OpVT = Op.getValueType();
   EVT NewVT = EVT::getVectorVT(*DAG.getContext(), OpVT.getScalarType(),
                                ResVT.getVectorNumElements());
-  Op = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Op), NewVT, Op,
-                   DAG.getVectorIdxConstant(0, SDLoc(Op)));
+  Op = DAG.getExtractSubvector(SDLoc(Op), NewVT, Op, 0);
   return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), ResVT, Op);
 }
 
