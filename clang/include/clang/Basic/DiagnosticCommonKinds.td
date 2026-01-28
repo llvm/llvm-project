@@ -312,6 +312,10 @@ def warn_stack_clash_protection_inline_asm : Warning<
   "unable to protect inline asm that clobbers stack pointer against stack "
   "clash">, InGroup<DiagGroup<"stack-protector">>;
 
+def warn_stack_protection_ignore_attribute : Warning<
+  "'stack_protector_ignore' attribute ignored due to "
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
+
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
   InGroup<DiagGroup<"slh-asm-goto">>;
@@ -371,6 +375,11 @@ def err_ppc_impossible_musttail: Error<
   "long calls cannot be tail called on PPC|"
   "indirect calls cannot be tail called on PPC|"
   "external calls cannot be tail called on PPC}0"
+  >;
+def err_mips_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "the MIPS16 ABI does not support tail calls|"
+  "calls outside the current linkage unit cannot be tail called on MIPS}0"
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;

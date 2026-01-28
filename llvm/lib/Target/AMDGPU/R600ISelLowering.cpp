@@ -1480,6 +1480,9 @@ SDValue R600TargetLowering::LowerFormalArguments(
       MemVT = MemVT.getVectorElementType();
     }
 
+    if (VT.isInteger() && !MemVT.isInteger())
+      MemVT = MemVT.changeTypeToInteger();
+
     if (AMDGPU::isShader(CallConv)) {
       Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
@@ -1496,11 +1499,15 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // thread group and global sizes.
     ISD::LoadExtType Ext = ISD::NON_EXTLOAD;
     if (MemVT.getScalarSizeInBits() != VT.getScalarSizeInBits()) {
-      // FIXME: This should really check the extload type, but the handling of
-      // extload vector parameters seems to be broken.
+      if (VT.isFloatingPoint()) {
+        Ext = ISD::EXTLOAD;
+      } else {
+        // FIXME: This should really check the extload type, but the handling of
+        // extload vector parameters seems to be broken.
 
-      // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      Ext = ISD::SEXTLOAD;
+        // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+        Ext = ISD::SEXTLOAD;
+      }
     }
 
     // Compute the offset from the value.
