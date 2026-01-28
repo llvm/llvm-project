@@ -7833,12 +7833,16 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       // Check whether comparison of TrueValues can be simplified
       if (Value *Res = simplifyICmpInst(Pred, A, C, SQ)) {
         Value *NewICMP = Builder.CreateICmp(Pred, B, D);
-        return SelectInst::Create(Cond, Res, NewICMP);
+        return SelectInst::Create(
+            Cond, Res, NewICMP, /*NameStr=*/"", /*InsertBefore=*/nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Op0));
       }
       // Check whether comparison of FalseValues can be simplified
       if (Value *Res = simplifyICmpInst(Pred, B, D, SQ)) {
         Value *NewICMP = Builder.CreateICmp(Pred, A, C);
-        return SelectInst::Create(Cond, NewICMP, Res);
+        return SelectInst::Create(
+            Cond, NewICMP, Res, /*NameStr=*/"", /*InsertBefore=*/nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Op0));
       }
     }
   }

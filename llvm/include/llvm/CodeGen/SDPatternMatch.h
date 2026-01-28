@@ -1419,8 +1419,14 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   constexpr static size_t NumPatterns =
       std::tuple_size_v<std::tuple<PatternTs...>>;
 
+  SDNodeFlags Flags;
+
   ReassociatableOpc_match(unsigned Opcode, const PatternTs &...Patterns)
       : Opcode(Opcode), Patterns(Patterns...) {}
+
+  ReassociatableOpc_match(unsigned Opcode, SDNodeFlags Flags,
+                          const PatternTs &...Patterns)
+      : Opcode(Opcode), Patterns(Patterns...), Flags(Flags) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -1439,7 +1445,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
   bool collectLeaves(SDValue V, std::array<SDValue, NumPatterns> &Leaves,
                      std::size_t &LeafIdx) {
-    if (V->getOpcode() == Opcode) {
+    if (V->getOpcode() == Opcode && (Flags & V->getFlags()) == Flags) {
       for (size_t I = 0, N = V->getNumOperands(); I < N; I++)
         if ((LeafIdx == NumPatterns) ||
             !collectLeaves(V->getOperand(I), Leaves, LeafIdx))
@@ -1498,6 +1504,20 @@ template <typename... PatternTs>
 inline ReassociatableOpc_match<PatternTs...>
 m_ReassociatableMul(const PatternTs &...Patterns) {
   return ReassociatableOpc_match<PatternTs...>(ISD::MUL, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableNSWAdd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(
+      ISD::ADD, SDNodeFlags::NoSignedWrap, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableNUWAdd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(
+      ISD::ADD, SDNodeFlags::NoUnsignedWrap, Patterns...);
 }
 
 } // namespace SDPatternMatch

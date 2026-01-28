@@ -1302,9 +1302,16 @@ NumTeams make(const parser::OmpClause::NumTeams &inp,
 NumThreads make(const parser::OmpClause::NumThreads &inp,
                 semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpNumThreadsClause
-  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
-  assert(!t1.empty());
-  return NumThreads{/*Nthreads=*/makeExpr(t1.front(), semaCtx)};
+  // With dims modifier (OpenMP 6.1): multiple values
+  // Without dims modifier: single value
+  auto &values = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!values.empty());
+
+  List<NumThreads::Nthreads> v;
+  for (const auto &val : values) {
+    v.push_back(makeExpr(val, semaCtx));
+  }
+  return NumThreads{/*Nthreads=*/v};
 }
 
 // OmpxAttribute: empty
@@ -1554,9 +1561,16 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpThreadLimitClause
-  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
-  assert(!t1.empty());
-  return ThreadLimit{/*Threadlim=*/makeExpr(t1.front(), semaCtx)};
+  // With dims modifier: multiple values
+  // Without dims modifier: single value
+  auto &values = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!values.empty());
+
+  List<ThreadLimit::Threadlim> v;
+  for (const auto &val : values) {
+    v.push_back(makeExpr(val, semaCtx));
+  }
+  return ThreadLimit{/*Threadlim=*/std::move(v)};
 }
 
 Threadset make(const parser::OmpClause::Threadset &inp,

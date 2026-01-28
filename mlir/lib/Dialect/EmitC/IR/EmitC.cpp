@@ -8,11 +8,11 @@
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
-#include "mlir/Dialect/EmitC/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -413,9 +413,59 @@ LogicalResult DereferenceOp::verify() {
 // ExpressionOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+struct RemoveRecurringExpressionOperands
+    : public OpRewritePattern<ExpressionOp> {
+  using OpRewritePattern<ExpressionOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(ExpressionOp expressionOp,
+                                PatternRewriter &rewriter) const override {
+    SetVector<Value> uniqueOperands;
+    DenseMap<Value, int> firstIndexOf;
+
+    // Collect duplicate operands and prepare to remove excessive copies.
+    for (auto [i, operand] : llvm::enumerate(expressionOp.getDefs())) {
+      if (uniqueOperands.contains(operand))
+        continue;
+      uniqueOperands.insert(operand);
+      firstIndexOf[operand] = i;
+    }
+
+    // If every operand is unique, bail out.
+    if (uniqueOperands.size() == expressionOp.getDefs().size())
+      return failure();
+
+    // Create a new expression with unique operands.
+    rewriter.setInsertionPointAfter(expressionOp);
+    auto uniqueExpression = emitc::ExpressionOp::create(
+        rewriter, expressionOp.getLoc(), expressionOp.getResult().getType(),
+        uniqueOperands.getArrayRef(), expressionOp.getDoNotInline());
+    Block &uniqueExpressionBody = uniqueExpression.createBody();
+
+    // Map each original block arguments to the unique block argument taking
+    // the same operand.
+    IRMapping mapper;
+    Block *expressionBody = expressionOp.getBody();
+    for (auto [operand, arg] :
+         llvm::zip(expressionOp.getOperands(), expressionBody->getArguments()))
+      mapper.map(arg, uniqueExpressionBody.getArgument(firstIndexOf[operand]));
+
+    rewriter.setInsertionPointToStart(&uniqueExpressionBody);
+    for (Operation &opToClone : *expressionOp.getBody())
+      rewriter.clone(opToClone, mapper);
+
+    // Complete the rewrite.
+    rewriter.replaceOp(expressionOp, uniqueExpression);
+
+    return success();
+  }
+};
+
+} // namespace
+
 void ExpressionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  populateExpressionCanonicalizationPatterns(results, context);
+  results.add<RemoveRecurringExpressionOperands>(context);
 }
 
 ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {

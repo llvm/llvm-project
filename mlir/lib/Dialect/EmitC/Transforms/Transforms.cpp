@@ -149,60 +149,9 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
   }
 };
 
-struct RemoveRecurringExpressionOperands
-    : public OpRewritePattern<ExpressionOp> {
-  using OpRewritePattern<ExpressionOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(ExpressionOp expressionOp,
-                                PatternRewriter &rewriter) const override {
-    SetVector<Value> uniqueOperands;
-    DenseMap<Value, int> firstIndexOf;
-
-    // Collect duplicate operands and prepare to remove excessive copies.
-    for (auto [i, operand] : llvm::enumerate(expressionOp.getDefs())) {
-      if (uniqueOperands.contains(operand))
-        continue;
-      uniqueOperands.insert(operand);
-      firstIndexOf[operand] = i;
-    }
-
-    // If every operand is unique, bail out.
-    if (uniqueOperands.size() == expressionOp.getDefs().size())
-      return failure();
-
-    // Create a new expression with unique operands.
-    rewriter.setInsertionPointAfter(expressionOp);
-    auto uniqueExpression = emitc::ExpressionOp::create(
-        rewriter, expressionOp.getLoc(), expressionOp.getResult().getType(),
-        uniqueOperands.getArrayRef(), expressionOp.getDoNotInline());
-    Block &uniqueExpressionBody = uniqueExpression.createBody();
-
-    // Map each original block arguments to the unique block argument taking
-    // the same operand.
-    IRMapping mapper;
-    Block *expressionBody = expressionOp.getBody();
-    for (auto [operand, arg] :
-         llvm::zip(expressionOp.getOperands(), expressionBody->getArguments()))
-      mapper.map(arg, uniqueExpressionBody.getArgument(firstIndexOf[operand]));
-
-    rewriter.setInsertionPointToStart(&uniqueExpressionBody);
-    for (Operation &opToClone : *expressionOp.getBody())
-      rewriter.clone(opToClone, mapper);
-
-    // Complete the rewrite.
-    rewriter.replaceOp(expressionOp, uniqueExpression);
-
-    return success();
-  }
-};
-
 } // namespace
 
-void mlir::emitc::populateExpressionCanonicalizationPatterns(
-    RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<RemoveRecurringExpressionOperands>(patterns.getContext());
-}
-
 void mlir::emitc::populateExpressionPatterns(RewritePatternSet &patterns) {
-  populateExpressionCanonicalizationPatterns(patterns, patterns.getContext());
+  ExpressionOp::getCanonicalizationPatterns(patterns, patterns.getContext());
   patterns.add<FoldExpressionOp>(patterns.getContext());
 }
