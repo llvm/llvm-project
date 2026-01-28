@@ -64,10 +64,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}lshr_threadid_no_dim_info:
-; GCN: global_load_dword
+; W32: v_readfirstlane_b32 [[P:s[0-9]+]]
+; W32: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[P]]
+; W64: global_load_dword
 
 ; OPT-LABEL: @lshr_threadid_no_dim_info
-; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
 define amdgpu_kernel void @lshr_threadid_no_dim_info(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -81,10 +84,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}lshr_threadid_2d:
-; GCN: global_load_dword
+; W32: v_readfirstlane_b32 [[OFFSET:s[0-9]+]], v0
+; W32: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[OFFSET]]
+; W64: global_load_dword
 
 ; OPT-LABEL: @lshr_threadid_2d
-; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
 define amdgpu_kernel void @lshr_threadid_2d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !1 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -156,10 +162,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}and_threadid_2d:
-; GCN: global_load_dword
+; W32: v_readfirstlane_b32 [[P:s[0-9]+]]
+; W32: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[P]]
+; W64: global_load_dword
 
 ; OPT-LABEL: @and_threadid_2d
-; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
 define amdgpu_kernel void @and_threadid_2d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !1 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

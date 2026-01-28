@@ -1628,5 +1628,26 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
   if (isSourceOfDivergence(V))
     return InstructionUniformity::NeverUniform;
 
+  if (!ST->isWaveSizeKnown())
+    return InstructionUniformity::Default;
+
+  using namespace PatternMatch;
+  uint64_t C;
+  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                      m_ConstantInt(C))) &&
+      C >= ST->getWavefrontSizeLog2())
+    return InstructionUniformity::AlwaysUniform;
+
+  uint64_t LaneMask = ST->getWavefrontSize() - 1;
+  if (match(V, m_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                     m_ConstantInt(C))) &&
+      (C & LaneMask) == 0)
+    return InstructionUniformity::AlwaysUniform;
+
+  if (match(V, m_Or(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                    m_ConstantInt(C))) &&
+      (C & LaneMask) == LaneMask)
+    return InstructionUniformity::AlwaysUniform;
+
   return InstructionUniformity::Default;
 }
