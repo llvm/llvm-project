@@ -75,7 +75,7 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
         updated.
 
         This implementation of this method shall use the `modifyOpInPlace` method
-        on the provided rewriter when applicable, and may create or clone operations.
+        on the provided rewriter when applicable. It may also create or clone operations.
         However, the operation must not replace itself, and should instead return
         a vector of replacement results to the caller. (This allows for post-processing
         and prevents stale references.)
