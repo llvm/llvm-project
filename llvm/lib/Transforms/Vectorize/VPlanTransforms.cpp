@@ -2576,6 +2576,9 @@ static void licm(VPlan &Plan) {
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
       auto *Def = cast<VPSingleDefRecipe>(&R);
+      // Skip recipes without users as we cannot determine a sink block.
+      // TODO: Clone sinkable recipes without users to all exit blocks to reduce
+      // their execution frequency.
       if (Def->getNumUsers() == 0)
         continue;
 
