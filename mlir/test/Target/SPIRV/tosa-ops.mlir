@@ -1222,3 +1222,165 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader
     spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<49x38x58xf16>
   }
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Select - PRO-INT
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @select_int_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<4x1x4x5xi1>, UniformConstant>
+  spirv.GlobalVariable @select_int_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<4x6x4x5xi8>, UniformConstant>
+  spirv.GlobalVariable @select_int_arg_2 bind(0, 2) : !spirv.ptr<!spirv.arm.tensor<4x6x4x5xi8>, UniformConstant>
+  spirv.GlobalVariable @select_int_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<4x6x4x5xi8>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @select_int, @select_int_arg_0, @select_int_arg_1, @select_int_arg_2, @select_int_res_0
+  spirv.ARM.Graph @select_int(%arg0: !spirv.arm.tensor<4x1x4x5xi1>, %arg1: !spirv.arm.tensor<4x6x4x5xi8>, %arg2: !spirv.arm.tensor<4x6x4x5xi8>) -> (!spirv.arm.tensor<4x6x4x5xi8>) {
+    // CHECK: {{%.*}} = spirv.Tosa.Select %arg0, %arg1, %arg2 : !spirv.arm.tensor<4x1x4x5xi1>, !spirv.arm.tensor<4x6x4x5xi8>, !spirv.arm.tensor<4x6x4x5xi8> -> !spirv.arm.tensor<4x6x4x5xi8>
+    %0 = spirv.Tosa.Select %arg0, %arg1, %arg2 : !spirv.arm.tensor<4x1x4x5xi1>, !spirv.arm.tensor<4x6x4x5xi8>, !spirv.arm.tensor<4x6x4x5xi8> -> !spirv.arm.tensor<4x6x4x5xi8>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<4x6x4x5xi8>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x6x4x5xi8>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Select - PRO-FP
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @select_fp_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<9x2x15x8xi1>, UniformConstant>
+  spirv.GlobalVariable @select_fp_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<9x2x15x8xf16>, UniformConstant>
+  spirv.GlobalVariable @select_fp_arg_2 bind(0, 2) : !spirv.ptr<!spirv.arm.tensor<9x1x15x8xf16>, UniformConstant>
+  spirv.GlobalVariable @select_fp_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<9x2x15x8xf16>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @select_fp, @select_fp_arg_0, @select_fp_arg_1, @select_fp_arg_2, @select_fp_res_0
+  spirv.ARM.Graph @select_fp(%arg0: !spirv.arm.tensor<9x2x15x8xi1>, %arg1: !spirv.arm.tensor<9x2x15x8xf16>, %arg2: !spirv.arm.tensor<9x1x15x8xf16>) -> (!spirv.arm.tensor<9x2x15x8xf16>) {
+    // CHECK: {{%.*}} = spirv.Tosa.Select %arg0, %arg1, %arg2 : !spirv.arm.tensor<9x2x15x8xi1>, !spirv.arm.tensor<9x2x15x8xf16>, !spirv.arm.tensor<9x1x15x8xf16> -> !spirv.arm.tensor<9x2x15x8xf16>
+    %0 = spirv.Tosa.Select %arg0, %arg1, %arg2 : !spirv.arm.tensor<9x2x15x8xi1>, !spirv.arm.tensor<9x2x15x8xf16>, !spirv.arm.tensor<9x1x15x8xf16> -> !spirv.arm.tensor<9x2x15x8xf16>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<9x2x15x8xf16>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<9x2x15x8xf16>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Equal - PRO-INT
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @equal_int_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<51x28x59xi32>, UniformConstant>
+  spirv.GlobalVariable @equal_int_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<51x1x59xi32>, UniformConstant>
+  spirv.GlobalVariable @equal_int_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<51x28x59xi1>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @equal_int, @equal_int_arg_0, @equal_int_arg_1, @equal_int_res_0
+  spirv.ARM.Graph @equal_int(%arg0: !spirv.arm.tensor<51x28x59xi32>, %arg1: !spirv.arm.tensor<51x1x59xi32>) -> (!spirv.arm.tensor<51x28x59xi1>) {
+    // CHECK: {{%.*}} = spirv.Tosa.Equal %arg0, %arg1 : !spirv.arm.tensor<51x28x59xi32>, !spirv.arm.tensor<51x1x59xi32> -> !spirv.arm.tensor<51x28x59xi1>
+    %0 = spirv.Tosa.Equal %arg0, %arg1 : !spirv.arm.tensor<51x28x59xi32>, !spirv.arm.tensor<51x1x59xi32> -> !spirv.arm.tensor<51x28x59xi1>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<51x28x59xi1>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<51x28x59xi1>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Equal - PRO-FP
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @equal_fp_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<16x11x5x3xf32>, UniformConstant>
+  spirv.GlobalVariable @equal_fp_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<16x1x5x3xf32>, UniformConstant>
+  spirv.GlobalVariable @equal_fp_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<16x11x5x3xi1>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @equal_fp, @equal_fp_arg_0, @equal_fp_arg_1, @equal_fp_res_0
+  spirv.ARM.Graph @equal_fp(%arg0: !spirv.arm.tensor<16x11x5x3xf32>, %arg1: !spirv.arm.tensor<16x1x5x3xf32>) -> (!spirv.arm.tensor<16x11x5x3xi1>) {
+    // CHECK: {{%.*}} = spirv.Tosa.Equal %arg0, %arg1 : !spirv.arm.tensor<16x11x5x3xf32>, !spirv.arm.tensor<16x1x5x3xf32> -> !spirv.arm.tensor<16x11x5x3xi1>
+    %0 = spirv.Tosa.Equal %arg0, %arg1 : !spirv.arm.tensor<16x11x5x3xf32>, !spirv.arm.tensor<16x1x5x3xf32> -> !spirv.arm.tensor<16x11x5x3xi1>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<16x11x5x3xi1>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<16x11x5x3xi1>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Greater - PRO-INT
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @greater_int_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<11x10x10x2xi32>, UniformConstant>
+  spirv.GlobalVariable @greater_int_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<11x10x10x1xi32>, UniformConstant>
+  spirv.GlobalVariable @greater_int_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<11x10x10x2xi1>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @greater_int, @greater_int_arg_0, @greater_int_arg_1, @greater_int_res_0
+  spirv.ARM.Graph @greater_int(%arg0: !spirv.arm.tensor<11x10x10x2xi32>, %arg1: !spirv.arm.tensor<11x10x10x1xi32>) -> (!spirv.arm.tensor<11x10x10x2xi1>) {
+    // CHECK: {{%.*}} = spirv.Tosa.Greater %arg0, %arg1 : !spirv.arm.tensor<11x10x10x2xi32>, !spirv.arm.tensor<11x10x10x1xi32> -> !spirv.arm.tensor<11x10x10x2xi1>
+    %0 = spirv.Tosa.Greater %arg0, %arg1 : !spirv.arm.tensor<11x10x10x2xi32>, !spirv.arm.tensor<11x10x10x1xi32> -> !spirv.arm.tensor<11x10x10x2xi1>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<11x10x10x2xi1>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<11x10x10x2xi1>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Greater - PRO-FP
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @greater_fp_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<6x3x12x4xf16>, UniformConstant>
+  spirv.GlobalVariable @greater_fp_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<6x3x1x4xf16>, UniformConstant>
+  spirv.GlobalVariable @greater_fp_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<6x3x12x4xi1>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @greater_fp, @greater_fp_arg_0, @greater_fp_arg_1, @greater_fp_res_0
+  spirv.ARM.Graph @greater_fp(%arg0: !spirv.arm.tensor<6x3x12x4xf16>, %arg1: !spirv.arm.tensor<6x3x1x4xf16>) -> (!spirv.arm.tensor<6x3x12x4xi1>) {
+    // CHECK: {{%.*}} = spirv.Tosa.Greater %arg0, %arg1 : !spirv.arm.tensor<6x3x12x4xf16>, !spirv.arm.tensor<6x3x1x4xf16> -> !spirv.arm.tensor<6x3x12x4xi1>
+    %0 = spirv.Tosa.Greater %arg0, %arg1 : !spirv.arm.tensor<6x3x12x4xf16>, !spirv.arm.tensor<6x3x1x4xf16> -> !spirv.arm.tensor<6x3x12x4xi1>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<6x3x12x4xi1>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x3x12x4xi1>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.GreaterEqual - PRO-INT
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @greaterequal_int_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<10x17x7x1xi32>, UniformConstant>
+  spirv.GlobalVariable @greaterequal_int_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<10x17x7x16xi32>, UniformConstant>
+  spirv.GlobalVariable @greaterequal_int_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<10x17x7x16xi1>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @greaterequal_int, @greaterequal_int_arg_0, @greaterequal_int_arg_1, @greaterequal_int_res_0
+  spirv.ARM.Graph @greaterequal_int(%arg0: !spirv.arm.tensor<10x17x7x1xi32>, %arg1: !spirv.arm.tensor<10x17x7x16xi32>) -> (!spirv.arm.tensor<10x17x7x16xi1>) {
+    // CHECK: {{%.*}} = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<10x17x7x1xi32>, !spirv.arm.tensor<10x17x7x16xi32> -> !spirv.arm.tensor<10x17x7x16xi1>
+    %0 = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<10x17x7x1xi32>, !spirv.arm.tensor<10x17x7x16xi32> -> !spirv.arm.tensor<10x17x7x16xi1>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<10x17x7x16xi1>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<10x17x7x16xi1>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.GreaterEqual - PRO-FP
+//===----------------------------------------------------------------------===//
+
+// CHECK: spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_vulkan_memory_model]> {
+  spirv.GlobalVariable @greaterequal_fp_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<3x17x6x3xf32>, UniformConstant>
+  spirv.GlobalVariable @greaterequal_fp_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<1x17x6x3xf32>, UniformConstant>
+  spirv.GlobalVariable @greaterequal_fp_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<3x17x6x3xi1>, UniformConstant>
+  spirv.ARM.GraphEntryPoint @greaterequal_fp, @greaterequal_fp_arg_0, @greaterequal_fp_arg_1, @greaterequal_fp_res_0
+  spirv.ARM.Graph @greaterequal_fp(%arg0: !spirv.arm.tensor<3x17x6x3xf32>, %arg1: !spirv.arm.tensor<1x17x6x3xf32>) -> (!spirv.arm.tensor<3x17x6x3xi1>) {
+    // CHECK: {{%.*}} = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<3x17x6x3xf32>, !spirv.arm.tensor<1x17x6x3xf32> -> !spirv.arm.tensor<3x17x6x3xi1>
+    %0 = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<3x17x6x3xf32>, !spirv.arm.tensor<1x17x6x3xf32> -> !spirv.arm.tensor<3x17x6x3xi1>
+    // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<3x17x6x3xi1>
+    spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<3x17x6x3xi1>
+  }
+}
