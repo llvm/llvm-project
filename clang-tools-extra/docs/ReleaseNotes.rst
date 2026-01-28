@@ -194,6 +194,11 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
 
+- Improved :doc:`performance-trivially-destructible
+  <clang-tidy/checks/performance/trivially-destructible>` check by fixing
+  false positives when a class is seen through both a header include and
+  a C++20 module import.
+
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
