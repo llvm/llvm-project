@@ -353,7 +353,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     ArgClass &current = byteOffset < 8 ? Lo : Hi;
     // System V AMD64 ABI 3.2.3. version 1.0
     llvm::TypeSwitch<mlir::Type>(type)
-        .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+        .Case([&](mlir::IntegerType intTy) {
           if (intTy.getWidth() == 128)
             Hi = Lo = ArgClass::Integer;
           else
@@ -371,7 +371,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
             current = ArgClass::SSE;
           }
         })
-        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+        .Case([&](mlir::ComplexType cmplx) {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
           if (sem == &llvm::APFloat::x87DoubleExtended()) {
             current = ArgClass::ComplexX87;
@@ -382,23 +382,23 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                           byteOffset, Lo, Hi);
           }
         })
-        .template Case<fir::LogicalType>([&](fir::LogicalType logical) {
+        .Case([&](fir::LogicalType logical) {
           if (kindMap.getLogicalBitsize(logical.getFKind()) == 128)
             Hi = Lo = ArgClass::Integer;
           else
             current = ArgClass::Integer;
         })
-        .template Case<fir::CharacterType>(
+        .Case(
             [&](fir::CharacterType character) { current = ArgClass::Integer; })
-        .template Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
+        .Case([&](fir::SequenceType seqTy) {
           // Array component.
           classifyArray(loc, seqTy, byteOffset, Lo, Hi);
         })
-        .template Case<fir::RecordType>([&](fir::RecordType recTy) {
+        .Case([&](fir::RecordType recTy) {
           // Component that is a derived type.
           classifyStruct(loc, recTy, byteOffset, Lo, Hi);
         })
-        .template Case<fir::VectorType>([&](fir::VectorType vecTy) {
+        .Case([&](fir::VectorType vecTy) {
           // Previously marshalled SSE eight byte for a previous struct
           // argument.
           auto *sem = fir::isa_real(vecTy.getEleTy())
@@ -939,23 +939,23 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
 
   NRegs usedRegsForType(mlir::Location loc, mlir::Type type) const {
     return llvm::TypeSwitch<mlir::Type, NRegs>(type)
-        .Case<mlir::IntegerType>([&](auto intTy) {
+        .Case([&](mlir::IntegerType intTy) {
           return intTy.getWidth() == 128 ? NRegs{2, false} : NRegs{1, false};
         })
-        .Case<mlir::FloatType>([&](auto) { return NRegs{1, true}; })
-        .Case<mlir::ComplexType>([&](auto) { return NRegs{2, true}; })
-        .Case<fir::LogicalType>([&](auto) { return NRegs{1, false}; })
-        .Case<fir::CharacterType>([&](auto) { return NRegs{1, false}; })
-        .Case<fir::SequenceType>([&](auto ty) {
+        .Case([&](mlir::FloatType) { return NRegs{1, true}; })
+        .Case([&](mlir::ComplexType) { return NRegs{2, true}; })
+        .Case([&](fir::LogicalType) { return NRegs{1, false}; })
+        .Case([&](fir::CharacterType) { return NRegs{1, false}; })
+        .Case([&](fir::SequenceType ty) {
           assert(ty.getShape().size() == 1 &&
                  "invalid array dimensions in BIND(C)");
           NRegs nregs = usedRegsForType(loc, ty.getEleTy());
           nregs.n *= ty.getShape()[0];
           return nregs;
         })
-        .Case<fir::RecordType>(
-            [&](auto ty) { return usedRegsForRecordType(loc, ty); })
-        .Case<fir::VectorType>([&](auto) {
+        .Case(
+            [&](fir::RecordType ty) { return usedRegsForRecordType(loc, ty); })
+        .Case([&](fir::VectorType) {
           TODO(loc, "passing vector argument to C by value is not supported");
           return NRegs{};
         })
@@ -1167,13 +1167,12 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
   unsigned getElemWidth(mlir::Type ty) const {
     unsigned width{};
     llvm::TypeSwitch<mlir::Type>(ty)
-        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+        .Case([&](mlir::ComplexType cmplx) {
           auto elemType{
               mlir::dyn_cast<mlir::FloatType>(cmplx.getElementType())};
           width = elemType.getWidth();
         })
-        .template Case<mlir::FloatType>(
-            [&](mlir::FloatType real) { width = real.getWidth(); });
+        .Case([&](mlir::FloatType real) { width = real.getWidth(); });
     return width;
   }
 
@@ -1594,15 +1593,15 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     llvm::SmallVector<mlir::Type> flatTypes;
 
     llvm::TypeSwitch<mlir::Type>(type)
-        .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+        .Case([&](mlir::IntegerType intTy) {
           if (intTy.getWidth() != 0)
             flatTypes.push_back(intTy);
         })
-        .template Case<mlir::FloatType>([&](mlir::FloatType floatTy) {
+        .Case([&](mlir::FloatType floatTy) {
           if (floatTy.getWidth() != 0)
             flatTypes.push_back(floatTy);
         })
-        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+        .Case([&](mlir::ComplexType cmplx) {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
           if (sem == &llvm::APFloat::IEEEsingle() ||
               sem == &llvm::APFloat::IEEEdouble() ||
@@ -1614,21 +1613,21 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
                       "IEEEquad) as a structure component for BIND(C), "
                       "VALUE derived type argument and type return");
         })
-        .template Case<fir::LogicalType>([&](fir::LogicalType logicalTy) {
+        .Case([&](fir::LogicalType logicalTy) {
           const unsigned width =
               kindMap.getLogicalBitsize(logicalTy.getFKind());
           if (width != 0)
             flatTypes.push_back(
                 mlir::IntegerType::get(type.getContext(), width));
         })
-        .template Case<fir::CharacterType>([&](fir::CharacterType charTy) {
+        .Case([&](fir::CharacterType charTy) {
           assert(kindMap.getCharacterBitsize(charTy.getFKind()) <= 8 &&
                  "the bit size of characterType as an interoperable type must "
                  "not exceed 8");
           for (unsigned i = 0; i < charTy.getLen(); ++i)
             flatTypes.push_back(mlir::IntegerType::get(type.getContext(), 8));
         })
-        .template Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
+        .Case([&](fir::SequenceType seqTy) {
           if (!seqTy.hasDynamicExtents()) {
             const std::uint64_t numOfEle = seqTy.getConstantArraySize();
             mlir::Type eleTy = seqTy.getEleTy();
@@ -1646,7 +1645,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
                       "component for BIND(C), "
                       "VALUE derived type argument and type return");
         })
-        .template Case<fir::RecordType>([&](fir::RecordType recTy) {
+        .Case([&](fir::RecordType recTy) {
           for (auto &component : recTy.getTypeList()) {
             mlir::Type eleTy = component.second;
             llvm::SmallVector<mlir::Type> subTypeList =
@@ -1655,7 +1654,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
               llvm::copy(subTypeList, std::back_inserter(flatTypes));
           }
         })
-        .template Case<fir::VectorType>([&](fir::VectorType vecTy) {
+        .Case([&](fir::VectorType vecTy) {
           auto sizeAndAlign = fir::getTypeSizeAndAlignmentOrCrash(
               loc, vecTy, getDataLayout(), kindMap);
           if (sizeAndAlign.first == 2 * GRLenInChar)
@@ -1742,7 +1741,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       return true;
 
     llvm::TypeSwitch<mlir::Type>(type)
-        .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+        .Case([&](mlir::IntegerType intTy) {
           const unsigned width = intTy.getWidth();
           if (width > 128)
             TODO(loc,
@@ -1754,7 +1753,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
           else if (width <= 2 * GRLen)
             GARsLeft = GARsLeft - 2;
         })
-        .template Case<mlir::FloatType>([&](mlir::FloatType floatTy) {
+        .Case([&](mlir::FloatType floatTy) {
           const unsigned width = floatTy.getWidth();
           if (width > 128)
             TODO(loc, "floatType with width exceeding 128 bits is unsupported");
