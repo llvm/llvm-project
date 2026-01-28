@@ -386,7 +386,7 @@ class SDNode<string opcode, SDTypeProfile typeprof,
 def set;
 
 // `node` is used when defining pattern fragments, to represent "holes" in the
-// fragment that should be instantated with dags when the fragment is used. For
+// fragment that should be instantiated with dags when the fragment is used. For
 // instance in the `def fmul_contract` below.
 def node;
 
@@ -1185,15 +1185,15 @@ class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
 }
 
 
-// ImmLeaf is a pattern fragment with a constraint on the immediate.  The
-// constraint is a function that is run on the immediate (always with the value
-// sign extended out to an int64_t) as Imm.  For example:
+// ImmLeaf is a pattern fragment for immediates that match a constraint.  The
+// constraint is a C++ snippet that is run on the immediate (always with the
+// value sign extended out to an int64_t) as Imm.  For example:
 //
 //  def immSExt8 : ImmLeaf<i16, [{ return (char)Imm == Imm; }]>;
 //
 // this is a more convenient form to match 'imm' nodes in than PatLeaf and also
 // is preferred over using PatLeaf because it allows the code generator to
-// reason more about the constraint.
+// reason more about the constraint, and port the constraint to GlobalISel.
 //
 // If FastIsel should ignore all instructions that have an operand of this type,
 // the FastIselShouldIgnore flag can be set.  This is an optimization to reduce
@@ -1202,13 +1202,12 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
               SDNode ImmNode = imm>
   : PatFrag<(ops), (vt ImmNode), [{}], xform> {
 
-  // Specific C++ Checks for Immediate Values. This code is shared between
-  // SDISel and GlobalISel.
+  // Specific C++ Check for the Immediate Values.
   //
   // The following variables are in scope:
-  // - `Imm` representing the sign-extended value of the immediate. This might
-  //   be an APInt, an APFloat, or a sign-extended int64_t, depending on the
-  //   `IsAPInt` and `IsAPFloat` fields below.
+  // - `Imm` representing the value of the immediate. The type of this variable
+  //   depends on whether you are instantiating a `ImmLeaf`, a `IntImmLeaf`, or
+  //   a `FPImmLeaf`.
   //
   // This should return a `bool` for whether the predicate matches or not.
   let ImmediateCode = pred;
@@ -1224,11 +1223,15 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
 
 // Convenience wrapper for ImmLeaf to use timm/TargetConstant instead
 // of imm/Constant.
+//
+// `Imm` in the snippet is the value sign-extended to `int64_t`.
 class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
 
-// An ImmLeaf except that Imm is an APInt. This is useful when you need to
-// zero-extend the immediate instead of sign-extend it.
+// An ImmLeaf where the `Imm` in the C++ predicate is an `APInt`.
+//
+// This is useful when you need to zero-extend the immediate instead of
+// sign-extend it, or when the value does not fit into an `int64_t`.
 //
 // Note that FastISel does not currently understand IntImmLeaf and will not
 // generate code for rules that make use of it. As such, it does not make sense
@@ -1240,7 +1243,7 @@ class IntImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
   let FastIselShouldIgnore = true;
 }
 
-// An ImmLeaf except that Imm is an APFloat.
+// An ImmLeaf where the `Imm` in the C++ predicate is an `APFloat`.
 //
 // Note that FastISel does not currently understand FPImmLeaf and will not
 // generate code for rules that make use of it.
