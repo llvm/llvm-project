@@ -3931,6 +3931,16 @@ struct FormatStyle {
   /// \version 18
   std::vector<std::string> ObjCPropertyAttributeOrder;
 
+  /// Add or remove a space between the '-'/'+' and the return type in
+  /// Objective-C method declarations. i.e
+  /// \code{.objc}
+  ///    false:                      true:
+  ///
+  ///    -(void)method      vs.      - (void)method
+  /// \endcode
+  /// \version 23
+  bool ObjCSpaceAfterMethodDeclarationPrefix;
+
   /// Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
   /// \version 3.7
@@ -5771,6 +5781,8 @@ struct FormatStyle {
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
            ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
+           ObjCSpaceAfterMethodDeclarationPrefix ==
+               R.ObjCSpaceAfterMethodDeclarationPrefix &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            OneLineFormatOffRegex == R.OneLineFormatOffRegex &&

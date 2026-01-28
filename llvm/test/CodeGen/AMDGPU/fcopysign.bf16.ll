@@ -741,21 +741,15 @@ define half @v_copysign_f16_bf16(half %mag, bfloat %sign.bf16) {
 ; GCN-LABEL: v_copysign_f16_bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GCN-NEXT:    s_brev_b32 s4, -2
+; GCN-NEXT:    s_movk_i32 s4, 0x7fff
 ; GCN-NEXT:    v_bfi_b32 v0, s4, v0, v1
-; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: v_copysign_f16_bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-NEXT:    s_brev_b32 s4, -2
+; GFX7-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX7-NEXT:    v_bfi_b32 v0, s4, v0, v1
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_copysign_f16_bf16:
@@ -791,22 +785,16 @@ define half @v_copysign_f16_bf16(half %mag, bfloat %sign.bf16) {
 define amdgpu_ps i32 @s_copysign_f16_bf16(half inreg %mag, bfloat inreg %sign.bf16) {
 ; GCN-LABEL: s_copysign_f16_bf16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GCN-NEXT:    v_cvt_f32_f16_e32 v1, s1
-; GCN-NEXT:    s_brev_b32 s0, -2
-; GCN-NEXT:    v_bfi_b32 v0, s0, v0, v1
-; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    s_and_b32 s1, s1, 0x8000
+; GCN-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GCN-NEXT:    s_or_b32 s0, s0, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: s_copysign_f16_bf16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, s1
-; GFX7-NEXT:    s_brev_b32 s0, -2
-; GFX7-NEXT:    v_bfi_b32 v0, s0, v0, v1
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    s_and_b32 s1, s1, 0x8000
+; GFX7-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX7-NEXT:    s_or_b32 s0, s0, s1
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_copysign_f16_bf16:
