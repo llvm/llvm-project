@@ -35,7 +35,9 @@ public:
 
   int GetFD() const { return m_fd; }
 
+#ifdef _WIN32
   void *GetHandle() const;
+#endif
 
   Action GetAction() const { return m_action; }
 
