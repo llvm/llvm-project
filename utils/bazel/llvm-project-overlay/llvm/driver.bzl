@@ -23,6 +23,7 @@ _TOOLS = {
     "llvm-ifs": "//llvm:llvm-ifs-lib",
     "llvm-libtool-darwin": "//llvm:llvm-libtool-darwin-lib",
     "llvm-lipo": "//llvm:llvm-lipo-lib",
+    "llvm-link": "//llvm:llvm-link-lib",
     "llvm-ml": "//llvm:llvm-ml-lib",
     "llvm-mt": "//llvm:llvm-mt-lib",
     "llvm-nm": "//llvm:llvm-nm-lib",
