@@ -820,7 +820,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
             if (!config) {
               config.emplace(PyConversionConfig());
             }
-            auto status = mlirApplyPartialConversion(
+            MlirLogicalResult status = mlirApplyPartialConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error("partial conversion failed");
