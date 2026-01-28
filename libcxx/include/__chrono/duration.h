@@ -62,51 +62,26 @@ namespace chrono {
 
 // duration_cast
 
-template <class _FromDuration,
-          class _ToDuration,
-          class _Period = typename ratio_divide<typename _FromDuration::period, typename _ToDuration::period>::type,
-          bool          = _Period::num == 1,
-          bool          = _Period::den == 1>
-struct __duration_cast;
-
-template <class _FromDuration, class _ToDuration, class _Period>
-struct __duration_cast<_FromDuration, _ToDuration, _Period, true, true> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
-    return _ToDuration(static_cast<typename _ToDuration::rep>(__fd.count()));
-  }
-};
-
-template <class _FromDuration, class _ToDuration, class _Period>
-struct __duration_cast<_FromDuration, _ToDuration, _Period, true, false> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
-    typedef typename common_type<typename _ToDuration::rep, typename _FromDuration::rep, intmax_t>::type _Ct;
-    return _ToDuration(
-        static_cast<typename _ToDuration::rep>(static_cast<_Ct>(__fd.count()) / static_cast<_Ct>(_Period::den)));
-  }
-};
-
-template <class _FromDuration, class _ToDuration, class _Period>
-struct __duration_cast<_FromDuration, _ToDuration, _Period, false, true> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
-    typedef typename common_type<typename _ToDuration::rep, typename _FromDuration::rep, intmax_t>::type _Ct;
-    return _ToDuration(
-        static_cast<typename _ToDuration::rep>(static_cast<_Ct>(__fd.count()) * static_cast<_Ct>(_Period::num)));
-  }
-};
-
-template <class _FromDuration, class _ToDuration, class _Period>
-struct __duration_cast<_FromDuration, _ToDuration, _Period, false, false> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
-    typedef typename common_type<typename _ToDuration::rep, typename _FromDuration::rep, intmax_t>::type _Ct;
-    return _ToDuration(static_cast<typename _ToDuration::rep>(
-        static_cast<_Ct>(__fd.count()) * static_cast<_Ct>(_Period::num) / static_cast<_Ct>(_Period::den)));
-  }
-};
-
 template <class _ToDuration, class _Rep, class _Period, __enable_if_t<__is_duration_v<_ToDuration>, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration
 duration_cast(const duration<_Rep, _Period>& __fd) {
-  return __duration_cast<duration<_Rep, _Period>, _ToDuration>()(__fd);
+  using _CommonPeriod = typename ratio_divide<_Period, typename _ToDuration::period>::type;
+  if _LIBCPP_CONSTEXPR (_CommonPeriod::num == 1 && _CommonPeriod::den == 1) {
+    return _ToDuration(static_cast<typename _ToDuration::rep>(__fd.count()));
+  } else {
+    using _Ct = typename common_type<typename _ToDuration::rep, _Rep, intmax_t>::type;
+    if _LIBCPP_CONSTEXPR (_CommonPeriod::num == 1) {
+      return _ToDuration(static_cast<typename _ToDuration::rep>(
+          static_cast<_Ct>(__fd.count()) / static_cast<_Ct>(_CommonPeriod::den)));
+    } else if _LIBCPP_CONSTEXPR (_CommonPeriod::den == 1) {
+      return _ToDuration(static_cast<typename _ToDuration::rep>(
+          static_cast<_Ct>(__fd.count()) * static_cast<_Ct>(_CommonPeriod::num)));
+    } else {
+      return _ToDuration(static_cast<typename _ToDuration::rep>(
+          static_cast<_Ct>(__fd.count()) * static_cast<_Ct>(_CommonPeriod::num) /
+          static_cast<_Ct>(_CommonPeriod::den)));
+    }
+  }
 }
 
 template <class _Rep>
