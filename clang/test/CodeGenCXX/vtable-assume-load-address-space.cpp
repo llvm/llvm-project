@@ -112,7 +112,7 @@ void g(B *a) { a->foo(); }
 // CHECK3: call{{.*}} void @_ZN5test31CC1Ev(ptr
 // CHECK3: %[[CMP:.*]] = icmp eq ptr addrspace(1) %{{.*}}, getelementptr inbounds inrange(-24, 8) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test31CE, i32 0, i32 0, i32 3)
 // CHECK3: call{{.*}} void @llvm.assume(i1 %[[CMP]])
-// CHECK3-LABLEL: }
+// CHECK3-LABEL: }
 void test() {
   C c;
   g(&c);
