@@ -35,6 +35,9 @@ while.end:                                        ; preds = %while.cond
 
 attributes #0 = { optnone noinline }
 
+; Nothing that runs at -O0 gets skipped.
+; LLC-O0-NOT: Skipping pass
+
 ; Machine Function passes run at -O1 and higher.
 ; LLC-Ox-DAG: Skipping pass 'Branch Probability Basic Block Placement'
 ; LLC-Ox-DAG: Skipping pass 'CodeGen Prepare'

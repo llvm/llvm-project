@@ -22,7 +22,7 @@ entry:
 ; will make use of GlobalISel. The top check, checks that the GlobalISel pipeline is run on the 
 ; optnone function, and the second line is checking that SDAG was run on the normal function.
 
-; GISEL: Skipping pass 'AArch64PostLegalizerCombiner' on function optnone_fn
+; GISEL: Skipping pass 'IRTranslator' on function optnone_fn
 ; GISEL: Creating new node:
 
 attributes #0 = { noinline nounwind optnone uwtable }
