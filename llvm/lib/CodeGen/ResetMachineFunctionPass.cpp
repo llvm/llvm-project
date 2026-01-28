@@ -74,9 +74,7 @@ namespace {
         // tearing down and rebuilding all of the per-function state. Just clear
         // the FailedISel bit so the SelectionDAG pipeline can proceed.
         auto &Props = MF.getProperties();
-        Props.reset();
-        Props.setIsSSA();
-        Props.setTracksLiveness();
+        Props.resetToInitial();
       } else {
         MF.reset();
         MF.initTargetMachineFunctionInfo(MF.getSubtarget());
