@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify %s
 
+#define NULL (void*)0
+
+void *set(int size);
+void func_call(void *);
+
 static int set_unused; // expected-warning {{variable 'set_unused' set but not used}}
 static int set_and_used;
 static int only_used;
@@ -81,4 +86,34 @@ void f7() {
   multi = 1;
   multi = 2;
   multi = 3;
+}
+
+// unused pointers
+static int *unused_ptr; // expected-warning{{variable 'unused_ptr' set but not used}}
+static char *str_ptr; // expected-warning{{variable 'str_ptr' set but not used}}
+void f8() {
+  unused_ptr = set(5);
+  str_ptr = "hello";
+}
+
+// used pointers
+void a(void *);
+static int *used_ptr;
+static int *param_ptr;
+static int *null_check_ptr;
+void f9() {
+  used_ptr = set(5);
+  *used_ptr = 5;
+
+  param_ptr = set(5);
+  func_call(param_ptr);
+
+  null_check_ptr = set(5);
+  if (null_check_ptr == NULL) {}
+}
+
+// function pointers
+static void (*sandboxing_callback)();
+void SetSandboxingCallback(void (*f)()) {
+  sandboxing_callback = f;
 }
