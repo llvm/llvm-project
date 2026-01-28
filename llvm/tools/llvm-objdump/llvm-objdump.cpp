@@ -2691,16 +2691,16 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
   } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
   } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
-    // Assign attributes based on the AVR architecture version, default to
-    // "avr0". Report "<unknown>" for unsupported AVR instructions to avoid
-    // silent failures.
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
       if (Expected<std::string> VersionOrErr =
               AVR::getFeatureSetFromEFlag(Elf)) {
         Features.AddFeature('+' + *VersionOrErr);
       } else {
+        // If the architecture version cannot be determined from ELF flags,
+        // fall back to the baseline "avr0" ISA. The AVR disassembler
+        // requires a valid feature specification to function correctly.
         reportWarning(toString(VersionOrErr.takeError()) +
-                          ", defaulting to avr0",
+                          ": defaulting to avr0",
                       Obj->getFileName());
         Features.AddFeature("+avr0");
       }

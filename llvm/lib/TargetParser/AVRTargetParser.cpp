@@ -1,4 +1,4 @@
-//===-- AVRTargetParser - Parser for AVR target features --------*- C++ -*-===//
+//===-- AVRTargetParser - Parser for AVR target features ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// \file
 // This file implements a target parser to recognise AVR hardware features.
 //
 //===----------------------------------------------------------------------===//
+
 #include "llvm/TargetParser/AVRTargetParser.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Errc.h"
-#include <map>
 
 using namespace llvm;
 
 Expected<std::string>
 AVR::getFeatureSetFromEFlag(const object::ELFObjectFileBase *Elf) {
-  static const std::map<unsigned, StringRef> EFlagToFeatureSet = {
+  static const DenseMap<unsigned, StringRef> EFlagToFeatureSet = {
       {ELF::EF_AVR_ARCH_AVR1, "avr1"},
       {ELF::EF_AVR_ARCH_AVR2, "avr2"},
       {ELF::EF_AVR_ARCH_AVR25, "avr25"},
@@ -44,6 +45,6 @@ AVR::getFeatureSetFromEFlag(const object::ELFObjectFileBase *Elf) {
     return It->second.str();
 
   return createStringError(errc::invalid_argument,
-                           "unrecognised AVR version: 0x" +
+                           "unrecognised AVR version, 0x" +
                                Twine::utohexstr(EFlag));
 }

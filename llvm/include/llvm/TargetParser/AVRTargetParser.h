@@ -1,4 +1,4 @@
-//===-- AVRTargetParser - Parser for AVR target features --------*- C++ -*-===//
+//===-- AVRTargetParser - Parser for AVR target features ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// \file
 // This file implements a target parser to recognise AVR hardware features.
 //
 //===----------------------------------------------------------------------===//

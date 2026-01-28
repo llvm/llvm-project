@@ -5,7 +5,7 @@
 # RUN: llvm-objdump -d %t.avr3 | FileCheck %s --check-prefix=ALL
 
 ## The mask is being correctly applied before the version is determined.
-# RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR3,EF_AVR_LINKRELAX_PREPARED' %s -o %t.multiflag
+# RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR3, EF_AVR_LINKRELAX_PREPARED' %s -o %t.multiflag
 # RUN: llvm-objdump -d %t.multiflag | FileCheck %s --check-prefix=ALL
 
 ## If --mattr or --mcpu is specified, don't default to the file's e_flags derived feature.
@@ -18,7 +18,7 @@
 # RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_LINKRELAX_PREPARED %s -o %t.noarchversion
 # RUN: llvm-objdump -d %t.noarchversion 2>&1 | FileCheck -DFILE=%t.noarchversion -DVERSION=0x0 %s --check-prefixes=AVR0,INVALIDARCHINFO
 
-## If file's e_flags is invalid, default to "avr0".
+## If file's e_flags is unrecognised, default to "avr0".
 # RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR1, EF_AVR_ARCH_AVR6' %s -o %t.invalid
 # RUN: llvm-objdump -d %t.invalid 2>&1 | FileCheck -DFILE=%t.invalid -DVERSION=0x7 %s --check-prefixes=AVR0,INVALIDARCHINFO
 
@@ -33,7 +33,7 @@
 # ALL-NEXT:   lpm
 # ALL-NEXT:   rjmp    .-2
 
-# INVALIDARCHINFO: warning: '[[FILE]]': unrecognised AVR version: [[VERSION]], defaulting to avr0
+# INVALIDARCHINFO: warning: '[[FILE]]': unrecognised AVR version, [[VERSION]]: defaulting to avr0
 # AVR0:         <_start>:
 # AVR0-COUNT-3:   <unknown>
 
