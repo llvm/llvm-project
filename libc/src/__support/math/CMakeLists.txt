@@ -1227,6 +1227,7 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+
 add_header_library(
   log
   HDRS
@@ -1425,6 +1426,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sqrt
+  HDRS
+    sqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
 )
 
 add_header_library(
