@@ -1291,8 +1291,8 @@ bool ClangExpressionDeclMap::LookupFunction(
   bool found_function_with_type_info = false;
 
   if (sc_list.GetSize()) {
-    Symbol *extern_symbol = nullptr;
-    Symbol *non_extern_symbol = nullptr;
+    const Symbol *extern_symbol = nullptr;
+    const Symbol *non_extern_symbol = nullptr;
 
     for (const SymbolContext &sym_ctx : sc_list) {
       if (sym_ctx.function) {
@@ -1308,7 +1308,7 @@ bool ClangExpressionDeclMap::LookupFunction(
         AddOneFunction(context, sym_ctx.function, nullptr);
         found_function_with_type_info = true;
       } else if (sym_ctx.symbol) {
-        Symbol *symbol = sym_ctx.symbol;
+        const Symbol *symbol = sym_ctx.symbol;
         if (target && symbol->GetType() == eSymbolTypeReExported) {
           symbol = symbol->ResolveReExportedSymbol(*target);
           if (symbol == nullptr)
@@ -1802,7 +1802,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
 
 void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
                                             Function *function,
-                                            Symbol *symbol) {
+                                            const Symbol *symbol) {
   assert(m_parser_vars.get());
 
   Log *log = GetLog(LLDBLog::Expressions);

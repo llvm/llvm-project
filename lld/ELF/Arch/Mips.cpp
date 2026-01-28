@@ -632,8 +632,7 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
 
     uint32_t symIdx = rel.getSymbol(ctx.arg.isMips64EL);
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
-    RelExpr expr =
-        ctx.target->getRelExpr(type, sym, sec.content().data() + rel.r_offset);
+    RelExpr expr = getRelExpr(type, sym, sec.content().data() + rel.r_offset);
     if (expr == R_NONE)
       continue;
     if (sym.isUndefined() && symIdx != 0 &&
@@ -657,7 +656,7 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         for (auto *ri = &rel; ri != rels.end(); ++ri) {
           if (ri->getType(ctx.arg.isMips64EL) == pairTy &&
               ri->getSymbol(ctx.arg.isMips64EL) == symIdx) {
-            addend += ctx.target->getImplicitAddend(buf + ri->r_offset, pairTy);
+            addend += getImplicitAddend(buf + ri->r_offset, pairTy);
             found = true;
             break;
           }

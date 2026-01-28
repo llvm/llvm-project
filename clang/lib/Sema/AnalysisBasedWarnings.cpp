@@ -2891,16 +2891,24 @@ public:
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             SourceLocation ExpiryLoc, Confidence C) override {
     S.Diag(IssueExpr->getExprLoc(),
            C == Confidence::Definite
                ? diag::warn_lifetime_safety_return_stack_addr_permissive
                : diag::warn_lifetime_safety_return_stack_addr_strict)
         << IssueExpr->getSourceRange();
-
-    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
-        << EscapeExpr->getSourceRange();
+    S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << ReturnExpr->getSourceRange();
+  }
+  void reportDanglingField(const Expr *IssueExpr,
+                           const FieldDecl *DanglingField,
+                           SourceLocation ExpiryLoc) override {
+    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_dangling_field)
+        << IssueExpr->getSourceRange();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
   }
 
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
@@ -2940,6 +2948,28 @@ public:
         << EscapeExpr->getSourceRange();
   }
 
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const Expr *EscapeExpr) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const FieldDecl *EscapeField) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+
+    S.Diag(EscapeField->getLocation(),
+           diag::note_lifetime_safety_escapes_to_field_here)
+        << EscapeField->getEndLoc();
+  }
+
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
     S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
   }
@@ -2968,6 +2998,7 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AnalysisDeclContext AC(nullptr, FD);
     AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
     AC.getCFGBuildOptions().AddLifetime = true;
+    AC.getCFGBuildOptions().AddParameterLifetimes = true;
     AC.getCFGBuildOptions().AddImplicitDtors = true;
     AC.getCFGBuildOptions().AddTemporaryDtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
@@ -3076,6 +3107,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddEHEdges = false;
   AC.getCFGBuildOptions().AddInitializers = true;
   AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddParameterLifetimes = true;
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
@@ -3088,6 +3120,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
                        D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_strict,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
                        D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&
