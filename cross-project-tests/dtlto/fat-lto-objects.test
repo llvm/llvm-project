@@ -28,9 +28,9 @@ CHECK-DAG: {{^}}foo.a(foo.o at [[#FOO_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].nat
 # FatLTO object: <file>.<task>.<pid>.<task>.<pid>.native.o.
 CHECK-DAG: {{^}}start.o.1.[[#%X,HEXPID]].1.[[#PID]].native.o{{$}}
 
-# It is important that cross-module inlining occurs for this test to show that
-# Clang can successfully load the bitcode file dependencies recorded in the
-# summary indices. Explicitly check that the expected importing has occurred.
+# Check that all objects are named in all of the index files.
+# We expect this to happen because each object references symbols from the
+# others.
 RUN: llvm-dis *.1.*.thinlto.bc -o - | \
 RUN:   FileCheck %s --check-prefixes=OBJECTS
 RUN: llvm-dis *.2.*.thinlto.bc -o - | \
