@@ -165,7 +165,6 @@ void AArch64PointerAuth::authenticateLR(
       !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
-      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
       BuildMI(MBB, TI, DL,
               TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
           .addSym(PACSym)
@@ -185,7 +184,6 @@ void AArch64PointerAuth::authenticateLR(
   } else {
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
-      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
       emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
