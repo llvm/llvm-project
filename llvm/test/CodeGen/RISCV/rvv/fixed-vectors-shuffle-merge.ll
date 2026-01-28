@@ -31,7 +31,7 @@ define <16 x i16> @shuffle_shuffle_disjoint(<16 x i16> %op0, <16 x i16> %op1) {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -69,7 +69,7 @@ define <16 x i16> @shuffle_shuffle_disjoint_unordered(<16 x i16> %op0, <16 x i16
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -107,7 +107,7 @@ define <16 x i16> @shuffle_shuffle_duplicated_within_operand(<16 x i16> %op0, <1
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -259,7 +259,7 @@ define <16 x i16> @shuffle_shuffle_unbalanced(<16 x i16> %op0, <16 x i16> %op1) 
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

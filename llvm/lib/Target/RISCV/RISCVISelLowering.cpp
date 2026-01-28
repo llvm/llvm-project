@@ -5496,7 +5496,7 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
   }
 
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-  auto [_, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   // Create the mask for the initial merge
   auto XLenVT = Subtarget.getXLenVT();
@@ -5536,7 +5536,7 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
   SDValue Gather = DAG.getNode(
       RISCVISD::VRGATHER_VV_VL, DL, ContainerVT, Merge,
       convertToScalableVector(ContainerVT, GatherMask, DAG, Subtarget),
-      DAG.getUNDEF(ContainerVT), DAG.getUNDEF(MaskContainerVT), VL);
+      DAG.getUNDEF(ContainerVT), TrueMask, VL);
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
 }
 
