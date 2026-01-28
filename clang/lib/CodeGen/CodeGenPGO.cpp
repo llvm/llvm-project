@@ -340,14 +340,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return Base::VisitBinaryOperator(S);
   }
 
-  bool VisitConditionalOperator(ConditionalOperator *S) {
-    if (llvm::EnableSingleByteCoverage && S->getTrueExpr())
-      CounterMap[S->getTrueExpr()] = NextCounter++;
-    if (llvm::EnableSingleByteCoverage && S->getFalseExpr())
-      CounterMap[S->getFalseExpr()] = NextCounter++;
-    return Base::VisitConditionalOperator(S);
-  }
-
   /// Include \p S in the function hash.
   bool VisitStmt(Stmt *S) {
     auto Type = updateCounterMappings(S);
@@ -1124,16 +1116,15 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
-std::pair<bool, bool>
-CodeGenPGO::getExecSkipCounterExistence(const Stmt *S) const {
+bool CodeGenPGO::hasSkipCounter(const Stmt *S) const {
   if (!RegionCounterMap)
-    return {false, false};
+    return false;
 
   auto I = RegionCounterMap->find(S);
   if (I == RegionCounterMap->end())
-    return {false, false};
+    return false;
 
-  return {I->second.Executed.hasValue(), I->second.Skipped.hasValue()};
+  return I->second.Skipped.hasValue();
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
@@ -1163,10 +1154,11 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
       NormalizedFuncNameVarPtr, Builder.getInt64(FunctionHash),
       Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
-  if (llvm::EnableSingleByteCoverage)
+  if (llvm::EnableSingleByteCoverage) {
+    assert(!StepV && "StepV is not supported in single byte counter mode");
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
-  else if (!StepV)
+  } else if (!StepV)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
                        ArrayRef(Args, 4));
   else
@@ -1504,9 +1496,8 @@ void CodeGenFunction::incrementProfileCounter(CounterForIncrement ExecSkip,
   PGO->setCurrentStmt(S);
 }
 
-std::pair<bool, bool>
-CodeGenFunction::getExecSkipCounterExistence(const Stmt *S) const {
-  return PGO->getExecSkipCounterExistence(S);
+bool CodeGenFunction::hasSkipCounter(const Stmt *S) const {
+  return PGO->hasSkipCounter(S);
 }
 void CodeGenFunction::markStmtAsUsed(bool Skipped, const Stmt *S) {
   PGO->markStmtAsUsed(Skipped, S);

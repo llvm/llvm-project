@@ -158,9 +158,9 @@ int testDo() {          // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+9]]:2 = [
 // CHECK-NEXT: testConditional
 int testConditional(int x) {    // CHECK-NEXT: File 0, [[@LINE]]:28 -> [[@LINE+7]]:2 = [[C90:#0]]
  int result = (x > 0) ? 1 : -1; // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE]]:22 = [[C90]]
-
-                                // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:24 -> [[@LINE-2]]:25 = [[C9T:#2]]
+                                // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:15 -> [[@LINE-1]]:22 = [[C9T:#1]], [[C9F:#2]]
+                                // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:24 -> [[@LINE-2]]:25 = [[C9T]]
                                 // CHECK-NEXT: File 0, [[@LINE-3]]:25 -> [[@LINE-3]]:26 = [[C9T]]
-                                // CHECK-NEXT: File 0, [[@LINE-4]]:29 -> [[@LINE-4]]:31 = [[C9F:#3]]
- return result;                 // CHECK-NEXT: File 0, [[@LINE]]:2 -> [[@LINE]]:15 = [[C9E:#1]]
+                                // CHECK-NEXT: File 0, [[@LINE-4]]:29 -> [[@LINE-4]]:31 = [[C9F]]
+ return result;                 // #0
 }

@@ -65,7 +65,8 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
   // Sanitizers may use markers.
   if (CGOpts.SanitizeAddressUseAfterScope ||
       LangOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      LangOpts.Sanitize.has(SanitizerKind::Memory))
+      LangOpts.Sanitize.has(SanitizerKind::Memory) ||
+      LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
     return true;
 
   // For now, only in optimized builds.
@@ -2040,7 +2041,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
     cond.begin(*this);
     EmitBlock(LHSBlock);
-    incrementProfileCounter(CondOp);
+    incrementProfileCounter(UseExecPath, CondOp);
     {
       ApplyDebugLocation DL(*this, Cond);
       EmitBranchOnBoolExpr(CondOp->getLHS(), TrueBlock, FalseBlock,
@@ -2050,6 +2051,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
     cond.begin(*this);
     EmitBlock(RHSBlock);
+    incrementProfileCounter(UseSkipPath, CondOp);
     EmitBranchOnBoolExpr(CondOp->getRHS(), TrueBlock, FalseBlock,
                          TrueCount - LHSScaledTrueCount, LH, CondOp);
     cond.end(*this);
