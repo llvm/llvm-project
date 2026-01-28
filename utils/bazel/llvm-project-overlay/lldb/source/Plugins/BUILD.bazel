@@ -137,6 +137,22 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginProtocolServerMCP",
+    srcs = glob(["Protocol/MCP/*.cpp"]),
+    hdrs = glob(["Protocol/MCP/*.h"]),
+    deps = [
+        "//llvm:Support",
+        "//lldb:Utility",
+        "//lldb:CoreHeaders",
+        "//lldb:Host",
+        "//lldb:Headers",
+        "//lldb:ProtocolHeaders",
+        "//lldb:InterpreterHeaders",
+        "//lldb:ProtocolMCP",
+    ],
+)
+
+cc_library(
     name = "PluginTypeSystemClang",
     srcs = glob(["TypeSystem/Clang/*.cpp"]),
     deps = [
