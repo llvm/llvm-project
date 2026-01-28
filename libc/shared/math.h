@@ -92,6 +92,7 @@
 #include "math/sinf16.h"
 #include "math/sinhf.h"
 #include "math/sinhf16.h"
+#include "math/sqrtf16.h"
 #include "math/tan.h"
 #include "math/tanf.h"
 
