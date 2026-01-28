@@ -2,17 +2,12 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fprcvt,+fullfp16 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -global-isel-abort=2 -mattr=+fprcvt,+fullfp16 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:  warning: Instruction selection used fallback path for test_sqshrn_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqshrun_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqshrn_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrshrn_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrshrun_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqrshrn_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqdmulls_scalar
+; CHECK-GI:    warning: Instruction selection used fallback path for test_uqadd_s32
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_uqadd_s64
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_uqsub_s32
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_uqsub_s64
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_sqdmulls_scalar
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_sqdmulh_scalar
 
 define void @test_sqrshl_s32(float noundef %a, ptr %dst){
 ; CHECK-LABEL: test_sqrshl_s32:
