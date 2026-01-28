@@ -5922,6 +5922,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FTRUNC:
   case ISD::FNEG:
   case ISD::FSQRT:
+  case ISD::FCBRT:
   case ISD::FSIN:
   case ISD::FCOS:
   case ISD::FTAN:

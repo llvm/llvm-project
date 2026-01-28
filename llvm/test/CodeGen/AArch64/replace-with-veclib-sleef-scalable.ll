@@ -529,6 +529,24 @@ define <vscale x 4 x float> @llvm_trunc_vscale_f32(<vscale x 4 x float> %in) {
   ret <vscale x 4 x float> %1
 }
 
+define <vscale x 2 x double> @llvm_cbrt_vscale_f64(<vscale x 2 x double> %in) {
+; CHECK-LABEL: @llvm_cbrt_vscale_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.cbrt.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = call fast <vscale x 2 x double> @llvm.cbrt.nxv2f64(<vscale x 2 x double> %in)
+  ret <vscale x 2 x double> %1
+}
+
+define <vscale x 4 x float> @llvm_cbrt_vscale_f32(<vscale x 4 x float> %in) {
+; CHECK-LABEL: @llvm_cbrt_vscale_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.cbrt.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = call fast <vscale x 4 x float> @llvm.cbrt.nxv4f32(<vscale x 4 x float> %in)
+  ret <vscale x 4 x float> %1
+}
+
 declare <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
@@ -573,7 +591,10 @@ declare <vscale x 2 x double> @llvm.tan.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.tan.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 2 x double> @llvm.cbrt.nxv2f64(<vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.cbrt.nxv4f32(<vscale x 4 x float>)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { "target-features"="+sve" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+sve" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+sve" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+sve" }
 ;.

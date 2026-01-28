@@ -497,6 +497,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(FMAXIMUM_NUM_F);
   case TargetOpcode::G_FSQRT:
     RTLIBCASE(SQRT_F);
+  case TargetOpcode::G_FCBRT:
+    RTLIBCASE(CBRT_F);
   case TargetOpcode::G_FRINT:
     RTLIBCASE(RINT_F);
   case TargetOpcode::G_FNEARBYINT:
@@ -1361,6 +1363,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FCBRT:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_INTRINSIC_TRUNC:
@@ -3387,6 +3390,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FCBRT:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
   case TargetOpcode::G_FEXP10:
@@ -5579,6 +5583,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FSINH:
   case G_FTANH:
   case G_FSQRT:
+  case G_FCBRT:
   case G_BSWAP:
   case G_BITREVERSE:
   case G_SDIV:
@@ -6745,6 +6750,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
   case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FCBRT:
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FNEARBYINT:

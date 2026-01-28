@@ -409,6 +409,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
   case ISD::FCOPYSIGN:
+  case ISD::FCBRT:
   case ISD::FSQRT:
   case ISD::FSIN:
   case ISD::FCOS:
@@ -1354,6 +1355,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
   case ISD::FSQRT:
+  case ISD::FCBRT:
     if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
       Results.push_back(Expanded);
       return;

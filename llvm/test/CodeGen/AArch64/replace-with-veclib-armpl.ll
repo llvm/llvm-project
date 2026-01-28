@@ -778,6 +778,51 @@ define <vscale x 4 x float> @llvm_tanh_vscale_f32(<vscale x 4 x float> %in) #0 {
   ret <vscale x 4 x float> %1
 }
 
+declare <2 x double> @llvm.cbrt.v2f64(<2 x double>)
+declare <4 x float> @llvm.cbrt.v4f32(<4 x float>)
+declare <vscale x 2 x double> @llvm.cbrt.nxv2f64(<vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.cbrt.nxv4f32(<vscale x 4 x float>)
+
+define <2 x double> @llvm_cbrt_f64(<2 x double> %in) {
+; CHECK-LABEL: define <2 x double> @llvm_cbrt_f64
+; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.cbrt.v2f64(<2 x double> [[IN]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = call fast <2 x double> @llvm.cbrt.v2f64(<2 x double> %in)
+  ret <2 x double> %1
+}
+
+define <4 x float> @llvm_cbrt_f32(<4 x float> %in) {
+; CHECK-LABEL: define <4 x float> @llvm_cbrt_f32
+; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.cbrt.v4f32(<4 x float> [[IN]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call fast <4 x float> @llvm.cbrt.v4f32(<4 x float> %in)
+  ret <4 x float> %1
+}
+
+define <vscale x 2 x double> @llvm_cbrt_vscale_f64(<vscale x 2 x double> %in) #0 {
+; CHECK-LABEL: define <vscale x 2 x double> @llvm_cbrt_vscale_f64
+; CHECK-SAME: (<vscale x 2 x double> [[IN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.cbrt.nxv2f64(<vscale x 2 x double> [[IN]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = call fast <vscale x 2 x double> @llvm.cbrt.nxv2f64(<vscale x 2 x double> %in)
+  ret <vscale x 2 x double> %1
+}
+
+define <vscale x 4 x float> @llvm_cbrt_vscale_f32(<vscale x 4 x float> %in) #0 {
+; CHECK-LABEL: define <vscale x 4 x float> @llvm_cbrt_vscale_f32
+; CHECK-SAME: (<vscale x 4 x float> [[IN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.cbrt.nxv4f32(<vscale x 4 x float> [[IN]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = call fast <vscale x 4 x float> @llvm.cbrt.nxv4f32(<vscale x 4 x float> %in)
+  ret <vscale x 4 x float> %1
+}
+
 attributes #0 = { "target-features"="+sve" }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }

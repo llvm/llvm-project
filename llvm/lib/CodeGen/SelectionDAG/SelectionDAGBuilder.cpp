@@ -6889,6 +6889,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                            getValue(I.getArgOperand(1)), DAG, TLI, Flags));
     return;
   case Intrinsic::sqrt:
+  case Intrinsic::cbrt:
   case Intrinsic::fabs:
   case Intrinsic::sin:
   case Intrinsic::cos:
@@ -6913,6 +6914,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     switch (Intrinsic) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
     case Intrinsic::sqrt:         Opcode = ISD::FSQRT;         break;
+    case Intrinsic::cbrt:         Opcode = ISD::FCBRT;         break;
     case Intrinsic::fabs:         Opcode = ISD::FABS;          break;
     case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
     case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
@@ -9684,6 +9686,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_tanhf:
       case LibFunc_tanhl:
         if (visitUnaryFloatCall(I, ISD::FTANH))
+          return;
+        break;
+      case LibFunc_cbrt:
+      case LibFunc_cbrtf:
+      case LibFunc_cbrtl:
+        if (visitUnaryFloatCall(I, ISD::FCBRT))
           return;
         break;
       case LibFunc_sqrt:

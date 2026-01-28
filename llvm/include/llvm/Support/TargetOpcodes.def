@@ -890,6 +890,9 @@ HANDLE_TARGET_OPCODE(G_FTANH)
 /// Floating point square root.
 HANDLE_TARGET_OPCODE(G_FSQRT)
 
+/// Floating point cube root.
+HANDLE_TARGET_OPCODE(G_FCBRT)
+
 /// Floating point floor.
 HANDLE_TARGET_OPCODE(G_FFLOOR)
 

@@ -1186,6 +1186,13 @@ def G_FSQRT : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point cube root.
+def G_FCBRT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = true;
+}
+
 // Floating point floor of a value.
 def G_FFLOOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);

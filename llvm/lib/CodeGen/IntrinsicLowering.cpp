@@ -387,6 +387,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     ReplaceFPIntrinsicWithCall(CI, "sqrtf", "sqrt", "sqrtl");
     break;
   }
+  case Intrinsic::cbrt: {
+    ReplaceFPIntrinsicWithCall(CI, "cbrtf", "cbrt", "cbrtl");
+    break;
+  }
   case Intrinsic::log: {
     ReplaceFPIntrinsicWithCall(CI, "logf", "log", "logl");
     break;

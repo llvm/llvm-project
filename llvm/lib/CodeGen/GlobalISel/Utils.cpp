@@ -1791,6 +1791,7 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
   case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FCBRT:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:

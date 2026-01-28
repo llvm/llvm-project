@@ -16331,6 +16331,46 @@ matches a conforming libm implementation.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+.. _int_cbrt:
+
+'``llvm.cbrt.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.cbrt`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.cbrt.f32(float %Val)
+      declare double    @llvm.cbrt.f64(double %Val)
+      declare x86_fp80  @llvm.cbrt.f80(x86_fp80 %Val)
+      declare fp128     @llvm.cbrt.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.cbrt.ppcf128(ppc_fp128 %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.cbrt``' intrinsics return the square root of the specified value.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``cbrt``' function but without
+trapping or setting ``errno``. For types specified by IEEE-754, the result
+matches a conforming libm implementation.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.powi.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

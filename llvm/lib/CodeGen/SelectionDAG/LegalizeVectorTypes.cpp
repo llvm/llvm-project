@@ -128,6 +128,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FSIN:
   case ISD::FSINH:
   case ISD::FSQRT:
+  case ISD::FCBRT:
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FTRUNC:
@@ -1353,6 +1354,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::LLROUND:
   case ISD::FSIN:
   case ISD::FSINH:
+  case ISD::FCBRT:
   case ISD::FSQRT: case ISD::VP_SQRT:
   case ISD::FTAN:
   case ISD::FTANH:
@@ -5129,6 +5131,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FSIN:
   case ISD::FSINH:
   case ISD::FSQRT:
+  case ISD::FCBRT:
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FTRUNC:

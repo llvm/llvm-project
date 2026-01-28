@@ -1931,6 +1931,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FSHL;
     case Intrinsic::fshr:
       return TargetOpcode::G_FSHR;
+    case Intrinsic::cbrt:
+      return TargetOpcode::G_FCBRT;
     case Intrinsic::ceil:
       return TargetOpcode::G_FCEIL;
     case Intrinsic::cos:

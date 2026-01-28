@@ -110,6 +110,28 @@ define double @pow_f64(double %a, double %b) {
   %1 = call double @llvm.pow.f64(double %a, double %b)
   ret double %1
 }
+
+define float @cbrt_f32(float %a) {
+; SMALL-LABEL: cbrt_f32
+; SMALL:       bl _cbrtf
+; LARGE-LABEL: cbrt_f32
+; LARGE:       adrp  [[REG:x[0-9]+]], _cbrtf@GOTPAGE
+; LARGE:       ldr [[REG]], [[[REG]], _cbrtf@GOTPAGEOFF]
+; LARGE-NEXT:  blr [[REG]]
+  %1 = call float @llvm.cbrt.f32(float %a)
+  ret float %1
+}
+
+define double @cbrt_f64(double %a) {
+; SMALL-LABEL: cbrt_f64
+; SMALL:       bl _cbrt
+; LARGE-LABEL: cbrt_f64
+; LARGE:       adrp  [[REG:x[0-9]+]], _cbrt@GOTPAGE
+; LARGE:       ldr [[REG]], [[[REG]], _cbrt@GOTPAGEOFF]
+; LARGE-NEXT:  blr [[REG]]
+  %1 = call double @llvm.cbrt.f64(double %a)
+  ret double %1
+}
 declare float @llvm.sin.f32(float)
 declare double @llvm.sin.f64(double)
 declare float @llvm.cos.f32(float)
@@ -118,3 +140,5 @@ declare float @llvm.tan.f32(float)
 declare double @llvm.tan.f64(double)
 declare float @llvm.pow.f32(float, float)
 declare double @llvm.pow.f64(double, double)
+declare float @llvm.cbrt.f32(float)
+declare double @llvm.cbrt.f64(double)

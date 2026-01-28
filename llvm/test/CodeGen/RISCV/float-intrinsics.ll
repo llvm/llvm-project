@@ -3071,3 +3071,45 @@ define { float, float } @test_modf_f32(float %a) nounwind {
   %result = call { float, float } @llvm.modf.f32(float %a)
   ret { float, float } %result
 }
+
+define float @cbrt_f32(float %a) nounwind {
+; RV32IF-LABEL: cbrt_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail cbrtf
+;
+; RV32IZFINX-LABEL: cbrt_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail cbrtf
+;
+; RV64IF-LABEL: cbrt_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail cbrtf
+;
+; RV64IZFINX-LABEL: cbrt_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail cbrtf
+;
+; RV64IFD-LABEL: cbrt_f32:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    tail cbrtf
+;
+; RV32I-LABEL: cbrt_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call cbrtf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: cbrt_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call cbrtf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.cbrt.f32(float %a)
+  ret float %1
+}

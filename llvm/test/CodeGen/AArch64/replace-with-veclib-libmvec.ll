@@ -528,6 +528,24 @@ define <4 x float> @llvm_trunc_f32(<4 x float> %in) {
   ret <4 x float> %1
 }
 
+define <2 x double> @llvm_cbrt_f64(<2 x double> %in) {
+; CHECK-LABEL: @llvm_cbrt_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.cbrt.v2f64(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = call fast <2 x double> @llvm.cbrt.v2f64(<2 x double> %in)
+  ret <2 x double> %1
+}
+
+define <4 x float> @llvm_cbrt_f32(<4 x float> %in) {
+; CHECK-LABEL: @llvm_cbrt_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.cbrt.v4f32(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call fast <4 x float> @llvm.cbrt.v4f32(<4 x float> %in)
+  ret <4 x float> %1
+}
+
 declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
 declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
 declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
@@ -573,5 +591,6 @@ declare <4 x float> @llvm.tan.v4f32(<4 x float>)
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
