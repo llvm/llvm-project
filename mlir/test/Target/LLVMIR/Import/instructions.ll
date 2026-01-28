@@ -713,6 +713,54 @@ define void @call_noreturn() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_returnstwice
+define void @call_returnstwice() {
+; CHECK: llvm.call @f() {returns_twice}
+  call void @f() returns_twice
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_hot
+define void @call_hot() {
+; CHECK: llvm.call @f() {hot}
+  call void @f() hot
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_cold
+define void @call_cold() {
+; CHECK: llvm.call @f() {cold}
+  call void @f() cold
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_noduplicate
+define void @call_noduplicate() {
+; CHECK: llvm.call @f() {noduplicate}
+  call void @f() noduplicate
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}

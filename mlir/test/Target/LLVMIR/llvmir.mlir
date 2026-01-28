@@ -2642,6 +2642,50 @@ llvm.func @noreturn() attributes { noreturn } {
 
 // -----
 
+// CHECK-LABEL: @returnstwice
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @returnstwice() attributes { returns_twice } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: returns_twice
+
+// -----
+
+// CHECK-LABEL: @hot
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @hot() attributes { hot } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: hot
+
+// -----
+
+// CHECK-LABEL: @cold
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @cold() attributes { cold } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME:cold
+
+// -----
+
+// CHECK-LABEL: @noduplicate
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noduplicate() attributes { noduplicate } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noduplicate
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call

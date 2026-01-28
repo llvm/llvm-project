@@ -1606,6 +1606,22 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+static void lowerCallAttributes(cir::CIRCallOpInterface op,
+                                SmallVectorImpl<mlir::NamedAttribute> &result) {
+  for (mlir::NamedAttribute attr : op->getAttrs()) {
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    if (attr.getName() == CIRDialect::getCalleeAttrName() ||
+        attr.getName() == CIRDialect::getSideEffectAttrName() ||
+        attr.getName() == CIRDialect::getNoThrowAttrName() ||
+        attr.getName() == CIRDialect::getNoUnwindAttrName() ||
+        attr.getName() == CIRDialect::getNoReturnAttrName())
+      continue;
+
+    assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    result.push_back(attr);
+  }
+}
+
 static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
@@ -1626,6 +1642,9 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   bool noReturn = false;
   convertSideEffectForCall(op, call.getNothrow(), call.getSideEffect(),
                            memoryEffects, noUnwind, willReturn, noReturn);
+
+  SmallVector<mlir::NamedAttribute, 4> attributes;
+  lowerCallAttributes(call, attributes);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
 
@@ -1684,6 +1703,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
   auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
       op, llvmFnTy, calleeAttr, callOperands);
+  newOp->setAttrs(attributes);
   if (memoryEffects)
     newOp.setMemoryEffectsAttr(memoryEffects);
   newOp.setNoUnwind(noUnwind);
