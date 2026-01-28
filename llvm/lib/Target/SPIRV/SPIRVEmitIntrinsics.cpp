@@ -67,38 +67,39 @@ class GlobalVariableUsers {
   template <typename T1, typename T2>
   using OneToManyMapTy = DenseMap<T1, SmallPtrSet<T2, 4>>;
 
-  OneToManyMapTy<GlobalVariable *, Function *> GlobalIsUsedByFun;
+  OneToManyMapTy<const GlobalVariable *, const Function *> GlobalIsUsedByFun;
 
-  void collectGlobalUsers(GlobalVariable *GV,
-                          OneToManyMapTy<GlobalVariable *, GlobalVariable *>
-                              &GlobalIsUsedByGlobal) {
-    SmallVector<Value *> Stack = {GV->user_begin(), GV->user_end()};
+  void collectGlobalUsers(
+      const GlobalVariable *GV,
+      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
+          &GlobalIsUsedByGlobal) {
+    SmallVector<const Value *> Stack = {GV->user_begin(), GV->user_end()};
     while (!Stack.empty()) {
-      Value *V = Stack.pop_back_val();
+      const Value *V = Stack.pop_back_val();
 
-      if (Instruction *I = dyn_cast<Instruction>(V)) {
+      if (const Instruction *I = dyn_cast<Instruction>(V)) {
         GlobalIsUsedByFun[GV].insert(I->getFunction());
         continue;
       }
 
-      if (GlobalVariable *UserGV = dyn_cast<GlobalVariable>(V)) {
+      if (const GlobalVariable *UserGV = dyn_cast<GlobalVariable>(V)) {
         GlobalIsUsedByGlobal[GV].insert(UserGV);
         continue;
       }
 
-      if (Constant *C = dyn_cast<Constant>(V))
+      if (const Constant *C = dyn_cast<Constant>(V))
         Stack.append(C->user_begin(), C->user_end());
     }
   }
 
   bool propagateGlobalToGlobalUsers(
-      OneToManyMapTy<GlobalVariable *, GlobalVariable *>
+      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
           &GlobalIsUsedByGlobal) {
     bool Changed = false;
     for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
-      SmallVector<GlobalVariable *> OldUsersGlobals(UserGlobals.begin(),
-                                                    UserGlobals.end());
-      for (GlobalVariable *UserGV : OldUsersGlobals) {
+      SmallVector<const GlobalVariable *> OldUsersGlobals(UserGlobals.begin(),
+                                                          UserGlobals.end());
+      for (const GlobalVariable *UserGV : OldUsersGlobals) {
         auto It = GlobalIsUsedByGlobal.find(UserGV);
         if (It == GlobalIsUsedByGlobal.end())
           continue;
@@ -109,11 +110,11 @@ class GlobalVariableUsers {
   }
 
   void propagateGlobalToFunctionReferences(
-      OneToManyMapTy<GlobalVariable *, GlobalVariable *>
+      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
           &GlobalIsUsedByGlobal) {
     for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
       auto &UserFunctions = GlobalIsUsedByFun[GV];
-      for (GlobalVariable *UserGV : UserGlobals) {
+      for (const GlobalVariable *UserGV : UserGlobals) {
         auto It = GlobalIsUsedByFun.find(UserGV);
         if (It == GlobalIsUsedByFun.end())
           continue;
@@ -126,7 +127,8 @@ public:
   void init(Module &M) {
     // Collect which global variables are referenced by which global variables
     // and which functions reference each global variables.
-    OneToManyMapTy<GlobalVariable *, GlobalVariable *> GlobalIsUsedByGlobal;
+    OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
+        GlobalIsUsedByGlobal;
     GlobalIsUsedByFun.clear();
     for (GlobalVariable &GV : M.globals())
       collectGlobalUsers(&GV, GlobalIsUsedByGlobal);
@@ -138,12 +140,12 @@ public:
     propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  const auto &getTransitiveUserFunctions(GlobalVariable &GV) const {
+  const auto &getTransitiveUserFunctions(const GlobalVariable &GV) const {
     auto It = GlobalIsUsedByFun.find(&GV);
     if (It != GlobalIsUsedByFun.end())
       return It->second;
 
-    const static SmallPtrSet<Function *, 4> Empty;
+    const static SmallPtrSet<const Function *, 4> Empty;
     return Empty;
   }
 };
