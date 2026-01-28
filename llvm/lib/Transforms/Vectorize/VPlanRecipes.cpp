@@ -2722,11 +2722,15 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else if (isPartialReduction()) {
-    assert(Kind == RecurKind::Add && "Unexpected partial reduction kind");
+    assert((Kind == RecurKind::Add || Kind == RecurKind::FAdd) &&
+           "Unexpected partial reduction kind");
     Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ false);
     NewRed = State.Builder.CreateIntrinsic(
-        PrevInChain->getType(), Intrinsic::vector_partial_reduce_add,
-        {PrevInChain, NewVecOp}, nullptr, "partial.reduce");
+        PrevInChain->getType(),
+        Kind == RecurKind::Add ? Intrinsic::vector_partial_reduce_add
+                               : Intrinsic::vector_partial_reduce_fadd,
+        {PrevInChain, NewVecOp}, State.Builder.getFastMathFlags(),
+        "partial.reduce");
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else {
@@ -2799,9 +2803,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
     }
     return CondCost + Ctx.TTI.getPartialReductionCost(
                           Opcode, ElementTy, ElementTy, ElementTy, VF,
-                          TargetTransformInfo::PR_None,
-                          TargetTransformInfo::PR_None, std::nullopt,
-                          Ctx.CostKind);
+                          TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
+                          OptionalFMF);
   }
 
   // TODO: Support any-of reductions.
@@ -2900,8 +2903,6 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy = cast<VectorType>(
       toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
-  assert(RedTy->isIntegerTy() &&
-         "VPExpressionRecipe only supports integer types currently.");
   unsigned Opcode = RecurrenceDescriptor::getOpcode(
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
@@ -2917,7 +2918,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                      RedTy, VF,
                      TargetTransformInfo::getPartialReductionExtendKind(
                          ExtR->getOpcode()),
-                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind)
+                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
+                     std::nullopt)
                : Ctx.TTI.getExtendedReductionCost(
                      Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
                      SrcVecTy, std::nullopt, Ctx.CostKind);
@@ -2943,7 +2945,9 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
               Ext0R->getOpcode()),
           TargetTransformInfo::getPartialReductionExtendKind(
               Ext1R->getOpcode()),
-          Mul->getOpcode(), Ctx.CostKind);
+          Mul->getOpcode(), Ctx.CostKind,
+          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
+                                     : std::nullopt);
     }
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
