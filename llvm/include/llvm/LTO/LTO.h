@@ -212,14 +212,10 @@ public:
   MemoryBufferRef getFileBuffer() const { return MbRef; }
   // Returns true if this input should be serialized to disk for distribution.
   // See the comment on SerializeForDistribution for details.
-  bool getSerializeForDistribution() const {
-    return SerializeForDistribution;
-  }
+  bool getSerializeForDistribution() const { return SerializeForDistribution; }
   // Mark whether this input should be serialized to disk for distribution.
   // See the comment on SerializeForDistribution for details.
-  void setSerializeForDistribution(bool SFD) {
-    SerializeForDistribution = SFD;
-  }
+  void setSerializeForDistribution(bool SFD) { SerializeForDistribution = SFD; }
   // Returns true if this bitcode came from a FatLTO object.
   bool isFatLTOObject() const { return IsFatLTOObject; }
   // Mark this bitcode as coming from a FatLTO object.
