@@ -1606,9 +1606,6 @@ def : Pat<(fma_nsz (fneg v4f64:$xj), v4f64:$xk, v4f64:$xa),
 // XVFSQRT_{S/D}
 defm : PatXrF<fsqrt, "XVFSQRT">;
 
-// XVFLOGB_{S/D}
-defm : PatXrF<flog2, "XVFLOGB">;
-
 // XVRECIP_{S/D}
 def : Pat<(fdiv vsplatf32_fpimm_eq_1, v8f32:$xj),
           (XVFRECIP_S v8f32:$xj)>;
