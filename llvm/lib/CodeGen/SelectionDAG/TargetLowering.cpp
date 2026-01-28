@@ -36,7 +36,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include <cctype>
 #include <deque>
 using namespace llvm;
@@ -5959,7 +5958,6 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
   unsigned ResNo = 0; // ResNo - The result number of the next output.
   unsigned LabelNo = 0; // LabelNo - CallBr indirect dest number.
 
-  const Triple &T = getTargetMachine().getTargetTriple();
   for (InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     ConstraintOperands.emplace_back(std::move(CI));
     AsmOperandInfo &OpInfo = ConstraintOperands.back();
@@ -5975,7 +5973,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     // would vastly prefer to use 'r' over 'm', but can't because of LLVM's
     // architecture picks the most "conservative" constraint to ensure that (in
     // the case of "rm") register pressure cause bad things to happen.
-    if (T.isX86() && !OpInfo.hasMatchingInput() && OpInfo.Codes.size() == 2 &&
+    if (!OpInfo.hasMatchingInput() && OpInfo.Codes.size() == 2 &&
         llvm::is_contained(OpInfo.Codes, "r") &&
         llvm::is_contained(OpInfo.Codes, "m"))
       OpInfo.MayFoldRegister = true;
@@ -6277,7 +6275,8 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   // If we can fold the register (i.e. it has an "rm" constraint), opt for the
   // 'r' constraint, and allow the register allocator to spill if need be.
   // Applies only to the greedy and default register allocators.
-  if (OpInfo.MayFoldRegister) {
+  const TargetMachine &TM = getTargetMachine();
+  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister) {
     Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
     Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
     return Ret;

@@ -8,9 +8,9 @@
 //
 // This pass prepares inline assembly for code generation with the fast register
 // allocator---e.g., by converting "rm" (register-or-memory) constraints to "m"
-// (memory-only) constraints on x86 platforms, simplifying register allocation
-// by forcing operands to memory locations, avoiding the complexity of handling
-// dual register/memory options.
+// (memory-only) constraints, simplifying register allocation by forcing
+// operands to memory locations, avoiding the complexity of handling dual
+// register/memory options.
 //
 //===----------------------------------------------------------------------===//
 
@@ -72,9 +72,11 @@ static bool isRegMemConstraint(StringRef Constraint) {
 }
 
 /// Convert instances of the "rm" constraints into "m".
-static std::string convertConstraintsToMemory(StringRef ConstraintStr) {
+static std::pair<std::string, bool>
+convertConstraintsToMemory(StringRef ConstraintStr) {
   auto I = ConstraintStr.begin(), E = ConstraintStr.end();
   std::ostringstream Out;
+  bool HasRegMem = false;
 
   while (I != E) {
     bool IsOutput = false;
@@ -98,12 +100,12 @@ static std::string convertConstraintsToMemory(StringRef ConstraintStr) {
     auto Comma = std::find(I, E, ',');
     std::string Sub(I, Comma);
     if (isRegMemConstraint(Sub)) {
+      HasRegMem = true;
       if (IsOutput && !HasIndirect)
         Out << '*';
-      Out << 'm';
-    } else {
-      Out << Sub;
     }
+
+    Out << Sub;
 
     if (Comma == E)
       break;
@@ -112,7 +114,7 @@ static std::string convertConstraintsToMemory(StringRef ConstraintStr) {
     I = Comma + 1;
   }
 
-  return Out.str();
+  return std::make_pair(Out.str(), HasRegMem);
 }
 
 namespace {
@@ -297,10 +299,6 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
 } // namespace
 
 bool InlineAsmPrepare::runOnFunction(Function &F) {
-  // Only process "rm" on x86 platforms.
-  if (!F.getParent()->getTargetTriple().isX86())
-    return false;
-
   SmallVector<CallBase *, 4> IAs = findInlineAsms(F);
   if (IAs.empty())
     return false;
@@ -310,9 +308,9 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
     InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
     const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
-    std::string NewConstraintStr =
+    auto [NewConstraintStr, HasRegMem] =
         convertConstraintsToMemory(IA->getConstraintString());
-    if (NewConstraintStr == IA->getConstraintString())
+    if (!HasRegMem)
       continue;
 
     IRBuilder<> Builder(CB);

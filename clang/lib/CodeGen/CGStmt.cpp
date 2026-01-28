@@ -2929,12 +2929,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
                                      hasAggregateEvaluationKind(QTy);
-    const bool X86RegisterMemoryConstraints =
-        getTarget().getTriple().isX86() &&
-        (OutputConstraint == "rm" || OutputConstraint == "mr");
+    const bool RegisterMemoryConstraints =
+        OutputConstraint == "rm" || OutputConstraint == "mr";
 
     if (IsScalarOrAggregate &&
-        (!Info.allowsMemory() || X86RegisterMemoryConstraints)) {
+        (!Info.allowsMemory() || RegisterMemoryConstraints)) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
