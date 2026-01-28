@@ -4567,9 +4567,10 @@ multiclass VPatUnaryV_VF<string intrinsic, string instruction, string suffix,
 }
 
 multiclass VPatUnaryV_V<string intrinsic, string instruction,
-                        list<VTypeInfo> vtilist, bit isSEWAware = 0> {
+                        list<VTypeInfo> vtilist, bit isSEWAware = 0,
+                        list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
       def : VPatUnaryNoMask<intrinsic, instruction, "V",
                             vti.Vector, vti.Vector, vti.Log2SEW,
                             vti.LMul, vti.RegClass, vti.RegClass, isSEWAware>;
@@ -4813,9 +4814,10 @@ multiclass VPatConversionRTZ<string intrinsic,
 }
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist, bit isSEWAware = 0> {
+                          list<VTypeInfo> vtilist, bit isSEWAware = 0,
+                          list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     defm : VPatBinary<intrinsic,
                       !if(isSEWAware,
                           instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
@@ -4874,10 +4876,11 @@ multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VX<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist, bit isSEWAware = 0> {
+                          list<VTypeInfo> vtilist, bit isSEWAware = 0,
+                          list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in {
     defvar kind = "V"#vti.ScalarSuffix;
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     defm : VPatBinary<intrinsic,
                       !if(isSEWAware,
                           instruction#"_"#kind#"_"#vti.LMul.MX#"_E"#vti.SEW,
@@ -4916,9 +4919,10 @@ multiclass VPatBinaryV_VX_INT<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VI<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist, Operand imm_type> {
+                          list<VTypeInfo> vtilist, Operand imm_type,
+                          list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     defm : VPatBinary<intrinsic, instruction # "_VI_" # vti.LMul.MX,
                       vti.Vector, vti.Vector, XLenVT, vti.Mask,
                       vti.Log2SEW, vti.RegClass,
@@ -4958,11 +4962,13 @@ multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
 }
 
 multiclass VPatBinaryW_VV<string intrinsic, string instruction,
-                          list<VTypeInfoToWide> vtilist> {
+                          list<VTypeInfoToWide> vtilist,
+                          list<Predicate> ExtraPreds = []> {
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
+    let Predicates = !listconcat(ExtraPreds,
+                                 GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
     defm : VPatBinary<intrinsic, instruction # "_VV_" # Vti.LMul.MX,
                       Wti.Vector, Vti.Vector, Vti.Vector, Vti.Mask,
@@ -5342,10 +5348,11 @@ multiclass VPatBinaryM_VI<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VV_VX_VI<string intrinsic, string instruction,
-                                list<VTypeInfo> vtilist, Operand ImmType = simm5>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
+                                list<VTypeInfo> vtilist, Operand ImmType = simm5,
+                                list<Predicate> ExtraPreds = []>
+    : VPatBinaryV_VV<intrinsic, instruction, vtilist, ExtraPreds=ExtraPreds>,
+      VPatBinaryV_VX<intrinsic, instruction, vtilist, ExtraPreds=ExtraPreds>,
+      VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType, ExtraPreds=ExtraPreds>;
 
 multiclass VPatBinaryV_VV_VX_VI_RM<string intrinsic, string instruction,
                                    list<VTypeInfo> vtilist, Operand ImmType>
@@ -5354,9 +5361,10 @@ multiclass VPatBinaryV_VV_VX_VI_RM<string intrinsic, string instruction,
       VPatBinaryV_VI_RM<intrinsic, instruction, vtilist, ImmType>;
 
 multiclass VPatBinaryV_VV_VX<string intrinsic, string instruction,
-                             list<VTypeInfo> vtilist, bit isSEWAware = 0>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist, isSEWAware>,
-      VPatBinaryV_VX<intrinsic, instruction, vtilist, isSEWAware>;
+                             list<VTypeInfo> vtilist, bit isSEWAware = 0,
+                             list<Predicate> ExtraPreds = []>
+    : VPatBinaryV_VV<intrinsic, instruction, vtilist, isSEWAware, ExtraPreds>,
+      VPatBinaryV_VX<intrinsic, instruction, vtilist, isSEWAware, ExtraPreds>;
 
 multiclass VPatBinaryV_VV_VX_RM<string intrinsic, string instruction,
                                 list<VTypeInfo> vtilist, bit isSEWAware = 0>
