@@ -7171,7 +7171,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fms-define-stdc");
   }
 
-  // -fms-anonymous-struct=0 default.
+  // -fms-anonymous-structs is disabled by default.
   bool EnableMSAnon = false;
   bool SeenRelevantOption = false;
   for (const Arg *A : Args) {

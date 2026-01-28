@@ -109,7 +109,9 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
-- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added to enable or disable Microsoft's anonymous struct/union extension without enabling other ``-fms-extensions`` features [GH177607].
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
 
 Deprecated Compiler Flags
 -------------------------
