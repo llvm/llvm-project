@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -1324,7 +1325,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     VarDecl *Underlying = Var->getPotentiallyDecomposedVarDecl();
 
-    if (!Underlying->hasLocalStorage()) {
+    if (!Underlying->hasLocalStorage() &&
+        !PP.isIncrementalProcessingEnabled()) {
       Diag(C->Loc, diag::err_capture_non_automatic_variable) << C->Id;
       Diag(Var->getLocation(), diag::note_previous_decl) << C->Id;
       continue;
@@ -1381,11 +1383,14 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // For DR1632, we also allow a capture-default in any context where we can
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
+  // For increasemental processing(such as clang-repl), allow lambda to capture
+  // top level varible.
   if (Intro.Default != LCD_None &&
       !LSI->Lambda->getParent()->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
        CheckCXXThisCapture(SourceLocation(), /*Explicit=*/true,
-                           /*BuildAndDiagnose=*/false)))
+                           /*BuildAndDiagnose=*/false)) &&
+      !PP.isIncrementalProcessingEnabled())
     Diag(Intro.DefaultLoc, diag::err_capture_default_non_local);
 }
 
