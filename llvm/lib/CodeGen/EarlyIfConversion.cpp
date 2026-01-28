@@ -925,8 +925,13 @@ static bool isConstantPoolLoad(const MachineInstr *MI) {
 
 /// Check if there are any calls in the range (From, To].
 static bool callInRange(const MachineInstr *From, const MachineInstr *To) {
-  return any_of(make_range(std::next(From->getIterator()), To->getIterator()),
-                [](const MachineInstr &MI) { return MI.isCall(); });
+  constexpr int MaxInstructionsToCheck = 64;
+  int Count = 0;
+  auto InstrRange =
+      make_range(std::next(From->getIterator()), To->getIterator());
+  return any_of(InstrRange, [&Count](const MachineInstr &MI) {
+    return ++Count > MaxInstructionsToCheck || MI.isCall();
+  });
 }
 
 /// Check if a register's value comes from a memory load by walking the
