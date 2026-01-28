@@ -134,7 +134,7 @@ public:
       collectGlobalReferences(&GV, GlobalIsReferencedByGlobal,
                               GlobalIsReferencedByFun);
 
-    // Compute indirect references by iterating until a fixed point is found.
+    // Compute indirect references by iterating until a fixed point is reached.
     while (propagateGlobalToGlobalReferences(GlobalIsReferencedByGlobal))
       (void)0;
 
