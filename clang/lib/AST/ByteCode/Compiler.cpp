@@ -1080,13 +1080,16 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   // Do the operation and optionally transform to
   // result pointer type.
-  if (Op == BO_Add) {
+  switch (Op) {
+  case BO_Add:
     if (!this->emitAddOffset(OffsetType, E))
       return false;
-  } else if (Op == BO_Sub) {
+    break;
+  case BO_Sub:
     if (!this->emitSubOffset(OffsetType, E))
       return false;
-  } else {
+    break;
+  default:
     return false;
   }
 
