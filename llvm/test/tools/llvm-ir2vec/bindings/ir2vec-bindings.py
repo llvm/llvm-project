@@ -12,7 +12,7 @@ import ir2vec
 ll_file = sys.argv[1]
 vocab_path = sys.argv[2]
 
-tool = ir2vec.initEmbedding(filename=ll_file, mode="sym", vocab_path=vocab_path)
+tool = ir2vec.initEmbedding(filename=ll_file, mode="sym", vocabPath=vocab_path)
 
 if tool is not None:
     print("SUCCESS: Tool initialized")

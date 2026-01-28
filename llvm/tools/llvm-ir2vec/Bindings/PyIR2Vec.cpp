@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/unique_ptr.h>
-
 #include "lib/Utils.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/SourceMgr.h"
+
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/unique_ptr.h>
 
 #include <fstream>
 #include <memory>
@@ -26,17 +26,13 @@ using namespace llvm::ir2vec;
 
 namespace {
 
-bool fileNotValid(const std::string &Filename) {
-  std::ifstream F(Filename, std::ios_base::in | std::ios_base::binary);
-  return !F.good();
-}
-
 std::unique_ptr<Module> getLLVMIR(const std::string &Filename,
                                   LLVMContext &Context) {
   SMDiagnostic Err;
   auto M = parseIRFile(Filename, Err, Context);
   if (!M)
-    throw std::runtime_error("Failed to parse IR file.");
+    throw std::runtime_error("Failed to parse IR file '" + Filename +
+                           "': " + Err.getMessage().str());
   return M;
 }
 
@@ -49,9 +45,6 @@ private:
 public:
   PyIR2VecTool(const std::string &Filename, const std::string &Mode,
                const std::string &VocabPath) {
-    if (fileNotValid(Filename))
-      throw std::runtime_error("Invalid file path");
-
     if (Mode != "sym" && Mode != "fa")
       throw std::runtime_error("Invalid mode. Use 'sym' or 'fa'");
 
@@ -77,14 +70,14 @@ NB_MODULE(ir2vec, m) {
   nb::class_<PyIR2VecTool>(m, "IR2VecTool")
       .def(nb::init<const std::string &, const std::string &,
                     const std::string &>(),
-           nb::arg("filename"), nb::arg("mode"), nb::arg("vocab_path"));
+           nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"));
 
   m.def(
       "initEmbedding",
       [](const std::string &filename, const std::string &mode,
-         const std::string &vocab_path) {
-        return std::make_unique<PyIR2VecTool>(filename, mode, vocab_path);
+         const std::string &vocabPath) {
+        return std::make_unique<PyIR2VecTool>(filename, mode, vocabPath);
       },
-      nb::arg("filename"), nb::arg("mode") = "sym", nb::arg("vocab_path"),
+      nb::arg("filename"), nb::arg("mode") = "sym", nb::arg("vocabPath"),
       nb::rv_policy::take_ownership);
 }
