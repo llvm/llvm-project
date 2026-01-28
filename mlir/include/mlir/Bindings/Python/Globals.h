@@ -94,7 +94,7 @@ public:
   void registerOperationImpl(const std::string &operationName,
                              nanobind::object pyClass, bool replace = false);
 
-  /// Adds a operation adaptor class.
+  /// Adds an operation adaptor class.
   /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerOpAdaptorImpl(const std::string &operationName,
