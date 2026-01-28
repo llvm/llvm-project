@@ -231,6 +231,9 @@ if "%local-libxml2%" NEQ "true" (
   set cmake_flags=%cmake_flags% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+) else (
+  set cmake_flags=%cmake_flags% ^
+  -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
 )
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
@@ -297,7 +300,10 @@ if "%local-libxml2%" NEQ "true" (
   set cmake_flags=%cmake_flags% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
-)
+) else (
+  set cmake_flags=%cmake_flags% ^
+  -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
+}
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
     -DCOMPILER_RT_BUILD_SANITIZERS=OFF
