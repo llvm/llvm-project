@@ -77,6 +77,7 @@
 #include "math/ldexpf16.h"
 #include "math/llogb.h"
 #include "math/llogbf.h"
+#include "math/llogbf16.h"
 #include "math/log.h"
 #include "math/log10.h"
 #include "math/log1p.h"
