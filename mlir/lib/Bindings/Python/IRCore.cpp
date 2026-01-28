@@ -50,7 +50,7 @@ operations.
 
 /// Local helper to concatenate string and integer arguments into a std::string.
 template <typename... Ts>
-std::string join(const Ts &...args) {
+static std::string join(const Ts &...args) {
   std::ostringstream oss;
   (oss << ... << args);
   return oss.str();
@@ -827,7 +827,7 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
   MlirDialect dialect = mlirContextGetOrLoadDialect(getContext()->get(),
                                                     {key.data(), key.size()});
   if (mlirDialectIsNull(dialect)) {
-    std::string msg = (std::string("Dialect '") + key + "' not found");
+    std::string msg = join("Dialect '", key, "' not found");
     if (attrError)
       throw nb::attribute_error(msg.c_str());
     throw nb::index_error(msg.c_str());
@@ -1326,7 +1326,7 @@ nb::object PyOperation::create(std::string_view name,
   // point, exceptions cannot be thrown or else the state will leak.
   MlirOperationState state =
       mlirOperationStateGet(toMlirStringRef(name), location);
-  if (numOperands)
+  if (numOperands > 0)
     mlirOperationStateAddOperands(&state, numOperands, operands);
   state.enableResultTypeInference = inferType;
   if (!mlirResults.empty())
