@@ -2719,6 +2719,29 @@ llvm.func @modular_format(%arg : i32) attributes { modular_format = "ident,1,1,f
 
 // -----
 
+// CHECK-LABEL: @no_builtins_all
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_all(%arg : i32) attributes { nobuiltins = [] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+// CHECK-LABEL: @no_builtins_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_2(%arg : i32) attributes { nobuiltins = ["asdf", "defg"] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call

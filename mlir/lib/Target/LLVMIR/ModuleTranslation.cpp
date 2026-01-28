@@ -1700,6 +1700,19 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
     llvmFunc->setUWTableKind(
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
+
+  if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
+    if (noBuiltins.empty())
+      llvmFunc->addFnAttr("no-builtins");
+
+    for (Attribute a : noBuiltins) {
+      if (auto str = dyn_cast<StringAttr>(a)) {
+        std::string attrName = ("no-builtin-" + str.getValue()).str();
+        llvmFunc->addFnAttr(attrName);
+      }
+    }
+  }
+
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 

@@ -1419,10 +1419,10 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
 /// Converts LLVM string, integer, and enum attributes into MLIR attributes,
 /// skipping those in `attributesToSkip` and emitting a warning at `loc` for
 /// any other unsupported attributes.
-static ArrayAttr
-convertLLVMAttributesToMLIR(Location loc, MLIRContext *context,
-                            llvm::AttributeSet attributes,
-                            ArrayRef<StringLiteral> attributesToSkip = {}) {
+static ArrayAttr convertLLVMAttributesToMLIR(
+    Location loc, MLIRContext *context, llvm::AttributeSet attributes,
+    ArrayRef<StringLiteral> attributesToSkip = {},
+    ArrayRef<StringLiteral> attributePrefixesToSkip = {}) {
   SmallVector<Attribute> mlirAttributes;
   for (llvm::Attribute attr : attributes) {
     StringRef attrName;
@@ -1431,6 +1431,13 @@ convertLLVMAttributesToMLIR(Location loc, MLIRContext *context,
     else
       attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
     if (llvm::is_contained(attributesToSkip, attrName))
+      continue;
+
+    auto attrNameStartsWith = [attrName](StringLiteral sl) {
+      return attrName.starts_with(sl);
+    };
+    if (attributePrefixesToSkip.end() !=
+        llvm::find_if(attributePrefixesToSkip, attrNameStartsWith))
       continue;
 
     auto keyAttr = StringAttr::get(context, attrName);
@@ -2669,6 +2676,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("no-builtins"),
     StringLiteral("nocallback"),
     StringLiteral("noduplicate"),
     StringLiteral("noinline"),
@@ -2683,15 +2691,55 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("willreturn"),
 };
 
+// List of LLVM IR attributes that are handled by prefix to map onto an MLIR
+// LLVMFuncOp.
+static constexpr std::array kExplicitLLVMFuncOpAttributePrefixes{
+    StringLiteral("no-builtin-"),
+};
+
+template <typename OpTy>
+static void convertNoBuiltinAttrs(MLIRContext *ctx,
+                                  const llvm::AttributeSet &attrs,
+                                  OpTy target) {
+  // 'no-builtins' is the complete collection, and overrides all the rest.
+  if (attrs.hasAttribute("no-builtins")) {
+    target.setNobuiltinsAttr(mlir::ArrayAttr::get(ctx, {}));
+    return;
+  }
+
+  llvm::SmallVector<mlir::Attribute> nbAttrs;
+  for (llvm::Attribute attr : attrs) {
+    // Attributes that are part of llvm directly (that is, have an AttributeKind
+    // in the enum) shouldn't be checked.
+    if (attr.hasKindAsEnum())
+      continue;
+
+    StringRef val = attr.getKindAsString();
+
+    if (val.starts_with("no-builtin-")) {
+      StringRef str = val.drop_front(sizeof("no-builtin-") - 1);
+
+      if (nbAttrs.end() == llvm::find_if(nbAttrs, [str](Attribute a) {
+            return mlir::cast<StringAttr>(a).getValue() == str;
+          }))
+        nbAttrs.push_back(mlir::StringAttr::get(
+            ctx, val.drop_front(sizeof("no-builtin-") - 1)));
+    }
+  }
+
+  if (!nbAttrs.empty())
+    target.setNobuiltinsAttr(mlir::ArrayAttr::get(ctx, nbAttrs));
+}
+
 /// Converts LLVM attributes from `func` into MLIR attributes and adds them
 /// to `funcOp` as passthrough attributes, skipping those listed in
 /// `kExplicitLLVMFuncAttributes`.
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
   llvm::AttributeSet funcAttrs = func->getAttributes().getAttributes(
       llvm::AttributeList::AttrIndex::FunctionIndex);
-  ArrayAttr passthroughAttr =
-      convertLLVMAttributesToMLIR(funcOp.getLoc(), funcOp.getContext(),
-                                  funcAttrs, kExplicitLLVMFuncOpAttributes);
+  ArrayAttr passthroughAttr = convertLLVMAttributesToMLIR(
+      funcOp.getLoc(), funcOp.getContext(), funcAttrs,
+      kExplicitLLVMFuncOpAttributes, kExplicitLLVMFuncOpAttributePrefixes);
   if (!passthroughAttr.empty())
     funcOp.setPassthroughAttr(passthroughAttr);
 }
@@ -2750,6 +2798,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmInoutZa(true);
   else if (func->hasFnAttribute("aarch64_preserves_za"))
     funcOp.setArmPreservesZa(true);
+
+  convertNoBuiltinAttrs(context, func->getAttributes().getFnAttrs(), funcOp);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
   if (attr.isValid()) {
@@ -2990,6 +3040,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   // Only set the attribute when it does not match the default value.
   if (!memAttr.isReadWrite())
     op.setMemoryEffectsAttr(memAttr);
+
+  convertNoBuiltinAttrs(op.getContext(), callAttrs.getFnAttrs(), op);
 
   return convertCallBaseAttributes(inst, op);
 }

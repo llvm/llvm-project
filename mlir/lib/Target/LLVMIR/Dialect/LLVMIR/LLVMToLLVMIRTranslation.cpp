@@ -447,6 +447,20 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                            "modular-format",
                                            modFormat.getValue()));
 
+    if (ArrayAttr noBuiltins = callOp.getNobuiltinsAttr()) {
+      if (noBuiltins.empty())
+        call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "no-builtins"));
+
+      for (Attribute a : noBuiltins) {
+        if (auto str = dyn_cast<StringAttr>(a)) {
+          std::string attrName = ("no-builtin-" + str.getValue()).str();
+          call->addFnAttr(llvm::Attribute::get(
+              moduleTranslation.getLLVMContext(), attrName));
+        }
+      }
+    }
+
     if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
       return failure();
 
