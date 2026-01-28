@@ -148,7 +148,7 @@ if "%skip-checkout%" == "true" (
 
 curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
 tar zxf libxml2-v2.9.12.tar.gz
- 
+
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
 set common_compiler_flags=-DLIBXML_STATIC
@@ -219,9 +219,9 @@ set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
+  -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
-  -DPython3_ROOT_DIR=%PYTHONHOME%
+  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
@@ -283,7 +283,6 @@ set cmake_flags=^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DCLANG_DEFAULT_LINKER=lld
-
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
     -DCOMPILER_RT_BUILD_SANITIZERS=OFF
