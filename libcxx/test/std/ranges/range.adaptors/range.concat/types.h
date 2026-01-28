@@ -13,20 +13,6 @@
 #include <utility>
 #include "test_iterators.h"
 
-struct TrackInitialization {
-  constexpr explicit TrackInitialization(bool* moved, bool* copied) : moved_(moved), copied_(copied) {}
-  constexpr TrackInitialization(TrackInitialization const& other) : moved_(other.moved_), copied_(other.copied_) {
-    *copied_ = true;
-  }
-  constexpr TrackInitialization(TrackInitialization&& other) : moved_(other.moved_), copied_(other.copied_) {
-    *moved_ = true;
-  }
-  TrackInitialization& operator=(TrackInitialization const&) = default;
-  TrackInitialization& operator=(TrackInitialization&&)      = default;
-  bool* moved_;
-  bool* copied_;
-};
-
 template <class Iter, class Sent>
 struct minimal_view : std::ranges::view_base {
   constexpr explicit minimal_view(Iter it, Sent sent) : it_(base(std::move(it))), sent_(base(std::move(sent))) {}

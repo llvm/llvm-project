@@ -12,7 +12,7 @@
 //   requires(!(__simple_view<_Views> && ...))
 
 // constexpr auto end() const
-//     requires(range<const _Views> && ...)
+//   requires((range<const _Views> && ...) && __concatable<const _Views...>)
 
 #include <array>
 #include <cassert>
