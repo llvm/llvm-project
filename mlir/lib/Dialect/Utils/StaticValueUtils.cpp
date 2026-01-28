@@ -336,10 +336,8 @@ std::optional<APInt> constantTripCount(
       // case applies, so the static trip count is unknown.
       return std::nullopt;
     }
-    // For unsigned values, negative step is impossible; for signed, check the
-    // sign bit properly using APSInt.
-    APSInt stepSInt(stepCst, /*isUnsigned=*/!isSigned);
-    if (stepSInt.isNegative())
+    // For signed loops, return zero trip count if step is negative.
+    if (isSigned && stepCst.isSignBitSet())
       return APInt(bitwidth, 0);
   }
 
@@ -395,21 +393,12 @@ std::optional<APInt> constantTripCount(
   }
   auto &stepCst = maybeStepCst->first;
   // Create new APSInt instances with explicit signedness to ensure they match
-  llvm::APSInt diffSigned(diff, /*isUnsigned=*/!isSigned);
-  llvm::APSInt stepSInt(stepCst, /*isUnsigned=*/!isSigned);
-  llvm::APSInt tripCount = diffSigned / stepSInt;
-  llvm::APSInt remainder = diffSigned % stepSInt;
+  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
+  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
   LDBG() << "constantTripCount found: " << tripCount;
-
-  // For unsigned narrow types, zero-extend to 64 bits to avoid
-  // misinterpretation when callers use getSExtValue(). This ensures values like
-  // 255 (0xFF in 8-bit) are treated as positive when sign-extended.
-  APInt result = tripCount;
-  if (!isSigned && bitwidth < 64)
-    result = result.zext(64);
-  return result;
+  return tripCount;
 }
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {

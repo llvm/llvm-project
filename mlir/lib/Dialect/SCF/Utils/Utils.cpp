@@ -397,8 +397,8 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     }
 
     int64_t tripCountEvenMultiple =
-        constTripCount->getSExtValue() -
-        (constTripCount->getSExtValue() % unrollFactor);
+        constTripCount->getZExtValue() -
+        (constTripCount->getZExtValue() % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -500,9 +500,9 @@ LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   const APInt &tripCount = *mayBeConstantTripCount;
   if (tripCount.isZero())
     return success();
-  if (tripCount.getSExtValue() == 1)
+  if (tripCount.getZExtValue() == 1)
     return forOp.promoteIfSingleIteration(rewriter);
-  return loopUnrollByFactor(forOp, tripCount.getSExtValue());
+  return loopUnrollByFactor(forOp, tripCount.getZExtValue());
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -1572,7 +1572,7 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
         lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
     if (!numIter)
       return {};
-    tripCounts.push_back(numIter->getSExtValue());
+    tripCounts.push_back(numIter->getZExtValue());
   }
   return tripCounts;
 }

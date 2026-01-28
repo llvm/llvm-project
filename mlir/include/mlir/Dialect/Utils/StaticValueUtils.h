@@ -212,10 +212,11 @@ foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes);
 LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides);
 
 /// Return the number of iterations for a loop with a lower bound `lb`, upper
-/// bound `ub` and step `step`. The `isSigned` flag indicates whether the loop
-/// comparison between lb and ub is signed or unsigned. A negative step or a
-/// lower bound greater than the upper bound are considered invalid and will
-/// yield a zero trip count.
+/// bound `ub` and step `step`, as an unsigned integer. The `isSigned` flag
+/// indicates whether the loop comparison between lb and ub is signed or
+/// unsigned. (The result of this function must be interpreted as an unsigned
+/// integer.) A lower bound greater than the upper bound is considered invalid
+/// and will yield a zero trip count.
 /// The `computeUbMinusLb` callback is invoked to compute the difference between
 /// the upper and lower bound when not constant. It can be used by the client
 /// to compute a static difference when the bounds are not constant.
@@ -228,9 +229,6 @@ LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides);
 /// where %ub is computed as a static offset from %lb.
 /// Note: the matched addition should be nsw/nuw (matching the loop comparison)
 /// to avoid overflow, otherwise an overflow would imply a zero trip count.
-///
-/// For unsigned narrow types, the result is zero-extended to 64 bits to avoid
-/// misinterpretation when callers use getSExtValue().
 std::optional<APInt> constantTripCount(
     OpFoldResult lb, OpFoldResult ub, OpFoldResult step, bool isSigned,
     llvm::function_ref<std::optional<llvm::APSInt>(Value, Value, bool)>
