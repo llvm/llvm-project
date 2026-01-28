@@ -31,8 +31,8 @@ TEST(kmp_str_ref_test, ConstructFromCString) {
   EXPECT_TRUE(equals(s, "Hello"));
 }
 
-TEST(kmp_str_ref_test, ConstructFromCStringWithLength) {
-  kmp_str_ref s("Hello World", 5);
+TEST(kmp_str_ref_test, ConstructFromStringView) {
+  kmp_str_ref s(std::string_view("Hello World", 5));
   EXPECT_EQ(s.length(), 5u);
   EXPECT_TRUE(equals(s, "Hello"));
 }
