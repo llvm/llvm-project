@@ -287,6 +287,79 @@ inline size_t ColumnWidth(llvm::StringRef str) {
   return llvm::sys::locale::columnWidth(stripped);
 }
 
+// This function converts an index into "visible" text (text with ANSI codes
+// removed) into an index into the actual data of the text (which includes ANSI
+// codes). That actual index should be used when printing the actual data.
+//
+// If a character is preceeded by an ANSI code, the returned actual index will
+// point to that ANSI code. As formatting that visible character requires the
+// code.
+//
+// This logic does not extend to whole words. This function assumes you are not
+// going to split up the words of whatever text you pass in here. Making sure
+// not to split words is the responsibility of the caller of this function.
+//
+// Returns a pair containing {visible index, actual index}. This may be passed
+// back to the function later as "hint" to allow it to skip ahead if you are
+// asking for a visible index equal or greater to the one in the hint.
+//
+// The function assumes that the hint provided is correct, even if it refers
+// to an index that does not exist. If the hint is for the exact requested
+// visible index, it will return the hint, without checking the string at all.
+struct VisibleActualIdxPair {
+  size_t visible;
+  size_t actual;
+
+  bool operator==(const VisibleActualIdxPair &rhs) const {
+    return visible == rhs.visible && actual == rhs.actual;
+  }
+};
+inline VisibleActualIdxPair
+VisibleIndexToActualIndex(llvm::StringRef actual_text, size_t visible_idx,
+                          std::optional<VisibleActualIdxPair> hint) {
+  size_t actual_idx = 0;
+  const size_t wanted_visible_idx = visible_idx;
+  visible_idx = 0;
+  llvm::StringRef remaining_actual_text = actual_text;
+
+  if (hint) {
+    if (hint->visible == wanted_visible_idx)
+      return *hint;
+
+    if (hint->visible < wanted_visible_idx) {
+      // Skip forward using the hint.
+      visible_idx = hint->visible;
+      actual_idx = hint->actual;
+
+      remaining_actual_text = remaining_actual_text.drop_front(actual_idx);
+    }
+  }
+
+  while (remaining_actual_text.size()) {
+    auto [left, escape, right] =
+        ansi::FindNextAnsiSequence(remaining_actual_text);
+
+    for (unsigned i = 0; i < left.size(); ++i) {
+      if (visible_idx == wanted_visible_idx)
+        return {wanted_visible_idx, actual_idx};
+
+      actual_idx++;
+      visible_idx++;
+    }
+
+    if (visible_idx == wanted_visible_idx)
+      return {wanted_visible_idx, actual_idx};
+
+    actual_idx += escape.size();
+    remaining_actual_text = right;
+  }
+
+  assert(visible_idx == wanted_visible_idx &&
+         "should have found visible_idx by now");
+
+  return {wanted_visible_idx, actual_idx};
+}
+
 } // namespace ansi
 } // namespace lldb_private
 

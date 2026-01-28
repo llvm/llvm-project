@@ -272,9 +272,13 @@ void Options::OutputFormattedUsageText(Stream &strm,
       actual_text.append("] ");
     }
   }
-  actual_text.append(
-      ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
-  const size_t visible_length = ansi::ColumnWidth(actual_text);
+  actual_text.append(option_def.usage_text);
+
+  const std::string text_without_ansi =
+      ansi::FormatAnsiTerminalCodes(actual_text, false);
+  const size_t visible_length = text_without_ansi.size();
+
+  actual_text = ansi::FormatAnsiTerminalCodes(actual_text, use_color);
 
   // Will it all fit on one line?
   if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
@@ -294,14 +298,16 @@ void Options::OutputFormattedUsageText(Stream &strm,
   //   applied to the indent too.
 
   const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
+  // start, end and final_end are all relative to the visible text.
   int start = 0;
   int end = start;
   const int final_end = visible_length;
+  std::optional<ansi::VisibleActualIdxPair> conversion_hint;
 
   while (end < final_end) {
     // Don't start the 'text' on a space, since we're already outputting the
     // indentation.
-    while ((start < final_end) && (actual_text[start] == ' '))
+    while ((start < final_end) && text_without_ansi[start] == ' ')
       start++;
 
     end = start + max_text_width;
@@ -310,18 +316,37 @@ void Options::OutputFormattedUsageText(Stream &strm,
     } else {
       // If we're not at the end of the text, make sure we break the line on
       // white space.
-      while (end > start && actual_text[end] != ' ' &&
-             actual_text[end] != '\t' && actual_text[end] != '\n')
-        end--;
+      while (end > start) {
+        const char end_char = text_without_ansi[end];
+        if (end_char == ' ' || end_char == '\t' || end_char == '\n')
+          break;
+        else
+          end--;
+      }
     }
 
-    const int sub_len = end - start;
     if (start != 0)
       strm.EOL();
     strm.Indent();
+
+    const int sub_len = end - start;
     assert(start < final_end);
     assert(start + sub_len <= final_end);
-    strm.PutCString(llvm::StringRef(actual_text.c_str() + start, sub_len));
+
+    // Convert indexes into visible text into indexes into the actual data.
+    // Our requests only ever move forward, so the hint saves some time each
+    // call.
+    conversion_hint =
+        ansi::VisibleIndexToActualIndex(actual_text, start, conversion_hint);
+    const size_t start_actual = conversion_hint->actual;
+    conversion_hint =
+        ansi::VisibleIndexToActualIndex(actual_text, end, conversion_hint);
+    const size_t end_actual = conversion_hint->actual;
+
+    const int sub_len_actual = end_actual - start_actual;
+    strm.PutCString(
+        llvm::StringRef(actual_text.c_str() + start_actual, sub_len_actual));
+
     start = end + 1;
   }
   strm.EOL();
