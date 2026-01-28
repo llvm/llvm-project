@@ -3167,9 +3167,9 @@ void populateIRCore(nb::module_ &m) {
             if (frames.empty())
               throw nb::value_error("No caller frames provided.");
             MlirLocation caller = frames.back().get();
-            for (const PyLocation &frame :
-                 llvm::reverse(llvm::ArrayRef(frames).drop_back()))
-              caller = mlirLocationCallSiteGet(frame.get(), caller);
+            for (size_t index = frames.size() - 1; index-- > 0;) {
+              caller = mlirLocationCallSiteGet(frames[index].get(), caller);
+            }
             return PyLocation(context->getRef(),
                               mlirLocationCallSiteGet(callee.get(), caller));
           },
