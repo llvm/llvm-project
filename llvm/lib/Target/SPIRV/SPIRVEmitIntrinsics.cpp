@@ -161,7 +161,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  GlobalVariableUsers GlobalRefs;
+  GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
   // map of function declarations to <pointer arg index => element type>
@@ -2205,21 +2205,22 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
 }
 
 static bool
-shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GlobalRefs,
-                                   GlobalVariable &GV, Function *F) {
+shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
+                                   const GlobalVariable &GV,
+                                   const Function *F) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
                                              "llvm.compiler.used"};
   if (ArtificialGlobals.contains(GV.getName()))
     return false;
 
-  auto &ReferencedBy = GlobalRefs.getTransitiveUserFunctions(GV);
-  if (ReferencedBy.contains(F))
+  auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
+  if (UserFunctions.contains(F))
     return true;
 
   // Do not emit the intrinsics in this function, it's going to be emitted on
   // the functions that reference it.
-  if (!ReferencedBy.empty())
+  if (!UserFunctions.empty())
     return false;
 
   // Emit definitions for globals that are not referenced by any function on the
@@ -2232,7 +2233,7 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GlobalRefs,
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
 
-  if (!shouldEmitIntrinsicsForGlobalValue(GlobalRefs, GV, CurrF))
+  if (!shouldEmitIntrinsicsForGlobalValue(GVUsers, GV, CurrF))
     return;
 
   Constant *Init = nullptr;
@@ -3214,7 +3215,7 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
 
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
-  GlobalRefs.init(M);
+  GVUsers.init(M);
 
   TodoType.clear();
   for (auto &F : M)
