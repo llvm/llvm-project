@@ -887,7 +887,16 @@ def merge_unmerge : GICombineRule<
            // Check size compatibility.
            LLT SrcTy = MRI.getType(${src});
            LLT DstTy = MRI.getType(${dst}.getReg());
-           return SrcTy.getSizeInBits() == DstTy.getSizeInBits();
+           if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
+             return false;
+
+           if (SrcTy != DstTy) {
+             LegalityQuery Query(TargetOpcode::G_BITCAST, {DstTy, SrcTy});
+             if (!Helper.isLegalOrBeforeLegalizer(Query))
+               return false;
+           }
+
+           return true;
          }]),
   (apply [{
            LLT SrcTy = MRI.getType(${src});
@@ -898,9 +907,6 @@ def merge_unmerge : GICombineRule<
            if (SrcTy == DstTy) {
              Helper.replaceRegWith(MRI, ${dst}.getReg(), ${src});
            } else {
-             LegalityQuery Query(TargetOpcode::G_BITCAST, {DstTy, SrcTy});
-             if (!Helper.isLegalOrBeforeLegalizer(Query))
-               return;
 
              Helper.getBuilder().buildBitcast(${dst}.getReg(), ${src});
            }
