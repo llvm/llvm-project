@@ -143,50 +143,6 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) {
   assert(nonSuccessorInputs.size() == nonSuccessorInputLattices.size() &&
          "size mismatch");
-  if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
-    LDBG() << "Inferring ranges for "
-           << OpWithFlags(op, OpPrintingFlags().skipRegions());
-
-    auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
-    });
-
-    auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
-      auto arg = dyn_cast<BlockArgument>(v);
-      if (!arg)
-        return;
-      if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
-        return;
-
-      LDBG() << "Inferred range " << attrs;
-      auto it = llvm::find(successor.getSuccessor()->getArguments(), arg);
-      unsigned nonSuccessorInputIdx =
-          std::distance(successor.getSuccessor()->getArguments().begin(), it);
-      IntegerValueRangeLattice *lattice =
-          nonSuccessorInputLattices[nonSuccessorInputIdx];
-      IntegerValueRange oldRange = lattice->getValue();
-
-      ChangeResult changed = lattice->join(attrs);
-
-      // Catch loop results with loop variant bounds and conservatively make
-      // them [-inf, inf] so we don't circle around infinitely often (because
-      // the dataflow analysis in MLIR doesn't attempt to work out trip counts
-      // and often can't).
-      bool isYieldedValue = llvm::any_of(v.getUsers(), [](Operation *op) {
-        return op->hasTrait<OpTrait::IsTerminator>();
-      });
-      if (isYieldedValue && !oldRange.isUninitialized() &&
-          !(lattice->getValue() == oldRange)) {
-        LDBG() << "Loop variant loop result detected";
-        changed |= lattice->join(IntegerValueRange::getMaxRange(v));
-      }
-      propagateIfChanged(lattice, changed);
-    };
-
-    inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
-    return;
-  }
-
   /// Given a lower bound, upper bound, or step from a LoopLikeInterface return
   /// the lower/upper bound for that result if possible.
   auto getLoopBoundFromFold = [&](OpFoldResult loopBound, Type boundType,
@@ -251,7 +207,51 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     }
     return;
   }
-
   return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
       op, successor, nonSuccessorInputs, nonSuccessorInputLattices);
+}
+
+void IntegerRangeAnalysis::visitNonControlFlowArguments(
+    Operation *op, Region *const region, ValueRange arguments,
+    ArrayRef<IntegerValueRangeLattice *> argLattices) {
+  assert(arguments.size() == argLattices.size() && "size mismatch");
+  if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
+    LDBG() << "Inferring ranges for "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+
+    auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
+      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
+    });
+
+    auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
+      auto arg = dyn_cast<BlockArgument>(v);
+      if (!arg)
+        return;
+      if (!llvm::is_contained(arguments, arg))
+        return;
+
+      LDBG() << "Inferred range " << attrs;
+      auto it = llvm::find(arguments, arg);
+      unsigned argIndex = std::distance(arguments.begin(), it);
+      IntegerValueRangeLattice *lattice = argLattices[argIndex];
+      IntegerValueRange oldRange = lattice->getValue();
+
+      ChangeResult changed = lattice->join(attrs);
+
+      // Catch loop results with loop variant bounds and conservatively make
+      // them [-inf, inf] so we don't circle around infinitely often (because
+      // the dataflow analysis in MLIR doesn't attempt to work out trip counts
+      // and often can't).
+      bool isYieldedValue = llvm::any_of(v.getUsers(), [](Operation *op) {
+        return op->hasTrait<OpTrait::IsTerminator>();
+      });
+      if (isYieldedValue && !oldRange.isUninitialized() &&
+          !(lattice->getValue() == oldRange)) {
+        LDBG() << "Loop variant loop result detected";
+        changed |= lattice->join(IntegerValueRange::getMaxRange(v));
+      }
+      propagateIfChanged(lattice, changed);
+    };
+    inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
+  }
 }
