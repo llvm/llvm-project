@@ -10,7 +10,7 @@
 ;; Run optimizer pass on an IR module without IR functions, and test that global
 ;; variables in the module could be annotated (i.e., no early return),
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOG,IRCOMMON,IR,STAT
+; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IRCOMMON,IR,STAT
 
 ;; Add '-memprof-annotate-string-literal-section-prefix' to RUN command above.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
@@ -19,7 +19,7 @@
 
 ;; Run optimizer pass on the IR, and check the section prefix.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOG,IR,STAT
+; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR,STAT
 
 ;; Add '-memprof-annotate-string-literal-section-prefix' to RUN command above.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
@@ -36,7 +36,6 @@
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - | FileCheck %s --check-prefix=FLAGLESS --implicit-check-not="section_prefix"
 
-; LOG: String literal annotation is off. Skip annotating .str
 ; LOGSTR: Global variable .str is annotated as hot
 
 ;; Common log lines
@@ -49,13 +48,8 @@
 ; LOGCOMMON: Skip annotation for llvm.fake_var due to name starts with `llvm.`.
 ; LOGCOMMON: Skip annotation for qux due to linker declaration.
 
-; LOG: String literal annotation is off. Skip annotating .str.llvm.98765
-; LOG: String literal annotation is off. Skip annotating .str.2
-
 ; LOGSTR: Global variable .str.llvm.98765 is annotated as unlikely
 ; LOGSTR: Global variable .str.2 is not annotated
-
-
 
 ;; String literals are not annotated.
 ; IR: @.str = unnamed_addr constant [5 x i8] c"abcde"
