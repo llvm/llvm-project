@@ -68,8 +68,8 @@ def simm20_lsb000 : Operand<XLenVT> {
 }
 
 // Predicate: True if immediate is a power of 2.
-def PowerOf2 : PatLeaf<(imm), [{
-  return isPowerOf2_64(N->getZExtValue());
+def PowerOf2 : IntImmLeaf<XLenVT, [{
+  return isPowerOf2_64(Imm.getZExtValue());
 }]>;
 
 // Transformation function: Get log2 of immediate.
