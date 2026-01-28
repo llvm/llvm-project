@@ -4008,11 +4008,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         //       each pair of elements (e.g., [S0, S0]) into a single bit, and
         //       we only care if it is fully initialized.
 
-        FixedVectorType* InputShadowType = cast<FixedVectorType>(Sa->getType());
+        FixedVectorType *InputShadowType = cast<FixedVectorType>(Sa->getType());
         unsigned Width = InputShadowType->getNumElements();
 
-        Sa = IRB.CreateShuffleVector(Sa, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
-        Sb = IRB.CreateShuffleVector(Sb, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
+        Sa = IRB.CreateShuffleVector(
+            Sa, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
+        Sb = IRB.CreateShuffleVector(
+            Sb, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
       }
     }
 
