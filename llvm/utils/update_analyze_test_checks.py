@@ -101,7 +101,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         regex_map = {
             r"Printing analysis ": common.ANALYZE_FUNCTION_RE,
-            r"(LV|LDist|HashRecognize): Checking a loop in " : common.LOOP_PASS_DEBUG_RE,
+            r"(LV|LDist|HashRecognize): Checking a loop in ": common.LOOP_PASS_DEBUG_RE,
         }
 
         for split_by, regex in regex_map.items():
