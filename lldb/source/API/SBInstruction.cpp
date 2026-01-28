@@ -352,7 +352,7 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   return false;
 }
 
-lldb::SBStructuredData SBInstruction::GetVariableAnnotations() {
+SBStructuredData SBInstruction::GetVariableAnnotations() {
   LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData result;
@@ -364,48 +364,8 @@ lldb::SBStructuredData SBInstruction::GetVariableAnnotations() {
   if (!inst_sp)
     return result;
 
-  const Address &addr = inst_sp->GetAddress();
-  ModuleSP module_sp = addr.GetModule();
-
-  if (!module_sp)
-    return result;
-
-  VariableAnnotator annotator;
-  std::vector<VariableAnnotation> annotations =
-      annotator.AnnotateStructured(*inst_sp);
-
-  auto array_sp = std::make_shared<StructuredData::Array>();
-
-  for (const VariableAnnotation &ann : annotations) {
-    auto dict_sp = std::make_shared<StructuredData::Dictionary>();
-
-    dict_sp->AddStringItem("variable_name", ann.variable_name);
-    dict_sp->AddStringItem("location_description", ann.location_description);
-    if (ann.address_range.has_value()) {
-      const auto &range = *ann.address_range;
-      dict_sp->AddItem("start_address",
-                       std::make_shared<StructuredData::UnsignedInteger>(
-                           range.GetBaseAddress().GetFileAddress()));
-      dict_sp->AddItem(
-          "end_address",
-          std::make_shared<StructuredData::UnsignedInteger>(
-              range.GetBaseAddress().GetFileAddress() + range.GetByteSize()));
-    }
-    dict_sp->AddItem(
-        "register_kind",
-        std::make_shared<StructuredData::UnsignedInteger>(ann.register_kind));
-    if (ann.decl_file.has_value())
-      dict_sp->AddStringItem("decl_file", *ann.decl_file);
-    if (ann.decl_line.has_value())
-      dict_sp->AddItem(
-          "decl_line",
-          std::make_shared<StructuredData::UnsignedInteger>(*ann.decl_line));
-    if (ann.type_name.has_value())
-      dict_sp->AddStringItem("type_name", *ann.type_name);
-
-    array_sp->AddItem(dict_sp);
-  }
-
+  StructuredData::ArraySP array_sp = inst_sp->GetVariableAnnotations();
   result.m_impl_up->SetObjectSP(array_sp);
+
   return result;
 }
