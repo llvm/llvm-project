@@ -284,22 +284,33 @@ bad_clobber:
 with built-in authentication), classified as tail calls either by BOLT or by
 PtrAuth gadget scanner's heuristic.
 
-**Property:** `x30` must be trusted.
+**Property:** link register (`x30` on AArch64) must be trusted.
 
 **Notes:** Heuristics are involved to classify instructions either as a tail
 call or as another kind of branch (such as jump table or computed goto).
 
 A report is generated if tail call is performed with untrusted link register.
-This basically means that the tail-callee function would have link register
-untrusted on its entry.
+This basically means that the tail-called function would have link register
+untrusted on its entry (unlike inherently correct address placed to link
+register by one of `bl*` instructions when non-tail call is performed).
 
 ```asm
-untrusted_tail_call:
+non_protected_tail_call:
   stp     x29, x30, [sp, #-16]!
   mov     x29, sp
   bl      callee
   ldp     x29, x30, [sp], #16
   ; x30 is neither trusted nor safe-to-dereference at this point.
+  b       tail_callee
+
+non_checked_tail_call:
+  pacibsp
+  stp     x29, x30, [sp, #-16]!
+  mov     x29, sp
+  bl      callee
+  ldp     x29, x30, [sp], #16
+  autibsp
+  ; x30 is safe-to-dereference, but not fully trusted at this point.
   b       tail_callee
 
 tail_callee:
@@ -311,7 +322,7 @@ Even though `x30` is likely to be safe-to-dereference before exit from a functio
 (whether via return or tail call) in a consistently pac-ret-protected program,
 with respect to this gadget kind it further must be fully "trusted".
 With `x30` being safe-to-dereference, but not fully trusted at the entry to the
-tail callee, the subsequent `pacibsp` instruction may act as a [signing oracle](#signing-oracles).
+tail callee, the subsequent `pacibsp` instruction may act as a [signing oracle](#signing-oracles-ptrauth-sign-oracles).
 
 **FIXME:** Is it actually possible when none of `FEAT_FPAC`, `FEAT_EPAC`, or `FEAT_PAuth2` are implemented?
 
@@ -414,7 +425,7 @@ good_resign:
   autda   x0, x1
   ; x0 is s-t-d here.
   ldr     x2, [x0]
-  ; If we got here without crashing on the above LDR, x0 is fully trusted.
+  ; If we got here without crashing on the above ldr, x0 is fully trusted.
   pacdb   x0, x1
   ; ...
 
@@ -476,7 +487,7 @@ bad_auth_call:
   stp     x29, x30, [sp, #-16]!
   mov     x29, sp
 
-  ; x0 may be observed by the caller of bad_call if x2 is 0.
+  ; x0 may be observed by the caller of bad_auth_call if x2 is 0.
   autia   x0, x1
   cbz     x2, .L2
   blr     x0
@@ -495,7 +506,7 @@ bad_leaks_to_callee:
   autda   x20, x0
   ; The result of authentication is leaked to the called function.
   bl      callee
-  ; The below ldr instruction would properly check x20 is placed above the call.
+  ; The below ldr instruction would properly check x20 if placed above the call.
   ldr     x0, [x20]
 
   ldp     x29, x30, [sp], #16
@@ -516,21 +527,20 @@ processes a function containing a flat list of instructions (as opposed to
 interlinked basic blocks) and the reports (if any) are printed without the
 `, basic block <name>` part in the first line.
 
-At the time of writing this, BOLT may fail to properly recognize jump table
-implementation in code but still construct *some* control-flow graph for a
-function. For that reason, `llvm-bolt-binary-analysis` generates a report if
-any basic block in a function is unreachable, according to the reconstructed CFG.
-While this is not inherently impossible, it is unlikely to occur in an optimized
-code and is thus likely to indicate an error in CFG reconstruction.
-
-```
-GS-PAUTH: untrusted link register found before tail call in function luaV_execute/1(*2), basic block .Ltmp2198, at address 338a0
-  The instruction is     000338a0:      br      x16 # UNKNOWN CONTROL FLOW
-```
+Furthermore, it is possible that CFG information is returned by BOLT for a
+function, even though the graph is imprecise (known issues are tracked in
+[#177761](https://github.com/llvm/llvm-project/issues/177761),
+[#178058](https://github.com/llvm/llvm-project/issues/178058),
+[#178232](https://github.com/llvm/llvm-project/issues/178232)).
+Inaccurate CFG information may result in false positives and false negatives,
+thus PtrAuth gadget scanner produces warning messages (at most once per
+function) for non-entry basic blocks without any predecessors in CFG: while
+unreachable basic blocks are technically correct, truly unreachable blocks are
+unlikely to exist in optimized code.
 
 #### Last writing instructions
 
-Some of the reports contain extra information like this
+Some of the reports contain extra information along these lines
 
 ```
   The 1 instructions that write to the affected registers after any authentication are:
