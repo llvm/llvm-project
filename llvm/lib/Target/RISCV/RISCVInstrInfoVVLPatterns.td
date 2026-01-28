@@ -929,10 +929,11 @@ multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
 }
 
 multiclass VPatBinaryVL_VV_VX_VI<SDPatternOperator vop, string instruction_name,
-                                 Operand ImmType = simm5>
-    : VPatBinaryVL_VV_VX<vop, instruction_name> {
+                                 Operand ImmType = simm5,
+                                 list<Predicate> ExtraPreds = []>
+    : VPatBinaryVL_VV_VX<vop, instruction_name, ExtraPreds=ExtraPreds> {
   foreach vti = AllIntegerVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : VPatBinaryVL_XI<vop, instruction_name, "VI",
                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
