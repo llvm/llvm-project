@@ -4499,7 +4499,7 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
     assert(isa<llvm::ArrayType>(Addr.getElementType()) &&
            "Expected pointer to array");
 
-    if (getLangOpts().HLSL && getLangOpts().EmitStructuredGEP)
+    if (getLangOpts().EmitStructuredGEP)
       return Addr;
     Addr = Builder.CreateConstArrayGEP(Addr, 0, "arraydecay");
   }
@@ -4540,7 +4540,7 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           bool signedIndices,
                                           SourceLocation loc,
                                     const llvm::Twine &name = "arrayidx") {
-  if (CGF.getLangOpts().HLSL && inbounds && CGF.getLangOpts().EmitStructuredGEP)
+  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
     return CGF.Builder.CreateStructuredGEP(elemType, ptr, indices);
 
   if (inbounds) {
@@ -4559,8 +4559,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      bool signedIndices, SourceLocation loc,
                                      CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
-  if (CGF.getLangOpts().HLSL && arrayType && inbounds &&
-      CGF.getLangOpts().EmitStructuredGEP)
+  if (arrayType && inbounds && CGF.getLangOpts().EmitStructuredGEP)
     return RawAddress(CGF.Builder.CreateStructuredGEP(arrayType,
                                                       addr.emitRawPointer(CGF),
                                                       indices.drop_front()),
@@ -5541,7 +5540,7 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   llvm::Type *StructType =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMType();
 
-  if (CGF.getLangOpts().HLSL && CGF.getLangOpts().EmitStructuredGEP)
+  if (CGF.getLangOpts().EmitStructuredGEP)
     return RawAddress(
         CGF.Builder.CreateStructuredGEP(StructType, base.emitRawPointer(CGF),
                                         {CGF.Builder.getSize(idx)}),
