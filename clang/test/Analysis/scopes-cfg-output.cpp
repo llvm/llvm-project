@@ -1437,14 +1437,12 @@ void test_cleanup_functions() {
 // CHECK-NEXT:    4: return;
 // CHECK-NEXT:    5: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    6: CFGScopeEnd(i)
-// CHECK-NEXT:    7: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:    1: return;
 // CHECK-NEXT:    2: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    3: CFGScopeEnd(i)
-// CHECK-NEXT:    4: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B3]

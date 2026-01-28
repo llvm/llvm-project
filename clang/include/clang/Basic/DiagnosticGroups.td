@@ -535,14 +535,23 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive">;
+def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
+  code Documentation = [{
+    Warning to detect dangling field references.
+  }];
+}
+
+def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
+                                         [LifetimeSafetyDanglingField]>;
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict">;
+
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
   code Documentation = [{
-    Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+    Warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
+
 def LifetimeSafetyCrossTUSuggestions
     : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
 def LifetimeSafetyIntraTUSuggestions

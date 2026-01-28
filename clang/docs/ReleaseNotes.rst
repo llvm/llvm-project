@@ -145,7 +145,7 @@ Improvements to Clang's diagnostics
   a CFG-based intra-procedural analysis that detects use-after-free and related
   temporal safety bugs. See the
   `RFC <https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291>`_
-  for more details. By design, this warning is enabled in ``-Wall``. To disable
+  for more details. By design, this warning is enabled in ``-Weverything``. To disable
   the analysis, use ``-Wno-lifetime-safety`` or ``-fno-lifetime-safety``.
 
 - Added ``-Wlifetime-safety-suggestions`` to enable lifetime annotation suggestions.
@@ -186,6 +186,18 @@ Improvements to Clang's diagnostics
     note: returned here
     int* p(int *in [[clang::noescape]]) { return in; }
                                                  ^~
+
+- Added ``-Wlifetime-safety-dangling-field`` to detect dangling field references
+  when stack memory escapes to class fields. This is part of ``-Wlifetime-safety``
+  and detects cases where local variables or parameters are stored in fields but
+  outlive their scope. For example:
+
+  .. code-block:: c++
+
+    struct DanglingView {
+      std::string_view view;
+      DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
+    };
 
 Improvements to Clang's time-trace
 ----------------------------------
