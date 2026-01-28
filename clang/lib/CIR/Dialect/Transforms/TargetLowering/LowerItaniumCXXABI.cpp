@@ -172,7 +172,7 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
   if (attr.isNullPtr()) {
     // Itanium C++ ABI 2.3:
     //   A NULL pointer is represented as -1.
-    memberOffset = std::numeric_limits<uint64_t>::max();
+    memberOffset = -1;
   } else {
     // Itanium C++ ABI 2.3:
     //   A pointer to data member is an offset from the base address of
