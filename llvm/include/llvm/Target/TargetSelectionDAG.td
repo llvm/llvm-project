@@ -1050,14 +1050,13 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // The equivalent of `PredicateCode` for GlobalISel.
   //
   // The following variables are in scope:
-  // - `const MachineInstr &MI` representing the MI being checked.
-  // - `std::array<const MachineOperand *, _>` representing the operands of the
-  //   current fragment.
+  // - `const MachineInstr &MI` representing the instruction being checked.
   // - `const MachineFunction &MF` the current function.
   // - `const MachineRegisterInfo &MRI` for the current function.
   // - `const <target>InstructionSelector *this` representing the target's
   //   `InstructionSelector` instance.
   // - `const MatcherState &State`
+  // - `std::array<const MachineOperand *, _> Operands`
   //
   // This should `return` a `bool` for whether the predicate matches or not.
   code GISelPredicateCode = [{}];
@@ -1180,7 +1179,21 @@ class OutPatFrag<dag ops, dag frag>
 // PatLeaf's are pattern fragments that have no operands.  This is just a helper
 // to define immediates and other common things concisely.
 class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
- : PatFrag<(ops), frag, pred, xform> {
+  : PatFrag<(ops), frag, pred, xform> {
+
+  // The equivalent of `PredicateCode` for GlobalISel. Unlike with `PatFrag`,
+  // this is examining a `MachineOperand` rather than a `MachineInstruction`.
+  //
+  // The following variables are in scope:
+  // - `const MachineOperand &MO` representing the Operand being checked.
+  // - `const MachineFunction &MF` the current function.
+  // - `const MachineRegisterInfo &MRI` for the current function.
+  // - `const <target>InstructionSelector *this` representing the target's
+  //   `InstructionSelector` instance.
+  // - `const MatcherState &State`
+  // - `std::array<const MachineOperand *, _> Operands`
+  //
+  // This should `return` a `bool` for whether the predicate matches or not.
   code GISelLeafPredicateCode = ?;
 }
 
