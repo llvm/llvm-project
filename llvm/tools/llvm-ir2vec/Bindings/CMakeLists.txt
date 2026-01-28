@@ -6,16 +6,24 @@ endif()
 set(BINDINGS_MINIMUM_PYTHON_VERSION 3.10)
 find_package(Python ${BINDINGS_MINIMUM_PYTHON_VERSION} EXACT COMPONENTS Interpreter Development.Module REQUIRED)
 
-execute_process(
-    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
-    RESULT_VARIABLE STATUS
-    OUTPUT_VARIABLE nanobind_ROOT
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
-
-if(NOT STATUS EQUAL "0")
-    message(FATAL_ERROR "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR)")
+if(nanobind_DIR)
+  message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR}")
+else()
+  message(STATUS "Checking for nanobind in python path...")
+  execute_process(
+      COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE PACKAGE_DIR
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+  )
+  
+  if(NOT STATUS EQUAL "0")
+      message(FATAL_ERROR "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR)")
+  endif()
+  
+  message(STATUS "found nanobind at: ${PACKAGE_DIR}")
+  set(nanobind_DIR "${PACKAGE_DIR}")
 endif()
 
 find_package(nanobind CONFIG REQUIRED)
