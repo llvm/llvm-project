@@ -2328,7 +2328,7 @@ public:
 
   LLVM_ABI bool isConstant() const;
 
-  /// If this BuildVector is constant and represents the numerical series
+  /// If this BuildVector is constant and represents an arithmetic sequence
   /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero
   /// integer, the value "<a, n>" is returned. Arithmetic is performed modulo
   /// 2^BitWidth, so this also matches sequences that wrap around. Poison
