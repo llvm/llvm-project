@@ -2653,6 +2653,22 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                             ResultType, AllocTypeInfo, Range, DirectInitRange);
 }
 
+// Format an address space for diagnostics without assuming it maps to a
+// target-specific value. Language-specific spaces (e.g. OpenCL) are rendered
+// using their spelled qualifiers, while target-specific ones are printed as the
+// numeric attribute value for compatibility with existing messages.
+
+static std::string formatAddressSpaceForDiag(LangAS AS,
+                                             const LangOptions &LangOpts) {
+  PrintingPolicy PP(LangOpts);
+  Qualifiers Q;
+  Q.setAddressSpace(AS);
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  Q.print(OS, PP, false);
+  return OS.str();
+}
+
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                               SourceRange R) {
   // C++ 5.3.4p1: "[The] type shall be a complete object type, but not an
@@ -2677,7 +2693,8 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
       << AllocType.getUnqualifiedType()
-      << AllocType.getQualifiers().getAddressSpaceAttributePrintValue();
+      << formatAddressSpaceForDiag(AllocType.getAddressSpace(), getLangOpts());
+
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
       QualType BaseAllocType = Context.getBaseElementType(AT);
@@ -4069,7 +4086,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << Pointee.getQualifiers().getAddressSpaceAttributePrintValue();
+             << formatAddressSpaceForDiag(Pointee.getAddressSpace(), getLangOpts());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
