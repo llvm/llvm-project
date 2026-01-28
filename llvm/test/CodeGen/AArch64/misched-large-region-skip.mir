@@ -1,17 +1,19 @@
 # RUN: llc -mtriple=arm64-apple-ios -run-pass=machine-scheduler \
-# RUN:     -misched-large-region-skip-threshold=10 \
+# RUN:     -misched-skip-region-num-instrs-threshold=10 \
+# RUN:     -misched-skip-region-reg-pressure-threshold=1 \
 # RUN:     -debug-only=machine-scheduler -o /dev/null %s 2>&1 \
 # RUN:   | FileCheck %s
 
 # REQUIRES: asserts
 
 # Test that large regions with critical register pressure are skipped when
-# -misched-large-region-skip-threshold is set.
+# -misched-skip-region-num-instrs-threshold and
+# -misched-skip-region-reg-pressure-threshold are set.
 
 # High pressure function should be skipped.
 # CHECK: Skipping scheduling for region
 
-# Low pressure function should NOT be skipped.
+# Low pressure function should not be skipped.
 # CHECK-NOT: Skipping scheduling for region
 
 ---

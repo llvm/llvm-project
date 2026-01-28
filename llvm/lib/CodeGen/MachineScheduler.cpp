@@ -268,10 +268,18 @@ static cl::opt<unsigned>
                          cl::desc("The threshold for fast cluster"),
                          cl::init(1000));
 
-static cl::opt<unsigned> LargeRegionSkipThreshold(
-    "misched-large-region-skip-threshold", cl::Hidden,
-    cl::desc("Skip scheduling regions with instruction count exceeding this "
-             "threshold when register pressure is critical. 0 disables."),
+static cl::opt<unsigned> SkipRegionNumInstrsThreshold(
+    "misched-skip-region-num-instrs-threshold", cl::Hidden,
+    cl::desc("The minimum number of instructions in a region before it is "
+             "considered as a candidate to skip in case of excessive register "
+             "pressures. 0 disables."),
+    cl::init(0));
+
+static cl::opt<unsigned> SkipRegionRegisterPressureThreshold(
+    "misched-skip-region-reg-pressure-threshold", cl::Hidden,
+    cl::desc("The minimum number of critical register pressure sets in a "
+             "region before it is considered as a candidate to skip in case of "
+             "excessive register pressures. 0 disables."),
     cl::init(0));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1700,11 +1708,14 @@ void ScheduleDAGMILive::schedule() {
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
 
-  // Skip scheduling for large regions with critical register pressure that
-  // exceed the large region skip threshold.
-  unsigned SkipThreshold = SchedImpl->getPolicy().LargeRegionSkipThreshold;
-  if (SkipThreshold && NumRegionInstrs > SkipThreshold &&
-      !RegionCriticalPSets.empty()) {
+  // Skip scheduling for large regions with exceesive critical register
+  // pressures sets, according to thresholds.
+  const unsigned InstrsThreshold =
+      SchedImpl->getPolicy().SkipRegionNumInstrsThreshold;
+  const unsigned RPThreshold =
+      SchedImpl->getPolicy().SkipRegionRegisterPressureThreshold;
+  if (InstrsThreshold && RPThreshold && NumRegionInstrs >= InstrsThreshold &&
+      RegionCriticalPSets.size() >= RPThreshold) {
     LLVM_DEBUG(dbgs() << "Skipping scheduling for region with "
                       << NumRegionInstrs << " instructions and "
                       << RegionCriticalPSets.size()
@@ -3734,9 +3745,11 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyTopDown = false;
   }
 
-  // Apply command-line override for large region skip threshold.
-  if (LargeRegionSkipThreshold.getNumOccurrences())
-    RegionPolicy.LargeRegionSkipThreshold = LargeRegionSkipThreshold;
+  if (SkipRegionNumInstrsThreshold.getNumOccurrences())
+    RegionPolicy.SkipRegionNumInstrsThreshold = SkipRegionNumInstrsThreshold;
+  if (SkipRegionRegisterPressureThreshold.getNumOccurrences())
+    RegionPolicy.SkipRegionRegisterPressureThreshold =
+        SkipRegionRegisterPressureThreshold;
 
   BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;
