@@ -3487,8 +3487,8 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_fp_bits",
         ":__support_fputil_fma",
+        ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
@@ -5173,13 +5173,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "sincosf",
-    additional_deps = [
-        ":__support_math_sincosf",
-    ],
-)
-
-libc_math_function(
     name = "sinf",
     additional_deps = [
         ":__support_math_sinf",
@@ -5209,12 +5202,7 @@ libc_math_function(
 libc_math_function(
     name = "sincosf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_sincosf_utils",
+        ":__support_math_sincosf",
     ],
 )
 
