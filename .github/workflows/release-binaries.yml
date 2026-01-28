@@ -243,7 +243,7 @@ jobs:
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\x64\libs" >> $env:GITHUB_ENV
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Debug
       shell: bash
