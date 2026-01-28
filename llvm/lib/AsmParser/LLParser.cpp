@@ -6699,7 +6699,7 @@ bool LLParser::parseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   FileLoc Start = Lex.getTokLineColumnPos();
   bool Ret = parseValID(ID, PFS, Ty) || convertValIDToValue(Ty, ID, V, PFS);
   FileLoc End = Lex.getPrevTokEndLineColumnPos();
-  if (ParserContext)
+  if (!Ret && ParserContext)
     ParserContext->addValueReferenceAtLocation(V, FileLocRange(Start, End));
   return Ret;
 }
