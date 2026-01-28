@@ -48,7 +48,7 @@ operations.
 // Utilities.
 //------------------------------------------------------------------------------
 
-/// Local helper to concatenate string and integer arguments into a std::string.
+/// Local helper to concatenate arguments into a `std::string`.
 template <typename... Ts>
 static std::string join(const Ts &...args) {
   std::ostringstream oss;
