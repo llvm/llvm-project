@@ -62,3 +62,7 @@
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState
 // CHECK-NEXT:     FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension
+
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V2 %s
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 -march=native -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V2 %s
+// NEOVERSE-V2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v2"

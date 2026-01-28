@@ -27,6 +27,9 @@
 // CHECK-FEAT-NN1:    FEAT_UAO                                               Enable Armv8.2-A UAO PState
 // CHECK-FEAT-NN1:    FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension
 
+// RUN: %clang --target=aarch64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N1 %s
+// RUN: %clang --target=aarch64 -march=native -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N1 %s
+// NEOVERSE-N1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n1"
 
 // RUN: export LLVM_CPUINFO=%S/Inputs/cpunative/cortex-a57
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace --check-prefix=CHECK-FEAT-CA57 --implicit-check-not=FEAT_ %s
@@ -39,6 +42,10 @@
 // CHECK-FEAT-CA57:    FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-FEAT-CA57:    FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-FEAT-CA57:    FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
+
+// RUN: %clang --target=aarch64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A57 %s
+// RUN: %clang --target=aarch64 -march=native -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A57 %s
+// CORTEX-A57: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a57"
 
 // RUN: export LLVM_CPUINFO=%S/Inputs/cpunative/cortex-a72
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace  --check-prefix=CHECK-FEAT-CA72 --implicit-check-not=FEAT_ %s
@@ -53,6 +60,10 @@
 // CHECK-FEAT-CA72:    FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-FEAT-CA72:    FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-FEAT-CA72:    FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
+
+// RUN: %clang --target=aarch64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A72 %s
+// RUN: %clang --target=aarch64 -march=native -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A72 %s
+// CORTEX-A72: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a72"
 
 // RUN: export LLVM_CPUINFO=%S/Inputs/cpunative/cortex-a76
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace --check-prefix=CHECK-FEAT-CA76 --implicit-check-not=FEAT_ %s
@@ -80,3 +91,7 @@
 // CHECK-FEAT-CA76:    FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-FEAT-CA76:    FEAT_UAO                                               Enable Armv8.2-A UAO PState
 // CHECK-FEAT-CA76:    FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension
+
+// RUN: %clang --target=aarch64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A76 %s
+// RUN: %clang --target=aarch64 -march=native -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A76 %s
+// CORTEX-A76: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a76"
