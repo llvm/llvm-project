@@ -1,10 +1,4 @@
-# RUN: rm -rf %t.ll
-# RUN: echo "define i32 @add(i32 %%a, i32 %%b) {" > %t.ll
-# RUN: echo "entry:" >> %t.ll
-# RUN: echo "  %%sum = add i32 %%a, %%b" >> %t.ll
-# RUN: echo "  ret i32 %%sum" >> %t.ll
-# RUN: echo "}" >> %t.ll
-# RUN: env PYTHONPATH=%llvm_lib_dir %python %s %t.ll %ir2vec_test_vocab_dir/dummy_3D_nonzero_opc_vocab.json | FileCheck %s
+# RUN: env PYTHONPATH=%llvm_lib_dir %python %s %S/input.ll %ir2vec_test_vocab_dir/dummy_3D_nonzero_opc_vocab.json | FileCheck %s
 
 import sys
 import ir2vec
