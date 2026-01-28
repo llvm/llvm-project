@@ -899,9 +899,24 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
                                             "EntryExitInstrumenter");
 }
 
-Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
-                                            "DropUnnecessaryAssumes");
+Expected<std::pair<bool, bool>>
+parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  // {DropDereferenceable, DropArrayBounds}
+  std::pair<bool, bool> Result = {false, false};
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName == "drop-deref")
+      Result.first = true;
+    else if (ParamName == "drop-array-bounds")
+      Result.second = true;
+    else
+      return make_error<StringError>(
+          formatv("invalid DropUnnecessaryAssumes option '{0}'", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return Result;
 }
 
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
