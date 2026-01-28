@@ -411,5 +411,35 @@ declare void @willreturn_attribute() willreturn
 
 // -----
 
+; CHECK-LABEL: @noreturn_attribute
+; CHECK-SAME: attributes {noreturn}
+declare void @noreturn_attribute() noreturn
+
+// -----
+
+; CHECK-LABEL: @returnstwice_attribute
+; CHECK-SAME: attributes {returns_twice}
+declare void @returnstwice_attribute() returns_twice
+
+// -----
+
+; CHECK-LABEL: @hot_attribute
+; CHECK-SAME: attributes {hot}
+declare void @hot_attribute() hot
+
+// -----
+
+; CHECK-LABEL: @cold_attribute
+; CHECK-SAME: attributes {cold}
+declare void @cold_attribute() cold
+
+// -----
+
+; CHECK-LABEL: @noduplicate_attribute
+; CHECK-SAME: attributes {noduplicate}
+declare void @noduplicate_attribute() noduplicate
+
+// -----
+
 ; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
 declare void @test() preallocated(i32)

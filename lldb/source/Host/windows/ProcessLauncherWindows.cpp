@@ -242,8 +242,9 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
   for (size_t i = 0; i < launch_info.GetNumFileActions(); ++i) {
     const FileAction *act = launch_info.GetFileActionAtIndex(i);
     if (act->GetAction() == FileAction::eFileActionDuplicate &&
-        act->GetFD() == act->GetActionArgument())
-      inherited_handles.push_back(reinterpret_cast<HANDLE>(act->GetFD()));
+        act->GetFD() == act->GetActionArgument()) {
+      inherited_handles.push_back(act->GetHandle());
+    }
   }
 
   if (inherited_handles.empty())

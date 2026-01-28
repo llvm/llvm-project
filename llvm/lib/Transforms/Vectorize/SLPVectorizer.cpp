@@ -902,7 +902,14 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
     auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
     if (!CI)
       return std::nullopt;
-    return CI->getZExtValue();
+    // Check if the index is out of bound  - we can get the source vector from
+    // operand 0
+    unsigned Idx = CI->getZExtValue();
+    auto *EE = cast<ExtractElementInst>(E);
+    const unsigned VF = ::getNumElements(EE->getVectorOperandType());
+    if (Idx >= VF)
+      return std::nullopt;
+    return Idx;
   }
   auto *EI = cast<ExtractValueInst>(E);
   if (EI->getNumIndices() != 1)
@@ -7390,7 +7397,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   }
 
   SortedIndices.clear();
-  SortedIndices = SortedIndicesDraft;
+  SortedIndices = std::move(SortedIndicesDraft);
   SPtrInfo.StrideSCEV = Stride0;
   SPtrInfo.Ty = StridedLoadTy;
   return true;
@@ -13392,6 +13399,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
     Order.assign(VF, VF);
     // Check if need to reorder Rhs to make it in form (0, Stride, 2 * Stride,
     // ..., Sz-Stride).
+    if (VF * Stride != Sz)
+      return false;
     for (const auto [Idx, V] : enumerate(RhsTE->Scalars)) {
       if (isa<UndefValue>(V))
         continue;
@@ -13402,10 +13411,14 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
       if (Val.isNegative() || Val.uge(Sz) || Val.getZExtValue() % Stride != 0)
         return false;
       unsigned Pos = Val.getZExtValue() / Stride;
-      if (Order[Idx] != VF)
+      // TODO: Support Pos >= VF, in this case need to shift the final value.
+      if (Order[Idx] != VF || Pos >= VF)
         return false;
       Order[Idx] = Pos;
     }
+    // One of the indices not set - exit.
+    if (is_contained(Order, VF))
+      return false;
   }
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   FastMathFlags FMF;
