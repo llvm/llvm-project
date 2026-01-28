@@ -151,7 +151,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
-    requires(range<const _Views> && ...)
+    requires((range<const _Views> && ...) && __concatable<const _Views...>)
   {
     if constexpr (__all_forward<true, _Views...> && common_range<__maybe_const<true, __extract_last<_Views...>>>) {
       constexpr auto __n = sizeof...(_Views);

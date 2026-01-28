@@ -14,6 +14,7 @@
 // constexpr __iterator<true> begin() const
 //     requires((range<const _Views> && ...) && __concatable<const _Views...>)
 
+#include <array>
 #include <ranges>
 #include <vector>
 
@@ -80,10 +81,10 @@ constexpr void tests() {
     assert(it + 4 == view.end());
   }
 
-  // first few views is empty
+  // first few views is empty, including different types
   {
     std::vector<int> v1;
-    std::vector<int> v2;
+    std::array<int, 0> v2;
     std::vector<int> v3 = {1, 2, 3, 4};
     std::ranges::concat_view view(v1, v2, v3);
     auto it = view.begin();
