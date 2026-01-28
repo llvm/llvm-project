@@ -214,7 +214,11 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
           llvm::sys::Process::GetEnv("LLVM_CACHE_WARNINGS")) {
     SmallVector<const char *, 8> WarnOpts;
     WarnOpts.push_back(Args.front());
+#if LLVM_ON_WIN32
+    llvm::cl::TokenizeWindowsCommandLine(*WarnOptsValue, Saver, WarnOpts);
+#else
     llvm::cl::TokenizeGNUCommandLine(*WarnOptsValue, Saver, WarnOpts);
+#endif
     DiagOpts = CreateAndPopulateDiagOpts(WarnOpts);
   } else {
     DiagOpts = std::make_unique<DiagnosticOptions>();
