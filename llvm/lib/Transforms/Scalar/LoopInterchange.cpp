@@ -1911,7 +1911,6 @@ void LoopInterchangeTransform::reduction2Memory() {
                          InnerLoop->getLoopPreheader());
   FirstIter->addIncoming(ConstantInt::get(Type::getInt1Ty(Context), 0),
                          InnerLoop->getLoopLatch());
-  FirstIter->dropDbgRecords();
   assert(FirstIter->isComplete() && "The FirstIter PHI node is not complete.");
 
   // When the reduction is initialized from a constant value, we need to add
