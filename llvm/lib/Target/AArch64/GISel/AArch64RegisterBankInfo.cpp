@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Threading.h"
@@ -358,12 +359,71 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
   return RegisterBankInfo::getInstrAlternativeMappings(MI);
 }
 
+static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                         const AArch64Subtarget &STI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (!Ty.isScalar())
+    return false;
+
+  unsigned Bits = Ty.getSizeInBits();
+  if (Bits != 16 && Bits != 32 && Bits != 64)
+    return false;
+
+  EVT VT = EVT::getFloatingPointVT(Bits);
+  bool OptForSize = MI.getMF()->getFunction().hasOptSize() ||
+                    MI.getMF()->getFunction().hasMinSize();
+  const TargetLowering *TLI = STI.getTargetLowering();
+  return TLI->isFPImmLegal(MI.getOperand(1).getFPImm()->getValueAPF(), VT,
+                           OptForSize);
+}
+
 void AArch64RegisterBankInfo::applyMappingImpl(
     MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
 
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONSTANT: {
+    Register Dst = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank && DstTy.isScalar() &&
+        DstTy.getSizeInBits() < 32) {
+      Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
+      Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      Builder.buildTrunc(Dst, ExtReg);
+
+      auto Val = MI.getOperand(1).getCImm()->getValue().zext(32);
+      LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
+      MI.getOperand(1).setCImm(ConstantInt::get(Ctx, Val));
+      MI.getOperand(0).setReg(ExtReg);
+      MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
+
+      for (MachineInstr &UseMI :
+           make_early_inc_range(MRI.use_nodbg_instructions(Dst))) {
+        if (UseMI.getOpcode() != AArch64::G_DUP)
+          continue;
+        for (MachineOperand &Op : UseMI.operands()) {
+          if (Op.isReg() && Op.getReg() == Dst)
+            Op.setReg(ExtReg);
+        }
+      }
+    }
+    return applyDefaultMapping(OpdMapper);
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    Register Dst = MI.getOperand(0).getReg();
+    if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank) {
+      const APFloat &Imm = MI.getOperand(1).getFPImm()->getValueAPF();
+      Builder.setInsertPt(*MI.getParent(), MI.getIterator());
+      Builder.buildConstant(Dst, Imm.bitcastToAPInt());
+      MI.eraseFromParent();
+      return;
+    }
+    return applyDefaultMapping(OpdMapper);
+  }
+
   case TargetOpcode::G_STORE: {
     Register Dst = MI.getOperand(0).getReg();
     LLT Ty = MRI.getType(Dst);
@@ -855,6 +915,22 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   // Some of the floating-point instructions have mixed GPR and FPR operands:
   // fine-tune the computed mapping.
   switch (Opc) {
+  case TargetOpcode::G_CONSTANT: {
+    Register Dst = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    if (DstTy.isScalar() && DstTy.getSizeInBits() < 32)
+      MappingID = CustomMappingID;
+    break;
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    if (!isLegalFPImm(MI, MRI, STI) &&
+        MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits() != 128) {
+      // Materialize in GPR and rely on later bank copies for FP uses.
+      MappingID = CustomMappingID;
+      OpRegBankIdx = {PMI_FirstGPR};
+    }
+    break;
+  }
   case AArch64::G_DUP: {
     Register ScalarReg = MI.getOperand(1).getReg();
     LLT ScalarTy = MRI.getType(ScalarReg);

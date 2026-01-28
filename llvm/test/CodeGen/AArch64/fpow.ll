@@ -47,16 +47,30 @@ entry:
 }
 
 define <1 x double> @pow_v1f64(<1 x double> %x) {
-; CHECK-LABEL: pow_v1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    bl pow
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: pow_v1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    adrp x8, .LCPI4_0
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
+; CHECK-SD-NEXT:    bl pow
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pow_v1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    mov x8, #34079 // =0x851f
+; CHECK-GI-NEXT:    movk x8, #20971, lsl #16
+; CHECK-GI-NEXT:    movk x8, #7864, lsl #32
+; CHECK-GI-NEXT:    movk x8, #16393, lsl #48
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    bl pow
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %c = call <1 x double> @llvm.pow.v1f64(<1 x double> %x, <1 x double> <double 3.140000e+00>)
   ret <1 x double> %c
 }
