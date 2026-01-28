@@ -32,20 +32,22 @@ class SerializationFormat {
 protected:
   // Helpers providing access to implementation details of basic data structures
   // for efficient serialization/deserialization.
-  static EntityIdTable &getIdTableForDeserialization(TUSummary &S);
-  static BuildNamespace &getTUNamespaceForDeserialization(TUSummary &S);
-  static const EntityIdTable &getIdTable(const TUSummary &S);
-  static const BuildNamespace &getTUNamespace(const TUSummary &S);
 
-  static BuildNamespaceKind getBuildNamespaceKind(const BuildNamespace &BN);
-  static llvm::StringRef getBuildNamespaceName(const BuildNamespace &BN);
-  static const std::vector<BuildNamespace> &
-  getNestedBuildNamespaces(const NestedBuildNamespace &NBN);
+  // Accessors for TUSummary:
+  template <class T> static auto &IdTableOf(T &X) { return X.IdTable; }
+  template <class T> static auto &TUNamespaceOf(T &X) { return X.TUNamespace; }
 
-  static llvm::StringRef getEntityNameUSR(const EntityName &EN);
-  static const llvm::SmallString<16> &getEntityNameSuffix(const EntityName &EN);
-  static const NestedBuildNamespace &
-  getEntityNameNamespace(const EntityName &EN);
+  // Accessors for BuildNamespace:
+  template <class T> static auto &KindOf(T &X) { return X.Kind; }
+  template <class T> static auto &NameOf(T &X) { return X.Name; }
+
+  // Accessors for NestedBuildNamespace:
+  template <class T> static auto &NamespacesOf(T &X) { return X.Namespaces; }
+
+  // Accessors for EntityName:
+  template <class T> static auto &USROf(T &X) { return X.USR; }
+  template <class T> static auto &SuffixOf(T &X) { return X.Suffix; }
+  template <class T> static auto &NamespaceOf(T &X) { return X.Namespace; }
 
 public:
   virtual ~SerializationFormat() = default;
