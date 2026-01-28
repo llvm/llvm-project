@@ -12277,8 +12277,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       };
 
   auto EvaluateFpBinOpExpr =
-      [&](llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                                     std::optional<APSInt>)>
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
               Fn) {
         assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
         APValue A, B;
@@ -12304,10 +12304,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
           const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
           const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
-          if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
-              EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+          std::optional<APFloat> Result = Fn(EltA, EltB, RoundingMode);
+          if (!Result)
             return false;
-          ResultElements.push_back(APValue(Fn(EltA, EltB, RoundingMode)));
+          ResultElements.push_back(APValue(*Result));
         }
         return Success(APValue(ResultElements.data(), NumElems), E);
       };
@@ -14385,7 +14385,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_minph256:
   case clang::X86::BI__builtin_ia32_minph512:
     return EvaluateFpBinOpExpr(
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -14401,7 +14405,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_maxph256:
   case clang::X86::BI__builtin_ia32_maxph512:
     return EvaluateFpBinOpExpr(
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);
