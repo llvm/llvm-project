@@ -113,7 +113,7 @@ namespace noninline_virt {
   // constructor, which takes no arguments other than the this pointer and VTT.
   // ITANIUM-LABEL: define linkonce_odr void @_ZN14noninline_virt1CCI1NS_1AEEiO1QPvU17pass_object_size0(
   // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, ptr {{.*}}, ptr %{{.*}}, i{{32|64}} %{{.*}})
-  // ITANIUM: call void @_ZN14noninline_virt1BCI2NS_1AEEiO1QPvU17pass_object_size0(ptr {{[^,]*}} %{{.*}}, ptr getelementptr inbounds ([2 x ptr], ptr @_ZTTN14noninline_virt1CE, i64 0, i64 1))
+  // ITANIUM: call void @_ZN14noninline_virt1BCI2NS_1AEEiO1QPvU17pass_object_size0(ptr {{[^,]*}} %{{.*}}, ptr getelementptr inbounds (ptr, ptr @_ZTTN14noninline_virt1CE, i64 1))
   // ITANIUM: store {{.*}} @_ZTVN14noninline_virt1CE
 
   // C constructor forwards to B constructor and A constructor. We pass the args
@@ -371,7 +371,7 @@ namespace inline_virt {
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 4)
   // ITANIUM: %[[A:.*]] = getelementptr {{.*}}, i{{32|64}} {{12|16}}
   // ITANIUM: call void ({{.*}}, ...) @_ZN11inline_virt1AC2E1QiS1_OS1_z(ptr {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
-  // ITANIUM: call void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z({{[^,]*}}, ptr getelementptr inbounds ([2 x ptr], ptr @_ZTTN11inline_virt1CE, i64 0, i64 1))
+  // ITANIUM: call void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z({{[^,]*}}, ptr getelementptr inbounds (ptr, ptr @_ZTTN11inline_virt1CE, i64 1))
   // ITANIUM: store {{.*}} @_ZTVN11inline_virt1CE
   // ITANIUM: call void @_ZN1QD1Ev(
   // ITANIUM: call void @_ZN1QD1Ev(
