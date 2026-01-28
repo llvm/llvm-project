@@ -509,7 +509,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-  unsigned KillFlag = getKillRegState(KillSrc);
+  RegState KillFlag = getKillRegState(KillSrc);
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
@@ -1012,9 +1012,9 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
 
   for (const RISCVMatInt::Inst &Inst : Seq) {
     bool LastItem = ++Num == Seq.size();
-    unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
+    RegState DstRegState = getDeadRegState(DstIsDead && LastItem) |
                            getRenamableRegState(DstRenamable);
-    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
+    RegState SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
                            getRenamableRegState(SrcRenamable);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
@@ -2962,15 +2962,21 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         default:
           llvm_unreachable("Unexpected operand type");
 
-          // clang-format off
 #define CASE_OPERAND_UIMM(NUM)                                                 \
   case RISCVOp::OPERAND_UIMM##NUM:                                             \
     Ok = isUInt<NUM>(Imm);                                                     \
     break;
+#define CASE_OPERAND_UIMM_LSB_ZEROS(BITS, SUFFIX)                              \
+  case RISCVOp::OPERAND_UIMM##BITS##_LSB##SUFFIX: {                            \
+    constexpr size_t NumZeros = sizeof(#SUFFIX) - 1;                           \
+    Ok = isShiftedUInt<BITS - NumZeros, NumZeros>(Imm);                        \
+    break;                                                                     \
+  }
 #define CASE_OPERAND_SIMM(NUM)                                                 \
   case RISCVOp::OPERAND_SIMM##NUM:                                             \
     Ok = isInt<NUM>(Imm);                                                      \
     break;
+          // clang-format off
         CASE_OPERAND_UIMM(1)
         CASE_OPERAND_UIMM(2)
         CASE_OPERAND_UIMM(3)
@@ -2986,13 +2992,15 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(32)
         CASE_OPERAND_UIMM(48)
         CASE_OPERAND_UIMM(64)
-          // clang-format on
-        case RISCVOp::OPERAND_UIMM2_LSB0:
-          Ok = isShiftedUInt<1, 1>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM5_LSB0:
-          Ok = isShiftedUInt<4, 1>(Imm);
-          break;
+        CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
+        CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
+        CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)
+        CASE_OPERAND_UIMM_LSB_ZEROS(8, 000)
+        CASE_OPERAND_UIMM_LSB_ZEROS(9, 000)
+        // clang-format on
         case RISCVOp::OPERAND_UIMM5_NONZERO:
           Ok = isUInt<5>(Imm) && (Imm != 0);
           break;
@@ -3002,26 +3010,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM5_PLUS1:
           Ok = Imm >= 1 && Imm <= 32;
           break;
-        case RISCVOp::OPERAND_UIMM6_LSB0:
-          Ok = isShiftedUInt<5, 1>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM7_LSB00:
-          Ok = isShiftedUInt<5, 2>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM7_LSB000:
-          Ok = isShiftedUInt<4, 3>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM8_LSB00:
-          Ok = isShiftedUInt<6, 2>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM8_LSB000:
-          Ok = isShiftedUInt<5, 3>(Imm);
-          break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
-          break;
-        case RISCVOp::OPERAND_UIMM9_LSB000:
-          Ok = isShiftedUInt<6, 3>(Imm);
           break;
         case RISCVOp::OPERAND_SIMM8_UNSIGNED:
           Ok = isInt<8>(Imm);
@@ -3652,7 +3642,22 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   return false;
 }
 
-static bool analyzeCandidate(outliner::Candidate &C) {
+bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
+  // If the expansion register for tail calls is live across the candidate
+  // outlined call site, we cannot outline that candidate as the expansion
+  // would clobber the register.
+  MCRegister TailExpandUseReg =
+      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+  if (C.back().isReturn() &&
+      !C.isAvailableAcrossAndOutOfSeq(TailExpandUseReg, RegInfo)) {
+    LLVM_DEBUG(dbgs() << "MBB:\n" << *C.getMBB());
+    LLVM_DEBUG(dbgs() << "Cannot be outlined between: " << C.front() << "and "
+                      << C.back());
+    LLVM_DEBUG(dbgs() << "Because the tail-call register is live across "
+                         "the proposed outlined function call\n");
+    return true;
+  }
+
   // If last instruction is return then we can rely on
   // the verification already performed in the getOutliningTypeImpl.
   if (C.back().isReturn()) {
@@ -3664,13 +3669,12 @@ static bool analyzeCandidate(outliner::Candidate &C) {
 
   // Filter out candidates where the X5 register (t0) can't be used to setup
   // the function call.
-  const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
-  if (llvm::any_of(C, [TRI](const MachineInstr &MI) {
-        return isMIModifiesReg(MI, TRI, RISCV::X5);
+  if (llvm::any_of(C, [this](const MachineInstr &MI) {
+        return isMIModifiesReg(MI, &RegInfo, RISCV::X5);
       }))
     return true;
 
-  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
+  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo);
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -3680,7 +3684,9 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     unsigned MinRepeats) const {
 
   // Analyze each candidate and erase the ones that are not viable.
-  llvm::erase_if(RepeatedSequenceLocs, analyzeCandidate);
+  llvm::erase_if(RepeatedSequenceLocs, [this](auto Candidate) {
+    return analyzeCandidate(Candidate);
+  });
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < MinRepeats)

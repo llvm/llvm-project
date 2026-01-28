@@ -4,10 +4,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-SDAG %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6,GFX6-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6,GFX6-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL %s
 
 ; define float @test_ldexp_f32_i16(ptr addrspace(1) %out, float %a, i16 %b) #0 {
 ;   %result = call float @llvm.experimental.constrained.ldexp.f32.i16(float %a, i16 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -234,6 +234,33 @@ define <4 x float> @test_ldexp_v4f32_v4i32(ptr addrspace(1) %out, <4 x float> %a
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x float> @llvm.experimental.constrained.ldexp.v4f32.v4i32(<4 x float> %a, <4 x i32> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x float> %result
+}
+
+define amdgpu_ps float @s_test_ldexp_f32_i32(float inreg %a, i32 inreg %b) #0 {
+; GFX6-LABEL: s_test_ldexp_f32_i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    v_ldexp_f32_e32 v0, s0, v0
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_test_ldexp_f32_i32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s1
+; GFX8-NEXT:    v_ldexp_f32 v0, s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_test_ldexp_f32_i32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_ldexp_f32 v0, s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_test_ldexp_f32_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_ldexp_f32 v0, s0, s1
+; GFX11-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.experimental.constrained.ldexp.f32.i32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %result
 }
 
 declare float @llvm.experimental.constrained.ldexp.f32.i16(float, i16, metadata, metadata) #1
