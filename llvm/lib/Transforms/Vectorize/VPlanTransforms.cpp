@@ -4176,14 +4176,16 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     assert(Opcode == Instruction::FAdd &&
            "MulAccumulateReduction from an FMul must accumulate into an FAdd "
            "instruction");
-    if (auto *FMul = dyn_cast<VPWidenRecipe>(VecOp)) {
-      auto *RecipeA = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(0));
-      auto *RecipeB = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(1));
+    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
+    if (!FMul)
+      return nullptr;
 
-      if (RecipeA && RecipeB &&
-          IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
-        return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
-      }
+    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(0));
+    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(1));
+
+    if (RecipeA && RecipeB &&
+        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
+      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
     }
   }
   if (RedTy->isFloatingPointTy())
