@@ -2602,7 +2602,7 @@ static void licm(VPlan &Plan) {
           }))
         continue;
 
-      // Only sink to dedicated exit blocks.
+      // Only sink to dedicated exit blocks of the loop region.
       if (SinkBB->getSinglePredecessor() != LoopRegion)
         continue;
 
