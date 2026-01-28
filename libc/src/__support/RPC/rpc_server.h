@@ -37,6 +37,10 @@
 #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
 
+#if defined(_WIN32)
+#define LIBC_COPT_PRINTF_DISABLE_WIDE
+#endif
+
 // The 'long double' type is 8 bytes.
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
