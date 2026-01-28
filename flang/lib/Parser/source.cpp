@@ -142,7 +142,7 @@ bool SourceFile::Open(std::string path, llvm::raw_ostream &error) {
 
 bool SourceFile::ReadStandardInput(llvm::raw_ostream &error) {
   Close();
-  path_ = "standard input";
+  path_ = "<stdin>";
   auto buf_or = llvm::MemoryBuffer::getSTDIN();
   if (!buf_or) {
     auto err = buf_or.getError();
