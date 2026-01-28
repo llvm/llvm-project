@@ -9287,14 +9287,14 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
     // as visible.
     return true;
 
-  auto DefinitionIsAcceptable = [&] (NamedDecl *D) {
+  auto DefinitionIsAcceptable = [&](NamedDecl *D) {
     // The (primary) definition might be in a visible module.
     if (isAcceptable(D, Kind))
       return true;
 
     // A visible module might have a merged definition instead.
     if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
-                              : hasVisibleMergedDefinition(D)) {
+                             : hasVisibleMergedDefinition(D)) {
       if (CodeSynthesisContexts.empty() &&
           !getLangOpts().ModulesLocalVisibility) {
         // Cache the fact that this definition is implicitly visible because
@@ -9333,7 +9333,7 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
     return false;
   };
-  
+
   if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
