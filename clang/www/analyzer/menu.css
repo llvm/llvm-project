@@ -53,3 +53,8 @@
 a{
   text-decoration: none;
 }
+
+table tr td a:hover{
+  text-decoration: underline;
+
+}
