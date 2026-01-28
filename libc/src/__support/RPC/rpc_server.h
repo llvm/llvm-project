@@ -38,7 +38,8 @@
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 // TODO: Clean up this.
-// We plan to support UTF-16 eventually and also windows is not the only UTF-16 platform.
+// We plan to support UTF-16 eventually and also windows is not the only UTF-16
+// platform.
 #if defined(_WIN32)
 #define LIBC_COPT_PRINTF_DISABLE_WIDE
 #endif
