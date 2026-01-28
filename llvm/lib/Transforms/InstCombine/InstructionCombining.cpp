@@ -1122,6 +1122,10 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   else
     return nullptr;
 
+  SelectInst *SI = ProfcheckDisableMetadataFixes
+                       ? nullptr
+                       : cast<SelectInst>(CastOp == LHS ? RHS : LHS);
+
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
     bool IsZExt = isa<ZExtInst>(CastOp);
@@ -1145,13 +1149,13 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   if (CondVal == A) {
     Value *NewTrueVal = NewFoldedConst(false, TrueVal);
     return SelectInst::Create(CondVal, NewTrueVal,
-                              NewFoldedConst(true, FalseVal));
+                              NewFoldedConst(true, FalseVal), "", nullptr, SI);
   }
 
   if (match(A, m_Not(m_Specific(CondVal)))) {
     Value *NewTrueVal = NewFoldedConst(true, TrueVal);
     return SelectInst::Create(CondVal, NewTrueVal,
-                              NewFoldedConst(false, FalseVal));
+                              NewFoldedConst(false, FalseVal), "", nullptr, SI);
   }
 
   return nullptr;
@@ -1916,7 +1920,9 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   if (!NewTV || !NewFV)
     return nullptr;
 
-  Value *NewSI = Builder.CreateSelect(SI->getCondition(), NewTV, NewFV);
+  Value *NewSI =
+      Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "",
+                           ProfcheckDisableMetadataFixes ? nullptr : SI);
   return BinaryOperator::Create(Op.getOpcode(), NewSI, Input);
 }
 
